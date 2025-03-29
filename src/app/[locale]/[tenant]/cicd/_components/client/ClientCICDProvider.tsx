@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import React, { useState, useCallback } from 'react';
 
+import { deleteCICDProvider, testCICDProvider } from '@/app/actions/cicd';
 import { EmptyState } from '@/components/layout/EmptyState';
 import {
   AlertDialog,
@@ -15,6 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/shadcn/alert-dialog';
+import { Badge } from '@/components/shadcn/badge';
 import { Button } from '@/components/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
@@ -34,15 +36,8 @@ import {
 } from '@/components/shadcn/table';
 import { useToast } from '@/components/shadcn/use-toast';
 
-import CICDProviderForm from '../CICDProviderForm';
-
-import { deleteCICDProvider, testCICDProvider } from '@/app/actions/cicd';
-import { Badge } from '@/components/shadcn/badge';
-
 import type { CICDProviderType } from '../../types';
-
-
-
+import CICDProviderForm from '../CICDProviderForm';
 
 interface ClientCICDProviderProps {
   initialProviders: CICDProviderType[];

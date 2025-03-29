@@ -342,7 +342,7 @@ export function DeploymentList({
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                      className="px-2 py-1 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                     >
                       Actions
                     </th>
@@ -390,7 +390,7 @@ export function DeploymentList({
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                      className="px-2 py-1 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                     >
                       Actions
                     </th>
@@ -433,7 +433,7 @@ export function DeploymentList({
                               : '-'}
                       </td>
                       <td className="px-2 py-1 whitespace-nowrap text-sm">
-                        <div className="flex space-x-2 justify-end">
+                        <div className="flex space-x-2 justify-center">
                           <Button
                             variant="outline"
                             size="sm"
@@ -547,7 +547,7 @@ export function DeploymentList({
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                      className="px-2 py-1 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                     >
                       Actions
                     </th>
