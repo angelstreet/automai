@@ -7,8 +7,9 @@ import {
   ResourceType,
   Operation,
   PermissionMatrix,
-  checkPermission as checkPermissionFn,
+  checkPermission,
   getUserPermissions,
+  type PermissionsResult,
 } from '@/app/actions/permission';
 import {
   Team,
@@ -208,40 +209,30 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
 
   const refreshTeams = async () => {
     await loadTeams();
-    if (activeTeam) {
-      await loadPermissions();
+  };
+
+  const syncWithUserContext = async () => {
+    if (selectedTeam && (!activeTeam || selectedTeam.id !== activeTeam.id)) {
+      await switchTeam(selectedTeam.id);
     }
   };
 
-  const checkPermission = useCallback(
-    async (
-      resourceType: ResourceType,
-      operation: Operation,
-      creatorId?: string,
-    ): Promise<boolean> => {
+  // Use the checkPermission server action
+  const checkTeamPermission = useCallback(
+    async (resourceType: ResourceType, operation: Operation, creatorId?: string) => {
       if (!user || !activeTeam) return false;
 
-      // Check permission using the database function
-      return checkPermissionFn(user.id, activeTeam.id, resourceType, operation, creatorId);
+      try {
+        return await checkPermission(user.id, activeTeam.id, resourceType, operation, creatorId);
+      } catch (err) {
+        console.error('Error checking permission:', err);
+        return false;
+      }
     },
     [user, activeTeam],
   );
 
-  // Force sync between contexts
-  const syncWithUserContext = useCallback(async () => {
-    if (user && userTeams.length > 0) {
-      // If selectedTeam exists, use it, otherwise use the first team
-      const teamToSelect = selectedTeam || userTeams[0];
-
-      // Update both contexts
-      if (teamToSelect) {
-        await switchTeam(teamToSelect.id);
-        setSelectedTeam(teamToSelect.id);
-      }
-    }
-  }, [user, userTeams, selectedTeam, setSelectedTeam]);
-
-  const value: TeamContextState = {
+  const value = {
     teams,
     activeTeam,
     permissions,
@@ -249,7 +240,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
     error,
     switchTeam,
     refreshTeams,
-    checkPermission,
+    checkPermission: checkTeamPermission,
     syncWithUserContext,
   };
 
@@ -257,28 +248,23 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useTeam() {
-  return useContext(TeamContext);
+  const context = useContext(TeamContext);
+  if (context === undefined) {
+    throw new Error('useTeam must be used within a TeamProvider');
+  }
+  return context;
 }
 
-/**
- * Hook to check if the current user has permission for a specific operation
- */
+// Export a hook for checking permissions
 export function usePermission() {
-  const { activeTeam, checkPermission } = useTeam();
-  const { user } = useUser();
+  const { activeTeam, user, checkPermission } = useTeam();
 
-  const hasPermission = useCallback(
-    async (
-      resourceType: ResourceType,
-      operation: Operation,
-      resourceCreatorId?: string,
-    ): Promise<boolean> => {
-      if (!activeTeam || !user) return false;
+  return useCallback(
+    async (resourceType: ResourceType, operation: Operation, resourceCreatorId?: string) => {
       return checkPermission(resourceType, operation, resourceCreatorId);
     },
     [activeTeam, user, checkPermission],
   );
-
-  return { hasPermission };
 }
+
 export default TeamContext;
