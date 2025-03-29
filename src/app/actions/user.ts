@@ -10,7 +10,7 @@ import { AuthUser } from '@/types/user';
 export async function invalidateUserCache() {
   // Forward to the DB module to clear its cache
   await userDB.clearCache();
-  
+
   return {
     success: true,
     message: 'User cache invalidated',
@@ -35,13 +35,13 @@ export async function updateProfile(formData: FormData | Record<string, any>) {
   try {
     // Extract data from FormData or direct object
     const metadata: Record<string, any> = {};
-    
+
     if (formData instanceof FormData) {
       const name = formData.get('name') as string;
       const locale = (formData.get('locale') as string) || 'en';
       const avatar_url = formData.get('avatar_url') as string;
       const role = formData.get('role') as string;
-      
+
       if (name) metadata.name = name;
       if (locale) metadata.locale = locale;
       if (avatar_url) metadata.avatar_url = avatar_url;
@@ -53,13 +53,13 @@ export async function updateProfile(formData: FormData | Record<string, any>) {
       if (formData.avatar_url) metadata.avatar_url = formData.avatar_url;
       if (formData.role) metadata.role = formData.role;
     }
-    
+
     // Get current user to get ID
     const user = await userDB.getCurrentUser();
     if (!user) {
       throw new Error('User not found');
     }
-    
+
     // Call the db-users module to handle the update
     return userDB.updateProfile(user.id, metadata);
   } catch (error) {

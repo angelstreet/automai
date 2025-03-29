@@ -92,7 +92,9 @@ function clearAuthCookies(response: NextResponse): NextResponse {
  */
 export async function updateSession(request: NextRequest): Promise<NextResponse> {
   console.debug(`--------------------------------`);
-  console.debug(`[SUPABASE MW:updateSession] Processing ${request.method} request for ${request.nextUrl.pathname}`);
+  console.debug(
+    `[SUPABASE MW:updateSession] Processing ${request.method} request for ${request.nextUrl.pathname}`,
+  );
   const startTime = Date.now();
 
   // Create the Supabase client
@@ -139,7 +141,8 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
       .some((c) => c.name.startsWith('sb-access-token') || c.name.startsWith('sb-refresh-token'));
 
     if (hasAuthCookies) {
-      console.debug('[SUPABASE MW :cookies] Auth cookies present but failed to authenticate - possible cookie issue',
+      console.debug(
+        '[SUPABASE MW :cookies] Auth cookies present but failed to authenticate - possible cookie issue',
       );
       return response;
     }
@@ -161,7 +164,9 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   }
 
   // Return the response with updated cookies for authenticated users
-  console.debug(`[SUPABASE MW:complete] Finished processing request in ${Date.now() - startTime}ms`);
+  console.debug(
+    `[SUPABASE MW:complete] Finished processing request in ${Date.now() - startTime}ms`,
+  );
   console.debug(`--------------------------------`);
   return response;
 }

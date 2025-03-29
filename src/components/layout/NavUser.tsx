@@ -38,7 +38,7 @@ export function NavUser({ user }: NavUserProps) {
     try {
       // Use the signOut method from context which handles cache clearing and sign out
       const result = await signOut(locale);
-      
+
       // Use router navigation based on result
       if (result.success && result.redirectUrl) {
         router.push(result.redirectUrl);

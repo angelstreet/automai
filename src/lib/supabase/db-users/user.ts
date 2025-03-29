@@ -85,12 +85,12 @@ const user = {
 
       // Get basic user info
       const { data: authData, error: authError } = await supabase.auth.getUser();
-      
+
       if (authError || !authData.user) {
         console.error('Error getting auth user:', authError);
         return null;
       }
-      
+
       // Only proceed if the requested user ID matches the authenticated user
       if (authData.user.id !== userId) {
         console.error('User ID mismatch - cannot access other user data');
@@ -109,21 +109,23 @@ const user = {
 
       // Only use role from profiles table
       const role = profile.role;
-      
+
       if (!role) {
         console.error('No role found in profiles table');
         return null;
       }
 
       // Transform teams data
-      const userTeams: UserTeam[] = !teamsError && teams ? 
-        teams.map((teamMember: any) => ({
-          id: teamMember.teams.id,
-          name: teamMember.teams.name,
-          tenant_id: teamMember.teams.tenant_id,
-          created_at: teamMember.teams.created_at,
-          is_default: false // Add required property
-        })) : [];
+      const userTeams: UserTeam[] =
+        !teamsError && teams
+          ? teams.map((teamMember: any) => ({
+              id: teamMember.teams.id,
+              name: teamMember.teams.name,
+              tenant_id: teamMember.teams.tenant_id,
+              created_at: teamMember.teams.created_at,
+              is_default: false, // Add required property
+            }))
+          : [];
 
       return {
         id: userId,
@@ -164,9 +166,9 @@ const user = {
       const supabase = await createClient(cookieStore);
 
       // Get the current user
-      const { 
-        data: { user: authUser }, 
-        error: authError 
+      const {
+        data: { user: authUser },
+        error: authError,
       } = await supabase.auth.getUser();
 
       if (authError || !authUser) {
@@ -175,65 +177,65 @@ const user = {
       }
 
       const userData = await this.getUser(authUser.id);
-      
+
       if (userData) {
         userCache.set(cacheKey, { user: userData, timestamp: now });
       }
-      
+
       return userData;
     } catch (error) {
       console.error('Error in getCurrentUser:', error);
       return null;
     }
   },
-  
+
   async clearCache(): Promise<void> {
     userCache.clear();
-    
+
     // Clear client-side cache in case we're in a client context
     if (typeof window !== 'undefined') {
       localStorage.removeItem('user-data-cache');
       localStorage.removeItem('cached_user');
     }
-    
+
     return;
   },
-  
+
   async updateProfile(userId: string, metadata: Record<string, any>): Promise<any> {
     try {
       const cookieStore = await cookies();
       const supabase = await createClient(cookieStore);
-      
+
       // First update auth user metadata
       const { data: authData, error: authError } = await supabase.auth.updateUser({
         data: metadata,
       });
-      
+
       if (authError) {
         console.error('Error updating auth user:', authError);
         throw new Error(authError.message);
       }
-      
+
       // Then update profile in the database
       const profileData: Record<string, any> = {};
       if (metadata.avatar_url) profileData.avatar_url = metadata.avatar_url;
       if (metadata.role) profileData.role = metadata.role;
-      
+
       if (Object.keys(profileData).length > 0) {
         const { error: profileError } = await supabase
           .from('profiles')
           .update(profileData)
           .eq('id', userId);
-          
+
         if (profileError) {
           console.error('Error updating profile:', profileError);
           throw new Error(profileError.message);
         }
       }
-      
+
       // Clear cache to ensure fresh data on next fetch
       await this.clearCache();
-      
+
       return {
         success: true,
         data: authData.user,
@@ -248,15 +250,15 @@ const user = {
   async setSelectedTeam(userId: string, teamId: string): Promise<any> {
     try {
       const cookieStore = await cookies();
-      
+
       // Store the selected team ID in a cookie
-      cookieStore.set(`selected_team_${userId}`, teamId, { 
-        maxAge: 60 * 60 * 24 * 365 // 1 year
+      cookieStore.set(`selected_team_${userId}`, teamId, {
+        maxAge: 60 * 60 * 24 * 365, // 1 year
       });
-      
+
       // Clear cache to ensure fresh data on next fetch
       await this.clearCache();
-      
+
       return {
         success: true,
         message: 'Team selected successfully',
@@ -317,4 +319,4 @@ const user = {
   },
 };
 
-export default user; 
+export default user;

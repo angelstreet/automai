@@ -67,23 +67,31 @@ export function UserProvider({
 }) {
   const { protectedFetch } = useRequestProtection('UserContext');
   const [error, setError] = React.useState<Error | null>(null);
-  
-  console.debug('[UserContext] UserProvider initializing with initialUser:', initialUser ? `${initialUser.id} (${initialUser.email})` : 'null');
+
+  console.debug(
+    '[UserContext] UserProvider initializing with initialUser:',
+    initialUser ? `${initialUser.id} (${initialUser.email})` : 'null',
+  );
 
   // Fetch user data only when forced (e.g., refresh)
   const fetchUserData = useCallback(
     async (force = false): Promise<User | null> => {
-      console.log('[DEBUG]  fetchUserData called with initialUser:', initialUser ? 'exists' : 'null', 'force:', force);
+      console.log(
+        '[DEBUG]  fetchUserData called with initialUser:',
+        initialUser ? 'exists' : 'null',
+        'force:',
+        force,
+      );
       if (force) {
         console.log('[DEBUG] Force fetch triggered by:', new Error().stack);
       }
-      
+
       return protectedFetch('user.getUser', async () => {
         if (!force && initialUser) {
           console.log('[DEBUG] Using initialUser from props, skipping fetch');
           return initialUser; // Trust initialUser unless forced
         }
-        
+
         console.log('[DEBUG] Fetching fresh user data from server');
         const authUser = await getUser();
         return authUser ? mapAuthUserToUser(authUser) : null;
@@ -97,10 +105,10 @@ export function UserProvider({
   );
 
   // Use SWR for reactivity, but skip fetch if initialUser is provided
-  const { 
-    data: user, 
-    isLoading: loading, 
-    mutate: mutateUser
+  const {
+    data: user,
+    isLoading: loading,
+    mutate: mutateUser,
   } = useSWR(
     initialUser ? null : 'user-data', // No key means no fetch if initialUser exists
     () => {
@@ -114,7 +122,7 @@ export function UserProvider({
       revalidateOnReconnect: false,
       dedupingInterval: 15000, // 15s deduping
       refreshInterval: 0, // Manual refresh only
-    }
+    },
   );
 
   // Refresh user data explicitly
@@ -156,32 +164,35 @@ export function UserProvider({
     [refreshUser],
   );
 
-  const signOut = useCallback(async (locale: string = 'en') => {
-    try {
-      // First clear cache
-      await clearRequestCache();
-      await mutateUser(null, { revalidate: false });
-
-      // Clear localStorage as a backup
+  const signOut = useCallback(
+    async (locale: string = 'en') => {
       try {
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('cached_user');
-          localStorage.removeItem('cached_user_time');
-        }
-      } catch {
-        // Ignore localStorage errors
-      }
+        // First clear cache
+        await clearRequestCache();
+        await mutateUser(null, { revalidate: false });
 
-      // Then sign out with the server
-      const formData = new FormData();
-      formData.append('locale', locale);
-      const result = await signOutAction(formData);
-      return result;
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Sign out failed'));
-      return { success: false };
-    }
-  }, [mutateUser]);
+        // Clear localStorage as a backup
+        try {
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('cached_user');
+            localStorage.removeItem('cached_user_time');
+          }
+        } catch {
+          // Ignore localStorage errors
+        }
+
+        // Then sign out with the server
+        const formData = new FormData();
+        formData.append('locale', locale);
+        const result = await signOutAction(formData);
+        return result;
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Sign out failed'));
+        return { success: false };
+      }
+    },
+    [mutateUser],
+  );
 
   // User management methods
   const updateProfile = useCallback(
@@ -214,10 +225,13 @@ export function UserProvider({
     await mutateUser(null, { revalidate: true });
   }, [mutateUser]);
 
-  const checkResourceLimit = useCallback(async (resourceType: string): Promise<ResourceLimit | null> => {
-    if (!user?.teams?.length || !user?.selectedTeamId) return null;
-    return { type: resourceType, current: 0, limit: 10, isUnlimited: false, canCreate: true }; // Placeholder
-  }, [user]);
+  const checkResourceLimit = useCallback(
+    async (resourceType: string): Promise<ResourceLimit | null> => {
+      if (!user?.teams?.length || !user?.selectedTeamId) return null;
+      return { type: resourceType, current: 0, limit: 10, isUnlimited: false, canCreate: true }; // Placeholder
+    },
+    [user],
+  );
 
   // Memoized context value
   const value = useMemo(

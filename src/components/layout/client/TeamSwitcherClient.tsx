@@ -41,7 +41,7 @@ export default function TeamSwitcherClient({
 }: TeamSwitcherClientProps) {
   const { user, teams, selectedTeam, setSelectedTeam } = useUser();
   const currentUser = initialUser || user;
-  
+
   // If no user data yet, show a minimal loading state
   if (!currentUser) {
     if (defaultCollapsed) {
@@ -55,11 +55,11 @@ export default function TeamSwitcherClient({
     }
     return null;
   }
-  
+
   // Generate visual teams based on user's tier
   const displayTeams = React.useMemo(() => {
     let teamsList: VisualTeam[] = [];
-    
+
     if (currentUser.tenant_name === 'trial') {
       teamsList = [
         {
@@ -87,21 +87,21 @@ export default function TeamSwitcherClient({
     }
     return teamsList;
   }, [currentUser.tenant_name, teams]);
-  
+
   // Determine active team
   const activeTeam = React.useMemo(() => {
     if (displayTeams.length === 0) return null;
-    
+
     if (selectedTeam && currentUser.tenant_name === 'enterprise') {
       const matchingTeam = displayTeams.find((t) => t.id === selectedTeam.id);
       return matchingTeam || displayTeams[0];
     }
     return displayTeams[0];
   }, [displayTeams, selectedTeam, currentUser.tenant_name]);
-  
+
   // If no active team determined, return null
   if (!activeTeam) return null;
-  
+
   // Handle team selection
   const handleTeamSelect = (team: VisualTeam) => {
     // Only select in context if team has ID and we're on enterprise tier
@@ -109,9 +109,9 @@ export default function TeamSwitcherClient({
       setSelectedTeam(team.id);
     }
   };
-  
+
   const Icon = activeTeam.logo;
-  
+
   // Render collapsed view for SSR and initial mount
   if (defaultCollapsed) {
     return (
@@ -122,7 +122,7 @@ export default function TeamSwitcherClient({
       </div>
     );
   }
-  
+
   // For trial and pro, or when there's only one team, don't show dropdown
   if (currentUser.tenant_name !== 'enterprise' || displayTeams.length <= 1) {
     return (
@@ -136,7 +136,7 @@ export default function TeamSwitcherClient({
       </button>
     );
   }
-  
+
   // For enterprise with multiple teams, show dropdown
   return (
     <DropdownMenu>
