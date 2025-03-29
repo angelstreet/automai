@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getUser } from '@/app/actions/user';
 import {
   getTeams as dbGetTeams,
-  getTeam as dbGetTeam,
+  getTeamById as dbGetTeam,
   createTeam as dbCreateTeam,
   updateTeam as dbUpdateTeam,
   deleteTeam as dbDeleteTeam,
@@ -289,7 +289,7 @@ export const checkResourceLimit = cache(
  * Gets basic details about the user's team
  */
 export async function getTeamDetails() {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const supabase = await createClient(cookieStore);
 
   try {
@@ -367,7 +367,7 @@ export async function getTeamDetails() {
  * linked to the user's providers
  */
 export async function getUnassignedResources() {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const supabase = await createClient(cookieStore);
 
   try {
@@ -412,7 +412,7 @@ export async function getUnassignedResources() {
  * Assigns a resource to a team and sets the creator
  */
 export async function assignResourceToTeam(resourceId, resourceType, teamId) {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const supabase = await createClient(cookieStore);
 
   try {

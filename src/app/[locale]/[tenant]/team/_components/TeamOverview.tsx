@@ -49,7 +49,7 @@ export default function TeamOverview({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex flex-col space-y-1">
               <span className="text-sm text-muted-foreground">Members</span>
               <span className="text-2xl font-semibold">{team.memberCount}</span>
@@ -58,10 +58,6 @@ export default function TeamOverview({
               <span className="text-sm text-muted-foreground">Your Role</span>
               <span className="text-2xl font-semibold">{team.userRole || 'N/A'}</span>
             </div>
-            <div className="flex flex-col space-y-1">
-              <span className="text-sm text-muted-foreground">Team ID</span>
-              <span className="text-xs font-mono truncate">{team.id || 'None'}</span>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -69,11 +65,11 @@ export default function TeamOverview({
       {/* Resources Card */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle>Resources for {team.id ? team.name : 'Your Account'}</CardTitle>
+          <CardTitle>Resources</CardTitle>
           <CardDescription>Overview of team resources</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="p-4 border rounded-md">
               <h3 className="font-medium">Repositories</h3>
               <p className="text-2xl">{team.resourceCounts.repositories}</p>
@@ -90,6 +86,10 @@ export default function TeamOverview({
             <div className="p-4 border rounded-md">
               <h3 className="font-medium">CI/CD</h3>
               <p className="text-2xl">{team.resourceCounts.cicd}</p>
+            </div>
+            <div className="p-4 border rounded-md">
+              <h3 className="font-medium">Deployments</h3>
+              <p className="text-2xl">0</p>
             </div>
           </div>
         </CardContent>
