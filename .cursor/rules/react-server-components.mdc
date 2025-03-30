@@ -1,39 +1,11 @@
 ---
-description: Guidelines for React Server Components in Next.js with Supabase integration
+description: 
 globs: 
 alwaysApply: true
 ---
 # React Server Components Architecture Guidelines
 
-## CRITICAL: Cookie Handling in Database Layer
-
-### ⚠️ Common Error: Synchronous Cookie Access
-
-The most common error you'll encounter looks like this:
-```
-Error: Route "/[locale]/[tenant]/hosts" used `cookies().get()`. 
-`cookies()` should be awaited before using its value.
-```
-
-This is caused by accessing cookies synchronously without awaiting:
-
-```typescript
-// ❌ WRONG: Will cause errors
-async get(name) {
-  return cookieHandler.get(name)?.value; // SYNC ACCESS - WILL BREAK
-}
-
-// ✅ CORRECT: Always await cookie access
-async get(name) {
-  try {
-    const cookie = await cookieHandler.get(name);
-    return cookie?.value;
-  } catch (error) {
-    console.warn(`Could not get cookie ${name}: ${error.message}`);
-    return undefined;
-  }
-}
-```
+## Database Access Pattern (CRITICAL)
 
 ### Three-Tier Architecture (Required)
 
@@ -41,8 +13,9 @@ async get(name) {
    - ✅ ALWAYS use `createClient` from `@/lib/supabase/server` for database access
    - ✅ ALWAYS include `cookieStore` parameter in ALL database functions
    - ✅ ALWAYS keep functions focused on database operations only
-   - ❌ NEVER import `cookies()` from 'next/headers' directly in database layer
-   - ❌ NEVER create custom browser client implementations
+   - ❌ NEVER import or use `createBrowserClient` from anywhere
+   - ❌ NEVER create custom browser client files or implementations
+   - ❌ NEVER import cookies directly in database layer files
 
 2. **Server Actions** (`/app/actions/*.ts`)
    - ✅ ALWAYS mark with `'use server'` directive at the top of the file
@@ -57,128 +30,241 @@ async get(name) {
    - ✅ ALWAYS manage UI state and user interactions here
    - ❌ NEVER directly call database operations
 
-## Creating New Database Modules
+### CookieStore Implementation Guidelines (CRITICAL)
 
-### Step-by-Step Implementation Guide
+#### 1. Basic Pattern: Always Accept cookieStore Parameter
 
-1. Create module file in `/lib/supabase/db-module/module.ts`
+All database layer functions MUST accept a cookieStore parameter and pass it to createClient:
+
+```typescript
+// CORRECT: Accept cookieStore parameter
+export async function getUserData(userId: string, cookieStore?: any): Promise<Result> {
+  try {
+    // Pass cookieStore to createClient
+    const supabase = await createClient(cookieStore);
+    
+    // Make database operations
+    const { data, error } = await supabase.from('users').select('*').eq('id', userId);
+    
+    // Return results
+    return { success: true, data };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+```
+
+#### 2. Common Anti-Patterns to Avoid
+
+```typescript
+// ❌ WRONG: Importing cookies directly in database layer
+import { cookies } from 'next/headers'; // NEVER DO THIS
+
+export async function getUserData(userId: string): Promise<Result> {
+  // ❌ WRONG: Direct cookie access in database layer
+  const cookieStore = cookies(); // NEVER DO THIS
+  const supabase = await createClient(cookieStore);
+  // ...
+}
+```
+
+#### 3. Step-by-Step Implementation Guide for New Database Layer Modules
+
+1. Create module file in appropriate directory (e.g., `/lib/supabase/db-module/module.ts`)
 2. Import only the server createClient:
    ```typescript
    import { createClient } from '@/lib/supabase/server';
    ```
-3. Define functions with cookieStore parameter:
+3. Define your function signatures with cookieStore parameter:
    ```typescript
-   export async function myFunction(id: string, cookieStore?: any): Promise<Result> {
-     // ...
-   }
+   export async function myDatabaseFunction(
+     requiredParam: string, 
+     optionalParam?: string, 
+     cookieStore?: any
+   ): Promise<Result> {
    ```
 4. Initialize Supabase client with cookieStore:
    ```typescript
    const supabase = await createClient(cookieStore);
    ```
-5. Add standard logging:
+5. Add logging with standardized format:
    ```typescript
-   console.log(`[@db:module:function] Starting operation for: ${id}`);
+   console.log(`[@db:module:function] Starting operation for: ${requiredParam}`);
    ```
-6. Implement proper error handling:
+6. Handle errors and log them:
    ```typescript
    try {
-     // Database operations...
+     // operations
    } catch (error) {
      console.error(`[@db:module:function] Error:`, error);
      return { success: false, error: error.message };
    }
    ```
 
-## Correct Patterns With Examples
+#### 4. How Server Actions Handle cookieStore
 
-### Database Function Pattern
+Server actions are responsible for retrieving and passing cookieStore:
 
 ```typescript
-// CORRECT DATABASE FUNCTION
+// CORRECT SERVER ACTION IMPLEMENTATION
+'use server';
+
+import { cookies } from 'next/headers';
+import { myDatabaseFunction } from '@/lib/supabase/db-module/module';
+
+export async function myServerAction(param: string): Promise<Result> {
+  // Get cookieStore here in the server action
+  const cookieStore = cookies();
+  
+  // Pass cookieStore to database function
+  return myDatabaseFunction(param, undefined, cookieStore);
+}
+```
+
+#### 5. Using cookieStore for Authentication
+
+All authentication operations must use cookieStore to access session tokens:
+
+```typescript
+// Database function
+export async function getUserProfile(userId: string, cookieStore?: any): Promise<Result> {
+  const supabase = await createClient(cookieStore);
+  // ...
+}
+
+// Server action
+export async function getCurrentUserProfile(): Promise<Result> {
+  const cookieStore = cookies();
+  const { data: { user } } = await createClient(cookieStore).auth.getUser();
+  if (!user) return { success: false, error: 'Not authenticated' };
+  return getUserProfile(user.id, cookieStore);
+}
+```
+
+#### 6. CRITICAL: Properly Await Cookie Access
+
+When implementing cookie access in the server client, ALWAYS await the cookie retrieval:
+
+```typescript
+// CORRECT: Await cookie access
+async get(name) {
+  try {
+    const cookie = await cookieHandler.get(name);
+    return cookie?.value;
+  } catch (error) {
+    console.warn(`[@supabase:server] Could not get cookie ${name}: ${error.message}`);
+    return undefined;
+  }
+}
+
+// WRONG: Synchronous cookie access
+async get(name) {
+  return cookieHandler.get(name)?.value; // Will cause "cookies() should be awaited" errors
+}
+```
+
+This synchronous cookie access is a common cause of errors like `Route used cookies().get(). cookies() should be awaited before using its value.`
+
+### Database Function Implementation
+
+```typescript
+// CORRECT DATABASE FUNCTION IMPLEMENTATION
+// src/lib/supabase/db-teams/teams.ts
 import { createClient } from '@/lib/supabase/server';
 
 export async function getTeamById(teamId: string, cookieStore?: any): Promise<TeamResult> {
   try {
-    console.log(`[@db:teams:getTeamById] Getting team: ${teamId}`);
-    
-    // Pass cookieStore to createClient
     const supabase = await createClient(cookieStore);
-    
     const { data, error } = await supabase
       .from('teams')
       .select('*')
       .eq('id', teamId)
       .single();
-
-    if (error) throw error;
     
-    return { success: true, data };
+    // Process and return data
   } catch (error) {
-    console.error(`[@db:teams:getTeamById] Error:`, error);
-    return { success: false, error: error.message };
+    // Handle errors
   }
 }
 ```
 
-### Server Action Pattern
+### Server Action Implementation
 
 ```typescript
-// CORRECT SERVER ACTION
+// CORRECT SERVER ACTION IMPLEMENTATION
+// src/app/actions/team.ts
 'use server';
 
 import { cookies } from 'next/headers';
 import { getTeamById } from '@/lib/supabase/db-teams/teams';
+import type { Team } from '@/types/team';
 
-export async function getTeam(id: string) {
-  // Get cookieStore in server action
+export async function getTeam(id: string): Promise<Team | null> {
   const cookieStore = cookies();
+  const result = await getTeamById(id, cookieStore);
+  return result.success ? result.data : null;
+}
+
+// Re-export types for client usage
+export type { Team };
+```
+
+### Client Component Implementation
+
+```typescript
+// CORRECT CLIENT COMPONENT IMPLEMENTATION
+// src/components/TeamDisplay.tsx
+'use client';
+
+import { useState, useEffect } from 'react';
+import { getTeam, type Team } from '@/app/actions/team';
+
+export function TeamDisplay({ teamId }: { teamId: string }) {
+  const [team, setTeam] = useState<Team | null>(null);
   
-  // Pass to database function
-  return getTeamById(id, cookieStore);
+  useEffect(() => {
+    async function loadTeam() {
+      const teamData = await getTeam(teamId);
+      setTeam(teamData);
+    }
+    loadTeam();
+  }, [teamId]);
+  
+  // Render UI with team data
 }
 ```
 
-## Common Anti-Patterns to Avoid
+## Module Export Best Practices
 
-### ❌ Importing cookies in database layer
+- ✅ ALWAYS use named exports to avoid conflicts
+- ✅ Use `export type` for TypeScript types to avoid compilation issues
+- ✅ Rename exports when consolidating from multiple files:
+
 ```typescript
-// NEVER DO THIS
-import { cookies } from 'next/headers'; // ❌ WRONG
+// CORRECT INDEX FILE PATTERN
+// src/lib/supabase/db-teams/index.ts
+export type { Team, TeamResult } from './teams';
+export {
+  getTeamById,
+  getTeams,
+  createTeam,
+  updateTeam,
+  deleteTeam,
+  getUserTeams as getTeamsByUser
+} from './teams';
 
-export async function getUserData(userId: string) {
-  const cookieStore = cookies(); // ❌ WRONG
-  // ...
-}
+export {
+  getTeamMembers,
+  addTeamMember,
+  updateTeamMemberRole,
+  removeTeamMember  
+} from './team-members';
+
+export * from './permissions';
 ```
 
-### ❌ Missing cookieStore parameter
-```typescript
-// NEVER DO THIS
-export async function getTeamData(teamId: string) { // ❌ Missing cookieStore parameter
-  const supabase = await createClient(); // ❌ Missing cookieStore
-  // ...
-}
-```
-
-### ❌ Synchronous cookie access 
-```typescript
-// NEVER DO THIS
-async get(name) {
-  return cookieHandler.get(name)?.value; // ❌ WRONG: Sync access
-}
-```
-
-## Troubleshooting Cookie Errors
-
-If you encounter cookie-related errors:
-
-1. Check for direct `cookies()` imports in database layer files
-2. Verify all database functions accept `cookieStore` parameter
-3. Ensure all cookie access is properly awaited
-4. Check that server actions pass `cookieStore` to database functions
-5. Verify `server.ts` implementation has properly awaited cookie access
-6. Add try/catch blocks around cookie operations
+- ❌ NEVER use `export *` from multiple files with overlapping export names
+- ❌ NEVER export default from context components unless absolutely necessary
 
 ## Authentication Flow
 
@@ -187,9 +273,21 @@ If you encounter cookie-related errors:
 - ✅ Pass to database functions: `return dbFunction(id, cookieStore);`
 - ❌ NEVER create your own authentication flow outside this pattern
 
-## Module Export Best Practices
+## Common Anti-patterns to Avoid
 
-- ✅ ALWAYS use named exports to avoid conflicts
-- ✅ Use `export type` for TypeScript types to avoid compilation issues
-- ✅ Rename exports when consolidating from multiple files
-- ❌ NEVER use `export *` from multiple files with overlapping export names
+- ❌ **NEVER** create custom browser client files 
+- ❌ **NEVER** import from database layer directly in client components
+- ❌ **NEVER** mix database operations and UI logic
+- ❌ **NEVER** use star exports from multiple files with same named exports
+- ❌ **NEVER** export components as default unless required by external libraries
+- ❌ **NEVER** import `cookies()` directly in database layer files
+
+## Debugging Database Access Issues
+
+If you encounter database access issues:
+1. Check that you're using `createClient` from `/lib/supabase/server.ts`
+2. Verify `cookieStore` is passed through the entire call chain
+3. Ensure API routes use `cookies()` from `next/headers`
+4. Confirm you're not importing browser-specific modules server-side
+5. Check for synchronous cookie access errors, always ensure async/await is used correctly
+6. Verify that your database functions accept a cookieStore parameter

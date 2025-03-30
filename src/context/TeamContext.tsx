@@ -15,8 +15,8 @@ import {
   Team,
   getTeamById,
   getUserTeams,
-  setUserActiveTeam,
-  getUserActiveTeam,
+  setUserActiveTeam as saveUserActiveTeamToServer,
+  getUserActiveTeam as fetchUserActiveTeam,
 } from '@/app/actions/team';
 import { useUser } from '@/context/UserContext';
 
@@ -33,7 +33,6 @@ interface TeamContextState {
     operation: Operation,
     creatorId?: string,
   ) => Promise<boolean>;
-  syncWithUserContext: () => Promise<void>;
 }
 
 const defaultState: TeamContextState = {
@@ -45,19 +44,12 @@ const defaultState: TeamContextState = {
   switchTeam: async () => false,
   refreshTeams: async () => {},
   checkPermission: async () => false,
-  syncWithUserContext: async () => {},
 };
 
 const TeamContext = createContext<TeamContextState>(defaultState);
 
 export function TeamProvider({ children }: { children: React.ReactNode }) {
-  const {
-    user,
-    isLoading: userLoading,
-    teams: userTeams,
-    selectedTeam,
-    setSelectedTeam,
-  } = useUser();
+  const { user, isLoading: userLoading } = useUser();
   const [teams, setTeams] = useState<Team[]>([]);
   const [activeTeam, setActiveTeam] = useState<Team | null>(null);
   const [permissions, setPermissions] = useState<PermissionMatrix[]>([]);
@@ -92,20 +84,6 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
     loadPermissions();
   }, [user, activeTeam]);
 
-  // Sync the selected team from UserContext to TeamContext
-  useEffect(() => {
-    if (selectedTeam && (!activeTeam || selectedTeam.id !== activeTeam.id)) {
-      switchTeam(selectedTeam.id);
-    }
-  }, [selectedTeam]);
-
-  // Sync the active team from TeamContext to UserContext
-  useEffect(() => {
-    if (activeTeam && (!selectedTeam || activeTeam.id !== selectedTeam.id)) {
-      setSelectedTeam(activeTeam.id);
-    }
-  }, [activeTeam, selectedTeam, setSelectedTeam]);
-
   const loadTeams = async () => {
     if (!user) return;
 
@@ -134,14 +112,14 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
     setError(null);
 
     try {
-      const result = await getUserActiveTeam(user.id);
+      const result = await fetchUserActiveTeam(user.id);
 
       if (result.success && result.data) {
         setActiveTeam(result.data);
       } else if (teams.length > 0) {
         // If no active team but teams exist, set the first one as active
         setActiveTeam(teams[0]);
-        await setUserActiveTeam(user.id, teams[0].id);
+        await saveUserActiveTeamToServer(user.id, teams[0].id);
       } else {
         setError('No teams available');
       }
@@ -189,7 +167,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Set active team in user profile
-      const result = await setUserActiveTeam(user.id, teamId);
+      const result = await saveUserActiveTeamToServer(user.id, teamId);
       if (result.success) {
         setActiveTeam(teamResult.data);
         await loadPermissions();
@@ -209,12 +187,6 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
 
   const refreshTeams = async () => {
     await loadTeams();
-  };
-
-  const syncWithUserContext = async () => {
-    if (selectedTeam && (!activeTeam || selectedTeam.id !== activeTeam.id)) {
-      await switchTeam(selectedTeam.id);
-    }
   };
 
   // Use the checkPermission server action
@@ -241,7 +213,6 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
     switchTeam,
     refreshTeams,
     checkPermission: checkTeamPermission,
-    syncWithUserContext,
   };
 
   return <TeamContext.Provider value={value}>{children}</TeamContext.Provider>;
@@ -249,22 +220,11 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
 
 export function useTeam() {
   const context = useContext(TeamContext);
-  if (context === undefined) {
-    throw new Error('useTeam must be used within a TeamProvider');
-  }
+  if (!context) throw new Error('useTeam must be used within a TeamProvider');
   return context;
 }
 
-// Export a hook for checking permissions
 export function usePermission() {
-  const { activeTeam, user, checkPermission } = useTeam();
-
-  return useCallback(
-    async (resourceType: ResourceType, operation: Operation, resourceCreatorId?: string) => {
-      return checkPermission(resourceType, operation, resourceCreatorId);
-    },
-    [activeTeam, user, checkPermission],
-  );
+  const { checkPermission } = useContext(TeamContext);
+  return { checkPermission };
 }
-
-export default TeamContext;

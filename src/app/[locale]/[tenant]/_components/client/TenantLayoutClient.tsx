@@ -2,7 +2,6 @@
 
 import { ReactNode } from 'react';
 
-import { PermissionProvider } from '@/context/PermissionContext';
 import { TeamProvider } from '@/context/TeamContext';
 import { UserProvider } from '@/context/UserContext';
 import { User } from '@/types/user';
@@ -17,9 +16,7 @@ export default function TenantLayoutClient({
 }) {
   return (
     <UserProvider initialUser={user}>
-      <TeamProvider>
-        <PermissionProvider>{children}</PermissionProvider>
-      </TeamProvider>
+      <TeamProvider>{children}</TeamProvider>
     </UserProvider>
   );
 }
