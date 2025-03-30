@@ -148,6 +148,11 @@
     "success": {
       "created": "Connection created",
       "connected": "Connected successfully to {name}"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "testConnection": "Test Connection",
+      "save": "Save"
     }
   },
   "Dashboard": {

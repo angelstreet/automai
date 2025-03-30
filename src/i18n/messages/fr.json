@@ -136,6 +136,11 @@
     "success": {
       "created": "Connexion créée",
       "connected": "Connecté avec succès à {name}"
+    },
+    "actions": {
+      "cancel": "Annuler",
+      "testConnection": "Tester la connexion",
+      "save": "Enregistrer"
     }
   },
   "Dashboard": {

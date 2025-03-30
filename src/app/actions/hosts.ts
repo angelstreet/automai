@@ -115,19 +115,6 @@ export async function createHost(
 
     logger.info(`[@action:hosts:createHost] Starting host creation for user: ${currentUser.id}`);
 
-    // Validate SSH hosts have username and password
-    if (data.type === 'ssh') {
-      if (!data.user || !data.password || data.user.trim() === '' || data.password.trim() === '') {
-        logger.error(
-          `[@action:hosts:createHost] Validation failed: SSH hosts require username and password`,
-        );
-        return {
-          success: false,
-          error: 'SSH hosts require both username and password',
-        };
-      }
-    }
-
     // Get the active team ID from user context instead of direct cookie access
     const { getUserActiveTeam, getUserTeams, createTeam } = await import('@/app/actions/team');
 

@@ -70,24 +70,9 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
       return false;
     }
 
-    if (formData.type === 'ssh') {
-      if (!formData.username.trim()) {
-        toast.error(
-          t('errors.usernameRequired', {
-            defaultValue: 'Username is required for SSH connections',
-          }),
-        );
-        return false;
-      }
-
-      if (!formData.password.trim()) {
-        toast.error(
-          t('errors.passwordRequired', {
-            defaultValue: 'Password is required for SSH connections',
-          }),
-        );
-        return false;
-      }
+    if (formData.type === 'ssh' && (!formData.username.trim() || !formData.password.trim())) {
+      toast.error(t('errors.sshCredentials'));
+      return false;
     }
 
     return true;
