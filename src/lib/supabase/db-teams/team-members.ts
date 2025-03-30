@@ -37,8 +37,6 @@ export async function getTeamMembers(
       )
       .eq('team_id', teamId);
 
-    console.log('[@db:team-members:getTeamMembers] Team members:', data);
-
     if (error) {
       console.error('[@db:team-members:getTeamMembers] Error fetching team members:', error);
       return { success: false, error: error.message };

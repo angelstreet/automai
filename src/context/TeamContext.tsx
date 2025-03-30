@@ -16,13 +16,16 @@ import {
   getUserTeams,
   setUserActiveTeam as saveUserActiveTeamToServer,
   getUserActiveTeam as fetchUserActiveTeam,
+  getTeamMembers as getTeamMembersAction,
 } from '@/app/actions/team';
 import { useUser } from '@/context/UserContext';
+import type { TeamMember } from '@/types/context/team';
 
 interface TeamContextState {
   teams: Team[];
   activeTeam: Team | null;
   permissions: PermissionMatrix[];
+  teamMembers: Record<string, TeamMember[]>;
   loading: boolean;
   error: string | null;
   switchTeam: (teamId: string) => Promise<boolean>;
@@ -32,17 +35,22 @@ interface TeamContextState {
     operation: Operation,
     creatorId?: string,
   ) => Promise<boolean>;
+  getTeamMembers: (teamId: string) => Promise<TeamMember[]>;
+  invalidateTeamMembersCache: (teamId: string) => void;
 }
 
 const defaultState: TeamContextState = {
   teams: [],
   activeTeam: null,
   permissions: [],
+  teamMembers: {},
   loading: true,
   error: null,
   switchTeam: async () => false,
   refreshTeams: async () => {},
   checkPermission: async () => false,
+  getTeamMembers: async () => [],
+  invalidateTeamMembersCache: () => {},
 };
 
 const TeamContext = createContext<TeamContextState>(defaultState);
@@ -62,6 +70,7 @@ export function TeamProvider({
   const [teams, setTeams] = useState<Team[]>(initialTeams);
   const [activeTeam, setActiveTeam] = useState<Team | null>(initialActiveTeam);
   const [permissions, setPermissions] = useState<PermissionMatrix[]>([]);
+  const [teamMembers, setTeamMembers] = useState<Record<string, TeamMember[]>>({});
   const [loading, setLoading] = useState(!initialTeams.length && !initialActiveTeam);
   const [error, setError] = useState<string | null>(null);
 
@@ -77,6 +86,7 @@ export function TeamProvider({
       setTeams([]);
       setActiveTeam(null);
       setPermissions([]);
+      setTeamMembers({});
       setLoading(false);
     }
   }, [user, userLoading, initialTeams.length]);
@@ -221,15 +231,61 @@ export function TeamProvider({
     [user, activeTeam],
   );
 
+  // Get team members with caching
+  const getTeamMembersFromContext = useCallback(
+    async (teamId: string): Promise<TeamMember[]> => {
+      if (!teamId) return [];
+
+      // Return cached data if available
+      if (teamMembers[teamId]) {
+        console.log(`[@context:team] Using cached team members for team ${teamId}`);
+        return teamMembers[teamId];
+      }
+
+      // Otherwise fetch data
+      try {
+        console.log(`[@context:team] Fetching team members for team ${teamId}`);
+        const result = await getTeamMembersAction(teamId);
+        if (result.success && result.data) {
+          // Cache the result
+          setTeamMembers((prev) => {
+            const newMembers = { ...prev };
+            newMembers[teamId] = result.data as TeamMember[];
+            return newMembers;
+          });
+          return result.data as TeamMember[];
+        }
+        return [];
+      } catch (error) {
+        console.error('[@context:team] Error fetching team members:', error);
+        return [];
+      }
+    },
+    [teamMembers],
+  );
+
+  // Function to invalidate team members cache for a specific team
+  const invalidateTeamMembersCache = useCallback((teamId: string) => {
+    console.log(`[@context:team] Invalidating team members cache for team ${teamId}`);
+    setTeamMembers((prev) => {
+      const newMembers = { ...prev };
+      delete newMembers[teamId];
+      return newMembers;
+    });
+  }, []);
+
   const value = {
     teams,
     activeTeam,
     permissions,
+    teamMembers,
     loading,
     error,
     switchTeam,
     refreshTeams,
     checkPermission: checkTeamPermission,
+    getTeamMembers: getTeamMembersFromContext,
+    invalidateTeamMembersCache,
   };
 
   return <TeamContext.Provider value={value}>{children}</TeamContext.Provider>;

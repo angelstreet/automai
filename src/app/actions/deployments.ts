@@ -120,7 +120,7 @@ export async function getDeploymentById(id: string): Promise<Deployment | null> 
     const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
 
     // Fetch the deployment from the database
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const result = await deploymentDb.findUnique(id, cookieStore);
 
     // Handle the result

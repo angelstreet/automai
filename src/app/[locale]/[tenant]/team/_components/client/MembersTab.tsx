@@ -4,12 +4,20 @@ import { MoreHorizontal, PlusIcon, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 
-import { getTeamMembers } from '@/app/actions/team';
 import { TeamMemberDetails } from '@/app/[locale]/[tenant]/team/types';
+import { removeTeamMember } from '@/app/actions/team';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
 import { Badge } from '@/components/shadcn/badge';
 import { Button } from '@/components/shadcn/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
+import { Card, CardContent, CardHeader } from '@/components/shadcn/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/shadcn/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,6 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/shadcn/table';
+import { useTeam } from '@/context/TeamContext';
 import { User } from '@/types/user';
 
 import MembersTabSkeleton from '../MembersTabSkeleton';
@@ -38,9 +47,13 @@ interface MembersTabProps {
 
 export function MembersTab({ teamId, userRole, subscriptionTier, user: _user }: MembersTabProps) {
   const t = useTranslations('team');
+  const { getTeamMembers, invalidateTeamMembersCache } = useTeam();
   const [members, setMembers] = useState<TeamMemberDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [memberToRemove, setMemberToRemove] = useState<TeamMemberDetails | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false);
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
 
   const canManageMembers =
     userRole && ['owner', 'admin'].includes(userRole.toLowerCase()) && subscriptionTier !== 'trial';
@@ -55,22 +68,47 @@ export function MembersTab({ teamId, userRole, subscriptionTier, user: _user }: 
 
       try {
         setIsLoading(true);
-        const result = await getTeamMembers(teamId);
-        if (result.success && result.data) {
-          setMembers(result.data);
-        } else {
-          console.error('Failed to fetch team members:', result.error);
-          setMembers([]);
-        }
+        // Use the cached function from context instead of direct server action
+        const membersData = await getTeamMembers(teamId);
+        setMembers(membersData as TeamMemberDetails[]);
       } catch (error) {
         console.error('Failed to fetch team members:', error);
+        setMembers([]);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchMembers();
-  }, [teamId]);
+  }, [teamId, getTeamMembers]);
+
+  const handleRemoveMember = async () => {
+    if (!teamId || !memberToRemove) return;
+
+    try {
+      setIsRemoving(true);
+      const result = await removeTeamMember(teamId, memberToRemove.profile_id);
+
+      if (result.success) {
+        // Invalidate the cache for this team
+        invalidateTeamMembersCache(teamId);
+
+        // Remove from local state
+        setMembers((current) =>
+          current.filter((member) => member.profile_id !== memberToRemove.profile_id),
+        );
+
+        setRemoveDialogOpen(false);
+      } else {
+        console.error('Failed to remove team member:', result.error);
+      }
+    } catch (error) {
+      console.error('Error removing team member:', error);
+    } finally {
+      setIsRemoving(false);
+      setMemberToRemove(null);
+    }
+  };
 
   const filteredMembers = members.filter(
     (member) =>
@@ -113,110 +151,145 @@ export function MembersTab({ teamId, userRole, subscriptionTier, user: _user }: 
   };
 
   return (
-    <Card>
-      <CardHeader className="py-2">
-        <div className="flex items-center justify-between gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder={t('membersTab.search')}
-              className="pl-8"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          {canManageMembers && (
-            <Button disabled={!teamId} size="sm">
-              <PlusIcon className="h-4 w-4 mr-1" />
-              {t('membersTab.add')}
-            </Button>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[50px]"></TableHead>
-              <TableHead>{t('membersTab.name')}</TableHead>
-              <TableHead>{t('membersTab.team')}</TableHead>
-              <TableHead>{t('membersTab.email')}</TableHead>
-              <TableHead>{t('membersTab.role')}</TableHead>
-              {canManageMembers && (
-                <TableHead className="text-right">{t('membersTab.actions')}</TableHead>
-              )}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredMembers.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={canManageMembers ? 6 : 5}
-                  className="text-center py-8 text-muted-foreground"
-                >
-                  {searchQuery
-                    ? t('membersTab.noSearchResults')
-                    : teamId
-                      ? t('membersTab.noMembers')
-                      : t('membersTab.noTeam')}
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredMembers.map((member) => (
-                <TableRow key={member.profile_id}>
-                  <TableCell className="py-2">
-                    <Avatar>
-                      <AvatarImage
-                        src={member.user?.avatar_url || member.profiles?.avatar_url || ''}
-                        alt={member.user?.name || ''}
-                      />
-                      <AvatarFallback>{getInitials(member.user?.name)}</AvatarFallback>
-                    </Avatar>
-                  </TableCell>
-                  <TableCell className="py-2 font-medium">
-                    {member.user?.name || t('membersTab.unknownUser')}
-                  </TableCell>
-                  <TableCell className="py-2">
-                    {member.team_name || member.team?.name || t('membersTab.defaultTeam')}
-                  </TableCell>
-                  <TableCell className="py-2">
-                    {member.user?.email &&
-                    member.user.email !== 'Email unavailable in profiles table'
-                      ? member.user.email
-                      : t('membersTab.noEmail')}
-                  </TableCell>
-                  <TableCell className="py-2">
-                    <Badge className={getRoleBadgeColor(member.role)} variant="outline">
-                      {member.role}
-                    </Badge>
-                  </TableCell>
-                  {canManageMembers && (
-                    <TableCell className="py-2 text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Open menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            {t('membersTab.memberActions.changeRole')}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive">
-                            {t('membersTab.memberActions.remove')}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))
+    <>
+      <Card>
+        <CardHeader className="py-2">
+          <div className="flex items-center justify-between gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder={t('membersTab.search')}
+                className="pl-8"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            {canManageMembers && (
+              <Button disabled={!teamId} size="sm">
+                <PlusIcon className="h-4 w-4 mr-1" />
+                {t('membersTab.add')}
+              </Button>
             )}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[50px]"></TableHead>
+                <TableHead>{t('membersTab.name')}</TableHead>
+                <TableHead>{t('membersTab.team')}</TableHead>
+                <TableHead>{t('membersTab.email')}</TableHead>
+                <TableHead>{t('membersTab.role')}</TableHead>
+                {canManageMembers && (
+                  <TableHead className="text-right">{t('membersTab.actions')}</TableHead>
+                )}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredMembers.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={canManageMembers ? 6 : 5}
+                    className="text-center py-8 text-muted-foreground"
+                  >
+                    {searchQuery
+                      ? t('membersTab.noSearchResults')
+                      : teamId
+                        ? t('membersTab.noMembers')
+                        : t('membersTab.noTeam')}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredMembers.map((member) => (
+                  <TableRow key={member.profile_id}>
+                    <TableCell className="py-2">
+                      <Avatar>
+                        <AvatarImage
+                          src={member.user?.avatar_url || member.profiles?.avatar_url || ''}
+                          alt={member.user?.name || ''}
+                        />
+                        <AvatarFallback>{getInitials(member.user?.name)}</AvatarFallback>
+                      </Avatar>
+                    </TableCell>
+                    <TableCell className="py-2 font-medium">
+                      {member.user?.name || t('membersTab.unknownUser')}
+                    </TableCell>
+                    <TableCell className="py-2">{t('membersTab.defaultTeam')}</TableCell>
+                    <TableCell className="py-2">
+                      {member.user?.email &&
+                      member.user.email !== 'Email unavailable in profiles table'
+                        ? member.user.email
+                        : t('membersTab.noEmail')}
+                    </TableCell>
+                    <TableCell className="py-2">
+                      <Badge className={getRoleBadgeColor(member.role)} variant="outline">
+                        {member.role}
+                      </Badge>
+                    </TableCell>
+                    {canManageMembers && (
+                      <TableCell className="py-2 text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                              <span className="sr-only">Open menu</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>
+                              {t('membersTab.memberActions.changeRole')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() => {
+                                setMemberToRemove(member);
+                                setRemoveDialogOpen(true);
+                              }}
+                            >
+                              {t('membersTab.memberActions.remove')}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Remove Member Dialog */}
+      <Dialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('membersTab.remove.title')}</DialogTitle>
+            <DialogDescription>
+              {t('membersTab.remove.description', {
+                name:
+                  memberToRemove?.user?.name ||
+                  memberToRemove?.profiles?.tenant_name ||
+                  t('membersTab.unknownUser'),
+              })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRemoveDialogOpen(false)}
+              disabled={isRemoving}
+            >
+              {t('cancel')}
+            </Button>
+            <Button variant="destructive" onClick={handleRemoveMember} disabled={isRemoving}>
+              {isRemoving ? t('removing') : t('remove')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
