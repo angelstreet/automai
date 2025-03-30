@@ -266,14 +266,15 @@ export function MembersTab({ teamId, userRole, subscriptionTier, user: _user }: 
       <Dialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t('membersTab.remove.title')}</DialogTitle>
+            <DialogTitle>Remove Team Member</DialogTitle>
             <DialogDescription>
-              {t('membersTab.remove.description', {
-                name:
-                  memberToRemove?.user?.name ||
+              Are you sure you want to remove{' '}
+              <strong>
+                {memberToRemove?.user?.name ||
                   memberToRemove?.profiles?.tenant_name ||
-                  t('membersTab.unknownUser'),
-              })}
+                  t('membersTab.unknownUser')}
+              </strong>{' '}
+              from this team?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -282,10 +283,10 @@ export function MembersTab({ teamId, userRole, subscriptionTier, user: _user }: 
               onClick={() => setRemoveDialogOpen(false)}
               disabled={isRemoving}
             >
-              {t('cancel')}
+              Cancel
             </Button>
             <Button variant="destructive" onClick={handleRemoveMember} disabled={isRemoving}>
-              {isRemoving ? t('removing') : t('remove')}
+              {isRemoving ? 'Removing...' : 'Remove'}
             </Button>
           </DialogFooter>
         </DialogContent>

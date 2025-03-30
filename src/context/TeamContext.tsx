@@ -245,6 +245,7 @@ export function TeamProvider({
       // Otherwise fetch data
       try {
         console.log(`[@context:team] Fetching team members for team ${teamId}`);
+        setLoading(true); // Set loading state when fetching
         const result = await getTeamMembersAction(teamId);
         if (result.success && result.data) {
           // Cache the result
@@ -259,6 +260,8 @@ export function TeamProvider({
       } catch (error) {
         console.error('[@context:team] Error fetching team members:', error);
         return [];
+      } finally {
+        setLoading(false); // Clear loading state after fetch completes
       }
     },
     [teamMembers],
