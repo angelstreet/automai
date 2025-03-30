@@ -32,14 +32,21 @@ interface SidebarProviderProps {
 }
 
 export function SidebarProvider({ children, defaultOpen = true }: SidebarProviderProps) {
+  console.log(
+    `[@context:SidebarContext:SidebarProvider] Initializing with defaultOpen=${defaultOpen}`,
+  );
+
   // Check for multiple instances of SidebarProvider
   useEffect(() => {
     if (SIDEBAR_CONTEXT_INITIALIZED) {
       console.warn(
-        '[SidebarContext] Multiple instances detected. This may cause unexpected behavior.',
+        '[@context:SidebarContext:SidebarProvider] Multiple instances detected. This may cause unexpected behavior.',
       );
     } else {
       SIDEBAR_CONTEXT_INITIALIZED = true;
+      console.log(
+        '[@context:SidebarContext:SidebarProvider] Successfully initialized singleton instance',
+      );
     }
     return () => {
       // Only reset if this instance set it to true
@@ -68,8 +75,11 @@ export function SidebarProvider({ children, defaultOpen = true }: SidebarProvide
       localStorage.setItem(SIDEBAR_COOKIE_NAME, String(open));
       // Ensure cookie is also set for cross-tab persistence
       Cookies.set(SIDEBAR_COOKIE_NAME, String(open), { path: '/' });
+      console.log(
+        `[@context:SidebarContext:useEffect] Synced initial state to storage: ${open ? 'expanded' : 'collapsed'}`,
+      );
     } catch (e) {
-      console.error('Error syncing sidebar state', e);
+      console.error('[@context:SidebarContext:useEffect] ERROR: Error syncing sidebar state', e);
     }
 
     setIsInitialized(true);
@@ -104,6 +114,10 @@ export function SidebarProvider({ children, defaultOpen = true }: SidebarProvide
   // Use useCallback for toggleSidebar to prevent recreation on each render
   const toggleSidebar = useCallback(() => {
     const newOpen = !open;
+    console.log(
+      `[@context:SidebarContext:toggleSidebar] Toggling sidebar: ${open ? 'expanded' : 'collapsed'} -> ${newOpen ? 'expanded' : 'collapsed'}`,
+    );
+
     setOpen(newOpen);
     setState(newOpen ? 'expanded' : 'collapsed');
 
@@ -114,9 +128,15 @@ export function SidebarProvider({ children, defaultOpen = true }: SidebarProvide
         localStorage.setItem(SIDEBAR_COOKIE_NAME, String(newOpen));
         // Also update cookie for cross-tab persistence
         Cookies.set(SIDEBAR_COOKIE_NAME, String(newOpen), { path: '/' });
+        console.log(
+          `[@context:SidebarContext:toggleSidebar] Updated storage with new state: ${newOpen ? 'expanded' : 'collapsed'}`,
+        );
       } catch (e) {
         // If localStorage fails, still try to use cookies
-        console.error('Error storing sidebar state', e);
+        console.error(
+          '[@context:SidebarContext:toggleSidebar] ERROR: Error storing sidebar state',
+          e,
+        );
         Cookies.set(SIDEBAR_COOKIE_NAME, String(newOpen), { path: '/' });
       }
     }
@@ -156,6 +176,9 @@ export const useSidebar = () => {
 
       // Use the context value directly (which now comes from server)
       const initialOffset = context.open ? SIDEBAR_WIDTH : SIDEBAR_WIDTH_ICON;
+      console.log(
+        `[@context:SidebarContext:useSidebar] Initial layout effect, setting width to ${initialOffset} (state: ${context.open ? 'expanded' : 'collapsed'})`,
+      );
 
       // Set CSS variable for sidebar width
       root.style.setProperty('--sidebar-width-offset', initialOffset);
@@ -166,6 +189,7 @@ export const useSidebar = () => {
       // Restore transitions after a brief delay
       const timer = setTimeout(() => {
         root.style.removeProperty('transition');
+        console.log(`[@context:SidebarContext:useSidebar] Restored transitions after layout`);
       }, 50);
 
       return () => clearTimeout(timer);
@@ -178,6 +202,10 @@ export const useSidebar = () => {
     if (typeof document !== 'undefined') {
       const root = document.documentElement;
       const offset = context.open ? SIDEBAR_WIDTH : SIDEBAR_WIDTH_ICON;
+      console.log(
+        `[@context:SidebarContext:useSidebar] Updating width on state change: ${offset} (state: ${context.open ? 'expanded' : 'collapsed'})`,
+      );
+
       root.style.setProperty('--sidebar-width-offset', offset);
 
       // Also set a class on the body to help with responsive styling

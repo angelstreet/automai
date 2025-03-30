@@ -117,12 +117,12 @@
   body {
     @apply bg-background text-foreground;
   }
-  
+
   /* Set default sidebar width to prevent layout shifts */
   :root {
     --sidebar-width-offset: 14.5rem;
   }
-  
+
   /* Handle sidebar visibility with multiple fallbacks */
   /* Base visibility - ensure it's visible by default with a fallback */
   .sidebar-visible {
@@ -131,26 +131,40 @@
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     transition-duration: 150ms;
   }
-  
+
   /* Guarantee client-side visibility */
   .sidebar-ready {
     opacity: 0.999;
   }
-  
+
   /* Server-rendered temporary hidden state */
   html.js-loading .sidebar-visible:not(.sidebar-ready) {
     opacity: 0;
   }
-  
+
   /* If any hydration issues occur, force visibility after 500ms */
   @keyframes forceVisible {
-    0% { opacity: 0; }
-    100% { opacity: 0.999; }
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 0.999;
+    }
   }
-  
+
   body:has(.sidebar-visible) {
     animation: forceVisible 0ms;
     animation-delay: 500ms;
     animation-fill-mode: forwards;
+  }
+
+  /* Prevent TeamSwitcher flash when collapsed */
+  body.sidebar-collapsed .sidebar-header-content {
+    display: none !important;
+  }
+
+  /* Ensure TeamSwitcher appears immediately when sidebar is expanded */
+  body.sidebar-expanded .sidebar-header-content {
+    display: flex !important;
   }
 }

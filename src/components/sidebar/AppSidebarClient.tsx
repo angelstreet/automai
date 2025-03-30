@@ -5,10 +5,6 @@ import * as React from 'react';
 import { NavGroup } from '@/components/layout/NavGroup';
 import { NavUser } from '@/components/layout/NavUser';
 import { TeamSwitcher } from '@/components/layout/TeamSwitcher';
-import TeamSelector from '@/components/team/TeamSelector';
-import { useUser } from '@/context';
-import { User } from '@/types/user';
-
 import {
   Sidebar,
   SidebarContent,
@@ -19,6 +15,9 @@ import {
 } from '@/components/sidebar';
 import { APP_SIDEBAR_WIDTH, APP_SIDEBAR_WIDTH_ICON } from '@/components/sidebar/constants';
 import { sidebarData } from '@/components/sidebar/sidebarData';
+import TeamSelector from '@/components/team/TeamSelector';
+import { useUser } from '@/context';
+import { User } from '@/types/user';
 
 interface AppSidebarClientProps {
   user?: User | null;
@@ -28,18 +27,38 @@ interface AppSidebarClientProps {
 const AppSidebarClient = React.memo(function AppSidebarClient({
   user: propUser,
 }: AppSidebarClientProps) {
+  console.log('[@ui:AppSidebarClient:render] Rendering AppSidebarClient');
+
   const userContext = useUser();
   // Use prop user if available, otherwise fall back to context
   const user = propUser || userContext?.user || null;
   const { open } = useSidebar();
 
+  console.log(
+    `[@ui:AppSidebarClient:render] Initial sidebar state: ${open ? 'expanded' : 'collapsed'}`,
+  );
+
   // Initialize isCollapsed directly from the open state to prevent flashing
   const [isCollapsed, setIsCollapsed] = React.useState(!open);
 
-  // Keep isCollapsed in sync with open state
+  // Add a ref to track if this is the first render
+  const isFirstRender = React.useRef(true);
+
+  // Debug logging for state changes
   React.useEffect(() => {
+    if (isFirstRender.current) {
+      console.log(
+        `[@ui:AppSidebarClient:useEffect] First render, isCollapsed=${isCollapsed}, open=${open}`,
+      );
+      isFirstRender.current = false;
+    } else {
+      console.log(
+        `[@ui:AppSidebarClient:useEffect] Updating isCollapsed: ${isCollapsed} → ${!open}`,
+      );
+    }
+
     setIsCollapsed(!open);
-  }, [open]);
+  }, [open, isCollapsed]);
 
   // Simplified role resolution
   const effectiveRole = user?.role || 'viewer';
@@ -70,6 +89,17 @@ const AppSidebarClient = React.memo(function AppSidebarClient({
   const sidebarClassName =
     'fixed left-0 top-0 z-30 sidebar-visible animate-in fade-in-50 duration-300';
 
+  // Debug logging for render lifecycle
+  React.useEffect(() => {
+    console.log(
+      `[@ui:AppSidebarClient:useEffect] Component mounted with isCollapsed=${isCollapsed}`,
+    );
+
+    return () => {
+      console.log('[@ui:AppSidebarClient:useEffect] Component unmounting');
+    };
+  }, [isCollapsed]);
+
   return (
     <Sidebar
       collapsible="icon"
@@ -82,12 +112,12 @@ const AppSidebarClient = React.memo(function AppSidebarClient({
         } as React.CSSProperties
       }
     >
-      {!isCollapsed && (
-        <SidebarHeader className="p-1.5 flex flex-col gap-2">
+      <SidebarHeader className="p-1.5">
+        <div className="sidebar-header-content flex flex-col gap-2">
           <TeamSwitcher defaultCollapsed={!open} user={user} />
           <TeamSelector />
-        </SidebarHeader>
-      )}
+        </div>
+      </SidebarHeader>
       <SidebarContent className={isCollapsed ? 'pt-4' : 'pt-2'}>
         {filteredNavigation.map((group) => (
           <NavGroup key={group.title} {...group} />
