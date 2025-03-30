@@ -62,6 +62,42 @@ export type RoleTemplateResult = {
 };
 
 /**
+ * Format permissions into a readable log output
+ * @param permissions Array of permission matrices
+ * @param profileId User profile ID
+ * @param teamId Team ID
+ * @returns Formatted log message
+ */
+export function formatPermissionsLog(
+  permissions: PermissionMatrix[],
+  profileId: string,
+  teamId: string,
+): string {
+  // Create a header
+  let message = `\n[PERMISSIONS LOG] User ID: ${profileId} | Team ID: ${teamId}\n`;
+  message += '='.repeat(80) + '\n';
+
+  if (!permissions || permissions.length === 0) {
+    return message + 'NO PERMISSIONS FOUND FOR THIS USER\n' + '='.repeat(80);
+  }
+
+  // Group by resource type for better readability
+  permissions.forEach((perm) => {
+    message += `\n🔑 RESOURCE: ${perm.resource_type}\n`;
+    message += `   ├─ SELECT:      ${perm.can_select ? '✓ ALLOWED' : '✗ DENIED'}\n`;
+    message += `   ├─ INSERT:      ${perm.can_insert ? '✓ ALLOWED' : '✗ DENIED'}\n`;
+    message += `   ├─ UPDATE:      ${perm.can_update ? '✓ ALLOWED' : '✗ DENIED'}\n`;
+    message += `   ├─ DELETE:      ${perm.can_delete ? '✓ ALLOWED' : '✗ DENIED'}\n`;
+    message += `   ├─ UPDATE_OWN:  ${perm.can_update_own ? '✓ ALLOWED' : '✗ DENIED'}\n`;
+    message += `   ├─ DELETE_OWN:  ${perm.can_delete_own ? '✓ ALLOWED' : '✗ DENIED'}\n`;
+    message += `   └─ EXECUTE:     ${perm.can_execute ? '✓ ALLOWED' : '✗ DENIED'}\n`;
+  });
+
+  message += '='.repeat(80);
+  return message;
+}
+
+/**
  * Get all permissions for a user in a specific team
  */
 export async function getUserPermissions(
@@ -85,6 +121,16 @@ export async function getUserPermissions(
     console.log(
       `[@db:permissions:getUserPermissions] Successfully retrieved ${data?.length || 0} permissions`,
     );
+
+    // Add detailed permissions log
+    if (data && data.length > 0) {
+      console.log(formatPermissionsLog(data, profileId, teamId));
+    } else {
+      console.log(
+        `[@db:permissions:getUserPermissions] No permissions found for user: ${profileId}`,
+      );
+    }
+
     return {
       success: true,
       data: data,
@@ -180,6 +226,18 @@ export async function applyRoleTemplate(
     if (error) throw error;
 
     console.log('[@db:permissions:applyRoleTemplate] Successfully applied role template');
+
+    // Get and log the permissions that were just applied
+    const { data } = await supabase
+      .from('permission_matrix')
+      .select('*')
+      .eq('profile_id', profileId)
+      .eq('team_id', teamId);
+
+    if (data && data.length > 0) {
+      console.log(formatPermissionsLog(data, profileId, teamId));
+    }
+
     return {
       success: true,
     };
@@ -257,6 +315,20 @@ export async function setUserPermission(
     if (error) throw error;
 
     console.log('[@db:permissions:setUserPermission] Successfully set user permission');
+
+    // Get and log the updated permissions
+    const { data } = await supabase
+      .from('permission_matrix')
+      .select('*')
+      .eq('team_id', teamId)
+      .eq('profile_id', profileId)
+      .eq('resource_type', resourceType);
+
+    if (data && data.length > 0) {
+      console.log(`Permission set for resource ${resourceType}:`);
+      console.log(data[0]);
+    }
+
     return {
       success: true,
     };
@@ -311,8 +383,21 @@ export async function checkPermission(
 
     if (error) throw error;
 
-    console.log(`[@db:permissions:checkPermission] Permission check result: ${data === true}`);
-    return data === true;
+    // Log the permission check result in a more detailed way
+    const result = data === true;
+    console.log(`
+[@db:permissions:checkPermission] PERMISSION CHECK RESULT:
+┌─────────────────────────────────────────────────┐
+│ User ID:      ${profileId.substring(0, 8)}...   │
+│ Team ID:      ${teamId.substring(0, 8)}...      │
+│ Resource:     ${resourceType.padEnd(15)}        │
+│ Operation:    ${operation.padEnd(15)}           │
+│ Own Resource: ${isOwnResource ? 'Yes' : 'No'}   │
+│ RESULT:       ${result ? '✓ ALLOWED' : '✗ DENIED'} │
+└─────────────────────────────────────────────────┘
+    `);
+
+    return result;
   } catch (error) {
     console.error('[@db:permissions:checkPermission] Error checking permission:', error);
     return false;
