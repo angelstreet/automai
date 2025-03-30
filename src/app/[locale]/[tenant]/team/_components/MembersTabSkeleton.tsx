@@ -18,16 +18,15 @@ export default function MembersTabSkeleton() {
 
   return (
     <Card>
-      <CardHeader className="pb-3">
-        <div className="flex justify-between items-center">
-          <CardTitle>{t('membersTab.title')}</CardTitle>
+      <CardHeader className="py-2">
+        <div className="flex items-center justify-between gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Skeleton className="h-10 w-full" />
+          </div>
           <Skeleton className="h-9 w-32" />
         </div>
       </CardHeader>
       <CardContent>
-        <div className="mb-4">
-          <Skeleton className="h-10 w-full" />
-        </div>
         <Table>
           <TableHeader>
             <TableRow>
@@ -53,19 +52,19 @@ export default function MembersTabSkeleton() {
               .fill(0)
               .map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell>
+                  <TableCell className="py-2">
                     <Skeleton className="h-10 w-10 rounded-full" />
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="py-2">
                     <Skeleton className="h-4 w-32" />
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="py-2">
                     <Skeleton className="h-4 w-40" />
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="py-2">
                     <Skeleton className="h-4 w-24" />
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="py-2 text-right">
                     <Skeleton className="h-8 w-16 ml-auto" />
                   </TableCell>
                 </TableRow>

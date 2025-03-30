@@ -114,20 +114,9 @@ export function MembersTab({ teamId, userRole, subscriptionTier, user: _user }: 
 
   return (
     <Card>
-      <CardHeader className="pb-3">
-        <div className="flex justify-between items-center">
-          <CardTitle>{t('membersTab.title')}</CardTitle>
-          {canManageMembers && (
-            <Button disabled={!teamId} size="sm">
-              <PlusIcon className="h-4 w-4 mr-1" />
-              {t('membersTab.add')}
-            </Button>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="mb-4">
-          <div className="relative">
+      <CardHeader className="py-2">
+        <div className="flex items-center justify-between gap-4">
+          <div className="relative flex-1 max-w-md">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
@@ -137,8 +126,15 @@ export function MembersTab({ teamId, userRole, subscriptionTier, user: _user }: 
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+          {canManageMembers && (
+            <Button disabled={!teamId} size="sm">
+              <PlusIcon className="h-4 w-4 mr-1" />
+              {t('membersTab.add')}
+            </Button>
+          )}
         </div>
-
+      </CardHeader>
+      <CardContent>
         <Table>
           <TableHeader>
             <TableRow>
@@ -156,7 +152,7 @@ export function MembersTab({ teamId, userRole, subscriptionTier, user: _user }: 
               <TableRow>
                 <TableCell
                   colSpan={canManageMembers ? 5 : 4}
-                  className="text-center py-10 text-muted-foreground"
+                  className="text-center py-8 text-muted-foreground"
                 >
                   {searchQuery
                     ? t('membersTab.noSearchResults')
@@ -168,7 +164,7 @@ export function MembersTab({ teamId, userRole, subscriptionTier, user: _user }: 
             ) : (
               filteredMembers.map((member) => (
                 <TableRow key={member.profile_id}>
-                  <TableCell>
+                  <TableCell className="py-2">
                     <Avatar>
                       <AvatarImage
                         src={member.user?.avatar_url || member.profiles?.avatar_url || ''}
@@ -177,22 +173,22 @@ export function MembersTab({ teamId, userRole, subscriptionTier, user: _user }: 
                       <AvatarFallback>{getInitials(member.user?.name)}</AvatarFallback>
                     </Avatar>
                   </TableCell>
-                  <TableCell className="font-medium">
+                  <TableCell className="py-2 font-medium">
                     {member.user?.name || t('membersTab.unknownUser')}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="py-2">
                     {member.user?.email &&
                     member.user.email !== 'Email unavailable in profiles table'
                       ? member.user.email
                       : t('membersTab.noEmail')}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="py-2">
                     <Badge className={getRoleBadgeColor(member.role)} variant="outline">
                       {member.role}
                     </Badge>
                   </TableCell>
                   {canManageMembers && (
-                    <TableCell className="text-right">
+                    <TableCell className="py-2 text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon">
