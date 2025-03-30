@@ -5,7 +5,7 @@ import { createClient } from '../server';
 // Deployment DB operations
 const deployment = {
   async findMany(options: any = {}, cookieStore?: any) {
-    console.log('DB layer: Finding many deployments with options:', JSON.stringify(options));
+    console.log('[DB-DEPLOYMENT]: Finding many deployments with options:', JSON.stringify(options));
 
     // Create client with provided cookie store or get a new one
     const supabase = await createClient(cookieStore);
@@ -65,7 +65,7 @@ const deployment = {
       return [];
     }
 
-    console.log('DB layer: Found', data?.length || 0, 'deployments');
+    console.log('[DB-DEPLOYMENT]: Found', data?.length || 0, 'deployments');
     return data || [];
   },
 
@@ -109,13 +109,13 @@ const deployment = {
   },
 
   async create({ data }: { data: any }, cookieStore?: any): Promise<any> {
-    console.log('DB layer: Creating deployment with data:', JSON.stringify(data, null, 2));
+    console.log('[DB-DEPLOYMENT]: Creating deployment with data:', JSON.stringify(data, null, 2));
 
     try {
-      console.log('DB layer: Creating Supabase client...');
+      console.log('[DB-DEPLOYMENT]: Creating Supabase client...');
       // Create client with provided cookie store or get a new one
       const supabase = await createClient(cookieStore);
-      console.log('DB layer: Supabase client created');
+      console.log('[DB-DEPLOYMENT]: Supabase client created');
 
       const deploymentData = {
         name: data.name,
@@ -147,20 +147,20 @@ const deployment = {
         .single();
 
       if (error) {
-        console.error('DB layer: Error creating deployment:', error);
+        console.error('[DB-DEPLOYMENT]: Error creating deployment:', error);
         return {
           success: false,
           error: `Failed to create deployment: ${error.message}`,
         };
       }
 
-      console.log('DB layer: Deployment created successfully with ID:', result.id);
+      console.log('[DB-DEPLOYMENT]: Deployment created successfully with ID:', result.id);
       return {
         success: true,
         data: result,
       };
     } catch (error) {
-      console.error('DB layer: Error creating deployment:', error);
+      console.error('[DB-DEPLOYMENT]: Error creating deployment:', error);
       return {
         success: false,
         error: `Failed to create deployment: ${error instanceof Error ? error.message : String(error)}`,
@@ -169,14 +169,14 @@ const deployment = {
   },
 
   async update(id: string, data: any, cookieStore?: any) {
-    console.log('DB layer: Updating deployment with id:', id);
-    console.log('DB layer: Updating deployment with data:', JSON.stringify(data, null, 2));
+    console.log('[DB-DEPLOYMENT]: Updating deployment with id:', id);
+    console.log('[DB-DEPLOYMENT]: Updating deployment with data:', JSON.stringify(data, null, 2));
 
     try {
-      console.log('DB layer: Creating Supabase client...');
+      console.log('[DB-DEPLOYMENT]: Creating Supabase client...');
       // Create client with provided cookie store or get a new one
       const supabase = await createClient(cookieStore);
-      console.log('DB layer: Supabase client created');
+      console.log('[DB-DEPLOYMENT]: Supabase client created');
 
       // Prepare update data
       const updateData = {
@@ -194,7 +194,7 @@ const deployment = {
         environment_vars: data.environment_vars,
       };
 
-      console.log('DB layer: Final update data:', JSON.stringify(updateData, null, 2));
+      console.log('[DB-DEPLOYMENT]: Final update data:', JSON.stringify(updateData, null, 2));
 
       const { data: result, error } = await supabase
         .from('deployments')
@@ -204,20 +204,20 @@ const deployment = {
         .single();
 
       if (error) {
-        console.error('DB layer: Error updating deployment:', error);
+        console.error('[DB-DEPLOYMENT]: Error updating deployment:', error);
         return {
           success: false,
           error: `Failed to update deployment: ${error.message}`,
         };
       }
 
-      console.log('DB layer: Deployment updated successfully');
+      console.log('[DB-DEPLOYMENT]: Deployment updated successfully');
       return {
         success: true,
         data: result,
       };
     } catch (error) {
-      console.error('DB layer: Error updating deployment:', error);
+      console.error('[DB-DEPLOYMENT]: Error updating deployment:', error);
       return {
         success: false,
         error: `Failed to update deployment: ${error instanceof Error ? error.message : String(error)}`,
@@ -230,11 +230,11 @@ const deployment = {
     console.log(`DB layer: DELETE OPERATION START - Deployment ID: ${id}`);
     console.log(`=======================================`);
 
-    console.log('DB layer: Deleting deployment with id:', id);
-    console.log('DB layer: cookieStore provided:', !!cookieStore);
+    console.log('[DB-DEPLOYMENT]: Deleting deployment with id:', id);
+    console.log('[DB-DEPLOYMENT]: cookieStore provided:', !!cookieStore);
 
     if (!id) {
-      console.error('DB layer: Cannot delete deployment - ID is required');
+      console.error('[DB-DEPLOYMENT]: Cannot delete deployment - ID is required');
       return {
         success: false,
         error: 'Deployment ID is required',
@@ -242,22 +242,22 @@ const deployment = {
     }
 
     try {
-      console.log('DB layer: Creating Supabase client...');
+      console.log('[DB-DEPLOYMENT]: Creating Supabase client...');
 
       // Create client with provided cookie store or get a new one
       let supabase;
       try {
         if (cookieStore) {
-          console.log('DB layer: Using provided cookieStore');
+          console.log('[DB-DEPLOYMENT]: Using provided cookieStore');
           supabase = await createClient(cookieStore);
         } else {
-          console.log('DB layer: No cookieStore provided, creating new one');
+          console.log('[DB-DEPLOYMENT]: No cookieStore provided, creating new one');
           const newCookieStore = await cookies();
           supabase = await createClient(newCookieStore);
         }
-        console.log('DB layer: Supabase client created successfully');
+        console.log('[DB-DEPLOYMENT]: Supabase client created successfully');
       } catch (clientError) {
-        console.error('DB layer: Error creating Supabase client:', clientError);
+        console.error('[DB-DEPLOYMENT]: Error creating Supabase client:', clientError);
         return {
           success: false,
           error: `Failed to create database client: ${clientError instanceof Error ? clientError.message : String(clientError)}`,
@@ -265,14 +265,14 @@ const deployment = {
       }
 
       // First verify the deployment exists
-      console.log('DB layer: Checking if deployment exists...');
+      console.log('[DB-DEPLOYMENT]: Checking if deployment exists...');
       let findResult;
       try {
         findResult = await supabase.from('deployments').select('id').eq('id', id).single();
 
-        console.log('DB layer: Find deployment result:', JSON.stringify(findResult, null, 2));
+        console.log('[DB-DEPLOYMENT]: Find deployment result:', JSON.stringify(findResult, null, 2));
       } catch (findError) {
-        console.error('DB layer: Error querying deployment:', findError);
+        console.error('[DB-DEPLOYMENT]: Error querying deployment:', findError);
         return {
           success: false,
           error: `Failed to query deployment: ${findError instanceof Error ? findError.message : String(findError)}`,
@@ -292,17 +292,17 @@ const deployment = {
         };
       }
 
-      console.log('DB layer: Found deployment to delete, proceeding with deletion');
+      console.log('[DB-DEPLOYMENT]: Found deployment to delete, proceeding with deletion');
 
       // If deployment exists, delete it
-      console.log('DB layer: Executing delete operation...');
+      console.log('[DB-DEPLOYMENT]: Executing delete operation...');
       let deleteResult;
       try {
         deleteResult = await supabase.from('deployments').delete().eq('id', id);
 
-        console.log('DB layer: Delete operation result:', JSON.stringify(deleteResult, null, 2));
+        console.log('[DB-DEPLOYMENT]: Delete operation result:', JSON.stringify(deleteResult, null, 2));
       } catch (deleteError) {
-        console.error('DB layer: Exception during delete operation:', deleteError);
+        console.error('[DB-DEPLOYMENT]: Exception during delete operation:', deleteError);
         return {
           success: false,
           error: `Exception during delete: ${deleteError instanceof Error ? deleteError.message : String(deleteError)}`,
@@ -312,14 +312,14 @@ const deployment = {
       const { error } = deleteResult;
 
       if (error) {
-        console.error('DB layer: Error deleting deployment:', error);
+        console.error('[DB-DEPLOYMENT]: Error deleting deployment:', error);
         return {
           success: false,
           error: `Failed to delete deployment: ${error.message}`,
         };
       }
 
-      console.log('DB layer: Deployment deleted successfully');
+      console.log('[DB-DEPLOYMENT]: Deployment deleted successfully');
       console.log(`\n=======================================`);
       console.log(`DB layer: DELETE OPERATION END - SUCCESS`);
       console.log(`=======================================`);
@@ -327,7 +327,7 @@ const deployment = {
         success: true,
       };
     } catch (error) {
-      console.error('DB layer: Error deleting deployment:', error);
+      console.error('[DB-DEPLOYMENT]: Error deleting deployment:', error);
       console.error(
         'DB layer: Error stack:',
         error instanceof Error ? error.stack : 'No stack trace available',

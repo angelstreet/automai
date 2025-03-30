@@ -1,12 +1,10 @@
-import { cookies } from 'next/headers';
-
 import { createClient } from '../server';
 
 // Host DB operations
 const host = {
   async findMany(options: any = {}) {
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
+    console.log('[DB-HOSTS] Finding many hosts');
+    const supabase = await createClient();
 
     // Start building the query
     let builder = supabase.from('hosts').select('*');
@@ -39,7 +37,7 @@ const host = {
     const { data, error } = await builder;
 
     if (error) {
-      console.error('Error querying hosts:', error);
+      console.error('[DB-HOSTS] Error querying hosts:', error);
       return [];
     }
 
@@ -47,14 +45,14 @@ const host = {
   },
 
   async findUnique({ where }: { where: any }) {
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
+    console.log('[DB-HOSTS] Finding unique host');
+    const supabase = await createClient();
 
     // Apply the 'where' conditions
     const { data, error } = await supabase.from('hosts').select().match(where).single();
 
     if (error) {
-      console.error('Error finding host:', error);
+      console.error('[DB-HOSTS] Error finding host:', error);
       return null;
     }
 
@@ -62,13 +60,13 @@ const host = {
   },
 
   async create({ data }: { data: any }) {
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
+    console.log('[DB-HOSTS] Creating host');
+    const supabase = await createClient();
 
     const { data: result, error } = await supabase.from('hosts').insert(data).select().single();
 
     if (error) {
-      console.error('Error creating host:', error);
+      console.error('[DB-HOSTS] Error creating host:', error);
       throw error;
     }
 
@@ -76,8 +74,8 @@ const host = {
   },
 
   async update({ where, data }: { where: any; data: any }) {
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
+    console.log('[DB-HOSTS] Updating host');
+    const supabase = await createClient();
 
     const { data: result, error } = await supabase
       .from('hosts')
@@ -87,7 +85,7 @@ const host = {
       .single();
 
     if (error) {
-      console.error('Error updating host:', error);
+      console.error('[DB-HOSTS] Error updating host:', error);
       throw error;
     }
 
@@ -95,13 +93,13 @@ const host = {
   },
 
   async delete({ where }: { where: any }) {
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
+    console.log('[DB-HOSTS] Deleting host');
+    const supabase = await createClient();
 
     const { error } = await supabase.from('hosts').delete().eq('id', where.id);
 
     if (error) {
-      console.error('Error deleting host:', error);
+      console.error('[DB-HOSTS] Error deleting host:', error);
       throw error;
     }
 

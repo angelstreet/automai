@@ -93,7 +93,7 @@ async function createCICDProvider(
     // Create Supabase client with cookieStore
     const supabase = await createClient(cookieStore);
 
-    console.log('DB layer: Creating new CI/CD provider');
+    console.log('[DB-CICD]: Creating new CI/CD provider');
 
     // Create provider with config object
     const { data: provider, error } = await supabase
@@ -109,18 +109,18 @@ async function createCICDProvider(
       .single();
 
     if (error) {
-      console.error('DB layer: Error creating CI/CD provider:', error);
+      console.error('[DB-CICD]: Error creating CI/CD provider:', error);
       return { success: false, error: error.message };
     }
 
-    console.log('DB layer: CI/CD provider created with ID:', provider.id);
+    console.log('[DB-CICD]: CI/CD provider created with ID:', provider.id);
 
     return {
       success: true,
       id: provider.id,
     };
   } catch (error: any) {
-    console.error('DB layer: Unexpected error creating CI/CD provider:', error);
+    console.error('[DB-CICD]: Unexpected error creating CI/CD provider:', error);
     return { success: false, error: error.message };
   }
 }
@@ -136,7 +136,7 @@ async function updateCICDProvider(
     // Create Supabase client with cookieStore
     const supabase = await createClient(cookieStore);
 
-    console.log('DB layer: Updating CI/CD provider');
+    console.log('[DB-CICD]: Updating CI/CD provider');
 
     // Build update query
     let query = supabase.from('cicd_providers').update({
@@ -156,13 +156,13 @@ async function updateCICDProvider(
     const { error } = await query;
 
     if (error) {
-      console.error('DB layer: Error updating CI/CD provider:', error);
+      console.error('[DB-CICD]: Error updating CI/CD provider:', error);
       return { success: false, error: error.message };
     }
 
     return { success: true };
   } catch (error: any) {
-    console.error('DB layer: Unexpected error updating CI/CD provider:', error);
+    console.error('[DB-CICD]: Unexpected error updating CI/CD provider:', error);
     return { success: false, error: error.message };
   }
 }
@@ -178,7 +178,7 @@ async function deleteCICDProvider(
     // Create Supabase client with cookieStore
     const supabase = await createClient(cookieStore);
 
-    console.log('DB layer: Deleting CI/CD provider');
+    console.log('[DB-CICD]: Deleting CI/CD provider');
 
     // Build delete query
     let query = supabase.from('cicd_providers').delete();
@@ -195,13 +195,13 @@ async function deleteCICDProvider(
     const { error } = await query;
 
     if (error) {
-      console.error('DB layer: Error deleting CI/CD provider:', error);
+      console.error('[DB-CICD]: Error deleting CI/CD provider:', error);
       return { success: false, error: error.message };
     }
 
     return { success: true };
   } catch (error: any) {
-    console.error('DB layer: Unexpected error deleting CI/CD provider:', error);
+    console.error('[DB-CICD]: Unexpected error deleting CI/CD provider:', error);
     return { success: false, error: error.message };
   }
 }
@@ -221,7 +221,7 @@ async function getCICDProvider(
     // Create Supabase client with cookieStore
     const supabase = await createClient(cookieStore);
 
-    console.log('DB layer: Getting specific CI/CD provider');
+    console.log('[DB-CICD]: Getting specific CI/CD provider');
 
     // Build query
     let query = supabase.from('cicd_providers').select('*');
@@ -238,7 +238,7 @@ async function getCICDProvider(
     const { data: provider, error } = await query.single();
 
     if (error) {
-      console.error('DB layer: Error getting CI/CD provider:', error);
+      console.error('[DB-CICD]: Error getting CI/CD provider:', error);
       return { success: false, error: error.message };
     }
 
@@ -247,7 +247,7 @@ async function getCICDProvider(
       data: provider as CICDProvider,
     };
   } catch (error: any) {
-    console.error('DB layer: Unexpected error getting CI/CD provider:', error);
+    console.error('[DB-CICD]: Unexpected error getting CI/CD provider:', error);
     return { success: false, error: error.message };
   }
 }
@@ -267,7 +267,7 @@ async function getCICDProviders(
     // Create Supabase client with cookieStore
     const supabase = await createClient(cookieStore);
 
-    console.log('DB layer: Getting all CI/CD providers');
+    console.log('[DB-CICD]: Getting all CI/CD providers');
 
     // Build query
     let query = supabase.from('cicd_providers').select('*');
@@ -284,18 +284,18 @@ async function getCICDProviders(
     const { data: providers, error } = await query;
 
     if (error) {
-      console.error('DB layer: Error getting CI/CD providers:', error);
+      console.error('[DB-CICD]: Error getting CI/CD providers:', error);
       return { success: false, error: error.message };
     }
 
-    console.log('DB layer: Retrieved CI/CD providers count:', providers?.length || 0);
+    console.log('[DB-CICD]: Retrieved CI/CD providers count:', providers?.length || 0);
 
     return {
       success: true,
       data: providers as CICDProvider[],
     };
   } catch (error: any) {
-    console.error('DB layer: Unexpected error getting CI/CD providers:', error);
+    console.error('[DB-CICD]: Unexpected error getting CI/CD providers:', error);
     return { success: false, error: error.message };
   }
 }
@@ -311,7 +311,7 @@ async function createCICDJob(
     // Create Supabase client with cookieStore
     const supabase = await createClient(cookieStore);
 
-    console.log('DB layer: Creating new CI/CD job');
+    console.log('[DB-CICD]: Creating new CI/CD job');
 
     // Create job
     const { data: job, error } = await supabase
@@ -327,7 +327,7 @@ async function createCICDJob(
       .single();
 
     if (error) {
-      console.error('DB layer: Error creating CI/CD job:', error);
+      console.error('[DB-CICD]: Error creating CI/CD job:', error);
       return { success: false, error: error.message };
     }
 
@@ -336,7 +336,7 @@ async function createCICDJob(
       id: job.id,
     };
   } catch (error: any) {
-    console.error('DB layer: Unexpected error creating CI/CD job:', error);
+    console.error('[DB-CICD]: Unexpected error creating CI/CD job:', error);
     return { success: false, error: error.message };
   }
 }
@@ -356,7 +356,7 @@ async function getCICDJob(
     // Create Supabase client with cookieStore
     const supabase = await createClient(cookieStore);
 
-    console.log('DB layer: Getting specific CI/CD job');
+    console.log('[DB-CICD]: Getting specific CI/CD job');
 
     // Build query
     let query = supabase.from('cicd_jobs').select('*');
@@ -378,7 +378,7 @@ async function getCICDJob(
     const { data: job, error } = await query.single();
 
     if (error) {
-      console.error('DB layer: Error getting CI/CD job:', error);
+      console.error('[DB-CICD]: Error getting CI/CD job:', error);
       return { success: false, error: error.message };
     }
 
@@ -387,7 +387,7 @@ async function getCICDJob(
       data: job as CICDJob,
     };
   } catch (error: any) {
-    console.error('DB layer: Unexpected error getting CI/CD job:', error);
+    console.error('[DB-CICD]: Unexpected error getting CI/CD job:', error);
     return { success: false, error: error.message };
   }
 }
@@ -407,7 +407,7 @@ async function getCICDJobs(
     // Create Supabase client with cookieStore
     const supabase = await createClient(cookieStore);
 
-    console.log('DB layer: Getting all CI/CD jobs');
+    console.log('[DB-CICD]: Getting all CI/CD jobs');
 
     // Build query
     let query = supabase.from('cicd_jobs').select('*');
@@ -421,7 +421,7 @@ async function getCICDJobs(
     const { data: jobs, error } = await query;
 
     if (error) {
-      console.error('DB layer: Error getting CI/CD jobs:', error);
+      console.error('[DB-CICD]: Error getting CI/CD jobs:', error);
       return { success: false, error: error.message };
     }
 
@@ -430,7 +430,7 @@ async function getCICDJobs(
       data: jobs as CICDJob[],
     };
   } catch (error: any) {
-    console.error('DB layer: Unexpected error getting CI/CD jobs:', error);
+    console.error('[DB-CICD]: Unexpected error getting CI/CD jobs:', error);
     return { success: false, error: error.message };
   }
 }
@@ -449,7 +449,7 @@ async function updateCICDJob(
     // Create Supabase client with cookieStore
     const supabase = await createClient(cookieStore);
 
-    console.log('DB layer: Updating CI/CD job');
+    console.log('[DB-CICD]: Updating CI/CD job');
 
     // Build query
     let query = supabase.from('cicd_jobs').update({
@@ -466,13 +466,13 @@ async function updateCICDJob(
     const { error } = await query;
 
     if (error) {
-      console.error('DB layer: Error updating CI/CD job:', error);
+      console.error('[DB-CICD]: Error updating CI/CD job:', error);
       return { success: false, error: error.message };
     }
 
     return { success: true };
   } catch (error: any) {
-    console.error('DB layer: Unexpected error updating CI/CD job:', error);
+    console.error('[DB-CICD]: Unexpected error updating CI/CD job:', error);
     return { success: false, error: error.message };
   }
 }
@@ -491,7 +491,7 @@ async function deleteCICDJob(
     // Create Supabase client with cookieStore
     const supabase = await createClient(cookieStore);
 
-    console.log('DB layer: Deleting CI/CD job');
+    console.log('[DB-CICD]: Deleting CI/CD job');
 
     // Build query
     let query = supabase.from('cicd_jobs').delete();
@@ -505,13 +505,13 @@ async function deleteCICDJob(
     const { error } = await query;
 
     if (error) {
-      console.error('DB layer: Error deleting CI/CD job:', error);
+      console.error('[DB-CICD]: Error deleting CI/CD job:', error);
       return { success: false, error: error.message };
     }
 
     return { success: true };
   } catch (error: any) {
-    console.error('DB layer: Unexpected error deleting CI/CD job:', error);
+    console.error('[DB-CICD]: Unexpected error deleting CI/CD job:', error);
     return { success: false, error: error.message };
   }
 }
@@ -533,7 +533,7 @@ async function createDeploymentCICDMapping(
     // Create Supabase client with cookieStore
     const supabase = await createClient(cookieStore);
 
-    console.log('DB layer: Creating deployment CICD mapping');
+    console.log('[DB-CICD]: Creating deployment CICD mapping');
 
     // Create mapping
     const { data: mapping, error } = await supabase
@@ -549,7 +549,7 @@ async function createDeploymentCICDMapping(
       .single();
 
     if (error) {
-      console.error('DB layer: Error creating deployment CICD mapping:', error);
+      console.error('[DB-CICD]: Error creating deployment CICD mapping:', error);
       return { success: false, error: error.message };
     }
 
@@ -558,7 +558,7 @@ async function createDeploymentCICDMapping(
       id: mapping.id,
     };
   } catch (error: any) {
-    console.error('DB layer: Unexpected error creating deployment CICD mapping:', error);
+    console.error('[DB-CICD]: Unexpected error creating deployment CICD mapping:', error);
     return { success: false, error: error.message };
   }
 }
@@ -575,7 +575,7 @@ async function updateDeploymentCICDMapping(
     // Create Supabase client with cookieStore
     const supabase = await createClient(cookieStore);
 
-    console.log('DB layer: Updating deployment CICD mapping');
+    console.log('[DB-CICD]: Updating deployment CICD mapping');
 
     // Build update object
     const updateData: any = {
@@ -593,13 +593,13 @@ async function updateDeploymentCICDMapping(
       .eq('id', id);
 
     if (error) {
-      console.error('DB layer: Error updating deployment CICD mapping:', error);
+      console.error('[DB-CICD]: Error updating deployment CICD mapping:', error);
       return { success: false, error: error.message };
     }
 
     return { success: true };
   } catch (error: any) {
-    console.error('DB layer: Unexpected error updating deployment CICD mapping:', error);
+    console.error('[DB-CICD]: Unexpected error updating deployment CICD mapping:', error);
     return { success: false, error: error.message };
   }
 }
@@ -619,7 +619,7 @@ async function getDeploymentCICDMappings(
     // Create Supabase client with cookieStore
     const supabase = await createClient(cookieStore);
 
-    console.log('DB layer: Getting deployment CICD mappings');
+    console.log('[DB-CICD]: Getting deployment CICD mappings');
 
     // Build query
     let query = supabase.from('deployment_cicd_mappings').select('*');
@@ -633,7 +633,7 @@ async function getDeploymentCICDMappings(
     const { data, error } = await query;
 
     if (error) {
-      console.error('DB layer: Error getting deployment CICD mappings:', error);
+      console.error('[DB-CICD]: Error getting deployment CICD mappings:', error);
       return { success: false, error: error.message };
     }
 
@@ -642,7 +642,7 @@ async function getDeploymentCICDMappings(
       data: data as any[],
     };
   } catch (error: any) {
-    console.error('DB layer: Unexpected error getting deployment CICD mappings:', error);
+    console.error('[DB-CICD]: Unexpected error getting deployment CICD mappings:', error);
     return { success: false, error: error.message };
   }
 }
@@ -662,7 +662,7 @@ async function getCICDDeploymentMapping(
     // Create Supabase client with cookieStore
     const supabase = await createClient(cookieStore);
 
-    console.log('DB layer: Getting specific CI/CD deployment mapping');
+    console.log('[DB-CICD]: Getting specific CI/CD deployment mapping');
 
     // Build query
     let query = supabase.from('deployment_cicd_mappings').select('*');
@@ -676,7 +676,7 @@ async function getCICDDeploymentMapping(
     const { data, error } = await query.maybeSingle();
 
     if (error) {
-      console.error('DB layer: Error getting CI/CD deployment mapping:', error);
+      console.error('[DB-CICD]: Error getting CI/CD deployment mapping:', error);
       return { success: false, error: error.message };
     }
 
@@ -685,7 +685,7 @@ async function getCICDDeploymentMapping(
       data: data,
     };
   } catch (error: any) {
-    console.error('DB layer: Unexpected error getting CI/CD deployment mapping:', error);
+    console.error('[DB-CICD]: Unexpected error getting CI/CD deployment mapping:', error);
     return { success: false, error: error.message };
   }
 }
@@ -701,19 +701,19 @@ async function deleteDeploymentCICDMapping(
     // Create Supabase client with cookieStore
     const supabase = await createClient(cookieStore);
 
-    console.log('DB layer: Deleting deployment CICD mapping');
+    console.log('[DB-CICD]: Deleting deployment CICD mapping');
 
     // Delete mapping
     const { error } = await supabase.from('deployment_cicd_mappings').delete().eq('id', mapping_id);
 
     if (error) {
-      console.error('DB layer: Error deleting deployment CICD mapping:', error);
+      console.error('[DB-CICD]: Error deleting deployment CICD mapping:', error);
       return { success: false, error: error.message };
     }
 
     return { success: true };
   } catch (error: any) {
-    console.error('DB layer: Unexpected error deleting deployment CICD mapping:', error);
+    console.error('[DB-CICD]: Unexpected error deleting deployment CICD mapping:', error);
     return { success: false, error: error.message };
   }
 }

@@ -45,7 +45,7 @@ const user = {
     const { data, error } = await builder;
 
     if (error) {
-      console.error('Error querying users:', error);
+      console.error('[DB-USERS] Error querying users:', error);
       return [];
     }
 
@@ -60,7 +60,7 @@ const user = {
     const { data, error } = await supabase.from('profiles').select().match(where).single();
 
     if (error) {
-      console.error('Error finding user:', error);
+      console.error('[DB-USERS] Error finding user:', error);
       return null;
     }
 
@@ -80,7 +80,7 @@ const user = {
         .single();
 
       if (profileError || !profile) {
-        console.error('Error getting user profile:', profileError);
+        console.error('[DB-USERS] Error getting user profile:', profileError);
         return null;
       }
 
@@ -88,13 +88,13 @@ const user = {
       const { data: authData, error: authError } = await supabase.auth.getUser();
 
       if (authError || !authData.user) {
-        console.error('Error getting auth user:', authError);
+        console.error('[DB-USERS] Error getting auth user:', authError);
         return null;
       }
 
       // Only proceed if the requested user ID matches the authenticated user
       if (authData.user.id !== userId) {
-        console.error('User ID mismatch - cannot access other user data');
+        console.error('[DB-USERS] User ID mismatch - cannot access other user data');
         return null;
       }
 
@@ -112,7 +112,7 @@ const user = {
       const role = profile.role;
 
       if (!role) {
-        console.error('No role found in profiles table');
+        console.error('[DB-USERS] No role found in profiles table');
         return null;
       }
 
@@ -143,7 +143,7 @@ const user = {
         updated_at: authData.user.updated_at,
       };
     } catch (error) {
-      console.error('Error in getUser:', error);
+      console.error('[DB-USERS] Error in getUser:', error);
       return null;
     }
   },
@@ -173,7 +173,7 @@ const user = {
       } = await supabase.auth.getUser();
 
       if (authError || !authUser) {
-        console.error('Error getting current user:', authError);
+        console.error('[DB-USERS] Error getting current user:', authError);
         return null;
       }
 
@@ -185,7 +185,7 @@ const user = {
 
       return userData;
     } catch (error) {
-      console.error('Error in getCurrentUser:', error);
+      console.error('[DB-USERS] Error in getCurrentUser:', error);
       return null;
     }
   },
@@ -213,7 +213,7 @@ const user = {
       });
 
       if (authError) {
-        console.error('Error updating auth user:', authError);
+        console.error('[DB-USERS] Error updating auth user:', authError);
         throw new Error(authError.message);
       }
 
@@ -229,7 +229,7 @@ const user = {
           .eq('id', userId);
 
         if (profileError) {
-          console.error('Error updating profile:', profileError);
+          console.error('[DB-USERS] Error updating profile:', profileError);
           throw new Error(profileError.message);
         }
       }
@@ -243,7 +243,7 @@ const user = {
         message: 'Profile updated successfully',
       };
     } catch (error) {
-      console.error('Error in updateProfile:', error);
+      console.error('[DB-USERS] Error in updateProfile:', error);
       throw error;
     }
   },
@@ -265,7 +265,7 @@ const user = {
         message: 'Team selected successfully',
       };
     } catch (error) {
-      console.error('Error in setSelectedTeam:', error);
+      console.error('[DB-USERS] Error in setSelectedTeam:', error);
       throw error;
     }
   },
@@ -277,7 +277,7 @@ const user = {
     const { data: result, error } = await supabase.from('profiles').insert(data).select().single();
 
     if (error) {
-      console.error('Error creating user profile:', error);
+      console.error('[DB-USERS] Error creating user profile:', error);
       throw error;
     }
 
@@ -296,7 +296,7 @@ const user = {
       .single();
 
     if (error) {
-      console.error('Error updating user profile:', error);
+      console.error('[DB-USERS] Error updating user profile:', error);
       throw error;
     }
 
@@ -312,7 +312,7 @@ const user = {
     const { error } = await supabase.from('profiles').delete().match(where);
 
     if (error) {
-      console.error('Error deleting user profile:', error);
+      console.error('[DB-USERS] Error deleting user profile:', error);
       throw error;
     }
 

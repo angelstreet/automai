@@ -401,7 +401,7 @@ export async function getRepository(
 
     console.log(`[Server] Fetching repository ${id} from database`);
 
-    // Call the repository module instead of direct db access
+    // Call the repository module - don't need to pass profile ID for non-tenant specific queries
     const result = await repository.getRepository(id);
 
     if (!result.success || !result.data) {

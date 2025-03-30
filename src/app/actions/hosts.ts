@@ -19,6 +19,7 @@ export async function getHosts(
   filter?: HostFilter,
 ): Promise<{ success: boolean; error?: string; data?: Host[] }> {
   try {
+    console.log('[ACTIONS-HOSTS] Getting all hosts');
     // Get current user
     const currentUser = await getUser();
 
@@ -50,10 +51,10 @@ export async function getHosts(
         error: 'Failed to fetch hosts',
       };
     }
-
+    console.log('[ACTIONS-HOSTS] Found hosts:', data);
     return { success: true, data };
   } catch (error: any) {
-    logger.error('Error in getHosts:', error);
+    logger.error('[ACTIONS-HOSTS] Error in getHosts:', error);
     return { success: false, error: error.message || 'Failed to fetch hosts' };
   }
 }
@@ -90,7 +91,7 @@ export async function getHostById(
 
     return { success: true, data };
   } catch (error: any) {
-    logger.error('Error in getHostById:', error);
+    logger.error('[ACTIONS-HOSTS] Error in getHostById:', error);
     return { success: false, error: error.message || 'Failed to fetch host' };
   }
 }
@@ -126,7 +127,7 @@ export async function createHost(
 
     return { success: true, data: newHost };
   } catch (error: any) {
-    logger.error('Error in createHost:', error);
+    logger.error('[ACTIONS-HOSTS] Error in createHost:', error);
     return { success: false, error: error.message || 'Failed to add host' };
   }
 }
@@ -171,7 +172,7 @@ export async function updateHost(
 
     return { success: true, data };
   } catch (error: any) {
-    logger.error('Error in updateHost:', error);
+    logger.error('[ACTIONS-HOSTS] Error in updateHost:', error);
     return { success: false, error: error.message || 'Failed to update host' };
   }
 }
@@ -210,7 +211,7 @@ export async function deleteHost(id: string): Promise<{ success: boolean; error?
 
     return { success: true };
   } catch (error: any) {
-    logger.error('Error in deleteHost:', error);
+    logger.error('[ACTIONS-HOSTS] Error in deleteHost:', error);
     return { success: false, error: error.message || 'Failed to delete host' };
   }
 }
@@ -281,7 +282,7 @@ export async function testHostConnection(
 
     return result;
   } catch (error: any) {
-    logger.error('Error in testHostConnection:', error);
+    logger.error('[ACTIONS-HOSTS] Error in testHostConnection:', error);
 
     // Update status to failed on error
     try {
@@ -297,7 +298,7 @@ export async function testHostConnection(
         });
       }
     } catch (updateError) {
-      logger.error('Error updating host status to failed:', updateError);
+      logger.error('[ACTIONS-HOSTS] Error updating host status to failed:', updateError);
     }
 
     // Revalidate paths
@@ -388,7 +389,7 @@ export async function testAllHosts(): Promise<{
       results,
     };
   } catch (error: any) {
-    logger.error('Error in testAllHosts:', error);
+    logger.error('[ACTIONS-HOSTS] Error in testAllHosts:', error);
     return { success: false, error: error.message || 'Failed to test all hosts' };
   }
 }
@@ -415,7 +416,7 @@ export async function testConnection(data: {
 
     return result;
   } catch (error: any) {
-    logger.error('Error in testConnection:', error);
+    logger.error('[ACTIONS-HOSTS] Error in testConnection:', error);
     return { success: false, error: error.message || 'Failed to test connection' };
   }
 }
@@ -441,7 +442,7 @@ export async function verifyFingerprint(data: {
       message: 'Fingerprint verified successfully',
     };
   } catch (error: any) {
-    logger.error('Error verifying fingerprint:', error);
+    logger.error('[ACTIONS-HOSTS] Error verifying fingerprint:', error);
     return {
       success: false,
       message: error.message || 'Failed to verify fingerprint',
