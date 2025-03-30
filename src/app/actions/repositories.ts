@@ -15,7 +15,7 @@ import {
   testRepositorySchema,
 } from '@/app/[locale]/[tenant]/repositories/types';
 import { getUser } from '@/app/actions/user';
-import { starRepository, repository, files, gitProvider } from '@/lib/supabase/db-repositories';
+import { repository, files, gitProvider } from '@/lib/supabase/db-repositories';
 import { GitProvider as DbGitProvider } from '@/lib/supabase/db-repositories/git-provider';
 import { AuthUser } from '@/types/user';
 
@@ -806,7 +806,7 @@ export async function handleOAuthCallback(
     let stateData;
     try {
       stateData = JSON.parse(Buffer.from(state, 'base64').toString('utf-8'));
-    } catch (parseError) {
+    } catch {
       return { success: false, error: 'Invalid state parameter' };
     }
 
@@ -888,120 +888,6 @@ export async function createGitProvider(
 }
 
 /**
- * Get starred repositories for the current user
- * Safe to call from client components
- */
-export async function getStarredRepositories(): Promise<{
-  success: boolean;
-  error?: string;
-  data?: any[];
-}> {
-  try {
-    console.log('[@action:repositories:getStarredRepositories] Starting...');
-
-    // Get the current user
-    let currentUser;
-    try {
-      currentUser = await getUser();
-    } catch (error) {
-      console.error('[@action:repositories:getStarredRepositories] Error fetching user:', error);
-      return { success: false, error: 'Unauthorized - Please sign in' };
-    }
-
-    if (!currentUser) {
-      return {
-        success: false,
-        error: 'Unauthorized - Please sign in',
-      };
-    }
-
-    console.log('[@action:repositories:getStarredRepositories] Fetching starred repositories');
-    // Call the starRepository module to get starred repositories
-    const result = await starRepository.getStarredRepositories(currentUser.id);
-
-    if (!result.success) {
-      console.error(
-        '[@action:repositories:getStarredRepositories] Error fetching starred repositories:',
-        result.error,
-      );
-      // Return empty array on error for graceful degradation
-      return { success: true, data: [] };
-    }
-
-    return result;
-  } catch (error: any) {
-    console.error('[@action:repositories:getStarredRepositories] Error:', error);
-    return { success: false, error: error.message || 'Failed to fetch starred repositories' };
-  }
-}
-
-/**
- * Star a repository for the current user
- * @param repositoryId The repository ID to star
- * @param user Optional pre-fetched user data to avoid redundant auth calls
- */
-export async function starRepositoryAction(
-  repositoryId: string,
-  user?: AuthUser | null,
-): Promise<{ success: boolean; error?: string; data?: any }> {
-  try {
-    // Use provided user data or fetch it if not provided
-    const currentUser = user || (await getUser());
-    if (!currentUser) {
-      return { success: false, error: 'Unauthorized - Please sign in' };
-    }
-
-    // Call the DB layer function
-    const result = await starRepository.starRepository(repositoryId, currentUser.id);
-
-    if (!result.success) {
-      return { success: false, error: result.error };
-    }
-
-    // Revalidate repository paths
-    revalidatePath('/[locale]/[tenant]/repositories');
-
-    return { success: true, data: result.data };
-  } catch (error: any) {
-    console.error('Error in starRepositoryAction:', error);
-    return { success: false, error: error.message || 'Failed to star repository' };
-  }
-}
-
-/**
- * Unstar a repository for the current user
- * @param repositoryId The repository ID to unstar
- * @param user Optional pre-fetched user data to avoid redundant auth calls
- */
-export async function unstarRepositoryAction(
-  repositoryId: string,
-  user?: AuthUser | null,
-): Promise<{ success: boolean; error?: string; data?: any }> {
-  try {
-    // Use provided user data or fetch it if not provided
-    const currentUser = user || (await getUser());
-    if (!currentUser) {
-      return { success: false, error: 'Unauthorized - Please sign in' };
-    }
-
-    // Call the DB layer function
-    const result = await starRepository.unstarRepository(repositoryId, currentUser.id);
-
-    if (!result.success) {
-      return { success: false, error: result.error };
-    }
-
-    // Revalidate repository paths
-    revalidatePath('/[locale]/[tenant]/repositories');
-
-    return { success: true, data: result.data };
-  } catch (error: any) {
-    console.error('Error in unstarRepositoryAction:', error);
-    return { success: false, error: error.message || 'Failed to unstar repository' };
-  }
-}
-
-/**
  * Get files for a repository at a specific path
  * @param repositoryId The repository ID
  * @param path The path to get files from (optional, defaults to root)
@@ -1014,7 +900,7 @@ export async function getRepositoryFiles(
 ): Promise<{ success: boolean; error?: string; data?: any[] }> {
   try {
     console.log(
-      '[actions.getRepositoryFiles] Starting with repository ID:',
+      '[@action:repositories:getRepositoryFiles] Starting with repository ID:',
       repositoryId,
       'path:',
       path,
@@ -1023,7 +909,7 @@ export async function getRepositoryFiles(
     // Use provided user data or fetch it if not provided
     const currentUser = user || (await getUser());
     if (!currentUser) {
-      console.log('[actions.getRepositoryFiles] No authenticated user found');
+      console.log('[@action:repositories:getRepositoryFiles] No authenticated user found');
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -1036,7 +922,7 @@ export async function getRepositoryFiles(
 
     return { success: true, data: result.data };
   } catch (error: any) {
-    console.error('Error in getRepositoryFiles:', error);
+    console.error('[@action:repositories:getRepositoryFiles] Error:', error);
     return { success: false, error: error.message || 'Failed to fetch repository files' };
   }
 }
@@ -1086,23 +972,22 @@ export async function getFileContent(
 }
 
 /**
- * Get both repositories and starred repositories in a single call
+ * Get all repositories with optional filtering
+ * This is the main function for fetching repositories for display
  * @param filter Optional filter criteria for repositories
  * @param user Optional pre-fetched user data to avoid redundant auth calls
  */
-export async function getRepositoriesWithStarred(
+export async function getAllRepositories(
   filter?: RepositoryFilter,
   user?: AuthUser | null,
 ): Promise<{
   success: boolean;
   error?: string;
-  data?: {
-    repositories: Repository[];
-    starredRepositoryIds: string[];
-  };
+  data?: Repository[];
 }> {
   try {
-    console.log('[Server] getRepositoriesWithStarred: Starting...');
+    console.log('[@action:repositories:getAllRepositories] Starting...');
+
     // Try to use provided user data or fetch it if not provided
     let currentUser = user;
     if (!currentUser) {
@@ -1110,48 +995,17 @@ export async function getRepositoriesWithStarred(
         const userResult = await getUser();
         currentUser = userResult;
       } catch (userError) {
-        console.error('[Server] Error fetching current user:', userError);
-        // Continue with null user - we'll handle repositories without starred info
+        console.error(
+          '[@action:repositories:getAllRepositories] Error fetching current user:',
+          userError,
+        );
+        // Continue with null user in case of error
       }
     }
-
-    console.log(
-      '[Server] User context:',
-      currentUser
-        ? {
-            id: currentUser.id,
-            tenant: currentUser.tenant_id,
-          }
-        : 'No user',
-    );
-
-    // If no authenticated user, return repositories without starred information
-    if (!currentUser) {
-      console.log('[Server] No authenticated user, fetching repositories without starred info');
-      const reposResult = await getRepositories(filter);
-
-      if (!reposResult.success) {
-        return {
-          success: false,
-          error: reposResult.error || 'Failed to fetch repositories',
-        };
-      }
-
-      // Return repositories without starred info
-      return {
-        success: true,
-        data: {
-          repositories: reposResult.data || [],
-          starredRepositoryIds: [],
-        },
-      };
-    }
-
-    console.log('[Server] Fetching fresh data');
 
     // Fetch repositories
     const reposResult = await getRepositories(filter);
-    console.log('[Server] Repository fetch result:', {
+    console.log('[@action:repositories:getAllRepositories] Repository fetch result:', {
       success: reposResult.success,
       count: reposResult.data?.length || 0,
       error: reposResult.error,
@@ -1164,40 +1018,12 @@ export async function getRepositoriesWithStarred(
       };
     }
 
-    // Fetch starred repositories
-    let starredRepositoryIds: string[] = [];
-    try {
-      const starredResult = await getStarredRepositories();
-      console.log('[Server] Starred repositories result:', {
-        success: starredResult.success,
-        count: starredResult.data?.length || 0,
-        error: starredResult.error,
-      });
-
-      // Extract just the IDs from starred repositories for efficiency
-      starredRepositoryIds =
-        starredResult.success && starredResult.data
-          ? starredResult.data.map((repo: any) => repo.repository_id || repo.id)
-          : [];
-    } catch (starredError) {
-      console.error('[Server] Error fetching starred repositories:', starredError);
-      // Continue with empty starred list
-    }
-
-    // Combine the data
-    const combinedData = {
-      repositories: reposResult.data,
-      starredRepositoryIds,
+    return {
+      success: true,
+      data: reposResult.data,
     };
-
-    console.log('[Server] Returning combined data:', {
-      repositories: combinedData.repositories.length,
-      starred: combinedData.starredRepositoryIds.length,
-    });
-
-    return { success: true, data: combinedData };
   } catch (error: any) {
-    console.error('[Server] Error in getRepositoriesWithStarred:', error);
+    console.error('[@action:repositories:getAllRepositories] Error:', error);
     return {
       success: false,
       error: error.message || 'Failed to fetch repository data',

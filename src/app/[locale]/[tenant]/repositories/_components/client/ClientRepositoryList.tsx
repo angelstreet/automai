@@ -4,11 +4,7 @@ import { ChevronLeft, ChevronRight, GitBranch, PlusCircle, Search } from 'lucide
 import { useTranslations } from 'next-intl';
 import React, { useState, useEffect } from 'react';
 
-import {
-  getStarredRepositories,
-  starRepositoryAction,
-  unstarRepositoryAction,
-} from '@/app/actions/repositories';
+import { getAllRepositories } from '@/app/actions/repositories';
 import { EmptyState } from '@/components/layout/EmptyState';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
@@ -19,73 +15,43 @@ import { EnhancedRepositoryCard } from '../EnhancedRepositoryCard';
 
 interface ClientRepositoryListProps {
   initialRepositories: Repository[];
-  initialStarredIds: string[];
+  initialStarredIds?: string[]; // Make this optional
 }
 
 export function ClientRepositoryList({
   initialRepositories,
-  initialStarredIds,
+  initialStarredIds = [], // Default to empty array
 }: ClientRepositoryListProps) {
   const t = useTranslations('repositories');
 
   // Local state
-  const [repositories] = useState<Repository[]>(initialRepositories);
-  const [starredIds, setStarredIds] = useState<string[]>(initialStarredIds);
+  const [repositories, setRepositories] = useState<Repository[]>(initialRepositories);
   const [activeTab, setActiveTab] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [isDeleting, _setIsDeleting] = useState<string | null>(null);
-  const [_loading, setLoading] = useState<boolean>(initialStarredIds.length === 0);
+  const [loading, setLoading] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState('');
   const itemsPerPage = 12;
 
-  // Convert array to Set for faster lookup
-  const starredRepos = new Set(starredIds);
-
-  // Fetch starred repositories on client side
+  // Refresh repositories on client side
   useEffect(() => {
-    const fetchStarredRepos = async () => {
+    const fetchRepositories = async () => {
       try {
         setLoading(true);
-        const result = await getStarredRepositories();
+        const result = await getAllRepositories();
         if (result.success && result.data) {
-          const ids = result.data.map((repo: any) => repo.repository_id || repo.id);
-          setStarredIds(ids);
+          setRepositories(result.data);
         }
       } catch (error) {
-        console.error('Error fetching starred repositories:', error);
+        console.error('[@component:ClientRepositoryList:fetchRepositories] Error:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    if (initialStarredIds.length === 0) {
-      fetchStarredRepos();
-    }
-  }, [initialStarredIds]);
-
-  // Action handlers
-  const handleToggleStarred = async (id: string) => {
-    const isStarred = starredRepos.has(id);
-
-    try {
-      // Optimistic update
-      const newStarredIds = isStarred
-        ? starredIds.filter((repoId) => repoId !== id)
-        : [...starredIds, id];
-
-      setStarredIds(newStarredIds);
-
-      // Call the appropriate server action
-      if (isStarred) {
-        await unstarRepositoryAction(id);
-      } else {
-        await starRepositoryAction(id);
-      }
-    } catch (error) {
-      console.error('Error toggling star status:', error);
-      setStarredIds(starredIds);
-    }
-  };
+    // Optionally refresh repositories after component mounts
+    // fetchRepositories();
+  }, []);
 
   const handleViewRepository = (repo: Repository) => {
     window.dispatchEvent(
@@ -116,7 +82,8 @@ export function ClientRepositoryList({
     // Filter by tab
     if (activeTab === 'public' && repo.isPrivate === true) return false;
     if (activeTab === 'private' && repo.isPrivate !== true) return false;
-    if (activeTab === 'starred' && !starredRepos.has(repo.id)) return false;
+    // We no longer have starring functionality
+    if (activeTab === 'starred') return false;
 
     return true;
   });
@@ -139,11 +106,10 @@ export function ClientRepositoryList({
             onValueChange={setActiveTab}
             className="pointer-events-auto"
           >
-            <TabsList className="grid grid-cols-4 min-w-[400px]">
+            <TabsList className="grid grid-cols-3 min-w-[400px]">
               <TabsTrigger value="all">{t('all')}</TabsTrigger>
               <TabsTrigger value="public">{t('public')}</TabsTrigger>
               <TabsTrigger value="private">{t('private')}</TabsTrigger>
-              <TabsTrigger value="starred">{t('starred')}</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -165,7 +131,11 @@ export function ClientRepositoryList({
 
       {/* Repository cards grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {currentRepositories.length === 0 ? (
+        {loading ? (
+          <div className="col-span-full flex justify-center p-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : currentRepositories.length === 0 ? (
           <div className="col-span-full">
             <EmptyState
               icon={<GitBranch className="h-10 w-10" />}
@@ -190,12 +160,7 @@ export function ClientRepositoryList({
               onClick={() => handleViewRepository(repo)}
               className="cursor-pointer"
             >
-              <EnhancedRepositoryCard
-                repository={repo}
-                onToggleStarred={handleToggleStarred}
-                isStarred={starredRepos.has(repo.id)}
-                isDeleting={isDeleting === repo.id}
-              />
+              <EnhancedRepositoryCard repository={repo} isDeleting={isDeleting === repo.id} />
             </div>
           ))
         )}

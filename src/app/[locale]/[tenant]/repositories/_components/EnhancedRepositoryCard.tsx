@@ -1,5 +1,5 @@
 import { formatDistanceToNow } from 'date-fns';
-import { Star, GitBranch, Clock, ExternalLink, Globe, Lock, Trash2 } from 'lucide-react';
+import { GitBranch, Clock, ExternalLink, Globe, Lock, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState, useEffect } from 'react';
 
@@ -22,8 +22,6 @@ export function EnhancedRepositoryCard({
   repository,
   onDelete,
   isDeleting,
-  onToggleStarred,
-  isStarred,
 }: EnhancedRepositoryCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isClient, setIsClient] = useState(false);
@@ -72,13 +70,6 @@ export function EnhancedRepositoryCard({
     return LANGUAGE_COLORS[key] || LANGUAGE_COLORS.default;
   };
 
-  // Handle star button click without propagation
-  const handleStarClick = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!repository?.id) return;
-    onToggleStarred(repository.id);
-  };
-
   // Handle delete button click without propagation
   const handleDeleteClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -100,14 +91,6 @@ export function EnhancedRepositoryCard({
               {repository?.name || 'Unnamed Repository'}
             </CardTitle>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={`h-7 w-7 p-0 ${isStarred ? 'text-yellow-500' : ''}`}
-            onClick={handleStarClick}
-          >
-            <Star className="h-4 w-4" />
-          </Button>
           {repository?.isPrivate ? (
             <Badge variant="outline" className="flex items-center">
               <Lock className="h-3 w-3 mr-1" />
