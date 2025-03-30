@@ -27,6 +27,8 @@ import type {
   ResourceLimit,
 } from '@/types/context/team';
 import { User } from '@/types/user';
+import { AuthUser } from '@/types/user';
+import { createClient } from '@/lib/supabase/db-teams/client';
 
 /**
  * Get all teams for the current user's tenant
@@ -362,18 +364,56 @@ export const getTeamDetails = cache(async (userId?: string) => {
 
     console.log(`Returning team details with role: ${role}`);
 
-    // For resource counts we would need specific functions in the db module
-    // This is simplified example
+    // Import necessary modules for resource counts
+    const { getRepositories } = await import('@/app/actions/repositories');
+    const { getCICDProviders } = await import('@/app/actions/cicd');
+    const { getDeployments } = await import('@/app/actions/deployments');
+
+    // Get repository count directly from database using team_id
+    let reposCount = 0;
+    try {
+      const supabase = await createClient(cookieStore);
+      const { data, error } = await supabase
+        .from('repositories')
+        .select('id', { count: 'exact' })
+        .eq('team_id', team.id);
+
+      if (!error) {
+        reposCount = data.length;
+        console.log(`Found ${reposCount} repositories for team ${team.id}`);
+      } else {
+        console.error('Error counting repositories:', error);
+      }
+    } catch (err) {
+      console.error('Exception counting repositories:', err);
+    }
+
+    // Get CICD provider count
+    const cicdResult = await getCICDProviders();
+    const cicdCount = cicdResult.success ? cicdResult.data?.length || 0 : 0;
+
+    // Get deployments count
+    // Create a proper user object with tenant_id for getDeployments
+    const userWithTenant = {
+      ...user,
+      tenant_id: team.tenant_id, // Use the team's tenant_id
+    };
+    const deployments = await getDeployments(userWithTenant as AuthUser);
+    const deploymentsCount = deployments?.length || 0;
+    console.log('Found deployments count:', deploymentsCount);
+
+    // Return team details with actual resource counts
     return {
       ...team,
       memberCount,
       ownerId: user.id,
-      ownerEmail: user.email, // Include the user's email if available
-      role, // Add the user's role
+      ownerEmail: user.email,
+      role,
       resourceCounts: {
-        repositories: 0, // Replace with actual counts from db
-        hosts: 0,
-        cicd: 0,
+        repositories: reposCount,
+        hosts: 0, // This is handled separately in page.tsx
+        cicd: cicdCount,
+        deployments: deploymentsCount,
       },
     };
   } catch (error) {

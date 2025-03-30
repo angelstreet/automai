@@ -49,7 +49,7 @@ export default function TeamOverview({
     {
       type: 'deployment',
       name: t('resources.deployments'),
-      count: 0,
+      count: team?.resourceCounts.deployments ?? 0,
     },
   ];
 
@@ -91,7 +91,10 @@ export default function TeamOverview({
           <div>
             <p className="text-sm font-medium">Resources</p>
             <p className="text-xl font-semibold">
-              {team.resourceCounts.repositories + hostsCount + team.resourceCounts.cicd}
+              {team.resourceCounts.repositories +
+                hostsCount +
+                team.resourceCounts.cicd +
+                team.resourceCounts.deployments}
             </p>
           </div>
 

@@ -10,6 +10,7 @@ export interface TeamDetails {
     repositories: number;
     hosts: number;
     cicd: number;
+    deployments: number;
   };
 }
 
