@@ -1,5 +1,5 @@
-// This file is kept for backwards compatibility
-// All functionality is now in db-repository.ts
+// DB Git Provider module
+// All functionality is in db-repository.ts
 
 import { gitProvider } from './db-repository';
 

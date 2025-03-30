@@ -1,5 +1,5 @@
-// This file is kept for backwards compatibility
-// All functionality is now in db-repository.ts
+// DB Files module
+// All functionality is in db-repository.ts
 
 import { files } from './db-repository';
 

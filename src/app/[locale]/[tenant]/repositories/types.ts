@@ -126,8 +126,6 @@ export interface EnhancedConnectRepositoryDialogProps {
 
 export interface EnhancedRepositoryCardProps {
   repository: Repository;
-  onToggleStarred: (id: string) => void;
-  isStarred: boolean;
   isDeleting?: boolean;
   onDelete?: (id: string) => void;
 }

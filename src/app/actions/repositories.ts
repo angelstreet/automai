@@ -15,8 +15,12 @@ import {
   testRepositorySchema,
 } from '@/app/[locale]/[tenant]/repositories/types';
 import { getUser } from '@/app/actions/user';
-import { repository, files, gitProvider } from '@/lib/supabase/db-repositories';
-import { GitProvider as DbGitProvider } from '@/lib/supabase/db-repositories/git-provider';
+import { files as dbFiles } from '@/lib/supabase/db-repositories/db-files';
+import {
+  gitProvider as dbGitProvider,
+  GitProvider as DbGitProvider,
+} from '@/lib/supabase/db-repositories/db-git-provider';
+import { repository as dbRepository } from '@/lib/supabase/db-repositories/db-repository';
 import { AuthUser } from '@/types/user';
 
 /**
@@ -99,7 +103,7 @@ export async function getRepositories(
 
     console.log('[@action:repositories:getRepositories] Fetching repositories from database');
     // Call the repository module instead of direct db access
-    const result = await repository.getRepositories();
+    const result = await dbRepository.getRepositories();
 
     if (!result.success || !result.data) {
       console.log('[@action:repositories:getRepositories] No repositories found');
@@ -170,7 +174,7 @@ export async function createRepository(
     });
 
     // Call the repository module with proper types
-    const result = await repository.createRepository(repositoryData, currentUser.id);
+    const result = await dbRepository.createRepository(repositoryData, currentUser.id);
 
     if (!result.success || !result.data) {
       console.log('[@action:repositories:createRepository] Failed to create repository', {
@@ -239,7 +243,7 @@ export async function updateRepository(
     });
 
     // Call the repository module instead of direct db access
-    const result = await repository.updateRepository(id, updates, currentUser.id);
+    const result = await dbRepository.updateRepository(id, updates, currentUser.id);
 
     if (!result.success || !result.data) {
       console.log('[@action:repositories:updateRepository] Update failed', {
@@ -300,7 +304,7 @@ export async function deleteRepository(
     }
 
     // First get the repository to confirm it exists
-    const getRepoResult = await repository.getRepository(id, currentUser.id);
+    const getRepoResult = await dbRepository.getRepository(id, currentUser.id);
 
     if (!getRepoResult.success || !getRepoResult.data) {
       console.log('[@action:repositories:deleteRepository] Repository not found', {
@@ -311,7 +315,7 @@ export async function deleteRepository(
     }
 
     // Call the repository module to delete
-    const result = await repository.deleteRepository(id, currentUser.id);
+    const result = await dbRepository.deleteRepository(id, currentUser.id);
 
     if (!result.success) {
       console.log('[@action:repositories:deleteRepository] Deletion failed', {
@@ -384,7 +388,7 @@ export async function syncRepository(
       status: 'SYNCED',
     });
 
-    const result = await repository.updateRepository(id, updates, currentUser.id);
+    const result = await dbRepository.updateRepository(id, updates, currentUser.id);
 
     if (!result.success || !result.data) {
       console.log('[@action:repositories:syncRepository] Sync failed', {
@@ -459,7 +463,7 @@ export async function createRepositoryFromUrl(
     );
 
     // Use the repository module's createRepositoryFromUrl method
-    const result = await repository.createRepositoryFromUrl(quickCloneData, user.id);
+    const result = await dbRepository.createRepositoryFromUrl(quickCloneData, user.id);
 
     console.log('[@action:repositories:createRepositoryFromUrl] Result from DB layer:', result);
 
@@ -494,7 +498,7 @@ export async function getRepository(
     console.log(`[Server] Fetching repository ${id} from database`);
 
     // Call the repository module - don't need to pass profile ID for non-tenant specific queries
-    const result = await repository.getRepository(id);
+    const result = await dbRepository.getRepository(id);
 
     if (!result.success || !result.data) {
       return { success: false, error: 'Repository not found' };
@@ -604,7 +608,7 @@ export async function getGitProviders(): Promise<{
     }
 
     // Call the gitProvider module instead of direct db access
-    const result = await gitProvider.getGitProviders(user.id);
+    const result = await dbGitProvider.getGitProviders(user.id);
 
     if (!result.success || !result.data) {
       console.error(`[Server] Failed to fetch git providers:`, result.error);
@@ -615,7 +619,9 @@ export async function getGitProviders(): Promise<{
     }
 
     // Map DB results to interface type
-    const providers = result.data.map((provider) => mapDbGitProviderToGitProvider(provider));
+    const providers = result.data.map((provider: DbGitProvider) =>
+      mapDbGitProviderToGitProvider(provider),
+    );
 
     return { success: true, data: providers };
   } catch (error: any) {
@@ -638,7 +644,7 @@ export async function getGitProvider(
     }
 
     // Call the gitProvider module instead of direct db access
-    const result = await gitProvider.getGitProvider(id, user.id);
+    const result = await dbGitProvider.getGitProvider(id, user.id);
 
     if (!result.success || !result.data) {
       console.error(`[Server] Git provider not found:`, result.error);
@@ -667,7 +673,7 @@ export async function deleteGitProvider(id: string): Promise<{ success: boolean;
     }
 
     // Call the gitProvider module instead of direct db access
-    const result = await gitProvider.deleteGitProvider(id, user.id);
+    const result = await dbGitProvider.deleteGitProvider(id, user.id);
 
     if (!result.success) {
       console.error(`[Server] Failed to delete git provider:`, result.error);
@@ -703,7 +709,7 @@ export async function addGitProvider(provider: {
     };
 
     // Call the gitProvider module instead of direct db access
-    const result = await gitProvider.createGitProvider(gitProviderData);
+    const result = await dbGitProvider.createGitProvider(gitProviderData);
 
     if (!result.success || !result.data) {
       console.error(`[Server] Failed to create git provider:`, result.error);
@@ -745,7 +751,7 @@ export async function updateGitProvider(
     };
 
     // Call the gitProvider module instead of direct db access
-    const result = await gitProvider.updateGitProvider(id, gitProviderUpdates, user.id);
+    const result = await dbGitProvider.updateGitProvider(id, gitProviderUpdates, user.id);
 
     if (!result.success || !result.data) {
       console.error(`[Server] Failed to update git provider:`, result.error);
@@ -772,7 +778,7 @@ export async function refreshGitProvider(id: string): Promise<GitProvider> {
     }
 
     // Call the gitProvider.refreshGitProvider method instead of updateGitProvider
-    const result = await gitProvider.refreshGitProvider(id, user.id);
+    const result = await dbGitProvider.refreshGitProvider(id, user.id);
 
     if (!result.success || !result.data) {
       console.error(`[Server] Failed to refresh git provider:`, result.error);
@@ -813,7 +819,7 @@ export async function handleOAuthCallback(
     const { providerId, redirectUri } = stateData;
 
     // Call the gitProvider module instead of direct db access
-    const result = await gitProvider.handleOAuthCallback(code, providerId, user.id);
+    const result = await dbGitProvider.handleOAuthCallback(code, providerId, user.id);
 
     if (!result.success) {
       console.error(
@@ -852,7 +858,7 @@ export async function createGitProvider(
     const validatedData = gitProviderCreateSchema.parse(data);
 
     // Call the gitProvider module instead of direct db access
-    const result = await gitProvider.createGitProviderWithSchema(
+    const result = await dbGitProvider.createGitProviderWithSchema(
       {
         type: validatedData.type,
         displayName: validatedData.displayName,
@@ -914,7 +920,7 @@ export async function getRepositoryFiles(
     }
 
     // Call the files DB module instead of direct access
-    const result = await files.getRepositoryFiles(repositoryId, path, currentUser.id);
+    const result = await dbFiles.getRepositoryFiles(repositoryId, path, currentUser.id);
 
     if (!result.success || !result.data) {
       return { success: false, error: result.error || 'Failed to fetch repository files' };
@@ -958,7 +964,7 @@ export async function getFileContent(
     }
 
     // Call the files DB module instead of direct access
-    const result = await files.getFileContent(repositoryId, path, currentUser.id);
+    const result = await dbFiles.getFileContent(repositoryId, path, currentUser.id);
 
     if (!result.success || !result.data) {
       return { success: false, error: result.error || 'Failed to fetch file content' };

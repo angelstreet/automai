@@ -1,13 +1,7 @@
-// Export all repository-related DB functions from the unified db-repository file
-export {
-  repository,
-  starRepository,
-  pinRepository,
-  gitProvider,
-  files,
-  // Types
-  type Repository,
-  type GitProvider,
-  type RepositoryPin,
-  type DbResponse,
-} from './db-repository';
+// Export all repository-related DB functions
+export { repository } from './db-repository';
+export { files } from './db-files';
+export { gitProvider } from './db-git-provider';
+
+// Types
+export { type Repository, type GitProvider, type DbResponse } from './db-repository';
