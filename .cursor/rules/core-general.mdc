@@ -35,6 +35,34 @@ alwaysApply: true
 - Propose server testing with clear justification when needed
 - NEVER modify shadcn components directly
 
+## Next.js Cookie Handling (CRITICAL)
+
+- ✅ ALWAYS await the cookies() function when using it in server components/actions
+  - Example: `const cookieStore = await cookies();`
+- ❌ NEVER use cookies() without awaiting it
+  - BAD: `const cookieStore = cookies();` - This causes infinite loops and "cookies() should be awaited" errors
+- ✅ ALWAYS properly handle cookie access in middleware and API routes with proper async/await
+- ✅ When passing cookieStore to functions, ensure the cookie value was properly awaited first
+
+### Cookie Handling Examples
+
+#### ❌ Incorrect (causes errors):
+```typescript
+// This pattern causes "cookies() should be awaited" errors
+export async function someServerAction() {
+  const cookieStore = cookies();  // WRONG: not awaited
+  const supabase = await createClient(cookieStore);
+}
+```
+
+#### ✅ Correct:
+```typescript
+// This is the correct pattern 
+export async function someServerAction() {
+  const cookieStore = await cookies();  // CORRECT: properly awaited
+  const supabase = await createClient(cookieStore);
+}
+```
 ## Logging Standards
 
 ### Format and Structure

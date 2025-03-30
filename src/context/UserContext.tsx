@@ -1,19 +1,18 @@
 'use client';
 
 import React, { createContext, useContext, useState } from 'react';
-import { User, UserTeam } from '@/types/user';
+
+import { User } from '@/types/user';
 
 // Define the minimal context type needed
 interface UserContextType {
   user: User | null;
-  teams: UserTeam[];
   isLoading: boolean;
 }
 
 // Create context with default values
 const UserContext = createContext<UserContextType>({
   user: null,
-  teams: [],
   isLoading: false,
 });
 
@@ -33,14 +32,9 @@ export function UserProvider({
     '[@context:UserContext:UserProvider] Initializing with initialUser:',
     initialUser ? `${initialUser.id} (${initialUser.email})` : 'null',
   );
-
-  // Compute derived state
-  const teams = user?.teams || [];
-
   // Create a minimal context value (without team selection)
   const value = {
     user,
-    teams,
     isLoading,
   };
 

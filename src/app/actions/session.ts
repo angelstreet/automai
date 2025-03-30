@@ -10,7 +10,7 @@ import { AuthUser } from '@/types/user';
  * This function should be used by middleware and server components
  */
 export async function getCurrentSession() {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const supabase = await createClient(cookieStore);
   const {
     data: { session },
@@ -36,7 +36,7 @@ export async function getCurrentSession() {
  */
 export async function getCurrentUser(): Promise<AuthUser | null> {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const user = await userDB.getCurrentUser(cookieStore);
 
     console.log('[@action:session:getCurrentUser] Fetched user data', {

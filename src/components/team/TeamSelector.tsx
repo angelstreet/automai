@@ -16,8 +16,8 @@ import { useUser, useTeam } from '@/context';
 import { cn } from '@/lib/utils';
 
 export default function TeamSelector() {
-  const { user, teams: userTeams, refreshUser } = useUser();
-  const { activeTeam, setSelectedTeam } = useTeam();
+  const { user, teams: userTeams, selectedTeam, setSelectedTeam, refreshUser } = useUser();
+  const { syncWithUserContext } = useTeam();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -33,6 +33,8 @@ export default function TeamSelector() {
 
   const handleTeamSelect = async (teamId: string) => {
     await setSelectedTeam(teamId);
+    // Make sure the permission system is aware of the team change
+    await syncWithUserContext();
     setOpen(false);
   };
 
@@ -47,7 +49,7 @@ export default function TeamSelector() {
         >
           <div className="flex items-center">
             <Users className="mr-2 h-4 w-4" />
-            <span className="truncate">{activeTeam ? activeTeam.name : 'Select team...'}</span>
+            <span className="truncate">{selectedTeam ? selectedTeam.name : 'Select team...'}</span>
           </div>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -66,7 +68,7 @@ export default function TeamSelector() {
                 <Check
                   className={cn(
                     'mr-2 h-4 w-4',
-                    activeTeam?.id === team.id ? 'opacity-100' : 'opacity-0',
+                    selectedTeam?.id === team.id ? 'opacity-100' : 'opacity-0',
                   )}
                 />
                 {team.name}

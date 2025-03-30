@@ -4,59 +4,41 @@ import { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adap
 import { cookies } from 'next/headers';
 
 export const createClient = async (cookieStore?: ReadonlyRequestCookies) => {
-  try {
-    // Ensure cookieHandler is properly awaited
-    const cookieHandler = cookieStore || (await cookies());
+  // Ensure cookieHandler is fully resolved before proceeding
+  const cookieHandler = cookieStore ?? (await cookies());
 
-    return createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          // Use a simplified, non-async getter that won't cause Next.js issues
-          get(name) {
-            try {
-              return cookieHandler.get(name)?.value || '';
-            } catch (error) {
-              console.warn(
-                `[@supabase:server] Error getting cookie '${name}': ${
-                  error instanceof Error ? error.message : String(error)
-                }`,
-              );
-              return '';
-            }
-          },
-          set(name, value, options) {
-            try {
-              cookieHandler.set(name, value, options);
-            } catch (error) {
-              console.warn(
-                `[@supabase:server] Error setting cookie '${name}': ${
-                  error instanceof Error ? error.message : String(error)
-                }`,
-              );
-            }
-          },
-          remove(name, options) {
-            try {
-              cookieHandler.set(name, '', { ...options, maxAge: 0 });
-            } catch (error) {
-              console.warn(
-                `[@supabase:server] Error removing cookie '${name}': ${
-                  error instanceof Error ? error.message : String(error)
-                }`,
-              );
-            }
-          },
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        async get(name) {
+          try {
+            const cookie = await cookieHandler.get(name); // Await the get call
+            return cookie?.value ?? ''; // Use nullish coalescing for clarity
+          } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.warn(`[@supabase:server] Could not get cookie ${name}: ${errorMessage}`);
+            return '';
+          }
+        },
+        async set(name, value, options) {
+          try {
+            await cookieHandler.set(name, value, options); // Await the set call
+          } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.warn(`[@supabase:server] Could not set cookie ${name}: ${errorMessage}`);
+          }
+        },
+        async remove(name, options) {
+          try {
+            await cookieHandler.set(name, '', { ...options, maxAge: 0 }); // Await the remove call
+          } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.warn(`[@supabase:server] Could not remove cookie ${name}: ${errorMessage}`);
+          }
         },
       },
-    );
-  } catch (error) {
-    console.error(
-      `[@supabase:server] Error creating client: ${
-        error instanceof Error ? error.message : String(error)
-      }`,
-    );
-    throw error;
-  }
+    },
+  );
 };

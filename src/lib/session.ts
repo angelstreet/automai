@@ -7,8 +7,8 @@ import { redirect } from 'next/navigation';
  * @returns The authenticated user or null if not authenticated
  */
 export async function getCurrentUser() {
-  const cookieStore = cookies();
-  const supabase = createServerClient(cookieStore);
+  const cookieStore = await cookies();
+  const supabase = await createServerClient(cookieStore);
 
   try {
     const {

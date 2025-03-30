@@ -2,7 +2,6 @@
 
 import userDB from '@/lib/supabase/db-users';
 import { AuthUser } from '@/types/user';
-import { cookies } from 'next/headers';
 
 /**
  * Invalidate user-related cache
@@ -71,7 +70,6 @@ export async function updateProfile(formData: FormData | Record<string, any>) {
 
 /**
  * Set the user's selected team
- * @deprecated Use setSelectedTeam from team actions instead
  *
  * @param teamId The ID of the team to select
  * @returns Result object with success status
