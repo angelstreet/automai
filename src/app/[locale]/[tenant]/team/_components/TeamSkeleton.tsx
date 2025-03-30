@@ -1,20 +1,31 @@
 'use client';
 
 import { Skeleton } from '@/components/shadcn/skeleton';
+import { Tabs, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 
 export default function TeamSkeleton() {
   return (
-    <div className="space-y-3">
-      {/* Tabs Skeleton - TeamHeader now only has tabs */}
-      <div className="border-b mb-4">
-        <div className="flex gap-4">
-          <Skeleton className="h-9 w-24" />
-          <Skeleton className="h-9 w-24" />
-        </div>
-      </div>
+    <div className="space-y-6">
+      {/* Tabs Skeleton */}
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="grid grid-cols-2 mb-8">
+          <TabsTrigger value="overview" disabled>
+            <Skeleton className="h-5 w-20" />
+          </TabsTrigger>
+          <TabsTrigger value="members" disabled>
+            <Skeleton className="h-5 w-20" />
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
-      {/* Content area - to be replaced by tab-specific skeletons */}
-      <Skeleton className="h-80 w-full rounded-lg" />
+      {/* Content area skeleton */}
+      <div className="space-y-6">
+        {/* Subscription card skeleton */}
+        <Skeleton className="h-24 w-full rounded-lg" />
+
+        {/* Resources card skeleton */}
+        <Skeleton className="h-80 w-full rounded-lg" />
+      </div>
     </div>
   );
 }

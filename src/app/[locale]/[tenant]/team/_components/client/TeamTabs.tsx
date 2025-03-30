@@ -5,6 +5,8 @@ import { useTeam } from '@/context/TeamContext';
 import { User } from '@/types/user';
 import { TeamDetails } from '@/types/team';
 
+import MembersTabSkeleton from '../MembersTabSkeleton';
+import OverviewTabSkeleton from '../OverviewTabSkeleton';
 import TeamOverview from '../TeamOverview';
 import { MembersTab } from './MembersTab';
 
@@ -17,8 +19,8 @@ export default function TeamTabs({ unassignedResources, user }: TeamTabsProps) {
   const searchParams = useSearchParams();
   const activeTab = searchParams.get('tab') || 'overview';
 
-  // Get team data from context instead of props
-  const { activeTeam } = useTeam();
+  // Get team data and loading state from context
+  const { activeTeam, loading } = useTeam();
 
   // Convert activeTeam to TeamDetails type with proper structure
   const teamDetails: TeamDetails = activeTeam
@@ -39,10 +41,11 @@ export default function TeamTabs({ unassignedResources, user }: TeamTabsProps) {
       }
     : null;
 
-  if (!activeTeam) {
+  // Show appropriate skeleton based on the active tab
+  if (loading || !activeTeam) {
     return (
-      <div className="p-4 text-center">
-        <p>Loading team details...</p>
+      <div className="space-y-6">
+        {activeTab === 'overview' ? <OverviewTabSkeleton /> : <MembersTabSkeleton />}
       </div>
     );
   }

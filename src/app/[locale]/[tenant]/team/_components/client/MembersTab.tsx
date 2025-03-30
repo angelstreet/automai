@@ -33,6 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/shadcn/table';
+import { ResourceType, usePermission } from '@/context/PermissionContext';
 import { useTeam } from '@/context/TeamContext';
 import { User } from '@/types/user';
 
@@ -45,9 +46,15 @@ interface MembersTabProps {
   user?: User | null;
 }
 
-export function MembersTab({ teamId, userRole, subscriptionTier, user: _user }: MembersTabProps) {
+export function MembersTab({
+  teamId,
+  userRole: _userRole,
+  subscriptionTier,
+  user: _user,
+}: MembersTabProps) {
   const t = useTranslations('team');
-  const { getTeamMembers, invalidateTeamMembersCache } = useTeam();
+  const { getTeamMembers, invalidateTeamMembersCache, loading: contextLoading } = useTeam();
+  const { hasPermission } = usePermission();
   const [members, setMembers] = useState<TeamMemberDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -55,8 +62,9 @@ export function MembersTab({ teamId, userRole, subscriptionTier, user: _user }: 
   const [isRemoving, setIsRemoving] = useState(false);
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
 
+  // Check permissions for managing members
   const canManageMembers =
-    userRole && ['owner', 'admin'].includes(userRole.toLowerCase()) && subscriptionTier !== 'trial';
+    hasPermission('repositories' as ResourceType, 'insert') && subscriptionTier !== 'trial';
 
   useEffect(() => {
     const fetchMembers = async () => {
@@ -81,6 +89,9 @@ export function MembersTab({ teamId, userRole, subscriptionTier, user: _user }: 
 
     fetchMembers();
   }, [teamId, getTeamMembers]);
+
+  // Use either local loading state or context loading state
+  const showLoading = isLoading || contextLoading;
 
   const handleRemoveMember = async () => {
     if (!teamId || !memberToRemove) return;
@@ -118,7 +129,7 @@ export function MembersTab({ teamId, userRole, subscriptionTier, user: _user }: 
       member.role.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
-  if (isLoading) {
+  if (showLoading) {
     return <MembersTabSkeleton />;
   }
 

@@ -1,19 +1,22 @@
 'use client';
 
-import { PlusIcon, Settings } from 'lucide-react';
+import { PlusIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+import { TeamDetails } from '@/app/[locale]/[tenant]/team/types';
 import { Button } from '@/components/shadcn/button';
+import { ResourceType, usePermission } from '@/context/PermissionContext';
 import { useTeam } from '@/context/TeamContext';
-import { TeamDetails } from '@/types/team';
 
 export default function TeamActions() {
   const t = useTranslations('team');
   const { activeTeam } = useTeam();
+  const { hasPermission } = usePermission();
 
   // Treat activeTeam as TeamDetails
   const team = activeTeam as unknown as TeamDetails;
 
+  // Show the create team button if no team is active
   if (!team) {
     return (
       <Button variant="default" size="sm">
@@ -23,8 +26,12 @@ export default function TeamActions() {
     );
   }
 
-  // For trial tier, don't show buttons or show limited options
-  if (team.subscription_tier === 'trial') {
+  // Check if user has permission to add members
+  const canAddMembers =
+    hasPermission('repositories' as ResourceType, 'insert') && team.subscription_tier !== 'trial';
+
+  // Don't show any buttons if user can't add members
+  if (!canAddMembers) {
     return null;
   }
 
@@ -33,10 +40,6 @@ export default function TeamActions() {
       <Button variant="outline" size="sm">
         <PlusIcon className="h-4 w-4 mr-1" />
         {t('addMember')}
-      </Button>
-      <Button variant="outline" size="sm">
-        <Settings className="h-4 w-4 mr-1" />
-        {t('settings')}
       </Button>
     </div>
   );
