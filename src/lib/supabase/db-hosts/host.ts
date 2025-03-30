@@ -1,10 +1,10 @@
-import { createClient } from '../server';
+import { createClient } from '@/lib/supabase/server';
 
 // Host DB operations
 const host = {
-  async findMany(options: any = {}) {
+  async findMany(options: any = {}, cookieStore?: any) {
     console.log('[@db:host:findMany] Finding many hosts');
-    const supabase = await createClient();
+    const supabase = await createClient(cookieStore);
 
     // Start building the query
     let builder = supabase.from('hosts').select('*');
@@ -44,9 +44,9 @@ const host = {
     return data || [];
   },
 
-  async findUnique({ where }: { where: any }) {
+  async findUnique({ where }: { where: any }, cookieStore?: any) {
     console.log('[@db:host:findUnique] Finding unique host');
-    const supabase = await createClient();
+    const supabase = await createClient(cookieStore);
 
     // Apply the 'where' conditions
     const { data, error } = await supabase.from('hosts').select().match(where).single();
@@ -59,9 +59,9 @@ const host = {
     return data;
   },
 
-  async create({ data }: { data: any }) {
+  async create({ data }: { data: any }, cookieStore?: any) {
     console.log('[@db:host:create] Creating host');
-    const supabase = await createClient();
+    const supabase = await createClient(cookieStore);
 
     const { data: result, error } = await supabase.from('hosts').insert(data).select().single();
 
@@ -73,9 +73,9 @@ const host = {
     return result;
   },
 
-  async update({ where, data }: { where: any; data: any }) {
+  async update({ where, data }: { where: any; data: any }, cookieStore?: any) {
     console.log('[@db:host:update] Updating host');
-    const supabase = await createClient();
+    const supabase = await createClient(cookieStore);
 
     const { data: result, error } = await supabase
       .from('hosts')
@@ -92,9 +92,9 @@ const host = {
     return result;
   },
 
-  async delete({ where }: { where: any }) {
+  async delete({ where }: { where: any }, cookieStore?: any) {
     console.log('[@db:host:delete] Deleting host');
-    const supabase = await createClient();
+    const supabase = await createClient(cookieStore);
 
     const { error } = await supabase.from('hosts').delete().eq('id', where.id);
 

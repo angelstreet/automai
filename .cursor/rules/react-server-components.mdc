@@ -1,11 +1,39 @@
 ---
-description: 
+description: Guidelines for React Server Components in Next.js with Supabase integration
 globs: 
 alwaysApply: true
 ---
 # React Server Components Architecture Guidelines
 
-## Database Access Pattern (CRITICAL)
+## CRITICAL: Cookie Handling in Database Layer
+
+### ⚠️ Common Error: Synchronous Cookie Access
+
+The most common error you'll encounter looks like this:
+```
+Error: Route "/[locale]/[tenant]/hosts" used `cookies().get()`. 
+`cookies()` should be awaited before using its value.
+```
+
+This is caused by accessing cookies synchronously without awaiting:
+
+```typescript
+// ❌ WRONG: Will cause errors
+async get(name) {
+  return cookieHandler.get(name)?.value; // SYNC ACCESS - WILL BREAK
+}
+
+// ✅ CORRECT: Always await cookie access
+async get(name) {
+  try {
+    const cookie = await cookieHandler.get(name);
+    return cookie?.value;
+  } catch (error) {
+    console.warn(`Could not get cookie ${name}: ${error.message}`);
+    return undefined;
+  }
+}
+```
 
 ### Three-Tier Architecture (Required)
 
@@ -13,8 +41,8 @@ alwaysApply: true
    - ✅ ALWAYS use `createClient` from `@/lib/supabase/server` for database access
    - ✅ ALWAYS include `cookieStore` parameter in ALL database functions
    - ✅ ALWAYS keep functions focused on database operations only
-   - ❌ NEVER import or use `createBrowserClient` from anywhere
-   - ❌ NEVER create custom browser client files or implementations
+   - ❌ NEVER import `cookies()` from 'next/headers' directly in database layer
+   - ❌ NEVER create custom browser client implementations
 
 2. **Server Actions** (`/app/actions/*.ts`)
    - ✅ ALWAYS mark with `'use server'` directive at the top of the file
@@ -29,106 +57,128 @@ alwaysApply: true
    - ✅ ALWAYS manage UI state and user interactions here
    - ❌ NEVER directly call database operations
 
-### Database Function Implementation
+## Creating New Database Modules
+
+### Step-by-Step Implementation Guide
+
+1. Create module file in `/lib/supabase/db-module/module.ts`
+2. Import only the server createClient:
+   ```typescript
+   import { createClient } from '@/lib/supabase/server';
+   ```
+3. Define functions with cookieStore parameter:
+   ```typescript
+   export async function myFunction(id: string, cookieStore?: any): Promise<Result> {
+     // ...
+   }
+   ```
+4. Initialize Supabase client with cookieStore:
+   ```typescript
+   const supabase = await createClient(cookieStore);
+   ```
+5. Add standard logging:
+   ```typescript
+   console.log(`[@db:module:function] Starting operation for: ${id}`);
+   ```
+6. Implement proper error handling:
+   ```typescript
+   try {
+     // Database operations...
+   } catch (error) {
+     console.error(`[@db:module:function] Error:`, error);
+     return { success: false, error: error.message };
+   }
+   ```
+
+## Correct Patterns With Examples
+
+### Database Function Pattern
 
 ```typescript
-// CORRECT DATABASE FUNCTION IMPLEMENTATION
-// src/lib/supabase/db-teams/teams.ts
+// CORRECT DATABASE FUNCTION
 import { createClient } from '@/lib/supabase/server';
 
 export async function getTeamById(teamId: string, cookieStore?: any): Promise<TeamResult> {
   try {
+    console.log(`[@db:teams:getTeamById] Getting team: ${teamId}`);
+    
+    // Pass cookieStore to createClient
     const supabase = await createClient(cookieStore);
+    
     const { data, error } = await supabase
       .from('teams')
       .select('*')
       .eq('id', teamId)
       .single();
+
+    if (error) throw error;
     
-    // Process and return data
+    return { success: true, data };
   } catch (error) {
-    // Handle errors
+    console.error(`[@db:teams:getTeamById] Error:`, error);
+    return { success: false, error: error.message };
   }
 }
 ```
 
-### Server Action Implementation
+### Server Action Pattern
 
 ```typescript
-// CORRECT SERVER ACTION IMPLEMENTATION
-// src/app/actions/team.ts
+// CORRECT SERVER ACTION
 'use server';
 
 import { cookies } from 'next/headers';
 import { getTeamById } from '@/lib/supabase/db-teams/teams';
-import type { Team } from '@/types/team';
 
-export async function getTeam(id: string): Promise<Team | null> {
+export async function getTeam(id: string) {
+  // Get cookieStore in server action
   const cookieStore = cookies();
-  const result = await getTeamById(id, cookieStore);
-  return result.success ? result.data : null;
-}
-
-// Re-export types for client usage
-export type { Team };
-```
-
-### Client Component Implementation
-
-```typescript
-// CORRECT CLIENT COMPONENT IMPLEMENTATION
-// src/components/TeamDisplay.tsx
-'use client';
-
-import { useState, useEffect } from 'react';
-import { getTeam, type Team } from '@/app/actions/team';
-
-export function TeamDisplay({ teamId }: { teamId: string }) {
-  const [team, setTeam] = useState<Team | null>(null);
   
-  useEffect(() => {
-    async function loadTeam() {
-      const teamData = await getTeam(teamId);
-      setTeam(teamData);
-    }
-    loadTeam();
-  }, [teamId]);
-  
-  // Render UI with team data
+  // Pass to database function
+  return getTeamById(id, cookieStore);
 }
 ```
 
-## Module Export Best Practices
+## Common Anti-Patterns to Avoid
 
-- ✅ ALWAYS use named exports to avoid conflicts
-- ✅ Use `export type` for TypeScript types to avoid compilation issues
-- ✅ Rename exports when consolidating from multiple files:
-
+### ❌ Importing cookies in database layer
 ```typescript
-// CORRECT INDEX FILE PATTERN
-// src/lib/supabase/db-teams/index.ts
-export type { Team, TeamResult } from './teams';
-export {
-  getTeamById,
-  getTeams,
-  createTeam,
-  updateTeam,
-  deleteTeam,
-  getUserTeams as getTeamsByUser
-} from './teams';
+// NEVER DO THIS
+import { cookies } from 'next/headers'; // ❌ WRONG
 
-export {
-  getTeamMembers,
-  addTeamMember,
-  updateTeamMemberRole,
-  removeTeamMember  
-} from './team-members';
-
-export * from './permissions';
+export async function getUserData(userId: string) {
+  const cookieStore = cookies(); // ❌ WRONG
+  // ...
+}
 ```
 
-- ❌ NEVER use `export *` from multiple files with overlapping export names
-- ❌ NEVER export default from context components unless absolutely necessary
+### ❌ Missing cookieStore parameter
+```typescript
+// NEVER DO THIS
+export async function getTeamData(teamId: string) { // ❌ Missing cookieStore parameter
+  const supabase = await createClient(); // ❌ Missing cookieStore
+  // ...
+}
+```
+
+### ❌ Synchronous cookie access 
+```typescript
+// NEVER DO THIS
+async get(name) {
+  return cookieHandler.get(name)?.value; // ❌ WRONG: Sync access
+}
+```
+
+## Troubleshooting Cookie Errors
+
+If you encounter cookie-related errors:
+
+1. Check for direct `cookies()` imports in database layer files
+2. Verify all database functions accept `cookieStore` parameter
+3. Ensure all cookie access is properly awaited
+4. Check that server actions pass `cookieStore` to database functions
+5. Verify `server.ts` implementation has properly awaited cookie access
+6. Add try/catch blocks around cookie operations
 
 ## Authentication Flow
 
@@ -137,18 +187,9 @@ export * from './permissions';
 - ✅ Pass to database functions: `return dbFunction(id, cookieStore);`
 - ❌ NEVER create your own authentication flow outside this pattern
 
-## Common Anti-patterns to Avoid
+## Module Export Best Practices
 
-- ❌ **NEVER** create custom browser client files 
-- ❌ **NEVER** import from database layer directly in client components
-- ❌ **NEVER** mix database operations and UI logic
-- ❌ **NEVER** use star exports from multiple files with same named exports
-- ❌ **NEVER** export components as default unless required by external libraries
-
-## Debugging Database Access Issues
-
-If you encounter database access issues:
-1. Check that you're using `createClient` from `/lib/supabase/server.ts`
-2. Verify `cookieStore` is passed through the entire call chain
-3. Ensure API routes use `cookies()` from `next/headers`
-4. Confirm you're not importing browser-specific modules server-side
+- ✅ ALWAYS use named exports to avoid conflicts
+- ✅ Use `export type` for TypeScript types to avoid compilation issues
+- ✅ Rename exports when consolidating from multiple files
+- ❌ NEVER use `export *` from multiple files with overlapping export names

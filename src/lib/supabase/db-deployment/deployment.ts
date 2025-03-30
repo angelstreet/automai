@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 
-import { createClient } from '../server';
+import { createClient } from '@/lib/supabase/server';
 
 // Deployment DB operations
 const deployment = {

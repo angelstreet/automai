@@ -1,6 +1,5 @@
-import { cookies } from 'next/headers';
-import { createServerClient } from '@/lib/supabase';
-import { PostgrestError } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/server';
+
 import { ResourceType } from './permissions';
 
 export interface ResourceLimit {
@@ -38,17 +37,18 @@ export type ResourceLimitCheckResult = {
   error?: string;
 };
 
-// Function to get supabase client
-async function getSupabaseClient() {
-  const cookieStore = cookies();
-  return await createServerClient(cookieStore);
-}
-
 /**
  * Get all resource limits for a subscription tier
  */
-export async function getResourceLimits(tierId: string): Promise<ResourceLimitsResult> {
+export async function getResourceLimits(
+  tierId: string,
+  cookieStore?: any,
+): Promise<ResourceLimitsResult> {
   try {
+    console.log(
+      `[@db:resource-limits:getResourceLimits] Getting resource limits for tier: ${tierId}`,
+    );
+    const supabase = await createClient(cookieStore);
     const { data, error } = await supabase
       .from('resource_limits')
       .select('*')
@@ -56,15 +56,18 @@ export async function getResourceLimits(tierId: string): Promise<ResourceLimitsR
 
     if (error) throw error;
 
+    console.log(
+      `[@db:resource-limits:getResourceLimits] Successfully retrieved ${data?.length || 0} resource limits`,
+    );
     return {
       success: true,
       data,
     };
   } catch (error) {
-    console.error('Error fetching resource limits:', error);
+    console.error('[@db:resource-limits:getResourceLimits] Error fetching resource limits:', error);
     return {
       success: false,
-      error: (error as PostgrestError).message || 'Failed to fetch resource limits',
+      error: error instanceof Error ? error.message : 'Failed to fetch resource limits',
     };
   }
 }
@@ -75,8 +78,13 @@ export async function getResourceLimits(tierId: string): Promise<ResourceLimitsR
 export async function getResourceLimit(
   tierId: string,
   resourceType: ResourceType,
+  cookieStore?: any,
 ): Promise<ResourceLimitResult> {
   try {
+    console.log(
+      `[@db:resource-limits:getResourceLimit] Getting resource limit for tier: ${tierId}, resource: ${resourceType}`,
+    );
+    const supabase = await createClient(cookieStore);
     const { data, error } = await supabase
       .from('resource_limits')
       .select('*')
@@ -86,15 +94,16 @@ export async function getResourceLimit(
 
     if (error) throw error;
 
+    console.log(`[@db:resource-limits:getResourceLimit] Successfully retrieved resource limit`);
     return {
       success: true,
       data,
     };
   } catch (error) {
-    console.error('Error fetching resource limit:', error);
+    console.error('[@db:resource-limits:getResourceLimit] Error fetching resource limit:', error);
     return {
       success: false,
-      error: (error as PostgrestError).message || 'Failed to fetch resource limit',
+      error: error instanceof Error ? error.message : 'Failed to fetch resource limit',
     };
   }
 }
@@ -105,10 +114,14 @@ export async function getResourceLimit(
 export async function checkResourceLimit(
   tenantId: string,
   resourceType: string,
+  cookieStore?: any,
 ): Promise<ResourceLimitResult> {
   try {
+    console.log(
+      `[@db:resource-limits:checkResourceLimit] Checking resource limit for tenant: ${tenantId}, resource: ${resourceType}`,
+    );
     // Call the RPC function to check the resource limit
-    const supabase = await getSupabaseClient();
+    const supabase = await createClient(cookieStore);
     const { data, error } = await supabase.rpc('check_resource_limit', {
       p_tenant_id: tenantId,
       p_resource_type: resourceType,
@@ -116,12 +129,16 @@ export async function checkResourceLimit(
 
     if (error) throw error;
 
+    console.log(`[@db:resource-limits:checkResourceLimit] Successfully checked resource limit`);
     return {
       success: true,
       data,
     };
   } catch (error) {
-    console.error(`Error checking resource limit for ${resourceType}:`, error);
+    console.error(
+      `[@db:resource-limits:checkResourceLimit] Error checking resource limit for ${resourceType}:`,
+      error,
+    );
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to check resource limit',
@@ -137,8 +154,14 @@ export async function updateResourceLimit(
   resourceType: ResourceType,
   maxCount: number,
   isUnlimited: boolean,
+  cookieStore?: any,
 ): Promise<ResourceLimitResult> {
   try {
+    console.log(
+      `[@db:resource-limits:updateResourceLimit] Updating resource limit for tier: ${tierId}, resource: ${resourceType}`,
+    );
+    const supabase = await createClient(cookieStore);
+
     // Check if resource limit exists
     const { data: existingLimit, error: fetchError } = await supabase
       .from('resource_limits')
@@ -156,6 +179,9 @@ export async function updateResourceLimit(
 
     if (existingLimit) {
       // Update existing resource limit
+      console.log(
+        `[@db:resource-limits:updateResourceLimit] Updating existing resource limit: ${existingLimit.id}`,
+      );
       const result = await supabase
         .from('resource_limits')
         .update({
@@ -170,6 +196,7 @@ export async function updateResourceLimit(
       error = result.error;
     } else {
       // Insert new resource limit
+      console.log(`[@db:resource-limits:updateResourceLimit] Creating new resource limit`);
       const result = await supabase
         .from('resource_limits')
         .insert({
@@ -187,15 +214,19 @@ export async function updateResourceLimit(
 
     if (error) throw error;
 
+    console.log(`[@db:resource-limits:updateResourceLimit] Successfully updated resource limit`);
     return {
       success: true,
       data,
     };
   } catch (error) {
-    console.error('Error updating resource limit:', error);
+    console.error(
+      '[@db:resource-limits:updateResourceLimit] Error updating resource limit:',
+      error,
+    );
     return {
       success: false,
-      error: (error as PostgrestError).message || 'Failed to update resource limit',
+      error: error instanceof Error ? error.message : 'Failed to update resource limit',
     };
   }
 }

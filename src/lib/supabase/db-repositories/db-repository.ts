@@ -1,6 +1,3 @@
-// DB Repository module
-// Main implementation for repository, gitProvider, and files functionality
-
 import { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies';
 
 import { createClient } from '@/lib/supabase/server';

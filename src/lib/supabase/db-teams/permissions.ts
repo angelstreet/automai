@@ -1,6 +1,4 @@
-import { createServerClient } from '@/lib/supabase';
-import { PostgrestError } from '@supabase/supabase-js';
-import { createBrowserClient } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/server';
 
 export type ResourceType =
   | 'hosts'
@@ -63,20 +61,19 @@ export type RoleTemplateResult = {
   error?: string;
 };
 
-// Function to get supabase client
-async function getSupabaseClient() {
-  return createBrowserClient();
-}
-
 /**
  * Get all permissions for a user in a specific team
  */
 export async function getUserPermissions(
   profileId: string,
   teamId: string,
+  cookieStore?: any,
 ): Promise<PermissionsResult> {
   try {
-    const supabase = await getSupabaseClient();
+    console.log(
+      `[@db:permissions:getUserPermissions] Getting permissions for profile: ${profileId}, team: ${teamId}`,
+    );
+    const supabase = await createClient(cookieStore);
     const { data, error } = await supabase
       .from('permission_matrix')
       .select('*')
@@ -85,12 +82,15 @@ export async function getUserPermissions(
 
     if (error) throw error;
 
+    console.log(
+      `[@db:permissions:getUserPermissions] Successfully retrieved ${data?.length || 0} permissions`,
+    );
     return {
       success: true,
       data: data,
     };
   } catch (error) {
-    console.error('Error getting user permissions:', error);
+    console.error('[@db:permissions:getUserPermissions] Error getting user permissions:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error getting permissions',
@@ -101,19 +101,23 @@ export async function getUserPermissions(
 /**
  * Get all available role templates
  */
-export async function getRoleTemplates(): Promise<RoleTemplatesResult> {
+export async function getRoleTemplates(cookieStore?: any): Promise<RoleTemplatesResult> {
   try {
-    const supabase = await getSupabaseClient();
+    console.log('[@db:permissions:getRoleTemplates] Getting all role templates');
+    const supabase = await createClient(cookieStore);
     const { data, error } = await supabase.from('role_templates').select('*');
 
     if (error) throw error;
 
+    console.log(
+      `[@db:permissions:getRoleTemplates] Successfully retrieved ${data?.length || 0} role templates`,
+    );
     return {
       success: true,
       data,
     };
   } catch (error) {
-    console.error('Error fetching role templates:', error);
+    console.error('[@db:permissions:getRoleTemplates] Error fetching role templates:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch role templates',
@@ -124,9 +128,14 @@ export async function getRoleTemplates(): Promise<RoleTemplatesResult> {
 /**
  * Get a specific role template
  */
-export async function getRoleTemplate(name: string): Promise<RoleTemplateResult> {
+export async function getRoleTemplate(
+  name: string,
+  cookieStore?: any,
+): Promise<RoleTemplateResult> {
   try {
-    const { data, error } = await getSupabaseClient()
+    console.log(`[@db:permissions:getRoleTemplate] Getting role template: ${name}`);
+    const supabase = await createClient(cookieStore);
+    const { data, error } = await supabase
       .from('role_templates')
       .select('*')
       .eq('name', name)
@@ -134,15 +143,16 @@ export async function getRoleTemplate(name: string): Promise<RoleTemplateResult>
 
     if (error) throw error;
 
+    console.log('[@db:permissions:getRoleTemplate] Successfully retrieved role template');
     return {
       success: true,
       data,
     };
   } catch (error) {
-    console.error('Error fetching role template:', error);
+    console.error('[@db:permissions:getRoleTemplate] Error fetching role template:', error);
     return {
       success: false,
-      error: (error as PostgrestError).message || 'Failed to fetch role template',
+      error: error instanceof Error ? error.message : 'Failed to fetch role template',
     };
   }
 }
@@ -154,9 +164,14 @@ export async function applyRoleTemplate(
   teamId: string,
   profileId: string,
   roleName: string,
+  cookieStore?: any,
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const { error } = await getSupabaseClient().rpc('apply_role_template', {
+    console.log(
+      `[@db:permissions:applyRoleTemplate] Applying role template: ${roleName} to profile: ${profileId} in team: ${teamId}`,
+    );
+    const supabase = await createClient(cookieStore);
+    const { error } = await supabase.rpc('apply_role_template', {
       p_team_id: teamId,
       p_profile_id: profileId,
       p_role_name: roleName,
@@ -164,14 +179,15 @@ export async function applyRoleTemplate(
 
     if (error) throw error;
 
+    console.log('[@db:permissions:applyRoleTemplate] Successfully applied role template');
     return {
       success: true,
     };
   } catch (error) {
-    console.error('Error applying role template:', error);
+    console.error('[@db:permissions:applyRoleTemplate] Error applying role template:', error);
     return {
       success: false,
-      error: (error as PostgrestError).message || 'Failed to apply role template',
+      error: error instanceof Error ? error.message : 'Failed to apply role template',
     };
   }
 }
@@ -192,10 +208,16 @@ export async function setUserPermission(
     can_delete_own?: boolean;
     can_execute?: boolean;
   },
+  cookieStore?: any,
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    console.log(
+      `[@db:permissions:setUserPermission] Setting permissions for profile: ${profileId}, team: ${teamId}, resource: ${resourceType}`,
+    );
+    const supabase = await createClient(cookieStore);
+
     // Check if permission exists
-    const { data: existingPermission, error: fetchError } = await getSupabaseClient()
+    const { data: existingPermission, error: fetchError } = await supabase
       .from('permission_matrix')
       .select('id')
       .eq('team_id', teamId)
@@ -212,34 +234,37 @@ export async function setUserPermission(
 
     if (existingPermission) {
       // Update existing permission
-      const { error: updateError } = await getSupabaseClient()
+      console.log(
+        `[@db:permissions:setUserPermission] Updating existing permission: ${existingPermission.id}`,
+      );
+      const { error: updateError } = await supabase
         .from('permission_matrix')
         .update(permissions)
         .eq('id', existingPermission.id);
       error = updateError;
     } else {
       // Insert new permission
-      const { error: insertError } = await getSupabaseClient()
-        .from('permission_matrix')
-        .insert({
-          team_id: teamId,
-          profile_id: profileId,
-          resource_type: resourceType,
-          ...permissions,
-        });
+      console.log('[@db:permissions:setUserPermission] Inserting new permission');
+      const { error: insertError } = await supabase.from('permission_matrix').insert({
+        team_id: teamId,
+        profile_id: profileId,
+        resource_type: resourceType,
+        ...permissions,
+      });
       error = insertError;
     }
 
     if (error) throw error;
 
+    console.log('[@db:permissions:setUserPermission] Successfully set user permission');
     return {
       success: true,
     };
   } catch (error) {
-    console.error('Error setting user permission:', error);
+    console.error('[@db:permissions:setUserPermission] Error setting user permission:', error);
     return {
       success: false,
-      error: (error as PostgrestError).message || 'Failed to set user permission',
+      error: error instanceof Error ? error.message : 'Failed to set user permission',
     };
   }
 }
@@ -252,6 +277,7 @@ export async function setUserPermission(
  * @param resourceType The type of resource (hosts, repositories, etc.)
  * @param operation The operation (select, insert, update, delete, execute)
  * @param creatorId The creator of the resource (optional, for own-resource checks)
+ * @param cookieStore Cookie store for authentication
  * @returns boolean indicating if permission is granted
  */
 export async function checkPermission(
@@ -260,15 +286,22 @@ export async function checkPermission(
   resourceType: ResourceType,
   operation: Operation,
   creatorId?: string,
+  cookieStore?: any,
 ): Promise<boolean> {
   try {
+    console.log(
+      `[@db:permissions:checkPermission] Checking permission for profile: ${profileId}, team: ${teamId}, resource: ${resourceType}, operation: ${operation}`,
+    );
+
     // If operation is update/delete and creatorId matches profileId,
     // check for "own resource" permission
     const isOwnResource =
       (operation === 'update' || operation === 'delete') && creatorId === profileId;
 
+    const supabase = await createClient(cookieStore);
+
     // Call the database function
-    const { data, error } = await getSupabaseClient().rpc('check_permission', {
+    const { data, error } = await supabase.rpc('check_permission', {
       p_profile_id: profileId,
       p_team_id: teamId,
       p_resource_type: resourceType,
@@ -278,9 +311,10 @@ export async function checkPermission(
 
     if (error) throw error;
 
+    console.log(`[@db:permissions:checkPermission] Permission check result: ${data === true}`);
     return data === true;
   } catch (error) {
-    console.error('Error checking permission:', error);
+    console.error('[@db:permissions:checkPermission] Error checking permission:', error);
     return false;
   }
 }

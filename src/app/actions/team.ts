@@ -78,7 +78,8 @@ export async function getUserActiveTeam(userId: string): Promise<TeamResult> {
   try {
     console.log(`[@action:team:getUserActiveTeam] Getting active team for user: ${userId}`);
     // Implementation note: this might need to be updated if the DB function is not working
-    const result = await dbGetUserActiveTeam(userId);
+    const cookieStore = cookies();
+    const result = await dbGetUserActiveTeam(userId, cookieStore);
 
     // If there's an error with the stored procedure, fall back to getting the first team
     if (!result.success) {
@@ -114,7 +115,8 @@ export async function setUserActiveTeam(
       `[@action:team:setUserActiveTeam] Setting active team: ${teamId} for user: ${userId}`,
     );
     // Implementation note: this might need to be updated if the DB function is not working
-    const result = await dbSetUserActiveTeam(userId, teamId);
+    const cookieStore = cookies();
+    const result = await dbSetUserActiveTeam(userId, teamId, cookieStore);
     console.log(
       `[@action:team:setUserActiveTeam] ${result.success ? 'Successfully set active team' : 'Failed to set active team'}`,
     );
@@ -392,7 +394,8 @@ export const checkResourceLimit = cache(
       console.log(
         `[@action:team:checkResourceLimit] Checking resource limit for: ${resourceType} in tenant: ${user.tenant_id}`,
       );
-      const result = await dbCheckResourceLimit(user.tenant_id, resourceType);
+      const cookieStore = cookies();
+      const result = await dbCheckResourceLimit(user.tenant_id, resourceType, cookieStore);
 
       // Transform result to match the expected ResourceLimit interface
       if (result.success && result.data) {

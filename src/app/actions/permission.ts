@@ -1,5 +1,6 @@
 'use server';
 
+import { cookies } from 'next/headers';
 import {
   ResourceType,
   Operation,
@@ -20,7 +21,8 @@ export async function getUserPermissions(
     console.log(
       `[@action:permission:getUserPermissions] Getting permissions for profile: ${profileId}, team: ${teamId}`,
     );
-    const result = await dbGetUserPermissions(profileId, teamId);
+    const cookieStore = cookies();
+    const result = await dbGetUserPermissions(profileId, teamId, cookieStore);
     console.log(`[@action:permission:getUserPermissions] Successfully retrieved permissions`);
     return result;
   } catch (error) {
@@ -43,12 +45,14 @@ export async function checkPermission(
     console.log(
       `[@action:permission:checkPermission] Checking permission for profile: ${profileId}, team: ${teamId}, resource: ${resourceType}, operation: ${operation}`,
     );
+    const cookieStore = cookies();
     const hasPermission = await dbCheckPermission(
       profileId,
       teamId,
       resourceType,
       operation,
       creatorId,
+      cookieStore,
     );
     console.log(`[@action:permission:checkPermission] Permission check result: ${hasPermission}`);
     return hasPermission;

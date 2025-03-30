@@ -1,9 +1,7 @@
-// DB Git Provider module
-// Exports functions from db-repository.ts
-
 import { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies';
 
 import { createClient } from '@/lib/supabase/server';
+
 import { gitProvider as repoGitProvider, type GitProvider } from './db-repository';
 
 // Re-export types and functionality
