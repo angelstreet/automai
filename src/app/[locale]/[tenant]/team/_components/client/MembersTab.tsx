@@ -140,6 +140,7 @@ export function MembersTab({ teamId, userRole, subscriptionTier, user: _user }: 
             <TableRow>
               <TableHead className="w-[50px]"></TableHead>
               <TableHead>{t('membersTab.name')}</TableHead>
+              <TableHead>{t('membersTab.team')}</TableHead>
               <TableHead>{t('membersTab.email')}</TableHead>
               <TableHead>{t('membersTab.role')}</TableHead>
               {canManageMembers && (
@@ -151,7 +152,7 @@ export function MembersTab({ teamId, userRole, subscriptionTier, user: _user }: 
             {filteredMembers.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={canManageMembers ? 5 : 4}
+                  colSpan={canManageMembers ? 6 : 5}
                   className="text-center py-8 text-muted-foreground"
                 >
                   {searchQuery
@@ -175,6 +176,9 @@ export function MembersTab({ teamId, userRole, subscriptionTier, user: _user }: 
                   </TableCell>
                   <TableCell className="py-2 font-medium">
                     {member.user?.name || t('membersTab.unknownUser')}
+                  </TableCell>
+                  <TableCell className="py-2">
+                    {member.team_name || member.team?.name || t('membersTab.defaultTeam')}
                   </TableCell>
                   <TableCell className="py-2">
                     {member.user?.email &&

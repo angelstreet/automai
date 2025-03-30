@@ -22,7 +22,6 @@ export {
 } from './teams';
 
 // Import and re-export from team-members.ts with different names to avoid conflicts
-import * as TeamMembersModule from './team-members';
 export {
   getTeamMembers,
   addTeamMember,

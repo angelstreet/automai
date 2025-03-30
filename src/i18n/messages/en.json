@@ -389,6 +389,7 @@
       "add": "Add Member",
       "search": "Search members...",
       "name": "Name",
+      "team": "Team",
       "email": "Email",
       "role": "Role",
       "actions": "Actions",
@@ -397,6 +398,7 @@
       "noSearchResults": "No members match your search",
       "unknownUser": "Unknown User",
       "noEmail": "No email",
+      "defaultTeam": "Default Team",
       "memberActions": {
         "changeRole": "Change Role",
         "remove": "Remove Member"

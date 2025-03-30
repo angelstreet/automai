@@ -31,7 +31,7 @@ export async function getTeamMembers(
         role,
         created_at,
         updated_at,
-        profiles:profiles(id, avatar_url, tenant_id, tenant_name, role)
+        profiles:profiles(id, tenant_id, tenant_name, role)
       `,
       )
       .eq('team_id', teamId);
@@ -62,7 +62,7 @@ export async function getTeamMembers(
         const userProfile = userProfiles?.find((p) => p.id === member.profile_id);
 
         // Get avatar with fallbacks, checking metadata if it exists
-        let avatarUrl = userProfile?.avatar_url || profile?.avatar_url;
+        let avatarUrl = userProfile?.avatar_url;
         if (!avatarUrl && userProfile?.raw_user_meta_data) {
           // Try to extract avatar from metadata if available
           avatarUrl =

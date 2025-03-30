@@ -353,6 +353,7 @@
       "add": "Ajouter un membre",
       "search": "Rechercher des membres...",
       "name": "Nom",
+      "team": "Équipe",
       "email": "Email",
       "role": "Rôle",
       "actions": "Actions",
@@ -361,6 +362,7 @@
       "noSearchResults": "Aucun membre ne correspond à votre recherche",
       "unknownUser": "Utilisateur inconnu",
       "noEmail": "Pas d'email",
+      "defaultTeam": "Équipe par défaut",
       "memberActions": {
         "changeRole": "Changer de rôle",
         "remove": "Supprimer le membre"
