@@ -16,7 +16,17 @@ export async function getUserPermissions(
   profileId: string,
   teamId: string,
 ): Promise<PermissionsResult> {
-  return dbGetUserPermissions(profileId, teamId);
+  try {
+    console.log(
+      `[@action:permission:getUserPermissions] Getting permissions for profile: ${profileId}, team: ${teamId}`,
+    );
+    const result = await dbGetUserPermissions(profileId, teamId);
+    console.log(`[@action:permission:getUserPermissions] Successfully retrieved permissions`);
+    return result;
+  } catch (error) {
+    console.error(`[@action:permission:getUserPermissions] Error getting permissions:`, error);
+    return { success: false, error: 'Failed to retrieve permissions' };
+  }
 }
 
 /**
@@ -29,7 +39,45 @@ export async function checkPermission(
   operation: Operation,
   creatorId?: string,
 ): Promise<boolean> {
-  return dbCheckPermission(profileId, teamId, resourceType, operation, creatorId);
+  try {
+    console.log(
+      `[@action:permission:checkPermission] Checking permission for profile: ${profileId}, team: ${teamId}, resource: ${resourceType}, operation: ${operation}`,
+    );
+    const hasPermission = await dbCheckPermission(
+      profileId,
+      teamId,
+      resourceType,
+      operation,
+      creatorId,
+    );
+    console.log(`[@action:permission:checkPermission] Permission check result: ${hasPermission}`);
+    return hasPermission;
+  } catch (error) {
+    console.error(`[@action:permission:checkPermission] Error checking permission:`, error);
+    return false;
+  }
+}
+
+/**
+ * Get all permissions for the current user across all teams
+ */
+export async function getCurrentUserPermissions(): Promise<{
+  [teamId: string]: PermissionsResult;
+}> {
+  try {
+    console.log(
+      `[@action:permission:getCurrentUserPermissions] Getting permissions for current user`,
+    );
+    // This would need to be implemented in the DB layer
+    // For now, returning an empty object as placeholder
+    return {};
+  } catch (error) {
+    console.error(
+      `[@action:permission:getCurrentUserPermissions] Error getting current user permissions:`,
+      error,
+    );
+    return {};
+  }
 }
 
 // Export types for client usage
