@@ -15,13 +15,16 @@ import {
   addTeamMember as dbAddTeamMember,
   updateTeamMemberRole as dbUpdateTeamMemberRole,
   removeTeamMember as dbRemoveTeamMember,
-  getUserTeams as dbGetUserTeams,
-  setUserActiveTeam as dbSetUserActiveTeam,
-  getUserActiveTeam as dbGetUserActiveTeam,
   TeamResult,
   TeamMemberType,
   checkResourceLimit as dbCheckResourceLimit,
 } from '@/lib/supabase/db-teams';
+// Import the active team functions from the teams module directly
+import {
+  getUserTeams as dbGetUserTeams,
+  setUserActiveTeam as dbSetUserActiveTeam,
+  getUserActiveTeam as dbGetUserActiveTeam,
+} from '@/lib/supabase/db-teams/teams';
 import { createClient } from '@/lib/supabase/server';
 import type { ActionResult } from '@/types/context/cicd';
 import type {
