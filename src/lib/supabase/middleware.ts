@@ -127,28 +127,46 @@ function clearAuthCookies(response: NextResponse): NextResponse {
  * - Validates the user's session
  * - Returns a NextResponse with updated cookies
  * - Redirects to login if no authenticated user is found
+ *
+ * @param request The Next.js request object
+ * @param clientData Optional pre-created Supabase client to reuse
+ * @returns NextResponse with updated cookies
  */
-export async function updateSession(request: NextRequest): Promise<NextResponse> {
+export async function updateSession(
+  request: NextRequest,
+  clientData?: { supabase: any; response: NextResponse },
+): Promise<NextResponse> {
   console.log(
     `[Middleware:updateSession] Processing ${request.method} request for ${request.nextUrl.pathname}`,
   );
   const startTime = Date.now();
 
-  // Create the Supabase client
-  const { supabase, response } = createClient(request);
+  // Use provided client or create a new one
+  const { supabase, response } = clientData || createClient(request);
 
-  // IMPORTANT: DO NOT REMOVE auth.getUser() call or add code between
-  // createClient and getUser() - this ensures proper token validation
-  const { data, error } = await supabase.auth.getUser();
+  // Only call getUser if not already done in the middleware
+  let data: any = { user: null };
+  let error: any = null;
 
-  // Reduced logging for better performance - only log errors
-  if (error) {
-    console.log('🔍 AUTH MIDDLEWARE ERROR:', error.message);
-    console.log('🔍 Request URL:', request.nextUrl.pathname);
-  } else if (data.user) {
-    // Just log minimal user info
-    console.log('🔍 AUTH MIDDLEWARE: User authenticated', data.user.id);
-    console.log(`[Middleware:auth] User authenticated in ${Date.now() - startTime}ms`);
+  if (!clientData) {
+    // IMPORTANT: DO NOT REMOVE auth.getUser() call or add code between
+    // createClient and getUser() - this ensures proper token validation
+    const result = await supabase.auth.getUser();
+    data = result.data;
+    error = result.error;
+
+    // Reduced logging for better performance - only log errors
+    if (error) {
+      console.log('🔍 AUTH MIDDLEWARE ERROR:', error.message);
+      console.log('🔍 Request URL:', request.nextUrl.pathname);
+    } else if (data.user) {
+      // Just log minimal user info
+      console.log('🔍 AUTH MIDDLEWARE: User authenticated', data.user.id);
+      console.log(`[Middleware:auth] User authenticated in ${Date.now() - startTime}ms`);
+    }
+  } else {
+    // If client was provided, assume auth check has already been done
+    console.log('[Middleware:updateSession] Using pre-validated authentication from middleware');
   }
 
   // Check if this is a data fetching request (POST to a page route)

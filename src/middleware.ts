@@ -49,7 +49,7 @@ async function handleLoginPath(request: NextRequest) {
   }
 
   // Check session to determine if user is authenticated
-  const { supabase } = createClient(request);
+  const { supabase, response } = createClient(request);
   const { data, error } = await supabase.auth.getSession();
 
   if (error || !data.session) {
@@ -73,6 +73,10 @@ async function handleLoginPath(request: NextRequest) {
 export default async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
   console.log('[@middleware:middleware] Processing path:', path);
+
+  // Create the Supabase client once and reuse it
+  // This prevents multiple client creations for the same request
+  const { supabase, response: clientResponse } = createClient(request);
 
   // Special handling for login path
   if (isLoginPath(path)) {
@@ -118,8 +122,7 @@ export default async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL(`/${defaultLocale}${path}`, request.url));
   }
 
-  // Check authentication using getSession
-  const { supabase } = createClient(request);
+  // Check authentication using the already created Supabase client
   const { data, error } = await supabase.auth.getSession();
 
   if (error || !data.session) {
@@ -131,8 +134,8 @@ export default async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL(`/${locale}/login`, request.url));
   }
 
-  // User is authenticated, update the session
-  const response = await updateSession(request);
+  // User is authenticated, update the session using the reusable client
+  const response = await updateSession(request, { supabase, response: clientResponse });
 
   // Apply intl for authenticated users
   const intl = await getIntlMiddleware();
