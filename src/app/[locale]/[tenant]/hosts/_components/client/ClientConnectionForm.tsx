@@ -23,6 +23,8 @@ import {
 } from '@/components/shadcn/select';
 import { Textarea } from '@/components/shadcn/textarea';
 
+import { REQUEST_THROTTLE_MS } from './constants';
+
 export interface FormData {
   name: string;
   description: string;
@@ -38,9 +40,7 @@ interface ConnectionFormProps {
   formData: FormData;
   onChange: (formData: FormData) => void;
   onTestSuccess?: () => void;
-  onSubmit?: () => void;
   onCancel?: () => void;
-  isSaving?: boolean;
   testStatus?: 'idle' | 'success' | 'error';
 }
 
@@ -48,9 +48,7 @@ export function ClientConnectionForm({
   formData,
   onChange,
   onTestSuccess,
-  onSubmit,
   onCancel,
-  isSaving: _isSaving = false,
   testStatus = 'idle',
 }: ConnectionFormProps) {
   const t = useTranslations('Common');
@@ -63,15 +61,12 @@ export function ClientConnectionForm({
   const [testError, setTestError] = useState<string | null>(null);
   const [testSuccess, setTestSuccess] = useState(false);
   const lastRequestTime = useRef<number>(0);
-  const REQUEST_THROTTLE_MS = 500;
 
-  // Add state for the direct host creation flow
+  // State for host creation
   const [isCreating, setIsCreating] = useState(false);
 
-  // Add state for Windows detection
+  // State for Windows detection
   const [isWindowsOS, setIsWindowsOS] = useState<boolean | undefined>(undefined);
-
-  // React.useEffect is defined but not needed anymore since we removed the context dependency
 
   const handleTypeChange = (value: string) => {
     setConnectionType(value as 'ssh' | 'docker' | 'portainer');
@@ -102,7 +97,7 @@ export function ClientConnectionForm({
     onChange(updatedFormData);
   };
 
-  // Test the connection using the action directly since we don't have a host ID yet
+  // Test the connection using the action directly
   const testHostConnection = async () => {
     const now = Date.now();
     if (now - lastRequestTime.current < REQUEST_THROTTLE_MS || testing) {
@@ -132,19 +127,15 @@ export function ClientConnectionForm({
         password: formData.password,
       });
 
-      // Add debug log
-      console.log('[@ui:ClientConnectionForm:testHostConnection] Test connection result:', {
+      console.log('[@ui:ClientConnectionForm:testHostConnection] Test result:', {
         success: result.success,
-        hasIsWindows: 'is_windows' in result,
         isWindows: 'is_windows' in result ? result.is_windows : undefined,
-        message: 'message' in result ? result.message : undefined,
-        error: result.error,
       });
 
       if (result.success) {
         setTestSuccess(true);
 
-        // Check if Windows was detected - use type assertion to handle the possible property
+        // Check if Windows was detected
         if ('is_windows' in result && result.is_windows !== undefined) {
           console.log(
             '[@ui:ClientConnectionForm:testHostConnection] Windows OS detected:',
@@ -157,7 +148,7 @@ export function ClientConnectionForm({
           onTestSuccess();
         }
       } else {
-        // Handle both types of error response formats
+        // Handle error response
         const errorMessage =
           'message' in result
             ? result.message
@@ -177,7 +168,7 @@ export function ClientConnectionForm({
     }
   };
 
-  // New function that handles creating the host directly after successful test
+  // Create the host after successful test
   const createHostDirectly = async () => {
     if (!testSuccess && testStatus !== 'success') {
       toast.error(t('errors.testFirst'));
@@ -187,54 +178,45 @@ export function ClientConnectionForm({
     setIsCreating(true);
 
     try {
-      // Log form data before submission
-      console.log(
-        '[@ui:ClientConnectionForm:createHostDirectly] Creating host directly with data:',
-        {
-          ...formData,
-          username: formData.username,
-          password: formData.password ? '[REDACTED]' : null,
-          hasUsername: !!formData.username,
-          hasPassword: !!formData.password,
-          is_windows: isWindowsOS,
-        },
-      );
+      console.log('[@ui:ClientConnectionForm:createHostDirectly] Creating host with data:', {
+        ...formData,
+        password: '[REDACTED]',
+        is_windows: isWindowsOS,
+      });
 
-      // Create the hostData object that will be sent to the server
+      // Create the hostData object with all required fields
       const hostData = {
         name: formData.name,
         description: formData.description || '',
         type: formData.type as 'ssh' | 'docker' | 'portainer',
         ip: formData.ip,
         port: parseInt(formData.port),
-        // Direct mapping - avoid passing through dialog
+        // Map username to user for the server
         user: formData.username,
         password: formData.password,
-        // Backup fields as JSON string
-        userData: JSON.stringify({
-          username: formData.username,
-          password: formData.password,
-        }),
+        // Include all fields needed by the server
         status: 'connected' as 'connected' | 'failed' | 'pending' | 'testing',
-        is_windows: isWindowsOS !== undefined ? isWindowsOS : false, // Use detected Windows value if available
+        is_windows: isWindowsOS !== undefined ? isWindowsOS : false,
         created_at: new Date(),
         updated_at: new Date(),
       };
 
-      // Call the server action directly
+      // Call the server action
+      console.log(
+        '[@ui:ClientConnectionForm:createHostDirectly] Creating host with data:',
+        hostData,
+      );
       const result = await createHostAction(hostData as any);
 
       if (result.success && result.data) {
         toast.success(t('success.connected', { name: formData.name }));
 
-        // Close the dialog
+        // Trigger refresh of host list
+        window.dispatchEvent(new CustomEvent('refresh-hosts'));
+
+        // Close dialog if onCancel is provided
         if (onCancel) {
           onCancel();
-        }
-
-        // Call onSubmit if provided (for backward compatibility)
-        if (onSubmit) {
-          await onSubmit();
         }
       } else {
         toast.error(result.error || t('errors.createFailed'));

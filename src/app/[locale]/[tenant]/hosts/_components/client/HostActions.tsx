@@ -4,21 +4,17 @@ import { PlusCircle, RefreshCw, Grid, List } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 
-import { createHost } from '@/app/actions/hosts';
 import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
 
 import { ClientConnectionForm, FormData as ConnectionFormData } from './ClientConnectionForm';
-
-// Create a custom event for view mode changes
-export const VIEW_MODE_CHANGE = 'host-view-mode-change';
+import { VIEW_MODE_CHANGE } from './constants';
 
 export function HostActions() {
   const t = useTranslations('hosts');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showAddHost, setShowAddHost] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<ConnectionFormData>({
     name: '',
     description: '',
@@ -48,45 +44,24 @@ export function HostActions() {
     setShowAddHost(true);
   };
 
-  const handleSaveHost = async () => {
-    try {
-      setIsSaving(true);
-      const result = await createHost({
-        name: formData.name,
-        description: formData.description,
-        type: formData.type as 'ssh' | 'docker' | 'portainer',
-        ip: formData.ip,
-        port: parseInt(formData.port || '22'),
-        status: 'connected',
-        created_at: new Date(),
-        updated_at: new Date(),
-        is_windows: false,
-      });
-
-      if (result.success && result.data) {
-        setShowAddHost(false);
-        // Dispatch event to refresh the host list
-        window.dispatchEvent(new CustomEvent('refresh-hosts'));
-        // Reset form data
-        setFormData({
-          name: '',
-          description: '',
-          type: 'ssh',
-          ip: '',
-          port: '22',
-          username: '',
-          password: '',
-        });
-      }
-    } catch (error) {
-      console.error('Error adding host:', error);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const handleFormChange = (newFormData: ConnectionFormData) => {
     setFormData(newFormData);
+  };
+
+  const handleDialogClose = () => {
+    setShowAddHost(false);
+    // Reset form data when dialog is closed
+    setFormData({
+      name: '',
+      description: '',
+      type: 'ssh',
+      ip: '',
+      port: '22',
+      username: '',
+      password: '',
+    });
+    // Refresh hosts list after dialog closes (in case a host was created)
+    window.dispatchEvent(new CustomEvent('refresh-hosts'));
   };
 
   // Listen for refresh complete event
@@ -122,7 +97,7 @@ export function HostActions() {
         </Button>
       </div>
 
-      <Dialog open={showAddHost} onOpenChange={setShowAddHost}>
+      <Dialog open={showAddHost} onOpenChange={handleDialogClose}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('add_host_dialog_title', { fallback: 'Add New Host' })}</DialogTitle>
@@ -130,8 +105,7 @@ export function HostActions() {
           <ClientConnectionForm
             formData={formData}
             onChange={handleFormChange}
-            onSubmit={handleSaveHost}
-            isSaving={isSaving}
+            onCancel={handleDialogClose}
           />
         </DialogContent>
       </Dialog>

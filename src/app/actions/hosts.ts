@@ -573,36 +573,25 @@ export async function testConnection(data: {
       `[@action:hosts:testConnection] Testing connection to ${data.ip}:${data.port || 'default'}`,
     );
 
-    // Add detailed logging to better diagnose field mapping issues
-    console.log('[@action:hosts:testConnection] Received test data:', {
-      type: data.type,
-      ip: data.ip,
-      port: data.port,
-      username: data.username, // Log the username field we received
-      hasPassword: !!data.password,
-      hostId: data.hostId,
-    });
-
     // Use the core testing function
     const result = await testConnectionCore(data);
 
-    // Log the result including is_windows if available
-    console.log('[@action:hosts:testConnection] Test result:', {
-      success: result.success,
-      is_windows: result.is_windows,
-      messageLength: result.message ? result.message.length : 0,
-    });
+    // Only log a concise summary of the result
+    console.log(
+      `[@action:hosts:testConnection] Test result: success=${result.success}, is_windows=${!!result.is_windows}`,
+    );
 
     // Revalidate paths if we have a host ID
     if (data.hostId) {
-      logger.info(`[@action:hosts:testConnection] Revalidating paths for host ID: ${data.hostId}`);
       revalidatePath('/[locale]/[tenant]/hosts');
       revalidatePath(`/[locale]/[tenant]/hosts/${data.hostId}`);
     }
 
     return result;
   } catch (error: any) {
-    logger.error(`[@action:hosts:testConnection] Error testing connection:`, { error });
+    logger.error(`[@action:hosts:testConnection] Error testing connection:`, {
+      error: error.message || 'Unknown error',
+    });
     return { success: false, error: error.message || 'Failed to test connection' };
   }
 }
