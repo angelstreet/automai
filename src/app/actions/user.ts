@@ -71,31 +71,19 @@ export async function updateProfile(formData: FormData | Record<string, any>) {
 
 /**
  * Set the user's selected team
+ * @deprecated Use setSelectedTeam from team actions instead
  *
  * @param teamId The ID of the team to select
  * @returns Result object with success status
  */
 export async function setSelectedTeam(teamId: string) {
-  try {
-    const cookieStore = cookies();
+  console.warn(
+    '[@action:user:setSelectedTeam] DEPRECATED: Use setSelectedTeam from team actions instead',
+  );
 
-    // Get current user
-    const user = await userDB.getCurrentUser();
-    if (!user) {
-      console.error('User not authenticated');
-      return { success: false, message: 'User not authenticated' };
-    }
+  // Import the new function from team actions to avoid circular dependencies
+  const { setSelectedTeam: teamSetSelectedTeam } = await import('@/app/actions/team');
 
-    // Verify the team exists and the user has access to it
-    if (!user.teams?.some((team) => team.id === teamId)) {
-      console.error('Team not found or access denied');
-      return { success: false, message: 'Team not found or access denied' };
-    }
-
-    // Call the db-users module to handle setting the team
-    return userDB.setSelectedTeam(user.id, teamId, cookieStore);
-  } catch (error) {
-    console.error('Error selecting team:', error);
-    return { success: false, message: 'Failed to select team' };
-  }
+  // Call the new function
+  return teamSetSelectedTeam(teamId);
 }

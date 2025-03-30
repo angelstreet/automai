@@ -691,5 +691,51 @@ export async function assignResourceToTeam(
   }
 }
 
+/**
+ * Set the selected team for the current user
+ * This replaces the setSelectedTeam function from user actions
+ *
+ * @param teamId The ID of the team to select
+ * @returns Result object with success status
+ */
+export async function setSelectedTeam(
+  teamId: string,
+): Promise<{ success: boolean; message?: string; error?: string }> {
+  try {
+    console.log(`[@action:team:setSelectedTeam] Setting selected team: ${teamId}`);
+    const cookieStore = cookies();
+
+    // Get current user
+    const user = await getUser();
+    if (!user) {
+      console.error('[@action:team:setSelectedTeam] User not authenticated');
+      return { success: false, message: 'User not authenticated' };
+    }
+
+    // Verify the team exists and the user has access to it
+    const userTeamsResult = await getUserTeams(user.id);
+    if (!userTeamsResult.success || !userTeamsResult.data) {
+      console.error('[@action:team:setSelectedTeam] Failed to get user teams');
+      return { success: false, message: 'Failed to get user teams' };
+    }
+
+    if (!userTeamsResult.data.some((team) => team.id === teamId)) {
+      console.error('[@action:team:setSelectedTeam] Team not found or access denied');
+      return { success: false, message: 'Team not found or access denied' };
+    }
+
+    // Call setUserActiveTeam to handle the team selection
+    const result = await setUserActiveTeam(user.id, teamId);
+    console.log(
+      `[@action:team:setSelectedTeam] ${result.success ? 'Successfully set selected team' : 'Failed to set selected team'}`,
+    );
+
+    return result;
+  } catch (error: any) {
+    console.error(`[@action:team:setSelectedTeam] Error selecting team:`, error);
+    return { success: false, error: error.message || 'Failed to select team' };
+  }
+}
+
 // Export types for client usage
 export type { Team, TeamResult };

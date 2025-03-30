@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
 import { useUser } from '@/context';
+import { useTeam } from '@/context';
 import { cn } from '@/lib/utils';
 import type { User } from '@/types/user';
 
@@ -39,7 +40,8 @@ export default function TeamSwitcherClient({
   defaultCollapsed = false,
   initialUser,
 }: TeamSwitcherClientProps) {
-  const { user, teams, selectedTeam, setSelectedTeam } = useUser();
+  const { user, teams } = useUser();
+  const { activeTeam, setSelectedTeam } = useTeam();
   const currentUser = initialUser || user;
 
   // If no user data yet, show a minimal loading state
@@ -89,18 +91,18 @@ export default function TeamSwitcherClient({
   }, [currentUser.tenant_name, teams]);
 
   // Determine active team
-  const activeTeam = React.useMemo(() => {
+  const currentVisualTeam = React.useMemo(() => {
     if (displayTeams.length === 0) return null;
 
-    if (selectedTeam && currentUser.tenant_name === 'enterprise') {
-      const matchingTeam = displayTeams.find((t) => t.id === selectedTeam.id);
+    if (activeTeam && currentUser.tenant_name === 'enterprise') {
+      const matchingTeam = displayTeams.find((t) => t.id === activeTeam.id);
       return matchingTeam || displayTeams[0];
     }
     return displayTeams[0];
-  }, [displayTeams, selectedTeam, currentUser.tenant_name]);
+  }, [displayTeams, activeTeam, currentUser.tenant_name]);
 
   // If no active team determined, return null
-  if (!activeTeam) return null;
+  if (!currentVisualTeam) return null;
 
   // Handle team selection
   const handleTeamSelect = (team: VisualTeam) => {
@@ -110,7 +112,7 @@ export default function TeamSwitcherClient({
     }
   };
 
-  const Icon = activeTeam.logo;
+  const Icon = currentVisualTeam.logo;
 
   // Render collapsed view for SSR and initial mount
   if (defaultCollapsed) {
@@ -131,7 +133,7 @@ export default function TeamSwitcherClient({
           <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-border bg-background">
             <Icon className="h-3.5 w-3.5" />
           </div>
-          <span className="text-xs font-medium">{activeTeam.name}</span>
+          <span className="text-xs font-medium">{currentVisualTeam.name}</span>
         </div>
       </button>
     );
@@ -146,7 +148,7 @@ export default function TeamSwitcherClient({
             <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-border bg-background">
               <Icon className="h-3.5 w-3.5" />
             </div>
-            <span className="text-xs font-medium">{activeTeam.name}</span>
+            <span className="text-xs font-medium">{currentVisualTeam.name}</span>
           </div>
           <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
         </button>
@@ -160,8 +162,8 @@ export default function TeamSwitcherClient({
             onClick={() => handleTeamSelect(team)}
             className={cn(
               'cursor-pointer',
-              (activeTeam && team.id === activeTeam.id) ||
-                (!team.id && !activeTeam.id && team.name === activeTeam.name)
+              (currentVisualTeam && team.id === currentVisualTeam.id) ||
+                (!team.id && !currentVisualTeam.id && team.name === currentVisualTeam.name)
                 ? 'bg-accent text-accent-foreground'
                 : '',
             )}

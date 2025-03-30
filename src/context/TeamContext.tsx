@@ -17,6 +17,7 @@ import {
   getUserTeams,
   setUserActiveTeam as saveUserActiveTeamToServer,
   getUserActiveTeam as fetchUserActiveTeam,
+  setSelectedTeam as setSelectedTeamAction,
 } from '@/app/actions/team';
 import { useUser } from '@/context/UserContext';
 
@@ -33,6 +34,7 @@ interface TeamContextState {
     operation: Operation,
     creatorId?: string,
   ) => Promise<boolean>;
+  setSelectedTeam: (teamId: string) => Promise<boolean>;
 }
 
 const defaultState: TeamContextState = {
@@ -44,6 +46,7 @@ const defaultState: TeamContextState = {
   switchTeam: async () => false,
   refreshTeams: async () => {},
   checkPermission: async () => false,
+  setSelectedTeam: async () => false,
 };
 
 const TeamContext = createContext<TeamContextState>(defaultState);
@@ -119,7 +122,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
       } else if (teams.length > 0) {
         // If no active team but teams exist, set the first one as active
         setActiveTeam(teams[0]);
-        await saveUserActiveTeamToServer(user.id, teams[0].id);
+        await setSelectedTeamAction(teams[0].id);
       } else {
         setError('No teams available');
       }
@@ -159,23 +162,21 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
     setError(null);
 
     try {
-      // Verify team exists and user is a member
-      const teamResult = await getTeamById(teamId);
-      if (!teamResult.success || !teamResult.data) {
-        setError('Team not found');
-        return false;
+      // Use the new setSelectedTeam action
+      const result = await setSelectedTeamAction(teamId);
+
+      if (result.success) {
+        // Get the full team data
+        const teamResult = await getTeamById(teamId);
+        if (teamResult.success && teamResult.data) {
+          setActiveTeam(teamResult.data);
+          await loadPermissions();
+          return true;
+        }
       }
 
-      // Set active team in user profile
-      const result = await saveUserActiveTeamToServer(user.id, teamId);
-      if (result.success) {
-        setActiveTeam(teamResult.data);
-        await loadPermissions();
-        return true;
-      } else {
-        setError(result.error || 'Failed to switch team');
-        return false;
-      }
+      setError(result.error || 'Failed to switch team');
+      return false;
     } catch (err) {
       console.error('Error switching team:', err);
       setError('Failed to switch team');
@@ -213,6 +214,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
     switchTeam,
     refreshTeams,
     checkPermission: checkTeamPermission,
+    setSelectedTeam: switchTeam,
   };
 
   return <TeamContext.Provider value={value}>{children}</TeamContext.Provider>;

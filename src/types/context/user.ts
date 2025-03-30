@@ -1,4 +1,4 @@
-import { Role, User, UserTeam, TeamMember, ResourceLimit } from '@/types/user';
+import { Role, User, UserTeam } from '@/types/user';
 
 /**
  * Type definition for UserContext
@@ -15,10 +15,6 @@ export interface UserContextType {
   signUp: (email: string, password: string, name: string, redirectUrl: string) => Promise<any>;
   signInWithOAuth: (provider: 'google' | 'github', redirectUrl: string) => Promise<any>;
 
-  // Team-related functionality (consolidated from TeamContext)
+  // Minimal team information still comes from the user object
   teams: UserTeam[];
-  selectedTeam: UserTeam | null;
-  teamMembers: TeamMember[];
-  setSelectedTeam: (teamId: string) => Promise<void>;
-  checkResourceLimit: (resourceType: string) => Promise<ResourceLimit | null>;
 }
