@@ -29,7 +29,7 @@ export async function getDeploymentWizardData() {
       cicdProviders: cicdProvidersResult.success ? cicdProvidersResult.data || [] : [],
     };
   } catch (error: any) {
-    logger.error('Error fetching deployment wizard data:', error);
+    console.error('Error fetching deployment wizard data:', error);
     return {
       success: false,
       error: error.message || 'Failed to fetch deployment data',
@@ -91,7 +91,7 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
       data: result.data,
     };
   } catch (error: any) {
-    logger.error('Error saving deployment configuration:', error);
+    console.error('Error saving deployment configuration:', error);
     return {
       success: false,
       error: error.message || 'Failed to save deployment configuration',
@@ -138,7 +138,7 @@ export async function startDeployment(deploymentId: string) {
       data: result.data,
     };
   } catch (error: any) {
-    logger.error('Error starting deployment:', error);
+    console.error('Error starting deployment:', error);
     return {
       success: false,
       error: error.message || 'Failed to start deployment',

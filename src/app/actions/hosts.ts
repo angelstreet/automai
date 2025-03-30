@@ -4,7 +4,6 @@ import { revalidatePath } from 'next/cache';
 
 import { Host } from '@/app/[locale]/[tenant]/hosts/types';
 import { getUser } from '@/app/actions/user';
-import { logger } from '@/lib/logger';
 import { testHostConnection as testHostConnectionService } from '@/lib/services/hosts';
 import hostDb from '@/lib/supabase/db-hosts/host';
 
@@ -19,7 +18,7 @@ export async function getHosts(
   filter?: HostFilter,
 ): Promise<{ success: boolean; error?: string; data?: Host[] }> {
   try {
-    console.log('[@action:hosts:getHosts] Getting all hosts');
+    console.info('[@action:hosts:getHosts] Getting all hosts');
     // Get current user
     const currentUser = await getUser();
 
@@ -51,10 +50,10 @@ export async function getHosts(
         error: 'Failed to fetch hosts',
       };
     }
-    console.log('[@action:hosts:getHosts] Found hosts:', data);
+    console.info('[@action:hosts:getHosts] Found hosts:', data);
     return { success: true, data };
   } catch (error: any) {
-    logger.error('[@action:hosts:getHosts] Error fetching hosts:', error);
+    console.error('[@action:hosts:getHosts] Error fetching hosts:', error);
     return { success: false, error: error.message || 'Failed to fetch hosts' };
   }
 }
@@ -91,7 +90,7 @@ export async function getHostById(
 
     return { success: true, data };
   } catch (error: any) {
-    logger.error('[@action:hosts:getHostById] Error fetching host:', error);
+    console.error('[@action:hosts:getHostById] Error fetching host:', error);
     return { success: false, error: error.message || 'Failed to fetch host' };
   }
 }
@@ -112,8 +111,8 @@ export async function createHost(
       };
     }
 
-    logger.info(`[@action:hosts:createHost] Starting host creation for user: ${currentUser.id}`);
-
+    console.info(`[@action:hosts:createHost] Starting host creation for user: ${currentUser.id}`);
+    console.info('[@action:hosts:createHost] raw data:', data);
     // Get the active team ID from user context instead of direct cookie access
     const { getUserActiveTeam, getUserTeams, createTeam } = await import('@/app/actions/team');
 
@@ -122,16 +121,16 @@ export async function createHost(
     const activeTeamResult = await getUserActiveTeam(currentUser.id);
     if (activeTeamResult.success && activeTeamResult.data) {
       teamId = activeTeamResult.data.id;
-      logger.info(`[@action:hosts:createHost] Using active team: ${teamId}`);
+      console.info(`[@action:hosts:createHost] Using active team: ${teamId}`);
     } else {
       // If no active team, try to get any team the user belongs to
       const teamsResult = await getUserTeams(currentUser.id);
       if (teamsResult.success && teamsResult.data && teamsResult.data.length > 0) {
         teamId = teamsResult.data[0].id;
-        logger.info(`[@action:hosts:createHost] Using first available team: ${teamId}`);
+        console.info(`[@action:hosts:createHost] Using first available team: ${teamId}`);
       } else {
         // No teams found, create a default personal team
-        logger.info(`[@action:hosts:createHost] No teams found, creating default personal team`);
+        console.info(`[@action:hosts:createHost] No teams found, creating default personal team`);
 
         // Pass only valid properties for TeamCreateInput
         const createTeamResult = await createTeam(
@@ -144,9 +143,9 @@ export async function createHost(
 
         if (createTeamResult.success && createTeamResult.data) {
           teamId = createTeamResult.data.id;
-          logger.info(`[@action:hosts:createHost] Created default team: ${teamId}`);
+          console.info(`[@action:hosts:createHost] Created default team: ${teamId}`);
         } else {
-          logger.error(`[@action:hosts:createHost] Failed to create default team:`, {
+          console.error(`[@action:hosts:createHost] Failed to create default team:`, {
             error: createTeamResult.error,
           });
           return {
@@ -158,7 +157,7 @@ export async function createHost(
     }
 
     if (!teamId) {
-      logger.error(
+      console.error(
         `[@action:hosts:createHost] No team available for host creation after all attempts`,
       );
       return {
@@ -188,7 +187,7 @@ export async function createHost(
     // This happens when data is coming from the ConnectHostDialog component
     if ((data as any).username && !hostData.user) {
       hostData.user = (data as any).username;
-      console.log(
+      console.info(
         '[@action:hosts:createHost] Found username field, mapped to user:',
         (data as any).username,
       );
@@ -200,26 +199,18 @@ export async function createHost(
         const userData = JSON.parse((data as any).userData);
         if (userData.username && !hostData.user) {
           hostData.user = userData.username;
-          console.log(
+          console.info(
             '[@action:hosts:createHost] Extracted username from userData:',
             userData.username,
           );
         }
         if (userData.password && !hostData.password) {
           hostData.password = userData.password;
-          console.log('[@action:hosts:createHost] Extracted password from userData');
+          console.info('[@action:hosts:createHost] Extracted password from userData');
         }
       } catch (e) {
         console.error('[@action:hosts:createHost] Error parsing userData:', e);
       }
-    }
-
-    // Add additional fields for backup in case of serialization issues
-    if (hostData.user) {
-      (hostData as any)._username = hostData.user;
-    }
-    if (hostData.password) {
-      (hostData as any)._password = hostData.password;
     }
 
     // Add an additional safeguard - if this is an SSH connection, ensure we have user and password
@@ -238,13 +229,13 @@ export async function createHost(
     }
 
     // Log detailed info about the host before creation
-    logger.info(`[@action:hosts:createHost] Creating host with data:`, {
+    console.info(`[@action:hosts:createHost] Creating host with data:`, {
       ...hostData,
       password: hostData.password ? '***' : undefined,
     });
 
     // Add explicit debug logging to verify all fields
-    console.log('[@action:hosts:createHost] Full host data for debugging:', {
+    console.info('[@action:hosts:createHost] Full host data for debugging:', {
       name: hostData.name,
       type: hostData.type,
       ip: hostData.ip,
@@ -258,7 +249,29 @@ export async function createHost(
     });
 
     // Create the host in the database
-    const newHost = await hostDb.create({ data: hostData });
+    // Create a clean hostData object without any extra fields not in the database schema
+    const cleanHostData = {
+      name: hostData.name,
+      description: hostData.description,
+      type: hostData.type,
+      ip: hostData.ip,
+      port: hostData.port,
+      user: hostData.user,
+      password: hostData.password,
+      status: hostData.status,
+      is_windows: hostData.is_windows,
+      created_at: hostData.created_at,
+      updated_at: hostData.updated_at,
+      team_id: hostData.team_id,
+      creator_id: hostData.creator_id,
+    };
+
+    console.info('[@action:hosts:createHost] Clean host data for database:', {
+      ...cleanHostData,
+      password: '***',
+    });
+
+    const newHost = await hostDb.create({ data: cleanHostData });
 
     if (!newHost) {
       return {
@@ -271,10 +284,10 @@ export async function createHost(
     revalidatePath('/[locale]/[tenant]/hosts');
     revalidatePath('/[locale]/[tenant]/dashboard');
 
-    logger.info(`[@action:hosts:createHost] Successfully created host: ${newHost.id}`);
+    console.info(`[@action:hosts:createHost] Successfully created host: ${newHost.id}`);
     return { success: true, data: newHost };
   } catch (error: any) {
-    logger.error(`[@action:hosts:createHost] Error creating host:`, { error });
+    console.error(`[@action:hosts:createHost] Error creating host:`, { error });
     return { success: false, error: error.message || 'Failed to add host' };
   }
 }
@@ -319,7 +332,7 @@ export async function updateHost(
 
     return { success: true, data };
   } catch (error: any) {
-    logger.error('[@action:hosts:updateHost] Error updating host:', error);
+    console.error('[@action:hosts:updateHost] Error updating host:', error);
     return { success: false, error: error.message || 'Failed to update host' };
   }
 }
@@ -358,7 +371,7 @@ export async function deleteHost(id: string): Promise<{ success: boolean; error?
 
     return { success: true };
   } catch (error: any) {
-    logger.error('[@action:hosts:deleteHost] Error deleting host:', error);
+    console.error('[@action:hosts:deleteHost] Error deleting host:', error);
     return { success: false, error: error.message || 'Failed to delete host' };
   }
 }
@@ -376,12 +389,12 @@ async function testConnectionCore(data: {
   hostId?: string;
 }): Promise<{ success: boolean; error?: string; message?: string; is_windows?: boolean }> {
   try {
-    logger.info(
+    console.info(
       `[@action:hosts:testConnectionCore] Testing connection to ${data.ip}:${data.port || 'default'}`,
     );
 
     // Log basic connection data without excessive details
-    console.log('[@action:hosts:testConnectionCore] Connection data:', {
+    console.info('[@action:hosts:testConnectionCore] Connection data:', {
       type: data.type,
       ip: data.ip,
       hasUsername: !!data.username,
@@ -393,20 +406,20 @@ async function testConnectionCore(data: {
 
     // Log concise result summary
     if (result.success) {
-      logger.info(
+      console.info(
         `[@action:hosts:testConnectionCore] Connection successful to ${data.ip}, Windows detected: ${!!result.is_windows}`,
       );
     } else {
       // Extract error message in a concise form
       const errorMessage = result.error || result.message || 'Unknown error';
-      logger.error(`[@action:hosts:testConnectionCore] Connection failed to ${data.ip}:`, {
+      console.error(`[@action:hosts:testConnectionCore] Connection failed to ${data.ip}:`, {
         error: errorMessage,
       });
     }
 
     return result;
   } catch (error: any) {
-    logger.error(`[@action:hosts:testConnectionCore] Error testing connection to ${data.ip}:`, {
+    console.error(`[@action:hosts:testConnectionCore] Error testing connection to ${data.ip}:`, {
       error: error.message || 'Unknown error',
     });
     return { success: false, error: error.message || 'Failed to test connection' };
@@ -421,7 +434,7 @@ export async function testHostConnection(
   id: string,
 ): Promise<{ success: boolean; error?: string; message?: string }> {
   try {
-    logger.info(
+    console.info(
       `[@action:hosts:testHostConnection] Starting host connection test for host ID: ${id}`,
     );
 
@@ -448,7 +461,7 @@ export async function testHostConnection(
     }
 
     const host = hostResponse.data;
-    logger.info(
+    console.info(
       `[@action:hosts:testHostConnection] Retrieved host: ${host.name} (${host.ip}:${host.port})`,
     );
 
@@ -460,7 +473,7 @@ export async function testHostConnection(
         updated_at: new Date().toISOString(),
       },
     });
-    logger.info(`[@action:hosts:testHostConnection] Updated host status to 'testing'`);
+    console.info(`[@action:hosts:testHostConnection] Updated host status to 'testing'`);
 
     // Use the core testing function
     const result = await testConnectionCore({
@@ -480,7 +493,7 @@ export async function testHostConnection(
         updated_at: new Date().toISOString(),
       },
     });
-    logger.info(
+    console.info(
       `[@action:hosts:testHostConnection] Updated host status to '${result.success ? 'connected' : 'failed'}'`,
     );
 
@@ -491,9 +504,12 @@ export async function testHostConnection(
 
     return result;
   } catch (error: any) {
-    logger.error(`[@action:hosts:testHostConnection] Error testing host connection for ID: ${id}`, {
-      error,
-    });
+    console.error(
+      `[@action:hosts:testHostConnection] Error testing host connection for ID: ${id}`,
+      {
+        error,
+      },
+    );
 
     // Update status to failed on error
     try {
@@ -507,12 +523,12 @@ export async function testHostConnection(
             updated_at: new Date().toISOString(),
           },
         });
-        logger.info(
+        console.info(
           `[@action:hosts:testHostConnection] Updated host status to 'failed' after error`,
         );
       }
     } catch (updateError: any) {
-      logger.error(`[@action:hosts:testHostConnection] Error updating host status to failed:`, {
+      console.error(`[@action:hosts:testHostConnection] Error updating host status to failed:`, {
         error: updateError,
       });
     }
@@ -538,7 +554,7 @@ export async function testConnection(data: {
   hostId?: string;
 }) {
   try {
-    logger.info(
+    console.info(
       `[@action:hosts:testConnection] Testing connection to ${data.ip}:${data.port || 'default'}`,
     );
 
@@ -546,7 +562,7 @@ export async function testConnection(data: {
     const result = await testConnectionCore(data);
 
     // Only log a concise summary of the result
-    console.log(
+    console.info(
       `[@action:hosts:testConnection] Test result: success=${result.success}, is_windows=${!!result.is_windows}`,
     );
 
@@ -558,38 +574,9 @@ export async function testConnection(data: {
 
     return result;
   } catch (error: any) {
-    logger.error(`[@action:hosts:testConnection] Error testing connection:`, {
+    console.error(`[@action:hosts:testConnection] Error testing connection:`, {
       error: error.message || 'Unknown error',
     });
     return { success: false, error: error.message || 'Failed to test connection' };
-  }
-}
-
-/**
- * Verify SSH fingerprint
- */
-export async function verifyFingerprint(data: {
-  fingerprint: string;
-  host: string;
-  port?: number;
-}): Promise<{
-  success: boolean;
-  message?: string;
-}> {
-  try {
-    // This would normally verify the fingerprint
-    // For now, we'll simulate a successful verification
-    logger.info(`[@action:hosts:verifyFingerprint] Verifying fingerprint for host: ${data.host}`);
-
-    return {
-      success: true,
-      message: 'Fingerprint verified successfully',
-    };
-  } catch (error: any) {
-    logger.error(`[@action:hosts:verifyFingerprint] Error verifying fingerprint:`, { error });
-    return {
-      success: false,
-      message: error.message || 'Failed to verify fingerprint',
-    };
   }
 }

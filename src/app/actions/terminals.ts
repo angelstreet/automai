@@ -58,7 +58,7 @@ export async function initTerminal(hostId: string) {
       },
     };
   } catch (error: any) {
-    logger.error('Error initializing terminal:', error);
+    console.error('Error initializing terminal:', error);
     return {
       success: false,
       error: error.message || 'Failed to initialize terminal',
@@ -90,7 +90,7 @@ export async function closeTerminal(sessionId: string) {
       success: true,
     };
   } catch (error: any) {
-    logger.error('Error closing terminal:', error);
+    console.error('Error closing terminal:', error);
     return {
       success: false,
       error: error.message || 'Failed to close terminal',
@@ -122,7 +122,7 @@ export async function sendTerminalData(sessionId: string, data: string) {
       success: true,
     };
   } catch (error: any) {
-    logger.error('Error sending terminal data:', error);
+    console.error('Error sending terminal data:', error);
     return {
       success: false,
       error: error.message || 'Failed to send terminal data',

@@ -72,7 +72,7 @@ export default async function DeploymentWizardContainer({
       />
     );
   } catch (error) {
-    logger.error('Error in DeploymentWizardContainer:', error);
+    console.error('Error in DeploymentWizardContainer:', error);
 
     return (
       <div className="p-8 text-center">

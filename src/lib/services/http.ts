@@ -27,12 +27,12 @@ export async function initializeNextApp(options: {
   const { dev = false, hostname = 'localhost', port = 3000 } = options;
 
   if (nextApp) {
-    logger.info('Reusing existing Next.js app');
+    console.info('Reusing existing Next.js app');
     return nextApp;
   }
 
   // Create new Next.js app
-  logger.info('Initializing Next.js app');
+  console.info('Initializing Next.js app');
   try {
     nextApp = next({
       dev,
@@ -42,9 +42,9 @@ export async function initializeNextApp(options: {
       dir: process.cwd(),
     }) as unknown as NextServer;
     await nextApp.prepare();
-    logger.info('Next.js app prepared successfully');
+    console.info('Next.js app prepared successfully');
   } catch (error) {
-    logger.error(
+    console.error(
       'Failed to prepare Next.js app: ' + (error instanceof Error ? error.message : String(error)),
     );
     throw error;
@@ -71,7 +71,7 @@ export async function createServer(options: {
 
   // Reuse existing server if available
   if (httpServer) {
-    logger.info('Reusing existing HTTP server');
+    console.info('Reusing existing HTTP server');
 
     // Initialize WebSocket server if enabled and not already initialized
     if (enableWebSockets && !isWebSocketInitialized) {
@@ -92,7 +92,7 @@ export async function createServer(options: {
     const handle = app.getRequestHandler();
 
     // Create HTTP server
-    logger.info('Creating HTTP server');
+    console.info('Creating HTTP server');
     httpServer = http.createServer((req, res) => {
       try {
         const parsedUrl = parse(req.url || '', true);
@@ -112,7 +112,7 @@ export async function createServer(options: {
         handle(req, res, parsedUrl);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        logger.error(`Error handling request for ${req.url}: ${errorMessage}`);
+        console.error(`Error handling request for ${req.url}: ${errorMessage}`);
         res.statusCode = 500;
         res.end('Internal Server Error');
       }
@@ -133,7 +133,7 @@ export async function createServer(options: {
         if (pathname && pathname.startsWith('/api/terminals/ws/')) {
           // If WebSockets aren't initialized yet, initialize them on-demand
           if (!isWebSocketInitialized) {
-            logger.info('Initializing WebSocket server on-demand');
+            console.info('Initializing WebSocket server on-demand');
             initializeWebSocketSupport(httpServer!);
           }
 
@@ -147,7 +147,7 @@ export async function createServer(options: {
 
     return httpServer;
   } catch (error) {
-    logger.error(`Error creating server: ${error}`);
+    console.error(`Error creating server: ${error}`);
     throw error;
   }
 }
@@ -157,11 +157,11 @@ export async function createServer(options: {
  */
 function initializeWebSocketSupport(server: Server) {
   if (isWebSocketInitialized) {
-    logger.info('WebSocket server already initialized');
+    console.info('WebSocket server already initialized');
     return;
   }
 
-  logger.info('Initializing WebSocket server');
+  console.info('Initializing WebSocket server');
   initializeWebSocketServer();
   isWebSocketInitialized = true;
 
@@ -169,14 +169,14 @@ function initializeWebSocketSupport(server: Server) {
   server.on('upgrade', (request, socket, head) => {
     // Check if this request is already being handled
     if ((request as any).__isHandlingUpgrade) {
-      logger.info('Skipping already handled WebSocket upgrade request');
+      console.info('Skipping already handled WebSocket upgrade request');
       socket.destroy();
       return;
     }
 
     const { pathname } = parse(request.url || '');
     const pathnameStr = pathname || '';
-    logger.info('Upgrade request received', { pathname: pathnameStr });
+    console.info('Upgrade request received', { pathname: pathnameStr });
 
     // Only handle terminal connections and let Next.js handle its own WebSocket connections
     if (pathnameStr && pathnameStr.startsWith('/api/terminals/ws/')) {
@@ -187,16 +187,16 @@ function initializeWebSocketSupport(server: Server) {
         // Extract connection ID from URL
         const connectionId = pathnameStr.split('/').pop();
         if (connectionId) {
-          logger.info('Handling terminal WebSocket upgrade', { connectionId });
+          console.info('Handling terminal WebSocket upgrade', { connectionId });
           (request as any).connectionId = connectionId;
           handleUpgrade(request, socket as Socket, head);
         } else {
-          logger.error('Invalid terminal WebSocket URL', { pathname: pathnameStr });
+          console.error('Invalid terminal WebSocket URL', { pathname: pathnameStr });
           socket.destroy();
         }
       } catch (error) {
         // Log error but don't crash server
-        logger.error('Error handling WebSocket upgrade', {
+        console.error('Error handling WebSocket upgrade', {
           error: error instanceof Error ? error.message : String(error),
           pathname: pathnameStr,
         });
@@ -204,11 +204,11 @@ function initializeWebSocketSupport(server: Server) {
       }
     } else {
       // Let Next.js handle other WebSocket connections
-      logger.info('Letting Next.js handle WebSocket upgrade', { pathname: pathnameStr });
+      console.info('Letting Next.js handle WebSocket upgrade', { pathname: pathnameStr });
     }
   });
 
-  logger.info('WebSocket server initialized successfully');
+  console.info('WebSocket server initialized successfully');
 }
 
 /**
@@ -237,12 +237,12 @@ export async function startServer(options: {
     const tryPort = (currentPort: number, maxRetries = 10, retryCount = 0) => {
       if (retryCount >= maxRetries) {
         const error = new Error(`Could not find an available port after ${maxRetries} attempts`);
-        logger.error(error.message);
+        console.error(error.message);
         reject(error);
         return;
       }
 
-      logger.info(`Attempting to listen on port ${currentPort}`);
+      console.info(`Attempting to listen on port ${currentPort}`);
 
       // Create a server just to test if the port is available
       const testServer = http.createServer();
@@ -251,10 +251,10 @@ export async function startServer(options: {
         testServer.close();
 
         if (err.code === 'EADDRINUSE') {
-          logger.info(`Port ${currentPort} in use, trying ${currentPort + 1}`);
+          console.info(`Port ${currentPort} in use, trying ${currentPort + 1}`);
           tryPort(currentPort + 1, maxRetries, retryCount + 1);
         } else {
-          logger.error(`Error testing port ${currentPort}: ${err.message}`);
+          console.error(`Error testing port ${currentPort}: ${err.message}`);
           reject(err);
         }
       });
@@ -265,12 +265,12 @@ export async function startServer(options: {
         // Now that we know the port is available, start the actual server
         httpServer?.listen(currentPort, hostname, (err?: Error) => {
           if (err) {
-            logger.error(`Error starting server: ${err.message}`);
+            console.error(`Error starting server: ${err.message}`);
             reject(err);
             return;
           }
 
-          logger.info(`Server ready on http://${hostname}:${currentPort}`);
+          console.info(`Server ready on http://${hostname}:${currentPort}`);
           resolve(httpServer as Server);
         });
       });
@@ -288,13 +288,13 @@ export async function startServer(options: {
 export async function stopServer(forceFullShutdown: boolean = false): Promise<void> {
   return new Promise(async (resolve, reject) => {
     if (!httpServer) {
-      logger.info('No HTTP server to stop, already shut down');
+      console.info('No HTTP server to stop, already shut down');
       resolve();
       return;
     }
 
     const startTime = Date.now();
-    logger.info('Starting server shutdown process');
+    console.info('Starting server shutdown process');
 
     // Count active connections for diagnostics
     let activeConnections = 0;
@@ -304,12 +304,12 @@ export async function stopServer(forceFullShutdown: boolean = false): Promise<vo
       });
     }
 
-    logger.info(`Server shutdown: ${activeConnections} active connections`);
+    console.info(`Server shutdown: ${activeConnections} active connections`);
 
     // Set a timeout for the entire shutdown process - increased to 5 seconds
     const shutdownTimeout = setTimeout(() => {
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-      logger.warn(`Server shutdown timed out after ${elapsed}s, forcing exit`);
+      console.warn(`Server shutdown timed out after ${elapsed}s, forcing exit`);
 
       // Remove all listeners to prevent memory leaks
       if (httpServer) {
@@ -332,43 +332,43 @@ export async function stopServer(forceFullShutdown: boolean = false): Promise<vo
         /* ... */
       });
     } else {
-      logger.info('Partial shutdown: Keeping HTTP server alive');
+      console.info('Partial shutdown: Keeping HTTP server alive');
       resolve();
     }
 
     // Remove all upgrade listeners to prevent memory leaks
     if (httpServer) {
-      logger.info('Removing HTTP server upgrade listeners');
+      console.info('Removing HTTP server upgrade listeners');
       httpServer.removeAllListeners('upgrade');
     }
 
     // Force close all connections
-    logger.info('Forcefully closing all HTTP connections');
+    console.info('Forcefully closing all HTTP connections');
     httpServer.closeAllConnections();
 
     // Then close HTTP server with a longer timeout (2 seconds)
     const serverCloseTimeout = setTimeout(() => {
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-      logger.warn(`HTTP server close timed out after ${elapsed}s, forcing close`);
+      console.warn(`HTTP server close timed out after ${elapsed}s, forcing close`);
       httpServer = null;
       clearTimeout(shutdownTimeout);
       resolve();
     }, 2000);
 
-    logger.info('Gracefully closing HTTP server');
+    console.info('Gracefully closing HTTP server');
     httpServer.close((err) => {
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
       clearTimeout(serverCloseTimeout);
       clearTimeout(shutdownTimeout);
 
       if (err) {
-        logger.error(`Error stopping server after ${elapsed}s: ${err.message}`);
+        console.error(`Error stopping server after ${elapsed}s: ${err.message}`);
         reject(err);
         return;
       }
 
       httpServer = null;
-      logger.info(`HTTP server closed successfully in ${elapsed}s`);
+      console.info(`HTTP server closed successfully in ${elapsed}s`);
       resolve();
     });
   });
@@ -386,12 +386,12 @@ export function getServer(): Server | null {
  */
 export function initializeWebSockets(): boolean {
   if (!httpServer) {
-    logger.error('Cannot initialize WebSockets: HTTP server not running');
+    console.error('Cannot initialize WebSockets: HTTP server not running');
     return false;
   }
 
   if (isWebSocketInitialized) {
-    logger.info('WebSockets already initialized');
+    console.info('WebSockets already initialized');
     return true;
   }
 

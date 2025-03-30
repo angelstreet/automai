@@ -18,7 +18,7 @@ type ActionResult<T> = {
  */
 export async function getDashboardStats(): Promise<Stats> {
   try {
-    logger.info('Fetching dashboard stats');
+    console.info('Fetching dashboard stats');
 
     // Static dashboard data
     const data: Stats = {
@@ -30,7 +30,7 @@ export async function getDashboardStats(): Promise<Stats> {
 
     return data;
   } catch (error) {
-    logger.error('Error in getDashboardStats', {
+    console.error('Error in getDashboardStats', {
       error: error instanceof Error ? error.message : String(error),
     });
     return getEmptyStats();
@@ -43,7 +43,7 @@ export async function getDashboardStats(): Promise<Stats> {
  */
 export async function getRecentActivity(): Promise<ActivityItem[]> {
   try {
-    logger.info('Fetching recent activity');
+    console.info('Fetching recent activity');
 
     // Static activity data
     const data: ActivityItem[] = [
@@ -69,7 +69,7 @@ export async function getRecentActivity(): Promise<ActivityItem[]> {
 
     return data;
   } catch (error) {
-    logger.error('Error in getRecentActivity', {
+    console.error('Error in getRecentActivity', {
       error: error instanceof Error ? error.message : String(error),
     });
     return [];
@@ -82,7 +82,7 @@ export async function getRecentActivity(): Promise<ActivityItem[]> {
  */
 export async function getTasks(): Promise<Task[]> {
   try {
-    logger.info('Fetching tasks');
+    console.info('Fetching tasks');
 
     // Static task data
     const data: Task[] = [
@@ -108,7 +108,7 @@ export async function getTasks(): Promise<Task[]> {
 
     return data;
   } catch (error) {
-    logger.error('Error in getTasks', {
+    console.error('Error in getTasks', {
       error: error instanceof Error ? error.message : String(error),
     });
     return [];
@@ -121,7 +121,7 @@ export async function getTasks(): Promise<Task[]> {
  */
 export async function getTeamChat(): Promise<ChatMessage[]> {
   try {
-    logger.info('Fetching team chat');
+    console.info('Fetching team chat');
 
     // Static chat data
     const data: ChatMessage[] = [
@@ -147,7 +147,7 @@ export async function getTeamChat(): Promise<ChatMessage[]> {
 
     return data;
   } catch (error) {
-    logger.error('Error in getTeamChat', {
+    console.error('Error in getTeamChat', {
       error: error instanceof Error ? error.message : String(error),
     });
     return [];
@@ -181,7 +181,7 @@ export async function addChatMessage(message: string): Promise<ActionResult<Chat
       data: newMessage,
     };
   } catch (error) {
-    logger.error('Error adding chat message', {
+    console.error('Error adding chat message', {
       error: error instanceof Error ? error.message : String(error),
     });
     return {
@@ -210,7 +210,7 @@ export async function clearDashboardCache(options?: {
       message: `Dashboard ${section} cache cleared`,
     };
   } catch (error) {
-    logger.error('Error clearing dashboard cache', {
+    console.error('Error clearing dashboard cache', {
       error: error instanceof Error ? error.message : String(error),
     });
     return {

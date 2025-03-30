@@ -2,16 +2,6 @@ import { Client } from 'ssh2';
 import type { ClientChannel } from 'ssh2';
 
 /**
- * @fileoverview Host Service Layer Implementation
- *
- * This file contains only the complex service implementations
- * that can't be easily handled at the database layer.
- *
- * Simple CRUD operations have been moved to the database layer
- * to simplify debugging and reduce unnecessary abstractions.
- */
-
-/**
  * Test connection to a host
  */
 export async function testHostConnection(data: {

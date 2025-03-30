@@ -7,7 +7,7 @@ class TerminalService {
 
   public static getInstance(): TerminalService {
     if (!TerminalService.instance) {
-      logger.debug('Creating new TerminalService instance');
+      console.debug('Creating new TerminalService instance');
       TerminalService.instance = new TerminalService();
     }
     return TerminalService.instance;
@@ -19,17 +19,17 @@ class TerminalService {
     username?: string;
     password?: string;
   }) {
-    logger.info('Creating terminal connection', { hostId: data.hostId, type: data.type });
+    console.info('Creating terminal connection', { hostId: data.hostId, type: data.type });
     try {
-      logger.debug('Fetching host from database', { hostId: data.hostId });
+      console.debug('Fetching host from database', { hostId: data.hostId });
       const host = await db.host.findUnique({ where: { id: data.hostId } });
       if (!host) {
-        logger.error('Host not found', { hostId: data.hostId });
+        console.error('Host not found', { hostId: data.hostId });
         throw new Error(`Host not found: ${data.hostId}`);
       }
-      logger.debug('Host found', { hostId: data.hostId, ip: host.ip });
+      console.debug('Host found', { hostId: data.hostId, ip: host.ip });
 
-      logger.debug('Inserting new connection into database', { type: data.type });
+      console.debug('Inserting new connection into database', { type: data.type });
       const connections = await db.query('connections', {
         insert: {
           type: data.type,
@@ -45,15 +45,15 @@ class TerminalService {
 
       const connection = connections[0];
       if (!connection) {
-        logger.error('Failed to create connection record', { hostId: data.hostId });
+        console.error('Failed to create connection record', { hostId: data.hostId });
         throw new Error('Failed to create connection record');
       }
 
-      logger.info('Terminal connection created', { connectionId: connection.id });
+      console.info('Terminal connection created', { connectionId: connection.id });
       return connection;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      logger.error('Error creating terminal connection', {
+      console.error('Error creating terminal connection', {
         error: errorMessage,
         hostId: data.hostId,
       });
@@ -62,9 +62,9 @@ class TerminalService {
   }
 
   async getTerminalConnection(id: string) {
-    logger.info('Getting terminal connection', { connectionId: id });
+    console.info('Getting terminal connection', { connectionId: id });
     try {
-      logger.debug('Querying connection from database', { connectionId: id });
+      console.debug('Querying connection from database', { connectionId: id });
       const connections = await db.query('connections', {
         where: { id },
         include: { host: true },
@@ -72,23 +72,23 @@ class TerminalService {
 
       const connection = connections[0];
       if (!connection) {
-        logger.error('Connection not found', { connectionId: id });
+        console.error('Connection not found', { connectionId: id });
         return null;
       }
 
-      logger.debug('Connection retrieved', { connectionId: id, type: connection.type });
+      console.debug('Connection retrieved', { connectionId: id, type: connection.type });
       return connection;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      logger.error('Error getting terminal connection', { error: errorMessage, connectionId: id });
+      console.error('Error getting terminal connection', { error: errorMessage, connectionId: id });
       return null;
     }
   }
 
   async updateTerminalConnectionStatus(id: string, status: string) {
-    logger.info('Updating terminal connection status', { connectionId: id, status });
+    console.info('Updating terminal connection status', { connectionId: id, status });
     try {
-      logger.debug('Updating connection status in database', { connectionId: id, status });
+      console.debug('Updating connection status in database', { connectionId: id, status });
       const connections = await db.query('connections', {
         where: { id },
         update: { status },
@@ -97,15 +97,15 @@ class TerminalService {
 
       const connection = connections[0];
       if (!connection) {
-        logger.error('Connection not found for update', { connectionId: id });
+        console.error('Connection not found for update', { connectionId: id });
         throw new Error(`Connection not found: ${id}`);
       }
 
-      logger.debug('Connection status updated', { connectionId: id, status });
+      console.debug('Connection status updated', { connectionId: id, status });
       return connection;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      logger.error('Error updating terminal connection status', {
+      console.error('Error updating terminal connection status', {
         error: errorMessage,
         connectionId: id,
       });
@@ -114,9 +114,9 @@ class TerminalService {
   }
 
   async closeTerminalConnection(id: string) {
-    logger.info('Closing terminal connection', { connectionId: id });
+    console.info('Closing terminal connection', { connectionId: id });
     try {
-      logger.debug('Closing connection in database', { connectionId: id });
+      console.debug('Closing connection in database', { connectionId: id });
       const connections = await db.query('connections', {
         where: { id },
         update: {
@@ -128,33 +128,33 @@ class TerminalService {
 
       const connection = connections[0];
       if (!connection) {
-        logger.error('Connection not found for closure', { connectionId: id });
+        console.error('Connection not found for closure', { connectionId: id });
         throw new Error(`Connection not found: ${id}`);
       }
 
-      logger.debug('Connection closed', { connectionId: id });
+      console.debug('Connection closed', { connectionId: id });
       return connection;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      logger.error('Error closing terminal connection', { error: errorMessage, connectionId: id });
+      console.error('Error closing terminal connection', { error: errorMessage, connectionId: id });
       throw new Error(`Failed to close terminal connection: ${errorMessage}`);
     }
   }
 
   async getTerminalConnections() {
-    logger.info('Getting all terminal connections');
+    console.info('Getting all terminal connections');
     try {
-      logger.debug('Querying all connections from database');
+      console.debug('Querying all connections from database');
       const connections = await db.query('connections', {
         include: { host: true },
         orderBy: { created_at: 'desc' },
       });
 
-      logger.debug('Retrieved all connections', { count: connections?.length || 0 });
+      console.debug('Retrieved all connections', { count: connections?.length || 0 });
       return connections || [];
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      logger.error('Error getting terminal connections', { error: errorMessage });
+      console.error('Error getting terminal connections', { error: errorMessage });
       return [];
     }
   }
@@ -164,9 +164,9 @@ const terminalService = TerminalService.getInstance();
 export default terminalService;
 
 export async function getCompatibleConnection(connectionId: string) {
-  logger.info('Getting compatible connection', { connectionId });
+  console.info('Getting compatible connection', { connectionId });
   try {
-    logger.debug('Querying compatible connection from database', { connectionId });
+    console.debug('Querying compatible connection from database', { connectionId });
     const connections = await db.query('connections', {
       where: { id: connectionId },
       include: { host: true },
@@ -174,11 +174,11 @@ export async function getCompatibleConnection(connectionId: string) {
 
     const connection = connections[0];
     if (!connection) {
-      logger.error('Connection not found', { connectionId });
+      console.error('Connection not found', { connectionId });
       return null;
     }
 
-    logger.debug('Connection found', {
+    console.debug('Connection found', {
       connectionId: connection.id,
       connectionType: connection.type,
       connectionHasHost: !!connection.host,
@@ -187,7 +187,7 @@ export async function getCompatibleConnection(connectionId: string) {
     return { ...connection };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Error getting compatible connection', { error: errorMessage, connectionId });
+    console.error('Error getting compatible connection', { error: errorMessage, connectionId });
     return null;
   }
 }

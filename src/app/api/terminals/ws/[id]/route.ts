@@ -5,7 +5,7 @@ import { logger } from '@/lib/logger';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest, context: { params: { id: string } }) {
-  logger.info('WebSocket route handler called', {
+  console.info('WebSocket route handler called', {
     connectionId: context.params.id,
     headers: Object.fromEntries(request.headers.entries()),
   });
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest, context: { params: { id: string 
   const upgradeHeader = request.headers.get('upgrade');
 
   if (!upgradeHeader || upgradeHeader.toLowerCase() !== 'websocket') {
-    logger.error('Not a WebSocket request', {
+    console.error('Not a WebSocket request', {
       upgradeHeader,
       headers: Object.fromEntries(request.headers.entries()),
     });

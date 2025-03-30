@@ -13,12 +13,12 @@ type Props = {
 
 export async function GET(request: NextRequest, { params }: Props) {
   const connectionId = params.id;
-  logger.info('WebSocket connection request received', { connectionId });
+  console.info('WebSocket connection request received', { connectionId });
 
   // Check if this is a WebSocket upgrade request
   const upgradeHeader = request.headers.get('upgrade');
   if (upgradeHeader !== 'websocket') {
-    logger.warn('Non-WebSocket request received', { connectionId });
+    console.warn('Non-WebSocket request received', { connectionId });
     return new NextResponse('Expected Upgrade: websocket', { status: 426 });
   }
 
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     // Get the WebSocket server (singleton instance)
     const wss = getWebSocketServer();
     if (!wss) {
-      logger.error('WebSocket server not initialized', { connectionId });
+      console.error('WebSocket server not initialized', { connectionId });
       return NextResponse.json({ error: 'WebSocket server not initialized' }, { status: 500 });
     }
 
@@ -66,15 +66,15 @@ export async function GET(request: NextRequest, { params }: Props) {
       socket,
     };
 
-    logger.info('Handling WebSocket upgrade', { connectionId });
+    console.info('Handling WebSocket upgrade', { connectionId });
     // Handle the WebSocket upgrade
     handleUpgrade(req as any, socket, Buffer.from([]), `/terminals/${connectionId}`);
 
-    logger.info('WebSocket connection established', { connectionId });
+    console.info('WebSocket connection established', { connectionId });
     return response;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Error handling WebSocket connection', { error: errorMessage, connectionId });
+    console.error('Error handling WebSocket connection', { error: errorMessage, connectionId });
     return NextResponse.json(
       { error: 'Failed to establish WebSocket connection', message: errorMessage },
       { status: 500 },
