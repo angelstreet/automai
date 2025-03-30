@@ -374,28 +374,30 @@ export const getTeamDetails = cache(async (userId?: string) => {
       // Create a Supabase client with cookie store
       const supabase = await createClient(cookieStore);
 
-      // First get all teams in this tenant to find which repositories to show
+      // First get all teams in this tenant
       const teamsResult = await supabase.from('teams').select('id').eq('tenant_id', team.tenant_id);
 
-      if (!teamsResult.error && teamsResult.data) {
-        // Extract team IDs
+      if (!teamsResult.error && teamsResult.data && teamsResult.data.length > 0) {
+        // Get all team IDs in this tenant
         const teamIds = teamsResult.data.map((t) => t.id);
         console.log(`Found ${teamIds.length} teams in tenant ${team.tenant_id}`);
 
-        if (teamIds.length > 0) {
-          // Get repository count for all teams in this tenant
-          const reposResult = await supabase
-            .from('repositories')
-            .select('id', { count: 'exact' })
-            .in('team_id', teamIds);
+        // Get repositories from all teams in this tenant
+        const reposResult = await supabase
+          .from('repositories')
+          .select('id', { count: 'exact' })
+          .in('team_id', teamIds);
 
-          if (!reposResult.error) {
-            reposCount = reposResult.data.length;
-            console.log(`Found ${reposCount} repositories across ${teamIds.length} teams`);
-          } else {
-            console.error('Error counting repositories:', reposResult.error);
-          }
+        if (!reposResult.error) {
+          reposCount = reposResult.data.length;
+          console.log(
+            `Found ${reposCount} repositories across all teams in tenant ${team.tenant_id}`,
+          );
+        } else {
+          console.error('Error counting repositories:', reposResult.error);
         }
+      } else {
+        console.log('No teams found in tenant or error fetching teams');
       }
 
       // Get CICD provider count for the current tenant
