@@ -1,28 +1,33 @@
 'use client';
 
-import { PlusIcon, Settings } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
-import { Button } from '@/components/shadcn/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 import { User } from '@/types/user';
+import { TeamDetails } from '@/types/team';
+import { useTeam } from '@/context/TeamContext';
 
-import { TeamDetails } from '../types';
-
-export default function TeamHeader({
-  team,
-  user: _user,
-}: {
-  team: TeamDetails;
-  user?: User | null;
-}) {
+export default function TeamHeader({ user }: { user?: User | null }) {
   const t = useTranslations('team');
-  const hasTeam = Boolean(team.id);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const activeTab = searchParams.get('tab') || 'overview';
+
+  // Get team data from context instead of props
+  const { activeTeam } = useTeam();
+
+  // Treat activeTeam as TeamDetails - adjust as needed based on your type structure
+  const team = activeTeam as unknown as TeamDetails;
+
+  if (!team) {
+    return (
+      <div className="p-4 border rounded mb-4">
+        <p>Loading team information...</p>
+      </div>
+    );
+  }
 
   // Use role property from team data
   const _userRole = team.role || '';
@@ -58,30 +63,6 @@ export default function TeamHeader({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-        {/* Actions */}
-        <div className="flex gap-2 items-center">
-          {hasTeam && team.subscription_tier !== 'trial' && (
-            <>
-              <Button variant="outline" size="sm" disabled={!hasTeam}>
-                <PlusIcon className="h-4 w-4 mr-1" />
-                {t('addMember')}
-              </Button>
-              <Button variant="outline" size="sm" disabled={!hasTeam}>
-                <Settings className="h-4 w-4 mr-1" />
-                {t('settings')}
-              </Button>
-            </>
-          )}
-          {!hasTeam && (
-            <Button variant="default" size="sm">
-              <PlusIcon className="h-4 w-4 mr-1" />
-              {t('createTeam')}
-            </Button>
-          )}
-        </div>
-      </div>
-
       {/* Navigation Tabs */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid grid-cols-2 mb-8">

@@ -47,34 +47,49 @@ const defaultState: TeamContextState = {
 
 const TeamContext = createContext<TeamContextState>(defaultState);
 
-export function TeamProvider({ children }: { children: React.ReactNode }) {
+interface TeamProviderProps {
+  children: React.ReactNode;
+  initialTeams?: Team[];
+  initialActiveTeam?: Team | null;
+}
+
+export function TeamProvider({
+  children,
+  initialTeams = [],
+  initialActiveTeam = null,
+}: TeamProviderProps) {
   const { user, isLoading: userLoading } = useUser();
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [activeTeam, setActiveTeam] = useState<Team | null>(null);
+  const [teams, setTeams] = useState<Team[]>(initialTeams);
+  const [activeTeam, setActiveTeam] = useState<Team | null>(initialActiveTeam);
   const [permissions, setPermissions] = useState<PermissionMatrix[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialTeams.length && !initialActiveTeam);
   const [error, setError] = useState<string | null>(null);
 
-  // Load teams when user is loaded
+  // Only load teams if we don't have initialTeams and user is loaded
   useEffect(() => {
     if (userLoading) return;
 
-    if (user) {
+    // Only fetch if we don't have initial data and user exists
+    if (user && !initialTeams.length) {
       loadTeams();
-    } else {
+    } else if (!user) {
+      // Reset state if no user
       setTeams([]);
       setActiveTeam(null);
       setPermissions([]);
       setLoading(false);
     }
-  }, [user, userLoading]);
+  }, [user, userLoading, initialTeams.length]);
 
-  // Load active team and permissions when teams are loaded
+  // Load active team only if needed
   useEffect(() => {
     if (!user || teams.length === 0) return;
 
+    // Skip loading if we already have an active team
+    if (activeTeam) return;
+
     loadActiveTeam();
-  }, [user, teams]);
+  }, [user, teams, activeTeam]);
 
   // Load team permissions when active team changes
   useEffect(() => {
@@ -186,6 +201,9 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
 
   const refreshTeams = async () => {
     await loadTeams();
+    if (teams.length > 0 && !activeTeam) {
+      await loadActiveTeam();
+    }
   };
 
   // Use the checkPermission server action

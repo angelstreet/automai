@@ -23,27 +23,35 @@ export default function TeamOverview({ team, _unassignedResources, user }: TeamO
   const t = useTranslations('team');
   const hasTeam = Boolean(team?.id);
 
+  // Ensure resourceCounts always exists by providing default values
+  const resourceCounts = team?.resourceCounts || {
+    repositories: 0,
+    hosts: 0,
+    cicd: 0,
+    deployments: 0,
+  };
+
   // Create resource cards for the overview
   const resourceCards = [
     {
       type: 'repository',
       name: t('resources.repositories'),
-      count: team?.resourceCounts.repositories ?? 0,
+      count: resourceCounts.repositories,
     },
     {
       type: 'host',
       name: t('resources.hosts'),
-      count: team?.resourceCounts.hosts ?? 0,
+      count: resourceCounts.hosts,
     },
     {
       type: 'cicd',
       name: t('resources.cicd'),
-      count: team?.resourceCounts.cicd ?? 0,
+      count: resourceCounts.cicd,
     },
     {
       type: 'deployment',
       name: t('resources.deployments'),
-      count: team?.resourceCounts.deployments ?? 0,
+      count: resourceCounts.deployments,
     },
   ];
 
@@ -85,10 +93,10 @@ export default function TeamOverview({ team, _unassignedResources, user }: TeamO
           <div>
             <p className="text-sm font-medium">Resources</p>
             <p className="text-xl font-semibold">
-              {team.resourceCounts.repositories +
-                team.resourceCounts.hosts +
-                team.resourceCounts.cicd +
-                team.resourceCounts.deployments}
+              {resourceCounts.repositories +
+                resourceCounts.hosts +
+                resourceCounts.cicd +
+                resourceCounts.deployments}
             </p>
           </div>
 

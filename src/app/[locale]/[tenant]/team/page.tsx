@@ -1,14 +1,15 @@
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
+import { getUnassignedResources } from '@/app/actions/team';
 import { getUser } from '@/app/actions/user';
-import { getTeamDetails, getUnassignedResources } from '@/app/actions/team';
 import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 import { mapAuthUserToUser } from '@/utils/user';
 
 import OverviewTabSkeleton from './_components/OverviewTabSkeleton';
 import TeamHeader from './_components/TeamHeader';
 import TeamSkeleton from './_components/TeamSkeleton';
+import TeamActions from './_components/client/TeamActions';
 import TeamTabs from './_components/client/TeamTabs';
 
 export default async function TeamPage() {
@@ -18,25 +19,20 @@ export default async function TeamPage() {
   const authUser = await getUser();
   const user = authUser ? mapAuthUserToUser(authUser) : null;
 
-  // Prefetch the team details once - this is important for caching
-  const teamDetailsPromise = getTeamDetails(user?.id);
-  const teamDetails = await teamDetailsPromise;
+  // Only fetch unassigned resources - team details come from context
   const unassignedResources = await getUnassignedResources();
 
   return (
     <FeaturePageContainer
       title={t('title')}
       description={t('description')}
-      actions={null} // No specific actions for team page
+      actions={<TeamActions />}
     >
       <Suspense fallback={<TeamSkeleton />}>
-        <TeamHeader team={teamDetails} user={user} />
+        {/* TeamHeader gets details from TeamContext */}
+        <TeamHeader user={user} />
         <Suspense fallback={<OverviewTabSkeleton />}>
-          <TeamTabs
-            teamDetails={teamDetails}
-            unassignedResources={unassignedResources}
-            user={user}
-          />
+          <TeamTabs unassignedResources={unassignedResources} user={user} />
         </Suspense>
       </Suspense>
     </FeaturePageContainer>
