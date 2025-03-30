@@ -2,9 +2,9 @@
 
 import { ReactNode } from 'react';
 
-import { User } from '@/types/user';
 import { PermissionProvider } from '@/context/PermissionContext';
 import { TeamProvider } from '@/context/TeamContext';
+import { User } from '@/types/user';
 
 // This client component wraps the layout and provides client-side context providers
 export default function TenantLayoutClient({

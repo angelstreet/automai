@@ -1,16 +1,16 @@
 'use client';
 
 import React, { createContext, useContext, useCallback, useState, useEffect } from 'react';
-import { useTeam } from '@/context/TeamContext';
-import { useUser } from '@/context/UserContext';
+
 import {
   getUserPermissions,
-  checkPermission,
   ResourceType,
   Operation,
   PermissionMatrix,
   PermissionsResult,
 } from '@/app/actions/permission';
+import { useTeam } from '@/context/TeamContext';
+import { useUser } from '@/context/UserContext';
 
 interface PermissionContextType {
   permissions: PermissionsResult | null;

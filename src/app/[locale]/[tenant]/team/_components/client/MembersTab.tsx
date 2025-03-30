@@ -4,7 +4,7 @@ import { MoreHorizontal, PlusIcon, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 
-import { getTeamMembers } from '@/app/[locale]/[tenant]/team/actions';
+import { getTeamMembers } from '@/app/actions/team';
 import { TeamMemberDetails } from '@/app/[locale]/[tenant]/team/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
 import { Badge } from '@/components/shadcn/badge';

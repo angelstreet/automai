@@ -2,6 +2,7 @@ import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
 import { getUser } from '@/app/actions/user';
+import { getTeamDetails, getUnassignedResources } from '@/app/actions/team';
 import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 import { mapAuthUserToUser } from '@/utils/user';
 
@@ -9,7 +10,6 @@ import OverviewTabSkeleton from './_components/OverviewTabSkeleton';
 import TeamHeader from './_components/TeamHeader';
 import TeamSkeleton from './_components/TeamSkeleton';
 import TeamTabs from './_components/client/TeamTabs';
-import { getTeamDetails, getUnassignedResources } from './actions';
 
 export default async function TeamPage() {
   const t = await getTranslations('team');
