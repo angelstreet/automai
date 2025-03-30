@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertCircle, Check, CheckCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, Check, Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import * as React from 'react';
 import { useState, useRef } from 'react';
@@ -37,7 +37,7 @@ interface ConnectionFormProps {
   formData: FormData;
   onChange: (formData: FormData) => void;
   onTestSuccess?: () => void;
-  onSubmit?: () => void;
+  onSubmit?: () => Promise<boolean> | void;
   onCancel?: () => void;
   isSaving?: boolean;
   testStatus?: 'idle' | 'success' | 'error';
@@ -69,8 +69,6 @@ export function ClientConnectionForm({
   const lastRequestTime = useRef<number>(0);
   const REQUEST_THROTTLE_MS = 500;
 
-  // React.useEffect is defined but not needed anymore since we removed the context dependency
-
   const handleTypeChange = (value: string) => {
     setConnectionType(value as 'ssh' | 'docker' | 'portainer');
 
@@ -89,10 +87,10 @@ export function ClientConnectionForm({
     });
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      onTestSuccess?.();
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (onSubmit) {
+      await onSubmit();
     }
   };
 
@@ -140,35 +138,8 @@ export function ClientConnectionForm({
     }
   };
 
-  // Verify host fingerprint
-  const verifyHostFingerprint = async () => {
-    if (!fingerprintData) return;
-
-    setTesting(true);
-    try {
-      const result = await verifyFingerprintAction({
-        host: fingerprintData.hostname,
-        fingerprint: fingerprintData.fingerprint,
-        port: parseInt(formData.port),
-      });
-
-      if (result.success) {
-        setShowFingerprint(false);
-        setTestSuccess(true);
-      } else {
-        setTestError(result.message || 'Failed to verify fingerprint');
-        setShowFingerprint(false);
-      }
-    } catch (error: any) {
-      setTestError(error.message || 'An unexpected error occurred');
-      setShowFingerprint(false);
-    } finally {
-      setTesting(false);
-    }
-  };
-
   return (
-    <div className="grid gap-2 py-1">
+    <form onSubmit={handleFormSubmit} className="grid gap-2 py-1">
       <div className="grid grid-cols-4 items-center gap-2">
         <Label htmlFor="name" className="text-right">
           {t('name')}
@@ -268,67 +239,40 @@ export function ClientConnectionForm({
         />
       </div>
 
-      <div className="flex justify-end space-x-3 mt-2">
-        <Button
-          variant="outline"
-          onClick={testHostConnection}
-          disabled={
-            testing ||
-            !formData.name.trim() ||
-            !formData.ip.trim() ||
-            (formData.type === 'ssh' && (!formData.username.trim() || !formData.password.trim()))
-          }
-          className="h-8 px-3 text-sm"
-        >
-          {testing ? (
-            <>
-              <Loader2 className="h-3 w-3 animate-spin mr-2" />
-              {t('testing')}
-            </>
-          ) : (
-            <>
-              <CheckCircle className="h-3 w-3 mr-2" />
-              {t('testConnection')}
-            </>
-          )}
+      <div className="flex justify-between pt-4">
+        <Button variant="outline" type="button" onClick={onCancel}>
+          {t('actions.cancel')}
         </Button>
-
-        <Button
-          onClick={async (e) => {
-            e.preventDefault(); // Prevent any default form behavior
-
-            // Check if onSubmit exists
-            if (typeof onSubmit !== 'function') {
-              console.error('onSubmit is not a function:', onSubmit);
-              return;
-            }
-
-            try {
-              await onSubmit();
-            } catch (error) {
-              console.error('Error executing onSubmit callback:', error);
-            }
-          }}
-          disabled={isSaving || (!testSuccess && testStatus !== 'success')}
-          variant={testSuccess || testStatus === 'success' ? 'default' : 'outline'}
-          className={
-            testSuccess || testStatus === 'success'
-              ? 'bg-green-600 hover:bg-green-700 h-8 px-3 text-sm'
-              : 'h-8 px-3 text-sm'
-          }
-        >
-          {isSaving ? (
-            <>
-              <Loader2 className="h-3 w-3 animate-spin mr-2" />
-              {t('saving')}
-            </>
-          ) : (
-            <>
-              {(testSuccess || testStatus === 'success') && <Check className="h-3 w-3 mr-2" />}
-              {t('save')}
-            </>
+        <div className="flex gap-2">
+          {testStatus !== 'success' && (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={testHostConnection}
+              disabled={testing || isSaving}
+              className="ml-2"
+            >
+              {testing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {t('testing')}
+                </>
+              ) : (
+                t('actions.testConnection')
+              )}
+            </Button>
           )}
-        </Button>
+          <Button type="submit" disabled={isSaving || testStatus !== 'success'}>
+            {isSaving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {t('saving')}
+              </>
+            ) : (
+              t('actions.save')
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Status message container with smaller fixed height */}
@@ -349,19 +293,6 @@ export function ClientConnectionForm({
           </Alert>
         )}
       </div>
-
-      <div className="flex justify-end space-x-2 mt-1">
-        {onCancel && (
-          <Button
-            variant="outline"
-            onClick={onCancel}
-            disabled={isSaving}
-            className="h-8 px-3 text-sm"
-          >
-            {t('cancel')}
-          </Button>
-        )}
-      </div>
-    </div>
+    </form>
   );
 }

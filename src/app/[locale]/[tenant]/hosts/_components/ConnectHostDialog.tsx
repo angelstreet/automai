@@ -1,12 +1,17 @@
-import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useState, useCallback, useRef } from 'react';
 import * as React from 'react';
 import { toast } from 'sonner';
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
+import { createHost } from '@/app/actions/hosts';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/shadcn/dialog';
 
-import { addHost } from '../actions';
 import { Host } from '../types';
 
 import { ClientConnectionForm, FormData } from './client/ClientConnectionForm';
@@ -19,11 +24,9 @@ interface ConnectHostDialogProps {
 
 export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHostDialogProps) {
   const t = useTranslations('Common');
-  const params = useParams();
-  const locale = params.locale as string;
   const [isCreating, setIsCreating] = useState(false);
   const [testStatus, setTestStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [testError, setTestError] = useState<string | null>(null);
+  const [_testError, setTestError] = useState<string | null>(null);
   const lastRequestTime = useRef<number>(0);
   const REQUEST_THROTTLE_MS = 500;
   const [formData, setFormData] = useState<FormData>({
@@ -67,9 +70,24 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
       return false;
     }
 
-    if (formData.type === 'ssh' && (!formData.username.trim() || !formData.password.trim())) {
-      toast.error(t('errors.sshCredentials'));
-      return false;
+    if (formData.type === 'ssh') {
+      if (!formData.username.trim()) {
+        toast.error(
+          t('errors.usernameRequired', {
+            defaultValue: 'Username is required for SSH connections',
+          }),
+        );
+        return false;
+      }
+
+      if (!formData.password.trim()) {
+        toast.error(
+          t('errors.passwordRequired', {
+            defaultValue: 'Password is required for SSH connections',
+          }),
+        );
+        return false;
+      }
     }
 
     return true;
@@ -89,7 +107,7 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
     setIsCreating(true);
 
     try {
-      // Ensure formData structure matches what the addHost action expects
+      // Ensure formData structure matches what the createHost action expects
       const hostData = {
         name: formData.name,
         description: formData.description || '',
@@ -104,7 +122,7 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
         is_windows: false,
       };
 
-      const result = await addHost(hostData);
+      const result = await createHost(hostData);
 
       if (result.success && result.data) {
         toast.success(t('success.connected', { name: formData.name }));
@@ -157,6 +175,9 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
       <DialogContent className="sm:max-w-[500px] p-4">
         <DialogHeader className="pb-2">
           <DialogTitle>{t('addNewHost')}</DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground">
+            {t('connectHostPrompt', { defaultValue: 'Enter the details to connect to a new host' })}
+          </DialogDescription>
         </DialogHeader>
 
         <ClientConnectionForm
@@ -169,6 +190,10 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
             try {
               // Call the handleCreate function directly
               await handleCreate();
+
+              // Add a small delay before closing the dialog to ensure the host list is updated
+              await new Promise((resolve) => setTimeout(resolve, 500));
+
               return true; // Return a success value
             } catch (error) {
               console.error('Error in handleCreate:', error);

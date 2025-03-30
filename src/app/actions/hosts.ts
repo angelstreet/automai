@@ -113,16 +113,71 @@ export async function createHost(
       };
     }
 
-    // Get the active team ID
-    const cookieStore = await cookies();
-    const selectedTeamCookie = cookieStore.get(`selected_team_${currentUser.id}`)?.value;
-    const teamId = selectedTeamCookie || currentUser.teams?.[0]?.id;
+    logger.info(`[@action:hosts:createHost] Starting host creation for user: ${currentUser.id}`);
+
+    // Validate SSH hosts have username and password
+    if (data.type === 'ssh') {
+      if (!data.user || !data.password || data.user.trim() === '' || data.password.trim() === '') {
+        logger.error(
+          `[@action:hosts:createHost] Validation failed: SSH hosts require username and password`,
+        );
+        return {
+          success: false,
+          error: 'SSH hosts require both username and password',
+        };
+      }
+    }
+
+    // Get the active team ID from user context instead of direct cookie access
+    const { getUserActiveTeam, getUserTeams, createTeam } = await import('@/app/actions/team');
+
+    // Try to get active team first
+    let teamId;
+    const activeTeamResult = await getUserActiveTeam(currentUser.id);
+    if (activeTeamResult.success && activeTeamResult.data) {
+      teamId = activeTeamResult.data.id;
+      logger.info(`[@action:hosts:createHost] Using active team: ${teamId}`);
+    } else {
+      // If no active team, try to get any team the user belongs to
+      const teamsResult = await getUserTeams(currentUser.id);
+      if (teamsResult.success && teamsResult.data && teamsResult.data.length > 0) {
+        teamId = teamsResult.data[0].id;
+        logger.info(`[@action:hosts:createHost] Using first available team: ${teamId}`);
+      } else {
+        // No teams found, create a default personal team
+        logger.info(`[@action:hosts:createHost] No teams found, creating default personal team`);
+
+        // Pass only valid properties for TeamCreateInput
+        const createTeamResult = await createTeam(
+          {
+            name: 'Personal Team',
+            description: 'Default team created for host management',
+          },
+          null, // Use null instead of currentUser to let createTeam use its own getUser call
+        );
+
+        if (createTeamResult.success && createTeamResult.data) {
+          teamId = createTeamResult.data.id;
+          logger.info(`[@action:hosts:createHost] Created default team: ${teamId}`);
+        } else {
+          logger.error(`[@action:hosts:createHost] Failed to create default team:`, {
+            error: createTeamResult.error,
+          });
+          return {
+            success: false,
+            error: 'Failed to create a team for host creation',
+          };
+        }
+      }
+    }
 
     if (!teamId) {
-      console.error('[ACTIONS-HOSTS] No team available for host creation');
+      logger.error(
+        `[@action:hosts:createHost] No team available for host creation after all attempts`,
+      );
       return {
         success: false,
-        error: 'No team available for host creation',
+        error: 'No team available for host creation, please create a team first',
       };
     }
 
@@ -133,12 +188,14 @@ export async function createHost(
       creator_id: currentUser.id,
     };
 
-    console.log('[ACTIONS-HOSTS] Creating host with data:', {
+    logger.info(`[@action:hosts:createHost] Creating host with data:`, {
       ...enrichedData,
       password: enrichedData.password ? '***' : undefined,
     });
 
-    const newHost = await hostDb.create({ data: enrichedData });
+    // Get cookie store for database operation
+    const cookieStore = await cookies();
+    const newHost = await hostDb.create({ data: enrichedData }, cookieStore);
 
     if (!newHost) {
       return {
@@ -151,9 +208,10 @@ export async function createHost(
     revalidatePath('/[locale]/[tenant]/hosts');
     revalidatePath('/[locale]/[tenant]/dashboard');
 
+    logger.info(`[@action:hosts:createHost] Successfully created host: ${newHost.id}`);
     return { success: true, data: newHost };
   } catch (error: any) {
-    logger.error('[ACTIONS-HOSTS] Error in createHost:', error);
+    logger.error(`[@action:hosts:createHost] Error creating host:`, { error });
     return { success: false, error: error.message || 'Failed to add host' };
   }
 }
@@ -243,12 +301,68 @@ export async function deleteHost(id: string): Promise<{ success: boolean; error?
 }
 
 /**
- * Test connection to a specific host
+ * Core connection testing function - handles the actual testing logic without DB operations
+ * @private Internal function used by other testing functions
+ */
+async function testConnectionCore(data: {
+  type: string;
+  ip: string;
+  port?: number;
+  username?: string;
+  password?: string;
+  hostId?: string;
+}): Promise<{ success: boolean; error?: string; message?: string }> {
+  try {
+    logger.info(
+      `[@action:hosts:testConnectionCore] Testing connection to ${data.ip}:${data.port || 'default'}`,
+    );
+
+    // Call the service function that handles the actual testing logic
+    const result = await testHostConnectionService(data);
+
+    if (result.success) {
+      logger.info(
+        `[@action:hosts:testConnectionCore] Connection test successful for ${data.ip}:${data.port || 'default'}`,
+      );
+    } else {
+      // Fix for linter error: Safely access error property
+      let errorMessage: string;
+      if ('message' in result && typeof result.message === 'string') {
+        errorMessage = result.message;
+      } else if ('error' in result && typeof result.error === 'string') {
+        errorMessage = result.error;
+      } else {
+        errorMessage = 'Unknown error';
+      }
+
+      logger.error(
+        `[@action:hosts:testConnectionCore] Connection test failed for ${data.ip}:${data.port || 'default'}`,
+        { error: errorMessage },
+      );
+    }
+
+    return result;
+  } catch (error: any) {
+    logger.error(
+      `[@action:hosts:testConnectionCore] Error testing connection to ${data.ip}:${data.port || 'default'}`,
+      { error },
+    );
+    return { success: false, error: error.message || 'Failed to test connection' };
+  }
+}
+
+/**
+ * Test connection to a specific host in the database
+ * This function updates the host status and handles DB operations
  */
 export async function testHostConnection(
   id: string,
 ): Promise<{ success: boolean; error?: string; message?: string }> {
   try {
+    logger.info(
+      `[@action:hosts:testHostConnection] Starting host connection test for host ID: ${id}`,
+    );
+
     if (!id) {
       return { success: false, error: 'Host ID is required' };
     }
@@ -272,6 +386,9 @@ export async function testHostConnection(
     }
 
     const host = hostResponse.data;
+    logger.info(
+      `[@action:hosts:testHostConnection] Retrieved host: ${host.name} (${host.ip}:${host.port})`,
+    );
 
     // First update the host to testing state
     await hostDb.update({
@@ -281,9 +398,10 @@ export async function testHostConnection(
         updated_at: new Date().toISOString(),
       },
     });
+    logger.info(`[@action:hosts:testHostConnection] Updated host status to 'testing'`);
 
-    // Test the SSH connection using the service
-    const result = await testHostConnectionService({
+    // Use the core testing function
+    const result = await testConnectionCore({
       type: host.type,
       ip: host.ip,
       port: host.port,
@@ -300,6 +418,9 @@ export async function testHostConnection(
         updated_at: new Date().toISOString(),
       },
     });
+    logger.info(
+      `[@action:hosts:testHostConnection] Updated host status to '${result.success ? 'connected' : 'failed'}'`,
+    );
 
     // Revalidate paths
     revalidatePath('/[locale]/[tenant]/hosts');
@@ -308,7 +429,9 @@ export async function testHostConnection(
 
     return result;
   } catch (error: any) {
-    logger.error('[ACTIONS-HOSTS] Error in testHostConnection:', error);
+    logger.error(`[@action:hosts:testHostConnection] Error testing host connection for ID: ${id}`, {
+      error,
+    });
 
     // Update status to failed on error
     try {
@@ -322,9 +445,14 @@ export async function testHostConnection(
             updated_at: new Date().toISOString(),
           },
         });
+        logger.info(
+          `[@action:hosts:testHostConnection] Updated host status to 'failed' after error`,
+        );
       }
     } catch (updateError: any) {
-      logger.error('[ACTIONS-HOSTS] Error updating host status to failed:', { error: updateError });
+      logger.error(`[@action:hosts:testHostConnection] Error updating host status to failed:`, {
+        error: updateError,
+      });
     }
 
     // Revalidate paths
@@ -336,92 +464,8 @@ export async function testHostConnection(
 }
 
 /**
- * Test all hosts with a batched approach to reduce Supabase calls
- */
-export async function testAllHosts(): Promise<{
-  success: boolean;
-  error?: string;
-  results?: Array<{ hostId: string; result: { success: boolean; message?: string } }>;
-}> {
-  try {
-    // Get current user once for all operations
-    const currentUser = await getUser();
-    if (!currentUser) {
-      return {
-        success: false,
-        error: 'Unauthorized - Please sign in',
-      };
-    }
-
-    const hostsResult = await getHosts();
-    if (!hostsResult.success) {
-      return { success: false, error: hostsResult.error };
-    }
-
-    const hosts = hostsResult.data || [];
-    const results = [];
-
-    // First, update all hosts to testing state in one batch (if possible)
-    const updatePromises = hosts.map((host) =>
-      hostDb.update({
-        where: { id: host.id },
-        data: {
-          status: 'testing',
-          updated_at: new Date().toISOString(),
-        },
-      }),
-    );
-    await Promise.all(updatePromises);
-
-    // Test each host concurrently
-    const testPromises = hosts.map(async (hostItem) => {
-      const result = await testHostConnectionService({
-        type: hostItem.type,
-        ip: hostItem.ip,
-        port: hostItem.port,
-        username: hostItem.user,
-        password: hostItem.password,
-        hostId: hostItem.id,
-      });
-
-      // Update the host status based on the test result
-      await hostDb.update({
-        where: { id: hostItem.id },
-        data: {
-          status: result.success ? 'connected' : 'failed',
-          updated_at: new Date().toISOString(),
-        },
-      });
-
-      return {
-        hostId: hostItem.id,
-        result: {
-          success: result.success,
-          message: result.message,
-        },
-      };
-    });
-
-    // Wait for all tests to complete
-    const testResults = await Promise.all(testPromises);
-    results.push(...testResults);
-
-    // Revalidate paths once for all hosts
-    revalidatePath('/[locale]/[tenant]/hosts');
-    revalidatePath('/[locale]/[tenant]/dashboard');
-
-    return {
-      success: true,
-      results,
-    };
-  } catch (error: any) {
-    logger.error('[ACTIONS-HOSTS] Error in testAllHosts:', error);
-    return { success: false, error: error.message || 'Failed to test all hosts' };
-  }
-}
-
-/**
- * Test connection with specific credentials
+ * Test connection with specific credentials (without requiring an existing host)
+ * Used primarily during host creation to verify connection details
  */
 export async function testConnection(data: {
   type: string;
@@ -432,17 +476,23 @@ export async function testConnection(data: {
   hostId?: string;
 }) {
   try {
-    const result = await testHostConnectionService(data);
+    logger.info(
+      `[@action:hosts:testConnection] Testing connection to ${data.ip}:${data.port || 'default'}`,
+    );
+
+    // Use the core testing function
+    const result = await testConnectionCore(data);
 
     // Revalidate paths if we have a host ID
     if (data.hostId) {
+      logger.info(`[@action:hosts:testConnection] Revalidating paths for host ID: ${data.hostId}`);
       revalidatePath('/[locale]/[tenant]/hosts');
       revalidatePath(`/[locale]/[tenant]/hosts/${data.hostId}`);
     }
 
     return result;
   } catch (error: any) {
-    logger.error('[ACTIONS-HOSTS] Error in testConnection:', error);
+    logger.error(`[@action:hosts:testConnection] Error testing connection:`, { error });
     return { success: false, error: error.message || 'Failed to test connection' };
   }
 }
@@ -461,14 +511,14 @@ export async function verifyFingerprint(data: {
   try {
     // This would normally verify the fingerprint
     // For now, we'll simulate a successful verification
-    logger.info('Verifying fingerprint', { host: data.host });
+    logger.info(`[@action:hosts:verifyFingerprint] Verifying fingerprint for host: ${data.host}`);
 
     return {
       success: true,
       message: 'Fingerprint verified successfully',
     };
   } catch (error: any) {
-    logger.error('[ACTIONS-HOSTS] Error verifying fingerprint:', error);
+    logger.error(`[@action:hosts:verifyFingerprint] Error verifying fingerprint:`, { error });
     return {
       success: false,
       message: error.message || 'Failed to verify fingerprint',
