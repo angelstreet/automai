@@ -5,7 +5,6 @@
 export {
   repository,
   gitProvider,
-  files,
   // Types
   type Repository,
   type GitProvider,

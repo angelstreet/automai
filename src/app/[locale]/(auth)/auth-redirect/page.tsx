@@ -5,7 +5,6 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { signInWithPassword, exchangeCodeForSession } from '@/app/actions/auth';
-import { useUser } from '@/context/UserContext';
 
 // Add error boundary component
 function ErrorFallback({ error, locale }: { error: Error; locale: string }) {
@@ -48,7 +47,6 @@ export default function AuthRedirectPage() {
   const [hasRedirected, setHasRedirected] = useState(false);
   const [loading, setLoading] = useState(false);
   const locale = params.locale as string;
-  const { refreshUser } = useUser();
 
   // Get search params
   const code = searchParams.get('code');
@@ -107,9 +105,6 @@ export default function AuthRedirectPage() {
             return;
           }
 
-          // After successful auth, refresh user data
-          await refreshUser();
-
           // Add delay to ensure session is stable
           await new Promise((resolve) => setTimeout(resolve, 1200));
 
@@ -152,9 +147,6 @@ export default function AuthRedirectPage() {
           return;
         }
 
-        // After successful auth, refresh user data
-        await refreshUser();
-
         // Handle redirect using Next.js router
         if (result.redirectUrl) {
           setHasRedirected(true);
@@ -168,7 +160,7 @@ export default function AuthRedirectPage() {
     }
 
     processAuth();
-  }, [code, errorParam, errorDescription, hasRedirected, router, locale, refreshUser, authMethod]);
+  }, [code, errorParam, errorDescription, hasRedirected, router, locale, authMethod]);
 
   // Show error if there is one
   if (authError) {

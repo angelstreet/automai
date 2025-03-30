@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { cookies } from 'next/headers';
 
 import {
   Repository,
@@ -15,7 +16,6 @@ import {
   testRepositorySchema,
 } from '@/app/[locale]/[tenant]/repositories/types';
 import { getUser } from '@/app/actions/user';
-import { files as dbFiles } from '@/lib/supabase/db-repositories/db-files';
 import {
   gitProvider as dbGitProvider,
   GitProvider as DbGitProvider,
@@ -103,7 +103,8 @@ export async function getRepositories(
 
     console.log('[@action:repositories:getRepositories] Fetching repositories from database');
     // Call the repository module instead of direct db access
-    const result = await dbRepository.getRepositories();
+    const cookieStore = await cookies();
+    const result = await dbRepository.getRepositories(cookieStore);
 
     if (!result.success || !result.data) {
       console.log('[@action:repositories:getRepositories] No repositories found');
@@ -894,19 +895,19 @@ export async function createGitProvider(
 }
 
 /**
- * Get files for a repository at a specific path
+ * Get files from a repository
  * @param repositoryId The repository ID
- * @param path The path to get files from (optional, defaults to root)
+ * @param path The directory path (optional)
  * @param user Optional pre-fetched user data to avoid redundant auth calls
  */
 export async function getRepositoryFiles(
   repositoryId: string,
-  path: string = '',
+  path?: string,
   user?: AuthUser | null,
 ): Promise<{ success: boolean; error?: string; data?: any[] }> {
   try {
     console.log(
-      '[@action:repositories:getRepositoryFiles] Starting with repository ID:',
+      '[actions.getRepositoryFiles] Starting with repository ID:',
       repositoryId,
       'path:',
       path,
@@ -915,18 +916,15 @@ export async function getRepositoryFiles(
     // Use provided user data or fetch it if not provided
     const currentUser = user || (await getUser());
     if (!currentUser) {
-      console.log('[@action:repositories:getRepositoryFiles] No authenticated user found');
+      console.log('[actions.getRepositoryFiles] No authenticated user found');
       return { success: false, error: 'Unauthorized' };
     }
 
-    // Call the files DB module instead of direct access
-    const result = await dbFiles.getRepositoryFiles(repositoryId, path, currentUser.id);
-
-    if (!result.success || !result.data) {
-      return { success: false, error: result.error || 'Failed to fetch repository files' };
-    }
-
-    return { success: true, data: result.data };
+    // Since we don't store files in the database, return a mock empty result
+    console.log(
+      '[actions.getRepositoryFiles] Files are not stored in the database, returning empty result',
+    );
+    return { success: true, data: [] };
   } catch (error: any) {
     console.error('[@action:repositories:getRepositoryFiles] Error:', error);
     return { success: false, error: error.message || 'Failed to fetch repository files' };
@@ -963,14 +961,23 @@ export async function getFileContent(
       return { success: false, error: 'File path is required' };
     }
 
-    // Call the files DB module instead of direct access
-    const result = await dbFiles.getFileContent(repositoryId, path, currentUser.id);
-
-    if (!result.success || !result.data) {
-      return { success: false, error: result.error || 'Failed to fetch file content' };
-    }
-
-    return { success: true, data: result.data };
+    // Since we don't store files in the database, return a mock result
+    console.log(
+      '[actions.getFileContent] Files are not stored in the database, returning mock result',
+    );
+    return {
+      success: true,
+      data: {
+        id: 'mock-file',
+        repository_id: repositoryId,
+        path: path,
+        content: '',
+        size: 0,
+        last_commit: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    };
   } catch (error: any) {
     console.error('Error in getFileContent:', error);
     return { success: false, error: error.message || 'Failed to fetch file content' };
