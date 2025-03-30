@@ -161,6 +161,20 @@ export async function createRepository(
     // Get cookies once for all operations
     const cookieStore = await cookies();
 
+    // Get the active team ID
+    const selectedTeamCookie = cookieStore.get(`selected_team_${currentUser.id}`)?.value;
+    const teamId = selectedTeamCookie || currentUser.teams?.[0]?.id;
+
+    if (!teamId) {
+      console.error(
+        '[@action:repositories:createRepository] No team available for repository creation',
+      );
+      return {
+        success: false,
+        error: 'No team available for repository creation',
+      };
+    }
+
     // Prepare data for the repository module with the correct structure
     const repositoryData = {
       name: data.name || '',
@@ -171,12 +185,16 @@ export async function createRepository(
       default_branch: data.defaultBranch || 'main',
       is_private: data.isPrivate || false,
       owner: data.owner || null,
+      team_id: teamId, // Explicitly add team_id
+      creator_id: currentUser.id, // Explicitly add creator_id
     };
 
     console.log('[@action:repositories:createRepository] Calling repository.createRepository', {
       name: repositoryData.name,
       provider_id: repositoryData.provider_id,
       provider_type: repositoryData.provider_type,
+      team_id: repositoryData.team_id,
+      creator_id: repositoryData.creator_id,
     });
 
     // Call the repository module with proper types and pass cookieStore

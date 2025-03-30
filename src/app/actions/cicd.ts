@@ -109,17 +109,39 @@ export async function createCICDProvider(
     // Get cookies once for all operations
     const cookieStore = await cookies();
 
+    // Get the active team ID
+    const selectedTeamCookie = cookieStore.get(`selected_team_${user.id}`)?.value;
+    const teamId = selectedTeamCookie || user.teams?.[0]?.id;
+
+    if (!teamId) {
+      console.error('[@action:cicd:createCICDProvider] No team available for provider creation');
+      return {
+        success: false,
+        error: 'No team available for provider creation',
+      };
+    }
+
     // Import the CI/CD database module
     const { default: cicdDb } = await import('@/lib/supabase/db-cicd/cicd');
 
     // Prepare data for database
     const providerData = {
       tenant_id: user.tenant_id,
+      team_id: teamId, // Explicitly add team_id
+      creator_id: user.id, // Explicitly add creator_id
       name: payload.name,
       type: payload.type,
       url: payload.url,
       config: payload.config || {},
     };
+
+    console.log('[@action:cicd:createCICDProvider] Creating provider with data:', {
+      tenant_id: providerData.tenant_id,
+      team_id: providerData.team_id,
+      creator_id: providerData.creator_id,
+      name: providerData.name,
+      type: providerData.type,
+    });
 
     // Create the provider
     const result = await cicdDb.createCICDProvider({ data: providerData as any }, cookieStore);

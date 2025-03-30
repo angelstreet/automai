@@ -162,6 +162,18 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
     // Get cookie store once for all operations
     const cookieStore = await cookies();
 
+    // Get the active team ID
+    const selectedTeamCookie = cookieStore.get(`selected_team_${user.id}`)?.value;
+    const teamId = selectedTeamCookie || user.teams?.[0]?.id;
+
+    if (!teamId) {
+      console.error('❌ [DEPLOYMENT_CREATE] No team available for deployment creation');
+      return {
+        success: false,
+        error: 'No team available for deployment creation',
+      };
+    }
+
     // Extract raw parameters from formData
     const rawParameters =
       formData.selectedScripts?.map((scriptPath, index) => {
@@ -192,6 +204,8 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
         scripts_parameters: rawParameters,
         host_ids: formData.selectedHosts || [],
         status: 'failed' as DeploymentStatus,
+        team_id: teamId, // Explicitly add team_id
+        creator_id: user.id, // Explicitly add creator_id
         user_id: user.id,
         tenant_id: user.tenant_id,
         schedule_type: formData.schedule || 'now',
@@ -226,6 +240,8 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
         scripts_parameters: rawParameters,
         host_ids: formData.selectedHosts || [],
         status: 'failed' as DeploymentStatus,
+        team_id: teamId, // Explicitly add team_id
+        creator_id: user.id, // Explicitly add creator_id
         user_id: user.id,
         tenant_id: user.tenant_id,
         schedule_type: formData.schedule || 'now',
@@ -303,6 +319,8 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
         scripts_parameters: rawParameters,
         host_ids: formData.selectedHosts || [],
         status: 'failed' as DeploymentStatus,
+        team_id: teamId, // Explicitly add team_id
+        creator_id: user.id, // Explicitly add creator_id
         user_id: user.id,
         tenant_id: user.tenant_id,
         schedule_type: formData.schedule || 'now',
@@ -350,6 +368,8 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
         scripts_parameters: rawParameters,
         host_ids: formData.selectedHosts || [],
         status: 'failed' as DeploymentStatus,
+        team_id: teamId, // Explicitly add team_id
+        creator_id: user.id, // Explicitly add creator_id
         user_id: user.id,
         tenant_id: user.tenant_id,
         schedule_type: formData.schedule || 'now',
@@ -379,6 +399,8 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
       scripts_parameters: rawParameters,
       host_ids: formData.selectedHosts || [],
       status: 'pending' as DeploymentStatus,
+      team_id: teamId, // Explicitly add team_id
+      creator_id: user.id, // Explicitly add creator_id
       user_id: user.id,
       tenant_id: user.tenant_id,
       schedule_type: formData.schedule || 'now',
