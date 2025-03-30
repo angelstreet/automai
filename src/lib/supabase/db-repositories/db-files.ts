@@ -1,7 +1,10 @@
 // DB Files module
-// All functionality is in db-repository.ts
+// Exports functions from db-repository.ts
 
-import { files } from './db-repository';
+import { files as repositoryFiles } from './db-repository';
 
-export { files } from './db-repository';
-export default files;
+// Re-export the main implementation
+export const files = repositoryFiles;
+
+// Default export for compatibility
+export default repositoryFiles;

@@ -1,7 +1,17 @@
 // Export all repository-related DB functions
-export { repository } from './db-repository';
-export { files } from './db-files';
-export { gitProvider } from './db-git-provider';
+// Main implementations are in db-repository.ts
 
-// Types
-export { type Repository, type GitProvider, type DbResponse } from './db-repository';
+// Export directly from db-repository for most consistent usage
+export {
+  repository,
+  gitProvider,
+  files,
+  // Types
+  type Repository,
+  type GitProvider,
+  type DbResponse,
+} from './db-repository';
+
+// Alternative exports from specialized modules (these reference db-repository)
+// export { files } from './db-files';
+// export { gitProvider } from './db-git-provider';

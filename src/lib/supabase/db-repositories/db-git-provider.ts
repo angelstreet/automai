@@ -1,7 +1,11 @@
 // DB Git Provider module
-// All functionality is in db-repository.ts
+// Exports functions from db-repository.ts
 
-import { gitProvider } from './db-repository';
+import { gitProvider as repoGitProvider, type GitProvider } from './db-repository';
 
-export { gitProvider, type GitProvider } from './db-repository';
-export default gitProvider;
+// Re-export types and functionality
+export { type GitProvider } from './db-repository';
+export const gitProvider = repoGitProvider;
+
+// Default export for compatibility
+export default repoGitProvider;
