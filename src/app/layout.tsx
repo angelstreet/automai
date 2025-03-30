@@ -5,6 +5,7 @@ import { cookies } from 'next/headers';
 import { ThemeProviders, SWRProvider } from '@/components/providers';
 import { TeamProvider } from '@/context';
 import { SidebarProvider } from '@/context/SidebarContext';
+import { getSidebarState } from '@/app/actions/sidebar';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -18,6 +19,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const cookieStore = await cookies();
   const themeCookie = cookieStore.get('theme');
   const theme = (themeCookie?.value ?? 'system') as 'light' | 'dark' | 'system';
+
+  // Get initial sidebar state from server action
+  const initialSidebarState = await getSidebarState();
 
   return (
     <html lang="en" className={`${inter.className} js-loading`} suppressHydrationWarning>
@@ -46,7 +50,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <ThemeProviders defaultTheme={theme}>
           <SWRProvider>
             <TeamProvider>
-              <SidebarProvider>{children}</SidebarProvider>
+              <SidebarProvider defaultOpen={initialSidebarState}>{children}</SidebarProvider>
             </TeamProvider>
           </SWRProvider>
         </ThemeProviders>

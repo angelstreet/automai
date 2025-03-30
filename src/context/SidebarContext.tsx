@@ -49,51 +49,31 @@ export function SidebarProvider({ children, defaultOpen = true }: SidebarProvide
     };
   }, []);
 
-  // Start with a known state for SSR
-  const [open, setOpen] = useState(false); // Always start with false/collapsed for SSR
-  const [state, setState] = useState<'expanded' | 'collapsed'>('collapsed');
+  // Initialize state with the server-provided defaultOpen value
+  // This ensures server and client rendering match
+  const [open, setOpen] = useState(defaultOpen);
+  const [state, setState] = useState<'expanded' | 'collapsed'>(
+    defaultOpen ? 'expanded' : 'collapsed',
+  );
   const [openMobile, setOpenMobile] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Only update state on client-side after first render to prevent hydration mismatches
+  // Only sync with localStorage/cookies after initial render to prevent overwrites
   useEffect(() => {
     if (typeof window === 'undefined' || isInitialized) return;
 
     try {
-      // Try to read from localStorage first (faster)
-      const storedValue = localStorage.getItem(SIDEBAR_COOKIE_NAME);
-      if (storedValue !== null) {
-        const newOpenState = storedValue !== 'false';
-        setOpen(newOpenState);
-        setState(newOpenState ? 'expanded' : 'collapsed');
-        setIsInitialized(true);
-        return;
-      }
-
-      // Fall back to cookies
-      const cookieValue = Cookies.get(SIDEBAR_COOKIE_NAME);
-      if (cookieValue !== undefined) {
-        localStorage.setItem(SIDEBAR_COOKIE_NAME, cookieValue);
-        const newOpenState = cookieValue !== 'false';
-        setOpen(newOpenState);
-        setState(newOpenState ? 'expanded' : 'collapsed');
-        setIsInitialized(true);
-        return;
-      }
-
-      // If no stored state, use the defaultOpen
-      setOpen(defaultOpen);
-      setState(defaultOpen ? 'expanded' : 'collapsed');
+      // Sync the current state with localStorage for future visits
+      localStorage.setItem(SIDEBAR_COOKIE_NAME, String(open));
+      // Ensure cookie is also set for cross-tab persistence
+      Cookies.set(SIDEBAR_COOKIE_NAME, String(open), { path: '/' });
     } catch (e) {
-      // Fall back to default if errors
-      console.error('Error accessing localStorage', e);
-      setOpen(defaultOpen);
-      setState(defaultOpen ? 'expanded' : 'collapsed');
+      console.error('Error syncing sidebar state', e);
     }
 
     setIsInitialized(true);
-  }, [defaultOpen, isInitialized]);
+  }, [open, isInitialized]);
 
   // Use useCallback for the resize handler to prevent recreation on each render
   const checkIsMobile = useCallback(() => {
@@ -174,19 +154,8 @@ export const useSidebar = () => {
       // Immediately disable transitions to prevent initial layout shift
       root.style.setProperty('transition', 'none');
 
-      // Get the initial width from local storage if available
-      let initialOpen = context.open;
-      try {
-        const savedState = localStorage.getItem(SIDEBAR_COOKIE_NAME);
-        if (savedState !== null) {
-          initialOpen = savedState !== 'false';
-        }
-      } catch (e) {
-        // Fallback to context value if localStorage fails
-      }
-
-      // Calculate initial offset based on the determined state
-      const initialOffset = initialOpen ? SIDEBAR_WIDTH : SIDEBAR_WIDTH_ICON;
+      // Use the context value directly (which now comes from server)
+      const initialOffset = context.open ? SIDEBAR_WIDTH : SIDEBAR_WIDTH_ICON;
 
       // Set CSS variable for sidebar width
       root.style.setProperty('--sidebar-width-offset', initialOffset);
