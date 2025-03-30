@@ -11,7 +11,7 @@ import { Host } from '../../types';
 import { HostGrid } from '../HostGrid';
 import { HostTable } from '../HostTable';
 
-import { VIEW_MODE_CHANGE } from './HostActions';
+import { VIEW_MODE_CHANGE } from './constants';
 
 interface ClientHostListProps {
   initialHosts: Host[];

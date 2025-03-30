@@ -401,19 +401,6 @@ export function ClientConnectionForm({
           </Alert>
         )}
       </div>
-
-      <div className="flex justify-end space-x-2 mt-1">
-        {onCancel && (
-          <Button
-            variant="outline"
-            onClick={onCancel}
-            disabled={isCreating}
-            className="h-8 px-3 text-sm"
-          >
-            {t('cancel')}
-          </Button>
-        )}
-      </div>
     </div>
   );
 }

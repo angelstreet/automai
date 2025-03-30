@@ -1,7 +1,6 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { cookies } from 'next/headers';
 
 import { Host } from '@/app/[locale]/[tenant]/hosts/types';
 import { getUser } from '@/app/actions/user';
@@ -238,6 +237,7 @@ export async function createHost(
       };
     }
 
+    // Log detailed info about the host before creation
     logger.info(`[@action:hosts:createHost] Creating host with data:`, {
       ...hostData,
       password: hostData.password ? '***' : undefined,
@@ -254,42 +254,11 @@ export async function createHost(
       team_id: hostData.team_id,
       creator_id: hostData.creator_id,
       status: hostData.status,
+      is_windows: hostData.is_windows,
     });
 
-    // If this is an SSH host, test the connection to detect Windows
-    let isWindows = hostData.is_windows;
-    if (data.type === 'ssh' && hostData.user && hostData.password) {
-      try {
-        console.log(
-          `[@action:hosts:createHost] Testing connection to detect Windows for: ${hostData.ip}`,
-        );
-        const testResult = await testConnectionCore({
-          type: hostData.type,
-          ip: hostData.ip,
-          port: hostData.port,
-          username: hostData.user,
-          password: hostData.password,
-        });
-
-        if (testResult.is_windows) {
-          console.log(
-            `[@action:hosts:createHost] Windows detected for ${hostData.ip}, setting is_windows=true`,
-          );
-          // Update is_windows in the data
-          isWindows = true;
-          hostData.is_windows = true;
-        }
-      } catch (e) {
-        console.error(
-          `[@action:hosts:createHost] Error testing connection for Windows detection: ${e instanceof Error ? e.message : String(e)}`,
-        );
-        // Continue with host creation even if test fails
-      }
-    }
-
-    // Get cookie store for database operation
-    const cookieStore = await cookies();
-    const newHost = await hostDb.create({ data: hostData }, cookieStore);
+    // Create the host in the database
+    const newHost = await hostDb.create({ data: hostData });
 
     if (!newHost) {
       return {
