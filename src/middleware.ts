@@ -48,27 +48,26 @@ async function handleLoginPath(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check if user is authenticated and redirect to dashboard if they are
-  const { supabase, response: _response } = createClient(request);
-  const { data, error } = await supabase.auth.getUser();
+  // Check session to determine if user is authenticated
+  const { supabase } = createClient(request);
+  const { data, error } = await supabase.auth.getSession();
 
-  if (error) {
-    console.log('[@middleware:handleLoginPath] Auth error on login path:', error.message);
-    return NextResponse.next();
-  }
-
-  if (data.user) {
-    // User is authenticated, redirect to dashboard
-    const locale = request.nextUrl.pathname.split('/')[1] || defaultLocale;
-    const tenantName = data.user.user_metadata?.tenant_name || 'trial';
+  if (error || !data.session) {
     console.log(
-      '[@middleware:handleLoginPath] User already authenticated, redirecting from login to dashboard',
+      '[@middleware:handleLoginPath] No active session on login path:',
+      error?.message || 'No session',
     );
-    return NextResponse.redirect(new URL(`/${locale}/${tenantName}/dashboard`, request.url));
+    return NextResponse.next(); // Allow access to login page if no session
   }
 
-  // Not authenticated, allow access to login page
-  return NextResponse.next();
+  // User is authenticated, redirect to dashboard
+  const user = data.session.user;
+  const locale = request.nextUrl.pathname.split('/')[1] || defaultLocale;
+  const tenantName = user.user_metadata?.tenant_name || 'trial';
+  console.log(
+    '[@middleware:handleLoginPath] User already authenticated, redirecting from login to dashboard',
+  );
+  return NextResponse.redirect(new URL(`/${locale}/${tenantName}/dashboard`, request.url));
 }
 
 export default async function middleware(request: NextRequest) {
@@ -81,14 +80,21 @@ export default async function middleware(request: NextRequest) {
     return handleLoginPath(request);
   }
 
+  // Special handling for root path
+  if (path === '/') {
+    console.log('[@middleware:middleware] Handling root path');
+    return NextResponse.redirect(new URL(`/${defaultLocale}`, request.url));
+  }
+
+  // Add special case for paths that are just a locale (like '/en')
+  if (locales.some((locale) => path === `/${locale}`)) {
+    console.log('[@middleware:middleware] Path is just locale, treating as public');
+    return NextResponse.next();
+  }
+
   // Public paths: apply locale but RETURN EARLY
   const isPublicPath = PUBLIC_PATHS.some((p) => path === p || path === `/${defaultLocale}${p}`);
   if (isPublicPath) {
-    // Special handling for root path to prevent double locale
-    if (path === '/') {
-      console.log('[@middleware:middleware] Handling root path');
-      return NextResponse.redirect(new URL(`/${defaultLocale}`, request.url));
-    }
     console.log('[@middleware:middleware] Handling public path:', path);
     return NextResponse.next();
   }
@@ -99,7 +105,7 @@ export default async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // API routes: enforce auth
+  // API routes: enforce auth (or skip for now, depending on your needs)
   if (path.startsWith('/api/')) {
     console.log('[@middleware:middleware] Handling API route:', path);
     return NextResponse.next();
@@ -112,14 +118,14 @@ export default async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL(`/${defaultLocale}${path}`, request.url));
   }
 
-  // Check authentication directly first to avoid redirect loops
+  // Check authentication using getSession
   const { supabase } = createClient(request);
-  const { data, error } = await supabase.auth.getUser();
+  const { data, error } = await supabase.auth.getSession();
 
-  if (error || !data.user) {
+  if (error || !data.session) {
     console.log(
       '[@middleware:middleware] Authentication failed:',
-      error?.message || 'No user found',
+      error?.message || 'No session found',
     );
     const locale = path.split('/')[1] || defaultLocale;
     return NextResponse.redirect(new URL(`/${locale}/login`, request.url));
