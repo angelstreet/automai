@@ -168,21 +168,50 @@ export async function createHost(
       };
     }
 
-    // Enrich data with team_id and creator_id
-    const enrichedData = {
-      ...data,
+    // Explicitly map all fields to ensure field names are correct, especially 'username' to 'user'
+    const hostData = {
+      name: data.name,
+      description: data.description || '',
+      type: data.type,
+      ip: data.ip,
+      port: data.port || (data.type === 'ssh' ? 22 : data.type === 'docker' ? 2375 : 9000),
+      user: data.user, // Use the user field from Host type
+      password: data.password,
+      status: data.status || 'connected',
+      is_windows: data.is_windows || false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
       team_id: teamId,
       creator_id: currentUser.id,
     };
 
+    // Handle the case where we might receive data from a form with 'username' instead of 'user'
+    // This happens when data is coming from the ConnectHostDialog component
+    if ((data as any).username && !hostData.user) {
+      hostData.user = (data as any).username;
+    }
+
     logger.info(`[@action:hosts:createHost] Creating host with data:`, {
-      ...enrichedData,
-      password: enrichedData.password ? '***' : undefined,
+      ...hostData,
+      password: hostData.password ? '***' : undefined,
+    });
+
+    // Add explicit debug logging to verify all fields
+    console.log('[@action:hosts:createHost] Full host data for debugging:', {
+      name: hostData.name,
+      type: hostData.type,
+      ip: hostData.ip,
+      port: hostData.port,
+      user: hostData.user, // Verify this field is present and correct
+      hasPassword: !!hostData.password,
+      team_id: hostData.team_id,
+      creator_id: hostData.creator_id,
+      status: hostData.status,
     });
 
     // Get cookie store for database operation
     const cookieStore = await cookies();
-    const newHost = await hostDb.create({ data: enrichedData }, cookieStore);
+    const newHost = await hostDb.create({ data: hostData }, cookieStore);
 
     if (!newHost) {
       return {

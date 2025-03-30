@@ -92,20 +92,27 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
     setIsCreating(true);
 
     try {
-      // Ensure formData structure matches what the createHost action expects
+      // Map the form data to match the Host type expected by the createHost action
+      // Note: For SSH hosts, we need to ensure username is properly mapped to user
       const hostData = {
         name: formData.name,
         description: formData.description || '',
         type: formData.type as 'ssh' | 'docker' | 'portainer',
         ip: formData.ip,
         port: parseInt(formData.port),
-        user: formData.username, // Note: backend expects 'user' not 'username'
+        user: formData.username, // Explicitly map username from form to user for the backend
         password: formData.password,
-        status: 'connected' as const, // Type assertion to make TypeScript happy
+        status: 'connected' as const,
         created_at: new Date(),
         updated_at: new Date(),
         is_windows: false,
       };
+
+      // Add debug logging to see what's actually being sent
+      console.log('[@ConnectHostDialog] Host data before sending:', {
+        ...hostData,
+        password: hostData.password ? '[REDACTED]' : null,
+      });
 
       const result = await createHost(hostData);
 
@@ -160,10 +167,10 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
       <DialogContent className="sm:max-w-[500px] p-4">
         <DialogHeader className="pb-2">
           <DialogTitle>{t('addNewHost')}</DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground">
-            {t('connectHostPrompt', { defaultValue: 'Enter the details to connect to a new host' })}
-          </DialogDescription>
         </DialogHeader>
+        <DialogDescription className="text-sm text-muted-foreground mb-4">
+          {t('connectHostPrompt', { defaultValue: 'Enter the details to connect to a new host' })}
+        </DialogDescription>
 
         <ClientConnectionForm
           formData={formData}
