@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { cache } from 'react';
+import { cookies } from 'next/headers';
 
 import type {
   ActionResult,
@@ -24,6 +25,9 @@ export const getCICDProviders = cache(async (): Promise<CICDProviderListResult> 
       return { success: false, error: 'User not authenticated', data: [] };
     }
 
+    // Get cookies once for all operations
+    const cookieStore = await cookies();
+
     console.log('[@action:cicd:getCICDProviders] Fetching CICD providers for tenant:', {
       tenantId: user.tenant_id,
     });
@@ -32,7 +36,10 @@ export const getCICDProviders = cache(async (): Promise<CICDProviderListResult> 
     const { default: cicdDb } = await import('@/lib/supabase/db-cicd/cicd');
 
     // Get CICD providers for the tenant
-    const result = await cicdDb.getCICDProviders({ where: { tenant_id: user.tenant_id } });
+    const result = await cicdDb.getCICDProviders(
+      { where: { tenant_id: user.tenant_id } },
+      cookieStore,
+    );
 
     if (!result.success) {
       console.error('[@action:cicd:getCICDProviders] Error fetching CICD providers:', {
@@ -62,15 +69,21 @@ export async function getCICDJobs(providerId?: string): Promise<ActionResult<CIC
       return { success: false, error: 'User not authenticated' };
     }
 
+    // Get cookies once for all operations
+    const cookieStore = await cookies();
+
     // Import the CI/CD database module
     const { default: cicdDb } = await import('@/lib/supabase/db-cicd/cicd');
 
     // Get jobs with tenant isolation
-    const jobs = await cicdDb.getCICDJobs({
-      where: providerId
-        ? { provider_id: providerId, tenant_id: user.tenant_id }
-        : { tenant_id: user.tenant_id },
-    });
+    const jobs = await cicdDb.getCICDJobs(
+      {
+        where: providerId
+          ? { provider_id: providerId, tenant_id: user.tenant_id }
+          : { tenant_id: user.tenant_id },
+      },
+      cookieStore,
+    );
 
     return { success: true, data: jobs.data || [] };
   } catch (error: any) {
@@ -93,6 +106,9 @@ export async function createCICDProvider(
       return { success: false, error: 'User not authenticated' };
     }
 
+    // Get cookies once for all operations
+    const cookieStore = await cookies();
+
     // Import the CI/CD database module
     const { default: cicdDb } = await import('@/lib/supabase/db-cicd/cicd');
 
@@ -106,7 +122,7 @@ export async function createCICDProvider(
     };
 
     // Create the provider
-    const result = await cicdDb.createCICDProvider({ data: providerData as any });
+    const result = await cicdDb.createCICDProvider({ data: providerData as any }, cookieStore);
 
     if (!result.success) {
       console.error(
@@ -145,6 +161,9 @@ export async function updateCICDProvider(
       return { success: false, error: 'User not authenticated' };
     }
 
+    // Get cookies once for all operations
+    const cookieStore = await cookies();
+
     // Import the CI/CD database module
     const { default: cicdDb } = await import('@/lib/supabase/db-cicd/cicd');
 
@@ -158,10 +177,13 @@ export async function updateCICDProvider(
     };
 
     // Update the provider
-    const result = await cicdDb.updateCICDProvider({
-      data: providerData as any,
-      where: { id, tenant_id: user.tenant_id },
-    });
+    const result = await cicdDb.updateCICDProvider(
+      {
+        data: providerData as any,
+        where: { id, tenant_id: user.tenant_id },
+      },
+      cookieStore,
+    );
 
     if (!result.success) {
       console.error(
@@ -197,13 +219,19 @@ export async function deleteCICDProvider(id: string): Promise<ActionResult> {
       return { success: false, error: 'User not authenticated' };
     }
 
+    // Get cookies once for all operations
+    const cookieStore = await cookies();
+
     // Import the CI/CD database module
     const { default: cicdDb } = await import('@/lib/supabase/db-cicd/cicd');
 
     // Delete the provider
-    const result = await cicdDb.deleteCICDProvider({
-      where: { id, tenant_id: user.tenant_id },
-    });
+    const result = await cicdDb.deleteCICDProvider(
+      {
+        where: { id, tenant_id: user.tenant_id },
+      },
+      cookieStore,
+    );
 
     if (!result.success) {
       console.error(
@@ -251,141 +279,63 @@ export async function testCICDProvider(provider: CICDProviderPayload): Promise<A
       return { success: false, error: 'User not authenticated' };
     }
 
-    // Import the CI/CD service directly
+    // Get cookies once for all operations
+    const cookieStore = await cookies();
+
+    // Initialize the provider service
     const { getCICDProvider } = await import('@/lib/services/cicd');
 
-    // Format the provider config in the expected structure
-    const providerConfig = {
-      id: provider.id || 'temp-id',
-      name: provider.name,
-      type: provider.type,
-      url: provider.url,
-      auth_type: provider.config.auth_type,
-      credentials: provider.config.credentials,
-    };
+    // Test Jenkins connection
+    if (provider.type === 'jenkins') {
+      const jenkinsUrl = provider.url;
+      const username = provider.config.username;
+      const apiToken = provider.config.apiToken;
 
-    // Create provider instance directly for testing
-    try {
-      const providerInstance = getCICDProvider(providerConfig);
-      const result = await providerInstance.testConnection();
+      // Basic validation for Jenkins specific fields
+      if (!username) {
+        return { success: false, error: 'Jenkins username is required' };
+      }
 
-      return {
-        success: result.success,
-        error: result.success ? undefined : result.error,
-      };
-    } catch (error: any) {
-      console.error(
-        '[@action:cicd:testCICDProvider] Failed to create or test CICD provider:',
-        error,
-      );
-      return {
-        success: false,
-        error: error.message || 'Failed to test CICD provider',
-      };
+      if (!apiToken) {
+        return { success: false, error: 'Jenkins API token is required' };
+      }
+
+      try {
+        // Test the Jenkins connection
+        const response = await fetch(`${jenkinsUrl}/api/json`, {
+          headers: {
+            Authorization: `Basic ${Buffer.from(`${username}:${apiToken}`).toString('base64')}`,
+          },
+        });
+
+        if (!response.ok) {
+          return {
+            success: false,
+            error: `Failed to connect to Jenkins: ${response.statusText}`,
+          };
+        }
+
+        const data = await response.json();
+
+        return { success: true, data };
+      } catch (error: any) {
+        console.error('[@action:cicd:testCICDProvider] Error testing Jenkins connection:', error);
+        return {
+          success: false,
+          error: `Failed to connect to Jenkins: ${error.message}`,
+        };
+      }
     }
+
+    return { success: false, error: 'Unsupported CICD provider type' };
   } catch (error: any) {
-    console.error('[@action:cicd:testCICDProvider] Unexpected error testing CICD provider:', error);
+    console.error('[@action:cicd:testCICDProvider] Unexpected error testing provider:', error);
     return { success: false, error: error.message || 'An unexpected error occurred' };
   }
 }
 
 /**
- * Test the Jenkins API directly using the provider credentials from the database
- */
-export async function testJenkinsAPI(): Promise<{ success: boolean; error?: string; data?: any }> {
-  try {
-    // Get authenticated user
-    const user = await getUser();
-    if (!user) {
-      return { success: false, error: 'Unauthorized access' };
-    }
-
-    console.log(
-      '[@action:cicd:testJenkinsAPI] Actions layer: Testing Jenkins API with authenticated user',
-      user.id,
-    );
-
-    // Import the CI/CD database module
-    const { default: cicdDb } = await import('@/lib/supabase/db-cicd/cicd');
-
-    // Get all Jenkins providers for the tenant
-    const providers = await cicdDb.getCICDProviders({ where: { tenant_id: user.tenant_id } });
-
-    if (!providers.success || !providers.data || providers.data.length === 0) {
-      return { success: false, error: 'No Jenkins provider found' };
-    }
-
-    // Find the Jenkins provider (first one available)
-    const jenkinsProvider = providers.data.find((p) => p.type === 'jenkins');
-
-    if (!jenkinsProvider) {
-      return { success: false, error: 'No Jenkins provider found' };
-    }
-
-    console.log('[@action:cicd:testJenkinsAPI] Actions layer: Found Jenkins provider:', {
-      id: jenkinsProvider.id,
-      name: jenkinsProvider.name,
-      url: jenkinsProvider.url,
-      auth_type: jenkinsProvider.config.auth_type,
-      credentials_available: {
-        username: !!jenkinsProvider.config.credentials.username,
-        token: !!jenkinsProvider.config.credentials.token,
-      },
-    });
-
-    // Import the CICD provider
-    const { getCICDProvider } = await import('@/lib/services/cicd');
-
-    // Get the provider instance
-    const providerResult = await getCICDProvider(jenkinsProvider.id, user.tenant_id);
-
-    if (!providerResult.success || !providerResult.data) {
-      return {
-        success: false,
-        error: providerResult.error || 'Failed to initialize Jenkins provider',
-      };
-    }
-
-    const provider = providerResult.data;
-
-    // Test the connection
-    const testResult = await provider.testConnection();
-
-    console.log(
-      '[@action:cicd:testJenkinsAPI] Actions layer: Jenkins connection test result:',
-      testResult,
-    );
-
-    if (!testResult.success) {
-      return { success: false, error: `Connection test failed: ${testResult.error}` };
-    }
-
-    // Try to get a crumb
-    const crumbResult = await provider['getCrumb']();
-
-    console.log('[@action:cicd:testJenkinsAPI] Actions layer: Jenkins crumb result:', crumbResult);
-
-    return {
-      success: true,
-      data: {
-        connectionTest: testResult,
-        crumbTest: crumbResult,
-        provider: {
-          id: jenkinsProvider.id,
-          name: jenkinsProvider.name,
-          url: jenkinsProvider.url,
-          type: jenkinsProvider.type,
-        },
-      },
-    };
-  } catch (error: any) {
-    console.error('[@action:cicd:testJenkinsAPI] Actions layer: Error testing Jenkins API:', error);
-    return { success: false, error: error.message || 'Error testing Jenkins API' };
-  }
-}
-
-/**
- * Clear CICD-related cache entries
+ * Clear CICD cache
  */
 export async function clearCICDCache(options?: {
   providerId?: string;
@@ -396,55 +346,26 @@ export async function clearCICDCache(options?: {
   message: string;
 }> {
   try {
-    // Get the current authenticated user
-    const user = await getUser();
-    if (!user) {
-      console.error('[@action:cicd:clearCICDCache] User not authenticated');
-      return {
-        success: false,
-        message: 'User not authenticated',
-      };
-    }
+    // Get cookies once for all operations
+    const cookieStore = await cookies();
 
-    const { providerId, tenantId, userId } = options || {};
+    // Import the CI/CD database module
+    const { default: cicdDb } = await import('@/lib/supabase/db-cicd/cicd');
 
-    // Revalidate CICD paths
-    revalidatePath('/[locale]/[tenant]/cicd');
-
-    // Determine appropriate message based on parameters
-    if (providerId) {
-      revalidatePath(`/[locale]/[tenant]/cicd/${providerId}`);
-      return {
-        success: true,
-        message: `Cache cleared for CICD provider: ${providerId}`,
-      };
-    } else if (userId && tenantId) {
-      return {
-        success: true,
-        message: `Cache cleared for user: ${userId} and tenant: ${tenantId}`,
-      };
-    } else if (tenantId || (tenantId === undefined && user)) {
-      const targetTenantId = tenantId || user.tenant_id;
-      return {
-        success: true,
-        message: `Cache cleared for tenant: ${targetTenantId}`,
-      };
-    } else if (userId) {
-      return {
-        success: true,
-        message: `Cache cleared for user: ${userId}`,
-      };
-    }
+    // Call clear cache with cookieStore
+    const result = await cicdDb.clearCache(cookieStore);
 
     return {
       success: true,
-      message: 'All CICD cache cleared',
+      message: `CICD cache cleared successfully${
+        options?.providerId ? ` for provider ${options.providerId}` : ''
+      }`,
     };
-  } catch (error) {
-    console.error('[@action:cicd:clearCICDCache] Error clearing CICD cache:', error);
+  } catch (error: any) {
+    console.error('[@action:cicd:clearCICDCache] Error clearing cache:', error);
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'Unknown error clearing cache',
+      message: `Failed to clear CICD cache: ${error.message}`,
     };
   }
 }

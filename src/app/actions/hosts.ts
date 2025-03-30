@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { cookies } from 'next/headers';
 
 import { Host } from '@/app/[locale]/[tenant]/hosts/types';
 import { getUser } from '@/app/actions/user';
@@ -112,7 +113,32 @@ export async function createHost(
       };
     }
 
-    const newHost = await hostDb.create({ data });
+    // Get the active team ID
+    const cookieStore = await cookies();
+    const selectedTeamCookie = cookieStore.get(`selected_team_${currentUser.id}`)?.value;
+    const teamId = selectedTeamCookie || currentUser.teams?.[0]?.id;
+
+    if (!teamId) {
+      console.error('[ACTIONS-HOSTS] No team available for host creation');
+      return {
+        success: false,
+        error: 'No team available for host creation',
+      };
+    }
+
+    // Enrich data with team_id and creator_id
+    const enrichedData = {
+      ...data,
+      team_id: teamId,
+      creator_id: currentUser.id,
+    };
+
+    console.log('[ACTIONS-HOSTS] Creating host with data:', {
+      ...enrichedData,
+      password: enrichedData.password ? '***' : undefined,
+    });
+
+    const newHost = await hostDb.create({ data: enrichedData });
 
     if (!newHost) {
       return {
@@ -297,8 +323,8 @@ export async function testHostConnection(
           },
         });
       }
-    } catch (updateError) {
-      logger.error('[ACTIONS-HOSTS] Error updating host status to failed:', updateError);
+    } catch (updateError: any) {
+      logger.error('[ACTIONS-HOSTS] Error updating host status to failed:', { error: updateError });
     }
 
     // Revalidate paths

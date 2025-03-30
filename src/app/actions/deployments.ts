@@ -54,12 +54,14 @@ export async function getDeployments(user?: AuthUser | User | null): Promise<Dep
 
     console.log('Fetching deployments for tenant:', user.tenant_id);
 
+    // Get cookie store once for all operations
+    const cookieStore = await cookies();
+
     // Import the deployment database module
     const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
 
     // Fetch deployments from the database
     const where = { tenant_id: user.tenant_id };
-    const cookieStore = await cookies();
     const result = await deploymentDb.findMany({ where }, cookieStore);
 
     // Handle the result based on its structure
@@ -116,11 +118,13 @@ export async function getDeploymentById(id: string): Promise<Deployment | null> 
 
     console.log(`Fetching deployment with ID: ${id}`);
 
+    // Get cookie store once for all operations
+    const cookieStore = await cookies();
+
     // Import the deployment database module
     const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
 
     // Fetch the deployment from the database
-    const cookieStore = await cookies();
     const result = await deploymentDb.findUnique(id, cookieStore);
 
     // Handle the result
@@ -155,6 +159,7 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
       return { success: false, error: 'User not authenticated' };
     }
 
+    // Get cookie store once for all operations
     const cookieStore = await cookies();
 
     // Extract raw parameters from formData
@@ -858,31 +863,51 @@ export async function getScriptsForRepository(repositoryId: string): Promise<any
 
 /**
  * Run a deployment
- * @param deploymentId Deployment ID to run
- * @returns Object with success status and optional error
+ * @param deploymentId The ID of the deployment to run
  */
 export async function runDeployment(
   deploymentId: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    console.log(`Actions layer: Running deployment ${deploymentId}`);
+    console.log(`🚀 [DEPLOYMENT_RUN] Starting deployment with ID: ${deploymentId}`);
 
-    // Get user
+    // Get current user
     const user = await getUser();
     if (!user) {
-      console.error('Actions layer: Cannot run deployment - user not authenticated');
+      console.error('❌ [DEPLOYMENT_RUN] User not authenticated');
       return { success: false, error: 'User not authenticated' };
     }
 
-    // Get deployment details
-    const deployment = await getDeploymentById(deploymentId);
+    // Get cookie store once for all operations
+    const cookieStore = await cookies();
+
+    // Import dependencies
+    const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
+    const { default: cicdDb } = await import('@/lib/supabase/db-cicd');
+
+    // Get the deployment details
+    console.log(`🔍 [DEPLOYMENT_RUN] Fetching deployment details for ID: ${deploymentId}`);
+    const deployment = await deploymentDb.findUnique(deploymentId, cookieStore);
+
     if (!deployment) {
-      console.error(`Actions layer: Deployment ${deploymentId} not found`);
+      console.error(`❌ [DEPLOYMENT_RUN] Deployment with ID ${deploymentId} not found`);
       return { success: false, error: 'Deployment not found' };
     }
 
+    // Update deployment status to running
+    console.log(`⏳ [DEPLOYMENT_RUN] Updating deployment status to 'running'`);
+    await deploymentDb.update(
+      {
+        where: { id: deploymentId },
+        data: {
+          status: 'running',
+          started_at: new Date().toISOString(),
+        },
+      },
+      cookieStore,
+    );
+
     // Get CICD mapping if it exists
-    const { default: cicdDb } = await import('@/lib/supabase/db-cicd');
     const mappingResult = await cicdDb.getCICDDeploymentMapping({
       where: { deployment_id: deploymentId },
     });
@@ -921,8 +946,6 @@ export async function runDeployment(
     }
 
     // Create a deployment run record
-    const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
-
     await deploymentDb.create({
       data: {
         name: `${deployment.name} (Run)`,
@@ -945,7 +968,7 @@ export async function runDeployment(
 
     return { success: true };
   } catch (error: any) {
-    console.error(`Actions layer: Error running deployment:`, error);
+    console.error('Error in runDeployment:', error);
     return { success: false, error: error.message || 'Failed to run deployment' };
   }
 }

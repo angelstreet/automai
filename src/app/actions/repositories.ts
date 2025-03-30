@@ -101,9 +101,11 @@ export async function getRepositories(
   try {
     console.log('[@action:repositories:getRepositories] Starting...', { filter });
 
+    // Get cookies once for all operations
+    const cookieStore = await cookies();
+
     console.log('[@action:repositories:getRepositories] Fetching repositories from database');
     // Call the repository module instead of direct db access
-    const cookieStore = await cookies();
     const result = await dbRepository.getRepositories(cookieStore);
 
     if (!result.success || !result.data) {
@@ -156,6 +158,9 @@ export async function createRepository(
       };
     }
 
+    // Get cookies once for all operations
+    const cookieStore = await cookies();
+
     // Prepare data for the repository module with the correct structure
     const repositoryData = {
       name: data.name || '',
@@ -174,8 +179,8 @@ export async function createRepository(
       provider_type: repositoryData.provider_type,
     });
 
-    // Call the repository module with proper types
-    const result = await dbRepository.createRepository(repositoryData, currentUser.id);
+    // Call the repository module with proper types and pass cookieStore
+    const result = await dbRepository.createRepository(repositoryData, currentUser.id, cookieStore);
 
     if (!result.success || !result.data) {
       console.log('[@action:repositories:createRepository] Failed to create repository', {
@@ -237,6 +242,9 @@ export async function updateRepository(
       };
     }
 
+    // Get cookies once for all operations
+    const cookieStore = await cookies();
+
     const currentUser = currentUserResult;
     console.log('[@action:repositories:updateRepository] User authenticated', {
       userId: currentUser.id,
@@ -244,7 +252,7 @@ export async function updateRepository(
     });
 
     // Call the repository module instead of direct db access
-    const result = await dbRepository.updateRepository(id, updates, currentUser.id);
+    const result = await dbRepository.updateRepository(id, updates, currentUser.id, cookieStore);
 
     if (!result.success || !result.data) {
       console.log('[@action:repositories:updateRepository] Update failed', {
@@ -304,8 +312,11 @@ export async function deleteRepository(
       };
     }
 
+    // Get cookies once for all operations
+    const cookieStore = await cookies();
+
     // First get the repository to confirm it exists
-    const getRepoResult = await dbRepository.getRepository(id, currentUser.id);
+    const getRepoResult = await dbRepository.getRepository(id, currentUser.id, cookieStore);
 
     if (!getRepoResult.success || !getRepoResult.data) {
       console.log('[@action:repositories:deleteRepository] Repository not found', {
@@ -316,7 +327,7 @@ export async function deleteRepository(
     }
 
     // Call the repository module to delete
-    const result = await dbRepository.deleteRepository(id, currentUser.id);
+    const result = await dbRepository.deleteRepository(id, currentUser.id, cookieStore);
 
     if (!result.success) {
       console.log('[@action:repositories:deleteRepository] Deletion failed', {
@@ -1116,18 +1127,23 @@ export async function clearRepositoriesCache(): Promise<{
   message: string;
 }> {
   try {
-    // Revalidate repository paths
-    revalidatePath('/[locale]/[tenant]/repositories');
+    // Get cookie store
+    const cookieStore = await cookies();
+
+    // Clear the cache
+    const result = await dbRepository.clearCache(cookieStore);
 
     return {
       success: true,
-      message: 'Cache cleared by revalidating paths',
+      message: 'Repository cache cleared successfully',
     };
-  } catch (error) {
-    console.error('Error clearing repositories cache:', error);
+  } catch (error: any) {
+    console.log('[@action:repositories:clearRepositoriesCache] Error clearing cache', {
+      error: error.message,
+    });
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'Unknown error occurred',
+      message: `Failed to clear repository cache: ${error.message}`,
     };
   }
 }
