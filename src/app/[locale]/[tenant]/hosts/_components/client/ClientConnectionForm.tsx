@@ -4,10 +4,11 @@ import { AlertCircle, Check, CheckCircle, Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import * as React from 'react';
 import { useState, useRef } from 'react';
+import { toast } from 'sonner';
 
 import {
-  verifyFingerprint as verifyFingerprintAction,
   testConnection as testConnectionAction,
+  createHost as createHostAction,
 } from '@/app/actions/hosts';
 import { Alert, AlertDescription, AlertTitle } from '@/components/shadcn/alert';
 import { Button } from '@/components/shadcn/button';
@@ -49,11 +50,11 @@ export function ClientConnectionForm({
   onTestSuccess,
   onSubmit,
   onCancel,
-  isSaving = false,
+  isSaving: _isSaving = false,
   testStatus = 'idle',
 }: ConnectionFormProps) {
   const t = useTranslations('Common');
-  const [connectionType, setConnectionType] = useState<'ssh' | 'docker' | 'portainer'>(
+  const [_connectionType, setConnectionType] = useState<'ssh' | 'docker' | 'portainer'>(
     formData.type as 'ssh' | 'docker' | 'portainer',
   );
 
@@ -61,13 +62,14 @@ export function ClientConnectionForm({
   const [testing, setTesting] = useState(false);
   const [testError, setTestError] = useState<string | null>(null);
   const [testSuccess, setTestSuccess] = useState(false);
-  const [showFingerprint, setShowFingerprint] = useState(false);
-  const [fingerprintData, setFingerprintData] = useState<{
-    hostname: string;
-    fingerprint: string;
-  } | null>(null);
   const lastRequestTime = useRef<number>(0);
   const REQUEST_THROTTLE_MS = 500;
+
+  // Add state for the direct host creation flow
+  const [isCreating, setIsCreating] = useState(false);
+
+  // Add state for Windows detection
+  const [isWindowsOS, setIsWindowsOS] = useState<boolean | undefined>(undefined);
 
   // React.useEffect is defined but not needed anymore since we removed the context dependency
 
@@ -83,17 +85,21 @@ export function ClientConnectionForm({
   };
 
   const handleInputChange = (field: string, value: string) => {
-    onChange({
+    const updatedFormData = {
       ...formData,
       [field]: value,
-    });
-  };
+    };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      onTestSuccess?.();
+    // Log changes when username or password field is modified
+    if (field === 'username' || field === 'password') {
+      console.log(`[@ui:ClientConnectionForm:handleInputChange] Field '${field}' updated:`, {
+        field,
+        hasValue: !!value,
+        valueLength: value ? value.length : 0,
+      });
     }
+
+    onChange(updatedFormData);
   };
 
   // Test the connection using the action directly since we don't have a host ID yet
@@ -107,8 +113,17 @@ export function ClientConnectionForm({
     setTesting(true);
     setTestError(null);
     setTestSuccess(false);
+    setIsWindowsOS(undefined); // Reset Windows detection
 
     try {
+      console.log('[@ui:ClientConnectionForm:testHostConnection] Testing connection with data:', {
+        type: formData.type,
+        ip: formData.ip,
+        port: parseInt(formData.port),
+        username: formData.username,
+        hasPassword: !!formData.password,
+      });
+
       const result = await testConnectionAction({
         type: formData.type,
         ip: formData.ip,
@@ -117,8 +132,27 @@ export function ClientConnectionForm({
         password: formData.password,
       });
 
+      // Add debug log
+      console.log('[@ui:ClientConnectionForm:testHostConnection] Test connection result:', {
+        success: result.success,
+        hasIsWindows: 'is_windows' in result,
+        isWindows: 'is_windows' in result ? result.is_windows : undefined,
+        message: 'message' in result ? result.message : undefined,
+        error: result.error,
+      });
+
       if (result.success) {
         setTestSuccess(true);
+
+        // Check if Windows was detected - use type assertion to handle the possible property
+        if ('is_windows' in result && result.is_windows !== undefined) {
+          console.log(
+            '[@ui:ClientConnectionForm:testHostConnection] Windows OS detected:',
+            result.is_windows,
+          );
+          setIsWindowsOS(result.is_windows);
+        }
+
         if (onTestSuccess) {
           onTestSuccess();
         }
@@ -133,37 +167,87 @@ export function ClientConnectionForm({
         setTestError(errorMessage);
       }
     } catch (error) {
-      console.error('Error testing connection:', error);
+      console.error(
+        '[@ui:ClientConnectionForm:testHostConnection] Error testing connection:',
+        error,
+      );
       setTestError(error instanceof Error ? error.message : t('errors.testFailed'));
     } finally {
       setTesting(false);
     }
   };
 
-  // Verify host fingerprint
-  const verifyHostFingerprint = async () => {
-    if (!fingerprintData) return;
+  // New function that handles creating the host directly after successful test
+  const createHostDirectly = async () => {
+    if (!testSuccess && testStatus !== 'success') {
+      toast.error(t('errors.testFirst'));
+      return;
+    }
 
-    setTesting(true);
+    setIsCreating(true);
+
     try {
-      const result = await verifyFingerprintAction({
-        host: fingerprintData.hostname,
-        fingerprint: fingerprintData.fingerprint,
-        port: parseInt(formData.port),
-      });
+      // Log form data before submission
+      console.log(
+        '[@ui:ClientConnectionForm:createHostDirectly] Creating host directly with data:',
+        {
+          ...formData,
+          username: formData.username,
+          password: formData.password ? '[REDACTED]' : null,
+          hasUsername: !!formData.username,
+          hasPassword: !!formData.password,
+          is_windows: isWindowsOS,
+        },
+      );
 
-      if (result.success) {
-        setShowFingerprint(false);
-        setTestSuccess(true);
+      // Create the hostData object that will be sent to the server
+      const hostData = {
+        name: formData.name,
+        description: formData.description || '',
+        type: formData.type as 'ssh' | 'docker' | 'portainer',
+        ip: formData.ip,
+        port: parseInt(formData.port),
+        // Direct mapping - avoid passing through dialog
+        user: formData.username,
+        password: formData.password,
+        // Backup fields as JSON string
+        userData: JSON.stringify({
+          username: formData.username,
+          password: formData.password,
+        }),
+        status: 'connected' as 'connected' | 'failed' | 'pending' | 'testing',
+        is_windows: isWindowsOS !== undefined ? isWindowsOS : false, // Use detected Windows value if available
+        created_at: new Date(),
+        updated_at: new Date(),
+      };
+
+      // Call the server action directly
+      const result = await createHostAction(hostData as any);
+
+      if (result.success && result.data) {
+        toast.success(t('success.connected', { name: formData.name }));
+
+        // Close the dialog
+        if (onCancel) {
+          onCancel();
+        }
+
+        // Call onSubmit if provided (for backward compatibility)
+        if (onSubmit) {
+          await onSubmit();
+        }
       } else {
-        setTestError(result.message || 'Failed to verify fingerprint');
-        setShowFingerprint(false);
+        toast.error(result.error || t('errors.createFailed'));
+        console.error(
+          '[@ui:ClientConnectionForm:createHostDirectly] Failed to create host:',
+          result.error,
+        );
       }
-    } catch (error: any) {
-      setTestError(error.message || 'An unexpected error occurred');
-      setShowFingerprint(false);
+    } catch (error) {
+      console.error('[@ui:ClientConnectionForm:createHostDirectly] Error creating host:', error);
+      toast.error(error instanceof Error ? error.message : t('errors.createFailed'));
     } finally {
-      setTesting(false);
+      setIsCreating(false);
     }
   };
 
@@ -294,22 +378,8 @@ export function ClientConnectionForm({
         </Button>
 
         <Button
-          onClick={async (e) => {
-            e.preventDefault(); // Prevent any default form behavior
-
-            // Check if onSubmit exists
-            if (typeof onSubmit !== 'function') {
-              console.error('onSubmit is not a function:', onSubmit);
-              return;
-            }
-
-            try {
-              await onSubmit();
-            } catch (error) {
-              console.error('Error executing onSubmit callback:', error);
-            }
-          }}
-          disabled={isSaving || (!testSuccess && testStatus !== 'success')}
+          onClick={createHostDirectly}
+          disabled={isCreating || (!testSuccess && testStatus !== 'success')}
           variant={testSuccess || testStatus === 'success' ? 'default' : 'outline'}
           className={
             testSuccess || testStatus === 'success'
@@ -317,7 +387,7 @@ export function ClientConnectionForm({
               : 'h-8 px-3 text-sm'
           }
         >
-          {isSaving ? (
+          {isCreating ? (
             <>
               <Loader2 className="h-3 w-3 animate-spin mr-2" />
               {t('saving')}
@@ -355,7 +425,7 @@ export function ClientConnectionForm({
           <Button
             variant="outline"
             onClick={onCancel}
-            disabled={isSaving}
+            disabled={isCreating}
             className="h-8 px-3 text-sm"
           >
             {t('cancel')}

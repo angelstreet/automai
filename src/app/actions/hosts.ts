@@ -20,7 +20,7 @@ export async function getHosts(
   filter?: HostFilter,
 ): Promise<{ success: boolean; error?: string; data?: Host[] }> {
   try {
-    console.log('[ACTIONS-HOSTS] Getting all hosts');
+    console.log('[@action:hosts:getHosts] Getting all hosts');
     // Get current user
     const currentUser = await getUser();
 
@@ -52,10 +52,10 @@ export async function getHosts(
         error: 'Failed to fetch hosts',
       };
     }
-    console.log('[ACTIONS-HOSTS] Found hosts:', data);
+    console.log('[@action:hosts:getHosts] Found hosts:', data);
     return { success: true, data };
   } catch (error: any) {
-    logger.error('[ACTIONS-HOSTS] Error in getHosts:', error);
+    logger.error('[@action:hosts:getHosts] Error fetching hosts:', error);
     return { success: false, error: error.message || 'Failed to fetch hosts' };
   }
 }
@@ -92,7 +92,7 @@ export async function getHostById(
 
     return { success: true, data };
   } catch (error: any) {
-    logger.error('[ACTIONS-HOSTS] Error in getHostById:', error);
+    logger.error('[@action:hosts:getHostById] Error fetching host:', error);
     return { success: false, error: error.message || 'Failed to fetch host' };
   }
 }
@@ -178,7 +178,7 @@ export async function createHost(
       user: data.user, // Use the user field from Host type
       password: data.password,
       status: data.status || 'connected',
-      is_windows: data.is_windows || false,
+      is_windows: data.is_windows !== undefined ? data.is_windows : false, // Explicitly handle is_windows
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       team_id: teamId,
@@ -189,6 +189,53 @@ export async function createHost(
     // This happens when data is coming from the ConnectHostDialog component
     if ((data as any).username && !hostData.user) {
       hostData.user = (data as any).username;
+      console.log(
+        '[@action:hosts:createHost] Found username field, mapped to user:',
+        (data as any).username,
+      );
+    }
+
+    // CRITICAL FIX: Handle the serialized userData field
+    if ((data as any).userData && (!hostData.user || !hostData.password)) {
+      try {
+        const userData = JSON.parse((data as any).userData);
+        if (userData.username && !hostData.user) {
+          hostData.user = userData.username;
+          console.log(
+            '[@action:hosts:createHost] Extracted username from userData:',
+            userData.username,
+          );
+        }
+        if (userData.password && !hostData.password) {
+          hostData.password = userData.password;
+          console.log('[@action:hosts:createHost] Extracted password from userData');
+        }
+      } catch (e) {
+        console.error('[@action:hosts:createHost] Error parsing userData:', e);
+      }
+    }
+
+    // Add additional fields for backup in case of serialization issues
+    if (hostData.user) {
+      (hostData as any)._username = hostData.user;
+    }
+    if (hostData.password) {
+      (hostData as any)._password = hostData.password;
+    }
+
+    // Add an additional safeguard - if this is an SSH connection, ensure we have user and password
+    if (data.type === 'ssh' && (!hostData.user || !hostData.password)) {
+      console.error(
+        '[@action:hosts:createHost] SSH connection missing required user/password fields:',
+        {
+          hasUser: !!hostData.user,
+          hasPassword: !!hostData.password,
+        },
+      );
+      return {
+        success: false,
+        error: 'SSH connections require both username and password',
+      };
     }
 
     logger.info(`[@action:hosts:createHost] Creating host with data:`, {
@@ -208,6 +255,37 @@ export async function createHost(
       creator_id: hostData.creator_id,
       status: hostData.status,
     });
+
+    // If this is an SSH host, test the connection to detect Windows
+    let isWindows = hostData.is_windows;
+    if (data.type === 'ssh' && hostData.user && hostData.password) {
+      try {
+        console.log(
+          `[@action:hosts:createHost] Testing connection to detect Windows for: ${hostData.ip}`,
+        );
+        const testResult = await testConnectionCore({
+          type: hostData.type,
+          ip: hostData.ip,
+          port: hostData.port,
+          username: hostData.user,
+          password: hostData.password,
+        });
+
+        if (testResult.is_windows) {
+          console.log(
+            `[@action:hosts:createHost] Windows detected for ${hostData.ip}, setting is_windows=true`,
+          );
+          // Update is_windows in the data
+          isWindows = true;
+          hostData.is_windows = true;
+        }
+      } catch (e) {
+        console.error(
+          `[@action:hosts:createHost] Error testing connection for Windows detection: ${e instanceof Error ? e.message : String(e)}`,
+        );
+        // Continue with host creation even if test fails
+      }
+    }
 
     // Get cookie store for database operation
     const cookieStore = await cookies();
@@ -272,7 +350,7 @@ export async function updateHost(
 
     return { success: true, data };
   } catch (error: any) {
-    logger.error('[ACTIONS-HOSTS] Error in updateHost:', error);
+    logger.error('[@action:hosts:updateHost] Error updating host:', error);
     return { success: false, error: error.message || 'Failed to update host' };
   }
 }
@@ -311,7 +389,7 @@ export async function deleteHost(id: string): Promise<{ success: boolean; error?
 
     return { success: true };
   } catch (error: any) {
-    logger.error('[ACTIONS-HOSTS] Error in deleteHost:', error);
+    logger.error('[@action:hosts:deleteHost] Error deleting host:', error);
     return { success: false, error: error.message || 'Failed to delete host' };
   }
 }
@@ -327,42 +405,41 @@ async function testConnectionCore(data: {
   username?: string;
   password?: string;
   hostId?: string;
-}): Promise<{ success: boolean; error?: string; message?: string }> {
+}): Promise<{ success: boolean; error?: string; message?: string; is_windows?: boolean }> {
   try {
     logger.info(
       `[@action:hosts:testConnectionCore] Testing connection to ${data.ip}:${data.port || 'default'}`,
     );
 
+    // Log basic connection data without excessive details
+    console.log('[@action:hosts:testConnectionCore] Connection data:', {
+      type: data.type,
+      ip: data.ip,
+      hasUsername: !!data.username,
+      hasPassword: !!data.password,
+    });
+
     // Call the service function that handles the actual testing logic
     const result = await testHostConnectionService(data);
 
+    // Log concise result summary
     if (result.success) {
       logger.info(
-        `[@action:hosts:testConnectionCore] Connection test successful for ${data.ip}:${data.port || 'default'}`,
+        `[@action:hosts:testConnectionCore] Connection successful to ${data.ip}, Windows detected: ${!!result.is_windows}`,
       );
     } else {
-      // Fix for linter error: Safely access error property
-      let errorMessage: string;
-      if ('message' in result && typeof result.message === 'string') {
-        errorMessage = result.message;
-      } else if ('error' in result && typeof result.error === 'string') {
-        errorMessage = result.error;
-      } else {
-        errorMessage = 'Unknown error';
-      }
-
-      logger.error(
-        `[@action:hosts:testConnectionCore] Connection test failed for ${data.ip}:${data.port || 'default'}`,
-        { error: errorMessage },
-      );
+      // Extract error message in a concise form
+      const errorMessage = result.error || result.message || 'Unknown error';
+      logger.error(`[@action:hosts:testConnectionCore] Connection failed to ${data.ip}:`, {
+        error: errorMessage,
+      });
     }
 
     return result;
   } catch (error: any) {
-    logger.error(
-      `[@action:hosts:testConnectionCore] Error testing connection to ${data.ip}:${data.port || 'default'}`,
-      { error },
-    );
+    logger.error(`[@action:hosts:testConnectionCore] Error testing connection to ${data.ip}:`, {
+      error: error.message || 'Unknown error',
+    });
     return { success: false, error: error.message || 'Failed to test connection' };
   }
 }
@@ -496,8 +573,25 @@ export async function testConnection(data: {
       `[@action:hosts:testConnection] Testing connection to ${data.ip}:${data.port || 'default'}`,
     );
 
+    // Add detailed logging to better diagnose field mapping issues
+    console.log('[@action:hosts:testConnection] Received test data:', {
+      type: data.type,
+      ip: data.ip,
+      port: data.port,
+      username: data.username, // Log the username field we received
+      hasPassword: !!data.password,
+      hostId: data.hostId,
+    });
+
     // Use the core testing function
     const result = await testConnectionCore(data);
+
+    // Log the result including is_windows if available
+    console.log('[@action:hosts:testConnection] Test result:', {
+      success: result.success,
+      is_windows: result.is_windows,
+      messageLength: result.message ? result.message.length : 0,
+    });
 
     // Revalidate paths if we have a host ID
     if (data.hostId) {
