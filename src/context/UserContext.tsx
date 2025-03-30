@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 import { User } from '@/types/user';
 
@@ -27,6 +27,18 @@ export function UserProvider({
   // Simple state management - just use what's passed from props
   const [user] = useState<User | null>(initialUser || null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Store user data in localStorage for persistence across page refreshes
+  useEffect(() => {
+    if (user) {
+      try {
+        localStorage.setItem('cached_user', JSON.stringify(user));
+        localStorage.setItem('user_cache_timestamp', Date.now().toString());
+      } catch (error) {
+        console.error('[@context:UserContext] Error caching user data:', error);
+      }
+    }
+  }, [user]);
 
   console.debug(
     '[@context:UserContext:UserProvider] Initializing with initialUser:',
