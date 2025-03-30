@@ -234,21 +234,6 @@ export async function createHost(
       password: hostData.password ? '***' : undefined,
     });
 
-    // Add explicit debug logging to verify all fields
-    console.info('[@action:hosts:createHost] Full host data for debugging:', {
-      name: hostData.name,
-      type: hostData.type,
-      ip: hostData.ip,
-      port: hostData.port,
-      user: hostData.user, // Verify this field is present and correct
-      hasPassword: !!hostData.password,
-      team_id: hostData.team_id,
-      creator_id: hostData.creator_id,
-      status: hostData.status,
-      is_windows: hostData.is_windows,
-    });
-
-    // Create the host in the database
     // Create a clean hostData object without any extra fields not in the database schema
     const cleanHostData = {
       name: hostData.name,
@@ -258,18 +243,13 @@ export async function createHost(
       port: hostData.port,
       user: hostData.user,
       password: hostData.password,
-      status: hostData.status,
+      status: hostData.status === 'connected' ? 'connected' : 'connected',
       is_windows: hostData.is_windows,
       created_at: hostData.created_at,
       updated_at: hostData.updated_at,
       team_id: hostData.team_id,
       creator_id: hostData.creator_id,
     };
-
-    console.info('[@action:hosts:createHost] Clean host data for database:', {
-      ...cleanHostData,
-      password: '***',
-    });
 
     const newHost = await hostDb.create({ data: cleanHostData });
 
@@ -279,6 +259,9 @@ export async function createHost(
         error: 'Failed to add host',
       };
     }
+
+    // Verify the status of the created host
+    console.info(`[@action:hosts:createHost] New host created with status: ${newHost.status}`);
 
     // Revalidate paths
     revalidatePath('/[locale]/[tenant]/hosts');

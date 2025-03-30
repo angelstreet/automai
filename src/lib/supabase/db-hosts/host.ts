@@ -60,7 +60,11 @@ const host = {
   },
 
   async create({ data }: { data: any }, cookieStore?: any) {
-    console.log('[@db:host:create] Creating host');
+    console.log('[@db:host:create] Creating host with data:', {
+      ...data,
+      password: data.password ? '***' : undefined,
+      status: data.status,
+    });
     const supabase = await createClient(cookieStore);
 
     const { data: result, error } = await supabase.from('hosts').insert(data).select().single();
@@ -70,6 +74,7 @@ const host = {
       throw error;
     }
 
+    console.log('[@db:host:create] Host created successfully with status:', result.status);
     return result;
   },
 

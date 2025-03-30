@@ -194,12 +194,18 @@ export function ClientConnectionForm({
         // Map username to user for the server
         user: formData.username,
         password: formData.password,
-        // Include all fields needed by the server
-        status: 'connected' as 'connected' | 'failed' | 'pending' | 'testing',
+        // CRITICAL: Explicitly set status to 'connected' (NOT 'pending')
+        status: 'connected' as 'connected',
         is_windows: isWindowsOS !== undefined ? isWindowsOS : false,
         created_at: new Date(),
         updated_at: new Date(),
       };
+
+      // Add explicit log for status
+      console.log(
+        '[@ui:ClientConnectionForm:createHostDirectly] Host status is set to:',
+        hostData.status,
+      );
 
       // Call the server action
       console.log(

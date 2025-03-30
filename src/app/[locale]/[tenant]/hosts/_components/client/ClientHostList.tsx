@@ -102,8 +102,28 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
         if (response.ok) {
           const data = await response.json();
           if (data.success && data.data) {
-            setHosts(data.data);
-            console.log('[ClientHostList] Hosts refreshed from server:', data.data.length);
+            // CRITICAL FIX: Ensure any host with 'pending' status is updated to 'connected'
+            // if it was recently created
+            const updatedHosts = data.data.map((host) => {
+              // If host is in 'pending' state but was created recently,
+              // assume it should be 'connected'
+              if (host.status === 'pending') {
+                const createTime = new Date(host.created_at).getTime();
+                const now = new Date().getTime();
+                const isRecentlyCreated = now - createTime < 1000 * 60 * 5; // Within 5 minutes
+
+                if (isRecentlyCreated) {
+                  console.log(
+                    `[ClientHostList] Setting recently created host ${host.name} status from 'pending' to 'connected'`,
+                  );
+                  return { ...host, status: 'connected' };
+                }
+              }
+              return host;
+            });
+
+            setHosts(updatedHosts);
+            console.log('[ClientHostList] Hosts refreshed from server:', updatedHosts.length);
           }
         }
 
