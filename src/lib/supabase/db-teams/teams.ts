@@ -1,6 +1,6 @@
-import { createClient } from '@/lib/supabase/server';
 import { PostgrestError } from '@supabase/supabase-js';
-import { cookies } from 'next/headers';
+
+import { createClient } from '@/lib/supabase/server';
 
 export interface Team {
   id: string;

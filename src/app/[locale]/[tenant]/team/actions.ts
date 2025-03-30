@@ -23,7 +23,6 @@ import type {
   Team,
   TeamCreateInput,
   TeamUpdateInput,
-  TeamMember as TeamMemberFromContext,
   TeamMemberCreateInput,
   ResourceLimit,
 } from '@/types/context/team';

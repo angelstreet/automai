@@ -21,7 +21,7 @@ export async function getTeamMembers(
   try {
     const supabase = await createClient(cookieStore);
 
-    // Get team members with profiles
+    // Get team members with basic profile data
     const { data, error } = await supabase
       .from('team_members')
       .select(
@@ -41,16 +41,41 @@ export async function getTeamMembers(
       return { success: false, error: error.message };
     }
 
-    // Process the results to properly associate user data
+    // For each team member, fetch their user profile from our view
     if (data && data.length > 0) {
+      // Get all user IDs for batch fetching
+      const profileIds = data.map((member) => member.profile_id);
+
+      // Fetch user profiles in a single query
+      const { data: userProfiles, error: profilesError } = await supabase
+        .from('team_user_profiles')
+        .select('*')
+        .in('id', profileIds);
+
+      if (profilesError) {
+        console.error('Error fetching user profiles:', profilesError);
+      }
+
+      // Map user profiles to team members
       data.forEach((member) => {
-        // Create user object with available data from profiles
         const profile = member.profiles as any;
+        const userProfile = userProfiles?.find((p) => p.id === member.profile_id);
+
+        // Get avatar with fallbacks, checking metadata if it exists
+        let avatarUrl = userProfile?.avatar_url || profile?.avatar_url;
+        if (!avatarUrl && userProfile?.raw_user_meta_data) {
+          // Try to extract avatar from metadata if available
+          avatarUrl =
+            userProfile.raw_user_meta_data.avatar_url ||
+            userProfile.raw_user_meta_data.picture ||
+            null;
+        }
+
         member.user = {
           id: member.profile_id,
-          name: profile?.tenant_name || 'User',
-          email: 'Email unavailable in profiles table',
-          avatar_url: profile?.avatar_url,
+          name: userProfile?.full_name || profile?.tenant_name || 'User',
+          email: userProfile?.email || 'Email unavailable',
+          avatar_url: avatarUrl || null,
         };
       });
     }
