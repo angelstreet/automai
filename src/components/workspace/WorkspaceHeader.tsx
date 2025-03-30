@@ -2,10 +2,9 @@ import { cookies } from 'next/headers';
 import { Suspense } from 'react';
 
 import { ThemeToggleStatic } from '@/components/theme/ThemeToggleStatic';
-import { User } from '@/types/user';
-
 import { UserProfileDropdown } from '@/components/user/profile/UserProfileDropdown';
 import { WorkspaceHeaderClient } from '@/components/workspace/WorkspaceHeaderClient';
+import { User } from '@/types/user';
 
 interface WorkspaceHeaderProps {
   className?: string;

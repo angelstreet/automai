@@ -4,8 +4,11 @@ import * as React from 'react';
 
 import { NavGroup } from '@/components/layout/NavGroup';
 import { NavUser } from '@/components/layout/NavUser';
-import TeamSelector from '@/components/layout/TeamSelector';
 import { TeamSwitcher } from '@/components/layout/TeamSwitcher';
+import TeamSelector from '@/components/team/TeamSelector';
+import { useUser } from '@/context';
+import { User } from '@/types/user';
+
 import {
   Sidebar,
   SidebarContent,
@@ -14,11 +17,8 @@ import {
   SidebarRail,
   useSidebar,
 } from '@/components/sidebar';
+import { APP_SIDEBAR_WIDTH, APP_SIDEBAR_WIDTH_ICON } from '@/components/sidebar/constants';
 import { sidebarData } from '@/components/sidebar/sidebarData';
-import { useUser } from '@/context';
-import { User } from '@/types/user';
-
-import { APP_SIDEBAR_WIDTH, APP_SIDEBAR_WIDTH_ICON } from '../../sidebar/constants';
 
 interface AppSidebarClientProps {
   user?: User | null;
@@ -33,10 +33,10 @@ const AppSidebarClient = React.memo(function AppSidebarClient({
   const user = propUser || userContext?.user || null;
   const { open } = useSidebar();
 
-  // Use state for isCollapsed to ensure hydration consistency
-  const [isCollapsed, setIsCollapsed] = React.useState(false);
+  // Initialize isCollapsed directly from the open state to prevent flashing
+  const [isCollapsed, setIsCollapsed] = React.useState(!open);
 
-  // Update isCollapsed after initial render to prevent hydration mismatch
+  // Keep isCollapsed in sync with open state
   React.useEffect(() => {
     setIsCollapsed(!open);
   }, [open]);
