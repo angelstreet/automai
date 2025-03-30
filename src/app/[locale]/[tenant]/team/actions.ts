@@ -15,9 +15,10 @@ import {
   updateTeamMemberRole as dbUpdateTeamMemberRole,
   removeTeamMember as dbRemoveTeamMember,
   getTeamsByUser,
-  TeamMemberType as TeamMember,
+  TeamMemberType,
 } from '@/lib/supabase/db-teams';
 import { checkResourceLimit as dbCheckResourceLimit } from '@/lib/supabase/db-teams/resource-limits';
+import { createClient } from '@/lib/supabase/server';
 import type { ActionResult } from '@/types/context/cicd';
 import type {
   Team,
@@ -27,8 +28,9 @@ import type {
   ResourceLimit,
 } from '@/types/context/team';
 import { User } from '@/types/user';
-import { AuthUser } from '@/types/user';
-import { createClient } from '@/lib/supabase/db-teams/client';
+
+// Use TeamMemberType consistently throughout this file
+type TeamMember = TeamMemberType;
 
 /**
  * Get all teams for the current user's tenant
@@ -353,9 +355,7 @@ export const getTeamDetails = cache(async (userId?: string) => {
     // Find the user's role in the team
     let role = null;
     if (membersResult.success && membersResult.data) {
-      const userMember = membersResult.data.find(
-        (member: TeamMember) => member.profile_id === user.id,
-      );
+      const userMember = membersResult.data.find((member) => member.profile_id === user.id);
       if (userMember) {
         role = userMember.role;
         console.log(`Found user role: ${role} for user ${user.id} in team ${team.id}`);
@@ -364,43 +364,98 @@ export const getTeamDetails = cache(async (userId?: string) => {
 
     console.log(`Returning team details with role: ${role}`);
 
-    // Import necessary modules for resource counts
-    const { getRepositories } = await import('@/app/actions/repositories');
-    const { getCICDProviders } = await import('@/app/actions/cicd');
-    const { getDeployments } = await import('@/app/actions/deployments');
-
-    // Get repository count directly from database using team_id
+    // Direct database queries to count resources associated with this team and tenant
     let reposCount = 0;
-    try {
-      const supabase = await createClient(cookieStore);
-      const { data, error } = await supabase
-        .from('repositories')
-        .select('id', { count: 'exact' })
-        .eq('team_id', team.id);
+    let cicdCount = 0;
+    let deploymentsCount = 0;
+    let hostsCount = 0;
 
-      if (!error) {
-        reposCount = data.length;
-        console.log(`Found ${reposCount} repositories for team ${team.id}`);
+    try {
+      // Create a Supabase client with cookie store
+      const supabase = await createClient(cookieStore);
+
+      // First get all teams in this tenant to find which repositories to show
+      const teamsResult = await supabase.from('teams').select('id').eq('tenant_id', team.tenant_id);
+
+      if (!teamsResult.error && teamsResult.data) {
+        // Extract team IDs
+        const teamIds = teamsResult.data.map((t) => t.id);
+        console.log(`Found ${teamIds.length} teams in tenant ${team.tenant_id}`);
+
+        if (teamIds.length > 0) {
+          // Get repository count for all teams in this tenant
+          const reposResult = await supabase
+            .from('repositories')
+            .select('id', { count: 'exact' })
+            .in('team_id', teamIds);
+
+          if (!reposResult.error) {
+            reposCount = reposResult.data.length;
+            console.log(`Found ${reposCount} repositories across ${teamIds.length} teams`);
+          } else {
+            console.error('Error counting repositories:', reposResult.error);
+          }
+        }
+      }
+
+      // Get CICD provider count for the current tenant
+      const cicdResult = await supabase
+        .from('cicd_providers')
+        .select('id', { count: 'exact' })
+        .eq('tenant_id', team.tenant_id);
+
+      if (!cicdResult.error) {
+        cicdCount = cicdResult.data.length;
+        console.log(`Found ${cicdCount} CICD providers for tenant ${team.tenant_id}`);
       } else {
-        console.error('Error counting repositories:', error);
+        console.error('Error counting CICD providers:', cicdResult.error);
+      }
+
+      // Get deployments count
+      try {
+        const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
+
+        // Get deployments directly from the database
+        const result = await deploymentDb.findMany(
+          { where: { tenant_id: team.tenant_id } },
+          cookieStore,
+        );
+
+        // Handle the response based on its structure
+        if (result && Array.isArray(result)) {
+          deploymentsCount = result.length;
+        } else if (
+          result &&
+          typeof result === 'object' &&
+          'data' in result &&
+          Array.isArray(result.data)
+        ) {
+          deploymentsCount = result.data.length;
+        }
+
+        console.log('Found deployments count:', deploymentsCount);
+      } catch (err) {
+        console.error('Error getting deployments count:', err);
+      }
+
+      // Count hosts
+      try {
+        // Import the host database module
+        const { default: hostDb } = await import('@/lib/supabase/db-hosts/host');
+
+        // Get hosts from the database - no filters needed as RLS will handle access control
+        const hosts = await hostDb.findMany();
+
+        if (Array.isArray(hosts)) {
+          hostsCount = hosts.length;
+          console.log(`Found ${hostsCount} hosts for tenant ${team.tenant_id}`);
+        }
+      } catch (err) {
+        console.error('Error counting hosts:', err);
       }
     } catch (err) {
-      console.error('Exception counting repositories:', err);
+      console.error('Exception counting resources:', err);
     }
-
-    // Get CICD provider count
-    const cicdResult = await getCICDProviders();
-    const cicdCount = cicdResult.success ? cicdResult.data?.length || 0 : 0;
-
-    // Get deployments count
-    // Create a proper user object with tenant_id for getDeployments
-    const userWithTenant = {
-      ...user,
-      tenant_id: team.tenant_id, // Use the team's tenant_id
-    };
-    const deployments = await getDeployments(userWithTenant as AuthUser);
-    const deploymentsCount = deployments?.length || 0;
-    console.log('Found deployments count:', deploymentsCount);
 
     // Return team details with actual resource counts
     return {
@@ -411,7 +466,7 @@ export const getTeamDetails = cache(async (userId?: string) => {
       role,
       resourceCounts: {
         repositories: reposCount,
-        hosts: 0, // This is handled separately in page.tsx
+        hosts: hostsCount,
         cicd: cicdCount,
         deployments: deploymentsCount,
       },

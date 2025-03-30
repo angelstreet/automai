@@ -5,7 +5,7 @@ import { cookies } from 'next/headers';
 
 import { getUser } from '@/app/actions/user';
 import { CICDPipelineConfig } from '@/lib/services/cicd/interfaces';
-import { AuthUser } from '@/types/user';
+import { AuthUser, User } from '@/types/user';
 
 import {
   Deployment,
@@ -40,7 +40,7 @@ function mapDbDeploymentToDeployment(dbDeployment: any): Deployment {
 /**
  * Get all deployments for the current user
  */
-export async function getDeployments(user?: AuthUser | null): Promise<Deployment[]> {
+export async function getDeployments(user?: AuthUser | User | null): Promise<Deployment[]> {
   try {
     // Get current user if not provided
     if (!user) {

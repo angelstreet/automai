@@ -415,7 +415,7 @@
       "overview": "Manage and track resources assigned to your team",
       "repositories": "Repositories",
       "hosts": "Hosts",
-      "cicd": "CI/CD Providers",
+      "cicd": "CI/CD",
       "deployments": "Deployments"
     }
   },

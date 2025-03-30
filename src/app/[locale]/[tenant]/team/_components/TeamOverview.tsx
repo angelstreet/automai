@@ -17,15 +17,9 @@ interface TeamOverviewProps {
   team: TeamDetails | null;
   _unassignedResources: UnassignedResources;
   user?: User | null;
-  hostsCount?: number;
 }
 
-export default function TeamOverview({
-  team,
-  _unassignedResources,
-  user,
-  hostsCount = 0,
-}: TeamOverviewProps) {
+export default function TeamOverview({ team, _unassignedResources, user }: TeamOverviewProps) {
   const t = useTranslations('team');
   const hasTeam = Boolean(team?.id);
 
@@ -39,7 +33,7 @@ export default function TeamOverview({
     {
       type: 'host',
       name: t('resources.hosts'),
-      count: hostsCount,
+      count: team?.resourceCounts.hosts ?? 0,
     },
     {
       type: 'cicd',
@@ -92,7 +86,7 @@ export default function TeamOverview({
             <p className="text-sm font-medium">Resources</p>
             <p className="text-xl font-semibold">
               {team.resourceCounts.repositories +
-                hostsCount +
+                team.resourceCounts.hosts +
                 team.resourceCounts.cicd +
                 team.resourceCounts.deployments}
             </p>
