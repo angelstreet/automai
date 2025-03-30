@@ -2,6 +2,7 @@
 
 import userDB from '@/lib/supabase/db-users';
 import { AuthUser } from '@/types/user';
+import { cookies } from 'next/headers';
 
 /**
  * Invalidate user-related cache
@@ -76,6 +77,8 @@ export async function updateProfile(formData: FormData | Record<string, any>) {
  */
 export async function setSelectedTeam(teamId: string) {
   try {
+    const cookieStore = cookies();
+
     // Get current user
     const user = await userDB.getCurrentUser();
     if (!user) {
@@ -90,7 +93,7 @@ export async function setSelectedTeam(teamId: string) {
     }
 
     // Call the db-users module to handle setting the team
-    return userDB.setSelectedTeam(user.id, teamId);
+    return userDB.setSelectedTeam(user.id, teamId, cookieStore);
   } catch (error) {
     console.error('Error selecting team:', error);
     return { success: false, message: 'Failed to select team' };
