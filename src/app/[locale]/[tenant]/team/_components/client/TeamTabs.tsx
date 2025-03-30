@@ -20,7 +20,7 @@ export default function TeamTabs({ unassignedResources, user }: TeamTabsProps) {
   const activeTab = searchParams.get('tab') || 'overview';
 
   // Get team data and loading state from context
-  const { activeTeam, loading } = useTeam();
+  const { activeTeam, loading, membersLoading } = useTeam();
 
   // Convert activeTeam to TeamDetails type with proper structure
   const teamDetails: TeamDetails = activeTeam
@@ -41,14 +41,17 @@ export default function TeamTabs({ unassignedResources, user }: TeamTabsProps) {
       }
     : null;
 
-  // Show appropriate skeleton based on the active tab
+  // Show appropriate loading state based on active tab
+  // Only show skeleton for overview when loading general team data
+  // Only show skeleton for members tab when loading members data
   if (loading || !activeTeam) {
     return (
-      <div className="space-y-6">
-        {activeTab === 'overview' ? <OverviewTabSkeleton /> : <MembersTabSkeleton />}
-      </div>
+      <div className="space-y-6">{activeTab === 'overview' ? <OverviewTabSkeleton /> : null}</div>
     );
   }
+
+  // Don't display loading state for members tab here
+  // The MembersTab component handles its own loading state now
 
   return (
     <div className="space-y-6">

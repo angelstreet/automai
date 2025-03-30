@@ -53,7 +53,7 @@ export function MembersTab({
   user: _user,
 }: MembersTabProps) {
   const t = useTranslations('team');
-  const { getTeamMembers, invalidateTeamMembersCache, loading: contextLoading } = useTeam();
+  const { getTeamMembers, invalidateTeamMembersCache, membersLoading } = useTeam();
   const { hasPermission } = usePermission();
   const [members, setMembers] = useState<TeamMemberDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -90,8 +90,8 @@ export function MembersTab({
     fetchMembers();
   }, [teamId, getTeamMembers]);
 
-  // Use either local loading state or context loading state
-  const showLoading = isLoading || contextLoading;
+  // Use either local loading state or members loading state from context
+  const showLoading = isLoading || membersLoading;
 
   const handleRemoveMember = async () => {
     if (!teamId || !memberToRemove) return;

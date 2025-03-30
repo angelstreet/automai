@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
 
 // Import types and actions from server actions
 import {
@@ -27,6 +27,7 @@ interface TeamContextState {
   permissions: PermissionMatrix[];
   teamMembers: Record<string, TeamMember[]>;
   loading: boolean;
+  membersLoading: boolean;
   error: string | null;
   switchTeam: (teamId: string) => Promise<boolean>;
   refreshTeams: () => Promise<void>;
@@ -45,6 +46,7 @@ const defaultState: TeamContextState = {
   permissions: [],
   teamMembers: {},
   loading: true,
+  membersLoading: false,
   error: null,
   switchTeam: async () => false,
   refreshTeams: async () => {},
@@ -72,7 +74,12 @@ export function TeamProvider({
   const [permissions, setPermissions] = useState<PermissionMatrix[]>([]);
   const [teamMembers, setTeamMembers] = useState<Record<string, TeamMember[]>>({});
   const [loading, setLoading] = useState(!initialTeams.length && !initialActiveTeam);
+  const [membersLoading, setMembersLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Add loading timestamps to prevent frequent refetching
+  const lastTeamLoadTime = useRef<Record<string, number>>({});
+  const lastMembersLoadTime = useRef<Record<string, number>>({});
 
   // Only load teams if we don't have initialTeams and user is loaded
   useEffect(() => {
@@ -111,6 +118,17 @@ export function TeamProvider({
   const loadTeams = async () => {
     if (!user) return;
 
+    // Skip if we've loaded teams in the last 30 seconds
+    const now = Date.now();
+    if (
+      lastTeamLoadTime.current.teams &&
+      now - lastTeamLoadTime.current.teams < 30000 &&
+      teams.length > 0
+    ) {
+      console.log('[@context:team:loadTeams] Using cached teams data (loaded within last 30s)');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -118,6 +136,7 @@ export function TeamProvider({
       const result = await getUserTeams(user.id);
       if (result.success && result.data) {
         setTeams(result.data);
+        lastTeamLoadTime.current.teams = now;
       } else {
         setError(result.error || 'Failed to load teams');
       }
@@ -132,6 +151,19 @@ export function TeamProvider({
   const loadActiveTeam = async () => {
     if (!user) return;
 
+    // Skip if we've loaded the active team in the last 30 seconds
+    const now = Date.now();
+    if (
+      lastTeamLoadTime.current.activeTeam &&
+      now - lastTeamLoadTime.current.activeTeam < 30000 &&
+      activeTeam
+    ) {
+      console.log(
+        '[@context:team:loadActiveTeam] Using cached active team (loaded within last 30s)',
+      );
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -140,10 +172,12 @@ export function TeamProvider({
 
       if (result.success && result.data) {
         setActiveTeam(result.data);
+        lastTeamLoadTime.current.activeTeam = now;
       } else if (teams.length > 0) {
         // If no active team but teams exist, set the first one as active
         setActiveTeam(teams[0]);
         await saveUserActiveTeamToServer(user.id, teams[0].id);
+        lastTeamLoadTime.current.activeTeam = now;
       } else {
         setError('No teams available');
       }
@@ -194,6 +228,10 @@ export function TeamProvider({
       const result = await saveUserActiveTeamToServer(user.id, teamId);
       if (result.success) {
         setActiveTeam(teamResult.data);
+
+        // Update the last load time for active team
+        lastTeamLoadTime.current.activeTeam = Date.now();
+
         await loadPermissions();
         return true;
       } else {
@@ -236,16 +274,26 @@ export function TeamProvider({
     async (teamId: string): Promise<TeamMember[]> => {
       if (!teamId) return [];
 
+      const now = Date.now();
+
       // Return cached data if available
       if (teamMembers[teamId]) {
-        console.log(`[@context:team] Using cached team members for team ${teamId}`);
-        return teamMembers[teamId];
+        // If we've fetched within the last 60 seconds, don't refetch
+        if (
+          lastMembersLoadTime.current[teamId] &&
+          now - lastMembersLoadTime.current[teamId] < 60000
+        ) {
+          console.log(
+            `[@context:team] Using cached team members for team ${teamId} (loaded within last 60s)`,
+          );
+          return teamMembers[teamId];
+        }
       }
 
       // Otherwise fetch data
       try {
         console.log(`[@context:team] Fetching team members for team ${teamId}`);
-        setLoading(true); // Set loading state when fetching
+        setMembersLoading(true);
         const result = await getTeamMembersAction(teamId);
         if (result.success && result.data) {
           // Cache the result
@@ -254,6 +302,10 @@ export function TeamProvider({
             newMembers[teamId] = result.data as TeamMember[];
             return newMembers;
           });
+
+          // Update the last load time
+          lastMembersLoadTime.current[teamId] = now;
+
           return result.data as TeamMember[];
         }
         return [];
@@ -261,7 +313,7 @@ export function TeamProvider({
         console.error('[@context:team] Error fetching team members:', error);
         return [];
       } finally {
-        setLoading(false); // Clear loading state after fetch completes
+        setMembersLoading(false);
       }
     },
     [teamMembers],
@@ -275,6 +327,11 @@ export function TeamProvider({
       delete newMembers[teamId];
       return newMembers;
     });
+
+    // Also remove the last load time entry
+    if (lastMembersLoadTime.current[teamId]) {
+      delete lastMembersLoadTime.current[teamId];
+    }
   }, []);
 
   const value = {
@@ -283,6 +340,7 @@ export function TeamProvider({
     permissions,
     teamMembers,
     loading,
+    membersLoading,
     error,
     switchTeam,
     refreshTeams,
