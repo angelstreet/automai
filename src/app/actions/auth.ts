@@ -9,14 +9,23 @@ import { invalidateUserCache } from './user';
  */
 export async function signInWithOAuth(provider: 'google' | 'github', redirectUrl: string) {
   try {
+    console.log('[@action:auth:signInWithOAuth] Starting OAuth flow', {
+      provider,
+      redirectUrl: redirectUrl.replace(/\?.+$/, '?...'), // Sanitize URL parameters
+    });
+
     // Use standard OAuth flow
     const result = await supabaseAuth.signInWithOAuth(provider, {
       redirectTo: redirectUrl,
     });
 
-    // Add debug log
     if (result.success && result.data?.url) {
-      console.log('🔐 OAUTH: Successfully initiated OAuth flow');
+      console.log('[@action:auth:signInWithOAuth] Successfully initiated OAuth flow', { provider });
+    } else {
+      console.warn('[@action:auth:signInWithOAuth] Failed to initiate OAuth flow', {
+        provider,
+        error: result.error,
+      });
     }
 
     return {
@@ -25,7 +34,11 @@ export async function signInWithOAuth(provider: 'google' | 'github', redirectUrl
       data: result.data || null,
     };
   } catch (error: any) {
-    console.error('Error signing in with OAuth:', error);
+    console.error('[@action:auth:signInWithOAuth] Error initiating OAuth flow', {
+      provider,
+      error: error.message,
+      stack: error.stack,
+    });
     return { success: false, error: error.message || 'Failed to sign in', data: null };
   }
 }
@@ -35,6 +48,8 @@ export async function signInWithOAuth(provider: 'google' | 'github', redirectUrl
  */
 export async function handleAuthCallback(urlOrCode: string) {
   try {
+    console.log('[@action:auth:handleAuthCallback] Starting auth callback process');
+
     // If this is a URL, extract the code
     let code = urlOrCode;
     if (urlOrCode.startsWith('http')) {
@@ -42,25 +57,31 @@ export async function handleAuthCallback(urlOrCode: string) {
       const codeParam = url.searchParams.get('code');
       if (codeParam) {
         code = codeParam;
-        console.log('⭐ AUTH CALLBACK - Extracted code from URL:', code.substring(0, 6) + '...');
+        console.log('[@action:auth:handleAuthCallback] Extracted code from URL', {
+          codePrefix: code.substring(0, 6) + '...',
+        });
       } else {
-        console.error('⭐ AUTH CALLBACK ERROR - No code provided in URL');
+        console.error('[@action:auth:handleAuthCallback] No code provided in URL');
         throw new Error('No code provided in URL');
       }
     } else {
-      console.log('⭐ AUTH CALLBACK - Using provided code:', code.substring(0, 6) + '...');
+      console.log('[@action:auth:handleAuthCallback] Using provided code', {
+        codePrefix: code.substring(0, 6) + '...',
+      });
     }
 
     // Invalidate user cache before processing callback
     await invalidateUserCache();
-    console.log('⭐ AUTH CALLBACK - User cache invalidated');
+    console.log('[@action:auth:handleAuthCallback] User cache invalidated');
 
     // Exchange the code for a session
-    console.log('⭐ AUTH CALLBACK - Exchanging code for session');
+    console.log('[@action:auth:handleAuthCallback] Exchanging code for session');
     const result = await supabaseAuth.handleOAuthCallback(code);
 
     if (!result.success) {
-      console.error('⭐ AUTH CALLBACK ERROR - Authentication failed:', result.error);
+      console.error('[@action:auth:handleAuthCallback] Authentication failed', {
+        error: result.error,
+      });
       return {
         success: false,
         error: result.error || 'Failed to authenticate',
@@ -70,7 +91,10 @@ export async function handleAuthCallback(urlOrCode: string) {
 
     return handleAuthSuccess(result, urlOrCode);
   } catch (error: any) {
-    console.error('⭐ AUTH CALLBACK ERROR - Exception:', error);
+    console.error('[@action:auth:handleAuthCallback] Exception in auth process', {
+      error: error.message,
+      stack: error.stack,
+    });
     return {
       success: false,
       error: error.message || 'Authentication failed',
@@ -83,19 +107,18 @@ export async function handleAuthCallback(urlOrCode: string) {
  * Handle successful authentication and prepare redirect
  */
 function handleAuthSuccess(result: any, url: string) {
-  console.log('⭐ AUTH CALLBACK SUCCESS - Session obtained');
+  console.log('[@action:auth:handleAuthSuccess] Starting handleAuthSuccess function');
 
   // Log session details for debugging
   const session = result.data.session;
-  console.log('⭐ AUTH CALLBACK - Session present:', !!session);
+  console.log('[@action:auth:handleAuthSuccess] Session present', { isPresent: !!session });
 
   if (session) {
-    console.log(
-      '⭐ AUTH CALLBACK - Session expires at:',
-      new Date(session.expires_at * 1000).toISOString(),
-    );
-    console.log('⭐ AUTH CALLBACK - User ID:', session.user.id);
-    console.log('⭐ AUTH CALLBACK - User email:', session.user.email);
+    console.log('[@action:auth:handleAuthSuccess] Session details', {
+      expiresAt: new Date(session.expires_at * 1000).toISOString(),
+      userId: session.user.id,
+      userEmail: session.user.email,
+    });
   }
 
   // Get the tenant information for redirection
@@ -122,10 +145,10 @@ function handleAuthSuccess(result: any, url: string) {
     locale = userData.user_metadata.locale;
   }
 
-  console.log('⭐ AUTH CALLBACK - Using locale:', locale);
+  console.log('[@action:auth:handleAuthSuccess] Using locale', { locale });
 
   // Log for debugging
-  console.log('⭐ AUTH CALLBACK - Redirect using tenant:', tenantName);
+  console.log('[@action:auth:handleAuthSuccess] Redirect using tenant', { tenantName });
 
   // Redirect URL for after authentication
   const redirectUrl = `/${locale}/${tenantName}/dashboard`;
@@ -226,37 +249,45 @@ export async function resetPasswordForEmail(email: string, redirectUrl: string) 
  */
 export async function signOut(formData: FormData) {
   try {
+    console.log('[@action:auth:signOut] Starting sign out process');
     // Get locale from form data for redirect
-    const locale = (formData.get('locale') as string) || 'en';
+    const locale = formData.get('locale') || 'en';
+    console.log('[@action:auth:signOut] Using locale for redirect', { locale });
 
-    console.log('🔐 SIGNOUT: Starting sign out process...');
-
-    // Invalidate user cache on sign out
+    // Invalidate user cache
     await invalidateUserCache();
-    console.log('🔐 SIGNOUT: User cache invalidated');
+    console.log('[@action:auth:signOut] User cache invalidated');
 
     // Sign out from Supabase
     const result = await supabaseAuth.signOut();
-    console.log('🔐 SIGNOUT: Supabase signOut result:', result);
 
     if (!result.success) {
-      console.error('🔐 SIGNOUT ERROR:', result.error);
-      throw new Error(result.error || 'Failed to sign out');
+      console.error('[@action:auth:signOut] Sign out failed', {
+        error: result.error,
+      });
+      return {
+        success: false,
+        error: result.error || 'Sign out failed',
+        redirectUrl: `/${locale}/login?error=signout`,
+      };
     }
 
     // Set cache-busting query parameter to prevent browser cache issues
     const timestamp = Date.now();
     const redirectUrl = `/${locale}/login?t=${timestamp}`;
 
-    console.log('🔐 SIGNOUT: Successfully signed out, redirect URL:', redirectUrl);
+    console.log('[@action:auth:signOut] Successfully signed out', { redirectUrl });
 
     // Return success and redirect URL
     return {
       success: true,
       redirectUrl,
     };
-  } catch (error) {
-    console.error('🔐 SIGNOUT ERROR:', error);
+  } catch (error: any) {
+    console.error('[@action:auth:signOut] Error during sign out', {
+      error: error.message,
+      stack: error.stack,
+    });
     // Still return some redirect URL even on error
     return {
       success: false,
@@ -271,4 +302,62 @@ export async function signOut(formData: FormData) {
  */
 export async function exchangeCodeForSession(url: string) {
   return handleAuthCallback(url);
+}
+
+/**
+ * Handle email and password authentication
+ */
+export async function handleAuthWithEmail(formData: FormData) {
+  try {
+    console.log('[@action:auth:handleAuthWithEmail] Starting email auth process');
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+
+    // Input validation
+    if (!email || !email.trim()) {
+      console.warn('[@action:auth:handleAuthWithEmail] Email missing or empty');
+      return {
+        success: false,
+        error: 'Email is required',
+      };
+    }
+
+    if (!password) {
+      console.warn('[@action:auth:handleAuthWithEmail] Password missing');
+      return {
+        success: false,
+        error: 'Password is required',
+      };
+    }
+
+    console.log('[@action:auth:handleAuthWithEmail] Attempting sign in with email');
+    const result = await supabaseAuth.signInWithPassword({ email, password });
+
+    // Handle sign-in failure
+    if (!result.success) {
+      console.error('[@action:auth:handleAuthWithEmail] Authentication failed', {
+        error: result.error,
+      });
+      return {
+        success: false,
+        error: result.error || 'Authentication failed',
+      };
+    }
+
+    console.log('[@action:auth:handleAuthWithEmail] Sign in successful');
+
+    return {
+      success: true,
+      redirectUrl: '/dashboard',
+    };
+  } catch (error: any) {
+    console.error('[@action:auth:handleAuthWithEmail] Exception in auth process', {
+      error: error.message,
+      stack: error.stack,
+    });
+    return {
+      success: false,
+      error: error.message || 'Authentication failed',
+    };
+  }
 }

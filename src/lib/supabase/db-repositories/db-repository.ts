@@ -1,4 +1,5 @@
 import { createClient } from '../server';
+
 import { detectProviderFromUrl, extractRepoNameFromUrl, extractOwnerFromUrl } from './utils';
 
 // Common response type for all database operations
@@ -55,25 +56,27 @@ export const repository = {
    */
   async getRepositories(): Promise<DbResponse<Repository[]>> {
     try {
-      console.log('[DB] getRepositories: Starting query');
+      console.log('[@db:repository:getRepositories] Starting query');
       const supabase = await createClient();
 
       // Get the current user's profile ID
       const { data: userData, error: userError } = await supabase.auth.getUser();
 
       if (userError) {
-        console.error('[DB-REPOSITORIES] Error getting current user:', userError);
+        console.error('[@db:repository:getRepositories] Error getting current user:', userError);
         return { success: false, error: userError.message };
       }
 
       const profileId = userData.user?.id;
 
       if (!profileId) {
-        console.error('[DB-REPOSITORIES] No user profile found');
+        console.error('[@db:repository:getRepositories] No user profile found');
         return { success: false, error: 'User not authenticated' };
       }
 
-      console.log(`[DB-REPOSITORIES] Fetching repositories for profile ID: ${profileId}`);
+      console.log(
+        `[@db:repository:getRepositories] Fetching repositories for profile ID: ${profileId}`,
+      );
 
       // Join with git_providers to enforce tenant isolation
       const { data, error } = await supabase
@@ -87,7 +90,7 @@ export const repository = {
         .eq('git_providers.profile_id', profileId);
 
       if (error) {
-        console.error('[DB-REPOSITORIES] Error fetching repositories:', error);
+        console.error('[@db:repository:getRepositories] Error fetching repositories:', error);
         return { success: false, error: error.message };
       }
 
@@ -97,13 +100,13 @@ export const repository = {
         return repoData;
       });
 
-      console.log('[DB] Successfully fetched repositories:', {
+      console.log('[@db:repository:getRepositories] Successfully fetched repositories:', {
         count: repositories?.length || 0,
       });
 
       return { success: true, data: repositories };
     } catch (error) {
-      console.error('[DB-REPOSITORIES] Unexpected error in getRepositories:', error);
+      console.error('[@db:repository:getRepositories] Unexpected error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -116,7 +119,12 @@ export const repository = {
    */
   async getRepository(id: string, profileId?: string): Promise<DbResponse<Repository>> {
     try {
-      console.log('[DB] getRepository: Fetching repository:', id, 'for profile:', profileId);
+      console.log(
+        '[@db:repository:getRepository] Fetching repository:',
+        id,
+        'for profile:',
+        profileId,
+      );
       const supabase = await createClient();
 
       if (!profileId) {
@@ -128,7 +136,7 @@ export const repository = {
           .single();
 
         if (error) {
-          console.error('[DB-REPOSITORIES] Error fetching repository:', error);
+          console.error('[@db:repository:getRepository] Error fetching repository:', error);
           return { success: false, error: error.message };
         }
 
@@ -148,18 +156,18 @@ export const repository = {
         .single();
 
       if (error) {
-        console.error('[DB-REPOSITORIES] Error fetching repository:', error);
+        console.error('[@db:repository:getRepository] Error fetching repository:', error);
         return { success: false, error: error.message };
       }
 
-      console.log('[DB] Successfully fetched repository:', {
+      console.log('[@db:repository:getRepository] Successfully fetched repository:', {
         id: data?.id,
         hasProvider: data?.git_providers !== undefined,
       });
 
       return { success: true, data };
     } catch (error) {
-      console.error('[DB-REPOSITORIES] Unexpected error in getRepository:', error);
+      console.error('[@db:repository:getRepository] Unexpected error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -326,12 +334,15 @@ export const repository = {
 
       // Detect the provider type from the URL
       const providerType = detectProviderFromUrl(url);
-      console.log('[createRepositoryFromUrl] Detected provider type:', providerType);
+      console.log('[@db:repository:createRepositoryFromUrl] Detected provider type:', providerType);
 
       // Extract repository name and owner from URL
       const repoName = extractRepoNameFromUrl(url);
       const owner = extractOwnerFromUrl(url);
-      console.log('[createRepositoryFromUrl] Extracted repo details:', { repoName, owner });
+      console.log('[@db:repository:createRepositoryFromUrl] Extracted repo details:', {
+        repoName,
+        owner,
+      });
 
       // Look for an existing provider of this type associated with the user
       const supabase = await createClient();
@@ -343,7 +354,7 @@ export const repository = {
         .eq('type', providerType)
         .limit(1);
 
-      console.log('[createRepositoryFromUrl] Existing providers query result:', {
+      console.log('[@db:repository:createRepositoryFromUrl] Existing providers query result:', {
         existingProviders,
         providersError,
       });
@@ -357,10 +368,16 @@ export const repository = {
 
       if (data.provider_id) {
         providerId = data.provider_id;
-        console.log('[createRepositoryFromUrl] Using provided provider ID:', providerId);
+        console.log(
+          '[@db:repository:createRepositoryFromUrl] Using provided provider ID:',
+          providerId,
+        );
       } else if (existingProviders && existingProviders.length > 0) {
         providerId = existingProviders[0].id;
-        console.log('[createRepositoryFromUrl] Using existing provider ID:', providerId);
+        console.log(
+          '[@db:repository:createRepositoryFromUrl] Using existing provider ID:',
+          providerId,
+        );
       } else {
         // We need to create a default provider for this type
         let providerName =
@@ -386,13 +403,16 @@ export const repository = {
         // This is a workaround for the database constraint
         const dbProviderType = providerType === 'self-hosted' ? 'gitea' : providerType;
 
-        console.log('[createRepositoryFromUrl] Creating provider with mapped type:', {
-          originalType: providerType,
-          mappedType: dbProviderType,
-          name: providerName,
-          profile_id: profileId,
-          server_url: serverUrl || undefined,
-        });
+        console.log(
+          '[@db:repository:createRepositoryFromUrl] Creating provider with mapped type:',
+          {
+            originalType: providerType,
+            mappedType: dbProviderType,
+            name: providerName,
+            profile_id: profileId,
+            server_url: serverUrl || undefined,
+          },
+        );
 
         const { data: newProvider, error: createProviderError } = await supabase
           .from('git_providers')
@@ -408,7 +428,7 @@ export const repository = {
           .select()
           .single();
 
-        console.log('[createRepositoryFromUrl] Provider creation result:', {
+        console.log('[@db:repository:createRepositoryFromUrl] Provider creation result:', {
           newProvider,
           createProviderError,
         });
@@ -461,51 +481,24 @@ export const starRepository = {
     try {
       const supabase = await createClient();
 
-      // Get all starred repositories for the user
-      const { data: starData, error: starError } = await supabase
-        .from('profile_repository_pins')
-        .select('repository_id')
+      const { data, error } = await supabase
+        .from('starred_repositories')
+        .select('id, repository_id, repositories(*)')
         .eq('profile_id', profileId);
 
-      if (starError) {
-        return {
-          success: false,
-          error: starError.message,
-        };
+      if (error) {
+        console.error(
+          '[@db:repository:getStarredRepositories] Error fetching starred repositories:',
+          error,
+        );
+        return { success: false, error: error.message };
       }
 
-      // If no starred repositories, return empty array
-      if (!starData || starData.length === 0) {
-        return {
-          success: true,
-          data: [],
-        };
-      }
-
-      // Get the full repository details for each starred repository
-      const repositoryIds = starData.map((item) => item.repository_id);
-
-      const { data: repositories, error: reposError } = await supabase
-        .from('repositories')
-        .select('*')
-        .in('id', repositoryIds);
-
-      if (reposError) {
-        return {
-          success: false,
-          error: reposError.message,
-        };
-      }
-
-      return {
-        success: true,
-        data: repositories,
-      };
-    } catch (error: any) {
-      console.error('Error fetching starred repositories:', error);
+      return { success: true, data };
+    } catch (error) {
       return {
         success: false,
-        error: error.message || 'Failed to fetch starred repositories',
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   },
@@ -517,53 +510,43 @@ export const starRepository = {
     try {
       const supabase = await createClient();
 
-      // Check if the repository exists
-      const { data: repository, error: repoError } = await supabase
-        .from('repositories')
+      // Check if already starred
+      const { data: existing, error: checkError } = await supabase
+        .from('starred_repositories')
         .select('id')
-        .eq('id', repositoryId)
+        .eq('repository_id', repositoryId)
+        .eq('profile_id', profileId)
+        .maybeSingle();
+
+      if (checkError) {
+        return { success: false, error: checkError.message };
+      }
+
+      // If already starred, return success
+      if (existing) {
+        return { success: true, data: existing };
+      }
+
+      // Otherwise, create a new star entry
+      const { data, error } = await supabase
+        .from('starred_repositories')
+        .insert({
+          repository_id: repositoryId,
+          profile_id: profileId,
+        })
+        .select()
         .single();
 
-      if (repoError || !repository) {
-        return {
-          success: false,
-          error: 'Repository not found',
-        };
-      }
-
-      // Add the repository to starred
-      const { data, error } = await supabase
-        .from('profile_repository_pins')
-        .insert({
-          profile_id: profileId,
-          repository_id: repositoryId,
-        })
-        .select();
-
       if (error) {
-        // Check if it's a unique constraint error (already starred)
-        if (error.code === '23505') {
-          return {
-            success: true,
-            data: { already_starred: true },
-          };
-        }
-
-        return {
-          success: false,
-          error: error.message,
-        };
+        console.error('[@db:repository:starRepository] Error starring repository:', error);
+        return { success: false, error: error.message };
       }
 
-      return {
-        success: true,
-        data,
-      };
-    } catch (error: any) {
-      console.error('Error starring repository:', error);
+      return { success: true, data };
+    } catch (error) {
       return {
         success: false,
-        error: error.message || 'Failed to star repository',
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   },
@@ -575,30 +558,22 @@ export const starRepository = {
     try {
       const supabase = await createClient();
 
-      // Remove the repository from starred
-      const { data, error } = await supabase
-        .from('profile_repository_pins')
+      const { error } = await supabase
+        .from('starred_repositories')
         .delete()
-        .eq('profile_id', profileId)
         .eq('repository_id', repositoryId)
-        .select();
+        .eq('profile_id', profileId);
 
       if (error) {
-        return {
-          success: false,
-          error: error.message,
-        };
+        console.error('[@db:repository:unstarRepository] Error unstarring repository:', error);
+        return { success: false, error: error.message };
       }
 
-      return {
-        success: true,
-        data,
-      };
-    } catch (error: any) {
-      console.error('Error unstarring repository:', error);
+      return { success: true };
+    } catch (error) {
       return {
         success: false,
-        error: error.message || 'Failed to unstar repository',
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   },
@@ -1150,9 +1125,6 @@ export const files = {
     return { success: true, data: null };
   },
 };
-
-// Export all components for direct imports
-export { repository, starRepository, pinRepository, gitProvider, files };
 
 // Export types for use in other modules
 export type { DbResponse, Repository, GitProvider, RepositoryPin };

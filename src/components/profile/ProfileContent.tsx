@@ -24,7 +24,7 @@ export function ProfileContent() {
       setIsUpdating(_true);
       await updateProfile({ name });
     } catch (error) {
-      console.error('Error updating profile:', error);
+      console.error('[@component:ProfileContent:handleUpdateName] Error updating profile:', error);
     } finally {
       setIsUpdating(false);
     }

@@ -35,6 +35,35 @@ alwaysApply: true
 - Propose server testing with clear justification when needed
 - NEVER modify shadcn components directly
 
+## Logging Standards
+
+### Format and Structure
+
+- ✅ ALWAYS use the format `[@layer:file:function]` as prefix for all logs
+  - Example: `[@action:repositories:getRepository]` or `[@db:db-repository:createRepository]`
+- ✅ ALWAYS log both the start and successful completion of operations
+  - Start: `[@action:repositories:getRepository] Starting to fetch repository: ${id}`
+  - Success: `[@action:repositories:getRepository] Successfully fetched repository: ${id}`
+- ✅ ALWAYS include relevant IDs in logs (repositoryId, teamId, userId, etc.)
+- ✅ ALWAYS use structured logging for objects where appropriate
+- ❌ NEVER log sensitive information (tokens, passwords, full credentials)
+
+### Error Handling
+
+- ✅ ALWAYS include severity level in logs for errors and warnings
+  - Example: `[@db:db-repository:getRepository] ERROR: Failed to fetch repository: ${error.message}`
+- ✅ ALWAYS log the full context of errors
+  - Example: `[@db:db-repository:getRepository] ERROR: Failed with id ${repositoryId}, status: failed`
+- ✅ ALWAYS catch and log exceptions at appropriate boundaries
+- ❌ NEVER swallow exceptions without logging
+
+### Standardization
+
+- ✅ ALWAYS use `console.log`, `console.error`, and `console.warn` for logging
+- ✅ ALWAYS use consistent formats for similar log messages
+- ✅ ALWAYS include tenant/user ID in logs when available for security auditing
+- ❌ NEVER use inconsistent prefixes in log messages
+
 ## Internationalization Guidelines (i18n)
 
 ### Translation Keys and Namespaces

@@ -42,7 +42,7 @@ async function handleLoginPath(request: NextRequest) {
   // Allow login with code parameter (for OAuth callbacks)
   if (request.nextUrl.searchParams.has('code') || request.nextUrl.searchParams.has('error')) {
     console.log(
-      '[MIDDLEWARE] Bypassing auth check for login path with code/error param:',
+      '[@middleware:handleLoginPath] Bypassing auth check for login path with code/error param:',
       request.nextUrl.pathname,
     );
     return NextResponse.next();
@@ -53,7 +53,7 @@ async function handleLoginPath(request: NextRequest) {
   const { data, error } = await supabase.auth.getUser();
 
   if (error) {
-    console.log('[MIDDLEWARE] Auth error on login path:', error.message);
+    console.log('[@middleware:handleLoginPath] Auth error on login path:', error.message);
     return NextResponse.next();
   }
 
@@ -61,7 +61,9 @@ async function handleLoginPath(request: NextRequest) {
     // User is authenticated, redirect to dashboard
     const locale = request.nextUrl.pathname.split('/')[1] || defaultLocale;
     const tenantName = data.user.user_metadata?.tenant_name || 'trial';
-    console.log('[MIDDLEWARE] User already authenticated, redirecting from login to dashboard');
+    console.log(
+      '[@middleware:handleLoginPath] User already authenticated, redirecting from login to dashboard',
+    );
     return NextResponse.redirect(new URL(`/${locale}/${tenantName}/dashboard`, request.url));
   }
 
@@ -71,11 +73,11 @@ async function handleLoginPath(request: NextRequest) {
 
 export default async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
-  console.log('[MIDDLEWARE] Processing path:', path);
+  console.log('[@middleware:middleware] Processing path:', path);
 
   // Special handling for login path
   if (isLoginPath(path)) {
-    console.log('[MIDDLEWARE] Handling login path');
+    console.log('[@middleware:middleware] Handling login path');
     return handleLoginPath(request);
   }
 
@@ -84,29 +86,29 @@ export default async function middleware(request: NextRequest) {
   if (isPublicPath) {
     // Special handling for root path to prevent double locale
     if (path === '/') {
-      console.log('[MIDDLEWARE] Handling root path');
+      console.log('[@middleware:middleware] Handling root path');
       return NextResponse.redirect(new URL(`/${defaultLocale}`, request.url));
     }
-    console.log('[MIDDLEWARE] Handling public path:', path);
+    console.log('[@middleware:middleware] Handling public path:', path);
     return NextResponse.next();
   }
 
   // Check for auth-redirect path with locale
   if (path.includes('/auth-redirect')) {
-    console.log('[MIDDLEWARE] Bypassing auth check for auth-redirect path:', path);
+    console.log('[@middleware:middleware] Bypassing auth check for auth-redirect path:', path);
     return NextResponse.next();
   }
 
   // API routes: enforce auth
   if (path.startsWith('/api/')) {
-    console.log('[MIDDLEWARE] Handling API route:', path);
+    console.log('[@middleware:middleware] Handling API route:', path);
     return NextResponse.next();
   }
 
   // Protected routes: enforce locale and auth
   const hasLocale = locales.some((locale) => path.startsWith(`/${locale}/`));
   if (!hasLocale) {
-    console.log('[MIDDLEWARE] Redirecting to default locale:', path);
+    console.log('[@middleware:middleware] Redirecting to default locale:', path);
     return NextResponse.redirect(new URL(`/${defaultLocale}${path}`, request.url));
   }
 
@@ -115,7 +117,10 @@ export default async function middleware(request: NextRequest) {
   const { data, error } = await supabase.auth.getUser();
 
   if (error || !data.user) {
-    console.log('[MIDDLEWARE] Authentication failed:', error?.message || 'No user found');
+    console.log(
+      '[@middleware:middleware] Authentication failed:',
+      error?.message || 'No user found',
+    );
     const locale = path.split('/')[1] || defaultLocale;
     return NextResponse.redirect(new URL(`/${locale}/login`, request.url));
   }

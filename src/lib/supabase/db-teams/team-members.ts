@@ -19,7 +19,7 @@ export async function getTeamMembers(
   cookieStore?: any,
 ): Promise<DbResponse<TeamMember[]>> {
   try {
-    console.log('[DB-TEAM-MEMBERS]: Getting all team members');
+    console.log('[@db:team-members:getTeamMembers] Getting all team members');
     const supabase = await createClient(cookieStore);
 
     // Get team members with basic profile data
@@ -37,10 +37,10 @@ export async function getTeamMembers(
       )
       .eq('team_id', teamId);
 
-    console.log('[DB-TEAM-MEMBERS]: Team members:', data);
+    console.log('[@db:team-members:getTeamMembers] Team members:', data);
 
     if (error) {
-      console.error('[DB-TEAM-MEMBERS] Error fetching team members:', error);
+      console.error('[@db:team-members:getTeamMembers] Error fetching team members:', error);
       return { success: false, error: error.message };
     }
 
@@ -56,7 +56,10 @@ export async function getTeamMembers(
         .in('id', profileIds);
 
       if (profilesError) {
-        console.error('[DB-TEAM-MEMBERS] Error fetching user profiles:', profilesError);
+        console.error(
+          '[@db:team-members:getTeamMembers] Error fetching user profiles:',
+          profilesError,
+        );
       }
 
       // Map user profiles to team members
@@ -83,7 +86,7 @@ export async function getTeamMembers(
       });
     }
 
-    console.log('[DB-TEAM-MEMBERS]: Team members with user info:', data);
+    console.log('[@db:team-members:getTeamMembers] Team members with user info:', data);
 
     // Cast to TeamMember[] with unknown intermediate to satisfy TypeScript
     return {
@@ -91,7 +94,7 @@ export async function getTeamMembers(
       data: data as unknown as TeamMember[],
     };
   } catch (error: any) {
-    console.error('[DB-TEAM-MEMBERS] Error in getTeamMembers:', error);
+    console.error('[@db:team-members:getTeamMembers] Error in getTeamMembers:', error);
     return {
       success: false,
       error: error.message || 'Failed to fetch team members',

@@ -46,12 +46,12 @@ export function UserProfileDropdown({ user }: UserProfileDropdownProps) {
           router.push(`/${locale}/login`);
         }, 200);
       } else {
-        console.error('Error signing out:', result);
+        console.error('[@component:UserProfileDropdown:handleSignOut] Error with result:', result);
         // If sign out failed through the context, try a direct page reload as a fallback
         window.location.href = `/${locale}/login`;
       }
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error('[@component:UserProfileDropdown:handleSignOut] Error caught:', error);
       // If all else fails, force a direct navigation
       window.location.href = `/${locale}/login`;
     }

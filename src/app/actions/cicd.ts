@@ -11,7 +11,6 @@ import type {
   CICDJob,
 } from '@/app/[locale]/[tenant]/cicd/types';
 import { getUser } from '@/app/actions/user';
-import { logger } from '@/lib/logger';
 
 /**
  * Fetch all CI/CD providers for the current tenant
@@ -21,11 +20,13 @@ export const getCICDProviders = cache(async (): Promise<CICDProviderListResult> 
     // Get the current authenticated user
     const user = await getUser();
     if (!user) {
-      logger.error('User not authenticated');
+      console.error('[@action:cicd:getCICDProviders] User not authenticated');
       return { success: false, error: 'User not authenticated', data: [] };
     }
 
-    logger.info('Fetching CICD providers for tenant:', { tenantId: user.tenant_id });
+    console.log('[@action:cicd:getCICDProviders] Fetching CICD providers for tenant:', {
+      tenantId: user.tenant_id,
+    });
 
     // Import the CI/CD database module
     const { default: cicdDb } = await import('@/lib/supabase/db-cicd/cicd');
@@ -34,13 +35,17 @@ export const getCICDProviders = cache(async (): Promise<CICDProviderListResult> 
     const result = await cicdDb.getCICDProviders({ where: { tenant_id: user.tenant_id } });
 
     if (!result.success) {
-      logger.error('Error fetching CICD providers:', { error: result.error });
+      console.error('[@action:cicd:getCICDProviders] Error fetching CICD providers:', {
+        error: result.error,
+      });
       return { success: false, error: result.error, data: [] };
     }
 
     return { success: true, data: result.data || [] };
   } catch (error: any) {
-    logger.error('Unexpected error fetching CICD providers:', { error: error.message });
+    console.error('[@action:cicd:getCICDProviders] Unexpected error fetching CICD providers:', {
+      error: error.message,
+    });
     return { success: false, error: error.message || 'An unexpected error occurred', data: [] };
   }
 });
@@ -53,7 +58,7 @@ export async function getCICDJobs(providerId?: string): Promise<ActionResult<CIC
     // Get the current authenticated user
     const user = await getUser();
     if (!user) {
-      logger.error('User not authenticated');
+      console.error('[@action:cicd:getCICDJobs] User not authenticated');
       return { success: false, error: 'User not authenticated' };
     }
 
@@ -69,7 +74,7 @@ export async function getCICDJobs(providerId?: string): Promise<ActionResult<CIC
 
     return { success: true, data: jobs.data || [] };
   } catch (error: any) {
-    logger.error('Error fetching CI/CD jobs:', error);
+    console.error('[@action:cicd:getCICDJobs] Error fetching CI/CD jobs:', error);
     return { success: false, error: error.message || 'Failed to fetch CI/CD jobs' };
   }
 }
@@ -84,7 +89,7 @@ export async function createCICDProvider(
     // Get the current authenticated user
     const user = await getUser();
     if (!user) {
-      logger.error('User not authenticated');
+      console.error('[@action:cicd:createCICDProvider] User not authenticated');
       return { success: false, error: 'User not authenticated' };
     }
 
@@ -104,7 +109,10 @@ export async function createCICDProvider(
     const result = await cicdDb.createCICDProvider({ data: providerData as any });
 
     if (!result.success) {
-      logger.error('Error creating CICD provider:', result.error);
+      console.error(
+        '[@action:cicd:createCICDProvider] Error creating CICD provider:',
+        result.error,
+      );
       return { success: false, error: result.error };
     }
 
@@ -114,7 +122,10 @@ export async function createCICDProvider(
 
     return { success: true, data: (result as any).data };
   } catch (error: any) {
-    logger.error('Unexpected error creating CICD provider:', error);
+    console.error(
+      '[@action:cicd:createCICDProvider] Unexpected error creating CICD provider:',
+      error,
+    );
     return { success: false, error: error.message || 'An unexpected error occurred' };
   }
 }
@@ -130,7 +141,7 @@ export async function updateCICDProvider(
     // Get the current authenticated user
     const user = await getUser();
     if (!user) {
-      logger.error('User not authenticated');
+      console.error('[@action:cicd:updateCICDProvider] User not authenticated');
       return { success: false, error: 'User not authenticated' };
     }
 
@@ -153,7 +164,10 @@ export async function updateCICDProvider(
     });
 
     if (!result.success) {
-      logger.error('Error updating CICD provider:', result.error);
+      console.error(
+        '[@action:cicd:updateCICDProvider] Error updating CICD provider:',
+        result.error,
+      );
       return { success: false, error: result.error };
     }
 
@@ -163,7 +177,10 @@ export async function updateCICDProvider(
 
     return { success: true, data: (result as any).data };
   } catch (error: any) {
-    logger.error('Unexpected error updating CICD provider:', error);
+    console.error(
+      '[@action:cicd:updateCICDProvider] Unexpected error updating CICD provider:',
+      error,
+    );
     return { success: false, error: error.message || 'An unexpected error occurred' };
   }
 }
@@ -176,7 +193,7 @@ export async function deleteCICDProvider(id: string): Promise<ActionResult> {
     // Get the current authenticated user
     const user = await getUser();
     if (!user) {
-      logger.error('User not authenticated');
+      console.error('[@action:cicd:deleteCICDProvider] User not authenticated');
       return { success: false, error: 'User not authenticated' };
     }
 
@@ -189,7 +206,10 @@ export async function deleteCICDProvider(id: string): Promise<ActionResult> {
     });
 
     if (!result.success) {
-      logger.error('Error deleting CICD provider:', result.error);
+      console.error(
+        '[@action:cicd:deleteCICDProvider] Error deleting CICD provider:',
+        result.error,
+      );
       return { success: false, error: result.error };
     }
 
@@ -198,7 +218,10 @@ export async function deleteCICDProvider(id: string): Promise<ActionResult> {
 
     return { success: true };
   } catch (error: any) {
-    logger.error('Unexpected error deleting CICD provider:', error);
+    console.error(
+      '[@action:cicd:deleteCICDProvider] Unexpected error deleting CICD provider:',
+      error,
+    );
     return { success: false, error: error.message || 'An unexpected error occurred' };
   }
 }
@@ -224,7 +247,7 @@ export async function testCICDProvider(provider: CICDProviderPayload): Promise<A
     // Get the current authenticated user
     const user = await getUser();
     if (!user) {
-      logger.error('User not authenticated');
+      console.error('[@action:cicd:testCICDProvider] User not authenticated');
       return { success: false, error: 'User not authenticated' };
     }
 
@@ -251,14 +274,17 @@ export async function testCICDProvider(provider: CICDProviderPayload): Promise<A
         error: result.success ? undefined : result.error,
       };
     } catch (error: any) {
-      logger.error('Failed to create or test CICD provider:', error);
+      console.error(
+        '[@action:cicd:testCICDProvider] Failed to create or test CICD provider:',
+        error,
+      );
       return {
         success: false,
         error: error.message || 'Failed to test CICD provider',
       };
     }
   } catch (error: any) {
-    logger.error('Unexpected error testing CICD provider:', error);
+    console.error('[@action:cicd:testCICDProvider] Unexpected error testing CICD provider:', error);
     return { success: false, error: error.message || 'An unexpected error occurred' };
   }
 }
@@ -274,7 +300,10 @@ export async function testJenkinsAPI(): Promise<{ success: boolean; error?: stri
       return { success: false, error: 'Unauthorized access' };
     }
 
-    logger.info('Actions layer: Testing Jenkins API with authenticated user', user.id);
+    console.log(
+      '[@action:cicd:testJenkinsAPI] Actions layer: Testing Jenkins API with authenticated user',
+      user.id,
+    );
 
     // Import the CI/CD database module
     const { default: cicdDb } = await import('@/lib/supabase/db-cicd/cicd');
@@ -293,7 +322,7 @@ export async function testJenkinsAPI(): Promise<{ success: boolean; error?: stri
       return { success: false, error: 'No Jenkins provider found' };
     }
 
-    logger.info('Actions layer: Found Jenkins provider:', {
+    console.log('[@action:cicd:testJenkinsAPI] Actions layer: Found Jenkins provider:', {
       id: jenkinsProvider.id,
       name: jenkinsProvider.name,
       url: jenkinsProvider.url,
@@ -322,7 +351,10 @@ export async function testJenkinsAPI(): Promise<{ success: boolean; error?: stri
     // Test the connection
     const testResult = await provider.testConnection();
 
-    logger.info('Actions layer: Jenkins connection test result:', testResult);
+    console.log(
+      '[@action:cicd:testJenkinsAPI] Actions layer: Jenkins connection test result:',
+      testResult,
+    );
 
     if (!testResult.success) {
       return { success: false, error: `Connection test failed: ${testResult.error}` };
@@ -331,7 +363,7 @@ export async function testJenkinsAPI(): Promise<{ success: boolean; error?: stri
     // Try to get a crumb
     const crumbResult = await provider['getCrumb']();
 
-    logger.info('Actions layer: Jenkins crumb result:', crumbResult);
+    console.log('[@action:cicd:testJenkinsAPI] Actions layer: Jenkins crumb result:', crumbResult);
 
     return {
       success: true,
@@ -347,7 +379,7 @@ export async function testJenkinsAPI(): Promise<{ success: boolean; error?: stri
       },
     };
   } catch (error: any) {
-    logger.error('Actions layer: Error testing Jenkins API:', error);
+    console.error('[@action:cicd:testJenkinsAPI] Actions layer: Error testing Jenkins API:', error);
     return { success: false, error: error.message || 'Error testing Jenkins API' };
   }
 }
@@ -367,7 +399,7 @@ export async function clearCICDCache(options?: {
     // Get the current authenticated user
     const user = await getUser();
     if (!user) {
-      logger.error('User not authenticated');
+      console.error('[@action:cicd:clearCICDCache] User not authenticated');
       return {
         success: false,
         message: 'User not authenticated',
@@ -409,7 +441,7 @@ export async function clearCICDCache(options?: {
       message: 'All CICD cache cleared',
     };
   } catch (error) {
-    logger.error('Error clearing CICD cache:', error);
+    console.error('[@action:cicd:clearCICDCache] Error clearing CICD cache:', error);
     return {
       success: false,
       message: error instanceof Error ? error.message : 'Unknown error clearing cache',

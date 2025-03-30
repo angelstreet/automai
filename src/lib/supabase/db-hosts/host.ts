@@ -3,7 +3,7 @@ import { createClient } from '../server';
 // Host DB operations
 const host = {
   async findMany(options: any = {}) {
-    console.log('[DB-HOSTS] Finding many hosts');
+    console.log('[@db:host:findMany] Finding many hosts');
     const supabase = await createClient();
 
     // Start building the query
@@ -37,7 +37,7 @@ const host = {
     const { data, error } = await builder;
 
     if (error) {
-      console.error('[DB-HOSTS] Error querying hosts:', error);
+      console.error('[@db:host:findMany] Error querying hosts:', error);
       return [];
     }
 
@@ -45,14 +45,14 @@ const host = {
   },
 
   async findUnique({ where }: { where: any }) {
-    console.log('[DB-HOSTS] Finding unique host');
+    console.log('[@db:host:findUnique] Finding unique host');
     const supabase = await createClient();
 
     // Apply the 'where' conditions
     const { data, error } = await supabase.from('hosts').select().match(where).single();
 
     if (error) {
-      console.error('[DB-HOSTS] Error finding host:', error);
+      console.error('[@db:host:findUnique] Error finding host:', error);
       return null;
     }
 
@@ -60,13 +60,13 @@ const host = {
   },
 
   async create({ data }: { data: any }) {
-    console.log('[DB-HOSTS] Creating host');
+    console.log('[@db:host:create] Creating host');
     const supabase = await createClient();
 
     const { data: result, error } = await supabase.from('hosts').insert(data).select().single();
 
     if (error) {
-      console.error('[DB-HOSTS] Error creating host:', error);
+      console.error('[@db:host:create] Error creating host:', error);
       throw error;
     }
 
@@ -74,7 +74,7 @@ const host = {
   },
 
   async update({ where, data }: { where: any; data: any }) {
-    console.log('[DB-HOSTS] Updating host');
+    console.log('[@db:host:update] Updating host');
     const supabase = await createClient();
 
     const { data: result, error } = await supabase
@@ -85,7 +85,7 @@ const host = {
       .single();
 
     if (error) {
-      console.error('[DB-HOSTS] Error updating host:', error);
+      console.error('[@db:host:update] Error updating host:', error);
       throw error;
     }
 
@@ -93,13 +93,13 @@ const host = {
   },
 
   async delete({ where }: { where: any }) {
-    console.log('[DB-HOSTS] Deleting host');
+    console.log('[@db:host:delete] Deleting host');
     const supabase = await createClient();
 
     const { error } = await supabase.from('hosts').delete().eq('id', where.id);
 
     if (error) {
-      console.error('[DB-HOSTS] Error deleting host:', error);
+      console.error('[@db:host:delete] Error deleting host:', error);
       throw error;
     }
 

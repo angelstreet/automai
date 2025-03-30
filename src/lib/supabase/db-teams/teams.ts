@@ -82,7 +82,7 @@ export async function createTeam(
       data,
     };
   } catch (error) {
-    console.error('Error creating team:', error);
+    console.error('[@db:teams:createTeam] Error creating team:', error);
     return {
       success: false,
       error: (error as PostgrestError).message || 'Failed to create team',
@@ -109,7 +109,7 @@ export async function getTeams(tenantId: string, cookieStore?: any): Promise<Tea
       data,
     };
   } catch (error) {
-    console.error('Error fetching teams:', error);
+    console.error('[@db:teams:getTeams] Error fetching teams:', error);
     return {
       success: false,
       error: (error as PostgrestError).message || 'Failed to fetch teams',
@@ -139,7 +139,7 @@ export async function getUserTeams(
       data,
     };
   } catch (error) {
-    console.error('Error fetching user teams:', error);
+    console.error('[@db:teams:getUserTeams] Error fetching user teams:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch user teams',
@@ -162,7 +162,7 @@ export async function getTeamById(teamId: string, cookieStore?: any): Promise<Te
       data,
     };
   } catch (error) {
-    console.error('Error fetching team:', error);
+    console.error('[@db:teams:getTeamById] Error fetching team:', error);
     return {
       success: false,
       error: (error as PostgrestError).message || 'Failed to fetch team',
@@ -194,7 +194,7 @@ export async function updateTeam(
       data,
     };
   } catch (error) {
-    console.error('Error updating team:', error);
+    console.error('[@db:teams:updateTeam] Error updating team:', error);
     return {
       success: false,
       error: (error as PostgrestError).message || 'Failed to update team',
@@ -219,7 +219,7 @@ export async function deleteTeam(
       success: true,
     };
   } catch (error) {
-    console.error('Error deleting team:', error);
+    console.error('[@db:teams:deleteTeam] Error deleting team:', error);
     return {
       success: false,
       error: (error as PostgrestError).message || 'Failed to delete team',
@@ -248,7 +248,7 @@ export async function getTeamMembers(
       data,
     };
   } catch (error) {
-    console.error('Error fetching team members:', error);
+    console.error('[@db:teams:getTeamMembers] Error fetching team members:', error);
     return {
       success: false,
       error: (error as PostgrestError).message || 'Failed to fetch team members',
@@ -283,7 +283,7 @@ export async function addTeamMember(
       data,
     };
   } catch (error) {
-    console.error('Error adding team member:', error);
+    console.error('[@db:teams:addTeamMember] Error adding team member:', error);
     return {
       success: false,
       error: (error as PostgrestError).message || 'Failed to add team member',
@@ -316,7 +316,7 @@ export async function updateTeamMember(
       data,
     };
   } catch (error) {
-    console.error('Error updating team member:', error);
+    console.error('[@db:teams:updateTeamMember] Error updating team member:', error);
     return {
       success: false,
       error: (error as PostgrestError).message || 'Failed to update team member',
@@ -345,7 +345,7 @@ export async function removeTeamMember(
       success: true,
     };
   } catch (error) {
-    console.error('Error removing team member:', error);
+    console.error('[@db:teams:removeTeamMember] Error removing team member:', error);
     return {
       success: false,
       error: (error as PostgrestError).message || 'Failed to remove team member',
@@ -374,7 +374,7 @@ export async function getUserActiveTeam(profileId: string, cookieStore?: any): P
 
     return getTeamById(activeTeamId);
   } catch (error) {
-    console.error('Error fetching user active team:', error);
+    console.error('[@db:teams:getUserActiveTeam] Error fetching user active team:', error);
     return {
       success: false,
       error: (error as PostgrestError).message || 'Failed to fetch active team',
@@ -406,7 +406,7 @@ export async function setUserActiveTeam(
       success: true,
     };
   } catch (error) {
-    console.error('Error setting active team:', error);
+    console.error('[@db:teams:setUserActiveTeam] Error setting active team:', error);
     return {
       success: false,
       error: (error as PostgrestError).message || 'Failed to set active team',

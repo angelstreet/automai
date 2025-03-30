@@ -39,51 +39,49 @@ const db = {
   },
 
   user: {
-    async findUnique({ where }: { where: any }) {
-      const cookieStore = await cookies();
-      const supabase = await createClient(cookieStore);
-
-      const { data, error } = await supabase.from('users').select().match(where).single();
+    findUnique: async function (where: any = {}) {
+      const supabase = await createClient();
+      const { data, error } = await supabase.from('profiles').select().match(where).single();
 
       if (error) {
-        console.error('Error finding user:', error);
+        console.error('[@db:user:findUnique] Error finding user:', error);
         return null;
       }
 
       return data;
     },
 
-    async findMany(options: any = {}) {
+    findMany: async function (options: any = {}) {
       return db.query('users', options);
     },
 
-    async create({ data }: { data: any }) {
-      const cookieStore = await cookies();
-      const supabase = await createClient(cookieStore);
-
-      const { data: result, error } = await supabase.from('users').insert(data).select().single();
+    create: async function (data: any = {}) {
+      const supabase = await createClient();
+      const { data: result, error } = await supabase
+        .from('profiles')
+        .insert(data)
+        .select()
+        .single();
 
       if (error) {
-        console.error('Error creating user:', error);
+        console.error('[@db:user:create] Error creating user:', error);
         throw error;
       }
 
       return result;
     },
 
-    async update({ where, data }: { where: any; data: any }) {
-      const cookieStore = await cookies();
-      const supabase = await createClient(cookieStore);
-
+    update: async function (where: any = {}, data: any = {}) {
+      const supabase = await createClient();
       const { data: result, error } = await supabase
-        .from('users')
+        .from('profiles')
         .update(data)
         .match(where)
         .select()
         .single();
 
       if (error) {
-        console.error('Error updating user:', error);
+        console.error('[@db:user:update] Error updating user:', error);
         throw error;
       }
 
@@ -92,69 +90,68 @@ const db = {
   },
 
   project: {
-    async findUnique({ where }: { where: any }) {
-      const cookieStore = await cookies();
-      const supabase = await createClient(cookieStore);
-
+    findUnique: async function (where: any = {}) {
+      const supabase = await createClient();
       const { data, error } = await supabase.from('projects').select().match(where).single();
 
       if (error) {
-        console.error('Error finding project:', error);
+        console.error('[@db:project:findUnique] Error finding project:', error);
         return null;
       }
 
       return data;
     },
 
-    async findMany(options: any = {}) {
+    findMany: async function (options: any = {}) {
       return db.query('projects', options);
     },
 
-    async create({ data }: { data: any }) {
-      const cookieStore = await cookies();
-      const supabase = await createClient(cookieStore);
-
+    create: async function (data: any = {}) {
+      const supabase = await createClient();
       const { data: result, error } = await supabase
         .from('projects')
-        .insert(data)
+        .insert({
+          ...data,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
         .select()
         .single();
 
       if (error) {
-        console.error('Error creating project:', error);
+        console.error('[@db:project:create] Error creating project:', error);
         throw error;
       }
 
       return result;
     },
 
-    async update({ where, data }: { where: any; data: any }) {
-      const cookieStore = await cookies();
-      const supabase = await createClient(cookieStore);
-
+    update: async function (where: any = {}, data: any = {}) {
+      const supabase = await createClient();
       const { data: result, error } = await supabase
         .from('projects')
-        .update(data)
+        .update({
+          ...data,
+          updated_at: new Date().toISOString(),
+        })
         .match(where)
         .select()
         .single();
 
       if (error) {
-        console.error('Error updating project:', error);
+        console.error('[@db:project:update] Error updating project:', error);
         throw error;
       }
 
       return result;
     },
 
-    async delete({ where }: { where: any }) {
-      const cookieStore = await cookies();
-      const supabase = await createClient(cookieStore);
-
+    delete: async function (where: any = {}) {
+      const supabase = await createClient();
       const { error } = await supabase.from('projects').delete().match(where);
 
       if (error) {
-        console.error('Error deleting project:', error);
+        console.error('[@db:project:delete] Error deleting project:', error);
         throw error;
       }
 
@@ -163,68 +160,53 @@ const db = {
   },
 
   tenant: {
-    async findUnique({ where }: { where: any }) {
-      const cookieStore = await cookies();
-      const supabase = await createClient(cookieStore);
-
+    findUnique: async function (where: any = {}) {
+      const supabase = await createClient();
       const { data, error } = await supabase.from('tenants').select().match(where).single();
 
       if (error) {
-        console.error('Error finding tenant:', error);
+        console.error('[@db:tenant:findUnique] Error finding tenant:', error);
         return null;
       }
 
       return data;
     },
 
-    async findMany(options: any = {}) {
-      const cookieStore = await cookies();
-      const supabase = await createClient(cookieStore);
+    findMany: async function (where: any = {}) {
+      const supabase = await createClient();
 
-      let builder = supabase.from('tenants').select();
+      // Build the query with any provided filters
+      let query = supabase.from('tenants').select();
 
-      // Apply filters if provided
-      if (options.where) {
-        Object.entries(options.where).forEach(([key, value]) => {
-          builder = builder.eq(key, value);
-        });
+      // Apply filters dynamically
+      if (Object.keys(where).length > 0) {
+        query = query.match(where);
       }
 
-      // Apply ordering
-      if (options.orderBy) {
-        Object.entries(options.orderBy).forEach(([key, value]) => {
-          builder = builder.order(key, { ascending: value === 'asc' });
-        });
-      }
-
-      const { data, error } = await builder;
+      const { data, error } = await query;
 
       if (error) {
-        console.error('Error finding tenants:', error);
+        console.error('[@db:tenant:findMany] Error finding tenants:', error);
         return [];
       }
 
       return data || [];
     },
 
-    async create({ data }: { data: any }) {
-      const cookieStore = await cookies();
-      const supabase = await createClient(cookieStore);
-
+    create: async function (data: any = {}) {
+      const supabase = await createClient();
       const { data: result, error } = await supabase.from('tenants').insert(data).select().single();
 
       if (error) {
-        console.error('Error creating tenant:', error);
+        console.error('[@db:tenant:create] Error creating tenant:', error);
         throw error;
       }
 
       return result;
     },
 
-    async update({ where, data }: { where: any; data: any }) {
-      const cookieStore = await cookies();
-      const supabase = await createClient(cookieStore);
-
+    update: async function (where: any = {}, data: any = {}) {
+      const supabase = await createClient();
       const { data: result, error } = await supabase
         .from('tenants')
         .update(data)
@@ -233,7 +215,7 @@ const db = {
         .single();
 
       if (error) {
-        console.error('Error updating tenant:', error);
+        console.error('[@db:tenant:update] Error updating tenant:', error);
         throw error;
       }
 

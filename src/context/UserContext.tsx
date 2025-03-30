@@ -69,7 +69,7 @@ export function UserProvider({
   const [error, setError] = React.useState<Error | null>(null);
 
   console.debug(
-    '[UserContext] UserProvider initializing with initialUser:',
+    '[@context:UserContext:UserProvider] Initializing with initialUser:',
     initialUser ? `${initialUser.id} (${initialUser.email})` : 'null',
   );
 
@@ -77,27 +77,32 @@ export function UserProvider({
   const fetchUserData = useCallback(
     async (force = false): Promise<User | null> => {
       console.log(
-        '[DEBUG]  fetchUserData called with initialUser:',
+        '[@context:UserContext:fetchUserData] Called with initialUser:',
         initialUser ? 'exists' : 'null',
         'force:',
         force,
       );
       if (force) {
-        console.log('[DEBUG] Force fetch triggered by:', new Error().stack);
+        console.log(
+          '[@context:UserContext:fetchUserData] Force fetch triggered by:',
+          new Error().stack,
+        );
       }
 
       return protectedFetch('user.getUser', async () => {
         if (!force && initialUser) {
-          console.log('[DEBUG] Using initialUser from props, skipping fetch');
+          console.log(
+            '[@context:UserContext:fetchUserData] Using initialUser from props, skipping fetch',
+          );
           return initialUser; // Trust initialUser unless forced
         }
 
-        console.log('[DEBUG] Fetching fresh user data from server');
+        console.log('[@context:UserContext:fetchUserData] Fetching fresh user data from server');
         const authUser = await getUser();
         return authUser ? mapAuthUserToUser(authUser) : null;
       }).catch((err) => {
         setError(err instanceof Error ? err : new Error('Fetch user failed'));
-        console.error('[DEBUG] fetchUserData error:', err);
+        console.error('[@context:UserContext:fetchUserData] Error:', err);
         return null;
       });
     },
@@ -112,7 +117,7 @@ export function UserProvider({
   } = useSWR(
     initialUser ? null : 'user-data', // No key means no fetch if initialUser exists
     () => {
-      console.log('[DEBUG] SWR fetch function executing');
+      console.log('[@context:UserContext:useSWR] Fetch function executing');
       return fetchUserData(false);
     },
     {
@@ -127,9 +132,12 @@ export function UserProvider({
 
   // Refresh user data explicitly
   const refreshUser = useCallback(async () => {
-    console.log('[DEBUG] refreshUser called from:', new Error().stack);
+    console.log('[@context:UserContext:refreshUser] Called from:', new Error().stack);
     const freshUser = await fetchUserData(true);
-    console.log('[DEBUG] refreshUser got fresh data:', freshUser ? `${freshUser.id}` : 'null');
+    console.log(
+      '[@context:UserContext:refreshUser] Got fresh data:',
+      freshUser ? `${freshUser.id}` : 'null',
+    );
     await mutateUser(freshUser, false);
     setError(null);
     return freshUser || null;
@@ -189,7 +197,7 @@ export function UserProvider({
             }
           }
         } catch (error) {
-          console.error('Error clearing localStorage:', error);
+          console.error('[@context:UserContext:signOut] Error clearing localStorage:', error);
         }
 
         // Then sign out with the server
@@ -199,11 +207,11 @@ export function UserProvider({
         // Call the server action to sign out
         const result = await signOutAction(formData);
 
-        console.log('Sign out result:', result);
+        console.log('[@context:UserContext:signOut] Result:', result);
 
         return result;
       } catch (err) {
-        console.error('Sign out error:', err);
+        console.error('[@context:UserContext:signOut] Error:', err);
         setError(err instanceof Error ? err : new Error('Sign out failed'));
         return { success: false, error: 'Sign out failed' };
       }

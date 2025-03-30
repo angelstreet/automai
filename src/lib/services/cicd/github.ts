@@ -38,7 +38,7 @@ export class GitHubProvider implements CICDProvider {
         );
       }
     } catch (error: any) {
-      console.error('Error parsing GitHub URL:', error);
+      console.error('[@service:github:initialize] Error parsing GitHub URL:', error);
       throw new Error(`Invalid GitHub URL: ${error.message}`);
     }
 
@@ -109,7 +109,7 @@ export class GitHubProvider implements CICDProvider {
         data: data as T,
       };
     } catch (error: any) {
-      console.error('Error in GitHub API request:', error);
+      console.error('[@service:github:githubRequest] Error in API request:', error);
       return {
         success: false,
         error: error.message || 'Failed to make GitHub API request',
@@ -146,7 +146,7 @@ export class GitHubProvider implements CICDProvider {
         data: jobs,
       };
     } catch (error: any) {
-      console.error('Error getting GitHub workflows:', error);
+      console.error('[@service:github:getAvailableJobs] Error getting workflows:', error);
       return {
         success: false,
         error: error.message || 'Failed to get GitHub workflows',
@@ -248,7 +248,10 @@ export class GitHubProvider implements CICDProvider {
         data: job,
       };
     } catch (error: any) {
-      console.error(`Error getting GitHub workflow details for ${jobId}:`, error);
+      console.error(
+        `[@service:github:getJobDetails] Error getting workflow details for ${jobId}:`,
+        error,
+      );
       return {
         success: false,
         error: error.message || `Failed to get GitHub workflow details for ${jobId}`,
@@ -330,7 +333,7 @@ export class GitHubProvider implements CICDProvider {
         },
       };
     } catch (error: any) {
-      console.error(`Error triggering GitHub workflow ${jobId}:`, error);
+      console.error(`[@service:github:triggerJob] Error triggering workflow ${jobId}:`, error);
       return {
         success: false,
         error: error.message || `Failed to trigger GitHub workflow ${jobId}`,
@@ -364,7 +367,10 @@ export class GitHubProvider implements CICDProvider {
         },
       };
     } catch (error: any) {
-      console.error(`Error getting GitHub workflow run status for ${buildId}:`, error);
+      console.error(
+        `[@service:github:getBuildStatus] Error getting workflow run status for ${buildId}:`,
+        error,
+      );
       return {
         success: false,
         error: error.message || `Failed to get GitHub workflow run status for ${buildId}`,
@@ -436,7 +442,10 @@ export class GitHubProvider implements CICDProvider {
         data: logs,
       };
     } catch (error: any) {
-      console.error(`Error getting GitHub workflow run logs for ${buildId}:`, error);
+      console.error(
+        `[@service:github:getBuildLogs] Error getting workflow run logs for ${buildId}:`,
+        error,
+      );
       return {
         success: false,
         error: error.message || `Failed to get GitHub workflow run logs for ${buildId}`,
@@ -449,10 +458,10 @@ export class GitHubProvider implements CICDProvider {
    */
   async testConnection(): Promise<CICDResponse<boolean>> {
     try {
-      console.log('[GITHUB] Testing connection to GitHub server');
+      console.log('[@service:github:testConnection] Testing connection to GitHub server');
 
       if (!this.owner || !this.repo) {
-        console.error('[GITHUB] Missing repository owner or name');
+        console.error('[@service:github:testConnection] Missing repository owner or name');
         return {
           success: false,
           error: 'Repository owner or name is missing',
@@ -463,20 +472,23 @@ export class GitHubProvider implements CICDProvider {
       const response = await this.githubRequest<any>(`/repos/${this.owner}/${this.repo}`);
 
       if (response.success) {
-        console.log('[GITHUB] Connection test successful');
+        console.log('[@service:github:testConnection] Connection test successful');
         return {
           success: true,
           data: true,
         };
       } else {
-        console.error('[GITHUB] Connection test failed:', response.error);
+        console.error('[@service:github:testConnection] Connection test failed:', response.error);
         return {
           success: false,
           error: response.error || 'Failed to connect to GitHub repository',
         };
       }
     } catch (error: any) {
-      console.error('[GITHUB] Connection test failed with exception:', error);
+      console.error(
+        '[@service:github:testConnection] Connection test failed with exception:',
+        error,
+      );
       return {
         success: false,
         error: error.message || 'Failed to connect to GitHub repository',
