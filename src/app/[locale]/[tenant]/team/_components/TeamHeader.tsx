@@ -84,10 +84,9 @@ export default function TeamHeader({
 
       {/* Navigation Tabs */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid grid-cols-3 mb-8">
+        <TabsList className="grid grid-cols-2 mb-8">
           <TabsTrigger value="overview">{t('overview')}</TabsTrigger>
           <TabsTrigger value="members">{t('membersTab.title')}</TabsTrigger>
-          <TabsTrigger value="resources">{t('tabs.resources')}</TabsTrigger>
         </TabsList>
       </Tabs>
     </div>

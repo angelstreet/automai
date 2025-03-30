@@ -1,8 +1,9 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { Skeleton } from '@/components/shadcn/skeleton';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
+import { Skeleton } from '@/components/shadcn/skeleton';
 import {
   Table,
   TableBody,
