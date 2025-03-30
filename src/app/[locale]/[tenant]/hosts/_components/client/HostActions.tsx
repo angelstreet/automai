@@ -36,8 +36,12 @@ export function HostActions() {
     if (isRefreshing) return;
 
     setIsRefreshing(true);
-    // Dispatch event for refresh action
-    window.dispatchEvent(new CustomEvent('refresh-hosts'));
+    // Dispatch event for refresh action with testing connections
+    window.dispatchEvent(
+      new CustomEvent('refresh-hosts', {
+        detail: { testConnections: true },
+      }),
+    );
   };
 
   const handleAddHost = () => {
@@ -61,7 +65,12 @@ export function HostActions() {
       password: '',
     });
     // Refresh hosts list after dialog closes (in case a host was created)
-    window.dispatchEvent(new CustomEvent('refresh-hosts'));
+    // Don't test connections when refreshing from dialog close
+    window.dispatchEvent(
+      new CustomEvent('refresh-hosts', {
+        detail: { testConnections: false },
+      }),
+    );
   };
 
   // Listen for refresh complete event

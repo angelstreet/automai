@@ -92,9 +92,15 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
 
   // Listen for refresh action - ONLY triggered by explicit user action
   useEffect(() => {
-    const handleRefresh = async () => {
+    const handleRefresh = async (event: Event) => {
       try {
-        console.log('[ClientHostList] Refreshing hosts from server');
+        // Check if the event has a detail with testConnections flag
+        const customEvent = event as CustomEvent<{ testConnections?: boolean }>;
+        const shouldTestConnections = customEvent.detail?.testConnections ?? false;
+
+        console.log(
+          `[ClientHostList] Refreshing hosts from server (testConnections=${shouldTestConnections})`,
+        );
         setIsRefreshing(true);
 
         // Fetch the latest hosts from the server
@@ -124,15 +130,33 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
 
             setHosts(updatedHosts);
             console.log('[ClientHostList] Hosts refreshed from server:', updatedHosts.length);
-          }
-        }
 
-        // Update connection status for all hosts
-        handleRefreshAll();
+            // Only test connections if explicitly requested
+            if (shouldTestConnections) {
+              console.log('[ClientHostList] Testing all host connections');
+              handleRefreshAll();
+            } else {
+              console.log('[ClientHostList] Skipping connection testing');
+              setIsRefreshing(false);
+              window.dispatchEvent(new CustomEvent('refresh-hosts-complete'));
+            }
+          } else {
+            setIsRefreshing(false);
+          }
+        } else {
+          setIsRefreshing(false);
+        }
       } catch (error) {
         console.error('[ClientHostList] Error refreshing hosts from server:', error);
-        // Fall back to just testing connections if fetch fails
-        handleRefreshAll();
+
+        // Only fall back to testing connections if explicitly requested
+        const customEvent = event as CustomEvent<{ testConnections?: boolean }>;
+        if (customEvent.detail?.testConnections) {
+          handleRefreshAll();
+        } else {
+          setIsRefreshing(false);
+          window.dispatchEvent(new CustomEvent('refresh-hosts-complete'));
+        }
       }
     };
 

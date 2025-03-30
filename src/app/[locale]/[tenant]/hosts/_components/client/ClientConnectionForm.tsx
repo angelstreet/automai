@@ -217,8 +217,12 @@ export function ClientConnectionForm({
       if (result.success && result.data) {
         toast.success(t('success.connected', { name: formData.name }));
 
-        // Trigger refresh of host list
-        window.dispatchEvent(new CustomEvent('refresh-hosts'));
+        // Trigger refresh of host list without testing all connections
+        window.dispatchEvent(
+          new CustomEvent('refresh-hosts', {
+            detail: { testConnections: false },
+          }),
+        );
 
         // Close dialog if onCancel is provided
         if (onCancel) {
