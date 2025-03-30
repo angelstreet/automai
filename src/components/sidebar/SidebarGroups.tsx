@@ -1,6 +1,7 @@
 import * as React from 'react';
-import { cn } from '@/lib/utils';
+
 import { Button, ButtonProps } from '@/components/shadcn/button';
+import { cn } from '@/lib/utils';
 
 export function SidebarGroup({
   className,

@@ -43,7 +43,7 @@ export default async function TenantLayout({
               <WorkspaceHeader user={user} />
             </Suspense>
             <div className="flex-1 px-3 pb-2 overflow-hidden">
-              <main className="h-full w-full max-w-full border border-gray-30 rounded-md overflow-auto p-6">
+              <main className="h-full w-full max-w-full border border-gray-30 rounded-md overflow-auto pl-3 pr-3">
                 {children}
               </main>
             </div>

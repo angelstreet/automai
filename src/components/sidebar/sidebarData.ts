@@ -1,19 +1,16 @@
-/* eslint-disable */
 import {
   LayoutDashboard,
   Code2,
   Rocket,
-  Monitor,
   BarChart3,
   Settings,
-  FileCode,
-  TestTube,
   Users,
   Building,
   Factory,
   Server,
   GitBranch,
 } from 'lucide-react';
+
 import { Role } from '@/types/user';
 
 export type SidebarData = {
