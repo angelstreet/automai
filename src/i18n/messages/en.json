@@ -405,8 +405,17 @@
       "noEmail": "No email",
       "defaultTeam": "Default Team",
       "memberActions": {
-        "changeRole": "Change Role",
+        "changePermissions": "Change Permissions",
         "remove": "Remove Member"
+      },
+      "addMember": {
+        "title": "Add Team Member",
+        "description": "Add a new member to your team",
+        "emailLabel": "Email Address",
+        "emailPlaceholder": "Enter member's email",
+        "roleLabel": "Role",
+        "rolePlaceholder": "Select a role",
+        "submitButton": "Add Member"
       }
     },
     "settings": "Settings",
@@ -422,6 +431,16 @@
       "hosts": "Hosts",
       "cicd": "CI/CD",
       "deployments": "Deployments"
+    },
+    "roles": {
+      "admin": "Admin",
+      "developer": "Developer",
+      "contributor": "Contributor",
+      "viewer": "Viewer",
+      "tester": "Tester"
+    },
+    "common": {
+      "cancel": "Cancel"
     }
   },
   "cicd": {

@@ -369,8 +369,17 @@
       "noEmail": "Pas d'email",
       "defaultTeam": "Équipe par défaut",
       "memberActions": {
-        "changeRole": "Changer de rôle",
+        "changePermissions": "Modifier les permissions",
         "remove": "Supprimer le membre"
+      },
+      "addMember": {
+        "title": "Ajouter un membre à l'équipe",
+        "description": "Ajoutez un nouveau membre à votre équipe",
+        "emailLabel": "Adresse email",
+        "emailPlaceholder": "Entrez l'email du membre",
+        "roleLabel": "Rôle",
+        "rolePlaceholder": "Sélectionnez un rôle",
+        "submitButton": "Ajouter le membre"
       }
     },
     "settings": "Paramètres",
@@ -386,6 +395,16 @@
       "hosts": "Hôtes",
       "cicd": "Fournisseurs CI/CD",
       "deployments": "Déploiements"
+    },
+    "roles": {
+      "admin": "Administrateur",
+      "developer": "Développeur",
+      "contributor": "Contributeur",
+      "viewer": "Visiteur",
+      "tester": "Testeur"
+    },
+    "common": {
+      "cancel": "Annuler"
     }
   },
   "Projects": {
