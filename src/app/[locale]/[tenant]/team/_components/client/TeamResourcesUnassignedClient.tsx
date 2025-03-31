@@ -5,7 +5,7 @@ import { useState } from 'react';
 
 import { Button } from '@/components/shadcn/button';
 
-import { assignResourceToTeam } from '../../actions';
+import { assignResourceToTeam } from '@/app/actions/team';
 
 interface Repository {
   id: string;

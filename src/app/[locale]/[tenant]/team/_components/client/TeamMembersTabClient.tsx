@@ -106,7 +106,7 @@ function MembersTabContent({
   };
 
   if (isLoading) {
-    return <MembersTabSkeleton />;
+    return <TeamMembersTableSkeleton />;
   }
 
   return (
