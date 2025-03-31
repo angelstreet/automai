@@ -1,4 +1,4 @@
-// ARCHIVED: This API route was archived on 2025-03-31T09:42:38.757Z
+// ARCHIVED: This API route was archived on 2025-03-31T12:57:53.915Z
 // Original path: src/app/api/deployments/[id]/route.ts
 // Route: /deployments/:id
 // This file is preserved for reference purposes only and is no longer in use.

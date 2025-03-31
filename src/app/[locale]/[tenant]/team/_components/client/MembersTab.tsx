@@ -5,19 +5,10 @@ import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 
 import { TeamMemberDetails } from '@/app/[locale]/[tenant]/team/types';
-import { removeTeamMember } from '@/app/actions/team';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
 import { Badge } from '@/components/shadcn/badge';
 import { Button } from '@/components/shadcn/button';
 import { Card, CardContent, CardHeader } from '@/components/shadcn/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/shadcn/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,6 +28,10 @@ import { ResourceType, usePermission } from '@/context/PermissionContext';
 import { useTeam } from '@/context/TeamContext';
 import { User } from '@/types/user';
 
+import { removeTeamMember } from '@/actions/team-member';
+import { TeamMemberResource } from '@/types/context/team';
+import { MemberDialogProvider, useMemberDialog } from './MemberDialogController';
+
 import MembersTabSkeleton from '../MembersTabSkeleton';
 
 interface MembersTabProps {
@@ -46,81 +41,35 @@ interface MembersTabProps {
   user?: User | null;
 }
 
-export function MembersTab({
+// Inner component that uses the dialog context
+function MembersTabContent({
   teamId,
-  userRole: _userRole,
+  userRole,
   subscriptionTier,
-  user: _user,
-}: MembersTabProps) {
+  members,
+  onRemoveMember,
+  isLoading,
+  searchQuery,
+  setSearchQuery,
+}: {
+  teamId: string | null;
+  userRole?: string;
+  subscriptionTier?: string;
+  members: TeamMemberDetails[];
+  onRemoveMember: (memberId: string) => Promise<void>;
+  isLoading: boolean;
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+}) {
   const t = useTranslations('team');
-  const { getTeamMembers, invalidateTeamMembersCache, membersLoading } = useTeam();
   const { hasPermission } = usePermission();
-  const [members, setMembers] = useState<TeamMemberDetails[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [memberToRemove, setMemberToRemove] = useState<TeamMemberDetails | null>(null);
-  const [isRemoving, setIsRemoving] = useState(false);
-  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
+  const { openAddDialog, openEditDialog } = useMemberDialog();
 
   // Check permissions for managing members
   const canManageMembers =
     hasPermission('repositories' as ResourceType, 'insert') && subscriptionTier !== 'trial';
 
-  useEffect(() => {
-    const fetchMembers = async () => {
-      if (!teamId) {
-        setMembers([]);
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        setIsLoading(true);
-        // Use the cached function from context instead of direct server action
-        const membersData = await getTeamMembers(teamId);
-        setMembers(membersData as TeamMemberDetails[]);
-      } catch (error) {
-        console.error('Failed to fetch team members:', error);
-        setMembers([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchMembers();
-  }, [teamId, getTeamMembers]);
-
-  // Use either local loading state or members loading state from context
-  const showLoading = isLoading || membersLoading;
-
-  const handleRemoveMember = async () => {
-    if (!teamId || !memberToRemove) return;
-
-    try {
-      setIsRemoving(true);
-      const result = await removeTeamMember(teamId, memberToRemove.profile_id);
-
-      if (result.success) {
-        // Invalidate the cache for this team
-        invalidateTeamMembersCache(teamId);
-
-        // Remove from local state
-        setMembers((current) =>
-          current.filter((member) => member.profile_id !== memberToRemove.profile_id),
-        );
-
-        setRemoveDialogOpen(false);
-      } else {
-        console.error('Failed to remove team member:', result.error);
-      }
-    } catch (error) {
-      console.error('Error removing team member:', error);
-    } finally {
-      setIsRemoving(false);
-      setMemberToRemove(null);
-    }
-  };
-
+  // Filter members based on search
   const filteredMembers = members.filter(
     (member) =>
       (member.profiles?.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -128,10 +77,6 @@ export function MembersTab({
       (member.user?.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       member.role.toLowerCase().includes(searchQuery.toLowerCase()),
   );
-
-  if (showLoading) {
-    return <MembersTabSkeleton />;
-  }
 
   const getRoleBadgeColor = (role: string) => {
     switch (role.toLowerCase()) {
@@ -161,147 +106,217 @@ export function MembersTab({
     return name.substring(0, 2).toUpperCase();
   };
 
-  return (
-    <>
-      <Card>
-        <CardHeader className="py-2">
-          <div className="flex items-center justify-between gap-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder={t('membersTab.search')}
-                className="pl-8"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            {canManageMembers && (
-              <Button disabled={!teamId} size="sm">
-                <PlusIcon className="h-4 w-4 mr-1" />
-                {t('membersTab.add')}
-              </Button>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[50px]"></TableHead>
-                <TableHead>{t('membersTab.name')}</TableHead>
-                <TableHead>{t('membersTab.team')}</TableHead>
-                <TableHead>{t('membersTab.email')}</TableHead>
-                <TableHead>{t('membersTab.role')}</TableHead>
-                {canManageMembers && (
-                  <TableHead className="text-right">{t('membersTab.actions')}</TableHead>
-                )}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredMembers.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={canManageMembers ? 6 : 5}
-                    className="text-center py-8 text-muted-foreground"
-                  >
-                    {searchQuery
-                      ? t('membersTab.noSearchResults')
-                      : teamId
-                        ? t('membersTab.noMembers')
-                        : t('membersTab.noTeam')}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredMembers.map((member) => (
-                  <TableRow key={member.profile_id}>
-                    <TableCell className="py-2">
-                      <Avatar>
-                        <AvatarImage
-                          src={member.user?.avatar_url || member.profiles?.avatar_url || ''}
-                          alt={member.user?.name || ''}
-                        />
-                        <AvatarFallback>{getInitials(member.user?.name)}</AvatarFallback>
-                      </Avatar>
-                    </TableCell>
-                    <TableCell className="py-2 font-medium">
-                      {member.user?.name || t('membersTab.unknownUser')}
-                    </TableCell>
-                    <TableCell className="py-2">{t('membersTab.defaultTeam')}</TableCell>
-                    <TableCell className="py-2">
-                      {member.user?.email &&
-                      member.user.email !== 'Email unavailable in profiles table'
-                        ? member.user.email
-                        : t('membersTab.noEmail')}
-                    </TableCell>
-                    <TableCell className="py-2">
-                      <Badge className={getRoleBadgeColor(member.role)} variant="outline">
-                        {member.role}
-                      </Badge>
-                    </TableCell>
-                    {canManageMembers && (
-                      <TableCell className="py-2 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                              <span className="sr-only">Open menu</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
-                              {t('membersTab.memberActions.changeRole')}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => {
-                                setMemberToRemove(member);
-                                setRemoveDialogOpen(true);
-                              }}
-                            >
-                              {t('membersTab.memberActions.remove')}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+  if (isLoading) {
+    return <MembersTabSkeleton />;
+  }
 
-      {/* Remove Member Dialog */}
-      <Dialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Remove Team Member</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to remove{' '}
-              <strong>
-                {memberToRemove?.user?.name ||
-                  memberToRemove?.profiles?.tenant_name ||
-                  t('membersTab.unknownUser')}
-              </strong>{' '}
-              from this team?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setRemoveDialogOpen(false)}
-              disabled={isRemoving}
-            >
-              Cancel
+  return (
+    <Card>
+      <CardHeader className="py-2">
+        <div className="flex items-center justify-between gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder={t('membersTab.search')}
+              className="pl-8"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          {canManageMembers && (
+            <Button disabled={!teamId} size="sm" onClick={() => openAddDialog()}>
+              <PlusIcon className="h-4 w-4 mr-1" />
+              {t('membersTab.add')}
             </Button>
-            <Button variant="destructive" onClick={handleRemoveMember} disabled={isRemoving}>
-              {isRemoving ? 'Removing...' : 'Remove'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[50px]"></TableHead>
+              <TableHead>{t('membersTab.name')}</TableHead>
+              <TableHead>{t('membersTab.team')}</TableHead>
+              <TableHead>{t('membersTab.email')}</TableHead>
+              <TableHead>{t('membersTab.role')}</TableHead>
+              {canManageMembers && (
+                <TableHead className="text-right">{t('membersTab.actions')}</TableHead>
+              )}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredMembers.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={canManageMembers ? 6 : 5}
+                  className="text-center py-8 text-muted-foreground"
+                >
+                  {searchQuery
+                    ? t('membersTab.noSearchResults')
+                    : teamId
+                      ? t('membersTab.noMembers')
+                      : t('membersTab.noTeam')}
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredMembers.map((member) => (
+                <TableRow key={member.profile_id}>
+                  <TableCell className="py-2">
+                    <Avatar>
+                      <AvatarImage
+                        src={member.user?.avatar_url || member.profiles?.avatar_url || ''}
+                        alt={member.user?.name || ''}
+                      />
+                      <AvatarFallback>{getInitials(member.user?.name)}</AvatarFallback>
+                    </Avatar>
+                  </TableCell>
+                  <TableCell className="py-2 font-medium">
+                    {member.user?.name || t('membersTab.unknownUser')}
+                  </TableCell>
+                  <TableCell className="py-2">{t('membersTab.defaultTeam')}</TableCell>
+                  <TableCell className="py-2">
+                    {member.user?.email &&
+                    member.user.email !== 'Email unavailable in profiles table'
+                      ? member.user.email
+                      : t('membersTab.noEmail')}
+                  </TableCell>
+                  <TableCell className="py-2">
+                    <Badge className={getRoleBadgeColor(member.role)} variant="outline">
+                      {member.role}
+                    </Badge>
+                  </TableCell>
+                  {canManageMembers && (
+                    <TableCell className="py-2 text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Open menu</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => {
+                              const memberResource: TeamMemberResource = {
+                                id: member.profile_id,
+                                profile_id: member.profile_id,
+                                name: member.user?.name || t('membersTab.unknownUser'),
+                                email: member.user?.email || t('membersTab.noEmail'),
+                                avatar_url: member.user?.avatar_url,
+                                role: member.role,
+                              };
+                              openEditDialog(memberResource);
+                            }}
+                          >
+                            {t('membersTab.memberActions.changePermissions')}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => onRemoveMember(member.profile_id)}
+                          >
+                            {t('membersTab.memberActions.remove')}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Main exported component that provides the dialog context
+export function MembersTab({ teamId, userRole, subscriptionTier, user }: MembersTabProps) {
+  const t = useTranslations('team');
+  const { getTeamMembers, invalidateTeamMembersCache, membersLoading } = useTeam();
+  const [members, setMembers] = useState<TeamMemberDetails[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isRemoving, setIsRemoving] = useState(false);
+
+  useEffect(() => {
+    const fetchMembers = async () => {
+      if (!teamId) {
+        setMembers([]);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        // Use the cached function from context instead of direct server action
+        const membersData = await getTeamMembers(teamId);
+        setMembers(membersData as TeamMemberDetails[]);
+      } catch (error) {
+        console.error('Failed to fetch team members:', error);
+        setMembers([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchMembers();
+  }, [teamId, getTeamMembers]);
+
+  const handleRemoveMember = async (profileId: string) => {
+    if (!teamId) return;
+
+    try {
+      setIsRemoving(true);
+      const result = await removeTeamMember(teamId, profileId);
+
+      if (result.success) {
+        // Invalidate the cache for this team
+        invalidateTeamMembersCache(teamId);
+
+        // Remove from local state
+        setMembers((current) => current.filter((member) => member.profile_id !== profileId));
+      } else {
+        console.error('Failed to remove team member:', result.error);
+      }
+    } catch (error) {
+      console.error('Error removing team member:', error);
+    } finally {
+      setIsRemoving(false);
+    }
+  };
+
+  // Use either local loading state or members loading state from context
+  const showLoading = isLoading || membersLoading;
+
+  // Handle members list refresh when dialogs make changes
+  const handleMembersChanged = async () => {
+    if (teamId) {
+      try {
+        // Invalidate the cache and fetch fresh data
+        invalidateTeamMembersCache(teamId);
+        const membersData = await getTeamMembers(teamId);
+        setMembers(membersData as TeamMemberDetails[]);
+      } catch (error) {
+        console.error('Failed to refresh team members:', error);
+      }
+    }
+  };
+
+  return (
+    <MemberDialogProvider teamId={teamId} onMembersChanged={handleMembersChanged}>
+      <MembersTabContent
+        teamId={teamId}
+        userRole={userRole}
+        subscriptionTier={subscriptionTier}
+        members={members}
+        onRemoveMember={handleRemoveMember}
+        isLoading={showLoading}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+      />
+    </MemberDialogProvider>
   );
 }

@@ -3,7 +3,7 @@
 import { useSearchParams } from 'next/navigation';
 import { useTeam } from '@/context/TeamContext';
 import { User } from '@/types/user';
-import { TeamDetails } from '@/types/team';
+import { TeamDetails } from '@/types/context/team';
 
 import MembersTabSkeleton from '../MembersTabSkeleton';
 import OverviewTabSkeleton from '../OverviewTabSkeleton';

@@ -1,8 +1,8 @@
 'use client';
 
 import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
+import { useToast } from '@/components/shadcn/use-toast';
 
-// Import types and actions from server actions
 import {
   ResourceType,
   Operation,
@@ -21,6 +21,15 @@ import {
 import { useUser } from '@/context/UserContext';
 import type { TeamMember } from '@/types/context/team';
 
+import {
+  addTeamMember,
+  updateMemberPermissions,
+  removeTeamMember,
+  getMemberPermissions,
+  applyRolePermissionTemplate,
+} from '@/app/actions/teamMember';
+import { ResourcePermissions } from '@/types/context/team';
+
 interface TeamContextState {
   teams: Team[];
   activeTeam: Team | null;
@@ -38,6 +47,11 @@ interface TeamContextState {
   ) => Promise<boolean>;
   getTeamMembers: (teamId: string) => Promise<TeamMember[]>;
   invalidateTeamMembersCache: (teamId: string) => void;
+}
+
+interface UseTeamMemberOptions {
+  teamId: string | null;
+  onSuccess?: () => void;
 }
 
 const defaultState: TeamContextState = {
@@ -361,4 +375,240 @@ export function useTeam() {
 export function usePermission() {
   const { checkPermission } = useContext(TeamContext);
   return { checkPermission };
+}
+
+// useTeamMember
+export function useTeamMember({ teamId, onSuccess }: UseTeamMemberOptions) {
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Add a new team member
+  const addMember = async (email: string, role: string) => {
+    if (!teamId) {
+      setError('Team ID is required');
+      toast({
+        title: 'Error',
+        description: 'Team ID is required',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const result = await addTeamMember(teamId, email, role);
+
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+
+      toast({
+        title: 'Success',
+        description: `Team member added successfully`,
+      });
+
+      if (onSuccess) {
+        onSuccess();
+      }
+
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setError(errorMessage);
+
+      toast({
+        title: 'Error adding team member',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Update a team member's permissions
+  const updatePermissions = async (memberId: string, permissions: ResourcePermissions) => {
+    if (!teamId) {
+      setError('Team ID is required');
+      toast({
+        title: 'Error',
+        description: 'Team ID is required',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const result = await updateMemberPermissions(teamId, memberId, permissions);
+
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+
+      toast({
+        title: 'Success',
+        description: `Permissions updated successfully`,
+      });
+
+      if (onSuccess) {
+        onSuccess();
+      }
+
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setError(errorMessage);
+
+      toast({
+        title: 'Error updating permissions',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Apply a role template to a team member
+  const applyRoleTemplate = async (memberId: string, role: string) => {
+    if (!teamId) {
+      setError('Team ID is required');
+      toast({
+        title: 'Error',
+        description: 'Team ID is required',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const result = await applyRolePermissionTemplate(teamId, memberId, role);
+
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+
+      toast({
+        title: 'Success',
+        description: `Role template applied successfully`,
+      });
+
+      if (onSuccess) {
+        onSuccess();
+      }
+
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setError(errorMessage);
+
+      toast({
+        title: 'Error applying role template',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Remove a team member
+  const removeMember = async (memberId: string) => {
+    if (!teamId) {
+      setError('Team ID is required');
+      toast({
+        title: 'Error',
+        description: 'Team ID is required',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const result = await removeTeamMember(teamId, memberId);
+
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+
+      toast({
+        title: 'Success',
+        description: `Team member removed successfully`,
+      });
+
+      if (onSuccess) {
+        onSuccess();
+      }
+
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setError(errorMessage);
+
+      toast({
+        title: 'Error removing team member',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Get permissions for a team member
+  const getPermissions = async (memberId: string) => {
+    if (!teamId) {
+      setError('Team ID is required');
+      return null;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const result = await getMemberPermissions(teamId, memberId);
+
+      if (!result.success || !result.data) {
+        throw new Error(result.error || 'Failed to get permissions');
+      }
+
+      return result.data;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setError(errorMessage);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return {
+    addMember,
+    updatePermissions,
+    applyRoleTemplate,
+    removeMember,
+    getPermissions,
+    isLoading,
+    error,
+  };
 }

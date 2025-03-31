@@ -1,4 +1,4 @@
-// ARCHIVED: This API route was archived on 2025-03-31T09:42:38.759Z
+// ARCHIVED: This API route was archived on 2025-03-31T12:57:53.920Z
 // Original path: src/app/api/repositories/explore/route.ts
 // Route: /repositories/explore
 // This file is preserved for reference purposes only and is no longer in use.

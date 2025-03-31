@@ -1,4 +1,4 @@
-// ARCHIVED: This API route was archived on 2025-03-31T09:42:38.759Z
+// ARCHIVED: This API route was archived on 2025-03-31T12:57:53.919Z
 // Original path: src/app/api/git-providers/callback/route.ts
 // Route: /git-providers/callback
 // This file is preserved for reference purposes only and is no longer in use.

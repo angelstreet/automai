@@ -11,7 +11,7 @@ import {
 import { ResourceCard } from '@/components/ui/resource-card';
 import { User } from '@/types/user';
 
-import { TeamDetails, UnassignedResources } from '../types';
+import { TeamDetails, UnassignedResources } from '@/types/context/team';
 
 interface TeamOverviewProps {
   team: TeamDetails | null;
