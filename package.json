@@ -27,7 +27,10 @@
     "electron-build": "next build && electron-builder",
     "electron-pack": "npm run build && electron-builder -c.extraMetadata.main=electron/main.js",
     "update-deps": "npm update && npm outdated",
-    "migrate:cicd": "node scripts/migrations/apply-cicd-providers.js"
+    "analyze-api": "ts-node scripts/api-analysis-report.ts",
+    "find-unused-api": "ts-node scripts/api-usage-analyzer.ts",
+    "analyze-server-actions": "ts-node scripts/server-actions-analyzer.ts",
+    "archive-api": "ts-node scripts/api-cleanup-helper.ts --archive"
   },
   "dependencies": {
     "@alloc/quick-lru": "5.2.0",
