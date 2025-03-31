@@ -21,7 +21,7 @@ import {
   listBranches as listGitLabBranches,
   extractGitLabProjectId,
 } from '@/lib/gitlab-api';
-import { getGitProviderById } from '@/lib/supabase/db-repositories/git-provider';
+import { getGitProvider } from '@/app/actions/repositories';
 
 /**
  * GET /api/repositories/explore
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
     );
 
     // Get the Git provider information
-    const providerResult = await getGitProviderById(providerId);
+    const providerResult = await getGitProvider(providerId);
 
     if (!providerResult.success || !providerResult.data) {
       return NextResponse.json(

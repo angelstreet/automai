@@ -1,7 +1,5 @@
 import { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies';
 
-import { createClient } from '@/lib/supabase/server';
-
 import { gitProvider as repoGitProvider, type GitProvider } from './db-repository';
 
 // Re-export types and functionality
@@ -18,6 +16,7 @@ export const gitProvider = {
     cookieStore?: ReadonlyRequestCookies,
   ): Promise<{ success: boolean; error?: string; data?: GitProvider[] }> {
     try {
+      const { createClient } = await import('@/lib/supabase/server');
       const supabase = await createClient(cookieStore);
 
       const { data, error } = await supabase
@@ -44,6 +43,7 @@ export const gitProvider = {
     cookieStore?: ReadonlyRequestCookies,
   ): Promise<{ success: boolean; error?: string; data?: GitProvider }> {
     try {
+      const { createClient } = await import('@/lib/supabase/server');
       const supabase = await createClient(cookieStore);
 
       const { data, error } = await supabase
@@ -72,6 +72,7 @@ export const gitProvider = {
     cookieStore?: ReadonlyRequestCookies,
   ): Promise<{ success: boolean; error?: string; data?: GitProvider }> {
     try {
+      const { createClient } = await import('@/lib/supabase/server');
       const supabase = await createClient(cookieStore);
 
       // Add required metadata
@@ -116,6 +117,7 @@ export const gitProvider = {
     cookieStore?: ReadonlyRequestCookies,
   ): Promise<{ success: boolean; error?: string; data?: GitProvider }> {
     try {
+      const { createClient } = await import('@/lib/supabase/server');
       const supabase = await createClient(cookieStore);
 
       // Add updated timestamp
@@ -151,6 +153,7 @@ export const gitProvider = {
     cookieStore?: ReadonlyRequestCookies,
   ): Promise<{ success: boolean; error?: string }> {
     try {
+      const { createClient } = await import('@/lib/supabase/server');
       const supabase = await createClient(cookieStore);
 
       const { error } = await supabase
@@ -178,6 +181,7 @@ export const gitProvider = {
     cookieStore?: ReadonlyRequestCookies,
   ): Promise<{ success: boolean; error?: string; data?: GitProvider }> {
     try {
+      const { createClient } = await import('@/lib/supabase/server');
       const supabase = await createClient(cookieStore);
 
       // Update the last refreshed timestamp

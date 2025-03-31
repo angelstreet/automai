@@ -790,8 +790,8 @@ export async function getScriptsForRepository(repositoryId: string): Promise<any
     const repo = repoResult.data;
 
     // Get the git provider details
-    const { gitProvider } = await import('@/lib/supabase/db-repositories');
-    const providerResult = await gitProvider.getGitProviderById(repo.provider_id);
+    const { getGitProvider } = await import('@/app/actions/repositories');
+    const providerResult = await getGitProvider(repo.provider_id);
 
     if (!providerResult.success || !providerResult.data) {
       console.error(`[Actions] Provider not found for repository ${repositoryId}`);

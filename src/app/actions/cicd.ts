@@ -301,12 +301,6 @@ export async function testCICDProvider(provider: CICDProviderPayload): Promise<A
       return { success: false, error: 'User not authenticated' };
     }
 
-    // Get cookies once for all operations
-    const cookieStore = await cookies();
-
-    // Initialize the provider service
-    const { getCICDProvider } = await import('@/lib/services/cicd');
-
     // Test Jenkins connection
     if (provider.type === 'jenkins') {
       const jenkinsUrl = provider.url;
@@ -389,5 +383,59 @@ export async function clearCICDCache(options?: {
       success: false,
       message: `Failed to clear CICD cache: ${error.message}`,
     };
+  }
+}
+
+/**
+ * Test Jenkins API connection
+ * Used for quick validation of Jenkins connectivity without providing specific credentials
+ */
+export async function testJenkinsAPI(): Promise<ActionResult<boolean>> {
+  try {
+    console.log('[@action:cicd:testJenkinsAPI] Testing Jenkins API connection');
+    
+    // Get the current user
+    const user = await getUser();
+    if (!user) {
+      console.error('[@action:cicd:testJenkinsAPI] User not authenticated');
+      return { success: false, error: 'User not authenticated' };
+    }
+
+    // Import the necessary modules
+    const { getCICDProvider } = await import('@/lib/services/cicd');
+    const { default: cicdDb } = await import('@/lib/supabase/db-cicd/cicd');
+    
+    // Get the first Jenkins provider for this tenant
+    const providers = await cicdDb.getCICDProviders({
+      where: { tenant_id: user.tenant_id, type: 'jenkins' }
+    });
+    
+    if (!providers.success || !providers.data || providers.data.length === 0) {
+      console.error('[@action:cicd:testJenkinsAPI] No Jenkins providers found');
+      return { success: false, error: 'No Jenkins providers configured' };
+    }
+    
+    // Get the first provider
+    const providerId = providers.data[0].id;
+    const provider = await getCICDProvider(providerId, user.tenant_id);
+    
+    if (!provider.success || !provider.data) {
+      console.error('[@action:cicd:testJenkinsAPI] Failed to initialize provider:', provider.error);
+      return { success: false, error: provider.error || 'Failed to initialize Jenkins provider' };
+    }
+    
+    // Test the connection
+    const result = await provider.data.testConnection();
+    
+    console.log('[@action:cicd:testJenkinsAPI] Connection test result:', result);
+    
+    return {
+      success: result.success,
+      error: result.error,
+      data: result.success ? true : false
+    };
+  } catch (error: any) {
+    console.error('[@action:cicd:testJenkinsAPI] Error testing Jenkins API:', error);
+    return { success: false, error: error.message || 'Failed to test Jenkins API connection' };
   }
 }
