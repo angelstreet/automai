@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
 
-export function StatsCards() {
+export function DashboardStatsCards() {
   // Static demo data
   const stats = {
     projects: 12,

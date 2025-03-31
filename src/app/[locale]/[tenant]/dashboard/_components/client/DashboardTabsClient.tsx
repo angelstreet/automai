@@ -2,11 +2,11 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 
-import { MainContent } from './MainContent';
-import { StatsCards } from './StatsCards';
-import { TabContentCard } from './TabContentCard';
+import { DashboardMainContentClient } from './DashboardMainContentClient';
+import { DashboardStatsCardsClient } from './DashboardStatsCardsClient';
+import { DashboardTabContentCardClient } from './DashboardTabContentCardClient';
 
-export function DashboardTabs() {
+export function DashboardTabsClient() {
   return (
     <Tabs defaultValue="overview" className="space-y-4">
       <div className="flex overflow-x-auto pb-2">
@@ -19,20 +19,20 @@ export function DashboardTabs() {
       </div>
 
       <TabsContent value="overview" className="space-y-4">
-        <StatsCards />
-        <MainContent />
+        <DashboardStatsCardsClient />
+        <DashboardMainContentClient />
       </TabsContent>
 
       <TabsContent value="analytics">
-        <TabContentCard title="Analytics" />
+        <DashboardTabContentCardClient title="Analytics" />
       </TabsContent>
 
       <TabsContent value="reports">
-        <TabContentCard title="Reports" />
+        <DashboardTabContentCardClient title="Reports" />
       </TabsContent>
 
       <TabsContent value="notifications">
-        <TabContentCard title="Notifications" />
+        <DashboardTabContentCardClient title="Notifications" />
       </TabsContent>
     </Tabs>
   );

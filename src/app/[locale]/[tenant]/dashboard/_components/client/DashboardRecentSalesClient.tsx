@@ -2,7 +2,7 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
 
-export function RecentSales() {
+export function DashboardRecentSalesClient() {
   return (
     <div className="space-y-8">
       <div className="flex items-center gap-4">

@@ -8,10 +8,10 @@ import {
   CardTitle,
 } from '@/components/shadcn/card';
 
-import { Overview } from './Overview';
-import { RecentSales } from './RecentSales';
+import { DashboardOverview } from './DashboardOverview';
+import { DashboardRecentSales } from './DashboardRecentSales';
 
-export function MainContent() {
+export function DashboardMainContent() {
   // Static demo data
   const tasks = [
     { id: '1', title: 'Review test results', dueDate: 'Today' },
@@ -46,7 +46,7 @@ export function MainContent() {
             <CardDescription>Monthly success rate for all test executions</CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
-            <Overview />
+            <DashboardOverview />
           </CardContent>
         </Card>
 
@@ -81,7 +81,7 @@ export function MainContent() {
             <CardDescription>Latest test executions by team members</CardDescription>
           </CardHeader>
           <CardContent>
-            <RecentSales />
+            <DashboardRecentSales />
           </CardContent>
         </Card>
 

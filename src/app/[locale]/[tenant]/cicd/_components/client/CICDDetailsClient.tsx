@@ -37,17 +37,17 @@ import {
 import { useToast } from '@/components/shadcn/use-toast';
 
 import type { CICDProviderType } from '../../types';
-import CICDProviderForm from '../CICDProviderForm';
+import CICDForm from '../CICDForm';
 
-interface ClientCICDProviderProps {
+interface CICDDetailsClientProps {
   initialProviders: CICDProviderType[];
   removeTitle?: boolean;
 }
 
-export default function ClientCICDProvider({
+export default function CICDDetailsClient({
   initialProviders,
   removeTitle = false,
-}: ClientCICDProviderProps) {
+}: CICDDetailsClientProps) {
   const [selectedProvider, setSelectedProvider] = useState<CICDProviderType | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
@@ -199,128 +199,112 @@ export default function ClientCICDProvider({
           <CardTitle className="text-xl font-bold">
             {t('providers_title', { fallback: 'CI/CD Providers' })}
           </CardTitle>
-          <Button onClick={() => handleAddEditProvider()} size="sm" className="h-8 gap-1">
-            <PlusCircle className="h-4 w-4" />
-            <span>{t('add_provider', { fallback: 'Add Provider' })}</span>
-          </Button>
         </CardHeader>
       )}
-
       <CardContent>
-        {isLoading ? (
-          <div className="flex justify-center items-center h-32">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-gray-50"></div>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('provider_name', { fallback: 'Name' })}</TableHead>
-                  <TableHead>{t('provider_type', { fallback: 'Type' })}</TableHead>
-                  <TableHead>{t('provider_url', { fallback: 'URL' })}</TableHead>
-                  <TableHead className="w-[80px]">
-                    {t('actions', { fallback: 'Actions' })}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {initialProviders.map((provider) => (
-                  <TableRow key={provider.id}>
-                    <TableCell className="font-medium">{provider.name}</TableCell>
-                    <TableCell>
-                      <Badge className={getProviderBadgeColor(provider.type)}>
-                        {provider.type === 'jenkins' &&
-                          t('provider_type_jenkins', { fallback: 'Jenkins' })}
-                        {provider.type === 'github' &&
-                          t('provider_type_github', { fallback: 'GitHub Actions' })}
-                        {provider.type === 'gitlab' &&
-                          t('provider_type_gitlab', { fallback: 'GitLab CI' })}
-                        {provider.type === 'azure_devops' &&
-                          t('provider_type_azure', { fallback: 'Azure DevOps' })}
-                        {!['jenkins', 'github', 'gitlab', 'azure_devops'].includes(provider.type) &&
-                          provider.type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="max-w-[200px] truncate">{provider.url}</TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleTestProvider(provider)}>
-                            <RefreshCcw className="h-4 w-4 mr-2" />
-                            {t('test_connection', { fallback: 'Test Connection' })}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleAddEditProvider(provider)}>
-                            <Edit className="h-4 w-4 mr-2" />
-                            {t('edit', { fallback: 'Edit' })}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleDeleteClick(provider)}
-                            className="text-red-600 dark:text-red-400"
-                          >
-                            <Trash className="h-4 w-4 mr-2" />
-                            {t('delete', { fallback: 'Delete' })}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-
-        {/* Add/Edit Dialog */}
-        <Dialog open={isAddEditDialogOpen} onOpenChange={setIsAddEditDialogOpen}>
-          <DialogContent className="max-w-3xl">
-            <DialogHeader>
-              <DialogTitle>
-                {isEditing
-                  ? t('edit_provider_dialog_title', { fallback: 'Edit CI/CD Provider' })
-                  : t('add_provider_dialog_title', { fallback: 'Add CI/CD Provider' })}
-              </DialogTitle>
-            </DialogHeader>
-            <CICDProviderForm
-              providerId={selectedProvider?.id}
-              provider={selectedProvider as any}
-              onComplete={handleDialogComplete}
-            />
-          </DialogContent>
-        </Dialog>
-
-        {/* Delete Confirmation Dialog */}
-        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>
-                {t('delete_provider_dialog_title', { fallback: 'Delete CI/CD Provider' })}
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                {t('delete_provider_confirmation', {
-                  name: selectedProvider?.name,
-                  fallback: `Are you sure you want to delete "${selectedProvider?.name}"? This action cannot be undone and will remove all access to this provider.`,
-                })}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>{t('cancel', { fallback: 'Cancel' })}</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleConfirmDelete}
-                className="bg-red-600 hover:bg-red-700"
-              >
-                {t('delete', { fallback: 'Delete' })}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[250px]">{t('provider_name')}</TableHead>
+              <TableHead>{t('provider_type')}</TableHead>
+              <TableHead>{t('provider_url')}</TableHead>
+              <TableHead>{t('provider_auth_type')}</TableHead>
+              <TableHead className="text-right">{t('actions')}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {initialProviders.map((provider) => (
+              <TableRow key={provider.id}>
+                <TableCell className="font-medium">{provider.name}</TableCell>
+                <TableCell>
+                  <Badge className={getProviderBadgeColor(provider.type)} variant="outline">
+                    {t(`provider_type_${provider.type}`, { fallback: provider.type })}
+                  </Badge>
+                </TableCell>
+                <TableCell>{provider.url}</TableCell>
+                <TableCell>
+                  {t(`auth_type_${provider.config?.auth_type}`, {
+                    fallback: provider.config?.auth_type || t('auth_type_not_specified'),
+                  })}
+                </TableCell>
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="h-8 w-8 p-0">
+                        <span className="sr-only">Open menu</span>
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleTestProvider(provider)}>
+                        <RefreshCcw className="mr-2 h-4 w-4" />
+                        <span>{t('test_connection')}</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleAddEditProvider(provider)}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        <span>{t('edit')}</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onClick={() => handleDeleteClick(provider)}
+                      >
+                        <Trash className="mr-2 h-4 w-4" />
+                        <span>{t('delete')}</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </CardContent>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('delete_provider_dialog_title')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {selectedProvider &&
+                t('delete_provider_confirmation', {
+                  name: selectedProvider.name,
+                })}
+              <br />
+              <br />
+              {t('delete_warning')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isLoading}>{t('cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isLoading}
+            >
+              {isLoading ? t('deleting', { fallback: 'Deleting...' }) : t('delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Add/Edit Provider Dialog */}
+      <Dialog open={isAddEditDialogOpen} onOpenChange={setIsAddEditDialogOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>
+              {isEditing
+                ? t('edit_provider_dialog_title', { fallback: 'Edit CI/CD Provider' })
+                : t('add_provider_dialog_title', { fallback: 'Add CI/CD Provider' })}
+            </DialogTitle>
+          </DialogHeader>
+          <CICDForm
+            providerId={selectedProvider?.id}
+            provider={selectedProvider}
+            onComplete={handleDialogComplete}
+          />
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

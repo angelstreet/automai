@@ -6,12 +6,12 @@ import {
   CardTitle,
 } from '@/components/shadcn/card';
 
-interface TabContentCardProps {
+interface DashboardTabContentCardProps {
   title: string;
   description?: string;
 }
 
-export function TabContentCard({ title, description }: TabContentCardProps) {
+export function DashboardTabContentCard({ title, description }: DashboardTabContentCardProps) {
   return (
     <Card>
       <CardHeader>

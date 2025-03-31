@@ -14,4 +14,4 @@ function DashboardHeaderComponent() {
 }
 
 // Use React.memo to prevent unnecessary re-renders
-export const DashboardHeader = React.memo(DashboardHeaderComponent);
+export const DashboardHeaderClient = React.memo(DashboardHeaderComponent);

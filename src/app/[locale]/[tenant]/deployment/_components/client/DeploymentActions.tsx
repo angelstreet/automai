@@ -11,8 +11,7 @@ import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent } from '@/components/shadcn/dialog';
 
 // Import required components
-
-import DeploymentWizard from './DeploymentWizard';
+import { DeploymentWizardClient } from './DeploymentWizardClient';
 
 export function DeploymentActions() {
   const t = useTranslations('deployments');
@@ -105,7 +104,7 @@ export function DeploymentActions() {
       <Dialog open={showWizard} onOpenChange={setShowWizard}>
         <DialogContent className="max-w-4xl">
           {showWizard && (
-            <DeploymentWizard
+            <DeploymentWizardClient
               onCancel={handleCloseWizard}
               onDeploymentCreated={handleDeploymentCreated}
               repositories={repositories}

@@ -55,7 +55,7 @@ const chartData = {
   ],
 };
 
-export function Overview() {
+export function DashboardOverviewClient() {
   return (
     <div className="h-[350px]">
       <LineChart options={options} data={chartData} />

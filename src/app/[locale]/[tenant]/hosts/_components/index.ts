@@ -1,6 +1,6 @@
 // Generated index file - component exports
 
-// Base components
+// Server Components
 export { ConnectHostDialog } from './ConnectHostDialog';
 export { HostCard } from './HostCard';
 export { HostForm } from './HostForm';
@@ -12,6 +12,12 @@ export { StatusSummary } from './StatusSummary';
 export { default as HostContent } from './HostContent';
 export { default as HostSkeleton } from './HostSkeleton';
 
-// Re-export the client components for convenience
-export { ClientConnectionForm } from './client';
-export { ClientHostList } from './client';
+// Client Components
+export { ClientConnectionForm } from './client/ClientConnectionForm';
+export { ConnectionFormClient } from './client/ConnectionFormClient';
+
+export { ClientHostList } from './client/ClientHostList';
+export { HostListClient } from './client/HostListClient';
+
+export { HostActions } from './client/HostActions';
+export { HostActionsClient } from './HostActionsClient';

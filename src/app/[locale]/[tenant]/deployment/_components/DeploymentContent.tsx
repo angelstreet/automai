@@ -2,7 +2,7 @@ import { getDeployments } from '@/app/actions/deployments';
 import { getRepositories } from '@/app/actions/repositories';
 
 import { DeploymentList } from './DeploymentList';
-import { ClientEmptyState } from './client/ClientEmptyState';
+import { DeploymentEmptyStateClient } from './client/DeploymentEmptyStateClient';
 
 export async function DeploymentContent() {
   // Fetch deployments directly on the server
@@ -14,7 +14,7 @@ export async function DeploymentContent() {
 
   // If no deployments, show empty state
   if (deployments.length === 0) {
-    return <ClientEmptyState />;
+    return <DeploymentEmptyStateClient />;
   }
 
   // Otherwise, show the deployment list

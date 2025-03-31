@@ -1,6 +1,6 @@
 import { getCICDProviders } from '@/app/actions/cicd';
 
-import ClientCICDProvider from './client/ClientCICDProvider';
+import CICDDetailsClient from './client/CICDDetailsClient';
 
 export default async function CICDContent() {
   const providersResponse = await getCICDProviders();
@@ -8,7 +8,7 @@ export default async function CICDContent() {
 
   return (
     <div className="w-full border-0 shadow-none">
-      <ClientCICDProvider initialProviders={providers} removeTitle={true} />
+      <CICDDetailsClient initialProviders={providers} removeTitle={true} />
     </div>
   );
 }

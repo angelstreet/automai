@@ -24,7 +24,7 @@ import {
 } from '@/components/shadcn/select';
 import { CICDProvider, CICDProviderPayload, CICDProviderType } from '@/types/context/cicd';
 
-interface CICDProviderFormProps {
+interface CICDFormProps {
   providerId?: string;
   provider?: CICDProvider;
   onComplete: () => void;
@@ -37,11 +37,7 @@ interface FormValues {
   token: string;
 }
 
-const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
-  providerId,
-  provider,
-  onComplete,
-}) => {
+const CICDForm: React.FC<CICDFormProps> = ({ providerId, provider, onComplete }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [testMessage, setTestMessage] = useState<{
@@ -200,19 +196,18 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
             )}
           />
 
-          {/* Provider Name */}
+          {/* Display Name */}
           <FormField
             control={form.control}
             name="name"
-            rules={{ required: 'Name is required' }}
             render={({ field }) => (
               <FormItem className="grid grid-cols-[200px,1fr] items-center gap-4">
-                <FormLabel className="text-sm">Name</FormLabel>
+                <FormLabel className="text-sm">Display Name</FormLabel>
                 <FormControl>
                   <Input
                     className="h-9 border rounded-md bg-transparent"
-                    placeholder="Enter provider name"
                     {...field}
+                    placeholder="Enter a display name"
                   />
                 </FormControl>
                 <FormMessage />
@@ -220,27 +215,18 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
             )}
           />
 
-          {/* Provider URL */}
+          {/* Server URL */}
           <FormField
             control={form.control}
             name="url"
-            rules={{ required: 'URL is required' }}
             render={({ field }) => (
               <FormItem className="grid grid-cols-[200px,1fr] items-center gap-4">
-                <FormLabel className="text-sm">URL</FormLabel>
+                <FormLabel className="text-sm">Server URL</FormLabel>
                 <FormControl>
                   <Input
                     className="h-9 border rounded-md bg-transparent"
-                    placeholder={
-                      form.getValues('type') === 'jenkins'
-                        ? 'http://jenkins.example.com:8080'
-                        : form.getValues('type') === 'github'
-                          ? 'https://github.com/username/repo'
-                          : form.getValues('type') === 'circleci'
-                            ? 'https://circleci.com/api/v2'
-                            : 'Enter provider URL'
-                    }
                     {...field}
+                    placeholder="https://jenkins.example.com"
                   />
                 </FormControl>
                 <FormMessage />
@@ -248,58 +234,76 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
             )}
           />
 
-          {/* API Token */}
-          <FormField
-            control={form.control}
-            name="token"
-            rules={{ required: 'API Token is required' }}
-            render={({ field }) => (
-              <FormItem className="grid grid-cols-[200px,1fr] items-center gap-4">
-                <FormLabel className="text-sm">API Token</FormLabel>
-                <FormControl>
-                  <Input
-                    type="password"
-                    className="h-9 border rounded-md bg-transparent"
-                    placeholder="Enter API token"
-                    onChange={(e) => handleCredentialChange('token', e.target.value)}
-                    value={field.value}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {/* Authentication */}
+          <div className="grid grid-cols-[200px,1fr] items-start gap-4 mt-4">
+            <div className="text-sm font-medium">Authentication</div>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <FormField
+                  control={form.control}
+                  name="token"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm">API Token</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          className="h-9 border rounded-md bg-transparent"
+                          {...field}
+                          placeholder="Enter your API token"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+          </div>
 
-          {/* Test Connection Status */}
+          {/* Test message display */}
           {testMessage && (
-            <div className="grid grid-cols-[200px,1fr] items-center gap-4">
-              <div></div>
-              <div className="text-sm">{testMessage.message}</div>
+            <div
+              className={`p-4 rounded-md mt-4 ${
+                testMessage.success
+                  ? 'bg-green-50 text-green-800 dark:bg-green-900 dark:text-green-200'
+                  : 'bg-red-50 text-red-800 dark:bg-red-900 dark:text-red-200'
+              }`}
+            >
+              {testMessage.success && (
+                <CheckCircle className="inline-block mr-2 h-4 w-4 text-green-600 dark:text-green-400" />
+              )}
+              {testMessage.message}
             </div>
           )}
 
           {/* Form Actions */}
-          <div className="grid grid-cols-[200px,1fr] items-center gap-4 pt-4">
-            <div></div>
-            <div className="flex justify-end space-x-4">
+          <div className="flex justify-between pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleTestConnection}
+              disabled={isTesting || isSubmitting}
+            >
+              {isTesting ? 'Testing...' : 'Test Connection'}
+            </Button>
+            <div className="flex gap-2">
               <Button
                 type="button"
                 variant="outline"
-                onClick={handleTestConnection}
-                disabled={isTesting}
+                onClick={() => onComplete()}
+                disabled={isSubmitting}
               >
-                {isTesting ? (
-                  'Testing...'
-                ) : (
-                  <>
-                    <CheckCircle className="h-3 w-3 mr-2" />
-                    Test Connection
-                  </>
-                )}
+                Cancel
               </Button>
-
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Saving...' : 'Save'}
+                {isSubmitting
+                  ? isEditMode
+                    ? 'Updating...'
+                    : 'Creating...'
+                  : isEditMode
+                    ? 'Update'
+                    : 'Create'}
               </Button>
             </div>
           </div>
@@ -309,4 +313,4 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
   );
 };
 
-export default CICDProviderForm;
+export default CICDForm;

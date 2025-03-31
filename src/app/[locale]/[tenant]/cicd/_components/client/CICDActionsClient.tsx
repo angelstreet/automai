@@ -8,9 +8,9 @@ import { useState, useCallback } from 'react';
 import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
 
-import CICDProviderForm from '../CICDProviderForm';
+import CICDForm from '../CICDForm';
 
-export function CICDActions() {
+export function CICDActionsClient() {
   const t = useTranslations('cicd');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const router = useRouter();
@@ -51,7 +51,7 @@ export function CICDActions() {
           <DialogHeader>
             <DialogTitle>{t('add_provider_dialog_title')}</DialogTitle>
           </DialogHeader>
-          <CICDProviderForm onComplete={handleDialogComplete} />
+          <CICDForm onComplete={handleDialogComplete} />
         </DialogContent>
       </Dialog>
     </>

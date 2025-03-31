@@ -5,7 +5,7 @@ import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 
 import { RepositoryContent } from './_components/RepositoryContent';
 import { RepositorySkeleton } from './_components/RepositorySkeleton';
-import { RepositoryActions } from './_components/client/RepositoryActions';
+import { RepositoryActionsClient } from './_components/RepositoryActionsClient';
 
 export default async function RepositoriesPage() {
   const t = await getTranslations('repositories');
@@ -14,7 +14,7 @@ export default async function RepositoriesPage() {
     <FeaturePageContainer
       title={t('repositories')}
       description={t('repositories_description')}
-      actions={<RepositoryActions />}
+      actions={<RepositoryActionsClient />}
     >
       <Suspense fallback={<RepositorySkeleton />}>
         <RepositoryContent />

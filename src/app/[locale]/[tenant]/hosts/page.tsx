@@ -5,7 +5,7 @@ import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 
 import HostContent from './_components/HostContent';
 import HostSkeleton from './_components/HostSkeleton';
-import { HostActions } from './_components/client/HostActions';
+import { HostActionsClient } from './_components/HostActionsClient';
 
 export default async function HostsPage() {
   const t = await getTranslations('hosts');
@@ -14,7 +14,7 @@ export default async function HostsPage() {
     <FeaturePageContainer
       title={t('hosts')}
       description={t('hosts_description')}
-      actions={<HostActions />}
+      actions={<HostActionsClient />}
     >
       <Suspense fallback={<HostSkeleton />}>
         <HostContent />
