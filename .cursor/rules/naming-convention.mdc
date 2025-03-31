@@ -1,0 +1,162 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Naming Conventions
+
+This document defines the naming conventions for files, components, and functions within the codebase.
+
+## Component Naming Conventions
+
+### File Naming Pattern
+
+```
+[Domain][Entity][Purpose][Type][Client].tsx
+```
+
+Where:
+- **Domain**: The high-level feature area (Team, Repository, Host, CICD, etc.)
+- **Entity**: The specific entity being managed (Member, Resource, Repository, etc.)
+- **Purpose**: The specific action/view (Add, Edit, List, View, etc.)
+- **Type**: The component type (Dialog, Tab, List, Form, Table, etc.)
+- **Client**: Required suffix for client-side components
+
+### Examples:
+
+| Component Type | Naming Pattern                   | Example                           |
+|----------------|----------------------------------|-----------------------------------|
+| Dialog         | [Domain][Entity][Action]DialogClient.tsx | TeamMemberAddDialogClient.tsx     |
+| Tab            | [Domain][Entity]TabClient.tsx    | TeamMembersTabClient.tsx          |
+| List           | [Domain][Entity][Type]Client.tsx | TeamResourcesUnassignedClient.tsx |
+| Actions        | [Domain]ActionsClient.tsx        | TeamActionsClient.tsx             |
+| Table          | [Domain][Entity]TableClient.tsx  | TeamMembersTableClient.tsx        |
+| Form           | [Domain][Entity]FormClient.tsx   | RepositoryDetailsFormClient.tsx   |
+
+### Server Component Naming
+
+For server components, follow a similar pattern without the Client suffix:
+
+```
+[Domain][Entity][Type].tsx
+```
+
+Examples:
+- TeamHeader.tsx
+- TeamOverview.tsx
+- TeamMembersTableSkeleton.tsx
+
+## Folder Structure
+
+```
+/[locale]/[tenant]/[domain]/
+├── page.tsx                 # Server component page
+├── metadata.ts              # Page metadata
+└── _components/             # Component folder
+    ├── [Domain]Header.tsx   # Server components
+    ├── [Domain]Overview.tsx
+    ├── [Domain]Skeleton.tsx
+    └── client/              # Client components
+        ├── [Domain][Entity][Purpose][Type]Client.tsx
+```
+
+## Database Layer Naming Conventions
+
+### File Naming Pattern
+
+```
+db-[domain]/[entity].ts
+```
+
+Examples:
+- db-teams/teams.ts
+- db-teams/team-members.ts
+- db-repositories/repositories.ts
+
+### Function Naming Pattern
+
+```
+[action]@Entity
+```
+
+Examples:
+- `getTeamById(teamId, cookieStore)`
+- `createTeam(data, cookieStore)`
+- `updateTeamMember(teamId, memberId, data, cookieStore)`
+
+## Server Actions Naming Conventions
+
+### File Naming Pattern
+
+```
+actions/[domain].ts
+```
+
+Examples:
+- actions/team.ts
+- actions/teamMember.ts
+- actions/repositories.ts
+
+### Function Naming Pattern
+
+```
+[action]@Entity
+```
+
+Examples:
+- `getTeam(id)`
+- `createTeam(data)`
+- `updateTeamMember(teamId, memberId, data)`
+
+## Hook Naming Conventions
+
+### File Naming Pattern
+
+```
+hooks/[domain]/use[Entity][Action].ts
+```
+
+Examples:
+- hooks/teamMember/useTeamMembers.ts
+- hooks/teamMember/useAddTeamMember.ts
+- hooks/repositories/useRepositories.ts
+
+### Function Naming Pattern
+
+```
+use[Entity][Action]
+```
+
+Examples:
+- `useTeamMembers()`
+- `useAddTeamMember()`
+- `useRemoveTeamMember()`
+
+## Logging Conventions
+
+All logs should follow the format:
+```
+[@layer:file:function] Message
+```
+
+Where layer is one of:
+- `@db`: Database operations
+- `@action`: Server actions
+- `@component`: React components
+- `@hook`: React hooks
+- `@api`: API routes
+- `@middleware`: Middleware
+
+Examples:
+- `[@db:teams:getTeamById] Getting team: ${id}`
+- `[@action:team:getTeam] Found team: ${id}`
+- `[@component:TeamMembersTable:render] Rendering members: ${members.length}`
+
+## General Rules
+
+1. Always use PascalCase for React components
+2. Always use camelCase for functions, variables, and file names
+3. Always add suffix "Client" to client components
+4. Always group related components in appropriate folders
+5. Always use explicit and descriptive names over abbreviations
+6. Maintain consistent naming across the entire codebase 
