@@ -141,88 +141,80 @@ export async function updateSession(
   );
   const startTime = Date.now();
 
-  // Use provided client or create a new one
   const { supabase, response } = clientData || createClient(request);
 
-  // Only call getUser if not already done in the middleware
-  let data: any = { user: null };
-  let error: any = null;
+  let sessionData: any = null;
+  let sessionError: any = null;
+  let userData: any = { user: null };
+  let userError: any = null;
 
-  if (!clientData) {
-    // IMPORTANT: DO NOT REMOVE auth.getUser() call or add code between
-    // createClient and getUser() - this ensures proper token validation
+  if (clientData) {
+    // Use pre-validated session
+    console.log('[Middleware:updateSession] Using pre-validated authentication from middleware');
+    const result = await supabase.auth.getSession();
+    sessionData = result.data;
+    sessionError = result.error;
+  } else {
+    // Validate user directly
     const result = await supabase.auth.getUser();
-    data = result.data;
-    error = result.error;
+    userData = result.data;
+    userError = result.error;
 
-    // Reduced logging for better performance - only log errors
-    if (error) {
-      console.log('🔍 AUTH MIDDLEWARE ERROR:', error.message);
+    if (userError) {
+      console.log('🔍 AUTH MIDDLEWARE ERROR:', userError.message);
       console.log('🔍 Request URL:', request.nextUrl.pathname);
-    } else if (data.user) {
-      // Just log minimal user info
-      console.log('🔍 AUTH MIDDLEWARE: User authenticated', data.user.id);
+    } else if (userData.user) {
+      console.log('🔍 AUTH MIDDLEWARE: User authenticated', userData.user.id);
       console.log(`[Middleware:auth] User authenticated in ${Date.now() - startTime}ms`);
     }
-  } else {
-    // If client was provided, assume auth check has already been done
-    console.log('[Middleware:updateSession] Using pre-validated authentication from middleware');
   }
 
-  // Check if this is a data fetching request (POST to a page route)
-  // These should not be redirected to prevent redirect loops
   const isDataFetchRequest =
     request.method === 'POST' && !request.nextUrl.pathname.startsWith('/api/');
-
   console.log(
     `[Middleware:check] isDataFetchRequest=${isDataFetchRequest}, Method=${request.method}, Path=${request.nextUrl.pathname}`,
   );
 
-  // Only redirect for specific auth errors, not network errors
-  const isAuthError = error && (error.status === 401 || error.message?.includes('Invalid JWT'));
-  if ((!data.user || isAuthError) && !isDataFetchRequest) {
-    console.log('[Middleware:redirect] No authenticated user found. Redirecting to login page.');
-    // Reduce logging to essential information only
-    if (error) {
-      console.log('[Middleware:redirect] Auth error details:', error?.message);
+  const isAuthError =
+    (sessionError || userError) &&
+    (sessionError?.status === 401 ||
+      userError?.status === 401 ||
+      sessionError?.message?.includes('Invalid JWT') ||
+      userError?.message?.includes('Invalid JWT'));
+
+  if ((!sessionData?.session && !userData.user) || isAuthError) {
+    if (isDataFetchRequest) {
+      console.log('[Middleware:skip] Skipping redirect for data fetch request');
+      return response;
     }
 
-    // Check if there are some auth cookies present even though we couldn't get a user
-    // This might indicate a cookie-related issue rather than truly unauthenticated
+    console.log('[Middleware:redirect] No authenticated user found. Redirecting to login page.');
+    if (sessionError || userError) {
+      console.log(
+        '[Middleware:redirect] Auth error details:',
+        (sessionError || userError)?.message,
+      );
+    }
+
     const hasAuthCookies = request.cookies
       .getAll()
-      .some((c) => c.name.startsWith('sb-access-token') || c.name.startsWith('sb-refresh-token'));
-
+      .some((c) => c.name.startsWith('sb-') && c.name.includes('auth-token'));
     if (hasAuthCookies) {
       console.log(
         '[Middleware:cookies] Auth cookies present but failed to authenticate - possible cookie issue',
       );
-      // For debugging: if auth cookies exist but auth failed, we'll still let the request through
-      // This helps diagnose issues where cookies exist but aren't being properly parsed
-      // In production, you'd want to remove this and always redirect to login
-      console.log(
-        '[Middleware:cookies] Allowing request to proceed despite auth failure due to cookie presence',
-      );
-      return response;
     }
 
-    // Extract locale from URL
     const pathParts = request.nextUrl.pathname.split('/').filter(Boolean);
     const locale =
       pathParts.length > 0 && locales.includes(pathParts[0] as any) ? pathParts[0] : defaultLocale;
-
-    // Create a new URL for the redirect
     const redirectUrl = new URL(`/${locale}/login`, request.url);
     console.log(`[Middleware:redirect] Redirecting to ${redirectUrl.toString()}`);
 
-    // Create a redirect response
     const redirectResponse = NextResponse.redirect(redirectUrl, { status: 307 });
-
-    // Clear auth cookies in the redirect response
     return clearAuthCookies(redirectResponse);
   }
 
-  // Return the response with updated cookies for authenticated users
   console.log(`[Middleware:complete] Finished processing request in ${Date.now() - startTime}ms`);
   return response;
 }
