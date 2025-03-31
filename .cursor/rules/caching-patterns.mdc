@@ -1,161 +1,76 @@
-# Next.js Caching Patterns
+# Next.js Caching Strategy Cursor Rules
 
-This document defines the standard caching patterns for server actions in our Next.js application to ensure consistent performance and minimize redundant database calls.
+This document outlines the standard caching rules for our Next.js application, ensuring efficient performance and minimizing redundant database calls through a hybrid server-side and client-side caching approach.
 
-## Three-Tier Architecture Caching Strategy
+## Core Principles
 
-Our application follows a strict three-tier architecture with caching implemented at the Server Action layer:
+1. **Layered Caching**: Implement caching for READ operations at the Server Actions Layer on the server and extend caching to the Client Layer for dynamic client-side interactions.
+2. **Server-Side Efficiency**: Utilize Next.js’s built-in caching tools for server-side READ operations, paired with explicit invalidation methods to keep data fresh.
+3. **Client-Side Deduplication**: Employ a client-side caching library to prevent duplicate data fetches and manage state, integrated with server-side pre-fetched data.
+4. **Data Consistency**: Ensure cache invalidation is synchronized across server and client layers after WRITE operations to maintain up-to-date data.
+5. **No Database Caching**: Keep the Database Layer free of any caching logic to provide raw, uncached data access.
 
-### 1. Database Layer (`/lib/supabase/db-*/`)
-- ✅ Accepts `cookieStore` parameter for authentication
-- ✅ Performs direct database operations
-- ❌ NEVER implements caching at this layer
-- ❌ NEVER calls other database layer functions
+## Three-Tier Architecture
 
-```typescript
-// CORRECT DATABASE LAYER IMPLEMENTATION (NO CACHING HERE)
-// src/lib/supabase/db-teams/teams.ts
-export async function getTeamsByUser(profileId: string, cookieStore?: any) {
-  try {
-    const supabase = await createClient(cookieStore);
-    const { data, error } = await supabase
-      .from('teams')
-      .select('*')
-      .eq('profile_id', profileId);
-    
-    return { success: true, data };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-}
-```
+### 1. Database Layer (Located in /lib/supabase/db-*)
 
-### 2. Server Actions Layer (`/app/actions/*.ts` or `/app/[locale]/[tenant]/*/actions.ts`)
-- ✅ ALWAYS marked with `'use server'` directive
-- ✅ ALWAYS wraps READ operations with React's `cache()` function
-- ✅ ALWAYS includes explicit cache key parameters
-- ✅ ALWAYS calls `cookies()` from 'next/headers' to get cookie store
-- ✅ ALWAYS passes cookie store to database functions
-- ❌ NEVER caches WRITE operations (create, update, delete)
-- ✅ ALWAYS uses `revalidatePath()` after WRITE operations
+- **Purpose**: Handles direct database operations without any caching or business logic.
+- **Rules**:
+  - Accepts a cookieStore parameter or equivalent for authentication purposes.
+  - Executes raw database queries using the Supabase client.
+  - Never implements caching at this layer.
+  - Never calls other functions within the Database Layer to avoid nesting.
 
-```typescript
-// CORRECT SERVER ACTION IMPLEMENTATION WITH CACHING
-// src/app/[locale]/[tenant]/team/actions.ts
-'use server';
+### 2. Server Actions Layer (Located in /app/actions/*.ts)
 
-import { cache } from 'react';
-import { cookies } from 'next/headers';
-import { revalidatePath } from 'next/cache';
-import { getTeamsByUser } from '@/lib/supabase/db-teams';
+- **Purpose**: Manages server-side caching for READ operations and processes WRITE operations, serving both Server Components and client-side API requests.
+- **Rules**:
+  - All functions must be marked with the 'use server' directive to ensure server-only execution.
+  - Wrap READ operations with Next.js’s cache function, using explicit keys like resource identifiers (e.g., user ID).
+  - Retrieve cookies using the cookies function from next/headers for authentication.
+  - Call Database Layer functions, passing the cookieStore for authenticated queries.
+  - Never cache WRITE operations such as create, update, or delete actions.
+  - Invalidate caches after WRITE operations using revalidateTag (preferred) or revalidatePath to ensure stale data is refreshed.
 
-// CORRECT: READ operation with cache()
-export const getTeams = cache(async (tenantId: string) => {
-  try {
-    const cookieStore = cookies();
-    const result = await getTeamsByUser(tenantId, cookieStore);
-    return result;
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-});
+### 3. Client-Side Layer (Located in /app/[locale]/[tenant]/*/components/*.tsx)
 
-// CORRECT: WRITE operation without cache()
-export async function createTeam(data: TeamInput) {
-  try {
-    const cookieStore = cookies();
-    const result = await createTeamInDb(data, cookieStore);
-    
-    // Revalidate to clear stale cache paths
-    revalidatePath('/[locale]/[tenant]/team');
-    return result;
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-}
-```
+- **Purpose**: Manages user interface and dynamic data fetching with client-side caching to prevent redundant requests.
+- **Rules**:
+  - All components must be marked with the 'use client' directive to indicate client-side execution.
+  - Use a client-side caching library’s query hook for READ operations, importing functions from the Server Actions Layer.
+  - Use a mutation hook for WRITE operations, invalidating specific cached queries afterward to refresh data.
+  - Integrate with Server Components by accepting pre-fetched data or hydrated state.
+  - Limit use of useEffect to side effects not managed by the caching library, including cleanup to prevent memory leaks.
+  - Never call Database Layer functions directly from client components.
 
-### 3. Client Components (`/app/[locale]/[tenant]/*/components/*.tsx`)
-- ✅ ALWAYS marked with `'use client'` directive
-- ✅ ALWAYS imports from server actions, NEVER from database layer
-- ✅ ALWAYS implements cleanup with `isMounted` flag in useEffect
-- ✅ ALWAYS uses minimal dependencies in useEffect to prevent excessive refetching
-- ✅ ALWAYS properly handles loading states
+## Server Components (Located in /app/[locale]/[tenant]/*/page.tsx)
 
-```typescript
-// CORRECT CLIENT COMPONENT IMPLEMENTATION
-// src/app/[locale]/[tenant]/team/_components/client/TeamList.tsx
-'use client';
+- **Purpose**: Pre-fetches data for server-side rendering, providing initial data to client-side components.
+- **Rules**:
+  - Call Server Actions directly to fetch data.
+  - Pass pre-fetched data to Client Components through props.
+  - Use the client-side caching library’s dehydration method to prepare data for client-side hydration when needed.
 
-import { useState, useEffect } from 'react';
-import { getTeams } from '@/app/[locale]/[tenant]/team/actions';
+## Global Configuration
 
-export function TeamList({ tenantId }) {
-  const [teams, setTeams] = useState([]);
-  const [loading, setLoading] = useState(true);
-  
-  // CORRECT: Single effect with cleanup and minimal dependencies
-  useEffect(() => {
-    let isMounted = true;
-    
-    async function fetchData() {
-      try {
-        setLoading(true);
-        const result = await getTeams(tenantId);
-        
-        if (!isMounted) return;
-        
-        if (result.success) {
-          setTeams(result.data);
-        }
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    }
-    
-    fetchData();
-    return () => { isMounted = false; };
-  }, [tenantId]); // Only depend on tenantId
-  
-  // Render component with teams data
-}
-```
+### Client-Side Caching Setup
+- Configure a client-side caching library provider in the application’s root file (e.g., /app/_app.tsx).
+- Set default caching options, such as a 5-minute stale time (data freshness threshold) and a 10-minute cache time (data retention period), to balance performance and freshness.
 
-## Server Component Optimization
+## Anti-Patterns to Avoid
 
-For even better performance, use Server Components to prefetch data:
+- Do not implement caching in the Database Layer.
+- Do not call Database Layer functions directly from Client Components.
+- Do not cache WRITE operations like create, update, or delete.
+- Do not omit cache invalidation (revalidateTag or invalidateQueries) after WRITE operations.
+- Do not use excessive dependencies in useEffect hooks that trigger unnecessary refetching.
+- Do not perform database queries directly in render functions.
 
-```typescript
-// CORRECT SERVER COMPONENT IMPLEMENTATION
-// src/app/[locale]/[tenant]/team/page.tsx
-import { getTeams } from './actions';
-import { TeamList } from './_components/client/TeamList';
+## Debugging Caching Problems
 
-// Server component (no 'use client' directive)
-export default async function TeamPage({ params }) {
-  const { tenant } = params;
-  const initialData = await getTeams(tenant);
-  
-  return <TeamList initialData={initialData} tenantId={tenant} />;
-}
-```
-
-## Common Anti-patterns to Avoid
-
-- ❌ **NEVER** implement caching at the database layer
-- ❌ **NEVER** call database functions directly from client components
-- ❌ **NEVER** use `useEffect` with dependencies that cause cascading fetches
-- ❌ **NEVER** cache write operations (create/update/delete)
-- ❌ **NEVER** forget to call `revalidatePath()` after mutations
-- ❌ **NEVER** make database calls in render functions
-- ❌ **NEVER** use unnecessary dependencies in useEffect hooks
-
-## Debugging Caching Issues
-
-If you're seeing repeated database queries:
-
-1. Verify server actions use React's `cache()` function for read operations
-2. Check that `revalidatePath()` is called after write operations
-3. Ensure client components have proper dependency arrays in useEffect
-4. Implement cleanup with isMounted flag in client components
-5. Use React DevTools to analyze render cycles 
+If redundant database queries occur:
+1. Confirm that Server Actions use the cache function for READ operations.
+2. Verify that revalidateTag or revalidatePath is called after WRITE operations.
+3. Ensure client-side query keys are unique and consistent across components.
+4. Check that useEffect dependencies in Client Components are minimal and appropriate.
+5. Use React Developer Tools and Next.js logs to inspect render cycles and cache behavior.
