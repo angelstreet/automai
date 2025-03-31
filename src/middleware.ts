@@ -135,7 +135,7 @@ export default async function middleware(request: NextRequest) {
 
   // User is authenticated, update the session using the reusable client
   const response = await updateSession(request, { supabase, response: clientResponse });
-  console.log('[@middleware:middleware] Response before intl:', response);
+  //console.log('[@middleware:middleware] Response before intl:', response);
   // Apply intl for authenticated users
   const intl = await getIntlMiddleware();
   return intl(response);
