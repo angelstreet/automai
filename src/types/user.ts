@@ -174,7 +174,7 @@ export const mapAuthUserToUser = (authUser: AuthUser): User => {
   };
 };
 
-import { Role, User, UserTeam, TeamMember, ResourceLimit } from '@/types/user';
+import { Role, User, UserTeam, TeamMember, ResourceLimit } from '@/types/auth/user';
 
 /**
  * Type definition for UserContext

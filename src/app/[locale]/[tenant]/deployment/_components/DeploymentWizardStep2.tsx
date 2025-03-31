@@ -3,7 +3,8 @@
 import { useTranslations } from 'next-intl';
 import React from 'react';
 
-import { Repository, Script } from '@/types/context/deployment';
+import { Repository } from '@/types/core/deployment';
+import { Script } from '@/types/context/deployment';
 
 import EnhancedScriptSelector from './EnhancedScriptSelector';
 

@@ -3,7 +3,7 @@
 import { Server, Check, Filter } from 'lucide-react';
 import React, { useState } from 'react';
 
-import { Host } from '@/types/context/deployment';
+import { Host } from '@/types/core/host';
 
 interface HostSelectorProps {
   availableHosts: Host[];

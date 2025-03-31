@@ -7,8 +7,6 @@ import { AppSidebar } from '@/components/layout/AppSidebar';
 import { AppSidebarSkeleton } from '@/components/layout/AppSidebarSkeleton';
 import { WorkspaceHeaderSkeleton } from '@/components/layout/WorkspaceHeaderSkeleton';
 import { WorkspaceHeader } from '@/components/workspace/WorkspaceHeader';
-import { TeamProvider } from '@/context/TeamContext';
-import { UserProvider } from '@/context/UserContext';
 import { mapAuthUserToUser } from '@/types/user';
 
 import TenantLayoutClient from './_components/client/TenantLayoutClient';
@@ -38,42 +36,42 @@ export default async function TenantLayout({
     ]);
 
     if (teamsResult.success && teamsResult.data) {
-      teams = teamsResult.data;
+      // Force JSON serialization to ensure it's safe for client consumption
+      const serialized = JSON.stringify(teamsResult.data);
+      teams = JSON.parse(serialized);
+      console.log('[TenantLayout] Loaded teams:', teams.length);
     }
 
     if (activeTeamResult.success && activeTeamResult.data) {
-      activeTeam = activeTeamResult.data;
+      // Force JSON serialization to ensure it's safe for client consumption
+      const serialized = JSON.stringify(activeTeamResult.data);
+      activeTeam = JSON.parse(serialized);
+      console.log('[TenantLayout] Loaded active team:', activeTeam?.id || 'none');
     }
   }
 
   return (
-    <UserProvider initialUser={user}>
-      <TeamProvider initialTeams={teams} initialActiveTeam={activeTeam}>
-        <TenantLayoutClient user={user}>
-          <div className="relative flex w-full overflow-hidden">
-            <Suspense fallback={<AppSidebarSkeleton />}>
-              <AppSidebar user={user} />
-            </Suspense>
-            <div
-              className="flex-1 flex flex-col w-full overflow-hidden transition-[margin,width] duration-300 ease-in-out"
-              style={{
-                marginLeft: 'var(--sidebar-width-offset, 0)',
-                width: 'calc(100% - var(--sidebar-width-offset, 0))',
-                opacity: 1,
-              }}
-            >
-              <Suspense fallback={<WorkspaceHeaderSkeleton />}>
-                <WorkspaceHeader user={user} />
-              </Suspense>
-              <div className="flex-1 px-3 pb-2 overflow-hidden">
-                <main className="h-full w-full max-w-full border border-gray-30 rounded-md overflow-auto pl-3 pr-3">
-                  {children}
-                </main>
-              </div>
-            </div>
-          </div>
-        </TenantLayoutClient>
-      </TeamProvider>
-    </UserProvider>
+    <TenantLayoutClient user={user} teams={teams} activeTeam={activeTeam}>
+      <Suspense fallback={<AppSidebarSkeleton />}>
+        <AppSidebar user={user} />
+      </Suspense>
+      <div
+        className="flex-1 flex flex-col w-full overflow-hidden transition-[margin,width] duration-300 ease-in-out"
+        style={{
+          marginLeft: 'var(--sidebar-width-offset, 0)',
+          width: 'calc(100% - var(--sidebar-width-offset, 0))',
+          opacity: 1,
+        }}
+      >
+        <Suspense fallback={<WorkspaceHeaderSkeleton />}>
+          <WorkspaceHeader user={user} />
+        </Suspense>
+        <div className="flex-1 px-3 pb-2 overflow-hidden">
+          <main className="h-full w-full max-w-full border border-gray-30 rounded-md overflow-auto pl-3 pr-3">
+            {children}
+          </main>
+        </div>
+      </div>
+    </TenantLayoutClient>
   );
 }

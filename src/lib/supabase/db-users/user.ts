@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
-import { AuthUser, UserTeam } from '@/types/user';
+import { AuthUser, UserTeam } from '@/types/auth/user';
 
 // Cache for user data
 const CACHE_TTL = 300000;

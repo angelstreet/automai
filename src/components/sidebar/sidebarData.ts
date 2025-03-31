@@ -11,7 +11,7 @@ import {
   GitBranch,
 } from 'lucide-react';
 
-import { Role } from '@/types/user';
+import { Role } from '@/types/auth/user';
 
 export type SidebarData = {
   user: {

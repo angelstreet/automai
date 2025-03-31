@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { cookies } from 'next/headers';
 import userDB from '@/lib/supabase/db-users';
-import { AuthUser } from '@/types/user';
+import { AuthUser } from '@/types/auth/user';
 
 /**
  * Get the current session on the server

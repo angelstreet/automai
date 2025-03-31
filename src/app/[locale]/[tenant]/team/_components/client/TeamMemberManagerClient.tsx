@@ -9,9 +9,9 @@ import { ResourceType, usePermission } from '@/context/PermissionContext';
 import { useTeam, useTeamMember } from '@/context/TeamContext';
 import { TeamMemberResource } from '@/types/context/team';
 
-import AddMemberDialog from './AddMemberDialog';
-import EditPermissionsDialog from './EditPermissionsDialog';
-import { MembersTab } from './MembersTab';
+import TeamMemberAddDialogClient from './TeamMemberAddDialogClient';
+import TeamMemberPermissionsDialogClient from './TeamMemberPermissionsDialogClient';
+import { MembersTab } from './TeamMembersTabClient';
 
 interface TeamMemberManagerProps {
   teamId: string | null;

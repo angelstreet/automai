@@ -5,8 +5,8 @@ import React, { useState } from 'react';
 
 import { TeamMemberResource } from '@/types/context/team';
 
-import AddMemberDialog from './AddMemberDialog';
-import EditPermissionsDialog from './EditPermissionsDialog';
+import TeamMemberAddDialogClient from './TeamMemberAddDialogClient';
+import TeamMemberPermissionsDialogClient from './TeamMemberPermissionsDialogClient';
 
 interface MemberDialogControllerProps {
   teamId: string | null;

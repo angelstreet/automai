@@ -2,7 +2,7 @@ import { cookies } from 'next/headers';
 import { Suspense } from 'react';
 
 import { ThemeToggleStatic } from '@/components/theme/ThemeToggleStatic';
-import { User } from '@/types/user';
+import { User } from '@/types/auth/user';
 
 import { UserProfileDropdown } from './client/UserProfileDropdown';
 import { WorkspaceHeaderClient } from './client/WorkspaceHeaderClient';

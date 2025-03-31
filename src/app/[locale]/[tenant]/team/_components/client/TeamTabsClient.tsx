@@ -4,19 +4,22 @@ import { useSearchParams } from 'next/navigation';
 
 import { useTeam } from '@/context/TeamContext';
 import { TeamDetails } from '@/types/context/team';
-import { User } from '@/types/user';
+import { User } from '@/types/auth/user';
 
-import OverviewTabSkeleton from '../OverviewTabSkeleton';
+import TeamOverviewSkeleton from '../TeamOverviewSkeleton';
 import TeamOverview from '../TeamOverview';
 
-import { MembersTab } from './MembersTab';
+import { MembersTab } from './TeamMembersTabClient';
 
 interface TeamTabsProps {
-  unassignedResources: { repositories: any[] };
+  unassignedResources?: { repositories: any[] };
   user?: User | null;
 }
 
-export default function TeamTabs({ unassignedResources, user }: TeamTabsProps) {
+export default function TeamTabs({
+  unassignedResources = { repositories: [] },
+  user,
+}: TeamTabsProps) {
   const searchParams = useSearchParams();
   const activeTab = searchParams.get('tab') || 'overview';
 

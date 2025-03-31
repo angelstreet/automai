@@ -24,8 +24,7 @@ import {
 } from '@/components/shadcn/select';
 import { useToast } from '@/components/shadcn/use-toast';
 import { AddMemberDialogProps } from '@/types/context/team';
-
-import { addTeamMember } from '@/actions/teamMember';
+import { useAddTeamMember } from '@/hooks/teamMember';
 
 const AddMemberDialog = ({ open, onOpenChange, onAddMember, teamId }: AddMemberDialogProps) => {
   const t = useTranslations('team');
@@ -33,6 +32,9 @@ const AddMemberDialog = ({ open, onOpenChange, onAddMember, teamId }: AddMemberD
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('contributor');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Use the Add Team Member mutation hook
+  const addTeamMemberMutation = useAddTeamMember();
 
   const handleSubmit = async () => {
     if (!teamId) {
@@ -61,12 +63,12 @@ const AddMemberDialog = ({ open, onOpenChange, onAddMember, teamId }: AddMemberD
         // Use the prop callback if provided
         await onAddMember(email, role);
       } else {
-        // Otherwise use the default action
-        const result = await addTeamMember(teamId, email, role);
-
-        if (!result.success) {
-          throw new Error(result.error);
-        }
+        // Use the mutation hook instead of direct action
+        await addTeamMemberMutation.mutateAsync({
+          teamId,
+          profileId: email, // Using email as profileId for demonstration
+          role,
+        });
       }
 
       toast({

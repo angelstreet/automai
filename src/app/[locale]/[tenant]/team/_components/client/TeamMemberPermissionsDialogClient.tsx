@@ -38,12 +38,8 @@ import {
   PERMISSION_LABELS,
   ResourcePermissions,
 } from '@/types/context/team';
-
-import {
-  updateMemberPermissions,
-  getMemberPermissions,
-  applyRolePermissionTemplate,
-} from '@/actions/teamMember';
+import { useUpdateMemberRole } from '@/hooks/teamMember';
+import { useUserPermissions } from '@/hooks/permission';
 
 const EditPermissionsDialog = ({
   open,
@@ -62,6 +58,10 @@ const EditPermissionsDialog = ({
     initialPermissions || ROLE_TEMPLATES.contributor,
   );
 
+  // Use our React Query hooks
+  const updateRoleMutation = useUpdateMemberRole();
+  const { data: permissionsQuery } = useUserPermissions(teamId);
+
   // Fetch permissions when the dialog opens if not provided as a prop
   useEffect(() => {
     const fetchPermissions = async () => {
@@ -69,13 +69,13 @@ const EditPermissionsDialog = ({
 
       setIsLoadingPermissions(true);
       try {
-        const result = await getMemberPermissions(teamId, member.profile_id);
-        if (result.success && result.data) {
-          setPermissions(result.data);
+        // Use the data from our hook if available
+        if (permissionsQuery?.success && permissionsQuery?.data) {
+          setPermissions(permissionsQuery.data);
         } else {
           // Default to contributor if can't fetch permissions
           setPermissions(ROLE_TEMPLATES.contributor);
-          console.warn('Could not fetch permissions:', result.error);
+          console.warn('Could not fetch permissions');
         }
       } catch (error) {
         console.error('Error fetching permissions:', error);
@@ -86,7 +86,7 @@ const EditPermissionsDialog = ({
     };
 
     fetchPermissions();
-  }, [open, teamId, member, initialPermissions]);
+  }, [open, teamId, member, initialPermissions, permissionsQuery]);
 
   const handlePermissionChange = (resource, permission, checked) => {
     setPermissions({
@@ -111,11 +111,13 @@ const EditPermissionsDialog = ({
       if (teamId && member?.profile_id) {
         try {
           setIsLoading(true);
-          const result = await applyRolePermissionTemplate(teamId, member.profile_id, role);
 
-          if (!result.success) {
-            throw new Error(result.error);
-          }
+          // Use our mutation hook
+          await updateRoleMutation.mutateAsync({
+            teamId,
+            profileId: member.profile_id,
+            role,
+          });
 
           toast({
             title: t('membersTab.editPermissions.roleApplied'),
@@ -151,12 +153,12 @@ const EditPermissionsDialog = ({
       if (onSavePermissions) {
         await onSavePermissions(member, permissions);
       } else {
-        // Otherwise use the default action
-        const result = await updateMemberPermissions(teamId, member.profile_id, permissions);
-
-        if (!result.success) {
-          throw new Error(result.error);
-        }
+        // Use our mutation hook for updating the role
+        await updateRoleMutation.mutateAsync({
+          teamId,
+          profileId: member.profile_id,
+          role: roleTemplate !== 'custom' ? roleTemplate : 'contributor', // Default to contributor for custom permissions
+        });
       }
 
       toast({

@@ -1,4 +1,4 @@
-import { User } from '@/types/user';
+import { User } from '@/types/auth/user';
 
 import { AppSidebarClient } from '@/components/sidebar/AppSidebarClient';
 

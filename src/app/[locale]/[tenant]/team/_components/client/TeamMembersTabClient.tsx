@@ -26,13 +26,12 @@ import {
 import { ResourceType, usePermission } from '@/context/PermissionContext';
 import { useTeam } from '@/context/TeamContext';
 import { TeamMemberResource, TeamMemberDetails } from '@/types/context/team';
-import { User } from '@/types/user';
+import { User } from '@/types/auth/user';
+import { useRemoveTeamMember } from '@/hooks/teamMember';
 
-import MembersTabSkeleton from '../MembersTabSkeleton';
+import TeamMembersTableSkeleton from '../TeamMembersTableSkeleton';
 
-import { MemberDialogProvider, useMemberDialog } from './MemberDialogController';
-
-import { removeTeamMember } from '@/actions/teamMember';
+import { MemberDialogProvider, useMemberDialog } from './TeamMemberDialogClient';
 
 interface MembersTabProps {
   teamId: string | null;
@@ -241,6 +240,9 @@ export function MembersTab({ teamId, userRole, subscriptionTier, user }: Members
   const [searchQuery, setSearchQuery] = useState('');
   const [isRemoving, setIsRemoving] = useState(false);
 
+  // Use our new React Query hook for removing team members
+  const removeTeamMemberMutation = useRemoveTeamMember();
+
   useEffect(() => {
     const fetchMembers = async () => {
       if (!teamId) {
@@ -270,17 +272,12 @@ export function MembersTab({ teamId, userRole, subscriptionTier, user }: Members
 
     try {
       setIsRemoving(true);
-      const result = await removeTeamMember(teamId, profileId);
+      // Use the mutation hook instead of direct action call
+      await removeTeamMemberMutation.mutateAsync({ teamId, profileId });
 
-      if (result.success) {
-        // Invalidate the cache for this team
-        invalidateTeamMembersCache(teamId);
-
-        // Remove from local state
-        setMembers((current) => current.filter((member) => member.profile_id !== profileId));
-      } else {
-        console.error('Failed to remove team member:', result.error);
-      }
+      // The mutation will handle invalidation through its onSuccess callback
+      // But we still update the local state for immediate UI feedback
+      setMembers((current) => current.filter((member) => member.profile_id !== profileId));
     } catch (error) {
       console.error('Error removing team member:', error);
     } finally {

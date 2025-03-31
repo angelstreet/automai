@@ -15,7 +15,7 @@ import {
 } from '@/components/shadcn/select';
 import { Switch } from '@/components/shadcn/switch';
 import { CICDProviderType } from '@/types/context/cicd';
-import { DeploymentData } from '@/types/context/deployment';
+import { DeploymentData } from '@/types/core/deployment';
 
 interface DeploymentWizardStep5Props {
   data: DeploymentData;

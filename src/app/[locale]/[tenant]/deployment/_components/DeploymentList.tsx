@@ -20,7 +20,7 @@ import {
 } from '@/components/shadcn/alert-dialog';
 import { Button } from '@/components/shadcn/button';
 import { useToast } from '@/components/shadcn/use-toast';
-import { Deployment, Repository } from '@/types/context/deployment';
+import { Deployment, Repository } from '@/types/core/deployment';
 import { getFormattedTime } from '@/utils/deployment';
 
 import StatusBadge from './StatusBadge';

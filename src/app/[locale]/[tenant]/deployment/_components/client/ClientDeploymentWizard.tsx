@@ -8,8 +8,9 @@ import { saveDeploymentConfiguration, startDeployment } from '@/app/actions/depl
 import { toast } from '@/components/shadcn/use-toast';
 import { useUser } from '@/context';
 import { CICDProviderType } from '@/types/context/cicd';
-import { DeploymentData, DeploymentFormData, Host as HostType } from '@/types/context/deployment';
-import { Host as SystemHost } from '@/types/context/host';
+import { DeploymentData, DeploymentFormData } from '@/types/core/deployment';
+import { Host as HostType } from '@/types/core/host';
+import { Host as SystemHost } from '@/types/core/host';
 
 import DeploymentWizardStep1 from '../DeploymentWizardStep1';
 import DeploymentWizardStep2 from '../DeploymentWizardStep2';

@@ -2,7 +2,7 @@ import { Building2 } from 'lucide-react';
 import { Suspense } from 'react';
 
 import type { Team } from '@/types/context/team';
-import type { User } from '@/types/user';
+import { User } from '@/types/auth/user';
 
 import TeamSwitcherClient from '@/components/team/TeamSwitcherClient';
 

@@ -58,6 +58,59 @@ export type TeamMembersResult = {
 };
 
 /**
+ * Helper function to create a plain serializable team object
+ * This ensures we only return primitive types that can be safely serialized
+ */
+function createSerializableTeam(rawTeam: any): Team {
+  // Log the input object
+  console.log(`[@db:teams:createSerializableTeam] Input object type:`, typeof rawTeam);
+  console.log(
+    `[@db:teams:createSerializableTeam] Input constructor:`,
+    rawTeam?.constructor?.name || 'unknown',
+  );
+  console.log(
+    `[@db:teams:createSerializableTeam] Input prototype:`,
+    Object.getPrototypeOf(rawTeam)?.constructor?.name || 'unknown',
+  );
+  console.log(`[@db:teams:createSerializableTeam] Input keys:`, Object.keys(rawTeam || {}));
+
+  // Log any suspicious properties that might cause serialization issues
+  for (const key in rawTeam) {
+    const value = rawTeam[key];
+    if (value && typeof value === 'object' && !(value instanceof Date) && !Array.isArray(value)) {
+      console.log(
+        `[@db:teams:createSerializableTeam] Complex property "${key}" type:`,
+        typeof value,
+      );
+      console.log(
+        `[@db:teams:createSerializableTeam] Complex property "${key}" constructor:`,
+        value?.constructor?.name || 'unknown',
+      );
+    }
+  }
+
+  const serialized = {
+    id: rawTeam?.id || '',
+    name: rawTeam?.name || '',
+    tenant_id: rawTeam?.tenant_id || '',
+    subscription_tier: rawTeam?.subscription_tier || '',
+    organization_id: rawTeam?.organization_id || null,
+    is_default: Boolean(rawTeam?.is_default),
+    created_at: rawTeam?.created_at || '',
+    updated_at: rawTeam?.updated_at || '',
+  };
+
+  // Log the output object
+  console.log(`[@db:teams:createSerializableTeam] Output object:`, serialized);
+  console.log(
+    `[@db:teams:createSerializableTeam] JSON test:`,
+    JSON.stringify(serialized) ? 'serializable' : 'not serializable',
+  );
+
+  return serialized;
+}
+
+/**
  * Create a new team
  */
 export async function createTeam(
@@ -104,9 +157,24 @@ export async function getTeams(tenantId: string, cookieStore?: any): Promise<Tea
 
     if (error) throw error;
 
+    // If no data, return early
+    if (!data || data.length === 0) {
+      return {
+        success: true,
+        data: [],
+      };
+    }
+
+    // Create an array of plain serializable objects using our helper
+    const plainTeams = data.map((rawTeam) => createSerializableTeam(rawTeam));
+
+    console.log(
+      `[@db:teams:getTeams] Constructed ${plainTeams.length} serializable team objects for tenant: ${tenantId}`,
+    );
+
     return {
       success: true,
-      data,
+      data: plainTeams,
     };
   } catch (error) {
     console.error('[@db:teams:getTeams] Error fetching teams:', error);
@@ -127,6 +195,8 @@ export async function getUserTeams(
   try {
     // Get user's teams (both owned and as a member)
     const supabase = await createClient(cookieStore);
+    console.log(`[@db:teams:getUserTeams] Fetching teams for user: ${profileId}`);
+
     const { data, error } = await supabase
       .from('teams')
       .select('*, team_members!inner(profile_id)')
@@ -134,9 +204,65 @@ export async function getUserTeams(
 
     if (error) throw error;
 
+    // If no data, return early
+    if (!data || data.length === 0) {
+      console.log(`[@db:teams:getUserTeams] No teams found for user: ${profileId}`);
+      return {
+        success: true,
+        data: [],
+      };
+    }
+
+    // Log the raw data from Supabase
+    console.log(`[@db:teams:getUserTeams] Raw data from Supabase, length:`, data.length);
+    if (data.length > 0) {
+      const firstTeam = data[0];
+      console.log(`[@db:teams:getUserTeams] First team type:`, typeof firstTeam);
+      console.log(
+        `[@db:teams:getUserTeams] First team constructor:`,
+        firstTeam?.constructor?.name || 'unknown',
+      );
+      console.log(
+        `[@db:teams:getUserTeams] First team prototype:`,
+        Object.getPrototypeOf(firstTeam)?.constructor?.name || 'unknown',
+      );
+      console.log(`[@db:teams:getUserTeams] First team keys:`, Object.keys(firstTeam || {}));
+
+      // Check serialization of raw data
+      try {
+        const jsonTest = JSON.stringify(firstTeam);
+        console.log(
+          `[@db:teams:getUserTeams] Direct JSON test on first team: Success, length:`,
+          jsonTest.length,
+        );
+      } catch (err) {
+        console.error(`[@db:teams:getUserTeams] Direct JSON test on first team failed:`, err);
+      }
+    }
+
+    // Create an array of plain serializable objects using our helper
+    const plainTeams = data.map((rawTeam) => createSerializableTeam(rawTeam));
+
+    // Test serialization of processed data
+    if (plainTeams.length > 0) {
+      try {
+        const jsonTest = JSON.stringify(plainTeams[0]);
+        console.log(
+          `[@db:teams:getUserTeams] Helper JSON test on first team: Success, length:`,
+          jsonTest.length,
+        );
+      } catch (err) {
+        console.error(`[@db:teams:getUserTeams] Helper JSON test on first team failed:`, err);
+      }
+    }
+
+    console.log(
+      `[@db:teams:getUserTeams] Constructed ${plainTeams.length} serializable team objects for user: ${profileId}`,
+    );
+
     return {
       success: true,
-      data,
+      data: plainTeams,
     };
   } catch (error) {
     console.error('[@db:teams:getUserTeams] Error fetching user teams:', error);
@@ -153,13 +279,48 @@ export async function getUserTeams(
 export async function getTeamById(teamId: string, cookieStore?: any): Promise<TeamResult> {
   try {
     const supabase = await createClient(cookieStore);
+    console.log(`[@db:teams:getTeamById] Fetching team with ID: ${teamId}`);
+
     const { data, error } = await supabase.from('teams').select('*').eq('id', teamId).single();
 
     if (error) throw error;
 
+    // Log the raw data from Supabase
+    console.log(`[@db:teams:getTeamById] Raw data from Supabase type:`, typeof data);
+    console.log(
+      `[@db:teams:getTeamById] Raw data constructor:`,
+      data?.constructor?.name || 'unknown',
+    );
+    console.log(
+      `[@db:teams:getTeamById] Raw data prototype:`,
+      Object.getPrototypeOf(data)?.constructor?.name || 'unknown',
+    );
+    console.log(`[@db:teams:getTeamById] Raw data keys:`, Object.keys(data || {}));
+
+    // Check serialization of raw data
+    try {
+      const jsonTest = JSON.stringify(data);
+      console.log(`[@db:teams:getTeamById] Direct JSON test: Success, length:`, jsonTest.length);
+    } catch (err) {
+      console.error(`[@db:teams:getTeamById] Direct JSON test failed:`, err);
+    }
+
+    // Create a plain serializable object using our helper
+    const plainTeam = createSerializableTeam(data);
+
+    // Test serialization of processed data
+    try {
+      const jsonTest = JSON.stringify(plainTeam);
+      console.log(`[@db:teams:getTeamById] Helper JSON test: Success, length:`, jsonTest.length);
+    } catch (err) {
+      console.error(`[@db:teams:getTeamById] Helper JSON test failed:`, err);
+    }
+
+    console.log(`[@db:teams:getTeamById] Constructed serializable team object for id: ${teamId}`);
+
     return {
       success: true,
-      data,
+      data: plainTeam,
     };
   } catch (error) {
     console.error('[@db:teams:getTeamById] Error fetching team:', error);
@@ -366,11 +527,52 @@ export async function getUserActiveTeam(userId: string, cookieStore?: any): Prom
     // Since the stored procedure doesn't exist, use a direct query to get the user's teams
     const result = await getUserTeams(userId, cookieStore);
 
+    console.log(`[@db:teams:getUserActiveTeam] Result from getUserTeams type:`, typeof result);
+    console.log(`[@db:teams:getUserActiveTeam] Success:`, result.success);
+
     if (result.success && result.data && result.data.length > 0) {
-      // Get the first team as the active team
+      // Extract the first team
+      const rawTeam = result.data[0];
+
+      console.log(`[@db:teams:getUserActiveTeam] Raw team object type:`, typeof rawTeam);
+      console.log(
+        `[@db:teams:getUserActiveTeam] Raw team object constructor:`,
+        rawTeam?.constructor?.name || 'unknown',
+      );
+
+      // Try direct JSON serialization first to see if it works without our helper
+      try {
+        const jsonTest = JSON.stringify(rawTeam);
+        console.log(
+          `[@db:teams:getUserActiveTeam] Direct JSON test: Success, length:`,
+          jsonTest.length,
+        );
+      } catch (err) {
+        console.error(`[@db:teams:getUserActiveTeam] Direct JSON test failed:`, err);
+      }
+
+      // Create a plain serializable object using our helper
+      const plainTeam = createSerializableTeam(rawTeam);
+
+      // Try JSON serialization again after our helper
+      try {
+        const jsonTest = JSON.stringify(plainTeam);
+        console.log(
+          `[@db:teams:getUserActiveTeam] Helper JSON test: Success, length:`,
+          jsonTest.length,
+        );
+      } catch (err) {
+        console.error(`[@db:teams:getUserActiveTeam] Helper JSON test failed:`, err);
+      }
+
+      console.log(
+        `[@db:teams:getUserActiveTeam] Constructed serializable team object for user: ${userId}`,
+      );
+
+      // Return the plain object
       return {
         success: true,
-        data: result.data[0],
+        data: plainTeam,
       };
     }
 

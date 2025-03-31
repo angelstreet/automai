@@ -15,7 +15,7 @@ import {
 import { useToast } from '@/components/shadcn/use-toast';
 import { PermissionAwareActionsWrapper } from '@/components/team/PermissionAwareActionsWrapper';
 import { usePermission } from '@/context/PermissionContext';
-import { Deployment } from '@/types/context/deployment';
+import { Deployment } from '@/types/core/deployment';
 
 export default function DeploymentList() {
   const router = useRouter();

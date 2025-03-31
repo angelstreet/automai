@@ -6,7 +6,7 @@ import React, { useState } from 'react';
 import { startDeployment } from '@/app/actions/deploymentWizard';
 import { Button } from '@/components/shadcn/button';
 import { useToast } from '@/components/shadcn/use-toast';
-import { Deployment } from '@/types/context/deployment';
+import { Deployment } from '@/types/core/deployment';
 
 interface ClientDeploymentRunActionProps {
   deployment: Deployment;

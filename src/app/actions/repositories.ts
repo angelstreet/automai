@@ -3,6 +3,12 @@
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 
+import { getUser } from '@/app/actions/user';
+import {
+  gitProvider as dbGitProvider,
+  GitProvider as DbGitProvider,
+} from '@/lib/supabase/db-repositories/db-git-provider';
+import { repository as dbRepository } from '@/lib/supabase/db-repositories/db-repository';
 import {
   Repository,
   GitProvider,
@@ -14,14 +20,8 @@ import {
   RepositoryFilter,
   gitProviderCreateSchema,
   testRepositorySchema,
-} from '@/app/[locale]/[tenant]/repositories/types';
-import { getUser } from '@/app/actions/user';
-import {
-  gitProvider as dbGitProvider,
-  GitProvider as DbGitProvider,
-} from '@/lib/supabase/db-repositories/db-git-provider';
-import { repository as dbRepository } from '@/lib/supabase/db-repositories/db-repository';
-import { AuthUser } from '@/types/user';
+} from '@/types/context/repository';
+import { AuthUser } from '@/types/auth/user';
 
 /**
  * Convert DB repository to our Repository type

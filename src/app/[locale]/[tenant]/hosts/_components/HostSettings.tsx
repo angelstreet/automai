@@ -11,7 +11,7 @@ import {
 import { Input } from '@/components/shadcn/input';
 import { Label } from '@/components/shadcn/label';
 import { Textarea } from '@/components/shadcn/textarea';
-import { VMConfig, VMType } from '@/types/context/host';
+import { VMConfig, VMType } from '@/types/context/host-new';
 
 interface VMSettingsProps {
   config: VMConfig;

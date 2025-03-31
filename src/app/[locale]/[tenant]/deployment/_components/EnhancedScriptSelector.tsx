@@ -5,7 +5,8 @@ import React, { useState } from 'react';
 
 import { Input } from '@/components/shadcn/input';
 
-import { Script, Repository } from '@/types/context/deployment';
+import { Script } from '@/types/context/deployment';
+import { Repository } from '@/types/core/deployment';
 
 interface EnhancedScriptSelectorProps {
   selectedRepository?: Repository;

@@ -1,16 +1,15 @@
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
-import { getUnassignedResources } from '@/app/actions/team';
 import { getUser } from '@/app/actions/user';
 import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 import { mapAuthUserToUser } from '@/types/user';
 
-import OverviewTabSkeleton from './_components/OverviewTabSkeleton';
 import TeamHeader from './_components/TeamHeader';
+import TeamOverviewSkeleton from './_components/TeamOverviewSkeleton';
 import TeamSkeleton from './_components/TeamSkeleton';
-import TeamActions from './_components/client/TeamActions';
-import TeamTabs from './_components/client/TeamTabs';
+import TeamActionsClient from './_components/client/TeamActionsClient';
+import TeamTabsClient from './_components/client/TeamTabsClient';
 
 export default async function TeamPage() {
   const t = await getTranslations('team');
@@ -19,20 +18,17 @@ export default async function TeamPage() {
   const authUser = await getUser();
   const user = authUser ? mapAuthUserToUser(authUser) : null;
 
-  // Only fetch unassigned resources - team details come from context
-  const unassignedResources = await getUnassignedResources();
-
   return (
     <FeaturePageContainer
       title={t('title')}
       description={t('description')}
-      actions={<TeamActions />}
+      actions={<TeamActionsClient />}
     >
       <Suspense fallback={<TeamSkeleton />}>
         {/* TeamHeader gets details from TeamContext */}
         <TeamHeader user={user} />
-        <Suspense fallback={<OverviewTabSkeleton />}>
-          <TeamTabs unassignedResources={unassignedResources} user={user} />
+        <Suspense fallback={<TeamOverviewSkeleton />}>
+          <TeamTabsClient user={user} />
         </Suspense>
       </Suspense>
     </FeaturePageContainer>

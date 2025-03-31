@@ -1,7 +1,6 @@
 'use client';
 
 import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
-import { useToast } from '@/components/shadcn/use-toast';
 
 import {
   ResourceType,
@@ -17,10 +16,13 @@ import {
   setUserActiveTeam as saveUserActiveTeamToServer,
   getUserActiveTeam as fetchUserActiveTeam,
   getTeamMembers as getTeamMembersAction,
+  createTeam as createTeamAction,
+  updateTeam as updateTeamAction,
+  deleteTeam as deleteTeamAction,
+  getTeamDetails as getTeamDetailsAction,
+  getUnassignedResources as getUnassignedResourcesAction,
+  assignResourceToTeam as assignResourceToTeamAction,
 } from '@/app/actions/team';
-import { useUser } from '@/context/UserContext';
-import type { TeamMember } from '@/types/context/team';
-
 import {
   addTeamMember,
   updateMemberPermissions,
@@ -28,30 +30,68 @@ import {
   getMemberPermissions,
   applyRolePermissionTemplate,
 } from '@/app/actions/teamMember';
+import { useToast } from '@/components/shadcn/use-toast';
+import { useUser } from '@/context/UserContext';
 import { ResourcePermissions } from '@/types/context/team';
+import type { TeamMember, TeamCreateInput, TeamUpdateInput } from '@/types/context/team';
 
 interface TeamContextState {
   teams: Team[];
   activeTeam: Team | null;
   permissions: PermissionMatrix[];
   teamMembers: Record<string, TeamMember[]>;
+  teamDetails: any | null;
   loading: boolean;
   membersLoading: boolean;
   error: string | null;
+
+  // Team management
   switchTeam: (teamId: string) => Promise<boolean>;
   refreshTeams: () => Promise<void>;
+  createTeam: (data: TeamCreateInput) => Promise<{ success: boolean; data?: Team; error?: string }>;
+  updateTeam: (
+    teamId: string,
+    data: TeamUpdateInput,
+  ) => Promise<{ success: boolean; data?: Team; error?: string }>;
+  deleteTeam: (teamId: string) => Promise<{ success: boolean; error?: string }>;
+  getTeamById: (teamId: string) => Promise<Team | null>;
+  getTeamDetails: (userId?: string) => Promise<any>;
+  getUnassignedResources: () => Promise<any>;
+  assignResourceToTeam: (resourceId: string, resourceType: string, teamId: string) => Promise<any>;
+
+  // Permission management
   checkPermission: (
     resourceType: ResourceType,
     operation: Operation,
     creatorId?: string,
   ) => Promise<boolean>;
+
+  // Team member management
   getTeamMembers: (teamId: string) => Promise<TeamMember[]>;
   invalidateTeamMembersCache: (teamId: string) => void;
-}
-
-interface UseTeamMemberOptions {
-  teamId: string | null;
-  onSuccess?: () => void;
+  addTeamMember: (
+    teamId: string,
+    email: string,
+    role: string,
+  ) => Promise<{ success: boolean; error?: string; data?: any }>;
+  removeTeamMember: (
+    teamId: string,
+    profileId: string,
+  ) => Promise<{ success: boolean; error?: string }>;
+  updateMemberPermissions: (
+    teamId: string,
+    profileId: string,
+    permissions: ResourcePermissions,
+  ) => Promise<{ success: boolean; error?: string }>;
+  applyRoleTemplate: (
+    teamId: string,
+    profileId: string,
+    role: string,
+  ) => Promise<{ success: boolean; error?: string }>;
+  getMemberPermissions: (
+    teamId: string,
+    profileId: string,
+  ) => Promise<{ success: boolean; error?: string; data?: ResourcePermissions }>;
 }
 
 const defaultState: TeamContextState = {
@@ -59,14 +99,27 @@ const defaultState: TeamContextState = {
   activeTeam: null,
   permissions: [],
   teamMembers: {},
+  teamDetails: null,
   loading: true,
   membersLoading: false,
   error: null,
   switchTeam: async () => false,
   refreshTeams: async () => {},
+  createTeam: async () => ({ success: false }),
+  updateTeam: async () => ({ success: false }),
+  deleteTeam: async () => ({ success: false }),
+  getTeamById: async () => null,
+  getTeamDetails: async () => null,
+  getUnassignedResources: async () => ({}),
+  assignResourceToTeam: async () => ({ success: false }),
   checkPermission: async () => false,
   getTeamMembers: async () => [],
   invalidateTeamMembersCache: () => {},
+  addTeamMember: async () => ({ success: false }),
+  removeTeamMember: async () => ({ success: false }),
+  updateMemberPermissions: async () => ({ success: false }),
+  applyRoleTemplate: async () => ({ success: false }),
+  getMemberPermissions: async () => ({ success: false }),
 };
 
 const TeamContext = createContext<TeamContextState>(defaultState);
@@ -83,10 +136,12 @@ export function TeamProvider({
   initialActiveTeam = null,
 }: TeamProviderProps) {
   const { user, isLoading: userLoading } = useUser();
+  const { toast } = useToast();
   const [teams, setTeams] = useState<Team[]>(initialTeams);
   const [activeTeam, setActiveTeam] = useState<Team | null>(initialActiveTeam);
   const [permissions, setPermissions] = useState<PermissionMatrix[]>([]);
   const [teamMembers, setTeamMembers] = useState<Record<string, TeamMember[]>>({});
+  const [teamDetails, setTeamDetails] = useState<any | null>(null);
   const [loading, setLoading] = useState(!initialTeams.length && !initialActiveTeam);
   const [membersLoading, setMembersLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -94,42 +149,10 @@ export function TeamProvider({
   // Add loading timestamps to prevent frequent refetching
   const lastTeamLoadTime = useRef<Record<string, number>>({});
   const lastMembersLoadTime = useRef<Record<string, number>>({});
+  const lastTeamDetailsTime = useRef<Record<string, number>>({});
 
   // Only load teams if we don't have initialTeams and user is loaded
-  useEffect(() => {
-    if (userLoading) return;
-
-    // Only fetch if we don't have initial data and user exists
-    if (user && !initialTeams.length) {
-      loadTeams();
-    } else if (!user) {
-      // Reset state if no user
-      setTeams([]);
-      setActiveTeam(null);
-      setPermissions([]);
-      setTeamMembers({});
-      setLoading(false);
-    }
-  }, [user, userLoading, initialTeams.length]);
-
-  // Load active team only if needed
-  useEffect(() => {
-    if (!user || teams.length === 0) return;
-
-    // Skip loading if we already have an active team
-    if (activeTeam) return;
-
-    loadActiveTeam();
-  }, [user, teams, activeTeam]);
-
-  // Load team permissions when active team changes
-  useEffect(() => {
-    if (!user || !activeTeam) return;
-
-    loadPermissions();
-  }, [user, activeTeam]);
-
-  const loadTeams = async () => {
+  const loadTeams = useCallback(async () => {
     if (!user) return;
 
     // Skip if we've loaded teams in the last 30 seconds
@@ -160,9 +183,9 @@ export function TeamProvider({
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, teams.length]);
 
-  const loadActiveTeam = async () => {
+  const loadActiveTeam = useCallback(async () => {
     if (!user) return;
 
     // Skip if we've loaded the active team in the last 30 seconds
@@ -201,9 +224,9 @@ export function TeamProvider({
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, teams, activeTeam]);
 
-  const loadPermissions = async () => {
+  const loadPermissions = useCallback(async () => {
     if (!user || !activeTeam) return;
 
     setLoading(true);
@@ -222,7 +245,43 @@ export function TeamProvider({
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, activeTeam]);
+
+  useEffect(() => {
+    if (userLoading) return;
+
+    // Only fetch if we don't have initial data and user exists
+    if (user && !initialTeams.length) {
+      loadTeams();
+    } else if (!user) {
+      // Reset state if no user
+      setTeams([]);
+      setActiveTeam(null);
+      setPermissions([]);
+      setTeamMembers({});
+      setTeamDetails(null);
+      setLoading(false);
+    }
+  }, [user, userLoading, initialTeams.length, loadTeams]);
+
+  // Load active team only if needed
+  useEffect(() => {
+    if (!user || teams.length === 0) return;
+
+    // Skip loading if we already have an active team
+    if (activeTeam) return;
+
+    loadActiveTeam();
+  }, [user, teams, activeTeam, loadActiveTeam]);
+
+  // Load team permissions when active team changes
+  useEffect(() => {
+    if (!user || !activeTeam) return;
+
+    loadPermissions();
+  }, [user, activeTeam, loadPermissions]);
+
+  // Team Management Functions
 
   const switchTeam = async (teamId: string): Promise<boolean> => {
     if (!user) return false;
@@ -265,6 +324,203 @@ export function TeamProvider({
     await loadTeams();
     if (teams.length > 0 && !activeTeam) {
       await loadActiveTeam();
+    }
+  };
+
+  const getTeamByIdFromContext = async (teamId: string): Promise<Team | null> => {
+    try {
+      const result = await getTeamById(teamId);
+      if (result.success && result.data) {
+        return result.data;
+      }
+      return null;
+    } catch (error) {
+      console.error('[@context:team] Error fetching team:', error);
+      return null;
+    }
+  };
+
+  const createTeamInContext = async (data: TeamCreateInput) => {
+    try {
+      const result = await createTeamAction(data);
+      if (result.success && result.data) {
+        // Update teams list in state
+        setTeams((prev) => [...prev, result.data!]);
+        // Invalidate cache
+        lastTeamLoadTime.current.teams = 0;
+
+        toast({
+          title: 'Success',
+          description: 'Team created successfully',
+        });
+
+        return result;
+      }
+
+      toast({
+        title: 'Error',
+        description: result.error || 'Failed to create team',
+        variant: 'destructive',
+      });
+
+      return result;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('[@context:team] Error creating team:', error);
+
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+
+      return { success: false, error: errorMessage };
+    }
+  };
+
+  const updateTeamInContext = async (teamId: string, data: TeamUpdateInput) => {
+    try {
+      const result = await updateTeamAction(teamId, data);
+      if (result.success && result.data) {
+        // Update teams list in state
+        setTeams((prev) => prev.map((team) => (team.id === teamId ? result.data! : team)));
+
+        // If active team was updated, update it too
+        if (activeTeam && activeTeam.id === teamId) {
+          setActiveTeam(result.data);
+        }
+
+        // Invalidate cache
+        lastTeamLoadTime.current.teams = 0;
+
+        toast({
+          title: 'Success',
+          description: 'Team updated successfully',
+        });
+
+        return result;
+      }
+
+      toast({
+        title: 'Error',
+        description: result.error || 'Failed to update team',
+        variant: 'destructive',
+      });
+
+      return result;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('[@context:team] Error updating team:', error);
+
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+
+      return { success: false, error: errorMessage };
+    }
+  };
+
+  const deleteTeamInContext = async (teamId: string) => {
+    try {
+      const result = await deleteTeamAction(teamId);
+      if (result.success) {
+        // Remove team from state
+        setTeams((prev) => prev.filter((team) => team.id !== teamId));
+
+        // If active team was deleted, reset active team
+        if (activeTeam && activeTeam.id === teamId) {
+          setActiveTeam(null);
+        }
+
+        // Invalidate cache
+        lastTeamLoadTime.current.teams = 0;
+
+        toast({
+          title: 'Success',
+          description: 'Team deleted successfully',
+        });
+
+        return result;
+      }
+
+      toast({
+        title: 'Error',
+        description: result.error || 'Failed to delete team',
+        variant: 'destructive',
+      });
+
+      return result;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('[@context:team] Error deleting team:', error);
+
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+
+      return { success: false, error: errorMessage };
+    }
+  };
+
+  const getTeamDetailsFromContext = async (userId?: string) => {
+    const cacheKey = userId || 'current';
+    const now = Date.now();
+
+    // Return cached data if available and still fresh (less than 1 minute old)
+    if (
+      teamDetails &&
+      lastTeamDetailsTime.current[cacheKey] &&
+      now - lastTeamDetailsTime.current[cacheKey] < 60000
+    ) {
+      console.log('[@context:team] Using cached team details (loaded within last 60s)');
+      return teamDetails;
+    }
+
+    try {
+      setLoading(true);
+      const details = await getTeamDetailsAction(userId);
+      setTeamDetails(details);
+      lastTeamDetailsTime.current[cacheKey] = now;
+      return details;
+    } catch (error) {
+      console.error('[@context:team] Error fetching team details:', error);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getUnassignedResourcesFromContext = async () => {
+    try {
+      return await getUnassignedResourcesAction();
+    } catch (error) {
+      console.error('[@context:team] Error fetching unassigned resources:', error);
+      return { repositories: [] };
+    }
+  };
+
+  const assignResourceToTeamFromContext = async (
+    resourceId: string,
+    resourceType: string,
+    teamId: string,
+  ) => {
+    try {
+      return await assignResourceToTeamAction(resourceId, resourceType, teamId);
+    } catch (error) {
+      console.error('[@context:team] Error assigning resource to team:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+
+      return { success: false, error: errorMessage };
     }
   };
 
@@ -348,257 +604,534 @@ export function TeamProvider({
     }
   }, []);
 
+  // Team member functions
+
+  const addTeamMemberToContext = async (teamId: string, email: string, role: string) => {
+    try {
+      const result = await addTeamMember(teamId, email, role);
+
+      if (result.success) {
+        // Invalidate team members cache for this team
+        invalidateTeamMembersCache(teamId);
+
+        toast({
+          title: 'Success',
+          description: 'Team member added successfully',
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: result.error || 'Failed to add team member',
+          variant: 'destructive',
+        });
+      }
+
+      return result;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('[@context:team] Error adding team member:', error);
+
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+
+      return { success: false, error: errorMessage };
+    }
+  };
+
+  const removeTeamMemberFromContext = async (teamId: string, profileId: string) => {
+    try {
+      const result = await removeTeamMember(teamId, profileId);
+
+      if (result.success) {
+        // Invalidate team members cache for this team
+        invalidateTeamMembersCache(teamId);
+
+        toast({
+          title: 'Success',
+          description: 'Team member removed successfully',
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: result.error || 'Failed to remove team member',
+          variant: 'destructive',
+        });
+      }
+
+      return result;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('[@context:team] Error removing team member:', error);
+
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+
+      return { success: false, error: errorMessage };
+    }
+  };
+
+  const updateMemberPermissionsInContext = async (
+    teamId: string,
+    profileId: string,
+    permissions: ResourcePermissions,
+  ) => {
+    try {
+      const result = await updateMemberPermissions(teamId, profileId, permissions);
+
+      if (result.success) {
+        // Invalidate team members cache for this team
+        invalidateTeamMembersCache(teamId);
+
+        toast({
+          title: 'Success',
+          description: 'Permissions updated successfully',
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: result.error || 'Failed to update permissions',
+          variant: 'destructive',
+        });
+      }
+
+      return result;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('[@context:team] Error updating member permissions:', error);
+
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+
+      return { success: false, error: errorMessage };
+    }
+  };
+
+  const applyRoleTemplateInContext = async (teamId: string, profileId: string, role: string) => {
+    try {
+      const result = await applyRolePermissionTemplate(teamId, profileId, role);
+
+      if (result.success) {
+        // Invalidate team members cache for this team
+        invalidateTeamMembersCache(teamId);
+
+        toast({
+          title: 'Success',
+          description: 'Role template applied successfully',
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: result.error || 'Failed to apply role template',
+          variant: 'destructive',
+        });
+      }
+
+      return result;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('[@context:team] Error applying role template:', error);
+
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+
+      return { success: false, error: errorMessage };
+    }
+  };
+
+  const getMemberPermissionsFromContext = async (teamId: string, profileId: string) => {
+    try {
+      return await getMemberPermissions(teamId, profileId);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('[@context:team] Error getting member permissions:', error);
+      return { success: false, error: errorMessage };
+    }
+  };
+
   const value = {
     teams,
     activeTeam,
     permissions,
     teamMembers,
+    teamDetails,
     loading,
     membersLoading,
     error,
+
+    // Team management
     switchTeam,
     refreshTeams,
+    createTeam: createTeamInContext,
+    updateTeam: updateTeamInContext,
+    deleteTeam: deleteTeamInContext,
+    getTeamById: getTeamByIdFromContext,
+    getTeamDetails: getTeamDetailsFromContext,
+    getUnassignedResources: getUnassignedResourcesFromContext,
+    assignResourceToTeam: assignResourceToTeamFromContext,
+
+    // Permission management
     checkPermission: checkTeamPermission,
+
+    // Team member management
     getTeamMembers: getTeamMembersFromContext,
     invalidateTeamMembersCache,
+    addTeamMember: addTeamMemberToContext,
+    removeTeamMember: removeTeamMemberFromContext,
+    updateMemberPermissions: updateMemberPermissionsInContext,
+    applyRoleTemplate: applyRoleTemplateInContext,
+    getMemberPermissions: getMemberPermissionsFromContext,
   };
 
   return <TeamContext.Provider value={value}>{children}</TeamContext.Provider>;
 }
 
+// @ts-ignore - Ignore fast refresh warning
 export function useTeam() {
   const context = useContext(TeamContext);
   if (!context) throw new Error('useTeam must be used within a TeamProvider');
   return context;
 }
 
+// @ts-ignore - Ignore fast refresh warning
 export function usePermission() {
   const { checkPermission } = useContext(TeamContext);
   return { checkPermission };
 }
 
-// useTeamMember
-export function useTeamMember({ teamId, onSuccess }: UseTeamMemberOptions) {
-  const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
+/**
+ * Hook for team creation functionality
+ */
+// @ts-ignore - Ignore fast refresh warning
+export function useTeamCreation() {
+  const { createTeam, loading } = useTeam();
   const [error, setError] = useState<string | null>(null);
 
-  // Add a new team member
+  const createNewTeam = async (data: TeamCreateInput) => {
+    setError(null);
+    try {
+      const result = await createTeam(data);
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
+    }
+  };
+
+  return {
+    createTeam: createNewTeam,
+    isLoading: loading,
+    error,
+  };
+}
+
+/**
+ * Hook for team update functionality
+ */
+// @ts-ignore - Ignore fast refresh warning
+export function useTeamUpdate() {
+  const { updateTeam, loading } = useTeam();
+  const [error, setError] = useState<string | null>(null);
+
+  const updateExistingTeam = async (teamId: string, data: TeamUpdateInput) => {
+    setError(null);
+    try {
+      const result = await updateTeam(teamId, data);
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
+    }
+  };
+
+  return {
+    updateTeam: updateExistingTeam,
+    isLoading: loading,
+    error,
+  };
+}
+
+/**
+ * Hook for team deletion functionality
+ */
+// @ts-ignore - Ignore fast refresh warning
+export function useTeamDeletion() {
+  const { deleteTeam, loading } = useTeam();
+  const [error, setError] = useState<string | null>(null);
+
+  const deleteExistingTeam = async (teamId: string) => {
+    setError(null);
+    try {
+      const result = await deleteTeam(teamId);
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
+    }
+  };
+
+  return {
+    deleteTeam: deleteExistingTeam,
+    isLoading: loading,
+    error,
+  };
+}
+
+/**
+ * Hook for team details with automatic fetching
+ */
+// @ts-ignore - Ignore fast refresh warning
+export function useTeamDetails(userId?: string) {
+  const { getTeamDetails, loading } = useTeam();
+  const [details, setDetails] = useState<any | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchDetails() {
+      setError(null);
+      try {
+        const result = await getTeamDetails(userId);
+        setDetails(result);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        setError(errorMessage);
+      }
+    }
+
+    fetchDetails();
+  }, [getTeamDetails, userId]);
+
+  return {
+    details,
+    isLoading: loading,
+    error,
+    refetch: async () => {
+      setError(null);
+      try {
+        const result = await getTeamDetails(userId);
+        setDetails(result);
+        return result;
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        setError(errorMessage);
+        return null;
+      }
+    },
+  };
+}
+
+/**
+ * Hook for getting unassigned resources
+ */
+// @ts-ignore - Ignore fast refresh warning
+export function useUnassignedResources() {
+  const { getUnassignedResources, loading } = useTeam();
+  const [resources, setResources] = useState<any | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchResources() {
+      setError(null);
+      try {
+        const result = await getUnassignedResources();
+        setResources(result);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        setError(errorMessage);
+      }
+    }
+
+    fetchResources();
+  }, [getUnassignedResources]);
+
+  return {
+    resources,
+    isLoading: loading,
+    error,
+    refetch: async () => {
+      setError(null);
+      try {
+        const result = await getUnassignedResources();
+        setResources(result);
+        return result;
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        setError(errorMessage);
+        return null;
+      }
+    },
+  };
+}
+
+/**
+ * Hook for team switching functionality
+ */
+// @ts-ignore - Ignore fast refresh warning
+export function useTeamSwitcher() {
+  const { switchTeam, activeTeam, teams, loading } = useTeam();
+  const [error, setError] = useState<string | null>(null);
+
+  const switchToTeam = async (teamId: string) => {
+    setError(null);
+    try {
+      const result = await switchTeam(teamId);
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setError(errorMessage);
+      return false;
+    }
+  };
+
+  return {
+    switchTeam: switchToTeam,
+    activeTeam,
+    availableTeams: teams,
+    isLoading: loading,
+    error,
+  };
+}
+
+// Simplified useTeamMember hook that now uses the context functions
+// @ts-ignore - Ignore fast refresh warning
+export function useTeamMember({
+  teamId,
+  onSuccess,
+}: {
+  teamId: string | null;
+  onSuccess?: () => void;
+}) {
+  const {
+    addTeamMember,
+    removeTeamMember,
+    updateMemberPermissions,
+    applyRoleTemplate: applyRole,
+    getMemberPermissions,
+    membersLoading: isLoading,
+  } = useTeam();
+  const [error, setError] = useState<string | null>(null);
+
   const addMember = async (email: string, role: string) => {
     if (!teamId) {
       setError('Team ID is required');
-      toast({
-        title: 'Error',
-        description: 'Team ID is required',
-        variant: 'destructive',
-      });
       return false;
     }
 
-    setIsLoading(true);
     setError(null);
-
     try {
       const result = await addTeamMember(teamId, email, role);
 
-      if (!result.success) {
-        throw new Error(result.error);
-      }
-
-      toast({
-        title: 'Success',
-        description: `Team member added successfully`,
-      });
-
-      if (onSuccess) {
+      if (result.success && onSuccess) {
         onSuccess();
       }
 
-      return true;
+      return result.success;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       setError(errorMessage);
-
-      toast({
-        title: 'Error adding team member',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-
       return false;
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  // Update a team member's permissions
-  const updatePermissions = async (memberId: string, permissions: ResourcePermissions) => {
+  const removeMember = async (profileId: string) => {
     if (!teamId) {
       setError('Team ID is required');
-      toast({
-        title: 'Error',
-        description: 'Team ID is required',
-        variant: 'destructive',
-      });
       return false;
     }
 
-    setIsLoading(true);
     setError(null);
-
     try {
-      const result = await updateMemberPermissions(teamId, memberId, permissions);
+      const result = await removeTeamMember(teamId, profileId);
 
-      if (!result.success) {
-        throw new Error(result.error);
-      }
-
-      toast({
-        title: 'Success',
-        description: `Permissions updated successfully`,
-      });
-
-      if (onSuccess) {
+      if (result.success && onSuccess) {
         onSuccess();
       }
 
-      return true;
+      return result.success;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       setError(errorMessage);
-
-      toast({
-        title: 'Error updating permissions',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-
       return false;
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  // Apply a role template to a team member
-  const applyRoleTemplate = async (memberId: string, role: string) => {
+  const updatePermissions = async (profileId: string, permissions: ResourcePermissions) => {
     if (!teamId) {
       setError('Team ID is required');
-      toast({
-        title: 'Error',
-        description: 'Team ID is required',
-        variant: 'destructive',
-      });
       return false;
     }
 
-    setIsLoading(true);
     setError(null);
-
     try {
-      const result = await applyRolePermissionTemplate(teamId, memberId, role);
+      const result = await updateMemberPermissions(teamId, profileId, permissions);
 
-      if (!result.success) {
-        throw new Error(result.error);
-      }
-
-      toast({
-        title: 'Success',
-        description: `Role template applied successfully`,
-      });
-
-      if (onSuccess) {
+      if (result.success && onSuccess) {
         onSuccess();
       }
 
-      return true;
+      return result.success;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       setError(errorMessage);
-
-      toast({
-        title: 'Error applying role template',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-
       return false;
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  // Remove a team member
-  const removeMember = async (memberId: string) => {
+  const applyRoleTemplate = async (profileId: string, role: string) => {
     if (!teamId) {
       setError('Team ID is required');
-      toast({
-        title: 'Error',
-        description: 'Team ID is required',
-        variant: 'destructive',
-      });
       return false;
     }
 
-    setIsLoading(true);
     setError(null);
-
     try {
-      const result = await removeTeamMember(teamId, memberId);
+      const result = await applyRole(teamId, profileId, role);
 
-      if (!result.success) {
-        throw new Error(result.error);
-      }
-
-      toast({
-        title: 'Success',
-        description: `Team member removed successfully`,
-      });
-
-      if (onSuccess) {
+      if (result.success && onSuccess) {
         onSuccess();
       }
 
-      return true;
+      return result.success;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       setError(errorMessage);
-
-      toast({
-        title: 'Error removing team member',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-
       return false;
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  // Get permissions for a team member
-  const getPermissions = async (memberId: string) => {
+  const getPermissions = async (profileId: string) => {
     if (!teamId) {
       setError('Team ID is required');
       return null;
     }
 
-    setIsLoading(true);
     setError(null);
-
     try {
-      const result = await getMemberPermissions(teamId, memberId);
+      const result = await getMemberPermissions(teamId, profileId);
 
-      if (!result.success || !result.data) {
-        throw new Error(result.error || 'Failed to get permissions');
+      if (result.success && result.data) {
+        return result.data;
       }
 
-      return result.data;
+      return null;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       setError(errorMessage);
       return null;
-    } finally {
-      setIsLoading(false);
     }
   };
 

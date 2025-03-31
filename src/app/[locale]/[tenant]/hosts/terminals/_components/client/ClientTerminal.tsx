@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { initTerminal, closeTerminal } from '@/app/actions/terminals';
 import { useToast } from '@/components/shadcn/use-toast';
-import { Host } from '@/types/context/host';
+import { Host } from '@/types/core/host';
 import '@xterm/xterm/css/xterm.css';
 
 interface ClientTerminalProps {

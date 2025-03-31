@@ -11,7 +11,7 @@ import { Separator } from '@/components/shadcn/separator';
 import { SidebarTrigger } from '@/components/sidebar';
 import { useSidebar, useUser } from '@/context';
 import { cn } from '@/lib/utils';
-import { User } from '@/types/user';
+import { User } from '@/types/auth/user';
 
 interface WorkspaceHeaderClientProps {
   className?: string;
