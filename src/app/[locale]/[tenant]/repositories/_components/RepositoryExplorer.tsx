@@ -38,14 +38,14 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/Breadcrumb';
 import { cn } from '@/lib/utils';
-
-import { FILE_EXTENSION_COLORS, EXPLORER_TABS } from '../constants';
 import {
   RepositoryExplorerProps,
   RepositoryFile,
   FilesAPIResponse,
   FileAPIResponse,
-} from '../types';
+} from '@/types/context/repository';
+
+import { FILE_EXTENSION_COLORS, EXPLORER_TABS } from '../constants';
 
 export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerProps) {
   const t = useTranslations('repositories');

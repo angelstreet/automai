@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import { Button } from '@/components/shadcn/button';
-import { assignResourceToTeam } from '../../actions';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+
+import { Button } from '@/components/shadcn/button';
+
+import { assignResourceToTeam } from '../../actions';
 
 interface Repository {
   id: string;

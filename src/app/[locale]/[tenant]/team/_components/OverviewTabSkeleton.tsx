@@ -1,14 +1,9 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
 import { Skeleton } from '@/components/shadcn/skeleton';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/shadcn/card';
 
 export default function OverviewTabSkeleton() {
   const t = useTranslations('team');

@@ -1,7 +1,5 @@
 'use server';
 
-import { logger } from '@/lib/logger';
-
 import { getHostById } from './hosts';
 import { getUser } from './user';
 

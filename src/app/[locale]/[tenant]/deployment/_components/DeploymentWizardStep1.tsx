@@ -6,8 +6,7 @@ import React from 'react';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { Textarea } from '@/components/shadcn/textarea';
-
-import { Repository } from '../types';
+import { Repository } from '@/types/context/repository';
 
 interface DeploymentWizardStep1Props {
   name: string;

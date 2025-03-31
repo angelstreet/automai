@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
+import React, { useState } from 'react';
+
+import { TeamMemberResource } from '@/types/context/team';
+
 import AddMemberDialog from './AddMemberDialog';
 import EditPermissionsDialog from './EditPermissionsDialog';
-import { TeamMemberResource } from '@/types/context/team';
 
 interface MemberDialogControllerProps {
   teamId: string | null;

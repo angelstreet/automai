@@ -1,13 +1,14 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useTeam } from '@/context/TeamContext';
-import { User } from '@/types/user';
-import { TeamDetails } from '@/types/context/team';
 
-import MembersTabSkeleton from '../MembersTabSkeleton';
+import { useTeam } from '@/context/TeamContext';
+import { TeamDetails } from '@/types/context/team';
+import { User } from '@/types/user';
+
 import OverviewTabSkeleton from '../OverviewTabSkeleton';
 import TeamOverview from '../TeamOverview';
+
 import { MembersTab } from './MembersTab';
 
 interface TeamTabsProps {
@@ -20,7 +21,7 @@ export default function TeamTabs({ unassignedResources, user }: TeamTabsProps) {
   const activeTab = searchParams.get('tab') || 'overview';
 
   // Get team data and loading state from context
-  const { activeTeam, loading, membersLoading } = useTeam();
+  const { activeTeam, loading } = useTeam();
 
   // Convert activeTeam to TeamDetails type with proper structure
   const teamDetails: TeamDetails = activeTeam

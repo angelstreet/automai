@@ -14,17 +14,17 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/shadcn/card';
+import { EnhancedRepositoryCardProps } from '@/types/context/repository';
 
 import { LANGUAGE_COLORS } from '../constants';
-import { EnhancedRepositoryCardProps } from '../types';
 
 export function EnhancedRepositoryCard({
   repository,
   onDelete,
   isDeleting,
 }: EnhancedRepositoryCardProps) {
-  const [isHovered, setIsHovered] = useState(false);
-  const [isClient, setIsClient] = useState(false);
+  const [_isHovered, setIsHovered] = useState(false);
+  const [_isClient, setIsClient] = useState(false);
   const t = useTranslations('repositories');
 
   // This effect only runs on the client after hydration is complete

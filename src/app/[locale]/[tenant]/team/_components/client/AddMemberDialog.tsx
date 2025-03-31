@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
 import { Plus, Search, Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import React, { useState } from 'react';
+
+import { Button } from '@/components/shadcn/button';
 import {
   Dialog,
   DialogContent,
@@ -11,6 +13,8 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/shadcn/dialog';
+import { Input } from '@/components/shadcn/input';
+import { Label } from '@/components/shadcn/label';
 import {
   Select,
   SelectContent,
@@ -18,13 +22,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/shadcn/select';
-import { Button } from '@/components/shadcn/button';
-import { Input } from '@/components/shadcn/input';
-import { Label } from '@/components/shadcn/label';
 import { useToast } from '@/components/shadcn/use-toast';
+import { AddMemberDialogProps } from '@/types/context/team';
 
 import { addTeamMember } from '@/actions/teamMember';
-import { AddMemberDialogProps } from '@/types/context/teamMember';
 
 const AddMemberDialog = ({ open, onOpenChange, onAddMember, teamId }: AddMemberDialogProps) => {
   const t = useTranslations('team');

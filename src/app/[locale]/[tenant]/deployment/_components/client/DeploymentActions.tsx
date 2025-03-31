@@ -4,13 +4,14 @@ import { PlusCircle, RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React, { useState, useEffect } from 'react';
 
+import { getCICDProviders } from '@/app/actions/cicd';
+import { getHosts } from '@/app/actions/hosts';
+import { getRepositories } from '@/app/actions/repositories';
 import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent } from '@/components/shadcn/dialog';
 
 // Import required components
-import { getRepositories } from '@/app/actions/repositories';
-import { getHosts } from '@/app/actions/hosts';
-import { getCICDProviders } from '@/app/actions/cicd';
+
 import DeploymentWizard from './DeploymentWizard';
 
 export function DeploymentActions() {
@@ -20,7 +21,7 @@ export function DeploymentActions() {
   const [repositories, setRepositories] = useState([]);
   const [hosts, setHosts] = useState([]);
   const [cicdProviders, setCicdProviders] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [_isLoading, setIsLoading] = useState(false);
 
   // Fetch data for the wizard when opened
   useEffect(() => {

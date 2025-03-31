@@ -1,7 +1,8 @@
+import { UserContextType } from '../user';
+
 import { DeploymentContextType } from './deployment';
 import { HostContextType } from './host';
 import { RepositoryContextType } from './repository';
-import { UserContextType } from './user';
 
 /**
  * Root AppContext type that combines all other contexts

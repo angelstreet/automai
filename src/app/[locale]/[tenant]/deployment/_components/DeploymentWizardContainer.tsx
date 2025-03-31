@@ -1,5 +1,4 @@
 import { getDeploymentWizardData } from '@/app/actions/deploymentWizard';
-import { logger } from '@/lib/logger';
 
 import DeploymentWizard from './client/DeploymentWizard';
 

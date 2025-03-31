@@ -3,10 +3,10 @@
 import { PlusIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { TeamDetails } from '@/types/context/team';
 import { Button } from '@/components/shadcn/button';
 import { ResourceType, usePermission } from '@/context/PermissionContext';
 import { useTeam } from '@/context/TeamContext';
+import { TeamDetails } from '@/types/context/team';
 
 export default function TeamActions() {
   const t = useTranslations('team');

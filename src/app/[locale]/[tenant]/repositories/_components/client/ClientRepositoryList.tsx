@@ -9,8 +9,8 @@ import { EmptyState } from '@/components/layout/EmptyState';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
+import { Repository } from '@/types/context/repository';
 
-import { Repository } from '../../types';
 import { EnhancedRepositoryCard } from '../EnhancedRepositoryCard';
 
 interface ClientRepositoryListProps {
@@ -20,7 +20,7 @@ interface ClientRepositoryListProps {
 
 export function ClientRepositoryList({
   initialRepositories,
-  initialStarredIds = [], // Default to empty array
+ _initialStarredIds = [], // Default to empty array
 }: ClientRepositoryListProps) {
   const t = useTranslations('repositories');
 

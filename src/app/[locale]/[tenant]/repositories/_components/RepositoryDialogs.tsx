@@ -10,8 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/shadcn/dialog';
-
-import { ConnectRepositoryValues } from '../types';
+import { ConnectRepositoryValues } from '@/types/context/repository';
 
 import { EnhancedConnectRepositoryDialog } from './EnhancedConnectRepositoryDialog';
 

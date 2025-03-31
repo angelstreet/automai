@@ -3,7 +3,7 @@
 import { Code } from 'lucide-react';
 import React from 'react';
 
-import { Script } from '../types';
+import { Script } from '@/types/context/deployment';
 
 interface ScriptSelectorProps {
   availableScripts: Script[];

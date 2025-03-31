@@ -9,8 +9,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/shadcn/dialog';
-
-import { Host } from '../types';
+import { Host } from '@/types/context/host';
 
 import { ClientConnectionForm, FormData } from './client/ClientConnectionForm';
 

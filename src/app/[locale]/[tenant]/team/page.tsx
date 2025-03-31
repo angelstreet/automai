@@ -4,7 +4,7 @@ import { Suspense } from 'react';
 import { getUnassignedResources } from '@/app/actions/team';
 import { getUser } from '@/app/actions/user';
 import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
-import { mapAuthUserToUser } from '@/utils/user';
+import { mapAuthUserToUser } from '@/types/user';
 
 import OverviewTabSkeleton from './_components/OverviewTabSkeleton';
 import TeamHeader from './_components/TeamHeader';

@@ -3,12 +3,7 @@ import { useRouter } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
 
 import { getDeployments, deleteDeployment, executeDeployment } from '@/app/actions/deployments';
-import { PermissionAwareActionsWrapper } from '@/components/team/PermissionAwareActionsWrapper';
-import { usePermission } from '@/context';
-
-import { Deployment } from './types';
-
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/shadcn/button';
 import {
   Table,
   TableBody,
@@ -16,8 +11,11 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { useToast } from '@/components/ui/use-toast';
+} from '@/components/shadcn/table';
+import { useToast } from '@/components/shadcn/use-toast';
+import { PermissionAwareActionsWrapper } from '@/components/team/PermissionAwareActionsWrapper';
+import { usePermission } from '@/context/PermissionContext';
+import { Deployment } from '@/types/context/deployment';
 
 export default function DeploymentList() {
   const router = useRouter();

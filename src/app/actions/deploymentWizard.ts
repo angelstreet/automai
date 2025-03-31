@@ -3,7 +3,6 @@
 import { revalidatePath } from 'next/cache';
 
 import type { DeploymentFormData } from '@/app/[locale]/[tenant]/deployment/types';
-import { logger } from '@/lib/logger';
 
 import { getCICDProviders } from './cicd';
 import { getHosts } from './hosts';

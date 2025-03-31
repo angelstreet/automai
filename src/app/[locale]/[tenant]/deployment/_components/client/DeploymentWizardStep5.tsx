@@ -3,7 +3,6 @@
 import { useTranslations } from 'next-intl';
 import React, { useState } from 'react';
 
-import { CICDProviderType } from '@/app/[locale]/[tenant]/cicd/types';
 import { Button } from '@/components/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
 import { FormLabel } from '@/components/shadcn/form';
@@ -15,8 +14,8 @@ import {
   SelectValue,
 } from '@/components/shadcn/select';
 import { Switch } from '@/components/shadcn/switch';
-
-import { DeploymentData } from '../../types';
+import { CICDProviderType } from '@/types/context/cicd';
+import { DeploymentData } from '@/types/context/deployment';
 
 interface DeploymentWizardStep5Props {
   data: DeploymentData;

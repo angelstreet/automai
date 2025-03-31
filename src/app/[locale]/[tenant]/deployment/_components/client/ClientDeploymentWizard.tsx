@@ -3,14 +3,14 @@
 import { ArrowLeft } from 'lucide-react';
 import React, { useState, useTransition } from 'react';
 
-import { CICDProviderType } from '@/app/[locale]/[tenant]/cicd/types';
 import { Repository as RepositoryInterface } from '@/app/[locale]/[tenant]/repositories/types';
 import { saveDeploymentConfiguration, startDeployment } from '@/app/actions/deploymentWizard';
 import { toast } from '@/components/shadcn/use-toast';
 import { useUser } from '@/context';
+import { CICDProviderType } from '@/types/context/cicd';
+import { DeploymentData, DeploymentFormData, Host as HostType } from '@/types/context/deployment';
+import { Host as SystemHost } from '@/types/context/host';
 
-import { Host as SystemHost } from '../../../hosts/types';
-import { DeploymentData, DeploymentFormData, Host as HostType } from '../../types';
 import DeploymentWizardStep1 from '../DeploymentWizardStep1';
 import DeploymentWizardStep2 from '../DeploymentWizardStep2';
 import DeploymentWizardStep3 from '../DeploymentWizardStep3';

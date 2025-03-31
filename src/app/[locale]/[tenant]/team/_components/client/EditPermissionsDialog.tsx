@@ -1,27 +1,29 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogDescription,
-  DialogFooter
-} from '@/components/shadcn/dialog';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/shadcn/select';
+import React, { useState, useEffect } from 'react';
+
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
 import { Button } from '@/components/shadcn/button';
-import { Label } from '@/components/shadcn/label';
 import { Checkbox } from '@/components/shadcn/checkbox';
-import { 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/shadcn/dialog';
+import { Label } from '@/components/shadcn/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/shadcn/select';
+import {
   Table,
   TableBody,
   TableCell,
@@ -29,24 +31,27 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/shadcn/table';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
 import { useToast } from '@/components/shadcn/use-toast';
-
-import { updateMemberPermissions, getMemberPermissions, applyRolePermissionTemplate } from '@/actions/teamMember';
-import { 
-  EditPermissionsDialogProps, 
-  ROLE_TEMPLATES, 
+import {
+  EditPermissionsDialogProps,
+  ROLE_TEMPLATES,
   PERMISSION_LABELS,
-  ResourcePermissions 
+  ResourcePermissions,
 } from '@/types/context/team';
 
-const EditPermissionsDialog = ({ 
-  open, 
-  onOpenChange, 
-  member, 
-  initialPermissions, 
+import {
+  updateMemberPermissions,
+  getMemberPermissions,
+  applyRolePermissionTemplate,
+} from '@/actions/teamMember';
+
+const EditPermissionsDialog = ({
+  open,
+  onOpenChange,
+  member,
+  initialPermissions,
   teamId,
-  onSavePermissions 
+  onSavePermissions,
 }: EditPermissionsDialogProps) => {
   const t = useTranslations('team');
   const { toast } = useToast();
@@ -54,14 +59,14 @@ const EditPermissionsDialog = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingPermissions, setIsLoadingPermissions] = useState(false);
   const [permissions, setPermissions] = useState<ResourcePermissions>(
-    initialPermissions || ROLE_TEMPLATES.contributor
+    initialPermissions || ROLE_TEMPLATES.contributor,
   );
 
   // Fetch permissions when the dialog opens if not provided as a prop
   useEffect(() => {
     const fetchPermissions = async () => {
       if (!open || initialPermissions || !teamId || !member) return;
-      
+
       setIsLoadingPermissions(true);
       try {
         const result = await getMemberPermissions(teamId, member.profile_id);
@@ -79,7 +84,7 @@ const EditPermissionsDialog = ({
         setIsLoadingPermissions(false);
       }
     };
-    
+
     fetchPermissions();
   }, [open, teamId, member, initialPermissions]);
 
@@ -88,34 +93,30 @@ const EditPermissionsDialog = ({
       ...permissions,
       [resource]: {
         ...permissions[resource],
-        [permission]: checked
-      }
+        [permission]: checked,
+      },
     });
-    
+
     // When changing individual permissions, set role to custom
     setRoleTemplate('custom');
   };
 
   const applyRoleTemplate = async (role) => {
     setRoleTemplate(role);
-    
+
     if (ROLE_TEMPLATES[role]) {
       setPermissions(ROLE_TEMPLATES[role]);
-      
+
       // If teamId and member are provided, also apply the role template at the server
       if (teamId && member?.profile_id) {
         try {
           setIsLoading(true);
-          const result = await applyRolePermissionTemplate(
-            teamId, 
-            member.profile_id, 
-            role
-          );
-          
+          const result = await applyRolePermissionTemplate(teamId, member.profile_id, role);
+
           if (!result.success) {
             throw new Error(result.error);
           }
-          
+
           toast({
             title: t('membersTab.editPermissions.roleApplied'),
             description: t('membersTab.editPermissions.roleAppliedDesc', { role }),
@@ -124,7 +125,7 @@ const EditPermissionsDialog = ({
           toast({
             title: t('membersTab.editPermissions.roleApplyError'),
             description: error instanceof Error ? error.message : String(error),
-            variant: "destructive"
+            variant: 'destructive',
           });
         } finally {
           setIsLoading(false);
@@ -138,51 +139,47 @@ const EditPermissionsDialog = ({
       toast({
         title: t('common.error'),
         description: t('membersTab.editPermissions.missingTeamOrMember'),
-        variant: "destructive"
+        variant: 'destructive',
       });
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
       // Call custom handler if provided
       if (onSavePermissions) {
         await onSavePermissions(member, permissions);
       } else {
         // Otherwise use the default action
-        const result = await updateMemberPermissions(
-          teamId,
-          member.profile_id,
-          permissions
-        );
-        
+        const result = await updateMemberPermissions(teamId, member.profile_id, permissions);
+
         if (!result.success) {
           throw new Error(result.error);
         }
       }
-      
+
       toast({
         title: t('membersTab.editPermissions.success'),
         description: t('membersTab.editPermissions.successDesc', { name: member.name }),
       });
-      
+
       onOpenChange(false);
     } catch (error) {
       toast({
         title: t('membersTab.editPermissions.saveError'),
         description: error instanceof Error ? error.message : String(error),
-        variant: "destructive"
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   const getInitials = (name: string) => {
     return name
       .split(' ')
-      .map(part => part[0])
+      .map((part) => part[0])
       .join('')
       .toUpperCase();
   };
@@ -209,11 +206,9 @@ const EditPermissionsDialog = ({
       <DialogContent className="sm:max-w-[700px]">
         <DialogHeader>
           <DialogTitle>{t('membersTab.editPermissions.title')}</DialogTitle>
-          <DialogDescription>
-            {t('membersTab.editPermissions.description')}
-          </DialogDescription>
+          <DialogDescription>{t('membersTab.editPermissions.description')}</DialogDescription>
         </DialogHeader>
-        
+
         <div className="flex items-center space-x-4 py-4">
           <Avatar>
             <AvatarImage src={member?.avatar_url || ''} alt={member?.name || ''} />
@@ -224,7 +219,7 @@ const EditPermissionsDialog = ({
             <p className="text-sm text-muted-foreground">{member?.email}</p>
           </div>
         </div>
-        
+
         <div className="grid gap-4">
           <div className="grid gap-2">
             <Label htmlFor="role-template">{t('membersTab.editPermissions.roleTemplate')}</Label>
@@ -242,13 +237,15 @@ const EditPermissionsDialog = ({
               </SelectContent>
             </Select>
           </div>
-          
+
           <div className="border rounded-md max-h-[300px] overflow-auto">
             <Table>
               <TableHeader className="sticky top-0 bg-background z-10">
                 <TableRow>
-                  <TableHead className="w-[180px]">{t('membersTab.editPermissions.resource')}</TableHead>
-                  {Object.keys(PERMISSION_LABELS).map(perm => (
+                  <TableHead className="w-[180px]">
+                    {t('membersTab.editPermissions.resource')}
+                  </TableHead>
+                  {Object.keys(PERMISSION_LABELS).map((perm) => (
                     <TableHead key={perm} className="text-center w-[100px]">
                       {t(`permissions.${perm}`)}
                     </TableHead>
@@ -256,14 +253,14 @@ const EditPermissionsDialog = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {Object.keys(permissions).map(resource => (
+                {Object.keys(permissions).map((resource) => (
                   <TableRow key={resource}>
                     <TableCell className="font-medium">{t(`resources.${resource}`)}</TableCell>
-                    {Object.keys(PERMISSION_LABELS).map(permission => (
+                    {Object.keys(PERMISSION_LABELS).map((permission) => (
                       <TableCell key={`${resource}-${permission}`} className="text-center">
                         <Checkbox
                           checked={permissions[resource][permission]}
-                          onCheckedChange={(checked) => 
+                          onCheckedChange={(checked) =>
                             handlePermissionChange(resource, permission, checked)
                           }
                           aria-label={`${t(`permissions.${permission}`)} ${t(`resources.${resource}`)}`}
@@ -276,7 +273,7 @@ const EditPermissionsDialog = ({
             </Table>
           </div>
         </div>
-        
+
         <DialogFooter className="mt-6">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {t('common.cancel')}

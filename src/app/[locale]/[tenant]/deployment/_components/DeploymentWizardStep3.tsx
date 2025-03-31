@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import React, { useEffect } from 'react';
 
-import { Host } from '../types';
+import { Host } from '@/types/context/deployment';
 
 import HostSelector from './HostSelector';
 

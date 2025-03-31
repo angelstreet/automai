@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
+import { Card, CardContent, CardHeader } from '@/components/shadcn/card';
 import { Skeleton } from '@/components/shadcn/skeleton';
 import {
   Table,

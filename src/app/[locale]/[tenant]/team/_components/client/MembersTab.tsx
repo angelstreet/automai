@@ -4,7 +4,6 @@ import { MoreHorizontal, PlusIcon, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 
-import { TeamMemberDetails } from '@/app/[locale]/[tenant]/team/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
 import { Badge } from '@/components/shadcn/badge';
 import { Button } from '@/components/shadcn/button';
@@ -26,13 +25,14 @@ import {
 } from '@/components/shadcn/table';
 import { ResourceType, usePermission } from '@/context/PermissionContext';
 import { useTeam } from '@/context/TeamContext';
+import { TeamMemberResource, TeamMemberDetails } from '@/types/context/team';
 import { User } from '@/types/user';
 
-import { removeTeamMember } from '@/actions/team-member';
-import { TeamMemberResource } from '@/types/context/team';
+import MembersTabSkeleton from '../MembersTabSkeleton';
+
 import { MemberDialogProvider, useMemberDialog } from './MemberDialogController';
 
-import MembersTabSkeleton from '../MembersTabSkeleton';
+import { removeTeamMember } from '@/actions/teamMember';
 
 interface MembersTabProps {
   teamId: string | null;

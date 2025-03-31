@@ -9,7 +9,7 @@ import { WorkspaceHeaderSkeleton } from '@/components/layout/WorkspaceHeaderSkel
 import { WorkspaceHeader } from '@/components/workspace/WorkspaceHeader';
 import { TeamProvider } from '@/context/TeamContext';
 import { UserProvider } from '@/context/UserContext';
-import { mapAuthUserToUser } from '@/utils/user';
+import { mapAuthUserToUser } from '@/types/user';
 
 import TenantLayoutClient from './_components/client/TenantLayoutClient';
 

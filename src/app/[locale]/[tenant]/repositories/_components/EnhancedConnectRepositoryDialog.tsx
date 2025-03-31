@@ -25,7 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/ta
 import { useToast } from '@/components/shadcn/use-toast';
 
 import { CONNECT_REPOSITORY_TABS, AUTH_METHODS } from '../constants';
-import { EnhancedConnectRepositoryDialogProps, CreateGitProviderParams } from '../types';
+import { EnhancedConnectRepositoryDialogProps, CreateGitProviderParams } from '@/types/context/repository';
 
 export function EnhancedConnectRepositoryDialog({
   open,

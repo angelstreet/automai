@@ -1,16 +1,17 @@
 'use client';
 
-import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Button } from '@/components/shadcn/button';
-import { useTeam, useTeamMember } from '@/context/TeamContext';
-import { ResourceType, usePermission } from '@/context/PermissionContext';
+import React, { useState } from 'react';
 
+import { Button } from '@/components/shadcn/button';
+import { ResourceType, usePermission } from '@/context/PermissionContext';
+import { useTeam, useTeamMember } from '@/context/TeamContext';
 import { TeamMemberResource } from '@/types/context/team';
-import { MembersTab } from './MembersTab';
+
 import AddMemberDialog from './AddMemberDialog';
 import EditPermissionsDialog from './EditPermissionsDialog';
+import { MembersTab } from './MembersTab';
 
 interface TeamMemberManagerProps {
   teamId: string | null;

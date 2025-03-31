@@ -2,8 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 
-import { ActivityItem, Task, Stats, ChatMessage } from '@/app/[locale]/[tenant]/dashboard/types';
-import { logger } from '@/lib/logger';
+import { ActivityItem, Task, Stats, ChatMessage } from '@/types/context/dashboard';
 
 // Define action result type for consistent return values
 type ActionResult<T> = {

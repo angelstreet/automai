@@ -6,9 +6,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Repository as RepositoryInterface } from '@/app/[locale]/[tenant]/repositories/types';
 import { saveDeploymentConfiguration, startDeployment } from '@/app/actions/deploymentWizard';
 import { toast } from '@/components/shadcn/use-toast';
+import { DeploymentData, Repository, Host as HostType } from '@/types/context/deployment';
 
-import { Host as SystemHost } from '../../../hosts/types';
-import { DeploymentData, Repository, Host as HostType } from '../../types';
+import { Host as SystemHost } from '@/types/context/host';
 import DeploymentWizardStep1 from '../DeploymentWizardStep1';
 import DeploymentWizardStep2 from '../DeploymentWizardStep2';
 import DeploymentWizardStep3 from '../DeploymentWizardStep3';
