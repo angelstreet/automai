@@ -38,7 +38,7 @@ function isLoginPath(path: string): boolean {
 }
 
 // Handle login redirects for authenticated users
-async function handleLoginPath(request: NextRequest) {
+async function handleLoginPath(request: NextRequest, supabase: any) {
   // Allow login with code parameter (for OAuth callbacks)
   if (request.nextUrl.searchParams.has('code') || request.nextUrl.searchParams.has('error')) {
     console.log(
@@ -48,8 +48,7 @@ async function handleLoginPath(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check session to determine if user is authenticated
-  const { supabase, response } = createClient(request);
+  // Check session using the passed supabase client
   const { data, error } = await supabase.auth.getSession();
 
   if (error || !data.session) {
@@ -81,7 +80,7 @@ export default async function middleware(request: NextRequest) {
   // Special handling for login path
   if (isLoginPath(path)) {
     console.log('[@middleware:middleware] Handling login path');
-    return handleLoginPath(request);
+    return handleLoginPath(request, supabase); // Pass the supabase client
   }
 
   // Special handling for root path
