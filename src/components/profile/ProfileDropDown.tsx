@@ -70,12 +70,12 @@ export function ProfileDropDown({
           className={
             compact
               ? 'relative flex items-center justify-between w-full rounded-md p-2 hover:bg-sidebar-hover'
-              : 'relative h-8 w-8 rounded-full'
+              : 'relative h-10 w-10 rounded-full'
           }
         >
           {compact ? (
             <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10">
+              <Avatar className="h-12 w-12">
                 <AvatarImage src={user.avatar_url || undefined} alt={user.name || 'User'} />
                 <AvatarFallback>
                   {user?.name ? getInitials(user.name) : <User className="h-4 w-4" />}
@@ -89,7 +89,7 @@ export function ProfileDropDown({
               </div>
             </div>
           ) : (
-            <Avatar className="h-8 w-8">
+            <Avatar className="h-10 w-10">
               <AvatarImage src={user.avatar_url || undefined} alt={user.name || 'User'} />
               <AvatarFallback>
                 {user?.name ? getInitials(user.name) : <User className="h-4 w-4" />}
