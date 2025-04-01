@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import React, { useState, useCallback } from 'react';
 
-import { deleteCICDProvider, testCICDProvider } from '@/app/actions/cicdAction';
+import { useCICD } from '@/context';
 import { EmptyState } from '@/components/layout/EmptyState';
 import {
   AlertDialog,
@@ -75,31 +75,16 @@ export default function CICDDetailsClient({
     setIsDeleteDialogOpen(true);
   }, []);
 
+  // Use the CICD hook
+  const { testProvider, deleteProvider, isTesting, isDeleting } = useCICD();
+
   // Memoize test provider handler
   const handleTestProvider = useCallback(
     async (provider: CICDProviderType) => {
       try {
         setIsLoading(true);
-        const providerPayload = {
-          id: provider.id,
-          name: provider.name,
-          type: provider.type,
-          url: provider.url,
-          config: {
-            auth_type: provider.config?.auth_type,
-            credentials: provider.config?.credentials,
-          },
-        };
-
-        const result = await testCICDProvider(providerPayload);
-
-        toast({
-          title: result.success ? 'Connection Successful' : 'Connection Failed',
-          description: result.success
-            ? 'Successfully connected to the CI/CD provider.'
-            : result.error || 'Failed to connect to the CI/CD provider.',
-          variant: result.success ? 'default' : 'destructive',
-        });
+        // Use the hook's testProvider function instead of the direct action
+        await testProvider(provider.id);
       } catch (error: any) {
         toast({
           title: 'Error',
@@ -110,7 +95,7 @@ export default function CICDDetailsClient({
         setIsLoading(false);
       }
     },
-    [toast],
+    [toast, testProvider],
   );
 
   // Memoize dialog completion handler
@@ -125,21 +110,11 @@ export default function CICDDetailsClient({
 
     try {
       setIsLoading(true);
-      const result = await deleteCICDProvider(selectedProvider.id);
-
+      // Use the hook's deleteProvider function instead of the direct action
+      const result = await deleteProvider(selectedProvider.id);
+      
       if (result.success) {
-        toast({
-          title: 'Provider Deleted',
-          description: `The provider "${selectedProvider.name}" has been successfully deleted.`,
-          variant: 'default',
-        });
         router.refresh(); // Use Next.js router refresh to trigger server revalidation
-      } else {
-        toast({
-          title: 'Error',
-          description: result.error || 'Failed to delete the provider',
-          variant: 'destructive',
-        });
       }
     } catch (error: any) {
       toast({
@@ -151,7 +126,7 @@ export default function CICDDetailsClient({
       setIsLoading(false);
       setIsDeleteDialogOpen(false);
     }
-  }, [selectedProvider, toast, router]);
+  }, [selectedProvider, deleteProvider, toast, router]);
 
   // Memoize provider badge color function
   const getProviderBadgeColor = useCallback((type: string) => {

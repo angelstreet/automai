@@ -77,11 +77,35 @@ Examples:
    }
    ```
 
-## To Add
+## Implemented Hooks
 
-The following domains need hooks implementation:
-- CICD: `hooks/cicd/useCICD.ts`
-- Deployments: `hooks/deployment/useDeployment.ts`
-- DeploymentWizard: `hooks/deployment/useDeploymentWizard.ts`
+### Basic Hooks
+- `useUser`: User authentication and state
+- `useTeam`: Team management and selection
+- `usePermission`: Permission checking and management
+- `useSidebar`: Sidebar state management
 
-These should wrap the corresponding action calls and expose a cleaner API to components.
+### Feature Hooks (Hooks-Only Pattern)
+- `useHost`: Host management functions
+- `useCICD`: CICD provider management
+- `useDeployment`: Deployment operations
+- `useDeploymentWizard`: Deployment configuration wizard
+- `useRepository`: Repository and git provider management
+
+## Migration Strategy
+
+When migrating components from direct action imports to hooks:
+1. Replace action imports with context imports:
+   ```diff
+   - import { getHosts } from '@/app/actions/hostsAction';
+   + import { useHost } from '@/context';
+   ```
+
+2. Replace action calls with hook functions:
+   ```diff
+   - const hostsResult = await getHosts();
+   - setHosts(hostsResult.data || []);
+   + const { hosts, isLoading } = useHost();
+   ```
+
+3. Update component to use React Query's automatic data management.

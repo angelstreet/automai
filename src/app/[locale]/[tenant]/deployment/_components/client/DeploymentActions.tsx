@@ -4,9 +4,7 @@ import { PlusCircle, RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React, { useState, useEffect } from 'react';
 
-import { getCICDProviders } from '@/app/actions/cicdAction';
-import { getRepositories } from '@/app/actions/repositoriesAction';
-import { useHost } from '@/context';
+import { useHost, useCICD, useRepository } from '@/context';
 import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent } from '@/components/shadcn/dialog';
 
@@ -16,58 +14,22 @@ import { DeploymentWizardClient } from './DeploymentWizardClient';
 export function DeploymentActions() {
   const t = useTranslations('deployments');
   const { hosts, isLoading: isLoadingHosts, refetchHosts } = useHost();
+  const { providers: cicdProviders, isLoading: isLoadingCICD, refetchProviders } = useCICD();
+  const { repositories, isLoading: isLoadingRepositories, refetchRepositories } = useRepository();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
-  const [repositories, setRepositories] = useState([]);
-  const [cicdProviders, setCicdProviders] = useState([]);
-  const [_isLoading, setIsLoading] = useState(false);
 
-  // Fetch data for the wizard when opened
-  useEffect(() => {
-    const fetchData = async () => {
-      if (showWizard && repositories.length === 0) {
-        setIsLoading(true);
-        try {
-          // Fetch repositories
-          const repoResult = await getRepositories();
-          if (repoResult.success) {
-            setRepositories(repoResult.data || []);
-          }
-
-          // Fetch CICD providers
-          const providersResult = await getCICDProviders();
-          if (providersResult.success) {
-            setCicdProviders(providersResult.data || []);
-          }
-          
-          // Hosts are fetched via the useHost hook automatically
-        } catch (error) {
-          console.error('Error fetching data for deployment wizard:', error);
-        } finally {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    fetchData();
-  }, [showWizard, repositories.length]);
+  const isLoading = isLoadingHosts || isLoadingCICD || isLoadingRepositories;
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      // Refresh hosts using the useHost hook
-      await refetchHosts();
-      
-      // Refresh other data
-      const repoResult = await getRepositories();
-      if (repoResult.success) {
-        setRepositories(repoResult.data || []);
-      }
-      
-      const providersResult = await getCICDProviders();
-      if (providersResult.success) {
-        setCicdProviders(providersResult.data || []);
-      }
+      // Use hooks to refresh all data in parallel
+      await Promise.all([
+        refetchHosts(),
+        refetchProviders(),
+        refetchRepositories()
+      ]);
     } catch (error) {
       console.error('Error refreshing data:', error);
     } finally {
