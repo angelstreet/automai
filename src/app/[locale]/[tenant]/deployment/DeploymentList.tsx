@@ -16,7 +16,7 @@ import { PermissionAwareActionsWrapper } from '@/components/team/PermissionAware
 import { usePermission } from '@/context/PermissionContext';
 import {  Deployment  } from '@/types/component/deploymentComponentType';
 
-import { getDeployments, deleteDeployment, executeDeployment } from '@/app/actions/deployments';
+import { getDeployments, deleteDeployment, executeDeployment } from '@/app/actions/deploymentsAction';
 
 export default function DeploymentList() {
   const router = useRouter();

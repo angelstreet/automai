@@ -4,8 +4,8 @@ import { revalidatePath } from 'next/cache';
 
 import { Host } from '@/app/[locale]/[tenant]/hosts/types';
 import { getUser } from '@/app/actions/userAction';
-import { testHostConnection as testHostConnectionService } from '@/lib/services/hosts';
-import hostDb from '@/lib/supabase/db-hosts/host';
+import hostService from '@/lib/services/hostService';
+import hostDb from '@/lib/db/hostDb';
 
 export interface HostFilter {
   status?: string;
@@ -385,7 +385,7 @@ async function testConnectionCore(data: {
     });
 
     // Call the service function that handles the actual testing logic
-    const result = await testHostConnectionService(data);
+    const result = await hostService.testHostConnection(data);
 
     // Log concise result summary
     if (result.success) {

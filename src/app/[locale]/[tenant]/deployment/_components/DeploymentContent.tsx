@@ -1,5 +1,5 @@
-import { getDeployments } from '@/app/actions/deployments';
-import { getRepositories } from '@/app/actions/repositories';
+import { getDeployments } from '@/app/actions/deploymentsAction';
+import { getRepositories } from '@/app/actions/repositoriesAction';
 
 import { DeploymentList } from './DeploymentList';
 import { DeploymentEmptyStateClient } from './client/DeploymentEmptyStateClient';

@@ -1,4 +1,4 @@
-import { getDeploymentWizardData } from '@/app/actions/deploymentWizard';
+import { getDeploymentWizardData } from '@/app/actions/deploymentWizardAction';
 
 import DeploymentWizard from './client/DeploymentWizard';
 

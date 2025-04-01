@@ -4,7 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 
 import { Repository as RepositoryInterface } from '@/app/[locale]/[tenant]/repositories/types';
-import { saveDeploymentConfiguration, startDeployment } from '@/app/actions/deploymentWizard';
+import { saveDeploymentConfiguration, startDeployment } from '@/app/actions/deploymentWizardAction';
 import { toast } from '@/components/shadcn/use-toast';
 import {  DeploymentData, Repository  } from '@/types/component/deploymentComponentType';
 import {  Host as HostType  } from '@/types/component/hostComponentType';

@@ -1,4 +1,4 @@
-import { getRepositories } from '@/app/actions/repositories';
+import { getRepositories } from '@/app/actions/repositoriesAction';
 import { Card, CardContent } from '@/components/shadcn/card';
 
 import { ClientRepositoryList } from './client/ClientRepositoryList';

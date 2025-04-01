@@ -7,7 +7,7 @@ import { WebLinksAddon } from '@xterm/addon-web-links';
 import { Terminal as XTerm } from '@xterm/xterm';
 import { useEffect, useRef, useState } from 'react';
 
-import { initTerminal, closeTerminal } from '@/app/actions/terminals';
+import { initTerminal, closeTerminal } from '@/app/actions/terminalsAction';
 import { useToast } from '@/components/shadcn/use-toast';
 import {  Host  } from '@/types/component/hostComponentType';
 import '@xterm/xterm/css/xterm.css';

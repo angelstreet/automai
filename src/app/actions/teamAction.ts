@@ -4,27 +4,8 @@ import { cookies } from 'next/headers';
 import { cache } from 'react';
 
 import { getUser } from '@/app/actions/userAction';
-import {
-  Team,
-  getTeamById as dbGetTeamById,
-  getTeams as dbGetTeams,
-  createTeam as dbCreateTeam,
-  updateTeam as dbUpdateTeam,
-  deleteTeam as dbDeleteTeam,
-  getTeamMembers as dbGetTeamMembers,
-  addTeamMember as dbAddTeamMember,
-  updateTeamMemberRole as dbUpdateTeamMemberRole,
-  removeTeamMember as dbRemoveTeamMember,
-  TeamResult,
-  TeamMemberType,
-  checkResourceLimit as dbCheckResourceLimit,
-} from '@/lib/supabase/db-teams';
-// Import the active team functions from the teams module directly
-import {
-  getUserTeams as dbGetUserTeams,
-  setUserActiveTeam as dbSetUserActiveTeam,
-  getUserActiveTeam as dbGetUserActiveTeam,
-} from '@/lib/supabase/db-teams/teams';
+import { Team, TeamMember } from '@/types/context/teamContextType';
+import teamDb from '@/lib/db/teamDb';
 import { createClient } from '@/lib/supabase/server';
 import {  User  } from '@/types/service/userServiceType';
 import type {  ActionResult  } from '@/types/context/cicdContextType';

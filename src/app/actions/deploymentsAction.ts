@@ -4,14 +4,14 @@ import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 
 import { getUser } from '@/app/actions/userAction';
-import { CICDPipelineConfig } from '@/lib/services/cicd/interfaces';
+import deploymentService from '@/lib/services/deploymentService';
 import {  AuthUser, User  } from '@/types/service/userServiceType';
 
 import {
   Deployment,
   DeploymentFormData,
   DeploymentStatus,
-} from '../[locale]/[tenant]/deployment/types';
+} from '@/types/component/deploymentComponentType';
 
 // Define a function to map database deployment to Deployment type
 function mapDbDeploymentToDeployment(dbDeployment: any): Deployment {

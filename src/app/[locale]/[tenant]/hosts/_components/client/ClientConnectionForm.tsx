@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import {
   testConnection as testConnectionAction,
   createHost as createHostAction,
-} from '@/app/actions/hosts';
+} from '@/app/actions/hostsAction';
 import { Alert, AlertDescription, AlertTitle } from '@/components/shadcn/alert';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';

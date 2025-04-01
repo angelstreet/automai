@@ -4,7 +4,7 @@ import { Eye, Trash2 } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
 import React, { useState } from 'react';
 
-import { deleteDeployment } from '@/app/actions/deployments';
+import { deleteDeployment } from '@/app/actions/deploymentsAction';
 import {
   AlertDialog,
   AlertDialogContent,

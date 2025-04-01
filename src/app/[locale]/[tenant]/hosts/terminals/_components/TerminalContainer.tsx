@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 
-import { getHostById } from '@/app/actions/hosts';
+import { getHostById } from '@/app/actions/hostsAction';
 
 import TerminalSkeleton from './TerminalSkeleton';
 import ClientTerminal from './client/ClientTerminal';

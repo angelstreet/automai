@@ -20,7 +20,7 @@ import {
 import { useTranslations } from 'next-intl';
 import { useState, useEffect } from 'react';
 
-import { getRepositoryFiles, getFileContent } from '@/app/actions/repositories';
+import { getRepositoryFiles, getFileContent } from '@/app/actions/repositoriesAction';
 import { GitHubIcon, GitLabIcon, GiteaIcon } from '@/components/icons';
 import { Alert, AlertDescription } from '@/components/shadcn/alert';
 import { Badge } from '@/components/shadcn/badge';

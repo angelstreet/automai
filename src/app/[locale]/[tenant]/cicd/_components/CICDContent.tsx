@@ -1,4 +1,4 @@
-import { getCICDProviders } from '@/app/actions/cicd';
+import { getCICDProviders } from '@/app/actions/cicdAction';
 
 import CICDDetailsClient from './client/CICDDetailsClient';
 

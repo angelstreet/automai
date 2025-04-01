@@ -1,4 +1,4 @@
-import { getHosts } from '@/app/actions/hosts';
+import { getHosts } from '@/app/actions/hostsAction';
 
 import ClientHostList from './client/ClientHostList';
 
