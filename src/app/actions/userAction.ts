@@ -80,7 +80,7 @@ export async function setSelectedTeam(teamId: string) {
   );
 
   // Import the new function from team actions to avoid circular dependencies
-  const { setSelectedTeam: teamSetSelectedTeam } = await import('@/app/actions/team');
+  const { setSelectedTeam: teamSetSelectedTeam } = await import('@/app/actions/teamAction');
 
   // Call the new function
   return teamSetSelectedTeam(teamId);

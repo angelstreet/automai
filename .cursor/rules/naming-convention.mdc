@@ -89,13 +89,13 @@ Examples:
 ### File Naming Pattern
 
 ```
-actions/[domain].ts
+actions/[domain]Action.ts
 ```
 
 Examples:
-- actions/team.ts
-- actions/teamMember.ts
-- actions/repositories.ts
+- actions/teamAction.ts
+- actions/teamMemberAction.ts
+- actions/repositoriesAction.ts
 
 ### Function Naming Pattern
 

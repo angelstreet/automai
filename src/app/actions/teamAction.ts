@@ -3,7 +3,7 @@
 import { cookies } from 'next/headers';
 import { cache } from 'react';
 
-import { getUser } from '@/app/actions/user';
+import { getUser } from '@/app/actions/userAction';
 import {
   Team,
   getTeamById as dbGetTeamById,

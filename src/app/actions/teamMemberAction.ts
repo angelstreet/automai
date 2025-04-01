@@ -3,7 +3,7 @@
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 
-import { getUser } from '@/app/actions/user';
+import { getUser } from '@/app/actions/userAction';
 import {
   addTeamMember as dbAddTeamMember,
   updateTeamMemberRole as dbUpdateTeamMemberRole,

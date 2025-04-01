@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 
-import { getUser } from '@/app/actions/user';
+import { getUser } from '@/app/actions/userAction';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { AppSidebarSkeleton } from '@/components/layout/AppSidebarSkeleton';
 import { WorkspaceHeader } from '@/components/workspace/WorkspaceHeader';

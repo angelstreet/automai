@@ -6,7 +6,7 @@ import {
   getUnassignedResources,
   assignResourceToTeam,
   checkResourceLimit,
-} from '@/app/actions/team';
+} from '@/app/actions/teamAction';
 import { useToast } from '@/components/shadcn/use-toast';
 import { useUser } from '@/context/UserContext';
 

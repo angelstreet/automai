@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getUser } from '@/app/actions/user';
+import { getUser } from '@/app/actions/userAction';
 import { User } from '@/types/auth/user';
 
 export function useUser(initialUser: User | null = null) {

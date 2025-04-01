@@ -11,7 +11,7 @@ import type {
   CICDProviderActionResult,
   CICDJob,
 } from '@/app/[locale]/[tenant]/cicd/types';
-import { getUser } from '@/app/actions/user';
+import { getUser } from '@/app/actions/userAction';
 
 /**
  * Fetch all CI/CD providers for the current tenant

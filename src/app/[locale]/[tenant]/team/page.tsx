@@ -1,7 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
-import { getUser } from '@/app/actions/user';
+import { getUser } from '@/app/actions/userAction';
 import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 import { mapAuthUserToUser } from '@/types/user';
 

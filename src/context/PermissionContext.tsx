@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useCallback, useState, useEffect } from 'react';
 
-import { getUserPermissions } from '@/app/actions/permission';
+import { getUserPermissions } from '@/app/actions/permissionAction';
 import type { ResourceType, Operation, PermissionMatrix, PermissionsResult } from '@/types/context/permissions';
 import { useTeam, useUser } from '@/context';
 

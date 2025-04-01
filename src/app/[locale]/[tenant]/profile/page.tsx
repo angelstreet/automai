@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 
-import { getUser } from '@/app/actions/user';
+import { getUser } from '@/app/actions/userAction';
 
 import { ProfileContent, ProfileSkeleton } from './_components';
 

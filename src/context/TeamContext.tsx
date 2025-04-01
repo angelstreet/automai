@@ -5,7 +5,7 @@ import React, { createContext, useState, useEffect, useContext, useCallback, use
 import {
   checkPermission,
   getUserPermissions,
-} from '@/app/actions/permission';
+} from '@/app/actions/permissionAction';
 import type {
   ResourceType,
   Operation,
@@ -24,14 +24,14 @@ import {
   getTeamDetails as getTeamDetailsAction,
   getUnassignedResources as getUnassignedResourcesAction,
   assignResourceToTeam as assignResourceToTeamAction,
-} from '@/app/actions/team';
+} from '@/app/actions/teamAction';
 import {
   addTeamMember,
   updateMemberPermissions,
   removeTeamMember,
   getMemberPermissions,
   applyRolePermissionTemplate,
-} from '@/app/actions/teamMember';
+} from '@/app/actions/teamMemberAction';
 import { useToast } from '@/components/shadcn/use-toast';
 import { useUser } from '@/app/providers';
 import { ResourcePermissions } from '@/types/context/team';

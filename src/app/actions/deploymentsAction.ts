@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 
-import { getUser } from '@/app/actions/user';
+import { getUser } from '@/app/actions/userAction';
 import { CICDPipelineConfig } from '@/lib/services/cicd/interfaces';
 import { AuthUser, User } from '@/types/auth/user';
 

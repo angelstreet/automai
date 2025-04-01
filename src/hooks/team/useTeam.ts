@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getUserTeams, getUserActiveTeam, setUserActiveTeam } from '@/app/actions/team';
+import { getUserTeams, getUserActiveTeam, setUserActiveTeam } from '@/app/actions/teamAction';
 import { useUser } from '@/app/providers';
 import { Team } from '@/types/context/team';
 

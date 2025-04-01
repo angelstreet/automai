@@ -5,7 +5,7 @@ import {
   addTeamMember as addTeamMemberAction,
   removeTeamMember as removeTeamMemberAction,
   updateTeamMemberRole,
-} from '@/app/actions/team';
+} from '@/app/actions/teamMemberAction';
 import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@/components/shadcn/use-toast';
 

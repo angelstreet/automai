@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { Host } from '@/app/[locale]/[tenant]/hosts/types';
-import { getUser } from '@/app/actions/user';
+import { getUser } from '@/app/actions/userAction';
 import { testHostConnection as testHostConnectionService } from '@/lib/services/hosts';
 import hostDb from '@/lib/supabase/db-hosts/host';
 

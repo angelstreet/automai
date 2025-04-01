@@ -8,7 +8,7 @@ import * as React from 'react';
 import {
   signUp as signUpAction,
   signInWithOAuth as signInWithOAuthAction,
-} from '@/app/actions/auth';
+} from '@/app/actions/authAction';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { useUser } from '@/context/UserContext';

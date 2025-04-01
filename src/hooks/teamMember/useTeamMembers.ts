@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { getTeamMembers } from '@/app/actions/team';
+import { getTeamMembers } from '@/app/actions/teamMemberAction';
 import type { TeamMember } from '@/types/context/team';
 import type { ActionResult } from '@/types/context/cicd';
 

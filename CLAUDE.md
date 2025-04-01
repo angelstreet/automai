@@ -47,6 +47,22 @@ alwaysApply: true
   - `/src/i18n` - Internationalization utilities
   - `/src/config` - Application configuration
 
+## Naming Conventions
+
+### Server Actions
+- **Action Files**: Must use `[domain]Action.ts` naming pattern
+  - Example: `userAction.ts`, `teamAction.ts`, `repositoriesAction.ts`
+- **All imports** must reference the file with the Action suffix
+  - Example: `import { getUser } from '@/app/actions/userAction'`
+- **NO aliases or backward compatibility** imports are allowed
+
+### Context and Hooks
+- **Hook Files**: Must use `use[Domain].ts` naming pattern (no suffixes)
+  - Example: `useUser.ts`, `useTeam.ts`, `usePermission.ts`
+- **Hook Functions**: Must use simple domain names without suffixes
+  - Example: `useUser()`, `useTeam()`, not `useUserLogic()` 
+- **One primary hook per domain**: Each domain should have one main hook
+
 ## Centralized Context Architecture
 - **Use the centralized context system** through `/src/context/index.ts`:
   - Import hooks and providers: `import { usePermission, TeamProvider } from '@/context'`
@@ -61,5 +77,4 @@ alwaysApply: true
 - **Business Logic Hooks**: Located in `/src/hooks/*/*.ts`
   - Contain all data fetching and business logic
   - Use React Query for data management
-  - Follow naming pattern `use[Feature]Logic` or `use[Feature]Data`
 - **Context Exports**: All exports centralized through `/src/context/index.ts`
