@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { cache } from 'react';
 
 import { getCICDProviders } from '@/app/actions/cicdAction';
 import { getHosts } from '@/app/actions/hostsAction';
@@ -11,7 +12,7 @@ import type { DeploymentFormData } from '@/types/component/deploymentComponentTy
 /**
  * Fetches all data needed for the deployment wizard
  */
-export async function getDeploymentWizardData() {
+export const getDeploymentWizardData = cache(async () => {
   try {
     // Fetch all required data in parallel
     const [repositoriesResult, hostsResult, cicdProvidersResult] = await Promise.all([
@@ -36,7 +37,7 @@ export async function getDeploymentWizardData() {
       cicdProviders: [],
     };
   }
-}
+});
 
 /**
  * Saves a deployment configuration

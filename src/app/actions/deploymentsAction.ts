@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
+import { cache } from 'react';
 
 import { getUser } from '@/app/actions/userAction';
 import {
@@ -11,7 +12,7 @@ import {
 } from '@/types/component/deploymentComponentType';
 import { AuthUser, User } from '@/types/service/userServiceType';
 
-// Define CICDPipelineConfig type 
+// Define CICDPipelineConfig type
 interface CICDPipelineConfig {
   name: string;
   description: string;
@@ -70,67 +71,69 @@ function mapDbDeploymentToDeployment(dbDeployment: any): Deployment {
 /**
  * Get all deployments for the current user
  */
-export async function getDeployments(user?: AuthUser | User | null): Promise<Deployment[]> {
-  try {
-    // Get current user if not provided
-    if (!user) {
-      user = await getUser();
-    }
+export const getDeployments = cache(
+  async (user?: AuthUser | User | null): Promise<Deployment[]> => {
+    try {
+      // Get current user if not provided
+      if (!user) {
+        user = await getUser();
+      }
 
-    if (!user) {
-      console.error('Actions layer: Cannot fetch deployments - user not authenticated');
-      return [];
-    }
-
-    console.log('Fetching deployments for tenant:', user.tenant_id);
-
-    // Get cookie store once for all operations
-    const cookieStore = await cookies();
-
-    // Import the deployment database module
-    const { default: deploymentDb } = await import('@/lib/db/deploymentDb');
-
-    // Fetch deployments from the database
-    const where = { tenant_id: user.tenant_id };
-    const result = await deploymentDb.findMany({ where }, cookieStore);
-
-    // Handle the result based on its structure
-    if (result && typeof result === 'object') {
-      if ('success' in result && result.success === false && 'error' in result) {
-        console.error('Actions layer: Error fetching deployments:', result.error);
+      if (!user) {
+        console.error('Actions layer: Cannot fetch deployments - user not authenticated');
         return [];
       }
 
-      let dbDeployments: any[] = [];
+      console.log('Fetching deployments for tenant:', user.tenant_id);
 
-      if ('data' in result && Array.isArray(result.data)) {
-        dbDeployments = result.data;
-      } else if (Array.isArray(result)) {
-        dbDeployments = result;
+      // Get cookie store once for all operations
+      const cookieStore = await cookies();
+
+      // Import the deployment database module
+      const { default: deploymentDb } = await import('@/lib/db/deploymentDb');
+
+      // Fetch deployments from the database
+      const where = { tenant_id: user.tenant_id };
+      const result = await deploymentDb.findMany({ where }, cookieStore);
+
+      // Handle the result based on its structure
+      if (result && typeof result === 'object') {
+        if ('success' in result && result.success === false && 'error' in result) {
+          console.error('Actions layer: Error fetching deployments:', result.error);
+          return [];
+        }
+
+        let dbDeployments: any[] = [];
+
+        if ('data' in result && Array.isArray(result.data)) {
+          dbDeployments = result.data;
+        } else if (Array.isArray(result)) {
+          dbDeployments = result;
+        }
+
+        // Map database results to Deployment type
+        const deployments: Deployment[] = dbDeployments.map(mapDbDeploymentToDeployment);
+
+        console.log('Actions layer: Fetched deployments count:', deployments.length);
+
+        return deployments;
       }
 
-      // Map database results to Deployment type
-      const deployments: Deployment[] = dbDeployments.map(mapDbDeploymentToDeployment);
-
-      console.log('Actions layer: Fetched deployments count:', deployments.length);
-
-      return deployments;
+      console.error('Actions layer: Unexpected result structure from database');
+      return [];
+    } catch (error) {
+      console.error('Error in getDeployments:', error);
+      return [];
     }
-
-    console.error('Actions layer: Unexpected result structure from database');
-    return [];
-  } catch (error) {
-    console.error('Error in getDeployments:', error);
-    return [];
-  }
-}
+  },
+);
 
 /**
  * Get a specific deployment by ID
  * @param id Deployment ID
  * @returns Deployment object or null if not found
  */
-export async function getDeploymentById(id: string): Promise<Deployment | null> {
+export const getDeploymentById = cache(async (id: string): Promise<Deployment | null> => {
   try {
     // Make sure we have an actual ID
     if (!id) {
@@ -167,7 +170,7 @@ export async function getDeploymentById(id: string): Promise<Deployment | null> 
     console.error(`Error fetching deployment with ID ${id}:`, error);
     return null;
   }
-}
+});
 
 /**
  * Create a new deployment
@@ -797,7 +800,7 @@ export async function refreshDeployment(id: string): Promise<{
  * @param repositoryId Repository ID
  * @returns Array of scripts
  */
-export async function getScriptsForRepository(repositoryId: string): Promise<any[]> {
+export const getScriptsForRepository = cache(async (repositoryId: string): Promise<any[]> => {
   try {
     console.log(`[Actions] Getting scripts for repository ${repositoryId}`);
 
@@ -836,11 +839,11 @@ export async function getScriptsForRepository(repositoryId: string): Promise<any
 
     // Mock implementation since the actual git API modules don't exist
     console.log(`[Actions] Using mock implementation for git API since modules don't exist`);
-    
+
     // Return empty arrays as fallback
     contents = [];
     rootContents = [];
-    
+
     if (provider.type !== 'github' && provider.type !== 'gitlab' && provider.type !== 'gitea') {
       console.error(`[Actions] Unsupported provider type: ${provider.type}`);
       return [];
@@ -869,7 +872,7 @@ export async function getScriptsForRepository(repositoryId: string): Promise<any
     console.error('[Actions] Error getting scripts for repository:', error);
     return [];
   }
-}
+});
 
 /**
  * Run a deployment

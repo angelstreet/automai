@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { cache } from 'react';
 
 import { ActivityItem, Task, Stats, ChatMessage } from '@/types/context/dashboardContextType';
 
@@ -15,7 +16,7 @@ type ActionResult<T> = {
  * Get dashboard statistics
  * @returns Dashboard statistics
  */
-export async function getDashboardStats(): Promise<Stats> {
+export const getDashboardStats = cache(async (): Promise<Stats> => {
   try {
     console.info('Fetching dashboard stats');
 
@@ -34,13 +35,13 @@ export async function getDashboardStats(): Promise<Stats> {
     });
     return getEmptyStats();
   }
-}
+});
 
 /**
  * Get recent activity
  * @returns Recent activity items
  */
-export async function getRecentActivity(): Promise<ActivityItem[]> {
+export const getRecentActivity = cache(async (): Promise<ActivityItem[]> => {
   try {
     console.info('Fetching recent activity');
 
@@ -73,13 +74,13 @@ export async function getRecentActivity(): Promise<ActivityItem[]> {
     });
     return [];
   }
-}
+});
 
 /**
  * Get tasks
  * @returns Task list
  */
-export async function getTasks(): Promise<Task[]> {
+export const getTasks = cache(async (): Promise<Task[]> => {
   try {
     console.info('Fetching tasks');
 
@@ -112,13 +113,13 @@ export async function getTasks(): Promise<Task[]> {
     });
     return [];
   }
-}
+});
 
 /**
  * Get team chat messages
  * @returns Chat message list
  */
-export async function getTeamChat(): Promise<ChatMessage[]> {
+export const getTeamChat = cache(async (): Promise<ChatMessage[]> => {
   try {
     console.info('Fetching team chat');
 
@@ -151,7 +152,7 @@ export async function getTeamChat(): Promise<ChatMessage[]> {
     });
     return [];
   }
-}
+});
 
 /**
  * Add a new message to the team chat

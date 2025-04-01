@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
+import { cache } from 'react';
 
 import { getUser } from '@/app/actions/userAction';
 import repositoryDb, { GitProvider as DbGitProvider } from '@/lib/db/repositoryDb';
@@ -91,42 +92,44 @@ function mapDbGitProviderToGitProvider(dbProvider: DbGitProvider): GitProvider {
  * Get all repositories with optional filtering
  * @param filter Optional filter criteria for repositories
  */
-export async function getRepositories(
-  filter?: RepositoryFilter,
-): Promise<{ success: boolean; error?: string; data?: Repository[] }> {
-  try {
-    console.log('[@action:repositories:getRepositories] Starting...', { filter });
+export const getRepositories = cache(
+  async (
+    filter?: RepositoryFilter,
+  ): Promise<{ success: boolean; error?: string; data?: Repository[] }> => {
+    try {
+      console.log('[@action:repositories:getRepositories] Starting...', { filter });
 
-    // Get cookies once for all operations
-    const cookieStore = await cookies();
+      // Get cookies once for all operations
+      const cookieStore = await cookies();
 
-    console.log('[@action:repositories:getRepositories] Fetching repositories from database');
-    // Call the repository module instead of direct db access
-    const result = await repositoryDb.getRepositories(cookieStore);
+      console.log('[@action:repositories:getRepositories] Fetching repositories from database');
+      // Call the repository module instead of direct db access
+      const result = await repositoryDb.getRepositories(cookieStore);
 
-    if (!result.success || !result.data) {
-      console.log('[@action:repositories:getRepositories] No repositories found');
-      return { success: false, error: 'No repositories found' };
+      if (!result.success || !result.data) {
+        console.log('[@action:repositories:getRepositories] No repositories found');
+        return { success: false, error: 'No repositories found' };
+      }
+
+      // Map DB repositories to our Repository type
+      const repositories = result.data.map(mapDbRepositoryToRepository);
+
+      console.log('[@action:repositories:getRepositories] Successfully fetched repositories', {
+        count: repositories.length,
+      });
+
+      return {
+        success: true,
+        data: repositories,
+      };
+    } catch (error: any) {
+      console.log('[@action:repositories:getRepositories] Error fetching repositories', {
+        error: error.message,
+      });
+      return { success: false, error: error.message || 'Failed to fetch repositories' };
     }
-
-    // Map DB repositories to our Repository type
-    const repositories = result.data.map(mapDbRepositoryToRepository);
-
-    console.log('[@action:repositories:getRepositories] Successfully fetched repositories', {
-      count: repositories.length,
-    });
-
-    return {
-      success: true,
-      data: repositories,
-    };
-  } catch (error: any) {
-    console.log('[@action:repositories:getRepositories] Error fetching repositories', {
-      error: error.message,
-    });
-    return { success: false, error: error.message || 'Failed to fetch repositories' };
-  }
-}
+  },
+);
 
 /**
  * Create a new repository
@@ -512,18 +515,13 @@ export async function createRepositoryFromUrl(
 
 /**
  * Get a repository by ID
- *
- * @param id Repository ID
- */
-/**
- * Get a repository by ID
  * This is an alias of getRepository with a different name to satisfy import requirements
  */
-export async function getRepositoryById(
-  id: string,
-): Promise<{ success: boolean; error?: string; data?: Repository }> {
-  return getRepository(id);
-}
+export const getRepositoryById = cache(
+  async (id: string): Promise<{ success: boolean; error?: string; data?: Repository }> => {
+    return getRepository(id);
+  },
+);
 
 /**
  * Test repository connection with specific credentials
@@ -552,30 +550,30 @@ export async function disconnectRepository(
   return deleteRepository(id);
 }
 
-export async function getRepository(
-  id: string,
-): Promise<{ success: boolean; error?: string; data?: Repository }> {
-  try {
-    console.log(`[Server] getRepository: Starting for repository ${id}`);
+export const getRepository = cache(
+  async (id: string): Promise<{ success: boolean; error?: string; data?: Repository }> => {
+    try {
+      console.log(`[Server] getRepository: Starting for repository ${id}`);
 
-    console.log(`[Server] Fetching repository ${id} from database`);
+      console.log(`[Server] Fetching repository ${id} from database`);
 
-    // Call the repository module - don't need to pass profile ID for non-tenant specific queries
-    const result = await repositoryDb.getRepository(id);
+      // Call the repository module - don't need to pass profile ID for non-tenant specific queries
+      const result = await repositoryDb.getRepository(id);
 
-    if (!result.success || !result.data) {
-      return { success: false, error: 'Repository not found' };
+      if (!result.success || !result.data) {
+        return { success: false, error: 'Repository not found' };
+      }
+
+      return {
+        success: true,
+        data: mapDbRepositoryToRepository(result.data),
+      };
+    } catch (error: any) {
+      console.error('[@action:repositories:getRepository] Error:', error);
+      return { success: false, error: error.message || 'Failed to fetch repository' };
     }
-
-    return {
-      success: true,
-      data: mapDbRepositoryToRepository(result.data),
-    };
-  } catch (error: any) {
-    console.error('[@action:repositories:getRepository] Error:', error);
-    return { success: false, error: error.message || 'Failed to fetch repository' };
-  }
-}
+  },
+);
 
 // Git Provider related functions
 
@@ -658,71 +656,73 @@ export async function testGitProviderConnection(
 /**
  * List all git providers for the current user
  */
-export async function getGitProviders(): Promise<{
-  success: boolean;
-  error?: string;
-  data?: GitProvider[];
-}> {
-  try {
-    console.log(`[Server] getGitProviders: Starting...`);
-    const user = await getUser();
-    if (!user) {
-      return { success: false, error: 'Unauthorized', data: [] };
+export const getGitProviders = cache(
+  async (): Promise<{
+    success: boolean;
+    error?: string;
+    data?: GitProvider[];
+  }> => {
+    try {
+      console.log(`[Server] getGitProviders: Starting...`);
+      const user = await getUser();
+      if (!user) {
+        return { success: false, error: 'Unauthorized', data: [] };
+      }
+
+      // Call the gitProvider module instead of direct db access
+      const result = await repositoryDb.getAllGitProviders();
+
+      if (!result.success || !result.data) {
+        console.error(`[Server] Failed to fetch git providers:`, result.error);
+        return {
+          success: false,
+          error: result.error || 'Failed to fetch git providers',
+        };
+      }
+
+      // Map DB results to interface type
+      const providers = result.data
+        ? result.data.map((provider: DbGitProvider) => mapDbGitProviderToGitProvider(provider))
+        : [];
+
+      return { success: true, data: providers };
+    } catch (error: any) {
+      console.error('[@action:repositories:getGitProviders] Error:', error);
+      return { success: false, error: error.message || 'Failed to fetch git providers' };
     }
-
-    // Call the gitProvider module instead of direct db access
-    const result = await repositoryDb.getAllGitProviders();
-
-    if (!result.success || !result.data) {
-      console.error(`[Server] Failed to fetch git providers:`, result.error);
-      return {
-        success: false,
-        error: result.error || 'Failed to fetch git providers',
-      };
-    }
-
-    // Map DB results to interface type
-    const providers = result.data
-      ? result.data.map((provider: DbGitProvider) => mapDbGitProviderToGitProvider(provider))
-      : [];
-
-    return { success: true, data: providers };
-  } catch (error: any) {
-    console.error('[@action:repositories:getGitProviders] Error:', error);
-    return { success: false, error: error.message || 'Failed to fetch git providers' };
-  }
-}
+  },
+);
 
 /**
  * Get a git provider by ID
  */
-export async function getGitProvider(
-  id: string,
-): Promise<{ success: boolean; error?: string; data?: GitProvider }> {
-  try {
-    console.log(`[Server] getGitProvider: Starting for provider ${id}`);
-    const user = await getUser();
-    if (!user) {
-      return { success: false, error: 'Unauthorized' };
+export const getGitProvider = cache(
+  async (id: string): Promise<{ success: boolean; error?: string; data?: GitProvider }> => {
+    try {
+      console.log(`[Server] getGitProvider: Starting for provider ${id}`);
+      const user = await getUser();
+      if (!user) {
+        return { success: false, error: 'Unauthorized' };
+      }
+
+      // Call the gitProvider module instead of direct db access
+      const result = await repositoryDb.getAllGitProviders();
+
+      if (!result.success || !result.data) {
+        console.error(`[Server] Git provider not found:`, result.error);
+        return { success: false, error: 'Git provider not found' };
+      }
+
+      // Map DB result to interface type
+      const provider = mapDbGitProviderToGitProvider(result.data);
+
+      return { success: true, data: provider };
+    } catch (error: any) {
+      console.error('[@action:repositories:getGitProvider] Error:', error);
+      return { success: false, error: error.message || 'Failed to fetch git provider' };
     }
-
-    // Call the gitProvider module instead of direct db access
-    const result = await repositoryDb.getAllGitProviders();
-
-    if (!result.success || !result.data) {
-      console.error(`[Server] Git provider not found:`, result.error);
-      return { success: false, error: 'Git provider not found' };
-    }
-
-    // Map DB result to interface type
-    const provider = mapDbGitProviderToGitProvider(result.data);
-
-    return { success: true, data: provider };
-  } catch (error: any) {
-    console.error('[@action:repositories:getGitProvider] Error:', error);
-    return { success: false, error: error.message || 'Failed to fetch git provider' };
-  }
-}
+  },
+);
 
 /**
  * Delete a git provider by ID
@@ -965,36 +965,38 @@ export async function createGitProvider(
  * @param path The directory path (optional)
  * @param user Optional pre-fetched user data to avoid redundant auth calls
  */
-export async function getRepositoryFiles(
-  repositoryId: string,
-  path?: string,
-  user?: AuthUser | null,
-): Promise<{ success: boolean; error?: string; data?: any[] }> {
-  try {
-    console.log(
-      '[actions.getRepositoryFiles] Starting with repository ID:',
-      repositoryId,
-      'path:',
-      path,
-    );
+export const getRepositoryFiles = cache(
+  async (
+    repositoryId: string,
+    path?: string,
+    user?: AuthUser | null,
+  ): Promise<{ success: boolean; error?: string; data?: any[] }> => {
+    try {
+      console.log(
+        '[actions.getRepositoryFiles] Starting with repository ID:',
+        repositoryId,
+        'path:',
+        path,
+      );
 
-    // Use provided user data or fetch it if not provided
-    const currentUser = user || (await getUser());
-    if (!currentUser) {
-      console.log('[actions.getRepositoryFiles] No authenticated user found');
-      return { success: false, error: 'Unauthorized' };
+      // Use provided user data or fetch it if not provided
+      const currentUser = user || (await getUser());
+      if (!currentUser) {
+        console.log('[actions.getRepositoryFiles] No authenticated user found');
+        return { success: false, error: 'Unauthorized' };
+      }
+
+      // Since we don't store files in the database, return a mock empty result
+      console.log(
+        '[actions.getRepositoryFiles] Files are not stored in the database, returning empty result',
+      );
+      return { success: true, data: [] };
+    } catch (error: any) {
+      console.error('[@action:repositories:getRepositoryFiles] Error:', error);
+      return { success: false, error: error.message || 'Failed to fetch repository files' };
     }
-
-    // Since we don't store files in the database, return a mock empty result
-    console.log(
-      '[actions.getRepositoryFiles] Files are not stored in the database, returning empty result',
-    );
-    return { success: true, data: [] };
-  } catch (error: any) {
-    console.error('[@action:repositories:getRepositoryFiles] Error:', error);
-    return { success: false, error: error.message || 'Failed to fetch repository files' };
-  }
-}
+  },
+);
 
 /**
  * Get file content from a repository
@@ -1002,52 +1004,54 @@ export async function getRepositoryFiles(
  * @param path The file path
  * @param user Optional pre-fetched user data to avoid redundant auth calls
  */
-export async function getFileContent(
-  repositoryId: string,
-  path: string,
-  user?: AuthUser | null,
-): Promise<{ success: boolean; error?: string; data?: any }> {
-  try {
-    console.log(
-      '[actions.getFileContent] Starting with repository ID:',
-      repositoryId,
-      'path:',
-      path,
-    );
+export const getFileContent = cache(
+  async (
+    repositoryId: string,
+    path: string,
+    user?: AuthUser | null,
+  ): Promise<{ success: boolean; error?: string; data?: any }> => {
+    try {
+      console.log(
+        '[actions.getFileContent] Starting with repository ID:',
+        repositoryId,
+        'path:',
+        path,
+      );
 
-    // Use provided user data or fetch it if not provided
-    const currentUser = user || (await getUser());
-    if (!currentUser) {
-      console.log('[actions.getFileContent] No authenticated user found');
-      return { success: false, error: 'Unauthorized' };
+      // Use provided user data or fetch it if not provided
+      const currentUser = user || (await getUser());
+      if (!currentUser) {
+        console.log('[actions.getFileContent] No authenticated user found');
+        return { success: false, error: 'Unauthorized' };
+      }
+
+      if (!path) {
+        return { success: false, error: 'File path is required' };
+      }
+
+      // Since we don't store files in the database, return a mock result
+      console.log(
+        '[actions.getFileContent] Files are not stored in the database, returning mock result',
+      );
+      return {
+        success: true,
+        data: {
+          id: 'mock-file',
+          repository_id: repositoryId,
+          path: path,
+          content: '',
+          size: 0,
+          last_commit: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      };
+    } catch (error: any) {
+      console.error('Error in getFileContent:', error);
+      return { success: false, error: error.message || 'Failed to fetch file content' };
     }
-
-    if (!path) {
-      return { success: false, error: 'File path is required' };
-    }
-
-    // Since we don't store files in the database, return a mock result
-    console.log(
-      '[actions.getFileContent] Files are not stored in the database, returning mock result',
-    );
-    return {
-      success: true,
-      data: {
-        id: 'mock-file',
-        repository_id: repositoryId,
-        path: path,
-        content: '',
-        size: 0,
-        last_commit: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-    };
-  } catch (error: any) {
-    console.error('Error in getFileContent:', error);
-    return { success: false, error: error.message || 'Failed to fetch file content' };
-  }
-}
+  },
+);
 
 /**
  * Get all repositories with optional filtering
@@ -1055,59 +1059,61 @@ export async function getFileContent(
  * @param filter Optional filter criteria for repositories
  * @param user Optional pre-fetched user data to avoid redundant auth calls
  */
-export async function getAllRepositories(
-  filter?: RepositoryFilter,
-  user?: AuthUser | null,
-): Promise<{
-  success: boolean;
-  error?: string;
-  data?: Repository[];
-}> {
-  try {
-    console.log('[@action:repositories:getAllRepositories] Starting...');
+export const getAllRepositories = cache(
+  async (
+    filter?: RepositoryFilter,
+    user?: AuthUser | null,
+  ): Promise<{
+    success: boolean;
+    error?: string;
+    data?: Repository[];
+  }> => {
+    try {
+      console.log('[@action:repositories:getAllRepositories] Starting...');
 
-    // Try to use provided user data or fetch it if not provided
-    let currentUser = user;
-    if (!currentUser) {
-      try {
-        const userResult = await getUser();
-        currentUser = userResult;
-      } catch (userError) {
-        console.error(
-          '[@action:repositories:getAllRepositories] Error fetching current user:',
-          userError,
-        );
-        // Continue with null user in case of error
+      // Try to use provided user data or fetch it if not provided
+      let currentUser = user;
+      if (!currentUser) {
+        try {
+          const userResult = await getUser();
+          currentUser = userResult;
+        } catch (userError) {
+          console.error(
+            '[@action:repositories:getAllRepositories] Error fetching current user:',
+            userError,
+          );
+          // Continue with null user in case of error
+        }
       }
-    }
 
-    // Fetch repositories
-    const reposResult = await getRepositories(filter);
-    console.log('[@action:repositories:getAllRepositories] Repository fetch result:', {
-      success: reposResult.success,
-      count: reposResult.data?.length || 0,
-      error: reposResult.error,
-    });
+      // Fetch repositories
+      const reposResult = await getRepositories(filter);
+      console.log('[@action:repositories:getAllRepositories] Repository fetch result:', {
+        success: reposResult.success,
+        count: reposResult.data?.length || 0,
+        error: reposResult.error,
+      });
 
-    if (!reposResult.success || !reposResult.data) {
+      if (!reposResult.success || !reposResult.data) {
+        return {
+          success: false,
+          error: reposResult.error || 'Failed to fetch repositories',
+        };
+      }
+
+      return {
+        success: true,
+        data: reposResult.data,
+      };
+    } catch (error: any) {
+      console.error('[@action:repositories:getAllRepositories] Error:', error);
       return {
         success: false,
-        error: reposResult.error || 'Failed to fetch repositories',
+        error: error.message || 'Failed to fetch repository data',
       };
     }
-
-    return {
-      success: true,
-      data: reposResult.data,
-    };
-  } catch (error: any) {
-    console.error('[@action:repositories:getAllRepositories] Error:', error);
-    return {
-      success: false,
-      error: error.message || 'Failed to fetch repository data',
-    };
-  }
-}
+  },
+);
 
 /**
  * Test if a repository URL is accessible

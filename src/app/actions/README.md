@@ -4,17 +4,25 @@ This directory contains all server actions for the application. Server actions a
 
 ## Core Principles
 
-1. **Mandatory Caching**
+1. **Mandatory Caching for READ Operations**
 
-   - ALL server actions MUST use the React `cache` function
+   - ALL READ operations MUST use the React `cache` function
+   - WRITE operations should NOT be cached
    - Example:
 
    ```typescript
    import { cache } from 'react';
 
+   // READ operation (should be cached)
    export const getUser = cache(async () => {
      // Implementation
    });
+
+   // WRITE operation (should not be cached)
+   export async function updateUser(data) {
+     // Implementation
+     revalidatePath('/path');
+   }
    ```
 
 2. **Cookie Handling**
@@ -34,20 +42,20 @@ This directory contains all server actions for the application. Server actions a
 
 ## Action Structure
 
-### 1. Basic Action Template
+### 1. Cached READ Operation Template
 
 ```typescript
-export const myAction = cache(async (param: ParamType): Promise<ResultType> => {
+export const myReadAction = cache(async (param: ParamType): Promise<ResultType> => {
   try {
-    console.log(`[@action:module:myAction] Starting with param: ${param}`);
+    console.log(`[@action:module:myReadAction] Starting with param: ${param}`);
     const cookieStore = await cookies();
 
     // Implementation
 
     return result;
   } catch (error) {
-    console.error(`[@action:module:myAction] Error:`, error);
-    throw error;
+    console.error(`[@action:module:myReadAction] Error:`, error);
+    return { success: false, error: error.message || 'Operation failed' };
   }
 });
 ```
@@ -55,7 +63,7 @@ export const myAction = cache(async (param: ParamType): Promise<ResultType> => {
 ### 2. Mutation Action Template
 
 ```typescript
-export const updateAction = cache(async (param: ParamType): Promise<void> => {
+export async function updateAction(param: ParamType): Promise<ResponseType> {
   try {
     console.log(`[@action:module:updateAction] Starting update`);
     const cookieStore = await cookies();
@@ -64,11 +72,13 @@ export const updateAction = cache(async (param: ParamType): Promise<void> => {
 
     // Revalidate affected paths
     revalidatePath('/affected/path');
+
+    return { success: true };
   } catch (error) {
     console.error(`[@action:module:updateAction] Error:`, error);
-    throw error;
+    return { success: false, error: error.message || 'Update failed' };
   }
-});
+}
 ```
 
 ## Layered Architecture
@@ -81,7 +91,7 @@ export const updateAction = cache(async (param: ParamType): Promise<void> => {
 
 2. **Server Actions Layer** (`/app/actions/*`)
 
-   - Mandatory caching
+   - Mandatory caching for all READ operations
    - Error handling
    - Data validation
    - Cookie management
@@ -110,18 +120,29 @@ export const updateAction = cache(async (param: ParamType): Promise<void> => {
 - Team CRUD operations
 - Team member management
 - Resource counting and limits
-- All operations are cached
+- All READ operations are cached
 
-### `teamMemberAction.ts`
+### `sessionAction.ts`
 
-- Team member CRUD operations
-- Permission management
-- Role assignments
-- All operations are cached
+- Session management
+- User authentication
+- All READ operations are cached (`getCurrentSession`, `getCurrentUser`)
+
+### `hostsAction.ts`
+
+- Host management operations
+- Host connectivity testing
+- READ operations are cached (`getHosts`, `getHostById`)
+
+### `repositoriesAction.ts`
+
+- Repository CRUD operations
+- Git provider management
+- READ operations are cached (`getRepositories`, `getRepository`, `getGitProviders`, etc.)
 
 ## Caching Patterns
 
-### 1. Read Operations
+### 1. Simple READ Operations
 
 ```typescript
 export const getData = cache(async (id: string) => {
@@ -129,23 +150,62 @@ export const getData = cache(async (id: string) => {
 });
 ```
 
-### 2. Write Operations with Revalidation
+### 2. READ Operations with Parameters
 
 ```typescript
-export const updateData = cache(async (data: DataType) => {
-  // Implementation
-  revalidatePath('/affected/path');
+export const getFilteredData = cache(async (filter: FilterType) => {
+  // Implementation with filtering
 });
 ```
 
-### 3. Composite Operations
+### 3. READ Operations with Authentication
 
 ```typescript
-export const complexOperation = cache(async (param: ParamType) => {
-  const result1 = await cachedAction1(param);
-  const result2 = await cachedAction2(result1.id);
-  return combineResults(result1, result2);
+export const getProtectedData = cache(async () => {
+  const user = await getUser();
+  if (!user) {
+    return { success: false, error: 'Unauthorized' };
+  }
+  // Fetch data for authenticated user
 });
+```
+
+### 4. Write Operations with Revalidation
+
+```typescript
+export async function updateData(data: DataType) {
+  // Implementation
+  revalidatePath('/affected/path');
+}
+```
+
+## Real-World Examples
+
+### Proper Caching Implementation
+
+```typescript
+// From sessionAction.ts
+export const getCurrentUser = cache(async (): Promise<AuthUser | null> => {
+  try {
+    const cookieStore = await cookies();
+    const user = await userDb.getCurrentUser(cookieStore);
+    return user;
+  } catch (error) {
+    console.error('[@action:session:getCurrentUser] Error:', error);
+    return null;
+  }
+});
+
+// From hostsAction.ts
+export const getHosts = cache(
+  async (filter?: HostFilter): Promise<{ success: boolean; error?: string; data?: Host[] }> => {
+    try {
+      // Implementation
+    } catch (error: any) {
+      // Error handling
+    }
+  },
+);
 ```
 
 ## Best Practices
@@ -170,7 +230,7 @@ export const complexOperation = cache(async (param: ParamType) => {
 
 4. **Performance**
 
-   - Cache all operations
+   - Cache all READ operations
    - Minimize database calls
    - Use proper indexes
    - Implement proper revalidation
@@ -183,7 +243,7 @@ export const complexOperation = cache(async (param: ParamType) => {
 
 ## Anti-patterns to Avoid
 
-❌ **DON'T** create uncached actions
+❌ **DON'T** create uncached READ operations
 
 ```typescript
 // BAD
@@ -225,6 +285,22 @@ export const getData = cache(async () => {
 export const getData = cache(async () => {
   return rawData;
 });
+```
+
+❌ **DON'T** cache WRITE operations
+
+```typescript
+// BAD
+export const updateData = cache(async (data) => {
+  // Update implementation
+  revalidatePath('/path');
+});
+
+// GOOD
+export async function updateData(data) {
+  // Update implementation
+  revalidatePath('/path');
+}
 ```
 
 ## Testing

@@ -1,6 +1,7 @@
 'use server';
 
 import { cookies } from 'next/headers';
+import { cache } from 'react';
 
 import userDb from '@/lib/db/userDb';
 import { createClient } from '@/lib/supabase/server';
@@ -10,7 +11,7 @@ import { AuthUser } from '@/types/service/userServiceType';
  * Get the current session on the server
  * This function should be used by middleware and server components
  */
-export async function getCurrentSession() {
+export const getCurrentSession = cache(async () => {
   const cookieStore = await cookies();
   const supabase = await createClient(cookieStore);
   const {
@@ -28,14 +29,14 @@ export async function getCurrentSession() {
   }
 
   return { session };
-}
+});
 
 /**
  * Get the current user for client components
  * This function is safe to call from UserContext
  * It will not attempt to modify cookies in client components
  */
-export async function getCurrentUser(): Promise<AuthUser | null> {
+export const getCurrentUser = cache(async (): Promise<AuthUser | null> => {
   try {
     const cookieStore = await cookies();
     const user = await userDb.getCurrentUser(cookieStore);
@@ -50,4 +51,4 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     console.error('[@action:session:getCurrentUser] Error:', error);
     return null;
   }
-}
+});

@@ -1,11 +1,12 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { cache } from 'react';
 
-import { Host } from '@/app/[locale]/[tenant]/hosts/types';
 import { getUser } from '@/app/actions/userAction';
-import hostService from '@/lib/services/hostService';
 import hostDb from '@/lib/db/hostDb';
+import hostService from '@/lib/services/hostService';
+import { Host } from '@/types/context/hostContextType';
 
 export interface HostFilter {
   status?: string;
@@ -14,86 +15,86 @@ export interface HostFilter {
 /**
  * Get all hosts with optional filtering
  */
-export async function getHosts(
-  filter?: HostFilter,
-): Promise<{ success: boolean; error?: string; data?: Host[] }> {
-  try {
-    console.info('[@action:hosts:getHosts] Getting all hosts');
-    // Get current user
-    const currentUser = await getUser();
+export const getHosts = cache(
+  async (filter?: HostFilter): Promise<{ success: boolean; error?: string; data?: Host[] }> => {
+    try {
+      console.info('[@action:hosts:getHosts] Getting all hosts');
+      // Get current user
+      const currentUser = await getUser();
 
-    if (!currentUser) {
-      return {
-        success: false,
-        error: 'Unauthorized - Please sign in',
-      };
+      if (!currentUser) {
+        return {
+          success: false,
+          error: 'Unauthorized - Please sign in',
+        };
+      }
+
+      // No need to add filter parameters - the RLS policies
+      // are already set up to handle team-based access control
+
+      // Set up query filters
+      const where: Record<string, any> = {};
+
+      if (filter?.status) {
+        where.status = filter.status;
+      }
+
+      const data = await hostDb.findMany({
+        where,
+        orderBy: { created_at: 'desc' },
+      });
+
+      if (!data) {
+        return {
+          success: false,
+          error: 'Failed to fetch hosts',
+        };
+      }
+      console.info('[@action:hosts:getHosts] Found hosts:', data);
+      return { success: true, data };
+    } catch (error: any) {
+      console.error('[@action:hosts:getHosts] Error fetching hosts:', error);
+      return { success: false, error: error.message || 'Failed to fetch hosts' };
     }
-
-    // No need to add filter parameters - the RLS policies
-    // are already set up to handle team-based access control
-
-    // Set up query filters
-    const where: Record<string, any> = {};
-
-    if (filter?.status) {
-      where.status = filter.status;
-    }
-
-    const data = await hostDb.findMany({
-      where,
-      orderBy: { created_at: 'desc' },
-    });
-
-    if (!data) {
-      return {
-        success: false,
-        error: 'Failed to fetch hosts',
-      };
-    }
-    console.info('[@action:hosts:getHosts] Found hosts:', data);
-    return { success: true, data };
-  } catch (error: any) {
-    console.error('[@action:hosts:getHosts] Error fetching hosts:', error);
-    return { success: false, error: error.message || 'Failed to fetch hosts' };
-  }
-}
+  },
+);
 
 /**
  * Get a specific host by ID
  */
-export async function getHostById(
-  id: string,
-): Promise<{ success: boolean; error?: string; data?: Host }> {
-  try {
-    if (!id) {
-      return { success: false, error: 'Host ID is required' };
+export const getHostById = cache(
+  async (id: string): Promise<{ success: boolean; error?: string; data?: Host }> => {
+    try {
+      if (!id) {
+        return { success: false, error: 'Host ID is required' };
+      }
+
+      // Get current user
+      const currentUser = await getUser();
+      if (!currentUser) {
+        return {
+          success: false,
+          error: 'Unauthorized - Please sign in',
+        };
+      }
+
+      // No need to filter by team_id - the RLS policies
+      // will handle access control
+      const data = await hostDb.findUnique({
+        where: { id },
+      });
+
+      if (!data) {
+        return { success: false, error: 'Host not found' };
+      }
+
+      return { success: true, data };
+    } catch (error: any) {
+      console.error('[@action:hosts:getHostById] Error fetching host:', error);
+      return { success: false, error: error.message || 'Failed to fetch host' };
     }
-
-    // Get current user
-    const currentUser = await getUser();
-    if (!currentUser) {
-      return {
-        success: false,
-        error: 'Unauthorized - Please sign in',
-      };
-    }
-
-    // No need to filter by team_id - the RLS policies
-    // will handle access control
-    const data = await hostDb.findUnique({
-      where: { id },
-    });
-
-    if (!data) {
-      return { success: false, error: 'Host not found' };
-    }
-
-    return { success: true, data };
-  } catch (error: any) {
-    console.error('[@action:hosts:getHostById] Error fetching host:', error);
-    return { success: false, error: error.message || 'Failed to fetch host' };
-  }
-}
+  },
+);
 
 /**
  * Create a new host
@@ -114,7 +115,9 @@ export async function createHost(
     console.info(`[@action:hosts:createHost] Starting host creation for user: ${currentUser.id}`);
     console.info('[@action:hosts:createHost] raw data:', data);
     // Get the active team ID from user context instead of direct cookie access
-    const { getUserActiveTeam, getUserTeams, createTeam } = await import('@/app/actions/teamAction');
+    const { getUserActiveTeam, getUserTeams, createTeam } = await import(
+      '@/app/actions/teamAction'
+    );
 
     // Try to get active team first
     let teamId;

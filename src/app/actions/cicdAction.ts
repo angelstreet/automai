@@ -63,7 +63,7 @@ export const getCICDProviders = cache(async (): Promise<CICDProviderListResult> 
 /**
  * Get CI/CD jobs for all providers or a specific provider
  */
-export async function getCICDJobs(providerId?: string): Promise<ActionResult<CICDJob[]>> {
+export const getCICDJobs = cache(async (providerId?: string): Promise<ActionResult<CICDJob[]>> => {
   try {
     // Get the current authenticated user
     const user = await getUser();
@@ -93,7 +93,7 @@ export async function getCICDJobs(providerId?: string): Promise<ActionResult<CIC
     console.error('[@action:cicd:getCICDJobs] Error fetching CI/CD jobs:', error);
     return { success: false, error: error.message || 'Failed to fetch CI/CD jobs' };
   }
-}
+});
 
 /**
  * Create a new CICD provider for the current tenant

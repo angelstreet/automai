@@ -12,20 +12,20 @@ This directory contains React Context Providers that follow a strict data-only p
            │
            ▼
 ┌──────────────────────┐
-│  Server Actions      │   Server-side caching with Next.js cache()
-│  /app/actions        │
+│  Server Actions      │   Server-side caching with React's cache()
+│  /app/actions        │   All READ operations must be cached
 └──────────┬───────────┘
            │
            ▼
 ┌──────────────────────┐
 │  React Query Hooks   │   Client-side caching with React Query
-│  /hooks              │
+│  /hooks              │   Business logic & data transformation
 └──────────┬───────────┘
            │
            ▼
 ┌──────────────────────┐
 │  Providers           │   State management & context (YOU ARE HERE)
-│  /app/providers      │
+│  /app/providers      │   Pure data containers, NO business logic
 └──────────┬───────────┘
            │
            ▼
@@ -43,6 +43,7 @@ This directory contains React Context Providers that follow a strict data-only p
    - NO business logic
    - NO data fetching
    - NO side effects
+   - NO direct server action calls
 
 2. **Client Components**
 
@@ -50,8 +51,13 @@ This directory contains React Context Providers that follow a strict data-only p
    'use client';
 
    export function ExampleProvider({ children, data }) {
+     const [state, setState] = useState(data);
+
      return (
-       <ExampleContext.Provider value={{ data }}>
+       <ExampleContext.Provider value={{
+         data: state,
+         setData: setState
+       }}>
          {children}
        </ExampleContext.Provider>
      );
@@ -62,7 +68,45 @@ This directory contains React Context Providers that follow a strict data-only p
    - Data storage ONLY in providers
    - Business logic in hooks (/hooks/\*)
    - Data fetching in React Query hooks
-   - Cache management in server actions
+   - Cache management in server actions (with React's cache() function)
+
+## Relationship with Cached Server Actions
+
+Providers should never directly call server actions. Instead:
+
+1. For server components: Server actions are called and data is passed to providers as props
+2. For client components: React Query hooks call cached server actions and manage the data flow
+
+```typescript
+// Server Component
+export default async function Layout({ children }) {
+  // Server component calls cached server actions
+  const userData = await getUser();
+
+  // Data is passed as props to the provider
+  return (
+    <UserProvider initialData={userData}>
+      {children}
+    </UserProvider>
+  );
+}
+
+// Client Hook (in a separate file)
+export function useUser() {
+  // Client-side data fetching uses React Query + cached server actions
+  const { data } = useQuery({
+    queryKey: ['user'],
+    queryFn: getUser  // This server action is already cached with cache()
+  });
+
+  // Hook provides business logic and returns data to components
+  return {
+    user: data?.user,
+    isAdmin: data?.user?.role === 'admin',
+    // ... more derived data and methods
+  };
+}
+```
 
 ## Current Providers
 
@@ -72,43 +116,127 @@ This directory contains React Context Providers that follow a strict data-only p
 - `PermissionProvider`: User permissions state
 - `ThemeProvider`: Theme preferences
 
-## Usage Example
+## Implementation Examples
+
+### Correct Implementation (Data-Only)
 
 ```typescript
-// Good: Data-only provider
-export function UserProvider({ children, user }) {
+// context definition
+export const UserContext = createContext<UserContextType | null>(null);
+
+// provider implementation - data container only
+export function UserProvider({ children, initialUser }) {
+  const [user, setUser] = useState(initialUser);
+
+  const value = useMemo(() => ({
+    user,
+    setUser
+  }), [user]);
+
   return (
-    <UserContext.Provider value={{ user }}>
+    <UserContext.Provider value={value}>
       {children}
     </UserContext.Provider>
   );
 }
 
-// Bad: Provider with business logic or data fetching
+// hook implementation - business logic goes here, not in provider
+export function useUser() {
+  const context = useContext(UserContext);
+  const queryClient = useQueryClient();
+
+  // Business logic in the hook
+  const isAdmin = context.user?.role === 'admin';
+
+  // Data fetching with React Query
+  const { data } = useQuery({
+    queryKey: ['user'],
+    queryFn: getUser, // Using cached server action
+    initialData: context.user
+  });
+
+  // Mutations
+  const updateUserMutation = useMutation({
+    mutationFn: updateUser,
+    onSuccess: (newUser) => {
+      context.setUser(newUser);
+      queryClient.invalidateQueries(['user']);
+    }
+  });
+
+  return {
+    user: data || context.user,
+    isAdmin,
+    updateUser: updateUserMutation.mutateAsync
+  };
+}
+```
+
+### Incorrect Implementation (Avoid This)
+
+```typescript
+// ❌ INCORRECT: Provider with business logic
 export function UserProvider({ children }) {
-  const { data } = useQuery(...);  // ❌ No data fetching
-  const [state, setState] = useState();  // ❌ No state management
+  const [user, setUser] = useState(null);
 
-  useEffect(() => {}, []); // ❌ No side effects
+  // ❌ WRONG: No data fetching in providers
+  useEffect(() => {
+    async function fetchUser() {
+      const userData = await getUser();
+      setUser(userData);
+    }
+    fetchUser();
+  }, []);
 
-  return <UserContext.Provider>{children}</UserContext.Provider>;
+  // ❌ WRONG: No business logic in providers
+  const isAdmin = user?.role === 'admin';
+  const canEditTeam = user?.permissions?.includes('team:edit');
+
+  return (
+    <UserContext.Provider value={{
+      user,
+      setUser,
+      isAdmin,
+      canEditTeam
+    }}>
+      {children}
+    </UserContext.Provider>
+  );
 }
 ```
 
 ## Data Flow
 
-1. Server Components fetch initial data using server actions
-2. Data is passed to providers via props
-3. Providers make data available through context
-4. Components access data using context hooks
-5. Updates are handled through React Query mutations
+1. **Initial Load (Server Components):**
 
-## Caching Strategy
+   - Server Components fetch initial data using cached server actions (`cache()`)
+   - Data is passed to providers via props
+   - Providers store and distribute data through context
 
-- **Server Actions**: Use Next.js `cache()` for server-side caching
-- **React Query**: Handles client-side caching and state updates
-- **Providers**: NO caching, only state distribution
-- **Components**: Consume cached data through hooks
+2. **Client-Side Updates:**
+   - Components use hooks to access provider data and interact with server
+   - Hooks use React Query to call cached server actions for data fetching
+   - Mutations update both server state and provider state
+   - Provider notifies all consuming components of changes
+
+## Multi-Level Caching Strategy
+
+- **Server Actions (cache()):**
+
+  - All READ operations are cached using React's `cache()` function
+  - Prevents redundant database calls for identical requests
+  - Automatically deduplicates requests on the server
+
+- **React Query (Client):**
+
+  - Handles client-side caching and state updates
+  - Manages loading, error states, and refetching
+  - Configurable stale time and cache time
+
+- **Providers:**
+  - NO caching responsibility
+  - Pure state distribution and management
+  - Source of truth for client-side state
 
 ## Anti-patterns to Avoid
 
@@ -117,8 +245,11 @@ export function UserProvider({ children }) {
 ❌ Don't manage cache in providers
 ❌ Don't handle side effects in providers
 ❌ Don't mix provider responsibilities
+❌ Don't directly call uncached server actions in providers
 
 ✅ Do keep providers focused on data distribution
 ✅ Do use React Query for data fetching
 ✅ Do implement business logic in hooks
 ✅ Do handle side effects in components
+✅ Do initialize providers with data from server components
+✅ Do separate context creation from provider implementation

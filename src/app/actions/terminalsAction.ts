@@ -39,8 +39,8 @@ export async function initTerminal(hostId: string) {
       connectionParams: {
         host: host.ip,
         port: host.port || 22,
-        username: host.user,
-        password: host.password,
+        username: host.user || '',
+        password: host.password || '',
       },
     });
 
