@@ -50,8 +50,11 @@ export function HeaderClient({
           ? {
               marginLeft: 'var(--sidebar-width-offset, 0)',
               width: 'calc(100% - var(--sidebar-width-offset, 0))',
+              transition: 'margin-left 200ms ease, width 200ms ease',
             }
-          : undefined
+          : {
+              transition: 'margin-left 200ms ease, width 200ms ease',
+            }
       }
     >
       <div className={cn('flex h-14 items-center border-b relative', !headerVisible && 'h-8')}>
@@ -59,7 +62,12 @@ export function HeaderClient({
           <>
             {/* Left section */}
             <div className="relative flex items-center h-full">
-              <div className={cn('absolute flex items-center', isCollapsed ? '-ml-16' : 'ml-1')}>
+              <div
+                className={cn(
+                  'absolute flex items-center transition-all duration-200 ease-in-out',
+                  isCollapsed ? '-ml-16' : 'ml-1',
+                )}
+              >
                 <SidebarTrigger />
                 <Separator orientation="vertical" className="h-8 opacity-50 ml-2" />
               </div>
