@@ -1,18 +1,17 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useContext } from 'react';
 
 import { checkPermission, getUserPermissions } from '@/app/actions/permissionAction';
-import { usePermissionContext } from '@/app/providers/PermissionProvider';
-import { useUser } from '@/hooks/user/useUser';
+import { PermissionContext } from '@/context/PermissionContext';
 import { useTeam } from '@/hooks/team/useTeam';
+import { useUser } from '@/hooks/user/useUser';
 import type {
   ResourceType,
   Operation,
   PermissionsResult,
 } from '@/types/context/permissionsContextType';
-import { PermissionContext } from '@/context/PermissionContext';
 
 /**
  * Access the permission context

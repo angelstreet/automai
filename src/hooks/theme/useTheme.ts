@@ -1,19 +1,38 @@
 'use client';
 
 import { useTheme as useNextTheme } from 'next-themes';
+import { useContext } from 'react';
 
-// Define theme type
-type Theme = 'light' | 'dark' | 'system';
+import { ThemeContext } from '@/context/ThemeContext';
 
-export function useTheme(defaultTheme: Theme = 'system') {
-  // We'll just forward the Next.js theme - no need for duplicate state
-  const { theme: nextTheme, setTheme: setNextTheme } = useNextTheme();
+/**
+ * Access the theme context
+ * This is a simple hook that just provides access to the context
+ */
+export function useThemeContext() {
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error('useThemeContext must be used within a ThemeProvider');
+  }
+  return context;
+}
 
-  // Safely typed theme value
-  const theme = (nextTheme || defaultTheme) as Theme;
+/**
+ * Primary hook for theme functionality
+ * This combines the next-themes hook with our own context
+ */
+export function useTheme() {
+  const { theme, setTheme, resolvedTheme, systemTheme } = useNextTheme();
 
+  // Expose theme methods for components
   return {
     theme,
-    setTheme: setNextTheme,
+    setTheme,
+    resolvedTheme,
+    systemTheme,
+    isDark: resolvedTheme === 'dark',
+    isLight: resolvedTheme === 'light',
+    isSystem: theme === 'system',
+    toggle: () => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark'),
   };
 }

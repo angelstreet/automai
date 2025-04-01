@@ -21,11 +21,12 @@ export { useDeployment, useDeploymentWizard } from '@/hooks/deployment';
 export { useRepository } from '@/hooks/repository';
 export { useSidebar } from '@/hooks/sidebar';
 export { useUser } from '@/hooks/user';
+export { useTheme } from '@/hooks/theme';
 
 // DEPRECATED: Import these from @/hooks in the future
 export { FontProvider, useFont } from './FontContext';
 export { SearchProvider, useSearch } from './SearchContext';
-export { ThemeProvider, useTheme } from './ThemeContext';
+export { ThemeProvider } from '@/app/providers';
 
 // Export types (still valid, these won't change)
 export type { ResourceType, Operation };
@@ -87,9 +88,9 @@ export const userSelectors = {
  *    - useRepository
  *    - useSidebar
  *    - useUser
+ *    - useTheme
  *
  * 3. These hooks still need proper migration:
- *    - useTheme (still in ThemeContext.tsx)
  *    - useFont (still in FontContext.tsx)
  *    - useSearch (still in SearchContext.tsx)
  */
