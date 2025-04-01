@@ -1,4 +1,17 @@
 import { createClient } from '@/lib/supabase/server';
+
+export default {
+  findMany,
+  findUnique,
+  getUser,
+  getCurrentUser,
+  clearCache,
+  updateProfile,
+  setSelectedTeam,
+  create,
+  update,
+  deleteUser
+};
 import { AuthUser, UserTeam } from '@/types/service/userServiceType';
 import { DbResponse } from './dbUtils';
 

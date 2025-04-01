@@ -515,6 +515,37 @@ export async function createRepositoryFromUrl(
  *
  * @param id Repository ID
  */
+/**
+ * Get a repository by ID
+ * This is an alias of getRepository with a different name to satisfy import requirements
+ */
+export async function getRepositoryById(
+  id: string,
+): Promise<{ success: boolean; error?: string; data?: Repository }> {
+  return getRepository(id);
+}
+
+/**
+ * Test repository connection with specific credentials
+ */
+export async function testRepositoryConnection(data: TestRepositoryInput): Promise<{ success: boolean; error?: string; status?: number }> {
+  return testGitRepository(data);
+}
+
+/**
+ * Connect a repository
+ */
+export async function connectRepository(data: any): Promise<{ success: boolean; error?: string; data?: Repository }> {
+  return createRepository(data);
+}
+
+/**
+ * Disconnect a repository
+ */
+export async function disconnectRepository(id: string): Promise<{ success: boolean; error?: string }> {
+  return deleteRepository(id);
+}
+
 export async function getRepository(
   id: string,
 ): Promise<{ success: boolean; error?: string; data?: Repository }> {

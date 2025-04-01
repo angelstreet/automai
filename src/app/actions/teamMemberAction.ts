@@ -15,6 +15,81 @@ import {  ResourcePermissions  } from '@/types/context/teamContextType';
  * @param email Email address of the user to add
  * @param role Role to assign to the new member
  */
+/**
+ * Get team members for a specific team
+ */
+export async function getTeamMembers(
+  teamId: string
+): Promise<{ success: boolean; error?: string; data?: any }> {
+  try {
+    // Verify the current user is authenticated
+    const user = await getUser();
+    if (!user) {
+      return { success: false, error: 'User not authenticated' };
+    }
+
+    const cookieStore = await cookies();
+    
+    // Get team members
+    const result = await teamMemberDb.getTeamMembers(teamId, cookieStore);
+    
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error || 'Failed to get team members',
+      };
+    }
+    
+    return { success: true, data: result.data };
+  } catch (error) {
+    console.error('Error getting team members:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get team members',
+    };
+  }
+}
+
+/**
+ * Update a team member's role
+ */
+export async function updateTeamMemberRole(
+  teamId: string,
+  profileId: string,
+  role: string
+): Promise<{ success: boolean; error?: string; data?: any }> {
+  try {
+    // Verify the current user is authenticated
+    const user = await getUser();
+    if (!user) {
+      return { success: false, error: 'User not authenticated' };
+    }
+
+    const cookieStore = await cookies();
+    
+    // Update role
+    const result = await teamMemberDb.updateTeamMemberRole(teamId, profileId, role, cookieStore);
+    
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error || 'Failed to update role',
+      };
+    }
+    
+    // Revalidate team-related paths
+    revalidatePath('/[locale]/[tenant]/team');
+    
+    return { success: true, data: result.data };
+  } catch (error) {
+    console.error('Error updating team member role:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to update role',
+    };
+  }
+}
+
 export async function addTeamMember(
   teamId: string,
   email: string,

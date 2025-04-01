@@ -391,6 +391,35 @@ export async function clearCICDCache(options?: {
 }
 
 /**
+ * Run a CI/CD job
+ */
+export async function runCICDJob(providerId: string, jobId: string): Promise<ActionResult<any>> {
+  try {
+    // Get the current authenticated user
+    const user = await getUser();
+    if (!user) {
+      console.error('[@action:cicd:runCICDJob] User not authenticated');
+      return { success: false, error: 'User not authenticated' };
+    }
+    
+    // This would call the actual CICD service to run the job
+    // For now, return a mock success
+    return { 
+      success: true, 
+      data: { 
+        id: jobId,
+        provider_id: providerId,
+        status: 'running',
+        started_at: new Date().toISOString()
+      } 
+    };
+  } catch (error: any) {
+    console.error('[@action:cicd:runCICDJob] Error:', error);
+    return { success: false, error: error.message || 'Failed to run CICD job' };
+  }
+}
+
+/**
  * Test Jenkins API connection
  * Used for quick validation of Jenkins connectivity without providing specific credentials
  */

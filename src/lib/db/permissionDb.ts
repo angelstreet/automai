@@ -1,4 +1,14 @@
 import { createClient } from '@/lib/supabase/server';
+
+export default {
+  formatPermissionsLog,
+  getUserPermissions,
+  getRoleTemplates,
+  getRoleTemplate,
+  applyRoleTemplate,
+  setUserPermission,
+  checkPermission
+};
 import { 
   PermissionMatrix,
   PermissionsResult,

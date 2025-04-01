@@ -22,6 +22,17 @@ export type GitProvider = {
 /**
  * Get a repository by ID
  */
+export default {
+  getById,
+  getRepositories,
+  getRepository,
+  createRepository,
+  updateRepository,
+  deleteRepository,
+  createRepositoryFromUrl,
+  getAllGitProviders
+};
+
 export async function getById(id: string, cookieStore?: ReadonlyRequestCookies): Promise<DbResponse<Repository>> {
   try {
     const supabase = await createClient(cookieStore);
