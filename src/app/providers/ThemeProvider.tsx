@@ -1,62 +1,43 @@
 'use client';
 
 import { ThemeProvider as NextThemesProvider } from 'next-themes';
-import { createContext, useContext } from 'react';
+import { type ThemeProviderProps } from 'next-themes';
+import * as React from 'react';
 import { useTheme as useNextTheme } from 'next-themes';
 
-import { TooltipProvider } from '@/components/shadcn/tooltip';
-import { FontProvider } from '@/context/FontContext';
-import { SearchProvider } from '@/context/SearchContext';
-
-// Define theme context
-type Theme = 'light' | 'dark' | 'system';
-
-export interface ThemeContextType {
-  theme: Theme;
-  setTheme: (theme: Theme) => void;
-}
-
-// Create a context for compatibility, but it will just forward to next-themes
-export const ThemeContext = createContext<ThemeContextType>({
-  theme: 'system',
-  setTheme: () => null,
-});
-
-// Simple provider that just forwards to next-themes
-export function ThemeProvider({
-  children,
-  defaultTheme = 'system',
-}: {
-  children: React.ReactNode;
-  defaultTheme?: Theme;
-}) {
-  return <>{children}</>;
-}
-
-// Simple context accessor that forwards to next-themes
-export function useTheme() {
-  return useNextTheme();
-}
-
-interface ThemeProvidersProps {
-  children: React.ReactNode;
-  defaultTheme?: Theme;
-}
-
-export function ThemeProviders({ children, defaultTheme = 'system' }: ThemeProvidersProps) {
+export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
   return (
-    // Only use next-themes provider
     <NextThemesProvider
       attribute="class"
-      defaultTheme={defaultTheme}
+      defaultTheme="system"
       enableSystem
       disableTransitionOnChange
+      {...props}
     >
-      <FontProvider>
-        <TooltipProvider>
-          <SearchProvider>{children}</SearchProvider>
-        </TooltipProvider>
-      </FontProvider>
+      {children}
+      {/* Add a hidden script to set cookies when theme changes */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+            (function() {
+              const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                  if (mutation.attributeName === 'class' && mutation.target === document.documentElement) {
+                    const theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+                    document.cookie = 'theme=' + theme + '; path=/; max-age=31536000';
+                  }
+                });
+              });
+              observer.observe(document.documentElement, { attributes: true });
+            })();
+          `,
+        }}
+      />
     </NextThemesProvider>
   );
+}
+
+// Export the next-themes useTheme hook
+export function useTheme() {
+  return useNextTheme();
 }

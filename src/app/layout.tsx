@@ -2,8 +2,7 @@ import './globals.css';
 import { Inter } from 'next/font/google';
 import { cookies } from 'next/headers';
 
-import { ThemeProvider } from '@/components/theme/ThemeProvider'; 
-import { SWRProvider, ToastProvider } from '@/app/providers';
+import { ThemeProvider, SWRProvider, ToastProvider } from '@/app/providers';
 
 const inter = Inter({
   subsets: ['latin'],

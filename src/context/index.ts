@@ -7,18 +7,15 @@ export {
   TeamProvider
 } from '@/app/providers';
 
-// Export theme functionality from components
-export { ThemeProvider } from '@/components/theme/ThemeProvider';
+// Theme is now handled through app/providers
 
 // Export basic data context hooks that access provider data only
 export { 
   useUser, 
   useSidebar,
-  useTeam
+  useTeam,
+  useTheme
 } from '@/app/providers';
-
-// Use next-themes directly
-export { useTheme } from 'next-themes';
 
 // Export business logic hooks from hooks directory
 export { usePermission } from '@/hooks/permission';
