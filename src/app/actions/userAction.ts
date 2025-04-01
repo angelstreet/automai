@@ -136,21 +136,3 @@ export async function updateProfile(formData: FormData | Record<string, any>) {
     throw new Error(error instanceof Error ? error.message : 'Failed to update profile');
   }
 }
-
-/**
- * Set the user's selected team
- *
- * @param teamId The ID of the team to select
- * @returns Result object with success status
- */
-export async function setSelectedTeam(teamId: string) {
-  console.warn(
-    '[@action:user:setSelectedTeam] DEPRECATED: Use setSelectedTeam from team actions instead',
-  );
-
-  // Import the new function from team actions to avoid circular dependencies
-  const { setSelectedTeam: teamSetSelectedTeam } = await import('@/app/actions/teamAction');
-
-  // Call the new function
-  return teamSetSelectedTeam(teamId);
-}
