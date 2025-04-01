@@ -8,7 +8,7 @@ import { Button } from '@/components/shadcn/button';
 import { Separator } from '@/components/shadcn/separator';
 import { RoleSwitcher } from '@/components/team/RoleSwitcher';
 import { ThemeToggleStatic } from '@/components/theme/ThemeToggleStatic';
-import { useUser, useSidebar } from '@/hooks';
+import { useSidebar } from '@/hooks';
 import { cn } from '@/lib/utils';
 import { Team } from '@/types/context/teamContextType';
 import { User } from '@/types/service/userServiceType';
@@ -28,7 +28,6 @@ export function HeaderClient({
 }: HeaderClientProps) {
   const { state } = useSidebar();
   const isCollapsed = state === 'collapsed';
-  const userContext = useUser();
 
   // Function to toggle header (can be implemented later)
   const toggleHeader = () => {
@@ -66,17 +65,16 @@ export function HeaderClient({
         {/* Right section */}
         <div className="flex items-center gap-2 px-4 h-full">
           <div className="flex-none w-36 mr-12">
-            {userContext?.user ? (
-              <RoleSwitcher
-                key={`role-switcher-${userContext.user.role || 'default'}`}
-                user={userContext.user}
-              />
+            {user ? (
+              <RoleSwitcher key={`role-switcher-${user.role || 'default'}`} user={user} />
             ) : (
               <div className="w-[180px] h-10 bg-muted animate-pulse rounded-md"></div>
             )}
           </div>
           <Separator orientation="vertical" className="h-8 opacity-30" />
-          <ThemeToggleStatic />
+          <div className="flex items-center">
+            <ThemeToggleStatic />
+          </div>
           <Separator orientation="vertical" className="h-8 opacity-30" />
           <Suspense fallback={<div className="h-8 w-8 bg-muted/30 rounded-full animate-pulse" />}>
             <HeaderUserProfile user={user} activeTeam={activeTeam} />
