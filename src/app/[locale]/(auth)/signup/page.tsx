@@ -11,7 +11,15 @@ import {
 } from '@/app/actions/authAction';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
-import { useUser } from '@/context/UserContext';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/shadcn/select';
+import { useToast } from '@/components/shadcn/use-toast';
+import { useUser } from '@/context';
 
 export default function SignUpPage() {
   const router = useRouter();

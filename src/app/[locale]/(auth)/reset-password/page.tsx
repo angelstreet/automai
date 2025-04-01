@@ -1,13 +1,13 @@
 'use client';
 
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as React from 'react';
 
 import { updatePassword } from '@/app/actions/authAction';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
-import { useUser } from '@/context/UserContext';
+import { useUser } from '@/context';
 
 export default function ResetPasswordPage() {
   const router = useRouter();

@@ -23,10 +23,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/shadcn/table';
-import { ResourceType, usePermission, useTeam } from '@/context';
-import {  TeamMemberResource, TeamMemberDetails  } from '@/types/context/teamContextType';
-import {  User  } from '@/types/service/userServiceType';
+import { ResourceType, usePermission } from '@/context';
+import { TeamMemberResource, TeamMemberDetails } from '@/types/context/teamContextType';
+import { User } from '@/types/service/userServiceType';
 import { useRemoveTeamMember } from '@/hooks/teamMember';
+import { useTeam } from '@/hooks/team';
 
 import TeamMembersTableSkeleton from '../TeamMembersTableSkeleton';
 

@@ -5,9 +5,10 @@ import { useTranslations } from 'next-intl';
 
 import { Skeleton } from '@/components/shadcn/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
-import { useTeam } from '@/context';
-import {  TeamDetails  } from '@/types/context/teamContextType';
-import {  User  } from '@/types/service/userServiceType';
+import { useTeam } from '@/hooks/team';
+import { usePermission } from '@/context';
+import { TeamDetails } from '@/types/context/teamContextType';
+import { User } from '@/types/service/userServiceType';
 
 export default function TeamHeader({ user }: { user?: User | null }) {
   const t = useTranslations('team');

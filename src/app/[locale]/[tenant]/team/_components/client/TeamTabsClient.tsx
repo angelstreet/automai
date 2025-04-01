@@ -1,10 +1,13 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { useState } from 'react';
 
-import { useTeam } from '@/context';
-import {  TeamDetails  } from '@/types/context/teamContextType';
-import {  User  } from '@/types/service/userServiceType';
+import { useTeam } from '@/hooks/team';
+import { TeamDetails } from '@/types/context/teamContextType';
+import { User } from '@/types/service/userServiceType';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 
 import TeamOverviewSkeleton from '../TeamOverviewSkeleton';
 import TeamOverview from '../TeamOverview';

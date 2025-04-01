@@ -2,10 +2,12 @@
 
 import { PlusIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import React from 'react';
 
 import { Button } from '@/components/shadcn/button';
-import { ResourceType, usePermission, useTeam } from '@/context';
-import {  TeamDetails  } from '@/types/context/teamContextType';
+import { ResourceType, usePermission } from '@/context';
+import { useTeam } from '@/hooks/team';
+import { TeamDetails } from '@/types/context/teamContextType';
 
 export default function TeamActions() {
   const t = useTranslations('team');

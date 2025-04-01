@@ -7,8 +7,8 @@ export { UserProvider, SidebarProvider, TeamProvider } from '@/app/providers';
 // Export basic data context hooks that access provider data only
 export { useUser, useSidebar, useTheme } from '@/app/providers';
 
-// IMPORTANT: useTeam has moved to @/hooks/team
-// Import it with: import { useTeam } from '@/hooks/team';
+// Import and re-export useTeam from hooks
+export { useTeam, useTeamData, useUnassignedResources, useResourceLimit } from '@/hooks/team';
 
 // Export hooks from hooks directory for more specialized usage
 export { usePermission } from '@/hooks/permission';
@@ -16,18 +16,6 @@ export { useHost } from '@/hooks/host';
 export { useCICD } from '@/hooks/cicd';
 export { useDeployment, useDeploymentWizard } from '@/hooks/deployment';
 export { useRepository } from '@/hooks/repository';
-
-// Export team hooks from TeamContext
-// IMPORTANT: These should be moved to hooks/team/ in the future to follow the same pattern
-export {
-  useTeamMember,
-  useTeamCreation,
-  useTeamUpdate,
-  useTeamDeletion,
-  useTeamDetails,
-  useUnassignedResources,
-  useTeamSwitcher,
-} from './TeamContext';
 
 // Export hooks that are still in the original location
 export { FontProvider, useFont } from './FontContext';
@@ -78,12 +66,19 @@ export const userSelectors = {
   selectedTeam: (context: UserContextType) => context.selectedTeam,
 };
 
-// Export context-related types
-
-// Import these hooks from '@/hooks' instead
-// export type { Team } from './TeamContext';
-// export { default as TeamContext, TeamProvider, useTeam } from './TeamContext';
-
-// DEPRECATED: Import hooks from @/hooks instead
-// For example, instead of importing from '@/context':
-// import { useTeam } from '@/hooks';
+/**
+ * MIGRATION NOTICE
+ *
+ * The following hooks have been moved from TeamContext to @/hooks/team:
+ * - useTeam → import from '@/hooks/team' or '@/context'
+ * - useTeamData → import from '@/hooks/team' or '@/context'
+ * - useUnassignedResources → import from '@/hooks/team' or '@/context'
+ * - useResourceLimit → import from '@/hooks/team' or '@/context'
+ *
+ * The following hooks need to be migrated:
+ * - useTeamCreation → not implemented yet, use team actions directly
+ * - useTeamUpdate → not implemented yet, use team actions directly
+ * - useTeamDeletion → not implemented yet, use team actions directly
+ * - useTeamDetails → not implemented yet, use useTeam().activeTeam instead
+ * - useTeamSwitcher → not implemented yet, use useTeam().switchTeam instead
+ */
