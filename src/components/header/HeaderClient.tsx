@@ -6,6 +6,7 @@ import { HeaderUserProfile } from '@/components/header';
 import { ThemeToggleStatic } from '@/components/theme/ThemeToggleStatic';
 import { Team } from '@/types/context/teamContextType';
 import { User } from '@/types/service/userServiceType';
+import { cn } from '@/lib/utils';
 
 interface HeaderClientProps {
   className?: string;
@@ -22,7 +23,11 @@ export function HeaderClient({
 }: HeaderClientProps) {
   return (
     <header
-      className={`${className} ${fixed ? 'fixed' : ''} flex items-center justify-between p-4`}
+      className={cn(
+        'w-full flex items-center justify-between p-4 bg-background',
+        fixed ? 'fixed top-0 z-50' : '',
+        className,
+      )}
     >
       <Suspense fallback={<div className="h-8 w-8 bg-muted/30 rounded-md animate-pulse" />}>
         <ThemeToggleStatic />
