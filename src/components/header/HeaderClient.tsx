@@ -6,6 +6,7 @@ import { Suspense, useState } from 'react';
 import { HeaderUserProfile } from '@/components/header';
 import { Button } from '@/components/shadcn/button';
 import { Separator } from '@/components/shadcn/separator';
+import { SidebarTrigger } from '@/components/sidebar';
 import { RoleSwitcher } from '@/components/team/RoleSwitcher';
 import { ThemeToggleStatic } from '@/components/theme/ThemeToggleStatic';
 import { useSidebar } from '@/hooks';
@@ -57,9 +58,9 @@ export function HeaderClient({
           <>
             {/* Left section */}
             <div className="relative flex items-center h-full">
-              <div className={cn('flex items-center ml-4')}>
-                {/* This is where SidebarTrigger would go */}
-                <Separator orientation="vertical" className="h-8 opacity-50 mx-2" />
+              <div className={cn('absolute flex items-center', isCollapsed ? '-ml-16' : 'ml-1')}>
+                <SidebarTrigger />
+                <Separator orientation="vertical" className="h-8 opacity-50 ml-2" />
               </div>
             </div>
 
