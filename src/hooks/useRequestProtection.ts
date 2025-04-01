@@ -1,6 +1,6 @@
 import { useRef, useCallback } from 'react';
 
-import { hasDataChanged } from '@/context/utils/contextHelpers';
+import { hasDataChanged } from '@/context/HelperContext';
 
 // Request state with TTL management
 interface RequestState {

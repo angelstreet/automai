@@ -1,21 +1,11 @@
-import type {  UserContextType  } from '@/types/context/userContextType';
+import type { ResourceType, Operation } from '@/types/context/permissionsContextType';
+import type { UserContextType } from '@/types/context/userContextType';
 
 // Export providers for app usage
-export { 
-  UserProvider,
-  SidebarProvider,
-  TeamProvider
-} from '@/app/providers';
-
-// Theme is now handled through app/providers
+export { UserProvider, SidebarProvider, TeamProvider } from '@/app/providers';
 
 // Export basic data context hooks that access provider data only
-export { 
-  useUser, 
-  useSidebar,
-  useTeam,
-  useTheme
-} from '@/app/providers';
+export { useUser, useSidebar, useTeam, useTheme } from '@/app/providers';
 
 // Export hooks from hooks directory for more specialized usage
 export { usePermission } from '@/hooks/permission';
@@ -33,7 +23,7 @@ export {
   useTeamDeletion,
   useTeamDetails,
   useUnassignedResources,
-  useTeamSwitcher
+  useTeamSwitcher,
 } from './TeamContext';
 
 // Export hooks that are still in the original location
@@ -41,22 +31,28 @@ export { FontProvider, useFont } from './FontContext';
 export { SearchProvider, useSearch } from './SearchContext';
 
 // Import types from their correct location
-import type {  ResourceType, Operation  } from '@/types/context/permissionsContextType';
 export type { ResourceType, Operation };
 
 // Export common types used across the application
 export type { UserContextType } from '@/types/context/userContextType';
 export type { SidebarContext } from '@/types/context/sidebarContextType';
-export type { 
-  TeamMember, 
-  TeamCreateInput, 
-  TeamUpdateInput, 
-  ResourcePermissions, 
-  TeamMemberResource 
+export type {
+  TeamMember,
+  TeamCreateInput,
+  TeamUpdateInput,
+  ResourcePermissions,
+  TeamMemberResource,
 } from '@/types/context/teamContextType';
 
 // Export context state types for component usage
-export type { User, Role, UserTeam, TeamMember, ResourceLimit, AuthUser } from '@/types/component/userComponentType';
+export type {
+  User,
+  Role,
+  UserTeam,
+  TeamMember,
+  ResourceLimit,
+  AuthUser,
+} from '@/types/component/userComponentType';
 
 // User selectors for optimized context usage
 export const userSelectors = {

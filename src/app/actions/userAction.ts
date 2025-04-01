@@ -3,6 +3,9 @@
 import userDb from '@/lib/db/userDb';
 import cacheUtils from '@/lib/utils/cacheUtils';
 import { AuthUser } from '@/types/service/userServiceType';
+import { cookies } from 'next/headers';
+import { createClient } from '@/lib/supabase/server';
+import type { User } from '@/types/service/userServiceType';
 
 /**
  * Invalidate user-related cache
@@ -20,10 +23,73 @@ export async function invalidateUserCache() {
 
 /**
  * Get the current authenticated user
- * @returns User data or null if not authenticated
+ * Returns the user data directly without needing mapping
  */
-export async function getUser(): Promise<AuthUser | null> {
-  return userDb.getCurrentUser();
+export async function getUser(): Promise<User | null> {
+  try {
+    const cookieStore = cookies();
+    const supabase = await createClient(cookieStore);
+
+    const {
+      data: { user: authUser },
+      error: authError,
+    } = await supabase.auth.getUser();
+    if (authError || !authUser) {
+      console.error('[@action:user:getUser] Auth error:', authError);
+      return null;
+    }
+
+    // Get profile data
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role, tenant_id, tenant_name, avatar_url')
+      .eq('id', authUser.id)
+      .single();
+
+    if (profileError || !profile) {
+      console.error('[@action:user:getUser] Profile error:', profileError);
+      return null;
+    }
+
+    // Get user teams
+    const { data: teams, error: teamsError } = await supabase
+      .from('team_members')
+      .select('team_id, teams(id, name, tenant_id, created_at)')
+      .eq('user_id', authUser.id);
+
+    const userTeams =
+      !teamsError && teams
+        ? teams.map((teamMember: any) => ({
+            id: teamMember.teams.id,
+            name: teamMember.teams.name,
+            tenant_id: teamMember.teams.tenant_id,
+            created_at: teamMember.teams.created_at,
+            is_default: false,
+          }))
+        : [];
+
+    // Get selected team from cookie
+    const selectedTeamCookie = cookieStore.get(`selected_team_${authUser.id}`);
+    const selectedTeamId = selectedTeamCookie?.value || undefined;
+
+    // Construct user object
+    return {
+      id: authUser.id,
+      email: authUser.email || '',
+      name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Guest',
+      role: profile.role,
+      tenant_id: profile.tenant_id,
+      tenant_name: profile.tenant_name,
+      avatar_url: authUser.user_metadata?.avatar_url || profile.avatar_url || '',
+      user_metadata: authUser.user_metadata,
+      teams: userTeams,
+      selectedTeamId,
+      teamMembers: [],
+    };
+  } catch (error) {
+    console.error('[@action:user:getUser] Error:', error);
+    return null;
+  }
 }
 
 /**

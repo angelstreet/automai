@@ -1,8 +1,10 @@
 'use client';
 
-import React, { createContext, useContext, useState } from 'react';
-import {  User  } from '@/types/service/userServiceType';
-import { useUser } from '@/hooks/user';
+import React, { createContext, useContext } from 'react';
+
+import { useUser as useUserHook } from '@/hooks';
+
+import { User } from '@/types/service';
 
 // Define the minimal context type needed - data only
 interface UserContextType {
@@ -18,22 +20,22 @@ const UserContext = createContext<UserContextType>({
 
 export function UserProvider({
   children,
-  initialUser,
+  user,
 }: {
   children: React.ReactNode;
-  initialUser?: User | null;
+  user?: User | null;
 }) {
   // Use the hook to manage user state
-  const { user, isLoading } = useUser(initialUser);
+  const { user: currentUser, isLoading } = useUserHook(user);
 
   console.debug(
-    '[@context:UserContext:UserProvider] Initializing with initialUser:',
-    initialUser ? `${initialUser.id} (${initialUser.email})` : 'null',
+    '[@context:UserContext:UserProvider] Initializing with user:',
+    user ? `${user.id} (${user.email})` : 'null',
   );
-  
+
   // Provide only the data without implementation details
   const value = {
-    user,
+    user: currentUser,
     isLoading,
   };
 

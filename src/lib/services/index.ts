@@ -19,7 +19,7 @@ export * from './sshService';
 // Repository services
 export * from './repositoryService';
 
-// Deployment services 
+// Deployment services
 export * from './deploymentService';
 
 // CICD services

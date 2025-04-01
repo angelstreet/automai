@@ -1,17 +1,19 @@
-import { 
-  getUser, 
-  getCurrentUser, 
-  updateProfile, 
-  setSelectedTeam, 
-  create, 
-  update, 
+import { AuthUser } from '@/types/service/userServiceType';
+
+import {
+  getUser,
+  getCurrentUser,
+  updateProfile,
+  setSelectedTeam,
+  create,
+  update,
   deleteUser as deleteUserDb,
   findMany,
   findUnique,
-  clearCache
+  clearCache,
 } from '../db/userDb';
+
 import { ServiceResponse } from './teamService';
-import { AuthUser } from '@/types/service/userServiceType';
 
 /**
  * User Service
@@ -26,13 +28,13 @@ export const userService = {
       return {
         success: result.success,
         data: result.data,
-        error: result.error
+        error: result.error,
       };
     } catch (error) {
       console.error('[@service:userService:getUser] Error:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error fetching user'
+        error: error instanceof Error ? error.message : 'Unknown error fetching user',
       };
     }
   },
@@ -46,13 +48,13 @@ export const userService = {
       return {
         success: result.success,
         data: result.data,
-        error: result.error
+        error: result.error,
       };
     } catch (error) {
       console.error('[@service:userService:getCurrentUser] Error:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error fetching current user'
+        error: error instanceof Error ? error.message : 'Unknown error fetching current user',
       };
     }
   },
@@ -60,19 +62,23 @@ export const userService = {
   /**
    * Update user profile
    */
-  async updateProfile(userId: string, metadata: Record<string, any>, cookieStore?: any): Promise<ServiceResponse<any>> {
+  async updateProfile(
+    userId: string,
+    metadata: Record<string, any>,
+    cookieStore?: any,
+  ): Promise<ServiceResponse<any>> {
     try {
       const result = await updateProfile(userId, metadata, cookieStore);
       return {
         success: result.success,
         data: result.data,
-        error: result.error
+        error: result.error,
       };
     } catch (error) {
       console.error('[@service:userService:updateProfile] Error:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error updating profile'
+        error: error instanceof Error ? error.message : 'Unknown error updating profile',
       };
     }
   },
@@ -80,19 +86,23 @@ export const userService = {
   /**
    * Set selected team for a user
    */
-  async setSelectedTeam(userId: string, teamId: string, cookieStore?: any): Promise<ServiceResponse<null>> {
+  async setSelectedTeam(
+    userId: string,
+    teamId: string,
+    cookieStore?: any,
+  ): Promise<ServiceResponse<null>> {
     try {
       const result = await setSelectedTeam(userId, teamId, cookieStore);
       return {
         success: result.success,
         data: null,
-        error: result.error
+        error: result.error,
       };
     } catch (error) {
       console.error('[@service:userService:setSelectedTeam] Error:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error setting selected team'
+        error: error instanceof Error ? error.message : 'Unknown error setting selected team',
       };
     }
   },
@@ -106,13 +116,13 @@ export const userService = {
       return {
         success: result.success,
         data: result.data,
-        error: result.error
+        error: result.error,
       };
     } catch (error) {
       console.error('[@service:userService:create] Error:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error creating user'
+        error: error instanceof Error ? error.message : 'Unknown error creating user',
       };
     }
   },
@@ -126,13 +136,13 @@ export const userService = {
       return {
         success: result.success,
         data: result.data,
-        error: result.error
+        error: result.error,
       };
     } catch (error) {
       console.error('[@service:userService:update] Error:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error updating user'
+        error: error instanceof Error ? error.message : 'Unknown error updating user',
       };
     }
   },
@@ -146,13 +156,13 @@ export const userService = {
       return {
         success: result.success,
         data: null,
-        error: result.error
+        error: result.error,
       };
     } catch (error) {
       console.error('[@service:userService:deleteUser] Error:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error deleting user'
+        error: error instanceof Error ? error.message : 'Unknown error deleting user',
       };
     }
   },
@@ -190,7 +200,7 @@ export const userService = {
     } catch (error) {
       console.error('[@service:userService:clearCache] Error:', error);
     }
-  }
+  },
 };
 
 export default userService;

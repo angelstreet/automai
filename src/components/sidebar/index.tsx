@@ -1,8 +1,7 @@
 export { default as Sidebar } from './Sidebar';
-export { SidebarProvider, useSidebar } from '@/context/SidebarContext';
 export { SidebarTrigger } from './SidebarTrigger';
 export { SidebarRail } from './SidebarRail';
-
+export { SidebarClient } from './SidebarClient';
 // Layout components - consolidated exports
 export {
   SidebarContent,
@@ -11,6 +10,8 @@ export {
   SidebarSeparator,
   SidebarInset,
 } from './SidebarLayout';
+// Skeleton components - consolidated exports
+export { SidebarSkeleton } from './SidebarSkeleton';
 
 // Group components - consolidated exports
 export {
@@ -27,6 +28,3 @@ export { SidebarMenu, SidebarMenuItem, SidebarMenuSub } from './SidebarMenuItems
 export { SidebarMenuButton } from './SidebarMenuButton';
 export { SidebarMenuSubButton } from './SidebarMenuSubButton';
 export { SidebarInput } from './SidebarInput';
-
-// Data exports
-export { sidebarData, type SidebarData } from './sidebarData';

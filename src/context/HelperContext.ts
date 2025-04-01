@@ -52,7 +52,7 @@ export const hasDataChanged = <T>(prevData: T, newData: T): boolean => {
   // Deep comparison
   try {
     return JSON.stringify(prevData) !== JSON.stringify(newData);
-  } catch (e) {
+  } catch (_error) {
     // If stringify fails (circular references, etc.), fall back to considering them different
     return true;
   }
