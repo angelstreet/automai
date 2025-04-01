@@ -24,7 +24,7 @@ export async function invalidateUserCache() {
  * @returns User data or null if not authenticated
  */
 export async function getUser(): Promise<AuthUser | null> {
-  return userDB.getCurrentUser();
+  return userDb.getCurrentUser();
 }
 
 /**
@@ -57,13 +57,13 @@ export async function updateProfile(formData: FormData | Record<string, any>) {
     }
 
     // Get current user to get ID
-    const user = await userDB.getCurrentUser();
+    const user = await userDb.getCurrentUser();
     if (!user) {
       throw new Error('User not found');
     }
 
     // Call the db-users module to handle the update
-    return userDB.updateProfile(user.id, metadata);
+    return userDb.updateProfile(user.id, metadata);
   } catch (error) {
     console.error('Error updating profile:', error);
     throw new Error(error instanceof Error ? error.message : 'Failed to update profile');

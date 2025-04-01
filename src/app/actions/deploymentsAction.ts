@@ -4,14 +4,12 @@ import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 
 import { getUser } from '@/app/actions/userAction';
-import deploymentService from '@/lib/services/deploymentService';
-import {  AuthUser, User  } from '@/types/service/userServiceType';
-
 import {
   Deployment,
   DeploymentFormData,
   DeploymentStatus,
 } from '@/types/component/deploymentComponentType';
+import { AuthUser, User } from '@/types/service/userServiceType';
 
 // Define a function to map database deployment to Deployment type
 function mapDbDeploymentToDeployment(dbDeployment: any): Deployment {

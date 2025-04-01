@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { cookies } from 'next/headers';
-import userDB from '@/lib/supabase/db-users';
+import userDb from '@/lib/db/userDb';
 import {  AuthUser  } from '@/types/service/userServiceType';
 
 /**
@@ -37,7 +37,7 @@ export async function getCurrentSession() {
 export async function getCurrentUser(): Promise<AuthUser | null> {
   try {
     const cookieStore = await cookies();
-    const user = await userDB.getCurrentUser(cookieStore);
+    const user = await userDb.getCurrentUser(cookieStore);
 
     console.log('[@action:session:getCurrentUser] Fetched user data', {
       userId: user?.id || 'none',

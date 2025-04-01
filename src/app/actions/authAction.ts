@@ -1,8 +1,7 @@
 'use server';
 
+import { invalidateUserCache } from '@/app/actions/userAction';
 import { supabaseAuth } from '@/lib/supabase/auth';
-
-import { invalidateUserCache } from './user';
 
 /**
  * Sign in with OAuth provider

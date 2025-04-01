@@ -2,12 +2,11 @@
 
 import { revalidatePath } from 'next/cache';
 
-import type { DeploymentFormData } from '@/app/[locale]/[tenant]/deployment/types';
-
-import { getCICDProviders } from './cicd';
-import { getHosts } from './hosts';
-import { getRepositories } from './repositories';
-import { getUser } from './user';
+import { getCICDProviders } from '@/app/actions/cicdAction';
+import { getHosts } from '@/app/actions/hostsAction';
+import { getRepositories } from '@/app/actions/repositoriesAction';
+import { getUser } from '@/app/actions/userAction';
+import type { DeploymentFormData } from '@/types/component/deploymentComponentType';
 
 /**
  * Fetches all data needed for the deployment wizard

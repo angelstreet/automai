@@ -1,7 +1,7 @@
 'use server';
 
-import { getHostById } from './hosts';
-import { getUser } from './user';
+import { getHostById } from '@/app/actions/hostsAction';
+import { getUser } from '@/app/actions/userAction';
 
 /**
  * Initialize a terminal session
