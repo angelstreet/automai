@@ -10,23 +10,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
-import { useTheme as useCustomTheme } from '@/context';
 export function ThemeToggleStatic() {
-  // Use both theme hooks for compatibility
+  // Use next-themes for theme management
   const nextThemes = useNextThemes();
-  const customTheme = useCustomTheme();
   const [_mounted, _setMounted] = React.useState(true); // Start as true to prevent flashing
 
-  // Function to set theme in both providers for maximum compatibility
+  // Function to set theme
   const setTheme = (newTheme: string) => {
     // Set theme in next-themes provider
     if (nextThemes.setTheme) {
       nextThemes.setTheme(newTheme);
-    }
-
-    // Also set theme in custom provider if available
-    if (customTheme.setTheme) {
-      customTheme.setTheme(newTheme as any);
     }
 
     // Optionally, manually set the theme class on html element as a fallback

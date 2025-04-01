@@ -45,19 +45,18 @@ import type {  ResourceType, Operation  } from '@/types/context/permissionsConte
 export type { ResourceType, Operation };
 
 // Export common types used across the application
-export type { UserContextType } from '@/types/context/user';
-export type { SidebarContext } from '@/types/sidebar';
-export type { ThemeContextType } from '@/app/providers/theme';
+export type { UserContextType } from '@/types/context/userContextType';
+export type { SidebarContext } from '@/types/context/sidebarContextType';
 export type { 
   TeamMember, 
   TeamCreateInput, 
   TeamUpdateInput, 
   ResourcePermissions, 
   TeamMemberResource 
-} from '@/types/context/team';
+} from '@/types/context/teamContextType';
 
 // Export context state types for component usage
-export type { User, Role, AuthUser, UserTeam, TeamMember, ResourceLimit } from '@/types/user';
+export type { User, Role, UserTeam, TeamMember, ResourceLimit, AuthUser } from '@/types/component/userComponentType';
 
 // User selectors for optimized context usage
 export const userSelectors = {
