@@ -5,9 +5,9 @@
 node scripts/generate-structure.js
 ```
 
-# automai project structure
+# automai3 project structure
 
-generated on: 4/1/2025, 7:20:27 AM
+generated on: 4/1/2025, 9:20:04 PM
 
 ## usage
 
@@ -23,27 +23,27 @@ this will create a new file at `docs/project_structure.md` containing the curren
 ## project statistics
 
 ### overall statistics
-- total files: 397
+- total files: 406
 - total lines: 0
 
 ### statistics by file type
 #### typescript
-- files: 392
-- lines: 0
-- average lines per file: 0.00
-
-#### css
-- files: 1
-- lines: 0
-- average lines per file: 0.00
-
-#### json configuration
-- files: 2
+- files: 396
 - lines: 0
 - average lines per file: 0.00
 
 #### documentation
+- files: 5
+- lines: 0
+- average lines per file: 0.00
+
+#### css
 - files: 2
+- lines: 0
+- average lines per file: 0.00
+
+#### json configuration
+- files: 3
 - lines: 0
 - average lines per file: 0.00
 
@@ -67,9 +67,10 @@ this will create a new file at `docs/project_structure.md` containing the curren
       📄 layout.tsx (typescript, 0 lines)
     📁 (marketing)/
       📁 _components/
-        📄 comingsoon.tsx (typescript, 0 lines)
-        📄 features.tsx (typescript, 0 lines)
-        📄 hero.tsx (typescript, 0 lines)
+        📁 client/
+          📄 features.tsx (typescript, 0 lines)
+          📄 hero.tsx (typescript, 0 lines)
+          📄 siteheader.tsx (typescript, 0 lines)
         📄 index.ts (typescript, 0 lines)
       📄 layout.tsx (typescript, 0 lines)
     📁 [tenant]/
@@ -263,50 +264,47 @@ this will create a new file at `docs/project_structure.md` containing the curren
     📄 layout.tsx (typescript, 0 lines)
     📄 page.tsx (typescript, 0 lines)
   📁 actions/
-    📄 auth.ts (typescript, 0 lines)
-    📄 cicd.ts (typescript, 0 lines)
-    📄 dashboard.ts (typescript, 0 lines)
-    📄 deployments.ts (typescript, 0 lines)
-    📄 deploymentwizard.ts (typescript, 0 lines)
-    📄 hosts.ts (typescript, 0 lines)
+    📄 authaction.ts (typescript, 0 lines)
+    📄 cicdaction.ts (typescript, 0 lines)
+    📄 dashboardaction.ts (typescript, 0 lines)
+    📄 deploymentsaction.ts (typescript, 0 lines)
+    📄 deploymentwizardaction.ts (typescript, 0 lines)
+    📄 hostsaction.ts (typescript, 0 lines)
     📄 index.ts (typescript, 0 lines)
-    📄 permission.ts (typescript, 0 lines)
-    📄 repositories.ts (typescript, 0 lines)
-    📄 session.ts (typescript, 0 lines)
-    📄 sidebar.ts (typescript, 0 lines)
-    📄 team.ts (typescript, 0 lines)
-    📄 teammember.ts (typescript, 0 lines)
-    📄 terminals.ts (typescript, 0 lines)
-    📄 user.ts (typescript, 0 lines)
+    📄 permissionaction.ts (typescript, 0 lines)
+    📄 readme.md (documentation, 0 lines)
+    📄 repositoriesaction.ts (typescript, 0 lines)
+    📄 sessionaction.ts (typescript, 0 lines)
+    📄 sidebaraction.ts (typescript, 0 lines)
+    📄 teamaction.ts (typescript, 0 lines)
+    📄 teammemberaction.ts (typescript, 0 lines)
+    📄 terminalsaction.ts (typescript, 0 lines)
+    📄 useraction.ts (typescript, 0 lines)
   📁 api/
-    📁 deployments/
-      📁 [id]/
-    📁 git-providers/
-      📁 [id]/
-      📁 callback/
+    📁 fetch-all-repositories/
     📁 repositories/
-      📁 explore/
-      📁 sync/
-        📁 [id]/
       📁 test-connection/
         📄 schema.ts (typescript, 0 lines)
       📁 verify/
         📄 schema.ts (typescript, 0 lines)
       📄 route.ts (typescript, 0 lines)
     📁 terminals/
-      📁 [id]/
       📁 init/
         📄 route.ts (typescript, 0 lines)
-      📁 ws/
-        📁 [id]/
   📁 providers/
+    📁 contexts/
     📄 index.tsx (typescript, 0 lines)
-    📄 sidebar.tsx (typescript, 0 lines)
-    📄 swr.tsx (typescript, 0 lines)
-    📄 team.tsx (typescript, 0 lines)
-    📄 theme.tsx (typescript, 0 lines)
-    📄 toast.tsx (typescript, 0 lines)
-    📄 user.tsx (typescript, 0 lines)
+    📄 permissionprovider.tsx (typescript, 0 lines)
+    📄 queryprovider.tsx (typescript, 0 lines)
+    📄 readme.md (documentation, 0 lines)
+    📄 sidebarprovider.tsx (typescript, 0 lines)
+    📄 teamprovider.tsx (typescript, 0 lines)
+    📄 themeprovider.tsx (typescript, 0 lines)
+    📄 toastprovider.tsx (typescript, 0 lines)
+    📄 userprovider.tsx (typescript, 0 lines)
+  📁 themes/
+    📄 matsu-theme.css (css, 0 lines)
+    📄 matsu-theme.json (json configuration, 0 lines)
   📄 globals.css (css, 0 lines)
   📄 layout.tsx (typescript, 0 lines)
   📄 metadata.ts (typescript, 0 lines)
@@ -315,35 +313,24 @@ this will create a new file at `docs/project_structure.md` containing the curren
   📁 dialog/
     📄 commandmenu.tsx (typescript, 0 lines)
     📄 confirmdialog.tsx (typescript, 0 lines)
+  📁 header/
+    📄 headerclient.tsx (typescript, 0 lines)
+    📄 headerskeleton.tsx (typescript, 0 lines)
+    📄 headeruserprofile.tsx (typescript, 0 lines)
+    📄 index.ts (typescript, 0 lines)
   📁 icons/
     📄 activitylogicon.tsx (typescript, 0 lines)
     📄 index.tsx (typescript, 0 lines)
   📁 layout/
-    📁 client/
-      📄 index.ts (typescript, 0 lines)
-      📄 teamswitcherclient.tsx (typescript, 0 lines)
-      📄 userprofiledropdown.tsx (typescript, 0 lines)
-    📄 appsidebar.tsx (typescript, 0 lines)
-    📄 appsidebarskeleton.tsx (typescript, 0 lines)
     📄 baseheader.tsx (typescript, 0 lines)
-    📄 emptystate.tsx (typescript, 0 lines)
     📄 featurepagecontainer.tsx (typescript, 0 lines)
     📄 footer.tsx (typescript, 0 lines)
     📄 main.tsx (typescript, 0 lines)
     📄 navgroup.tsx (typescript, 0 lines)
-    📄 navuser.tsx (typescript, 0 lines)
     📄 pageheader.tsx (typescript, 0 lines)
-    📄 roleswitcher.tsx (typescript, 0 lines)
     📄 siteheader.tsx (typescript, 0 lines)
-    📄 teamswitcher.tsx (typescript, 0 lines)
     📄 upgradeprompt.tsx (typescript, 0 lines)
-    📄 userprofiledropdownclient.tsx (typescript, 0 lines)
-    📄 workspaceheader.tsx (typescript, 0 lines)
-    📄 workspaceheaderskeleton.tsx (typescript, 0 lines)
   📁 profile/
-    📄 profilecontent.tsx (typescript, 0 lines)
-    📄 profiledropdown.tsx (typescript, 0 lines)
-    📄 userprofile.tsx (typescript, 0 lines)
   📁 settings/
     📄 languagesettings.tsx (typescript, 0 lines)
   📁 shadcn/
@@ -393,12 +380,16 @@ this will create a new file at `docs/project_structure.md` containing the curren
     📄 sidebarmenubutton.tsx (typescript, 0 lines)
     📄 sidebarmenuitems.tsx (typescript, 0 lines)
     📄 sidebarmenusubbutton.tsx (typescript, 0 lines)
+    📄 sidebarnavgroup.tsx (typescript, 0 lines)
     📄 sidebarrail.tsx (typescript, 0 lines)
+    📄 sidebarskeleton.tsx (typescript, 0 lines)
     📄 sidebartrigger.tsx (typescript, 0 lines)
+    📄 sidebaruserprofile.tsx (typescript, 0 lines)
   📁 team/
     📄 creatorbadge.tsx (typescript, 0 lines)
     📄 permissionawareactions.tsx (typescript, 0 lines)
     📄 permissionawareactionswrapper.tsx (typescript, 0 lines)
+    📄 roleswitcher.tsx (typescript, 0 lines)
     📄 teamselector.tsx (typescript, 0 lines)
     📄 teamselectorclient.tsx (typescript, 0 lines)
     📄 teamswitcher.tsx (typescript, 0 lines)
@@ -409,6 +400,7 @@ this will create a new file at `docs/project_structure.md` containing the curren
     📄 themetogglestatic.tsx (typescript, 0 lines)
   📁 ui/
     📄 breadcrumb.tsx (typescript, 0 lines)
+    📄 emptystate.tsx (typescript, 0 lines)
     📄 loadingspinner.tsx (typescript, 0 lines)
     📄 longtext.tsx (typescript, 0 lines)
     📄 permissionguard.tsx (typescript, 0 lines)
@@ -416,13 +408,11 @@ this will create a new file at `docs/project_structure.md` containing the curren
     📄 resource-card.tsx (typescript, 0 lines)
     📄 search.tsx (typescript, 0 lines)
   📁 workspace/
-    📄 workspaceheader.tsx (typescript, 0 lines)
-    📄 workspaceheaderclient.tsx (typescript, 0 lines)
-    📄 workspaceheaderskeleton.tsx (typescript, 0 lines)
 📁 config/
   📄 fonts.ts (typescript, 0 lines)
 📁 context/
   📄 fontcontext.tsx (typescript, 0 lines)
+  📄 helpercontext.ts (typescript, 0 lines)
   📄 index.ts (typescript, 0 lines)
   📄 permissioncontext.tsx (typescript, 0 lines)
   📄 searchcontext.tsx (typescript, 0 lines)
@@ -431,17 +421,40 @@ this will create a new file at `docs/project_structure.md` containing the curren
   📄 themecontext.tsx (typescript, 0 lines)
   📄 usercontext.tsx (typescript, 0 lines)
 📁 hooks/
+  📁 cicd/
+    📄 index.ts (typescript, 0 lines)
+    📄 usecicd.ts (typescript, 0 lines)
+  📁 deployment/
+    📄 index.ts (typescript, 0 lines)
+    📄 usedeployment.ts (typescript, 0 lines)
+    📄 usedeploymentwizard.ts (typescript, 0 lines)
+  📁 host/
+    📄 index.ts (typescript, 0 lines)
+    📄 usehost.ts (typescript, 0 lines)
   📁 permission/
     📄 index.ts (typescript, 0 lines)
     📄 usepermission.ts (typescript, 0 lines)
+  📁 query/
+    📄 usequeryhelpers.ts (typescript, 0 lines)
+  📁 repository/
+    📄 index.ts (typescript, 0 lines)
+    📄 userepository.ts (typescript, 0 lines)
   📁 team/
     📄 index.ts (typescript, 0 lines)
+    📄 useteam.ts (typescript, 0 lines)
     📄 useteamresources.ts (typescript, 0 lines)
   📁 teammember/
     📄 index.ts (typescript, 0 lines)
     📄 useteammembermanagement.ts (typescript, 0 lines)
     📄 useteammembers.ts (typescript, 0 lines)
+  📁 theme/
+    📄 index.ts (typescript, 0 lines)
+    📄 usetheme.ts (typescript, 0 lines)
+  📁 user/
+    📄 index.ts (typescript, 0 lines)
+    📄 useuser.ts (typescript, 0 lines)
   📄 index.ts (typescript, 0 lines)
+  📄 readme.md (documentation, 0 lines)
   📄 usemobile.tsx (typescript, 0 lines)
   📄 userequestprotection.ts (typescript, 0 lines)
 📁 i18n/
@@ -451,50 +464,39 @@ this will create a new file at `docs/project_structure.md` containing the curren
   📄 index.ts (typescript, 0 lines)
   📄 request.ts (typescript, 0 lines)
 📁 lib/
-  📁 gitea-api/
-    📄 index.ts (typescript, 0 lines)
-  📁 github-api/
-    📄 index.ts (typescript, 0 lines)
-  📁 gitlab-api/
-    📄 index.ts (typescript, 0 lines)
+  📁 config/
+    📄 appconfig.ts (typescript, 0 lines)
+    📄 authconfig.ts (typescript, 0 lines)
+    📄 envconfig.ts (typescript, 0 lines)
+    📄 featureconfig.ts (typescript, 0 lines)
+  📁 db/
+    📄 cicddb.ts (typescript, 0 lines)
+    📄 deploymentdb.ts (typescript, 0 lines)
+    📄 hostdb.ts (typescript, 0 lines)
+    📄 permissiondb.ts (typescript, 0 lines)
+    📄 repositorydb.ts (typescript, 0 lines)
+    📄 teamdb.ts (typescript, 0 lines)
+    📄 teammemberdb.ts (typescript, 0 lines)
+    📄 userdb.ts (typescript, 0 lines)
+  📁 git/
+    📄 giteaapi.ts (typescript, 0 lines)
+    📄 githubapi.ts (typescript, 0 lines)
+    📄 gitlabapi.ts (typescript, 0 lines)
   📁 services/
-    📁 cicd/
-      📄 factory.ts (typescript, 0 lines)
-      📄 github.ts (typescript, 0 lines)
-      📄 index.ts (typescript, 0 lines)
-      📄 interfaces.ts (typescript, 0 lines)
-      📄 jenkins.ts (typescript, 0 lines)
-    📄 hosts.ts (typescript, 0 lines)
-    📄 http.ts (typescript, 0 lines)
+    📄 authservice.ts (typescript, 0 lines)
+    📄 cicdservice.ts (typescript, 0 lines)
+    📄 deploymentservice.ts (typescript, 0 lines)
+    📄 hostservice.ts (typescript, 0 lines)
+    📄 httpservice.ts (typescript, 0 lines)
     📄 index.ts (typescript, 0 lines)
-    📄 oauth.ts (typescript, 0 lines)
-    📄 ssh.ts (typescript, 0 lines)
-    📄 terminal.ts (typescript, 0 lines)
-    📄 websocket.ts (typescript, 0 lines)
+    📄 oauthservice.ts (typescript, 0 lines)
+    📄 repositoryservice.ts (typescript, 0 lines)
+    📄 sshservice.ts (typescript, 0 lines)
+    📄 teamservice.ts (typescript, 0 lines)
+    📄 terminalservice.ts (typescript, 0 lines)
+    📄 userservice.ts (typescript, 0 lines)
+    📄 websocketservice.ts (typescript, 0 lines)
   📁 supabase/
-    📁 db-cicd/
-      📄 cicd.ts (typescript, 0 lines)
-      📄 index.ts (typescript, 0 lines)
-    📁 db-deployment/
-      📄 deployment.ts (typescript, 0 lines)
-      📄 index.ts (typescript, 0 lines)
-    📁 db-hosts/
-      📄 host.ts (typescript, 0 lines)
-      📄 index.ts (typescript, 0 lines)
-    📁 db-repositories/
-      📄 db-git-provider.ts (typescript, 0 lines)
-      📄 db-repository.ts (typescript, 0 lines)
-      📄 index.ts (typescript, 0 lines)
-      📄 utils.ts (typescript, 0 lines)
-    📁 db-teams/
-      📄 index.ts (typescript, 0 lines)
-      📄 permissions.ts (typescript, 0 lines)
-      📄 resource-limits.ts (typescript, 0 lines)
-      📄 team-members.ts (typescript, 0 lines)
-      📄 teams.ts (typescript, 0 lines)
-    📁 db-users/
-      📄 index.ts (typescript, 0 lines)
-      📄 user.ts (typescript, 0 lines)
     📄 admin.ts (typescript, 0 lines)
     📄 auth.ts (typescript, 0 lines)
     📄 client.ts (typescript, 0 lines)
@@ -502,58 +504,59 @@ this will create a new file at `docs/project_structure.md` containing the curren
     📄 index.ts (typescript, 0 lines)
     📄 middleware.ts (typescript, 0 lines)
     📄 server.ts (typescript, 0 lines)
-  📄 cache.ts (typescript, 0 lines)
-  📄 chart.ts (typescript, 0 lines)
-  📄 env.ts (typescript, 0 lines)
-  📄 features.ts (typescript, 0 lines)
-  📄 fetcher.ts (typescript, 0 lines)
-  📄 logger.ts (typescript, 0 lines)
-  📄 session.ts (typescript, 0 lines)
+  📁 utils/
+    📄 apiutils.ts (typescript, 0 lines)
+    📄 cacheutils.ts (typescript, 0 lines)
+    📄 chartutils.ts (typescript, 0 lines)
+    📄 commonutils.ts (typescript, 0 lines)
+    📄 dbutils.ts (typescript, 0 lines)
+    📄 deploymentutils.ts (typescript, 0 lines)
+    📄 logutils.ts (typescript, 0 lines)
+    📄 sessionutils.ts (typescript, 0 lines)
+  📄 index.ts (typescript, 0 lines)
+  📄 readme.md (documentation, 0 lines)
   📄 utils.ts (typescript, 0 lines)
 📁 pages/
   📄 _document.tsx (typescript, 0 lines)
 📁 types/
   📁 api/
-    📁 git/
-      📄 common.ts (typescript, 0 lines)
-      📄 github.ts (typescript, 0 lines)
-      📄 gitlab.ts (typescript, 0 lines)
-  📁 auth/
-    📄 session.ts (typescript, 0 lines)
-    📄 user.ts (typescript, 0 lines)
+    📄 gitcommonapitype.ts (typescript, 0 lines)
+    📄 githubapitype.ts (typescript, 0 lines)
+    📄 gitlabapitype.ts (typescript, 0 lines)
+  📁 component/
+    📄 cicdcomponenttype.ts (typescript, 0 lines)
+    📄 deploymentcomponenttype.ts (typescript, 0 lines)
+    📄 featurescomponenttype.ts (typescript, 0 lines)
+    📄 hostcomponenttype.ts (typescript, 0 lines)
+    📄 repositorycomponenttype.ts (typescript, 0 lines)
+    📄 scriptscomponenttype.ts (typescript, 0 lines)
+    📄 sshcomponenttype.ts (typescript, 0 lines)
+    📄 usercomponenttype.ts (typescript, 0 lines)
   📁 context/
-    📄 app.ts (typescript, 0 lines)
-    📄 cicd.ts (typescript, 0 lines)
-    📄 constants.ts (typescript, 0 lines)
-    📄 dashboard.ts (typescript, 0 lines)
-    📄 deployment.ts (typescript, 0 lines)
-    📄 host.ts (typescript, 0 lines)
-    📄 permissions.ts (typescript, 0 lines)
-    📄 repository.ts (typescript, 0 lines)
-    📄 team.ts (typescript, 0 lines)
-    📄 user.ts (typescript, 0 lines)
-  📁 core/
-    📄 deployment.ts (typescript, 0 lines)
-    📄 host.ts (typescript, 0 lines)
-    📄 ssh.ts (typescript, 0 lines)
+    📄 appcontexttype.ts (typescript, 0 lines)
+    📄 cicdcontexttype.ts (typescript, 0 lines)
+    📄 constantscontexttype.ts (typescript, 0 lines)
+    📄 dashboardcontexttype.ts (typescript, 0 lines)
+    📄 deploymentcontexttype.ts (typescript, 0 lines)
+    📄 hostcontexttype.ts (typescript, 0 lines)
+    📄 permissionscontexttype.ts (typescript, 0 lines)
+    📄 repositorycontexttype.ts (typescript, 0 lines)
+    📄 sidebarcontexttype.ts (typescript, 0 lines)
+    📄 teamcontexttype.ts (typescript, 0 lines)
+    📄 usercontexttype.ts (typescript, 0 lines)
   📁 db/
-    📄 supabase.ts (typescript, 0 lines)
+    📄 supabasedbtype.ts (typescript, 0 lines)
+  📁 service/
+    📄 cicdservicetypes.ts (typescript, 0 lines)
+    📄 sessionservicetype.ts (typescript, 0 lines)
+    📄 userservicetype.ts (typescript, 0 lines)
+  📁 ui/
   📄 environment.d.ts (typescript, 0 lines)
-  📄 features.ts (typescript, 0 lines)
   📄 index.ts (typescript, 0 lines)
   📄 readme.md (documentation, 0 lines)
-  📄 scripts.ts (typescript, 0 lines)
-  📄 sidebar.ts (typescript, 0 lines)
-  📄 ssh.ts (typescript, 0 lines)
-  📄 supabase.ts (typescript, 0 lines)
-  📄 user.ts (typescript, 0 lines)
 📁 utils/
-  📄 contexthelpers.ts (typescript, 0 lines)
-  📄 createsafecontext.ts (typescript, 0 lines)
-  📄 deployment.ts (typescript, 0 lines)
   📄 electronapi.ts (typescript, 0 lines)
   📄 iselectron.ts (typescript, 0 lines)
-  📄 loopprotectedcontext.md (documentation, 0 lines)
 📄 config.ts (typescript, 0 lines)
 📄 middleware.ts (typescript, 0 lines)
 ```
