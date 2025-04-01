@@ -57,11 +57,20 @@ export default function TenantLayoutClient({
                     />
                   </aside>
                 </Suspense>
-                <div className="flex-1">
+                <div
+                  className="flex-1 flex flex-col min-w-0 w-full overflow-hidden transition-[margin,width] duration-300 ease-in-out"
+                  style={{
+                    marginLeft: 'var(--sidebar-width-offset, 0)',
+                    width: 'calc(100% - var(--sidebar-width-offset, 0))',
+                    opacity: 1,
+                  }}
+                >
                   <Suspense fallback={<HeaderSkeleton />}>
                     <HeaderClient user={user} activeTeam={teamDetails} />
                   </Suspense>
-                  {children}
+                  <main className="flex-1 px-3 py-0 w-full max-w-full border border-gray-30 rounded-md">
+                    {children}
+                  </main>
                 </div>
               </div>
             </SidebarProvider>

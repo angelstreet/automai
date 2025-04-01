@@ -3,9 +3,9 @@ import { Suspense } from 'react';
 
 import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 
+import { HostActionsClient } from './_components/HostActionsClient';
 import HostContent from './_components/HostContent';
 import HostSkeleton from './_components/HostSkeleton';
-import { HostActionsClient } from './_components/HostActionsClient';
 
 export default async function HostsPage() {
   const t = await getTranslations('hosts');
