@@ -152,6 +152,7 @@
   "Profile": {
     "title": "Profil",
     "profile": "Profil",
+    "description": "Gérez vos paramètres de profil et vos préférences",
     "settings": "Paramètres du profil",
     "edit": "Modifier le profil",
     "save": "Enregistrer les modifications",

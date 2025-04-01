@@ -164,6 +164,7 @@
   "Profile": {
     "title": "Profile",
     "profile": "Profile",
+    "description": "Manage your profile settings and preferences",
     "settings": "Profile Settings",
     "edit": "Edit Profile",
     "save": "Save Changes",

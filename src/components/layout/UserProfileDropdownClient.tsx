@@ -23,7 +23,7 @@ interface UserProfileDropdownProps {
   user: User | null;
 }
 
-export function UserProfileDropdown({ user }: UserProfileDropdownProps) {
+export function UserProfileDropdownClient({ user }: UserProfileDropdownProps) {
   const [imageError, setImageError] = useState(false);
   const router = useRouter();
   const params = useParams();
@@ -46,12 +46,15 @@ export function UserProfileDropdown({ user }: UserProfileDropdownProps) {
           router.push(`/${locale}/login`);
         }, 200);
       } else {
-        console.error('[@component:UserProfileDropdown:handleSignOut] Error with result:', result);
+        console.error(
+          '[@component:UserProfileDropdownClient:handleSignOut] Error with result:',
+          result,
+        );
         // If sign out failed through the context, try a direct page reload as a fallback
         window.location.href = `/${locale}/login`;
       }
     } catch (error) {
-      console.error('[@component:UserProfileDropdown:handleSignOut] Error caught:', error);
+      console.error('[@component:UserProfileDropdownClient:handleSignOut] Error caught:', error);
       // If all else fails, force a direct navigation
       window.location.href = `/${locale}/login`;
     }

@@ -2,7 +2,7 @@ import { cookies } from 'next/headers';
 import { Suspense } from 'react';
 
 import { ThemeToggleStatic } from '@/components/theme/ThemeToggleStatic';
-import { UserProfileDropdown } from '@/components/user/profile/UserProfileDropdown';
+import { UserProfileDropdownClient } from '@/components/layout/UserProfileDropdownClient';
 import { WorkspaceHeaderClient } from '@/components/workspace/WorkspaceHeaderClient';
 import { User } from '@/types/auth/user';
 
@@ -35,7 +35,7 @@ export async function WorkspaceHeader({
         <ThemeToggleStatic />
       </Suspense>
       <Suspense fallback={<div className="h-8 w-8 bg-muted/30 rounded-full animate-pulse" />}>
-        <UserProfileDropdown user={user || null} />
+        <UserProfileDropdownClient user={user || null} />
       </Suspense>
     </WorkspaceHeaderClient>
   );
