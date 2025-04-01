@@ -1,27 +1,38 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext } from 'react';
 
-type FontSize = 'small' | 'medium' | 'large';
+/**
+ * Font size options
+ */
+export type FontSize = 'small' | 'medium' | 'large';
 
-interface FontContextType {
+/**
+ * Font context type definition
+ * DEPRECATED: This will be moved to hooks/font/useFont.ts in the future
+ */
+export interface FontContextType {
   fontSize: FontSize;
   setFontSize: (size: FontSize) => void;
 }
 
-const FontContext = createContext<FontContextType>({
+/**
+ * Font context with default values
+ * DEPRECATED: In the future, only the context definition will remain here
+ */
+export const FontContext = createContext<FontContextType>({
   fontSize: 'medium',
   setFontSize: () => null,
 });
 
-interface FontProviderProps {
-  children: ReactNode;
-}
+/**
+ * DEPRECATED: This provider should be moved to app/providers/FontProvider.tsx
+ * This will be kept temporarily for backward compatibility
+ */
+export function FontProvider({ children }: { children: React.ReactNode }) {
+  const [fontSize, setFontSize] = React.useState<FontSize>('medium');
 
-export function FontProvider({ children }: FontProviderProps) {
-  const [fontSize, setFontSize] = useState<FontSize>('medium');
-
-  useEffect(() => {
+  React.useEffect(() => {
     // Apply font size to document
     const savedFontSize = localStorage.getItem('fontSize') as FontSize;
     if (savedFontSize) {
@@ -45,4 +56,8 @@ export function FontProvider({ children }: FontProviderProps) {
   );
 }
 
+/**
+ * DEPRECATED: This hook should be moved to hooks/font/useFont.ts
+ * Use import { useFont } from '@/hooks' in the future
+ */
 export const useFont = () => useContext(FontContext);

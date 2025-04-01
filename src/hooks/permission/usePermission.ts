@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useCallback, useContext } from 'react';
 
 import { checkPermission, getUserPermissions } from '@/app/actions/permissionAction';
 import { usePermissionContext } from '@/app/providers/PermissionProvider';
@@ -12,6 +12,19 @@ import type {
   Operation,
   PermissionsResult,
 } from '@/types/context/permissionsContextType';
+import { PermissionContext } from '@/context/PermissionContext';
+
+/**
+ * Access the permission context
+ * This is a simple hook that just provides access to the context
+ */
+export function usePermissionContext() {
+  const context = useContext(PermissionContext);
+  if (!context) {
+    throw new Error('usePermissionContext must be used within a PermissionProvider');
+  }
+  return context;
+}
 
 /**
  * Hook for checking user permissions with React Query

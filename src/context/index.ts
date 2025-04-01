@@ -1,30 +1,34 @@
+/**
+ * DEPRECATED: This module is deprecated and will be removed in the future.
+ * Please migrate to the new pattern:
+ *
+ * OLD: import { useTeam, useUser } from '@/context';
+ * NEW: import { useTeam, useUser } from '@/hooks';
+ */
+
 import type { ResourceType, Operation } from '@/types/context/permissionsContextType';
 import type { UserContextType } from '@/types/context/userContextType';
 
 // Export providers for app usage
-export { UserProvider, SidebarProvider, TeamProvider } from '@/app/providers';
+export { UserProvider, SidebarProvider, TeamProvider, PermissionProvider } from '@/app/providers';
 
-// Export basic data context hooks that access provider data only
-export { useUser, useSidebar, useTheme } from '@/app/providers';
-
-// Import and re-export useTeam from hooks
+// DEPRECATED: Import hooks from @/hooks instead
 export { useTeam, useTeamData, useUnassignedResources, useResourceLimit } from '@/hooks/team';
-
-// Export hooks from hooks directory for more specialized usage
 export { usePermission } from '@/hooks/permission';
 export { useHost } from '@/hooks/host';
 export { useCICD } from '@/hooks/cicd';
 export { useDeployment, useDeploymentWizard } from '@/hooks/deployment';
 export { useRepository } from '@/hooks/repository';
+export { useSidebar } from '@/hooks/sidebar';
+export { useUser } from '@/hooks/user';
 
-// Export hooks that are still in the original location
+// DEPRECATED: Import these from @/hooks in the future
 export { FontProvider, useFont } from './FontContext';
 export { SearchProvider, useSearch } from './SearchContext';
+export { ThemeProvider, useTheme } from './ThemeContext';
 
-// Import types from their correct location
+// Export types (still valid, these won't change)
 export type { ResourceType, Operation };
-
-// Export common types used across the application
 export type { UserContextType } from '@/types/context/userContextType';
 export type { SidebarContext } from '@/types/context/sidebarContextType';
 export type {
@@ -34,8 +38,6 @@ export type {
   ResourcePermissions,
   TeamMemberResource,
 } from '@/types/context/teamContextType';
-
-// Export context state types for component usage
 export type {
   User,
   Role,
@@ -67,18 +69,27 @@ export const userSelectors = {
 };
 
 /**
- * MIGRATION NOTICE
+ * MIGRATION GUIDE
  *
- * The following hooks have been moved from TeamContext to @/hooks/team:
- * - useTeam → import from '@/hooks/team' or '@/context'
- * - useTeamData → import from '@/hooks/team' or '@/context'
- * - useUnassignedResources → import from '@/hooks/team' or '@/context'
- * - useResourceLimit → import from '@/hooks/team' or '@/context'
+ * 1. Replace imports:
+ *    - import { useX } from '@/context';  →  import { useX } from '@/hooks';
  *
- * The following hooks need to be migrated:
- * - useTeamCreation → not implemented yet, use team actions directly
- * - useTeamUpdate → not implemented yet, use team actions directly
- * - useTeamDeletion → not implemented yet, use team actions directly
- * - useTeamDetails → not implemented yet, use useTeam().activeTeam instead
- * - useTeamSwitcher → not implemented yet, use useTeam().switchTeam instead
+ * 2. These hooks have been fully migrated to @/hooks:
+ *    - useTeam
+ *    - useTeamData
+ *    - useUnassignedResources
+ *    - useResourceLimit
+ *    - usePermission
+ *    - useHost
+ *    - useCICD
+ *    - useDeployment
+ *    - useDeploymentWizard
+ *    - useRepository
+ *    - useSidebar
+ *    - useUser
+ *
+ * 3. These hooks still need proper migration:
+ *    - useTheme (still in ThemeContext.tsx)
+ *    - useFont (still in FontContext.tsx)
+ *    - useSearch (still in SearchContext.tsx)
  */

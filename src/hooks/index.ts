@@ -14,9 +14,9 @@ export * from './host';
 export * from './cicd';
 export * from './repository';
 export * from './deployment';
+export * from './sidebar';
 
 // Context-based hooks (until they're migrated)
 export { useFont } from '@/context/FontContext';
 export { useSearch } from '@/context/SearchContext';
 export { useTheme } from '@/context/ThemeContext';
-export { useSidebar } from '@/app/providers';

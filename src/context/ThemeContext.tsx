@@ -1,30 +1,46 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
+import React, { createContext, useContext } from 'react';
 
-type Theme = 'light' | 'dark' | 'system';
+/**
+ * Theme options
+ */
+export type Theme = 'light' | 'dark' | 'system';
 
 // Singleton flag to prevent multiple instances
 let THEME_CONTEXT_INITIALIZED = false;
 
+/**
+ * Theme context type definition
+ * DEPRECATED: This should be moved to hooks/theme/useTheme.ts in the future
+ */
 export interface ThemeContextType {
   theme: Theme;
   setTheme: (theme: Theme) => void;
 }
 
-const ThemeContext = createContext<ThemeContextType>({
+/**
+ * Theme context with default values
+ * DEPRECATED: In the future, only the context definition will remain here
+ */
+export const ThemeContext = createContext<ThemeContextType>({
   theme: 'system',
   setTheme: () => null,
 });
 
-interface ThemeProviderProps {
-  children: ReactNode;
+/**
+ * DEPRECATED: This provider should be moved to app/providers/ThemeProvider.tsx
+ * This will be kept temporarily for backward compatibility
+ */
+export function ThemeProvider({
+  children,
+  defaultTheme = 'system',
+}: {
+  children: React.ReactNode;
   defaultTheme?: Theme;
-}
-
-export function ThemeProvider({ children, defaultTheme = 'system' }: ThemeProviderProps) {
+}) {
   // Check for multiple instances of ThemeProvider
-  useEffect(() => {
+  React.useEffect(() => {
     if (THEME_CONTEXT_INITIALIZED) {
       console.warn(
         '[ThemeContext] Multiple instances detected. This may cause unexpected behavior.',
@@ -40,9 +56,9 @@ export function ThemeProvider({ children, defaultTheme = 'system' }: ThemeProvid
     };
   }, []);
 
-  const [theme, setTheme] = useState<Theme>(defaultTheme);
+  const [theme, setTheme] = React.useState<Theme>(defaultTheme);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const root = document.documentElement;
     // Read the initial theme from the server-rendered classList
     const initialIsDark = root.classList.contains('dark');
@@ -82,15 +98,19 @@ export function ThemeProvider({ children, defaultTheme = 'system' }: ThemeProvid
   };
 
   // Properly memoize the context value to prevent unnecessary re-renders
-  const contextValue = useMemo(
+  const contextValue = React.useMemo(
     () => ({
       theme,
       setTheme: handleSetTheme,
     }),
-    [theme, handleSetTheme],
+    [theme],
   );
 
   return <ThemeContext.Provider value={contextValue}>{children}</ThemeContext.Provider>;
 }
 
+/**
+ * DEPRECATED: This hook should be moved to hooks/theme/useTheme.ts
+ * Use import { useTheme } from '@/hooks' in the future
+ */
 export const useTheme = () => useContext(ThemeContext);

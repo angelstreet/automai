@@ -4,12 +4,20 @@ import { createContext } from 'react';
 
 import type { User } from '@/types/service/userServiceType';
 
-// Define the minimal context type needed
+/**
+ * User context type definition
+ * This is a minimal type definition for the context
+ * No business logic belongs here, that goes in hooks/user/useUser.ts
+ */
 export interface UserContextType {
   user: User | null;
 }
 
-// Create context with default values
+/**
+ * Context definition with default values
+ * Used by UserProvider in /app/providers/UserProvider.tsx
+ * Business logic should be imported from '@/hooks/user'
+ */
 export const UserContext = createContext<UserContextType>({
   user: null,
 });

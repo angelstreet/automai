@@ -1,8 +1,12 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext } from 'react';
 
-interface SearchContextType {
+/**
+ * Search context type definition
+ * DEPRECATED: This should be moved to hooks/search/useSearch.ts in the future
+ */
+export interface SearchContextType {
   searchTerm: string;
   setSearchTerm: (term: string) => void;
   isSearchOpen: boolean;
@@ -11,7 +15,11 @@ interface SearchContextType {
   setOpen: (isOpen: boolean) => void;
 }
 
-const SearchContext = createContext<SearchContextType>({
+/**
+ * Search context with default values
+ * DEPRECATED: In the future, only the context definition will remain here
+ */
+export const SearchContext = createContext<SearchContextType>({
   searchTerm: '',
   setSearchTerm: () => null,
   isSearchOpen: false,
@@ -20,14 +28,14 @@ const SearchContext = createContext<SearchContextType>({
   setOpen: () => null,
 });
 
-interface SearchProviderProps {
-  children: ReactNode;
-}
-
-export function SearchProvider({ children }: SearchProviderProps) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [open, setOpen] = useState(false);
+/**
+ * DEPRECATED: This provider should be moved to app/providers/SearchProvider.tsx
+ * This will be kept temporarily for backward compatibility
+ */
+export function SearchProvider({ children }: { children: React.ReactNode }) {
+  const [searchTerm, setSearchTerm] = React.useState('');
+  const [isSearchOpen, setIsSearchOpen] = React.useState(false);
+  const [open, setOpen] = React.useState(false);
 
   return (
     <SearchContext.Provider
@@ -38,4 +46,8 @@ export function SearchProvider({ children }: SearchProviderProps) {
   );
 }
 
+/**
+ * DEPRECATED: This hook should be moved to hooks/search/useSearch.ts
+ * Use import { useSearch } from '@/hooks' in the future
+ */
 export const useSearch = () => useContext(SearchContext);
