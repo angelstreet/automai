@@ -28,3 +28,4 @@ export { SidebarMenu, SidebarMenuItem, SidebarMenuSub } from './SidebarMenuItems
 export { SidebarMenuButton } from './SidebarMenuButton';
 export { SidebarMenuSubButton } from './SidebarMenuSubButton';
 export { SidebarInput } from './SidebarInput';
+export { SidebarUserProfile } from './SidebarUserProfile';

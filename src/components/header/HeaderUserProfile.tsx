@@ -1,6 +1,6 @@
 'use client';
 
-import { User } from 'lucide-react';
+import { LogOut, Settings, User, UserCircle2 } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
@@ -8,7 +8,6 @@ import { Button } from '@/components/shadcn/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -25,7 +24,10 @@ interface HeaderUserProfileProps {
 }
 
 // Update function signature to accept user and team props
-export function HeaderUserProfile({ user, activeTeam = null }: HeaderUserProfileProps) {
+export function HeaderUserProfile({
+  user,
+  activeTeam: _activeTeam = null,
+}: HeaderUserProfileProps) {
   const router = useRouter();
   const params = useParams();
   const locale = params.locale as string;
@@ -69,31 +71,22 @@ export function HeaderUserProfile({ user, activeTeam = null }: HeaderUserProfile
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">{user.name}</p>
             <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
-            {activeTeam && (
-              <p className="text-xs text-muted-foreground mt-1">Team: {activeTeam.name}</p>
-            )}
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem onClick={() => router.push(`/${locale}/${tenant}/settings/profile`)}>
-            Profile
-            <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => router.push(`/${locale}/${tenant}/settings/billing`)}>
-            Billing
-            <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => router.push(`/${locale}/${tenant}/settings`)}>
-            Settings
-            <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => router.push(`/${locale}/${tenant}/settings/team`)}>
-            New Team
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
+        <DropdownMenuItem onClick={() => router.push(`/${locale}/${tenant}/profile`)}>
+          <UserCircle2 className="mr-2 h-4 w-4" />
+          Profile
+          <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => router.push(`/${locale}/${tenant}/settings`)}>
+          <Settings className="mr-2 h-4 w-4" />
+          Settings
+          <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout}>
+        <DropdownMenuItem onClick={handleLogout} className="text-red-500 focus:text-red-500">
+          <LogOut className="mr-2 h-4 w-4 text-red-500" />
           Log out
           <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
         </DropdownMenuItem>
