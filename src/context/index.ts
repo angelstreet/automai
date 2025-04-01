@@ -1,17 +1,27 @@
 import type { UserContextType } from '@/types/context/user';
 
-// Re-export ALL hooks and providers from the new location
+// Export providers for app usage
+export { 
+  UserProvider,
+  SidebarProvider,
+  ThemeProvider,
+  ThemeProviders,
+  TeamProvider
+} from '@/app/providers';
+
+// Export basic data context hooks that access provider data only
 export { 
   useUser, 
-  UserProvider,
   useSidebar,
-  SidebarProvider,
   useTheme,
-  ThemeProviders as ThemeProvider,
-  useTeam,
-  TeamProvider,
-  usePermission
+  useTeam
 } from '@/app/providers';
+
+// Export business logic hooks from hooks directory
+export { usePermission } from '@/hooks/permission';
+export { useUserLogic } from '@/hooks/user';
+export { useSidebarLogic } from '@/hooks/sidebar';
+export { useThemeLogic } from '@/hooks/theme';
 
 // Re-export the specialized team hooks from TeamContext for backward compatibility
 export {
@@ -27,7 +37,10 @@ export {
 // Export hooks that are still in the original location
 export { FontProvider, useFont } from './FontContext';
 export { SearchProvider, useSearch } from './SearchContext';
-export { ResourceType, Operation } from '@/app/actions/permission';
+
+// Import types from their correct location
+import type { ResourceType, Operation } from '@/types/context/permissions';
+export type { ResourceType, Operation };
 
 // Export types for backward compatibility
 export type { UserContextType } from '@/types/context/user';

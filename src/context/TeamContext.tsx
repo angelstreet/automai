@@ -3,12 +3,14 @@
 import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
 
 import {
-  ResourceType,
-  Operation,
-  PermissionMatrix,
   checkPermission,
   getUserPermissions,
 } from '@/app/actions/permission';
+import type {
+  ResourceType,
+  Operation,
+  PermissionMatrix,
+} from '@/types/context/permissions';
 import {
   Team,
   getTeamById,

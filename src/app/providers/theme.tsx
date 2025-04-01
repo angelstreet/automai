@@ -1,11 +1,12 @@
 'use client';
 
 import { ThemeProvider as NextThemesProvider } from 'next-themes';
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext } from 'react';
 
 import { TooltipProvider } from '@/components/shadcn/tooltip';
 import { FontProvider } from '@/context/FontContext';
 import { SearchProvider } from '@/context/SearchContext';
+import { useThemeLogic } from '@/hooks/theme';
 
 // Define theme context
 type Theme = 'light' | 'dark' | 'system';
@@ -23,19 +24,24 @@ export const ThemeContext = createContext<ThemeContextType>({
 export function ThemeProvider({
   children,
   defaultTheme = 'system',
+  initialTheme,
 }: {
   children: React.ReactNode;
   defaultTheme?: Theme;
+  initialTheme?: ThemeContextType;
 }) {
-  const [theme, setTheme] = useState<Theme>(defaultTheme);
-
+  // Use the theme logic hook instead of managing state directly
+  const themeLogic = useThemeLogic(defaultTheme);
+  
+  // Use the provider as a pure data container
   return (
-    <ThemeContext.Provider value={{ theme, setTheme }}>
+    <ThemeContext.Provider value={initialTheme || themeLogic}>
       {children}
     </ThemeContext.Provider>
   );
 }
 
+// Simple context accessor
 export function useTheme() {
   return useContext(ThemeContext);
 }

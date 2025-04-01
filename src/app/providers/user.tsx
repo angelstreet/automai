@@ -1,10 +1,10 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-
+import React, { createContext, useContext, useState } from 'react';
 import { User } from '@/types/auth/user';
+import { useUserLogic } from '@/hooks/user';
 
-// Define the minimal context type needed
+// Define the minimal context type needed - data only
 interface UserContextType {
   user: User | null;
   isLoading: boolean;
@@ -23,27 +23,15 @@ export function UserProvider({
   children: React.ReactNode;
   initialUser?: User | null;
 }) {
-  // Simple state management - just use what's passed from props
-  const [user] = useState<User | null>(initialUser || null);
-  const [isLoading, setIsLoading] = useState(false);
-
-  // Store user data in localStorage for persistence across page refreshes
-  useEffect(() => {
-    if (user) {
-      try {
-        localStorage.setItem('cached_user', JSON.stringify(user));
-        localStorage.setItem('user_cache_timestamp', Date.now().toString());
-      } catch (error) {
-        console.error('[@context:UserContext] Error caching user data:', error);
-      }
-    }
-  }, [user]);
+  // Use the logic hook to manage user state
+  const { user, isLoading } = useUserLogic(initialUser);
 
   console.debug(
     '[@context:UserContext:UserProvider] Initializing with initialUser:',
     initialUser ? `${initialUser.id} (${initialUser.email})` : 'null',
   );
-  // Create a minimal context value (without team selection)
+  
+  // Provide only the data without implementation details
   const value = {
     user,
     isLoading,
@@ -52,7 +40,7 @@ export function UserProvider({
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }
 
-// Export hook separately to avoid Fast Refresh warning
+// Simple context accessor without business logic
 export function useUser() {
   const context = useContext(UserContext);
   if (!context) throw new Error('useUser must be used within a UserProvider');

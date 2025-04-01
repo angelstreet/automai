@@ -17,11 +17,15 @@ alwaysApply: false
    - Handle validation, authentication, and caching
    - Return consistent `ActionResult<T>` objects
 
-3. **Client Hooks Layer (Interface)**: `/src/context/*.tsx`
-   - Context providers and hooks export as `use[Feature]` (e.g., `useHost`)
-   - Call Server Actions, NEVER DB Layer directly
-   - Manage loading/error states and UI caching
-   - Import ONLY from the centralized context system, not feature-specific contexts
+3. **Client Hooks Layer (Interface)**: 
+   - **Data Context**: `/src/app/providers/*.tsx`
+     - Context providers are **data-only containers** without business logic
+     - Export basic hooks like `use[Feature]` (e.g., `useHost`) that only access data
+   - **Logic Hooks**: `/src/hooks/*/use[Feature]Logic.ts`
+     - Contain all business logic for data fetching and manipulation
+     - Use React Query for data fetching and caching
+     - Call Server Actions, NEVER DB Layer directly
+   - Access through centralized exports in `/src/context/index.ts`
 
 ## Tech Stack
 - Next.js App Router (React) with TypeScript
@@ -44,11 +48,20 @@ alwaysApply: false
 │ import { useFeature } from '@/context'
 ▼
 ┌─────────────────────────────────┐
-│ Centralized Context System      │
-│ /src/context/FeatureContext.tsx│
-│ - Exports useFeature() hook     │
-│ - Manages UI state              │
-│ - Handles loading/error states  │
+│ Hooks Layer                     │
+│                                 │
+│ 1. Data-only Providers:         │
+│    /src/app/providers/*.tsx     │
+│    - Only hold and provide data │
+│                                 │
+│ 2. Business Logic Hooks:        │
+│    /src/hooks/*/*.ts            │
+│    - All data logic              │
+│    - React Query for fetching   │
+│                                 │
+│ 3. Centralized Exports:         │
+│    /src/context/index.ts        │
+│    - Unified import source      │
 └───────────────┬─────────────────┘
 │
 │ Server Actions call

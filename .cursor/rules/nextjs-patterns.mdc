@@ -80,6 +80,8 @@ export function MyButton() {
 - ✅ Use props for parent-to-child communication
 - ✅ Use callbacks passed as props for child-to-parent communication
 - ✅ Use React Context for deeply nested component communication
+  - Context providers should be data-only containers with no business logic
+  - Business logic should be in separate hooks in /src/hooks/*
 - ✅ Use server actions for server-side mutations
 - ❌ Avoid direct DOM manipulation and global event listeners
 

@@ -2,15 +2,9 @@
 
 import React, { createContext, useContext, useCallback, useState, useEffect } from 'react';
 
-import {
-  getUserPermissions,
-  ResourceType,
-  Operation,
-  PermissionMatrix,
-  PermissionsResult,
-} from '@/app/actions/permission';
-import { useTeam } from '@/context/TeamContext';
-import { useUser } from '@/context/UserContext';
+import { getUserPermissions } from '@/app/actions/permission';
+import type { ResourceType, Operation, PermissionMatrix, PermissionsResult } from '@/types/context/permissions';
+import { useTeam, useUser } from '@/context';
 
 // Cache duration in milliseconds (24 hours)
 const CACHE_DURATION = 24 * 60 * 60 * 1000;

@@ -2,7 +2,7 @@
 
 import { useSearchParams } from 'next/navigation';
 
-import { useTeam } from '@/context/TeamContext';
+import { useTeam } from '@/context';
 import { TeamDetails } from '@/types/context/team';
 import { User } from '@/types/auth/user';
 

@@ -96,10 +96,12 @@ This document outlines the standard caching rules for our Next.js application, e
 
 ### 4. Providers Layer (Located in /app/providers/*)
 
-- **Purpose**: Manage application state and provide context to components.
+- **Purpose**: Hold and provide data for components via Context API.
 - **Rules**:
   - Providers should be client components marked with 'use client'.
-  - Providers can leverage hooks for data fetching but should focus on state management.
+  - Providers should be **data-only containers** without business logic.
+  - Providers should NOT fetch data or contain side effects.
+  - All business logic must be moved to dedicated hooks in /hooks/*.
   - Keep providers focused on a single domain (user, team, theme, etc.).
   - Avoid circular dependencies between providers.
 

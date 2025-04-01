@@ -2,6 +2,7 @@
 
 import { ReactNode } from 'react';
 
+import { PermissionProvider } from './permission';
 import { SidebarProvider } from './sidebar';
 import { SWRProvider } from './swr';
 import { TeamProvider } from './team';
@@ -27,9 +28,11 @@ export function Providers({
       <SWRProvider>
         <UserProvider initialUser={initialUser}>
           <TeamProvider>
-            <SidebarProvider defaultOpen={defaultSidebarOpen}>
-              <ToastProvider>{children}</ToastProvider>
-            </SidebarProvider>
+            <PermissionProvider>
+              <SidebarProvider defaultOpen={defaultSidebarOpen}>
+                <ToastProvider>{children}</ToastProvider>
+              </SidebarProvider>
+            </PermissionProvider>
           </TeamProvider>
         </UserProvider>
       </SWRProvider>
@@ -37,10 +40,10 @@ export function Providers({
   );
 }
 
+export { PermissionProvider, usePermissionContext } from './permission';
 export { SidebarProvider, useSidebar } from './sidebar';
 export { SWRProvider } from './swr';
-export { TeamProvider, useTeam, usePermission } from './team';
+export { TeamProvider, useTeam } from './team';
 export { ThemeProviders, useTheme } from './theme';
 export { ToastProvider } from './toast';
 export { UserProvider, useUser } from './user';
-export { TenantProvider, useTenant } from './tenant';

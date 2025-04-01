@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ResourceType, Operation } from '@/lib/supabase/db-teams/permissions';
-import { usePermission } from '@/context/TeamContext';
+import type { ResourceType, Operation } from '@/types/context/permissions';
+import { usePermission } from '@/context';
 
 interface PermissionAwareActionsProps {
   resourceType: ResourceType;

@@ -7,6 +7,15 @@ alwaysApply: true
 
 **IMPORTANT: This is the primary rule file for the entire codebase. Always consult this document first before making any changes.**
 
+## Architectural Principles
+
+- ✅ **Context Providers are Data-Only**: Context providers should only contain data without business logic
+- ✅ **Business Logic in Hooks**: All business logic should reside in dedicated hooks in /src/hooks/* directory
+- ✅ **Clear Separation of Concerns**: 
+  - Context Providers: Hold state only
+  - Logic Hooks: Contain business logic, data fetching, and data manipulation
+  - UI Components: Render UI and handle user interactions
+
 ## Planning and Communication
 - NEVER modify a file if mentionned at top #NEVER MODIFY
 - ALWAYS provide a clear plan before implementing code changes
