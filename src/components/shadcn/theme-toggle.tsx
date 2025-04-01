@@ -3,7 +3,6 @@
 import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { Moon, Sun, Laptop } from 'lucide-react';
-import { useTheme as useNextThemes } from 'next-themes';
 import { useTheme } from '@/hooks';
 
 import { Button } from '@/components/shadcn/button';
@@ -15,64 +14,8 @@ import {
 } from '@/components/shadcn/dropdown-menu';
 
 export function ThemeToggle() {
-  // Use both theme hooks for compatibility
-  const nextThemes = useNextThemes();
-  const customTheme = useTheme();
+  const { theme, setTheme, isDark } = useTheme();
   const [mounted, setMounted] = useState(false);
-
-  // Determine which theme API to use (prefer next-themes)
-  const theme = nextThemes.theme || customTheme.theme;
-
-  // Synchronize themes on mount
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      // Get theme from localStorage
-      const savedTheme = localStorage.getItem('theme');
-
-      // If there's a saved theme, make sure both providers are using it
-      if (savedTheme && savedTheme !== theme) {
-        // Update next-themes if available
-        if (nextThemes.setTheme) {
-          nextThemes.setTheme(savedTheme);
-        }
-
-        // Update custom theme provider if available
-        if (customTheme.setTheme) {
-          customTheme.setTheme(savedTheme as any);
-        }
-      }
-    }
-  }, [mounted, nextThemes, customTheme, theme]);
-
-  // Function to set theme in both providers for maximum compatibility
-  const setTheme = (newTheme: string) => {
-    // Set theme in next-themes provider
-    if (nextThemes.setTheme) {
-      nextThemes.setTheme(newTheme);
-    }
-
-    // Also set theme in custom provider if available
-    if (customTheme.setTheme) {
-      customTheme.setTheme(newTheme as any);
-    }
-
-    // Optionally, manually set the theme class on html element as a fallback
-    if (typeof window !== 'undefined') {
-      const root = window.document.documentElement;
-      const isDark =
-        newTheme === 'dark' ||
-        (newTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-
-      if (isDark) {
-        root.classList.add('dark');
-      } else {
-        root.classList.remove('dark');
-      }
-
-      // Save theme in localStorage for persistence
-      localStorage.setItem('theme', newTheme);
-    }
-  };
 
   // Wait for client-side hydration to prevent SSR issues
   useEffect(() => {
