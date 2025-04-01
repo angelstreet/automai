@@ -46,9 +46,9 @@ export default function TenantLayoutClient({
         <TeamProvider teams={teams} activeTeam={teamDetails} setSelectedTeam={setSelectedTeam}>
           <PermissionProvider>
             <SidebarProvider>
-              <div className="flex h-screen overflow-hidden">
+              <div className="flex">
                 <Suspense fallback={<SidebarSkeleton />}>
-                  <aside className="h-full shrink-0">
+                  <aside>
                     <SidebarClient
                       user={user}
                       teams={teams}
@@ -57,15 +57,11 @@ export default function TenantLayoutClient({
                     />
                   </aside>
                 </Suspense>
-                <div className="flex flex-col flex-1 h-full overflow-auto">
+                <div className="flex-1">
                   <Suspense fallback={<HeaderSkeleton />}>
-                    <HeaderClient
-                      user={user}
-                      activeTeam={teamDetails}
-                      className="border-b shadow-sm"
-                    />
+                    <HeaderClient user={user} activeTeam={teamDetails} />
                   </Suspense>
-                  <main className="flex-1">{children}</main>
+                  {children}
                 </div>
               </div>
             </SidebarProvider>
