@@ -1,3 +1,1 @@
-export * from './useUser';
-export * from './useUserLogic';
-export { useUserData } from './useUser';
+export { useUser } from './useUser';

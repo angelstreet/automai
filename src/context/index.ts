@@ -17,11 +17,8 @@ export {
   useTheme
 } from '@/app/providers';
 
-// Export business logic hooks from hooks directory
+// Export hooks from hooks directory for more specialized usage
 export { usePermission } from '@/hooks/permission';
-export { useUserLogic, useUserData } from '@/hooks/user';
-export { useSidebarLogic } from '@/hooks/sidebar';
-// Theme logic is now handled by next-themes
 
 // Re-export the specialized team hooks from TeamContext for backward compatibility
 export {

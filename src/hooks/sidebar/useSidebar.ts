@@ -12,7 +12,7 @@ import {
 // Create a safe version of useLayoutEffect that falls back to useEffect during SSR
 const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
-export function useSidebarLogic(defaultOpen = true) {
+export function useSidebar(defaultOpen = true) {
   // States
   const [open, setOpen] = useState(defaultOpen);
   const [state, setState] = useState<'expanded' | 'collapsed'>(

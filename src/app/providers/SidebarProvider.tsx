@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useMemo } from 'react';
 import { SidebarContext as SidebarContextType } from '@/types/sidebar';
-import { useSidebarLogic } from '@/hooks/sidebar';
+import { useSidebar } from '@/hooks/sidebar';
 
 // Create context with a null default value
 export const SidebarContext = createContext<SidebarContextType | null>(null);
@@ -21,7 +21,7 @@ export function SidebarProvider({
   console.log(`[@context:SidebarContext:SidebarProvider] Initializing provider`);
 
   // Use the hook for all business logic
-  const sidebarLogic = useSidebarLogic(defaultOpen);
+  const sidebarLogic = useSidebar(defaultOpen);
   
   // Use initialState if provided (for hydration/SSR purposes)
   const contextValue = useMemo(

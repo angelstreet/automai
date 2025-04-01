@@ -113,24 +113,35 @@ Examples:
 ### File Naming Pattern
 
 ```
-hooks/[domain]/use[Entity][Action].ts
+hooks/[domain]/use[Domain].ts
 ```
 
 Examples:
-- hooks/teamMember/useTeamMembers.ts
-- hooks/teamMember/useAddTeamMember.ts
-- hooks/repositories/useRepositories.ts
+- hooks/user/useUser.ts
+- hooks/sidebar/useSidebar.ts
+- hooks/team/useTeam.ts
+- hooks/permission/usePermission.ts
 
 ### Function Naming Pattern
 
 ```
-use[Entity][Action]
+use[Domain]
 ```
 
+Each domain should have a single primary hook that handles all the functionality.
+
 Examples:
-- `useTeamMembers()`
-- `useAddTeamMember()`
-- `useRemoveTeamMember()`
+- `useUser()` - For user authentication and state
+- `useSidebar()` - For sidebar state management
+- `useTeam()` - For team data and operations
+- `usePermission()` - For permission checking
+
+### IMPORTANT RULES:
+
+1. **Keep It Simple**: One primary hook per domain without any suffixes
+2. **Domain-First Naming**: Use the domain as the primary identifier (e.g., useUser not useAuth)
+3. **Complete Functionality**: Each hook should handle all functionality for its domain
+4. **No Specialized Variants**: Avoid creating multiple hooks for the same domain with different suffixes
 
 ## Logging Conventions
 

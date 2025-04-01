@@ -27,8 +27,11 @@ alwaysApply: true
    - Update references to use the correct hooks or providers
    - No aliases, compatibility layers, or "legacy support" code
 5. **✅ NEVER modify shadcn components**
-6. **✅ NEVER run servers without explicit permission**
-7. **✅ NEVER run git command without explicit permission**
+6. **✅ NEVER run servers, builds, or any other command that starts processes without explicit permission**
+   - No `npm run dev`, `npm run build`, `npm start`, etc.
+   - Only use file manipulation tools like View, Edit, Grep, etc.
+   - Do not run any long-running processes that might tie up resources
+7. **✅ NEVER run git commands without explicit permission**
 8. **✅ ALWAYS provide clear plans before implementing changes**
 9. **✅ ALWAYS make minimal, focused changes**
 

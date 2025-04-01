@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState } from 'react';
 import { User } from '@/types/auth/user';
-import { useUserLogic } from '@/hooks/user';
+import { useUser } from '@/hooks/user';
 
 // Define the minimal context type needed - data only
 interface UserContextType {
@@ -23,8 +23,8 @@ export function UserProvider({
   children: React.ReactNode;
   initialUser?: User | null;
 }) {
-  // Use the logic hook to manage user state
-  const { user, isLoading } = useUserLogic(initialUser);
+  // Use the hook to manage user state
+  const { user, isLoading } = useUser(initialUser);
 
   console.debug(
     '[@context:UserContext:UserProvider] Initializing with initialUser:',

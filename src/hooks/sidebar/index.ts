@@ -1,1 +1,1 @@
-export { useSidebarLogic } from './useSidebarLogic';
+export { useSidebar } from './useSidebar';
