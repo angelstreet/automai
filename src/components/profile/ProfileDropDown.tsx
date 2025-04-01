@@ -82,8 +82,10 @@ export function ProfileDropDown({
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col text-left">
-                <span className="text-sm font-medium">{user.name}</span>
-                <span className="text-xs text-muted-foreground">Role: {user.role || 'viewer'}</span>
+                <span className="text-xs font-medium">{user.name}</span>
+                <span className="text-[11px] text-muted-foreground">
+                  Role: {user.role || 'viewer'}
+                </span>
               </div>
             </div>
           ) : (
