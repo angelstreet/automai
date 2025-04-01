@@ -31,12 +31,9 @@ export default function TenantLayoutClient({
   return (
     <QueryClientProvider client={queryClient}>
       <UserProvider user={user}>
-        <TeamProvider
-          teamsDetails={teamDetails ? [teamDetails] : []}
-          activeTeam={teamDetails || undefined}
-        >
+        <TeamProvider teams={teamDetails ? [teamDetails] : []} activeTeam={teamDetails}>
           <PermissionProvider>
-            <SidebarProvider user={user}>
+            <SidebarProvider>
               <div className="flex">
                 <Suspense fallback={<SidebarSkeleton />}>
                   <aside>
@@ -45,7 +42,7 @@ export default function TenantLayoutClient({
                 </Suspense>
                 <div className="flex-1">
                   <Suspense fallback={<HeaderSkeleton />}>
-                    <HeaderClient />
+                    <HeaderClient user={user} />
                   </Suspense>
                   {children}
                 </div>

@@ -1,7 +1,7 @@
 'use client';
 
-import { useRouter, useParams } from 'next/navigation';
 import { User } from 'lucide-react';
+import { useRouter, useParams } from 'next/navigation';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
 import { Button } from '@/components/shadcn/button';
@@ -16,11 +16,20 @@ import {
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
 import { useUser } from '@/hooks';
+import { User as UserType } from '@/types/service/userServiceType';
 
-export function HeaderUserProfile() {
+// Add interface for props
+interface HeaderUserProfileProps {
+  user?: UserType | null;
+}
+
+// Update function signature to accept user prop
+export function HeaderUserProfile({ user: providedUser }: HeaderUserProfileProps) {
   const router = useRouter();
   const params = useParams();
-  const { user } = useUser(null, 'HeaderUserProfile');
+  // Use hook as a fallback if user prop wasn't provided
+  const { user: userFromHook } = useUser(null, 'HeaderUserProfile');
+  const user = providedUser || userFromHook;
   const locale = params.locale as string;
   const tenant = (params.tenant as string) || 'trial';
 
@@ -66,25 +75,19 @@ export function HeaderUserProfile() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem
-            onClick={() => router.push(`/${locale}/${params.tenant}/settings/profile`)}
-          >
+          <DropdownMenuItem onClick={() => router.push(`/${locale}/${tenant}/settings/profile`)}>
             Profile
             <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => router.push(`/${locale}/${params.tenant}/settings/billing`)}
-          >
+          <DropdownMenuItem onClick={() => router.push(`/${locale}/${tenant}/settings/billing`)}>
             Billing
             <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => router.push(`/${locale}/${params.tenant}/settings`)}>
+          <DropdownMenuItem onClick={() => router.push(`/${locale}/${tenant}/settings`)}>
             Settings
             <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => router.push(`/${locale}/${params.tenant}/settings/team`)}
-          >
+          <DropdownMenuItem onClick={() => router.push(`/${locale}/${tenant}/settings/team`)}>
             New Team
           </DropdownMenuItem>
         </DropdownMenuGroup>
