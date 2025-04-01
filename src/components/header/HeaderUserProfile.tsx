@@ -15,15 +15,17 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
+import { Team } from '@/types/context/teamContextType';
 import { User as UserType } from '@/types/service/userServiceType';
 
 // Add interface for props
 interface HeaderUserProfileProps {
   user?: UserType | null;
+  activeTeam?: Team | null;
 }
 
-// Update function signature to accept user prop
-export function HeaderUserProfile({ user }: HeaderUserProfileProps) {
+// Update function signature to accept user and team props
+export function HeaderUserProfile({ user, activeTeam = null }: HeaderUserProfileProps) {
   const router = useRouter();
   const params = useParams();
   const locale = params.locale as string;
@@ -67,6 +69,9 @@ export function HeaderUserProfile({ user }: HeaderUserProfileProps) {
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">{user.name}</p>
             <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+            {activeTeam && (
+              <p className="text-xs text-muted-foreground mt-1">Team: {activeTeam.name}</p>
+            )}
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />

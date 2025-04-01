@@ -17,14 +17,23 @@ import TeamSelector from '@/components/team/TeamSelector';
 import { TeamSwitcher } from '@/components/team/TeamSwitcher';
 import { useSidebar } from '@/hooks';
 import { cn } from '@/lib/utils';
+import { Team } from '@/types/context/teamContextType';
 import { User } from '@/types/service/userServiceType';
 
 interface SidebarClientProps {
   user?: User | null;
+  teams?: Team[];
+  activeTeam?: Team | null;
+  setSelectedTeam?: (teamId: string) => Promise<void>;
 }
 
 // Wrap the component with React.memo to prevent unnecessary re-renders
-const SidebarClient = React.memo(function SidebarClient({ user }: SidebarClientProps) {
+const SidebarClient = React.memo(function SidebarClient({
+  user,
+  teams = [],
+  activeTeam = null,
+  setSelectedTeam,
+}: SidebarClientProps) {
   const { open } = useSidebar();
 
   // Simplified role resolution
@@ -66,8 +75,19 @@ const SidebarClient = React.memo(function SidebarClient({ user }: SidebarClientP
     >
       <SidebarHeader className="p-1.5">
         <div className="sidebar-header-content flex flex-col gap-2">
-          <TeamSwitcher defaultCollapsed={!open} user={user} />
-          <TeamSelector />
+          <TeamSwitcher
+            defaultCollapsed={!open}
+            user={user}
+            teams={teams}
+            activeTeam={activeTeam}
+            setSelectedTeam={setSelectedTeam}
+          />
+          <TeamSelector
+            user={user}
+            teams={teams}
+            activeTeam={activeTeam}
+            setSelectedTeam={setSelectedTeam}
+          />
         </div>
       </SidebarHeader>
       <SidebarContent className={cn('pt-2', !open && 'pt-4')}>

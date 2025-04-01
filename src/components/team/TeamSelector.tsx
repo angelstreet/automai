@@ -1,15 +1,18 @@
 import { TeamSelectorClient } from './TeamSelectorClient';
-import { useTeam } from '@/hooks/team/useTeam';
 
 interface TeamSelectorProps {
   user?: any;
   teams?: any[];
   activeTeam?: any;
+  setSelectedTeam?: (teamId: string) => Promise<void>;
 }
 
-export default function TeamSelector({ user, teams, activeTeam }: TeamSelectorProps) {
-  const { setSelectedTeam } = useTeam();
-
+export default function TeamSelector({
+  user,
+  teams,
+  activeTeam,
+  setSelectedTeam,
+}: TeamSelectorProps) {
   return (
     <TeamSelectorClient
       user={user}

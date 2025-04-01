@@ -9,12 +9,17 @@ interface TeamProviderProps {
   children: React.ReactNode;
   teams: Team[];
   activeTeam: Team | null;
+  setSelectedTeam?: (teamId: string) => Promise<void>;
 }
 
 /**
  * TeamProvider - Pure data container for team state
  * No business logic, no data fetching, no side effects
  */
-export function TeamProvider({ children, teams, activeTeam }: TeamProviderProps) {
-  return <TeamContext.Provider value={{ teams, activeTeam }}>{children}</TeamContext.Provider>;
+export function TeamProvider({ children, teams, activeTeam, setSelectedTeam }: TeamProviderProps) {
+  return (
+    <TeamContext.Provider value={{ teams, activeTeam, setSelectedTeam }}>
+      {children}
+    </TeamContext.Provider>
+  );
 }

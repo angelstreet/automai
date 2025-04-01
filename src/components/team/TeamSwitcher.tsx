@@ -3,7 +3,6 @@ import { Suspense } from 'react';
 
 import type { Team } from '@/types/context/teamContextType';
 import { User } from '@/types/service/userServiceType';
-import { useTeam } from '@/hooks/team/useTeam';
 
 import TeamSwitcherClient from '@/components/team/TeamSwitcherClient';
 
@@ -12,20 +11,16 @@ interface TeamSwitcherProps {
   teams?: Team[];
   user?: User | null;
   activeTeam?: Team | null;
+  setSelectedTeam?: (teamId: string) => Promise<void>;
 }
 
 export function TeamSwitcher({
   defaultCollapsed = false,
   user,
-  teams,
-  activeTeam,
+  teams = [],
+  activeTeam = null,
+  setSelectedTeam,
 }: TeamSwitcherProps) {
-  const { teams: contextTeams, activeTeam: contextActiveTeam, setSelectedTeam } = useTeam();
-
-  // Use props if provided, otherwise use context
-  const finalTeams = teams || contextTeams || [];
-  const finalActiveTeam = activeTeam || contextActiveTeam;
-
   return (
     <Suspense
       fallback={
@@ -39,8 +34,8 @@ export function TeamSwitcher({
       <TeamSwitcherClient
         defaultCollapsed={defaultCollapsed}
         user={user}
-        teams={finalTeams}
-        selectedTeam={finalActiveTeam}
+        teams={teams}
+        selectedTeam={activeTeam}
         onTeamSelect={setSelectedTeam}
       />
     </Suspense>

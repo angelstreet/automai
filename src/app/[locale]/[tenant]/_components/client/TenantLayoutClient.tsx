@@ -1,8 +1,9 @@
 'use client';
 
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
-import { ReactNode, Suspense } from 'react';
+import { ReactNode, Suspense, useCallback } from 'react';
 
+import { setUserActiveTeam } from '@/app/actions/teamAction';
 import { TeamProvider, UserProvider, SidebarProvider, PermissionProvider } from '@/app/providers';
 import { HeaderClient, HeaderSkeleton } from '@/components/header';
 import { SidebarSkeleton, SidebarClient } from '@/components/sidebar';
@@ -28,21 +29,37 @@ export default function TenantLayoutClient({
   user: User | null;
   teamDetails: Team | null;
 }) {
+  const teams = teamDetails ? [teamDetails] : [];
+
+  // Create a setSelectedTeam function that calls the server action
+  const setSelectedTeam = useCallback(
+    async (teamId: string) => {
+      if (!user?.id) return;
+      return setUserActiveTeam(user.id, teamId);
+    },
+    [user?.id],
+  );
+
   return (
     <QueryClientProvider client={queryClient}>
       <UserProvider user={user}>
-        <TeamProvider teams={teamDetails ? [teamDetails] : []} activeTeam={teamDetails}>
+        <TeamProvider teams={teams} activeTeam={teamDetails} setSelectedTeam={setSelectedTeam}>
           <PermissionProvider>
             <SidebarProvider>
               <div className="flex">
                 <Suspense fallback={<SidebarSkeleton />}>
                   <aside>
-                    <SidebarClient user={user} />
+                    <SidebarClient
+                      user={user}
+                      teams={teams}
+                      activeTeam={teamDetails}
+                      setSelectedTeam={setSelectedTeam}
+                    />
                   </aside>
                 </Suspense>
                 <div className="flex-1">
                   <Suspense fallback={<HeaderSkeleton />}>
-                    <HeaderClient user={user} />
+                    <HeaderClient user={user} activeTeam={teamDetails} />
                   </Suspense>
                   {children}
                 </div>
