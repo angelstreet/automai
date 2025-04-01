@@ -676,10 +676,6 @@ export const getTeamDetails = cache(async (userId?: string, caller = 'unknown') 
       `getTeamDetails(${caller})`,
     );
 
-    // Return team details with actual resource counts
-    console.log(
-      `[@action:team:getTeamDetails] Called by: ${caller} - Successfully obtained team details`,
-    );
     return {
       ...team,
       memberCount,

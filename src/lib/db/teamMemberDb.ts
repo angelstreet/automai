@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import type { TeamMember, TeamMemberCreateInput } from '@/types/context/teamContextType';
+
 import { DbResponse } from './dbUtils';
 
 /**
@@ -13,7 +14,6 @@ export async function getTeamMembers(
   cookieStore?: any,
 ): Promise<DbResponse<TeamMember[]>> {
   try {
-    console.log('[@db:teamMemberDb:getTeamMembers] Getting all team members');
     const supabase = await createClient(cookieStore);
 
     // Get team members with basic profile data
