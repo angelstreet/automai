@@ -1,3 +1,5 @@
+'use client';
+
 import { useRouter, useParams } from 'next/navigation';
 import { User } from 'lucide-react';
 
@@ -15,12 +17,12 @@ import {
 } from '@/components/shadcn/dropdown-menu';
 import { useUser } from '@/context';
 
-export function ProfileDropdown() {
+export function HeaderUserProfile() {
   const router = useRouter();
   const params = useParams();
   const { user } = useUser();
   const locale = params.locale as string;
-  const tenant = params.tenant as string || 'trial';
+  const tenant = (params.tenant as string) || 'trial';
 
   // Get user's initials for avatar fallback
   const getInitials = (name: string) => {

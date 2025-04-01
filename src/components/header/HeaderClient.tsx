@@ -2,15 +2,15 @@
 
 import { Suspense } from 'react';
 
-import { UserProfile } from '@/components/profile/UserProfile';
+import { HeaderUserProfile } from '@/components/header';
 import { ThemeToggleStatic } from '@/components/theme/ThemeToggleStatic';
 
-interface WorkspaceHeaderProps {
+interface HeaderClientProps {
   className?: string;
   fixed?: boolean;
 }
 
-export function WorkspaceHeader({ className = '', fixed = false }: WorkspaceHeaderProps) {
+export function HeaderClient({ className = '', fixed = false }: HeaderClientProps) {
   return (
     <header
       className={`${className} ${fixed ? 'fixed' : ''} flex items-center justify-between p-4`}
@@ -19,7 +19,7 @@ export function WorkspaceHeader({ className = '', fixed = false }: WorkspaceHead
         <ThemeToggleStatic />
       </Suspense>
       <Suspense fallback={<div className="h-8 w-8 bg-muted/30 rounded-full animate-pulse" />}>
-        <UserProfile />
+        <HeaderUserProfile />
       </Suspense>
     </header>
   );

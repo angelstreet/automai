@@ -7,6 +7,7 @@ import { APP_SIDEBAR_WIDTH, APP_SIDEBAR_WIDTH_ICON } from '@/components/sidebar/
 import { SidebarContext as SidebarContextType } from '@/types/context/sidebarContextType';
 import { useSidebar } from '@/hooks/sidebar';
 import { User } from '@/types/service/userServiceType';
+import { cn } from '@/lib/utils';
 
 // Create context with a null default value
 export const SidebarContext = createContext<SidebarContextType | null>(null);
@@ -75,12 +76,12 @@ export function SidebarProvider({
           <SidebarClient user={user} />
         </Suspense>
         <div
-          className="flex-1 flex flex-col w-full overflow-hidden transition-[margin,width] duration-300 ease-in-out"
-          style={{
-            marginLeft: 'var(--sidebar-width-offset, 0)',
-            width: 'calc(100% - var(--sidebar-width-offset, 0))',
-            opacity: 1,
-          }}
+          className={cn(
+            'flex-1 flex flex-col w-full overflow-hidden transition-[margin,width] duration-300 ease-in-out',
+            contextValue.open
+              ? ''
+              : 'ml-[var(--sidebar-width-offset,0)] w-[calc(100%-var(--sidebar-width-offset,0))]',
+          )}
         >
           {children}
         </div>

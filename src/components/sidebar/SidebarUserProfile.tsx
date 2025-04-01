@@ -17,11 +17,11 @@ import {
 } from '@/components/shadcn/dropdown-menu';
 import { useUser } from '@/context';
 
-interface UserProfileProps {
+interface SidebarUserProfileProps {
   tenant?: string;
 }
 
-export function UserProfile({ tenant }: UserProfileProps) {
+export function SidebarUserProfile({ tenant }: SidebarUserProfileProps) {
   const router = useRouter();
   const params = useParams();
   const { user } = useUser();
@@ -29,10 +29,8 @@ export function UserProfile({ tenant }: UserProfileProps) {
 
   const handleSignOut = async () => {
     try {
-      // Use formData to pass the locale
       const formData = new FormData();
       formData.append('locale', locale);
-      
       // Redirect to login page
       router.push(`/${locale}/login`);
     } catch (error) {
@@ -53,7 +51,7 @@ export function UserProfile({ tenant }: UserProfileProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+        <Button variant="ghost" className="relative h-8 w-8 rounded-full mx-2">
           <Avatar className="h-8 w-8">
             <AvatarImage src={user?.image || '/avatars/01.svg'} alt={user?.name || 'User'} />
             <AvatarFallback>

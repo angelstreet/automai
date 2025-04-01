@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useParams } from 'next/navigation';
 import * as React from 'react';
 
+import { ScrollArea } from '@/components/shadcn/scroll-area';
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -16,27 +17,29 @@ import {
   SidebarMenuSubButton,
 } from '@/components/sidebar';
 import { useSidebar } from '@/context';
-import { ScrollArea } from '@/components/shadcn/scroll-area';
 import { cn } from '@/lib/utils';
 
-interface NavGroupProps {
+interface SidebarNavGroupProps {
   title: string;
   items: {
     title: string;
     href: string;
-    icon: any;
+    icon?: React.ComponentType<{ className?: string }>;
     roles?: string[];
     items?: {
       title: string;
       href: string;
-      icon: any;
+      icon: React.ComponentType<{ className?: string }>;
       roles?: string[];
     }[];
   }[];
 }
 
 // Wrap the component with React.memo to prevent unnecessary re-renders
-const NavGroup = React.memo(function NavGroup({ title, items }: NavGroupProps) {
+export const SidebarNavGroup = React.memo(function SidebarNavGroup({
+  title,
+  items,
+}: SidebarNavGroupProps) {
   const pathname = usePathname();
   const params = useParams();
   const { open } = useSidebar();
@@ -98,7 +101,7 @@ const NavGroup = React.memo(function NavGroup({ title, items }: NavGroupProps) {
                       onClick={() => toggleSubmenu(item.href)}
                       className="hover:bg-accent/50 data-[active=true]:bg-accent/50"
                     >
-                      <Icon className="h-4 w-4" />
+                      {Icon && <Icon className="h-4 w-4" />}
                       <span>{item.title}</span>
                       <ChevronDown
                         className={cn(
@@ -117,7 +120,7 @@ const NavGroup = React.memo(function NavGroup({ title, items }: NavGroupProps) {
                       <Link
                         href={`/${params.locale as string}/${params.tenant as string}${item.href.startsWith('/') ? item.href : `/${item.href}`}`}
                       >
-                        <Icon className="h-4 w-4" />
+                        {Icon && <Icon className="h-4 w-4" />}
                         <span>{item.title}</span>
                       </Link>
                     </SidebarMenuButton>
@@ -161,6 +164,3 @@ const NavGroup = React.memo(function NavGroup({ title, items }: NavGroupProps) {
     </SidebarGroup>
   );
 });
-
-// Export the memoized component
-export { NavGroup };

@@ -4,8 +4,8 @@ import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
 import { ReactNode, Suspense } from 'react';
 
 import { TeamProvider, UserProvider, SidebarProvider, PermissionProvider } from '@/app/providers';
+import { HeaderClient, HeaderSkeleton } from '@/components/header';
 import { SidebarSkeleton, SidebarClient } from '@/components/sidebar';
-import { WorkspaceHeader, WorkspaceHeaderSkeleton } from '@/components/workspace';
 import { Team } from '@/types/context/teamContextType';
 import { User } from '@/types/service/userServiceType';
 
@@ -44,8 +44,8 @@ export default function TenantLayoutClient({
                   </aside>
                 </Suspense>
                 <div className="flex-1">
-                  <Suspense fallback={<WorkspaceHeaderSkeleton />}>
-                    <WorkspaceHeader />
+                  <Suspense fallback={<HeaderSkeleton />}>
+                    <HeaderClient />
                   </Suspense>
                   {children}
                 </div>

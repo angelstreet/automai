@@ -2,22 +2,22 @@
 
 import * as React from 'react';
 
-import { NavGroup } from '@/components/layout/NavGroup';
-import { UserProfile } from '@/components/profile/UserProfile';
-import { TeamSwitcher } from '@/components/team/TeamSwitcher';
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
-  useSidebar,
 } from '@/components/sidebar';
+import { SidebarNavGroup } from '@/components/sidebar/SidebarNavGroup';
+import { SidebarUserProfile } from '@/components/sidebar/SidebarUserProfile';
 import { APP_SIDEBAR_WIDTH, APP_SIDEBAR_WIDTH_ICON } from '@/components/sidebar/constants';
 import { sidebarData } from '@/components/sidebar/sidebarData';
 import TeamSelector from '@/components/team/TeamSelector';
-import { useUser } from '@/context';
-import {  User  } from '@/types/service/userServiceType';
+import { TeamSwitcher } from '@/components/team/TeamSwitcher';
+import { useSidebar, useUser } from '@/context';
+import { cn } from '@/lib/utils';
+import { User } from '@/types/service/userServiceType';
 
 interface SidebarClientProps {
   user?: User | null;
@@ -25,36 +25,10 @@ interface SidebarClientProps {
 
 // Wrap the component with React.memo to prevent unnecessary re-renders
 const SidebarClient = React.memo(function SidebarClient({ user: propUser }: SidebarClientProps) {
-  console.log('[@ui:SidebarClient:render] Rendering SidebarClient');
-
   const userContext = useUser();
   // Use prop user if available, otherwise fall back to context
   const user = propUser || userContext?.user || null;
   const { open } = useSidebar();
-
-  console.log(
-    `[@ui:SidebarClient:render] Initial sidebar state: ${open ? 'expanded' : 'collapsed'}`,
-  );
-
-  // Initialize isCollapsed directly from the open state to prevent flashing
-  const [isCollapsed, setIsCollapsed] = React.useState(!open);
-
-  // Add a ref to track if this is the first render
-  const isFirstRender = React.useRef(true);
-
-  // Debug logging for state changes
-  React.useEffect(() => {
-    if (isFirstRender.current) {
-      console.log(
-        `[@ui:SidebarClient:useEffect] First render, isCollapsed=${isCollapsed}, open=${open}`,
-      );
-      isFirstRender.current = false;
-    } else {
-      console.log(`[@ui:SidebarClient:useEffect] Updating isCollapsed: ${isCollapsed} → ${!open}`);
-    }
-
-    setIsCollapsed(!open);
-  }, [open, isCollapsed]);
 
   // Simplified role resolution
   const effectiveRole = user?.role || 'viewer';
@@ -81,24 +55,11 @@ const SidebarClient = React.memo(function SidebarClient({ user: propUser }: Side
       .filter((group) => group.items.length > 0); // Remove empty groups
   }, [effectiveRole]);
 
-  // Always ensure sidebar is visible, without unnecessary transitions
-  const sidebarClassName =
-    'fixed left-0 top-0 z-30 sidebar-visible animate-in fade-in-50 duration-300';
-
-  // Debug logging for render lifecycle
-  React.useEffect(() => {
-    console.log(`[@ui:SidebarClient:useEffect] Component mounted with isCollapsed=${isCollapsed}`);
-
-    return () => {
-      console.log('[@ui:SidebarClient:useEffect] Component unmounting');
-    };
-  }, [isCollapsed]);
-
   return (
     <Sidebar
       collapsible="icon"
       variant="floating"
-      className={sidebarClassName}
+      className="fixed left-0 top-0 z-30 sidebar-visible animate-in fade-in-50 duration-300"
       style={
         {
           '--sidebar-width': APP_SIDEBAR_WIDTH,
@@ -112,12 +73,14 @@ const SidebarClient = React.memo(function SidebarClient({ user: propUser }: Side
           <TeamSelector />
         </div>
       </SidebarHeader>
-      <SidebarContent className={isCollapsed ? 'pt-4' : 'pt-2'}>
+      <SidebarContent className={cn('pt-2', !open && 'pt-4')}>
         {filteredNavigation.map((group) => (
-          <NavGroup key={group.title} {...group} />
+          <SidebarNavGroup key={group.title} {...group} />
         ))}
       </SidebarContent>
-      <SidebarFooter className="pb-2">{user && <UserProfile tenant={user.tenant_name} />}</SidebarFooter>
+      <SidebarFooter className="pb-2">
+        {user && <SidebarUserProfile tenant={user.tenant_name} />}
+      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   );

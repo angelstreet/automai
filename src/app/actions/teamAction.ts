@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { cache } from 'react';
 
 import { getUser } from '@/app/actions/userAction';
+import { getUserTeams as dbGetUserTeams } from '@/lib/db/teamDb';
 import { createClient } from '@/lib/supabase/server';
 import type { ActionResult } from '@/types/context/cicdContextType';
 import { Team, TeamMember } from '@/types/context/teamContextType';
@@ -16,7 +17,6 @@ import type {
 import { User } from '@/types/service/userServiceType';
 
 // Use TeamMemberType consistently throughout this file
-type TeamMember = TeamMemberType;
 
 /**
  * Checks if an object is safely serializable for client components
