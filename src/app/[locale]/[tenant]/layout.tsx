@@ -5,7 +5,7 @@ import { getUserTeams, getUserActiveTeam, type Team } from '@/app/actions/team';
 import { getUser } from '@/app/actions/user';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { AppSidebarSkeleton } from '@/components/layout/AppSidebarSkeleton';
-import { WorkspaceHeaderSkeleton } from '@/components/layout/WorkspaceHeaderSkeleton';
+import { WorkspaceHeaderSkeleton } from '@/components/workspace/WorkspaceHeaderSkeleton';
 import { WorkspaceHeader } from '@/components/workspace/WorkspaceHeader';
 import { mapAuthUserToUser } from '@/types/user';
 

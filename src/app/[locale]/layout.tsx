@@ -1,6 +1,5 @@
 import { NextIntlClientProvider } from 'next-intl';
 
-import { ToasterProvider } from '@/components/shadcn/toaster';
 import { locales } from '@/config';
 import { getMessages } from '@/i18n';
 
@@ -20,7 +19,6 @@ export default async function LocaleLayout({ children, params }: Props) {
   return (
     <NextIntlClientProvider locale={locale} messages={messages} timeZone="UTC">
       {children}
-      <ToasterProvider />
     </NextIntlClientProvider>
   );
 }

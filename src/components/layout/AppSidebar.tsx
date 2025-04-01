@@ -1,11 +1,11 @@
 import { User } from '@/types/auth/user';
 
-import { AppSidebarClient } from '@/components/sidebar/AppSidebarClient';
+import { SidebarClient } from '@/components/sidebar/SidebarClient';
 
 interface AppSidebarProps {
   user?: User | null;
 }
 
 export function AppSidebar({ user }: AppSidebarProps) {
-  return <AppSidebarClient user={user} />;
+  return <SidebarClient user={user} />;
 }

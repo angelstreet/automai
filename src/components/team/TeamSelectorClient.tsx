@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { Check, ChevronsUpDown, Users } from 'lucide-react';
+import { useState, useEffect } from 'react';
+
 import { Button } from '@/components/shadcn/button';
 import {
   Command,
@@ -11,11 +12,12 @@ import {
   CommandItem,
 } from '@/components/shadcn/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/shadcn/popover';
+import { useUser, useTeam } from '@/context';
 import { cn } from '@/lib/utils';
-import { useUser } from '@/context';
 
-export default function TeamSelector() {
-  const { user, teams, selectedTeam, setSelectedTeam, refreshUser } = useUser();
+export function TeamSelectorClient() {
+  const { user, teams: userTeams, selectedTeam, setSelectedTeam, refreshUser } = useUser();
+  const { syncWithUserContext } = useTeam();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -25,9 +27,16 @@ export default function TeamSelector() {
   }, [user, refreshUser]);
 
   // Only show for enterprise users with multiple teams
-  if (!user || user.tenant_name !== 'enterprise' || teams.length <= 1) {
+  if (!user || user.tenant_name !== 'enterprise' || userTeams.length <= 1) {
     return null;
   }
+
+  const handleTeamSelect = async (teamId: string) => {
+    await setSelectedTeam(teamId);
+    // Make sure the permission system is aware of the team change
+    await syncWithUserContext();
+    setOpen(false);
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -50,14 +59,11 @@ export default function TeamSelector() {
           <CommandInput placeholder="Search team..." />
           <CommandEmpty>No team found.</CommandEmpty>
           <CommandGroup>
-            {teams.map((team) => (
+            {userTeams.map((team) => (
               <CommandItem
                 key={team.id}
                 value={team.name}
-                onSelect={() => {
-                  setSelectedTeam(team.id);
-                  setOpen(false);
-                }}
+                onSelect={() => handleTeamSelect(team.id)}
               >
                 <Check
                   className={cn(

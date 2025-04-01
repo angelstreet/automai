@@ -1,8 +1,8 @@
 import { cookies } from 'next/headers';
 import { Suspense } from 'react';
 
-import { ThemeToggleStatic } from '@/components/theme/ThemeToggleStatic';
 import { UserProfileDropdownClient } from '@/components/layout/UserProfileDropdownClient';
+import { ThemeToggleStatic } from '@/components/theme/ThemeToggleStatic';
 import { WorkspaceHeaderClient } from '@/components/workspace/WorkspaceHeaderClient';
 import { User } from '@/types/auth/user';
 

@@ -2,11 +2,8 @@ import './globals.css';
 import { Inter } from 'next/font/google';
 import { cookies } from 'next/headers';
 
-import { ThemeProviders, SWRProvider } from '@/components/providers';
-import { TeamProvider } from '@/context';
-import { SidebarProvider } from '@/context/SidebarContext';
 import { getSidebarState } from '@/app/actions/sidebar';
-import { UserProvider } from '@/context/UserContext';
+import { Providers } from '@/app/providers';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -48,15 +45,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
       </head>
       <body>
-        <ThemeProviders defaultTheme={theme}>
-          <SWRProvider>
-            <UserProvider initialUser={null}>
-              <TeamProvider>
-                <SidebarProvider defaultOpen={initialSidebarState}>{children}</SidebarProvider>
-              </TeamProvider>
-            </UserProvider>
-          </SWRProvider>
-        </ThemeProviders>
+        <Providers defaultTheme={theme} defaultSidebarOpen={initialSidebarState} initialUser={null}>
+          {children}
+        </Providers>
       </body>
     </html>
   );

@@ -4,7 +4,7 @@ import * as React from 'react';
 
 import { NavGroup } from '@/components/layout/NavGroup';
 import { NavUser } from '@/components/layout/NavUser';
-import { TeamSwitcher } from '@/components/layout/TeamSwitcher';
+import { TeamSwitcher } from '@/components/team/TeamSwitcher';
 import {
   Sidebar,
   SidebarContent,
@@ -19,15 +19,13 @@ import TeamSelector from '@/components/team/TeamSelector';
 import { useUser } from '@/context';
 import { User } from '@/types/auth/user';
 
-interface AppSidebarClientProps {
+interface SidebarClientProps {
   user?: User | null;
 }
 
 // Wrap the component with React.memo to prevent unnecessary re-renders
-const AppSidebarClient = React.memo(function AppSidebarClient({
-  user: propUser,
-}: AppSidebarClientProps) {
-  console.log('[@ui:AppSidebarClient:render] Rendering AppSidebarClient');
+const SidebarClient = React.memo(function SidebarClient({ user: propUser }: SidebarClientProps) {
+  console.log('[@ui:SidebarClient:render] Rendering SidebarClient');
 
   const userContext = useUser();
   // Use prop user if available, otherwise fall back to context
@@ -35,7 +33,7 @@ const AppSidebarClient = React.memo(function AppSidebarClient({
   const { open } = useSidebar();
 
   console.log(
-    `[@ui:AppSidebarClient:render] Initial sidebar state: ${open ? 'expanded' : 'collapsed'}`,
+    `[@ui:SidebarClient:render] Initial sidebar state: ${open ? 'expanded' : 'collapsed'}`,
   );
 
   // Initialize isCollapsed directly from the open state to prevent flashing
@@ -48,13 +46,11 @@ const AppSidebarClient = React.memo(function AppSidebarClient({
   React.useEffect(() => {
     if (isFirstRender.current) {
       console.log(
-        `[@ui:AppSidebarClient:useEffect] First render, isCollapsed=${isCollapsed}, open=${open}`,
+        `[@ui:SidebarClient:useEffect] First render, isCollapsed=${isCollapsed}, open=${open}`,
       );
       isFirstRender.current = false;
     } else {
-      console.log(
-        `[@ui:AppSidebarClient:useEffect] Updating isCollapsed: ${isCollapsed} → ${!open}`,
-      );
+      console.log(`[@ui:SidebarClient:useEffect] Updating isCollapsed: ${isCollapsed} → ${!open}`);
     }
 
     setIsCollapsed(!open);
@@ -91,12 +87,10 @@ const AppSidebarClient = React.memo(function AppSidebarClient({
 
   // Debug logging for render lifecycle
   React.useEffect(() => {
-    console.log(
-      `[@ui:AppSidebarClient:useEffect] Component mounted with isCollapsed=${isCollapsed}`,
-    );
+    console.log(`[@ui:SidebarClient:useEffect] Component mounted with isCollapsed=${isCollapsed}`);
 
     return () => {
-      console.log('[@ui:AppSidebarClient:useEffect] Component unmounting');
+      console.log('[@ui:SidebarClient:useEffect] Component unmounting');
     };
   }, [isCollapsed]);
 
@@ -129,4 +123,4 @@ const AppSidebarClient = React.memo(function AppSidebarClient({
   );
 });
 
-export { AppSidebarClient };
+export { SidebarClient };
