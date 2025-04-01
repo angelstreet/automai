@@ -3,7 +3,7 @@
 import * as React from 'react';
 
 import { NavGroup } from '@/components/layout/NavGroup';
-import { NavUser } from '@/components/layout/NavUser';
+import { UserProfile } from '@/components/profile/UserProfile';
 import { TeamSwitcher } from '@/components/team/TeamSwitcher';
 import {
   Sidebar,
@@ -117,7 +117,7 @@ const SidebarClient = React.memo(function SidebarClient({ user: propUser }: Side
           <NavGroup key={group.title} {...group} />
         ))}
       </SidebarContent>
-      <SidebarFooter className="pb-2">{user && <NavUser user={user} />}</SidebarFooter>
+      <SidebarFooter className="pb-2">{user && <UserProfile tenant={user.tenant_name} />}</SidebarFooter>
       <SidebarRail />
     </Sidebar>
   );

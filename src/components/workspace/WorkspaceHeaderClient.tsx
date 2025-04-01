@@ -4,7 +4,7 @@ import Cookies from 'js-cookie';
 import { ChevronUp } from 'lucide-react';
 import * as React from 'react';
 
-import { RoleSwitcher } from '@/components/layout/RoleSwitcher';
+import { RoleSwitcher } from '@/components/team/RoleSwitcher';
 import { Button } from '@/components/shadcn/button';
 import { Search } from '@/components/shadcn/search';
 import { Separator } from '@/components/shadcn/separator';

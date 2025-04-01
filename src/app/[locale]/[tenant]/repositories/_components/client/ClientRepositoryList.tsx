@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import React, { useState, useEffect } from 'react';
 
 import { useRepository } from '@/context';
-import { EmptyState } from '@/components/layout/EmptyState';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/shadcn/tabs';

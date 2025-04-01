@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import React, { useState, useCallback } from 'react';
 
 import { useCICD } from '@/context';
-import { EmptyState } from '@/components/layout/EmptyState';
+import { EmptyState } from '@/components/ui/EmptyState';
 import {
   AlertDialog,
   AlertDialogAction,

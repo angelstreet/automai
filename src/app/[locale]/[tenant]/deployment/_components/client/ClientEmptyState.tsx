@@ -3,7 +3,7 @@
 import { Rocket, PlusCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { EmptyState } from '@/components/layout/EmptyState';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/shadcn/button';
 
 export function ClientEmptyState() {

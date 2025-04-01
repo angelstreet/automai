@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { Suspense } from 'react';
 
-import { UserProfileDropdownClient } from '@/components/layout/UserProfileDropdownClient';
+import { UserProfile } from '@/components/profile/UserProfile';
 import { ThemeToggleStatic } from '@/components/theme/ThemeToggleStatic';
 import { WorkspaceHeaderClient } from '@/components/workspace/WorkspaceHeaderClient';
 import {  User  } from '@/types/service/userServiceType';
@@ -35,7 +35,7 @@ export async function WorkspaceHeader({
         <ThemeToggleStatic />
       </Suspense>
       <Suspense fallback={<div className="h-8 w-8 bg-muted/30 rounded-full animate-pulse" />}>
-        <UserProfileDropdownClient user={user || null} />
+        <UserProfile tenant={user?.tenant_name || 'trial'} />
       </Suspense>
     </WorkspaceHeaderClient>
   );
