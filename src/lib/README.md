@@ -1,106 +1,124 @@
-# Library Directory Structure
+# AutomAI Library Structure
 
-This directory contains the core libraries, utilities, and services for the AutomAI application. It follows a consistent, flat structure with no more than two levels of depth.
+This directory contains the core library code for AutomAI, organized with a maximum depth of 2 levels for clarity and maintainability.
 
 ## Directory Structure
 
-```
-/src/lib/
-├── db/                     # Database access layer
-│   ├── repositoryDb.ts     # Repository database operations
-│   ├── deploymentDb.ts     # Deployment database operations
-│   ├── hostDb.ts           # Host database operations
-│   ├── teamDb.ts           # Team database operations
-│   ├── userDb.ts           # User database operations
-│   ├── cicdDb.ts           # CI/CD database operations
-│   ├── permissionDb.ts     # Permission database operations
-│   └── dbUtils.ts          # Common database utilities
-│
-├── services/               # Business logic services
-│   ├── authService.ts      # Authentication services
-│   ├── cicdService.ts      # CI/CD services
-│   ├── deploymentService.ts # Deployment services
-│   ├── hostService.ts      # Host management services
-│   ├── teamService.ts      # Team management services
-│   ├── repositoryService.ts # Repository services
-│   ├── sshService.ts       # SSH connection services
-│   ├── terminalService.ts  # Terminal functionality
-│   ├── websocketService.ts # WebSocket services
-│   ├── httpService.ts      # HTTP utilities
-│   └── oauthService.ts     # OAuth functionality
-│
-├── supabase/               # Supabase-specific code
-│   ├── client.ts           # Supabase client
-│   ├── server.ts           # Supabase server-side client
-│   ├── middleware.ts       # Supabase middleware
-│   ├── auth.ts             # Supabase auth helpers
-│   └── admin.ts            # Supabase admin
-│
-├── git/                    # Git provider APIs
-│   ├── githubApi.ts        # GitHub API integration
-│   ├── gitlabApi.ts        # GitLab API integration
-│   └── giteaApi.ts         # Gitea API integration
-│
-├── utils/                  # Utility functions
-│   ├── cacheUtils.ts       # Caching utilities
-│   ├── logUtils.ts         # Logging utilities
-│   ├── envUtils.ts         # Environment utilities
-│   ├── chartUtils.ts       # Chart generation utilities
-│   ├── fetchUtils.ts       # Fetch utilities
-│   ├── sessionUtils.ts     # Session utilities
-│   ├── apiUtils.ts         # API utilities
-│   └── commonUtils.ts      # General utilities
-│
-└── config/                 # Configuration
-    ├── featureConfig.ts    # Feature flags configuration
-    ├── envConfig.ts        # Environment configuration
-    ├── authConfig.ts       # Authentication configuration
-    └── appConfig.ts        # Application configuration
-```
+- `/db/` - Database access layer
+  - Files named with the pattern `*Db.ts`
+  - Directly interacts with Supabase
+  - Returns consistent `DbResponse<T>` objects
 
-## Naming Convention
+- `/services/` - Service layer
+  - Files named with the pattern `*Service.ts`
+  - Contains business logic
+  - Uses database layer for data access
+  - Returns consistent `ServiceResponse<T>` objects
 
-This library follows a consistent naming convention with suffixes:
+- `/git/` - Git provider APIs
+  - Files named with the pattern `*Api.ts`
+  - Contains API clients for different Git providers (GitHub, GitLab, Gitea)
 
-- Database files: `*Db.ts` (e.g., `repositoryDb.ts`)
-- Service files: `*Service.ts` (e.g., `hostService.ts`)
-- API files: `*Api.ts` (e.g., `githubApi.ts`)
-- Utility files: `*Utils.ts` (e.g., `cacheUtils.ts`)
-- Configuration files: `*Config.ts` (e.g., `featureConfig.ts`)
+- `/utils/` - Utility functions
+  - Files named with the pattern `*Utils.ts`
+  - Contains reusable helper functions
 
-## Usage Guidelines
+- `/config/` - Configuration
+  - Files named with the pattern `*Config.ts`
+  - Contains configuration settings and constants
 
-1. **Keep the structure flat**: No more than 2 levels of depth (`/src/lib/[category]/[file].ts`)
-2. **Follow the naming convention**: Use appropriate suffixes for each type of file
-3. **Avoid circular dependencies**: Structure your imports to avoid circular references
-4. **Maintain clear boundaries**: Each directory has a specific responsibility
-5. **Export consistent interfaces**: Each module should provide a consistent interface
+- `/supabase/` - Supabase-specific functionality
+  - Contains Supabase client initialization, authentication, etc.
 
-## Importing from lib
+## Usage Examples
 
-Import from lib using the appropriate path:
+### Database Layer
 
 ```typescript
-// Import a database module
-import repositoryDb from '@/lib/db/repositoryDb';
+import { getUserById } from '@/lib/db/userDb';
 
-// Import a service
-import hostService from '@/lib/services/hostService';
-
-// Import utilities
-import { cn } from '@/lib/utils/commonUtils';
-import cacheUtils from '@/lib/utils/cacheUtils';
-
-// Import configuration
-import featureConfig from '@/lib/config/featureConfig';
-import { env } from '@/lib/config/envConfig';
+// Database functions return DbResponse objects
+const response = await getUserById('user-123');
+if (response.success) {
+  // Use response.data
+} else {
+  // Handle response.error
+}
 ```
 
-## Design Principles
+### Service Layer
 
-1. **Database Layer**: Direct database operations, returns standard `DbResponse<T>`
-2. **Service Layer**: Business logic and operations, returns standard `ServiceResponse<T>`
-3. **Supabase Layer**: Supabase-specific functionality and clients
-4. **Git Layer**: External Git provider API integrations
-5. **Utils Layer**: Reusable utility functions
-6. **Config Layer**: Application configuration and settings
+```typescript
+import { userService } from '@/lib/services/userService';
+
+// Service functions return ServiceResponse objects
+const response = await userService.getUserProfile('user-123');
+if (response.success) {
+  // Use response.data
+} else {
+  // Handle response.error
+}
+```
+
+### Git APIs
+
+```typescript
+import { githubApi } from '@/lib/git/githubApi';
+
+// Use Git provider APIs
+const repositories = await githubApi.getRepositories('orgName');
+```
+
+### Utilities
+
+```typescript
+import { formatDate } from '@/lib/utils/dateUtils';
+
+// Use utility functions
+const formattedDate = formatDate(new Date(), 'YYYY-MM-DD');
+```
+
+## Response Types
+
+### DbResponse
+
+Database layer functions return `DbResponse<T>` objects:
+
+```typescript
+interface DbResponse<T> {
+  success: boolean;
+  data?: T | null;
+  error?: string;
+}
+```
+
+### ServiceResponse
+
+Service layer functions return `ServiceResponse<T>` objects:
+
+```typescript
+interface ServiceResponse<T> {
+  success: boolean;
+  data?: T | null;
+  error?: string;
+}
+```
+
+## Importing
+
+Always import specific functions from their respective modules:
+
+```typescript
+// Good
+import { getUser } from '@/lib/db/userDb';
+import { formatDate } from '@/lib/utils/dateUtils';
+
+// Bad - avoid importing entire modules
+import * as userDb from '@/lib/db/userDb';
+```
+
+For convenience, you can also import from the main library export:
+
+```typescript
+import { getUser, formatDate } from '@/lib';
+```

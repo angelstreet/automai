@@ -1,6 +1,6 @@
 /* eslint-disable */
 import db from '@/lib/supabase/db';
-import { logger } from '../logger';
+import { logUtils } from '../utils/logUtils';
 
 class TerminalService {
   private static instance: TerminalService;

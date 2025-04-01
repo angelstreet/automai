@@ -1,10 +1,10 @@
 /* eslint-disable */
 import { WebSocketServer, WebSocket } from 'ws';
-import { logger } from '../logger';
+import { logUtils } from '../utils/logUtils';
 import { IncomingMessage } from 'http';
 import { Socket } from 'net';
-import { handleSshConnection } from './ssh';
-import {  WebSocketConnection  } from '@/types/component/sshComponentType';
+import { handleSshConnection } from './sshService';
+import { WebSocketConnection } from '@/types/component/sshComponentType';
 
 interface ExtendedWebSocket extends WebSocket {
   ws_isAlive?: boolean;

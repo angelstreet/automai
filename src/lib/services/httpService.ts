@@ -7,8 +7,8 @@ import { parse } from 'url';
 // This will generate a warning during build but is required for the custom server to work
 import next from 'next';
 import { NextServer } from 'next/dist/server/next';
-import { initializeWebSocketServer, handleUpgrade } from './websocket';
-import { logger } from '../logger';
+import { initializeWebSocketServer, handleUpgrade } from './websocketService';
+import { logUtils } from '../utils/logUtils';
 import { Socket } from 'net';
 
 // Server instance cache
@@ -322,7 +322,7 @@ export async function stopServer(forceFullShutdown: boolean = false): Promise<vo
 
     // Handle WebSocket server shutdown in parallel without blocking the HTTP server shutdown
     if (isWebSocketInitialized && forceFullShutdown) {
-      const { closeWebSocketServer } = await import('./websocket');
+      const { closeWebSocketServer } = await import('./websocketService');
       await closeWebSocketServer();
       isWebSocketInitialized = false;
     }

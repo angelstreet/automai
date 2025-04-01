@@ -1,711 +1,929 @@
-/**
- * CICD Service
- * Business logic for CI/CD operations
- */
-import cicdDb from '@/lib/db/cicdDb';
-import logUtils from '@/lib/utils/logUtils';
-
-// Types
 import {
-  CICDProvider,
-  CICDProviderPayload,
-  CICDJob,
   CICDBuild,
-  CICDAuthType
-} from '@/types/component/cicdComponentType';
-
-// Create a logger for CICD service
-const logger = logUtils.createModuleLogger('cicdService');
-
-/**
- * Standard service response interface
- */
-export interface ServiceResponse<T> {
-  success: boolean;
-  data?: T | null;
-  error?: string;
-}
+  CICDJob,
+  CICDJobParameter,
+  CICDProvider,
+  CICDProviderConfig,
+  CICDPipelineConfig,
+  CICDResponse
+} from '@/types/service/cicdServiceTypes';
+import { ServiceResponse } from './teamService';
+import { DbResponse } from '../utils/dbUtils';
+import { getCICDProviders, getCICDProviderById, createCICDProvider, updateCICDProvider, deleteCICDProvider } from '../supabase/db-cicd';
 
 /**
- * Factory for CI/CD provider implementations
+ * GitHub Actions CI/CD Provider Implementation
  */
-function getCICDImplementation(provider: CICDProvider) {
-  // In a real implementation, this would dynamically import and return the appropriate
-  // implementation based on the provider type (GitHub, GitLab, Jenkins, etc.)
-  switch (provider.type) {
-    case 'github':
-      return new GitHubCICDProvider(provider);
-    case 'gitlab':
-      return new GitLabCICDProvider(provider);
-    case 'jenkins':
-      return new JenkinsCICDProvider(provider);
-    default:
-      throw new Error(`Unsupported CI/CD provider type: ${provider.type}`);
-  }
-}
+export class GitHubProvider implements CICDProvider {
+  private config: CICDProviderConfig | null = null;
+  private authHeader: string = '';
+  private owner: string = '';
+  private repo: string = '';
+  private baseUrl: string = 'https://api.github.com';
 
-/**
- * Abstract base class for CI/CD providers
- */
-abstract class BaseCICDProvider {
-  protected provider: CICDProvider;
-  
-  constructor(provider: CICDProvider) {
-    this.provider = provider;
-  }
-  
-  abstract testConnection(): Promise<ServiceResponse<boolean>>;
-  abstract fetchJobs(): Promise<ServiceResponse<CICDJob[]>>;
-  abstract fetchBuilds(jobId: string): Promise<ServiceResponse<CICDBuild[]>>;
-  abstract triggerBuild(jobId: string): Promise<ServiceResponse<CICDBuild>>;
-  abstract getBuildStatus(buildId: string): Promise<ServiceResponse<string>>;
-  abstract getBuildLogs(buildId: string): Promise<ServiceResponse<string>>;
-}
+  /**
+   * Initialize the GitHub provider with configuration
+   */
+  initialize(config: CICDProviderConfig): void {
+    this.config = config;
 
-/**
- * GitHub CI/CD Provider implementation
- */
-class GitHubCICDProvider extends BaseCICDProvider {
-  async testConnection(): Promise<ServiceResponse<boolean>> {
+    // Parse owner and repo from the URL
+    // Expected format: https://github.com/{owner}/{repo}
     try {
-      // In a real implementation, this would test the connection to GitHub
-      logger.info('Testing GitHub CI/CD connection', { provider: this.provider.id });
-      
-      return { success: true, data: true };
-    } catch (error: any) {
-      logger.error('GitHub connection test failed', { error: error.message });
-      return { success: false, error: error.message };
-    }
-  }
-  
-  async fetchJobs(): Promise<ServiceResponse<CICDJob[]>> {
-    try {
-      // In a real implementation, this would fetch GitHub Actions workflows
-      logger.info('Fetching GitHub CI/CD jobs', { provider: this.provider.id });
-      
-      return { success: true, data: [] };
-    } catch (error: any) {
-      logger.error('Failed to fetch GitHub jobs', { error: error.message });
-      return { success: false, error: error.message };
-    }
-  }
-  
-  async fetchBuilds(jobId: string): Promise<ServiceResponse<CICDBuild[]>> {
-    try {
-      // In a real implementation, this would fetch GitHub Actions runs for a workflow
-      logger.info('Fetching GitHub CI/CD builds', { job: jobId });
-      
-      return { success: true, data: [] };
-    } catch (error: any) {
-      logger.error('Failed to fetch GitHub builds', { error: error.message });
-      return { success: false, error: error.message };
-    }
-  }
-  
-  async triggerBuild(jobId: string): Promise<ServiceResponse<CICDBuild>> {
-    try {
-      // In a real implementation, this would trigger a GitHub Actions workflow run
-      logger.info('Triggering GitHub CI/CD build', { job: jobId });
-      
-      return { success: true, data: {
-        id: 'mock-build-id',
-        job_id: jobId,
-        status: 'running',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }};
-    } catch (error: any) {
-      logger.error('Failed to trigger GitHub build', { error: error.message });
-      return { success: false, error: error.message };
-    }
-  }
-  
-  async getBuildStatus(buildId: string): Promise<ServiceResponse<string>> {
-    try {
-      // In a real implementation, this would fetch the status of a GitHub Actions run
-      logger.info('Getting GitHub CI/CD build status', { build: buildId });
-      
-      return { success: true, data: 'running' };
-    } catch (error: any) {
-      logger.error('Failed to get GitHub build status', { error: error.message });
-      return { success: false, error: error.message };
-    }
-  }
-  
-  async getBuildLogs(buildId: string): Promise<ServiceResponse<string>> {
-    try {
-      // In a real implementation, this would fetch the logs of a GitHub Actions run
-      logger.info('Getting GitHub CI/CD build logs', { build: buildId });
-      
-      return { success: true, data: 'Build logs...' };
-    } catch (error: any) {
-      logger.error('Failed to get GitHub build logs', { error: error.message });
-      return { success: false, error: error.message };
-    }
-  }
-}
+      const url = new URL(config.url);
+      const pathParts = url.pathname.split('/').filter((part) => part);
 
-/**
- * GitLab CI/CD Provider implementation
- */
-class GitLabCICDProvider extends BaseCICDProvider {
-  async testConnection(): Promise<ServiceResponse<boolean>> {
-    try {
-      // In a real implementation, this would test the connection to GitLab
-      logger.info('Testing GitLab CI/CD connection', { provider: this.provider.id });
-      
-      return { success: true, data: true };
+      if (pathParts.length >= 2) {
+        this.owner = pathParts[0];
+        this.repo = pathParts[1];
+      } else {
+        throw new Error(
+          'Invalid GitHub repository URL format. Expected: https://github.com/{owner}/{repo}',
+        );
+      }
     } catch (error: any) {
-      logger.error('GitLab connection test failed', { error: error.message });
-      return { success: false, error: error.message };
+      console.error('[@service:github:initialize] Error parsing GitHub URL:', error);
+      throw new Error(`Invalid GitHub URL: ${error.message}`);
     }
-  }
-  
-  async fetchJobs(): Promise<ServiceResponse<CICDJob[]>> {
-    try {
-      // In a real implementation, this would fetch GitLab CI pipelines
-      logger.info('Fetching GitLab CI/CD jobs', { provider: this.provider.id });
-      
-      return { success: true, data: [] };
-    } catch (error: any) {
-      logger.error('Failed to fetch GitLab jobs', { error: error.message });
-      return { success: false, error: error.message };
-    }
-  }
-  
-  async fetchBuilds(jobId: string): Promise<ServiceResponse<CICDBuild[]>> {
-    try {
-      // In a real implementation, this would fetch GitLab CI pipeline runs
-      logger.info('Fetching GitLab CI/CD builds', { job: jobId });
-      
-      return { success: true, data: [] };
-    } catch (error: any) {
-      logger.error('Failed to fetch GitLab builds', { error: error.message });
-      return { success: false, error: error.message };
-    }
-  }
-  
-  async triggerBuild(jobId: string): Promise<ServiceResponse<CICDBuild>> {
-    try {
-      // In a real implementation, this would trigger a GitLab CI pipeline
-      logger.info('Triggering GitLab CI/CD build', { job: jobId });
-      
-      return { success: true, data: {
-        id: 'mock-build-id',
-        job_id: jobId,
-        status: 'running',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }};
-    } catch (error: any) {
-      logger.error('Failed to trigger GitLab build', { error: error.message });
-      return { success: false, error: error.message };
-    }
-  }
-  
-  async getBuildStatus(buildId: string): Promise<ServiceResponse<string>> {
-    try {
-      // In a real implementation, this would fetch the status of a GitLab CI pipeline
-      logger.info('Getting GitLab CI/CD build status', { build: buildId });
-      
-      return { success: true, data: 'running' };
-    } catch (error: any) {
-      logger.error('Failed to get GitLab build status', { error: error.message });
-      return { success: false, error: error.message };
-    }
-  }
-  
-  async getBuildLogs(buildId: string): Promise<ServiceResponse<string>> {
-    try {
-      // In a real implementation, this would fetch the logs of a GitLab CI pipeline
-      logger.info('Getting GitLab CI/CD build logs', { build: buildId });
-      
-      return { success: true, data: 'Build logs...' };
-    } catch (error: any) {
-      logger.error('Failed to get GitLab build logs', { error: error.message });
-      return { success: false, error: error.message };
-    }
-  }
-}
 
-/**
- * Jenkins CI/CD Provider implementation
- */
-class JenkinsCICDProvider extends BaseCICDProvider {
-  async testConnection(): Promise<ServiceResponse<boolean>> {
-    try {
-      // In a real implementation, this would test the connection to Jenkins
-      logger.info('Testing Jenkins CI/CD connection', { provider: this.provider.id });
-      
-      return { success: true, data: true };
-    } catch (error: any) {
-      logger.error('Jenkins connection test failed', { error: error.message });
-      return { success: false, error: error.message };
+    // Set up authentication
+    if (config.auth_type === 'token') {
+      const token = config.credentials.token;
+      this.authHeader = `Bearer ${token}`;
+    } else if (config.auth_type === 'basic_auth') {
+      const { username, password } = config.credentials;
+      this.authHeader = `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`;
+    } else {
+      throw new Error(`Unsupported authentication type: ${config.auth_type}`);
     }
   }
-  
-  async fetchJobs(): Promise<ServiceResponse<CICDJob[]>> {
-    try {
-      // In a real implementation, this would fetch Jenkins jobs
-      logger.info('Fetching Jenkins CI/CD jobs', { provider: this.provider.id });
-      
-      return { success: true, data: [] };
-    } catch (error: any) {
-      logger.error('Failed to fetch Jenkins jobs', { error: error.message });
-      return { success: false, error: error.message };
-    }
-  }
-  
-  async fetchBuilds(jobId: string): Promise<ServiceResponse<CICDBuild[]>> {
-    try {
-      // In a real implementation, this would fetch Jenkins job builds
-      logger.info('Fetching Jenkins CI/CD builds', { job: jobId });
-      
-      return { success: true, data: [] };
-    } catch (error: any) {
-      logger.error('Failed to fetch Jenkins builds', { error: error.message });
-      return { success: false, error: error.message };
-    }
-  }
-  
-  async triggerBuild(jobId: string): Promise<ServiceResponse<CICDBuild>> {
-    try {
-      // In a real implementation, this would trigger a Jenkins job build
-      logger.info('Triggering Jenkins CI/CD build', { job: jobId });
-      
-      return { success: true, data: {
-        id: 'mock-build-id',
-        job_id: jobId,
-        status: 'running',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }};
-    } catch (error: any) {
-      logger.error('Failed to trigger Jenkins build', { error: error.message });
-      return { success: false, error: error.message };
-    }
-  }
-  
-  async getBuildStatus(buildId: string): Promise<ServiceResponse<string>> {
-    try {
-      // In a real implementation, this would fetch the status of a Jenkins job build
-      logger.info('Getting Jenkins CI/CD build status', { build: buildId });
-      
-      return { success: true, data: 'running' };
-    } catch (error: any) {
-      logger.error('Failed to get Jenkins build status', { error: error.message });
-      return { success: false, error: error.message };
-    }
-  }
-  
-  async getBuildLogs(buildId: string): Promise<ServiceResponse<string>> {
-    try {
-      // In a real implementation, this would fetch the logs of a Jenkins job build
-      logger.info('Getting Jenkins CI/CD build logs', { build: buildId });
-      
-      return { success: true, data: 'Build logs...' };
-    } catch (error: any) {
-      logger.error('Failed to get Jenkins build logs', { error: error.message });
-      return { success: false, error: error.message };
-    }
-  }
-}
 
-/**
- * Test a CI/CD provider connection
- */
-export async function testCICDProvider(provider: CICDProviderPayload): Promise<ServiceResponse<boolean>> {
-  try {
-    logger.info('Testing CI/CD provider connection', { providerType: provider.type });
-    
-    // Create a temporary provider object
-    const tempProvider: CICDProvider = {
-      id: 'temp-id',
-      ...provider,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      user_id: '',
-      tenant_id: ''
-    };
-    
-    // Get the appropriate implementation for the provider
-    const implementation = getCICDImplementation(tempProvider);
-    
-    // Test the connection
-    return await implementation.testConnection();
-  } catch (error: any) {
-    logger.error('CI/CD provider test failed', { error: error.message });
-    return { success: false, error: error.message };
-  }
-}
-
-/**
- * Create a new CI/CD provider
- */
-export async function createCICDProvider(
-  provider: CICDProviderPayload,
-  userId: string,
-  tenantId: string
-): Promise<ServiceResponse<CICDProvider>> {
-  try {
-    logger.info('Creating CI/CD provider', { providerType: provider.type });
-    
-    // First, test the connection
-    const testResult = await testCICDProvider(provider);
-    
-    if (!testResult.success) {
-      return {
-        success: false,
-        error: `Connection test failed: ${testResult.error}`
-      };
-    }
-    
-    // Create the provider in the database
-    const result = await cicdDb.createCICDProvider(provider, userId, tenantId);
-    
-    if (!result.success) {
-      return result;
-    }
-    
-    logger.info('CI/CD provider created successfully', { providerId: result.data?.id });
-    
-    return result;
-  } catch (error: any) {
-    logger.error('Failed to create CI/CD provider', { error: error.message });
-    return { success: false, error: error.message };
-  }
-}
-
-/**
- * Update a CI/CD provider
- */
-export async function updateCICDProvider(
-  id: string,
-  provider: Partial<CICDProviderPayload>
-): Promise<ServiceResponse<CICDProvider>> {
-  try {
-    logger.info('Updating CI/CD provider', { providerId: id });
-    
-    // Get the current provider
-    const currentProviderResult = await cicdDb.getCICDProviderById(id);
-    
-    if (!currentProviderResult.success || !currentProviderResult.data) {
-      return {
-        success: false,
-        error: currentProviderResult.error || 'Provider not found'
-      };
-    }
-    
-    // If the provider type or authentication details have changed, test the connection
-    const shouldTestConnection =
-      provider.type !== undefined ||
-      provider.url !== undefined ||
-      provider.token !== undefined;
-    
-    if (shouldTestConnection) {
-      const testProvider: CICDProviderPayload = {
-        type: provider.type || currentProviderResult.data.type,
-        name: provider.name || currentProviderResult.data.name,
-        url: provider.url || currentProviderResult.data.url,
-        token: provider.token || currentProviderResult.data.token,
-        auth_type: provider.auth_type || currentProviderResult.data.auth_type as CICDAuthType
-      };
-      
-      const testResult = await testCICDProvider(testProvider);
-      
-      if (!testResult.success) {
+  /**
+   * Helper method to make authenticated requests to GitHub API
+   */
+  private async githubRequest<T>(
+    path: string,
+    options: RequestInit = {},
+  ): Promise<CICDResponse<T>> {
+    try {
+      if (!this.config) {
         return {
           success: false,
-          error: `Connection test failed: ${testResult.error}`
+          error: 'GitHub provider not initialized',
         };
       }
-    }
-    
-    // Update the provider in the database
-    const result = await cicdDb.updateCICDProvider(id, provider);
-    
-    if (!result.success) {
-      return result;
-    }
-    
-    logger.info('CI/CD provider updated successfully', { providerId: id });
-    
-    return result;
-  } catch (error: any) {
-    logger.error('Failed to update CI/CD provider', { error: error.message });
-    return { success: false, error: error.message };
-  }
-}
 
-/**
- * Delete a CI/CD provider
- */
-export async function deleteCICDProvider(id: string): Promise<ServiceResponse<null>> {
-  try {
-    logger.info('Deleting CI/CD provider', { providerId: id });
-    
-    // Delete the provider from the database
-    const result = await cicdDb.deleteCICDProvider(id);
-    
-    if (!result.success) {
-      return result;
-    }
-    
-    logger.info('CI/CD provider deleted successfully', { providerId: id });
-    
-    return result;
-  } catch (error: any) {
-    logger.error('Failed to delete CI/CD provider', { error: error.message });
-    return { success: false, error: error.message };
-  }
-}
+      const url = `${this.baseUrl}${path}`;
 
-/**
- * Get CI/CD jobs for a provider
- */
-export async function getCICDJobs(providerId: string): Promise<ServiceResponse<CICDJob[]>> {
-  try {
-    logger.info('Getting CI/CD jobs', { providerId });
-    
-    // Get the provider
-    const providerResult = await cicdDb.getCICDProviderById(providerId);
-    
-    if (!providerResult.success || !providerResult.data) {
-      return {
-        success: false,
-        error: providerResult.error || 'Provider not found'
+      // Add authentication headers
+      const headers = {
+        ...options.headers,
+        Authorization: this.authHeader,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+        'Content-Type': 'application/json',
       };
-    }
-    
-    // Get the implementation for the provider
-    const implementation = getCICDImplementation(providerResult.data);
-    
-    // Fetch jobs from the provider
-    const fetchResult = await implementation.fetchJobs();
-    
-    if (!fetchResult.success) {
-      return fetchResult;
-    }
-    
-    // Store the jobs in the database
-    const jobs = fetchResult.data || [];
-    
-    for (const job of jobs) {
-      // Check if the job already exists
-      const existingJobResult = await cicdDb.getCICDJobById(job.id);
-      
-      if (!existingJobResult.success || !existingJobResult.data) {
-        // If the job doesn't exist, create it
-        await cicdDb.createCICDBuild({
-          id: job.id,
-          provider_id: providerId,
-          name: job.name,
-          description: job.description,
-          status: job.status,
-          created_at: job.created_at,
-          updated_at: job.updated_at
-        });
+
+      const response = await fetch(url, {
+        ...options,
+        headers,
+        cache: 'no-store',
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        return {
+          success: false,
+          error: `GitHub API error: ${response.status} - ${errorText}`,
+        };
       }
-    }
-    
-    logger.info('CI/CD jobs fetched successfully', { providerId, count: jobs.length });
-    
-    return { success: true, data: jobs };
-  } catch (error: any) {
-    logger.error('Failed to get CI/CD jobs', { error: error.message });
-    return { success: false, error: error.message };
-  }
-}
 
-/**
- * Trigger a CI/CD job build
- */
-export async function triggerCICDJob(jobId: string): Promise<ServiceResponse<CICDBuild>> {
-  try {
-    logger.info('Triggering CI/CD job', { jobId });
-    
-    // Get the job
-    const jobResult = await cicdDb.getCICDJobById(jobId);
-    
-    if (!jobResult.success || !jobResult.data) {
+      // Handle response
+      const contentType = response.headers.get('content-type');
+      let data: any;
+
+      if (contentType?.includes('application/json')) {
+        data = await response.json();
+      } else {
+        data = await response.text();
+      }
+
+      return {
+        success: true,
+        data: data as T,
+      };
+    } catch (error: any) {
+      console.error('[@service:github:githubRequest] Error in API request:', error);
       return {
         success: false,
-        error: jobResult.error || 'Job not found'
+        error: error.message || 'Failed to make GitHub API request',
       };
     }
-    
-    // Get the provider
-    const providerResult = await cicdDb.getCICDProviderById(jobResult.data.provider_id);
-    
-    if (!providerResult.success || !providerResult.data) {
+  }
+
+  /**
+   * Test connection to GitHub
+   */
+  async testConnection(): Promise<CICDResponse<boolean>> {
+    try {
+      console.log('[@service:github:testConnection] Testing connection to GitHub server');
+
+      if (!this.owner || !this.repo) {
+        console.error('[@service:github:testConnection] Missing repository owner or name');
+        return {
+          success: false,
+          error: 'Repository owner or name is missing',
+        };
+      }
+
+      // Test by getting repo information
+      const response = await this.githubRequest<any>(`/repos/${this.owner}/${this.repo}`);
+
+      if (response.success) {
+        console.log('[@service:github:testConnection] Connection test successful');
+        return {
+          success: true,
+          data: true,
+        };
+      } else {
+        console.error('[@service:github:testConnection] Connection test failed:', response.error);
+        return {
+          success: false,
+          error: response.error || 'Failed to connect to GitHub repository',
+        };
+      }
+    } catch (error: any) {
+      console.error(
+        '[@service:github:testConnection] Connection test failed with exception:',
+        error,
+      );
       return {
         success: false,
-        error: providerResult.error || 'Provider not found'
+        error: error.message || 'Failed to connect to GitHub repository',
       };
     }
-    
-    // Get the implementation for the provider
-    const implementation = getCICDImplementation(providerResult.data);
-    
-    // Trigger the build
-    const buildResult = await implementation.triggerBuild(jobId);
-    
-    if (!buildResult.success) {
-      return buildResult;
+  }
+
+  /**
+   * Get available GitHub Actions workflows as jobs
+   */
+  async getAvailableJobs(): Promise<CICDResponse<CICDJob[]>> {
+    try {
+      // Get the list of workflows from GitHub API
+      const result = await this.githubRequest<any>(
+        `/repos/${this.owner}/${this.repo}/actions/workflows`,
+      );
+
+      if (!result.success) {
+        return result;
+      }
+
+      // Map GitHub workflows to our CICDJob interface
+      const jobs: CICDJob[] = result.data.workflows
+        .filter((workflow: any) => workflow.state === 'active')
+        .map((workflow: any) => ({
+          id: workflow.id.toString(),
+          name: workflow.name,
+          url: workflow.html_url,
+          description: `Path: ${workflow.path}`,
+        }));
+
+      return {
+        success: true,
+        data: jobs,
+      };
+    } catch (error: any) {
+      console.error('[@service:github:getAvailableJobs] Error getting workflows:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to get GitHub workflows',
+      };
     }
-    
-    // Store the build in the database
-    const build = buildResult.data;
-    
-    if (build) {
-      await cicdDb.createCICDBuild({
-        id: build.id,
-        job_id: jobId,
-        status: build.status,
-        created_at: build.created_at,
-        updated_at: build.updated_at
+  }
+
+  /**
+   * Get workflow details
+   */
+  async getJobDetails(jobId: string): Promise<CICDResponse<CICDJob>> {
+    try {
+      // Get detailed workflow info from GitHub API
+      const result = await this.githubRequest<any>(
+        `/repos/${this.owner}/${this.repo}/actions/workflows/${jobId}`,
+      );
+
+      if (!result.success) {
+        return result;
+      }
+
+      // Get the workflow file content to extract input parameters
+      const contentResult = await this.githubRequest<any>(
+        `/repos/${this.owner}/${this.repo}/contents/${result.data.path}`,
+      );
+
+      if (!contentResult.success) {
+        // Return the basic job info without parameters
+        return {
+          success: true,
+          data: {
+            id: jobId,
+            name: result.data.name,
+            url: result.data.html_url,
+            description: `Path: ${result.data.path}`,
+            parameters: [],
+          },
+        };
+      }
+
+      // Decode workflow file content
+      let content = '';
+      if (contentResult.data.content) {
+        content = Buffer.from(contentResult.data.content, 'base64').toString('utf-8');
+      }
+
+      // Extract input parameters from workflow file YAML
+      // This is a simplistic approach; a proper YAML parser should be used in production
+      const parameters: CICDJobParameter[] = [];
+      const inputMatches = [
+        ...content.matchAll(/on:\s*workflow_dispatch:\s*inputs:([\s\S]*?)(?=\n\w|$)/g),
+      ];
+
+      if (inputMatches.length > 0 && inputMatches[0][1]) {
+        const inputsSection = inputMatches[0][1];
+        const paramMatches = [
+          ...inputsSection.matchAll(
+            /(\w+):\s*(?:type:\s*(\w+))?(?:[\s\S]*?required:\s*(true|false))?(?:[\s\S]*?default:\s*(.+?))?(?:[\s\S]*?description:\s*(.+?))?(?=\n\s+\w+:|$)/g,
+          ),
+        ];
+
+        for (const match of paramMatches) {
+          const [_, name, type, required, defaultValue, description] = match;
+
+          const parameter: CICDJobParameter = {
+            name: name.trim(),
+            type: this.mapGitHubParamType(type?.trim() || 'string'),
+            description: description?.trim() || '',
+            default: defaultValue?.trim() || undefined,
+            required: required?.trim() === 'true',
+          };
+
+          // Check for choices in the input
+          const choicesMatch = inputsSection.match(
+            new RegExp(`${name}:[\\s\\S]*?options:\\s*\\[(.+?)\\]`, 'i'),
+          );
+          if (choicesMatch && choicesMatch[1]) {
+            parameter.choices = choicesMatch[1]
+              .split(',')
+              .map((choice) => choice.trim().replace(/^['"]|['"]$/g, ''));
+            parameter.type = 'choice';
+          }
+
+          parameters.push(parameter);
+        }
+      }
+
+      // Construct the job object
+      const job: CICDJob = {
+        id: jobId,
+        name: result.data.name,
+        url: result.data.html_url,
+        description: `Path: ${result.data.path}`,
+        parameters: parameters,
+      };
+
+      return {
+        success: true,
+        data: job,
+      };
+    } catch (error: any) {
+      console.error(
+        `[@service:github:getJobDetails] Error getting workflow details for ${jobId}:`,
+        error,
+      );
+      return {
+        success: false,
+        error: error.message || `Failed to get GitHub workflow details for ${jobId}`,
+      };
+    }
+  }
+
+  /**
+   * Helper method to map GitHub parameter types to our types
+   */
+  private mapGitHubParamType(githubType: string): 'string' | 'boolean' | 'number' | 'choice' {
+    const typeMap: Record<string, 'string' | 'boolean' | 'number' | 'choice'> = {
+      string: 'string',
+      boolean: 'boolean',
+      number: 'number',
+      choice: 'choice',
+    };
+
+    return typeMap[githubType.toLowerCase()] || 'string';
+  }
+
+  /**
+   * Trigger a GitHub workflow
+   */
+  async triggerJob(
+    jobId: string,
+    parameters?: Record<string, any>,
+  ): Promise<CICDResponse<CICDBuild>> {
+    try {
+      const requestBody = {
+        ref: 'main', // Default to main branch, but could be configurable
+        inputs: parameters || {},
+      };
+
+      // Trigger workflow
+      const result = await this.githubRequest<any>(
+        `/repos/${this.owner}/${this.repo}/actions/workflows/${jobId}/dispatches`,
+        {
+          method: 'POST',
+          body: JSON.stringify(requestBody),
+        },
+      );
+
+      if (!result.success) {
+        return result;
+      }
+
+      // GitHub doesn't return build ID directly when triggering a workflow
+      // We need to get the most recent run for this workflow
+      const runsResult = await this.githubRequest<any>(
+        `/repos/${this.owner}/${this.repo}/actions/workflows/${jobId}/runs?per_page=1`,
+      );
+
+      if (!runsResult.success) {
+        return {
+          success: true,
+          data: {
+            id: 'pending',
+            job_id: jobId,
+            status: 'pending',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+        };
+      }
+
+      // Get the most recent run
+      const run = runsResult.data.workflow_runs[0];
+
+      return {
+        success: true,
+        data: {
+          id: run.id.toString(),
+          job_id: jobId,
+          url: run.html_url,
+          status: this.mapGitHubRunStatus(run.status),
+          created_at: run.created_at,
+          updated_at: run.updated_at,
+        },
+      };
+    } catch (error: any) {
+      console.error(`[@service:github:triggerJob] Error triggering workflow ${jobId}:`, error);
+      return {
+        success: false,
+        error: error.message || `Failed to trigger GitHub workflow ${jobId}`,
+      };
+    }
+  }
+
+  /**
+   * Get build status
+   */
+  async getBuildStatus(jobId: string, buildId: string): Promise<CICDResponse<CICDBuild>> {
+    try {
+      // Get run info
+      const result = await this.githubRequest<any>(
+        `/repos/${this.owner}/${this.repo}/actions/runs/${buildId}`,
+      );
+
+      if (!result.success) {
+        return result;
+      }
+
+      return {
+        success: true,
+        data: {
+          id: buildId,
+          job_id: jobId,
+          url: result.data.html_url,
+          status: this.mapGitHubRunStatus(result.data.status, result.data.conclusion),
+          created_at: result.data.created_at,
+          updated_at: result.data.updated_at,
+        },
+      };
+    } catch (error: any) {
+      console.error(
+        `[@service:github:getBuildStatus] Error getting workflow run status for ${buildId}:`,
+        error,
+      );
+      return {
+        success: false,
+        error: error.message || `Failed to get GitHub workflow run status for ${buildId}`,
+      };
+    }
+  }
+
+  /**
+   * Helper method to map GitHub run status to our status type
+   */
+  private mapGitHubRunStatus(
+    status?: string,
+    conclusion?: string,
+  ): 'pending' | 'running' | 'success' | 'failure' | 'unknown' {
+    if (status === 'completed') {
+      if (conclusion === 'success') {
+        return 'success';
+      } else if (
+        conclusion === 'failure' ||
+        conclusion === 'cancelled' ||
+        conclusion === 'timed_out'
+      ) {
+        return 'failure';
+      }
+    } else if (status === 'in_progress' || status === 'queued') {
+      return 'running';
+    } else if (status === 'requested' || status === 'waiting') {
+      return 'pending';
+    }
+
+    return 'unknown';
+  }
+
+  /**
+   * Get build logs
+   */
+  async getBuildLogs(jobId: string, buildId: string): Promise<CICDResponse<string>> {
+    try {
+      // Get logs URL
+      const result = await this.githubRequest<any>(
+        `/repos/${this.owner}/${this.repo}/actions/runs/${buildId}/logs`,
+      );
+
+      if (!result.success) {
+        return result;
+      }
+
+      // GitHub returns a download URL for logs
+      const logsUrl = result.data.logs_url;
+
+      // Download the logs
+      const logsResponse = await fetch(logsUrl, {
+        headers: {
+          Authorization: this.authHeader,
+        },
       });
+
+      if (!logsResponse.ok) {
+        return {
+          success: false,
+          error: `Failed to download logs: ${logsResponse.status} ${logsResponse.statusText}`,
+        };
+      }
+
+      const logs = await logsResponse.text();
+
+      return {
+        success: true,
+        data: logs,
+      };
+    } catch (error: any) {
+      console.error(
+        `[@service:github:getBuildLogs] Error getting workflow run logs for ${buildId}:`,
+        error,
+      );
+      return {
+        success: false,
+        error: error.message || `Failed to get GitHub workflow run logs for ${buildId}`,
+      };
     }
-    
-    logger.info('CI/CD job triggered successfully', { jobId, buildId: build?.id });
-    
-    return buildResult;
-  } catch (error: any) {
-    logger.error('Failed to trigger CI/CD job', { error: error.message });
-    return { success: false, error: error.message };
+  }
+
+  /**
+   * Create a new job
+   */
+  async createJob(
+    jobName: string,
+    pipelineConfig: CICDPipelineConfig,
+    folderPath?: string
+  ): Promise<CICDResponse<string>> {
+    // Implementation would depend on GitHub's API for creating workflow files
+    return {
+      success: false,
+      error: 'Creating GitHub workflows is not currently supported through the API'
+    };
+  }
+
+  /**
+   * Delete a job
+   */
+  async deleteJob(jobId: string, folderPath?: string): Promise<CICDResponse<boolean>> {
+    // Implementation would depend on GitHub's API for deleting workflow files
+    return {
+      success: false,
+      error: 'Deleting GitHub workflows is not currently supported through the API'
+    };
   }
 }
 
 /**
- * Get build status for a CI/CD build
+ * Jenkins CI/CD Provider Implementation
  */
-export async function getBuildStatus(buildId: string): Promise<ServiceResponse<string>> {
-  try {
-    logger.info('Getting build status', { buildId });
-    
-    // Get the build
-    const buildResult = await cicdDb.getCICDBuilds(buildId);
-    
-    if (!buildResult.success || !buildResult.data || buildResult.data.length === 0) {
-      return {
-        success: false,
-        error: buildResult.error || 'Build not found'
-      };
+export class JenkinsProvider implements CICDProvider {
+  private config: CICDProviderConfig | null = null;
+  private baseUrl: string = '';
+  private authHeader: string = '';
+
+  /**
+   * Initialize the Jenkins provider with configuration
+   */
+  initialize(config: CICDProviderConfig): void {
+    this.config = config;
+    this.baseUrl = config.url.endsWith('/') ? config.url : `${config.url}/`;
+
+    // Set up authentication
+    if (config.auth_type === 'token') {
+      const token = config.credentials.token;
+      this.authHeader = `Bearer ${token}`;
+    } else if (config.auth_type === 'basic_auth') {
+      const { username, password } = config.credentials;
+      this.authHeader = `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`;
+    } else {
+      throw new Error(`Unsupported authentication type: ${config.auth_type}`);
     }
-    
-    const build = buildResult.data[0];
-    
-    // Get the job
-    const jobResult = await cicdDb.getCICDJobById(build.job_id);
-    
-    if (!jobResult.success || !jobResult.data) {
-      return {
-        success: false,
-        error: jobResult.error || 'Job not found'
-      };
-    }
-    
-    // Get the provider
-    const providerResult = await cicdDb.getCICDProviderById(jobResult.data.provider_id);
-    
-    if (!providerResult.success || !providerResult.data) {
-      return {
-        success: false,
-        error: providerResult.error || 'Provider not found'
-      };
-    }
-    
-    // Get the implementation for the provider
-    const implementation = getCICDImplementation(providerResult.data);
-    
-    // Get the build status
-    const statusResult = await implementation.getBuildStatus(buildId);
-    
-    if (!statusResult.success) {
-      return statusResult;
-    }
-    
-    // Update the build status in the database
-    if (statusResult.data && statusResult.data !== build.status) {
-      await cicdDb.updateCICDBuild(buildId, {
-        status: statusResult.data,
-        updated_at: new Date().toISOString()
+  }
+
+  /**
+   * Test connection to Jenkins
+   */
+  async testConnection(): Promise<CICDResponse<boolean>> {
+    try {
+      // Basic implementation - just try to get the Jenkins API info
+      const url = `${this.baseUrl}api/json`;
+      const response = await fetch(url, {
+        headers: {
+          Authorization: this.authHeader,
+          Accept: 'application/json',
+        },
       });
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: `Failed to connect to Jenkins: ${response.status} ${response.statusText}`,
+        };
+      }
+
+      return {
+        success: true,
+        data: true,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to connect to Jenkins',
+      };
     }
-    
-    logger.info('CI/CD build status fetched successfully', { buildId, status: statusResult.data });
-    
-    return statusResult;
-  } catch (error: any) {
-    logger.error('Failed to get build status', { error: error.message });
-    return { success: false, error: error.message };
+  }
+
+  // Add other required method implementations for Jenkins
+
+  async getAvailableJobs(): Promise<CICDResponse<CICDJob[]>> {
+    // Basic implementation placeholder
+    return {
+      success: false,
+      error: 'Jenkins integration not fully implemented'
+    };
+  }
+
+  async getJobDetails(jobId: string): Promise<CICDResponse<CICDJob>> {
+    // Basic implementation placeholder
+    return {
+      success: false,
+      error: 'Jenkins integration not fully implemented'
+    };
+  }
+
+  async triggerJob(jobId: string, parameters?: Record<string, any>): Promise<CICDResponse<CICDBuild>> {
+    // Basic implementation placeholder
+    return {
+      success: false,
+      error: 'Jenkins integration not fully implemented'
+    };
+  }
+
+  async getBuildStatus(jobId: string, buildId: string): Promise<CICDResponse<CICDBuild>> {
+    // Basic implementation placeholder
+    return {
+      success: false,
+      error: 'Jenkins integration not fully implemented'
+    };
+  }
+
+  async getBuildLogs(jobId: string, buildId: string): Promise<CICDResponse<string>> {
+    // Basic implementation placeholder
+    return {
+      success: false,
+      error: 'Jenkins integration not fully implemented'
+    };
+  }
+
+  async createJob(
+    jobName: string,
+    pipelineConfig: CICDPipelineConfig,
+    folderPath?: string
+  ): Promise<CICDResponse<string>> {
+    // Basic implementation placeholder
+    return {
+      success: false,
+      error: 'Jenkins integration not fully implemented'
+    };
+  }
+
+  async deleteJob(jobId: string, folderPath?: string): Promise<CICDResponse<boolean>> {
+    // Basic implementation placeholder
+    return {
+      success: false,
+      error: 'Jenkins integration not fully implemented'
+    };
   }
 }
 
 /**
- * Get build logs for a CI/CD build
+ * Factory for creating CI/CD provider instances
  */
-export async function getBuildLogs(buildId: string): Promise<ServiceResponse<string>> {
-  try {
-    logger.info('Getting build logs', { buildId });
-    
-    // Get the build
-    const buildResult = await cicdDb.getCICDBuilds(buildId);
-    
-    if (!buildResult.success || !buildResult.data || buildResult.data.length === 0) {
-      return {
-        success: false,
-        error: buildResult.error || 'Build not found'
-      };
+export class CICDProviderFactory {
+  /**
+   * Create a CI/CD provider instance based on the provider type
+   */
+  static createProvider(config: CICDProviderConfig): CICDProvider {
+    let provider: CICDProvider;
+
+    switch (config.type.toLowerCase()) {
+      case 'jenkins':
+        provider = new JenkinsProvider();
+        break;
+      case 'github':
+        provider = new GitHubProvider();
+        break;
+      default:
+        throw new Error(`Unsupported CI/CD provider type: ${config.type}`);
     }
-    
-    const build = buildResult.data[0];
-    
-    // Get the job
-    const jobResult = await cicdDb.getCICDJobById(build.job_id);
-    
-    if (!jobResult.success || !jobResult.data) {
-      return {
-        success: false,
-        error: jobResult.error || 'Job not found'
-      };
-    }
-    
-    // Get the provider
-    const providerResult = await cicdDb.getCICDProviderById(jobResult.data.provider_id);
-    
-    if (!providerResult.success || !providerResult.data) {
-      return {
-        success: false,
-        error: providerResult.error || 'Provider not found'
-      };
-    }
-    
-    // Get the implementation for the provider
-    const implementation = getCICDImplementation(providerResult.data);
-    
-    // Get the build logs
-    const logsResult = await implementation.getBuildLogs(buildId);
-    
-    logger.info('CI/CD build logs fetched successfully', { buildId, logsLength: logsResult.data?.length });
-    
-    return logsResult;
-  } catch (error: any) {
-    logger.error('Failed to get build logs', { error: error.message });
-    return { success: false, error: error.message };
+
+    // Initialize the provider with config
+    provider.initialize(config);
+
+    return provider;
+  }
+
+  /**
+   * Get a provider instance based on provider config
+   */
+  static async getProvider(config: CICDProviderConfig): Promise<CICDProvider> {
+    return this.createProvider(config);
   }
 }
 
-// Default export for all CICD service functions
-const cicdService = {
-  testCICDProvider,
-  createCICDProvider,
-  updateCICDProvider,
-  deleteCICDProvider,
-  getCICDJobs,
-  triggerCICDJob,
-  getBuildStatus,
-  getBuildLogs
+/**
+ * CICD Service
+ */
+export const cicdService = {
+  /**
+   * Get all CICD providers
+   */
+  async getAllProviders(tenantId: string, cookieStore?: any): Promise<ServiceResponse<any[]>> {
+    try {
+      const result = await getCICDProviders(tenantId);
+      return {
+        success: result.success,
+        data: result.data,
+        error: result.error
+      };
+    } catch (error) {
+      console.error('[@service:cicdService:getAllProviders] Error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error fetching CICD providers'
+      };
+    }
+  },
+
+  /**
+   * Get CICD provider by ID
+   */
+  async getProviderById(id: string, cookieStore?: any): Promise<ServiceResponse<any>> {
+    try {
+      const result = await getCicdProviderById(id, cookieStore);
+      return {
+        success: result.success,
+        data: result.data,
+        error: result.error
+      };
+    } catch (error) {
+      console.error('[@service:cicdService:getProviderById] Error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error fetching CICD provider'
+      };
+    }
+  },
+
+  /**
+   * Create a new CICD provider
+   */
+  async createProvider(providerData: any, userId: string, cookieStore?: any): Promise<ServiceResponse<any>> {
+    try {
+      const result = await createCicdProvider(providerData, userId, cookieStore);
+      return {
+        success: result.success,
+        data: result.data,
+        error: result.error
+      };
+    } catch (error) {
+      console.error('[@service:cicdService:createProvider] Error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error creating CICD provider'
+      };
+    }
+  },
+
+  /**
+   * Update a CICD provider
+   */
+  async updateProvider(id: string, updates: any, userId: string, cookieStore?: any): Promise<ServiceResponse<any>> {
+    try {
+      const result = await updateCicdProvider(id, updates, userId, cookieStore);
+      return {
+        success: result.success,
+        data: result.data,
+        error: result.error
+      };
+    } catch (error) {
+      console.error('[@service:cicdService:updateProvider] Error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error updating CICD provider'
+      };
+    }
+  },
+
+  /**
+   * Delete a CICD provider
+   */
+  async deleteProvider(id: string, userId: string, cookieStore?: any): Promise<ServiceResponse<null>> {
+    try {
+      const result = await deleteCicdProvider(id, userId, cookieStore);
+      return {
+        success: result.success,
+        data: null,
+        error: result.error
+      };
+    } catch (error) {
+      console.error('[@service:cicdService:deleteProvider] Error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error deleting CICD provider'
+      };
+    }
+  },
+
+  /**
+   * Test connection to a provider
+   */
+  async testConnection(config: CICDProviderConfig): Promise<ServiceResponse<boolean>> {
+    try {
+      const provider = CICDProviderFactory.createProvider(config);
+      const result = await provider.testConnection();
+      return {
+        success: result.success,
+        data: result.data,
+        error: result.error
+      };
+    } catch (error) {
+      console.error('[@service:cicdService:testConnection] Error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error testing connection'
+      };
+    }
+  },
+
+  /**
+   * Get available jobs from a provider
+   */
+  async getAvailableJobs(providerId: string, cookieStore?: any): Promise<ServiceResponse<CICDJob[]>> {
+    try {
+      // First get the provider data from the database
+      const providerResult = await getCicdProviderById(providerId, cookieStore);
+      if (!providerResult.success || !providerResult.data) {
+        return {
+          success: false,
+          error: providerResult.error || 'Failed to get CICD provider'
+        };
+      }
+
+      // Create a provider instance
+      const provider = CICDProviderFactory.createProvider(providerResult.data);
+      
+      // Get available jobs
+      const jobsResult = await provider.getAvailableJobs();
+      return {
+        success: jobsResult.success,
+        data: jobsResult.data,
+        error: jobsResult.error
+      };
+    } catch (error) {
+      console.error('[@service:cicdService:getAvailableJobs] Error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error getting available jobs'
+      };
+    }
+  },
+
+  /**
+   * Get job details
+   */
+  async getJobDetails(providerId: string, jobId: string, cookieStore?: any): Promise<ServiceResponse<CICDJob>> {
+    try {
+      // First get the provider data from the database
+      const providerResult = await getCicdProviderById(providerId, cookieStore);
+      if (!providerResult.success || !providerResult.data) {
+        return {
+          success: false,
+          error: providerResult.error || 'Failed to get CICD provider'
+        };
+      }
+
+      // Create a provider instance
+      const provider = CICDProviderFactory.createProvider(providerResult.data);
+      
+      // Get job details
+      const jobResult = await provider.getJobDetails(jobId);
+      return {
+        success: jobResult.success,
+        data: jobResult.data,
+        error: jobResult.error
+      };
+    } catch (error) {
+      console.error('[@service:cicdService:getJobDetails] Error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error getting job details'
+      };
+    }
+  },
+
+  /**
+   * Trigger a job
+   */
+  async triggerJob(
+    providerId: string, 
+    jobId: string, 
+    parameters?: Record<string, any>,
+    cookieStore?: any
+  ): Promise<ServiceResponse<CICDBuild>> {
+    try {
+      // First get the provider data from the database
+      const providerResult = await getCicdProviderById(providerId, cookieStore);
+      if (!providerResult.success || !providerResult.data) {
+        return {
+          success: false,
+          error: providerResult.error || 'Failed to get CICD provider'
+        };
+      }
+
+      // Create a provider instance
+      const provider = CICDProviderFactory.createProvider(providerResult.data);
+      
+      // Trigger the job
+      const buildResult = await provider.triggerJob(jobId, parameters);
+      return {
+        success: buildResult.success,
+        data: buildResult.data,
+        error: buildResult.error
+      };
+    } catch (error) {
+      console.error('[@service:cicdService:triggerJob] Error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error triggering job'
+      };
+    }
+  }
 };
 
 export default cicdService;
+
+// Export types
+export type {
+  CICDBuild,
+  CICDJob,
+  CICDJobParameter,
+  CICDProvider,
+  CICDProviderConfig,
+  CICDPipelineConfig,
+  CICDResponse
+};

@@ -8,7 +8,6 @@
     "dev": "next dev",
     "dev:turbo": "next dev --turbopack",
     "build": "next build",
-    "build:preload": "node -r ./preload.js ./node_modules/.bin/next build",
     "analyze": "ANALYZE=true next build",
     "start": "next start",
     "prod": "next build && next start",

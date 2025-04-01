@@ -1,12 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
-import type {  TeamMember, TeamMemberCreateInput  } from '@/types/context/teamContextType';
-
-// Define a generic response type
-interface DbResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
+import type { TeamMember, TeamMemberCreateInput } from '@/types/context/teamContextType';
+import { DbResponse } from './dbUtils';
 
 /**
  * Get team members for a specific team
@@ -19,7 +13,7 @@ export async function getTeamMembers(
   cookieStore?: any,
 ): Promise<DbResponse<TeamMember[]>> {
   try {
-    console.log('[@db:team-members:getTeamMembers] Getting all team members');
+    console.log('[@db:teamMemberDb:getTeamMembers] Getting all team members');
     const supabase = await createClient(cookieStore);
 
     // Get team members with basic profile data
@@ -38,7 +32,7 @@ export async function getTeamMembers(
       .eq('team_id', teamId);
 
     if (error) {
-      console.error('[@db:team-members:getTeamMembers] Error fetching team members:', error);
+      console.error('[@db:teamMemberDb:getTeamMembers] Error fetching team members:', error);
       return { success: false, error: error.message };
     }
 
@@ -55,7 +49,7 @@ export async function getTeamMembers(
 
       if (profilesError) {
         console.error(
-          '[@db:team-members:getTeamMembers] Error fetching user profiles:',
+          '[@db:teamMemberDb:getTeamMembers] Error fetching user profiles:',
           profilesError,
         );
       }
@@ -84,7 +78,7 @@ export async function getTeamMembers(
       });
     }
 
-    console.log('[@db:team-members:getTeamMembers] Team members with user info:', data);
+    console.log('[@db:teamMemberDb:getTeamMembers] Team members with user info:', data);
 
     // Cast to TeamMember[] with unknown intermediate to satisfy TypeScript
     return {
@@ -92,7 +86,7 @@ export async function getTeamMembers(
       data: data as unknown as TeamMember[],
     };
   } catch (error: any) {
-    console.error('[@db:team-members:getTeamMembers] Error in getTeamMembers:', error);
+    console.error('[@db:teamMemberDb:getTeamMembers] Error in getTeamMembers:', error);
     return {
       success: false,
       error: error.message || 'Failed to fetch team members',
