@@ -751,7 +751,7 @@ export const getTeamDetails = cache(async (userId?: string) => {
 
       // Get deployments count
       try {
-        const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
+        const { default: deploymentDb } = await import('@/lib/db/deploymentDb');
 
         // Get deployments directly from the database
         const result = await deploymentDb.findMany(
@@ -779,7 +779,7 @@ export const getTeamDetails = cache(async (userId?: string) => {
       // Count hosts
       try {
         // Import the host database module
-        const { default: hostDb } = await import('@/lib/supabase/db-hosts/host');
+        const { default: hostDb } = await import('@/lib/db/hostDb');
 
         // Get hosts from the database - no filters needed as RLS will handle access control
         const hosts = await hostDb.findMany();
