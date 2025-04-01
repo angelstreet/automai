@@ -4,7 +4,7 @@ import { ReactNode, useEffect, useState } from 'react';
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
 import Cookies from 'js-cookie';
 
-import { TeamProvider, UserProvider, SidebarProvider } from '@/app/providers';
+import { TeamProvider, UserProvider, SidebarProvider, PermissionProvider } from '@/app/providers';
 import { SIDEBAR_COOKIE_NAME } from '@/components/sidebar/constants';
 import { User } from '@/types/auth/user';
 
@@ -41,9 +41,11 @@ export default function TenantLayoutClient({
     <QueryClientProvider client={queryClient}>
       <UserProvider initialUser={initialUser}>
         <TeamProvider>
-          <SidebarProvider defaultOpen={sidebarOpen}>
-            <div className="relative flex w-full overflow-hidden">{children}</div>
-          </SidebarProvider>
+          <PermissionProvider>
+            <SidebarProvider defaultOpen={sidebarOpen}>
+              <div className="relative flex w-full overflow-hidden">{children}</div>
+            </SidebarProvider>
+          </PermissionProvider>
         </TeamProvider>
       </UserProvider>
     </QueryClientProvider>

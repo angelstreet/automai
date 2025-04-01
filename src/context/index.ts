@@ -4,10 +4,12 @@ import type { UserContextType } from '@/types/context/user';
 export { 
   UserProvider,
   SidebarProvider,
-  ThemeProvider,
   ThemeProviders,
   TeamProvider
 } from '@/app/providers';
+
+// Export ThemeProvider with correct name
+export { ThemeProvider } from '@/app/providers/theme';
 
 // Export basic data context hooks that access provider data only
 export { 
@@ -19,7 +21,7 @@ export {
 
 // Export business logic hooks from hooks directory
 export { usePermission } from '@/hooks/permission';
-export { useUserLogic } from '@/hooks/user';
+export { useUserLogic, useUserData } from '@/hooks/user';
 export { useSidebarLogic } from '@/hooks/sidebar';
 export { useThemeLogic } from '@/hooks/theme';
 

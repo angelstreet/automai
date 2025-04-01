@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { getCurrentUser } from '@/app/actions/user';
+import { getUser } from '@/app/actions/user';
 import { User } from '@/types/auth/user';
 
 export function useUserData() {
@@ -12,11 +12,11 @@ export function useUserData() {
     error,
   } = useQuery({
     queryKey: ['currentUser'],
-    queryFn: getCurrentUser,
+    queryFn: getUser,
   });
 
   return {
-    user: userResponse?.data as User | null,
+    user: userResponse as User | null,
     isLoading,
     error,
   };

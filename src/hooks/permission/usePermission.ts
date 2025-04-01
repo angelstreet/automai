@@ -8,12 +8,13 @@ import type { ResourceType, Operation, PermissionMatrix } from '@/types/context/
 
 /**
  * Hook for checking user permissions
+ * @param specificTeamId Optional team ID to override the active team from context
  */
-export function usePermission() {
+export function usePermission(specificTeamId?: string) {
   const { user } = useUser();
   const { activeTeam } = useTeam();
   const userId = user?.id;
-  const teamId = activeTeam?.id;
+  const teamId = specificTeamId || activeTeam?.id;
 
   // Fetch permissions with React Query
   const {
@@ -67,6 +68,8 @@ export function usePermission() {
 
   return {
     permissions: permissionsResponse?.data || [],
+    data: permissionsResponse?.data, // Added for compatibility with components using useUserPermissions
+    success: permissionsResponse?.success || false, // Added for compatibility
     isLoading,
     error,
     hasPermission,

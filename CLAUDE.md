@@ -17,15 +17,20 @@ alwaysApply: true
      - Handles business logic, validation, and authentication
      - Returns consistent `ActionResult<T>` objects
    - Client Hooks Layer (Interface):
-     - Centralized context system with domain-specific providers in `/src/context/[domain]/`
-     - Uses hooks as the primary API for UI components
+     - Data-only providers in `/src/app/providers/`
+     - Business logic hooks in `/src/hooks/*/`
+     - Centralized exports through `/src/context/index.ts`
      - NEVER calls DB Layer directly, only through Server Actions
 3. **✅ NEVER expose sensitive data or credentials**
+4. **✅ NEVER implement backward compatibility hacks or create aliases**
+   - Break imports directly to fix issues properly
+   - Update references to use the correct hooks or providers
+   - No aliases, compatibility layers, or "legacy support" code
 5. **✅ NEVER modify shadcn components**
 6. **✅ NEVER run servers without explicit permission**
-6. **✅ NEVER run git command without explicit permission**
-7. **✅ ALWAYS provide clear plans before implementing changes**
-8. **✅ ALWAYS make minimal, focused changes**
+7. **✅ NEVER run git command without explicit permission**
+8. **✅ ALWAYS provide clear plans before implementing changes**
+9. **✅ ALWAYS make minimal, focused changes**
 
 ## Architecture Overview
 - **Next.js App Router**: 100% App Router based (no Pages Router components)
@@ -40,12 +45,18 @@ alwaysApply: true
   - `/src/config` - Application configuration
 
 ## Centralized Context Architecture
-- **Use the centralized context system** in `/src/context/`:
-  - Import contexts from the centralized location: `import { useHost, useRepository } from '@/context'`
+- **Use the centralized context system** through `/src/context/index.ts`:
+  - Import hooks and providers: `import { usePermission, TeamProvider } from '@/context'`
+  - NEVER import directly from providers or hooks files
   - NEVER import from feature-specific contexts
-  - Context is organized by domain, not by feature
 
-### Context Provider Structure
-- **Provider Components**: Located in `/src/context/[domain]/[Domain]Provider.tsx`
-- **Hook Exports**: Named exports as `use[Domain]` (e.g., `useHost`, `useRepository`)
-- **Context Root Provider**: All context providers are composed in `AppProvider`
+### Context/Hooks Structure
+- **Provider Components**: Located in `/src/app/providers/*.tsx`
+  - Are data-only containers with minimal state
+  - No business logic, side effects, or data fetching
+  - Export basic context access hooks (e.g., `useUser`)
+- **Business Logic Hooks**: Located in `/src/hooks/*/*.ts`
+  - Contain all data fetching and business logic
+  - Use React Query for data management
+  - Follow naming pattern `use[Feature]Logic` or `use[Feature]Data`
+- **Context Exports**: All exports centralized through `/src/context/index.ts`

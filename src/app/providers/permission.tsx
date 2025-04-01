@@ -1,7 +1,8 @@
 'use client';
 
 import React, { createContext, useContext, useState } from 'react';
-import type { PermissionMatrix, PermissionsResult } from '@/types/context/permissions';
+
+import type { PermissionsResult } from '@/types/context/permissions';
 
 // Define a minimal permission context that only holds data
 interface PermissionContextType {
@@ -17,15 +18,17 @@ const PermissionContext = createContext<PermissionContextType>({
   permissionsError: null,
 });
 
-export function PermissionProvider({ 
+export function PermissionProvider({
   children,
   initialPermissions = null,
-}: { 
+}: {
   children: React.ReactNode;
   initialPermissions?: PermissionsResult | null;
 }) {
   // Simple state for permissions data
-  const [permissionsData, setPermissionsData] = useState<PermissionsResult | null>(initialPermissions);
+  const [permissionsData, setPermissionsData] = useState<PermissionsResult | null>(
+    initialPermissions,
+  );
   const [permissionsLoading, setPermissionsLoading] = useState(false);
   const [permissionsError, setPermissionsError] = useState<string | null>(null);
 

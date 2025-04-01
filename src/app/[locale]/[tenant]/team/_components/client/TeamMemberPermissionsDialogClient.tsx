@@ -39,7 +39,7 @@ import {
   ResourcePermissions,
 } from '@/types/context/team';
 import { useUpdateMemberRole } from '@/hooks/teamMember';
-import { useUserPermissions } from '@/hooks/permission';
+import { usePermission } from '@/context';
 
 const EditPermissionsDialog = ({
   open,
@@ -60,7 +60,7 @@ const EditPermissionsDialog = ({
 
   // Use our React Query hooks
   const updateRoleMutation = useUpdateMemberRole();
-  const { data: permissionsQuery } = useUserPermissions(teamId);
+  const { data: permissionsQuery, success } = usePermission(teamId);
 
   // Fetch permissions when the dialog opens if not provided as a prop
   useEffect(() => {
@@ -70,8 +70,8 @@ const EditPermissionsDialog = ({
       setIsLoadingPermissions(true);
       try {
         // Use the data from our hook if available
-        if (permissionsQuery?.success && permissionsQuery?.data) {
-          setPermissions(permissionsQuery.data);
+        if (success && permissionsQuery) {
+          setPermissions(permissionsQuery);
         } else {
           // Default to contributor if can't fetch permissions
           setPermissions(ROLE_TEMPLATES.contributor);
