@@ -1,19 +1,45 @@
 import type { UserContextType } from '@/types/context/user';
 
-// Re-export hooks and providers that are still needed
-export { useUser } from './UserContext';
-export { UserProvider } from './UserContext';
-export { useSidebar } from './SidebarContext';
-export { SidebarProvider } from './SidebarContext';
-export { useTheme } from './ThemeContext';
-export { ThemeProvider } from './ThemeContext';
+// Re-export ALL hooks and providers from the new location
+export { 
+  useUser, 
+  UserProvider,
+  useSidebar,
+  SidebarProvider,
+  useTheme,
+  ThemeProviders as ThemeProvider,
+  useTeam,
+  TeamProvider,
+  usePermission
+} from '@/app/providers';
+
+// Re-export the specialized team hooks from TeamContext for backward compatibility
+export {
+  useTeamMember,
+  useTeamCreation,
+  useTeamUpdate,
+  useTeamDeletion,
+  useTeamDetails,
+  useUnassignedResources,
+  useTeamSwitcher
+} from './TeamContext';
+
+// Export hooks that are still in the original location
 export { FontProvider, useFont } from './FontContext';
 export { SearchProvider, useSearch } from './SearchContext';
-export { TeamProvider, useTeam, usePermission } from './TeamContext';
+export { ResourceType, Operation } from '@/app/actions/permission';
 
+// Export types for backward compatibility
 export type { UserContextType } from '@/types/context/user';
 export type { SidebarContext as SidebarContextType } from '@/types/sidebar';
-export type { ThemeContextType } from './ThemeContext';
+export type { ThemeContextType } from '@/app/providers/theme';
+export type { 
+  TeamMember, 
+  TeamCreateInput, 
+  TeamUpdateInput, 
+  ResourcePermissions, 
+  TeamMemberResource 
+} from '@/types/context/team';
 
 // Export context state types for component usage
 export type { User, Role, AuthUser, UserTeam, TeamMember, ResourceLimit } from '@/types/user';

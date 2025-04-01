@@ -5,9 +5,13 @@ import { useTranslations } from 'next-intl';
 import React, { useState } from 'react';
 
 import { Button } from '@/components/shadcn/button';
-import { ResourceType, usePermission } from '@/context/PermissionContext';
-import { useTeam, useTeamMember } from '@/context/TeamContext';
-import { TeamMemberResource } from '@/types/context/team';
+import { 
+  usePermission, 
+  useTeam,
+  useTeamMember,
+  TeamMemberResource,
+  ResourceType
+} from '@/context';
 
 import TeamMemberAddDialogClient from './TeamMemberAddDialogClient';
 import TeamMemberPermissionsDialogClient from './TeamMemberPermissionsDialogClient';

@@ -2,13 +2,47 @@
 
 This document outlines the standard caching rules for our Next.js application, ensuring efficient performance and minimizing redundant database calls through a hybrid server-side and client-side caching approach.
 
+## Data Flow Architecture
+
+```
+┌──────────────────────┐
+│  Database Layer      │   No caching, raw data access
+│  /lib/supabase/db-*  │
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│  Server Actions      │   Server-side caching with Next.js cache()
+│  /app/actions        │
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│  React Query Hooks   │   Client-side caching with React Query
+│  /hooks              │
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│  Providers           │   State management & context
+│  /app/providers      │
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│  UI Components       │   Consume data, render UI
+│  /_components        │
+└──────────────────────┘
+```
+
 ## Core Principles
 
 1. **Layered Caching**: Implement caching for READ operations at the Server Actions Layer on the server and extend caching to the Client Layer for dynamic client-side interactions.
-2. **Server-Side Efficiency**: Utilize Next.js’s built-in caching tools for server-side READ operations, paired with explicit invalidation methods to keep data fresh.
+2. **Server-Side Efficiency**: Utilize Next.js's built-in caching tools for server-side READ operations, paired with explicit invalidation methods to keep data fresh.
 3. **Client-Side Deduplication**: Employ a client-side caching library to prevent duplicate data fetches and manage state, integrated with server-side pre-fetched data.
 4. **Data Consistency**: Ensure cache invalidation is synchronized across server and client layers after WRITE operations to maintain up-to-date data.
 5. **No Database Caching**: Keep the Database Layer free of any caching logic to provide raw, uncached data access.
+6. **DB Layer Independence**: Each database module must be fully independent and never import from other DB modules. If data from another entity is needed, it must be passed as a parameter.
 
 ## Three-Tier Architecture
 
@@ -20,47 +54,70 @@ This document outlines the standard caching rules for our Next.js application, e
   - Executes raw database queries using the Supabase client.
   - Never implements caching at this layer.
   - Never calls other functions within the Database Layer to avoid nesting.
+  - **IMPORTANT**: Each DB module must be fully independent. Never import from other DB modules.
+  - **CORRECT**: If a function needs data from another entity, it should accept it as a parameter:
+    ```typescript
+    // Good: Accept teamId as parameter instead of importing team DB functions
+    async function fetchUserWithTeam(userId: string, teamId: string) {
+      // Process teamId parameter
+    }
+    ```
+  - **INCORRECT**: Importing and using functions from other DB modules:
+    ```typescript
+    // Bad: Direct dependency between DB modules
+    import { fetchTeam } from '../db-teams/teams';
+    
+    async function fetchUserWithTeam(userId: string) {
+      const team = await fetchTeam(userId);  // Wrong! Creates dependency
+    }
+    ```
 
 ### 2. Server Actions Layer (Located in /app/actions/*.ts)
 
 - **Purpose**: Manages server-side caching for READ operations and processes WRITE operations, serving both Server Components and client-side API requests.
 - **Rules**:
   - All functions must be marked with the 'use server' directive to ensure server-only execution.
-  - Wrap READ operations with Next.js’s cache function, using explicit keys like resource identifiers (e.g., user ID).
+  - Wrap READ operations with Next.js's cache function, using explicit keys like resource identifiers (e.g., user ID).
   - Retrieve cookies using the cookies function from next/headers for authentication.
   - Call Database Layer functions, passing the cookieStore for authenticated queries.
   - Never cache WRITE operations such as create, update, or delete actions.
   - Invalidate caches after WRITE operations using revalidateTag (preferred) or revalidatePath to ensure stale data is refreshed.
+  - This is the layer where composition of multiple DB calls is appropriate.
 
-### 3. Client-Side Layer (Located in /app/[locale]/[tenant]/*/components/*.tsx)
+### 3. React Query Hooks (Located in /hooks/*)
 
-- **Purpose**: Manages user interface and dynamic data fetching with client-side caching to prevent redundant requests.
+- **Purpose**: Provide a clean API for components to access data with client-side caching.
+- **Rules**:
+  - Hooks should be organized by domain (e.g., `/hooks/team/`, `/hooks/user/`).
+  - Use React Query's useQuery for READ operations and useMutation for WRITE operations.
+  - Hooks should call Server Actions, never Database Layer functions directly.
+  - Handle loading states, errors, and cache invalidation within the hooks.
+  - Provide a consistent interface regardless of the data source complexity.
+
+### 4. Providers Layer (Located in /app/providers/*)
+
+- **Purpose**: Manage application state and provide context to components.
+- **Rules**:
+  - Providers should be client components marked with 'use client'.
+  - Providers can leverage hooks for data fetching but should focus on state management.
+  - Keep providers focused on a single domain (user, team, theme, etc.).
+  - Avoid circular dependencies between providers.
+
+### 5. Client-Side UI Components (Located in /app/[locale]/[tenant]/*/components/*.tsx)
+
+- **Purpose**: Render the UI and handle user interactions.
 - **Rules**:
   - All components must be marked with the 'use client' directive to indicate client-side execution.
-  - Use a client-side caching library’s query hook for READ operations, importing functions from the Server Actions Layer.
-  - Use a mutation hook for WRITE operations, invalidating specific cached queries afterward to refresh data.
-  - Integrate with Server Components by accepting pre-fetched data or hydrated state.
-  - Limit use of useEffect to side effects not managed by the caching library, including cleanup to prevent memory leaks.
-  - Never call Database Layer functions directly from client components.
-
-## Server Components (Located in /app/[locale]/[tenant]/*/page.tsx)
-
-- **Purpose**: Pre-fetches data for server-side rendering, providing initial data to client-side components.
-- **Rules**:
-  - Call Server Actions directly to fetch data.
-  - Pass pre-fetched data to Client Components through props.
-  - Use the client-side caching library’s dehydration method to prepare data for client-side hydration when needed.
-
-## Global Configuration
-
-### Client-Side Caching Setup
-- Configure a client-side caching library provider in the application’s root file (e.g., /app/_app.tsx).
-- Set default caching options, such as a 5-minute stale time (data freshness threshold) and a 10-minute cache time (data retention period), to balance performance and freshness.
+  - Use hooks from the /hooks directory to access data, never call Server Actions directly.
+  - Use providers for shared state.
+  - Focus on rendering and user interaction logic.
+  - Never call Database Layer functions directly from components.
 
 ## Anti-Patterns to Avoid
 
 - Do not implement caching in the Database Layer.
 - Do not call Database Layer functions directly from Client Components.
+- Do not import between different DB modules - maintain full independence.
 - Do not cache WRITE operations like create, update, or delete.
 - Do not omit cache invalidation (revalidateTag or invalidateQueries) after WRITE operations.
 - Do not use excessive dependencies in useEffect hooks that trigger unnecessary refetching.

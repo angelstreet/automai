@@ -39,7 +39,8 @@ export function Providers({
 
 export { SidebarProvider, useSidebar } from './sidebar';
 export { SWRProvider } from './swr';
-export { TeamProvider, useTeam } from './team';
-export { ThemeProviders } from './theme';
+export { TeamProvider, useTeam, usePermission } from './team';
+export { ThemeProviders, useTheme } from './theme';
 export { ToastProvider } from './toast';
 export { UserProvider, useUser } from './user';
+export { TenantProvider, useTenant } from './tenant';

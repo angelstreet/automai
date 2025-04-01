@@ -31,7 +31,7 @@ import {
   applyRolePermissionTemplate,
 } from '@/app/actions/teamMember';
 import { useToast } from '@/components/shadcn/use-toast';
-import { useUser } from '@/context/UserContext';
+import { useUser } from '@/app/providers';
 import { ResourcePermissions } from '@/types/context/team';
 import type { TeamMember, TeamCreateInput, TeamUpdateInput } from '@/types/context/team';
 

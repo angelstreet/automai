@@ -2,6 +2,7 @@
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
+import { ResourceType, Operation, checkPermission } from '@/app/actions/permission';
 import { Team } from '@/types/context/team';
 
 // Create a minimal Team context interface
@@ -59,4 +60,10 @@ export function useTeam() {
   const context = useContext(TeamContext);
   if (!context) throw new Error('useTeam must be used within a TeamProvider');
   return context;
+}
+
+// Export usePermission hook
+export function usePermission() {
+  const { checkPermission } = useTeam();
+  return { checkPermission };
 }

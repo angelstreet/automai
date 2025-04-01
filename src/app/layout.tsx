@@ -2,8 +2,7 @@ import './globals.css';
 import { Inter } from 'next/font/google';
 import { cookies } from 'next/headers';
 
-import { getSidebarState } from '@/app/actions/sidebar';
-import { Providers } from '@/app/providers';
+import { ThemeProviders, SWRProvider, ToastProvider } from '@/app/providers';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -17,9 +16,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const cookieStore = await cookies();
   const themeCookie = cookieStore.get('theme');
   const theme = (themeCookie?.value ?? 'system') as 'light' | 'dark' | 'system';
-
-  // Get initial sidebar state from server action
-  const initialSidebarState = await getSidebarState();
 
   return (
     <html lang="en" className={`${inter.className} js-loading`} suppressHydrationWarning>
@@ -45,9 +41,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
       </head>
       <body>
-        <Providers defaultTheme={theme} defaultSidebarOpen={initialSidebarState} initialUser={null}>
-          {children}
-        </Providers>
+        <ThemeProviders defaultTheme={theme}>
+          <SWRProvider>
+            <ToastProvider>{children}</ToastProvider>
+          </SWRProvider>
+        </ThemeProviders>
       </body>
     </html>
   );

@@ -1,11 +1,12 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
+import Cookies from 'js-cookie';
 
 import { Team } from '@/app/actions/team';
-import { TeamProvider } from '@/context/TeamContext';
-import { UserProvider } from '@/context/UserContext';
+import { TeamProvider, UserProvider, SidebarProvider } from '@/app/providers';
+import { SIDEBAR_COOKIE_NAME } from '@/components/sidebar/constants';
 import { User } from '@/types/auth/user';
 
 // Create a client - moved here from server component
@@ -32,12 +33,23 @@ export default function TenantLayoutClient({
 }) {
   console.log('[TenantLayoutClient] Rendering with teams:', teams.length);
   console.log('[TenantLayoutClient] Active team ID:', activeTeam?.id || 'none');
+  
+  // Get sidebar state from cookies (client-side)
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  
+  useEffect(() => {
+    // Get sidebar state from cookies on the client
+    const sidebarCookie = Cookies.get(SIDEBAR_COOKIE_NAME);
+    setSidebarOpen(sidebarCookie !== 'false');
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
       <UserProvider initialUser={user}>
         <TeamProvider initialTeams={teams} initialActiveTeam={activeTeam}>
-          <div className="relative flex w-full overflow-hidden">{children}</div>
+          <SidebarProvider defaultOpen={sidebarOpen}>
+            <div className="relative flex w-full overflow-hidden">{children}</div>
+          </SidebarProvider>
         </TeamProvider>
       </UserProvider>
     </QueryClientProvider>
