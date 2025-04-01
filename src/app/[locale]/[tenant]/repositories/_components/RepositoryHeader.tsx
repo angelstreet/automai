@@ -6,9 +6,17 @@ import React, { useState } from 'react';
 
 import { Input } from '@/components/shadcn/input';
 
-export function RepositoryHeader() {
+interface RepositoryHeaderProps {
+  repositoryCount: number;
+}
+
+export function RepositoryHeader({ repositoryCount }: RepositoryHeaderProps) {
   const t = useTranslations('repositories');
   const [searchQuery, setSearchQuery] = useState('');
+
+  if (repositoryCount === 0) {
+    return null;
+  }
 
   return (
     <div className="relative w-[300px]">

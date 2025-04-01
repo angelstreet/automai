@@ -19,7 +19,7 @@ export function Search({ className = '', placeholder = 'Search' }: Props) {
     <Button
       variant="outline"
       className={cn(
-        'relative h-8 w-full flex-1 justify-start rounded-md bg-muted/25 text-sm font-normal text-muted-foreground shadow-none hover:bg-muted/50 sm:pr-12 md:w-40 md:flex-none lg:w-56 xl:w-64',
+        'relative h-8 w-full flex-1 justify-start rounded-md bg-background text-sm font-normal text-muted-foreground shadow-none hover:bg-background/90 sm:pr-12 md:w-40 md:flex-none lg:w-56 xl:w-64',
         className,
       )}
       onClick={() => setOpen(true)}

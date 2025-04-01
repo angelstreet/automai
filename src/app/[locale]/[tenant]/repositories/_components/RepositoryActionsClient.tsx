@@ -1,7 +1,20 @@
 'use client';
 
 import { RepositoryActions } from './client/RepositoryActions';
+import { RepositoryHeader } from './RepositoryHeader';
 
-export function RepositoryActionsClient(props: React.ComponentProps<typeof RepositoryActions>) {
-  return <RepositoryActions {...props} />;
+interface RepositoryActionsClientProps extends React.ComponentProps<typeof RepositoryActions> {
+  repositoryCount?: number;
+}
+
+export function RepositoryActionsClient({
+  repositoryCount = 0,
+  ...props
+}: RepositoryActionsClientProps) {
+  return (
+    <div className="flex items-center gap-4">
+      <RepositoryHeader repositoryCount={repositoryCount} />
+      <RepositoryActions {...props} />
+    </div>
+  );
 }
