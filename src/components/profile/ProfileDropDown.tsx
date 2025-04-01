@@ -2,6 +2,7 @@
 
 import { LogOut, Settings, User, UserCircle2 } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
+import React from 'react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
 import { Button } from '@/components/shadcn/button';
@@ -17,21 +18,21 @@ import {
 import { Team } from '@/types/context/teamContextType';
 import { User as UserType } from '@/types/service/userServiceType';
 
-// Add interface for props
-interface HeaderUserProfileProps {
+interface ProfileDropDownProps {
   user?: UserType | null;
   activeTeam?: Team | null;
+  compact?: boolean; // For sidebar usage
 }
 
-// Update function signature to accept user and team props
-export function HeaderUserProfile({
+export function ProfileDropDown({
   user,
   activeTeam: _activeTeam = null,
-}: HeaderUserProfileProps) {
+  compact = false,
+}: ProfileDropDownProps) {
   const router = useRouter();
   const params = useParams();
   const locale = params.locale as string;
-  const tenant = (params.tenant as string) || 'trial';
+  const tenant = (params.tenant as string) || user?.tenant_name || 'trial';
 
   // Get user's initials for avatar fallback
   const getInitials = (name: string) => {
@@ -54,10 +55,24 @@ export function HeaderUserProfile({
 
   if (!user) return null;
 
+  // Add console log for visibility tracking
+  React.useEffect(() => {
+    console.log(
+      '[@component:ProfileDropDown:mount] Component mounted in ' + (compact ? 'sidebar' : 'header'),
+    );
+  }, [compact]);
+
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+        <Button
+          variant="ghost"
+          className={
+            compact
+              ? 'relative flex items-center justify-center w-full rounded-md'
+              : 'relative h-8 w-8 rounded-full'
+          }
+        >
           <Avatar className="h-8 w-8">
             <AvatarImage src={user.avatar_url || undefined} alt={user.name || 'User'} />
             <AvatarFallback>

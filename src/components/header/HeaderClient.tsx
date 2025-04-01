@@ -3,7 +3,7 @@
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Suspense, useState } from 'react';
 
-import { HeaderUserProfile } from '@/components/header';
+import { ProfileDropDown } from '@/components/profile/ProfileDropDown';
 import { Button } from '@/components/shadcn/button';
 import { Separator } from '@/components/shadcn/separator';
 import { SidebarTrigger } from '@/components/sidebar';
@@ -96,7 +96,7 @@ export function HeaderClient({
                 <Suspense
                   fallback={<div className="h-8 w-8 bg-muted/30 rounded-full animate-pulse" />}
                 >
-                  <HeaderUserProfile user={user} activeTeam={activeTeam} />
+                  <ProfileDropDown user={user} activeTeam={activeTeam} />
                 </Suspense>
                 <Separator orientation="vertical" className="h-8 opacity-30" />
               </div>

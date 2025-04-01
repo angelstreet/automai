@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 
+import { ProfileDropDown } from '@/components/profile/ProfileDropDown';
 import {
   Sidebar,
   SidebarContent,
@@ -10,7 +11,6 @@ import {
   SidebarRail,
 } from '@/components/sidebar';
 import { SidebarNavGroup } from '@/components/sidebar/SidebarNavGroup';
-import { SidebarUserProfile } from '@/components/sidebar/SidebarUserProfile';
 import { APP_SIDEBAR_WIDTH, APP_SIDEBAR_WIDTH_ICON } from '@/components/sidebar/constants';
 import { sidebarData } from '@/components/sidebar/sidebarData';
 import TeamSelector from '@/components/team/TeamSelector';
@@ -96,7 +96,15 @@ const SidebarClient = React.memo(function SidebarClient({
         ))}
       </SidebarContent>
       <SidebarFooter className="pb-2">
-        {user && <SidebarUserProfile user={user} tenant={user.tenant_name} />}
+        {user && (
+          <div className="w-full p-2 border-t border-border">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-sm font-medium">{user.name}</span>
+              <span className="text-xs text-muted-foreground">{user.email}</span>
+            </div>
+            <ProfileDropDown user={user} activeTeam={activeTeam} compact={true} />
+          </div>
+        )}
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
