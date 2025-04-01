@@ -2,20 +2,16 @@
 
 import React, { createContext, useContext } from 'react';
 
-import { useUser as useUserHook } from '@/hooks';
-
-import { User } from '@/types/service';
+import type { User } from '@/types/service/userServiceType';
 
 // Define the minimal context type needed - data only
 interface UserContextType {
   user: User | null;
-  isLoading: boolean;
 }
 
 // Create context with default values
 const UserContext = createContext<UserContextType>({
   user: null,
-  isLoading: false,
 });
 
 export function UserProvider({
@@ -25,18 +21,9 @@ export function UserProvider({
   children: React.ReactNode;
   user?: User | null;
 }) {
-  // Use the hook to manage user state
-  const { user: currentUser, isLoading } = useUserHook(user);
-
-  console.debug(
-    '[@context:UserContext:UserProvider] Initializing with user:',
-    user ? `${user.id} (${user.email})` : 'null',
-  );
-
   // Provide only the data without implementation details
   const value = {
-    user: currentUser,
-    isLoading,
+    user: user || null,
   };
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;

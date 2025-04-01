@@ -1,3 +1,8 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
 # Next.js Caching Strategy Cursor Rules
 
 This document outlines the standard caching rules for our Next.js application, ensuring efficient performance and minimizing redundant database calls through a hybrid server-side and client-side caching approach.

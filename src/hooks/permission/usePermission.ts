@@ -1,10 +1,10 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
+
 import { checkPermission, getUserPermissions } from '@/app/actions/permissionAction';
-import { useUser } from '@/context';
-import { useTeam } from '@/context';
-import type {  ResourceType, Operation, PermissionMatrix  } from '@/types/context/permissionsContextType';
+import { useUser, useTeam } from '@/context';
+import type { ResourceType, Operation } from '@/types/context/permissionsContextType';
 
 /**
  * Hook for checking user permissions
@@ -28,13 +28,17 @@ export function usePermission(specificTeamId?: string) {
   });
 
   // Function to check if user has a specific permission
-  const hasPermission = (resourceType: ResourceType, operation: Operation, creatorId?: string): boolean => {
+  const hasPermission = (
+    resourceType: ResourceType,
+    operation: Operation,
+    creatorId?: string,
+  ): boolean => {
     if (!permissionsResponse?.success || !permissionsResponse.data) {
       return false;
     }
 
     // Find the relevant permission matrix for this resource type
-    const permissionMatrix = permissionsResponse.data.find(p => p.resource_type === resourceType);
+    const permissionMatrix = permissionsResponse.data.find((p) => p.resource_type === resourceType);
     if (!permissionMatrix) {
       return false;
     }
@@ -71,7 +75,11 @@ export function usePermission(specificTeamId?: string) {
     isLoading,
     error,
     hasPermission,
-    checkPermissionAsync: async (resourceType: ResourceType, operation: Operation, creatorId?: string): Promise<boolean> => {
+    checkPermissionAsync: async (
+      resourceType: ResourceType,
+      operation: Operation,
+      creatorId?: string,
+    ): Promise<boolean> => {
       if (!userId || !teamId) return false;
       try {
         return await checkPermission(userId, teamId, resourceType, operation, creatorId);
@@ -79,6 +87,6 @@ export function usePermission(specificTeamId?: string) {
         console.error('Error checking permission:', error);
         return false;
       }
-    }
+    },
   };
 }

@@ -1,22 +1,18 @@
 'use client';
 
-import React, { createContext, useContext, useState } from 'react';
-import { Team } from '@/types/context/teamContextType';
+import React, { createContext, useContext } from 'react';
+import type { Team } from '@/types/context/teamContextType';
 
-// Create a minimal Team context interface with just data
+// Create a minimal Team context interface - data only
 interface TeamContextState {
-  teamsDetails: Team[];
+  teams: Team[];
   activeTeam: Team | null;
-  teamsLoading: boolean;
-  teamsError: any;
 }
 
 // Create context with default values
 const TeamContext = createContext<TeamContextState>({
-  teamsDetails: [],
+  teams: [],
   activeTeam: null,
-  teamsLoading: false,
-  teamsError: null,
 });
 
 interface TeamProviderProps {
@@ -25,29 +21,25 @@ interface TeamProviderProps {
   activeTeam?: Team | null;
 }
 
+/**
+ * TeamProvider - Pure data container for team state
+ * No business logic, no data fetching, no side effects
+ */
 export function TeamProvider({
   children,
   teamsDetails = [],
   activeTeam = null,
 }: TeamProviderProps) {
-  // Simple state management - just hold the data
-  const [teamsDetailsState] = useState<Team[]>(teamsDetails);
-  const [activeTeamState] = useState<Team | null>(activeTeam);
-  const [teamsLoading] = useState(false);
-  const [teamsError] = useState(null);
-
-  // Create the context value - data only
+  // Provide only the data without any state management
   const value = {
-    teamsDetails: teamsDetailsState,
-    activeTeam: activeTeamState,
-    teamsLoading,
-    teamsError,
+    teams: teamsDetails,
+    activeTeam,
   };
 
   return <TeamContext.Provider value={value}>{children}</TeamContext.Provider>;
 }
 
-// Export hook for using team context
+// Simple context accessor
 export function useTeam() {
   const context = useContext(TeamContext);
   if (!context) throw new Error('useTeam must be used within a TeamProvider');

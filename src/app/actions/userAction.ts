@@ -1,10 +1,11 @@
 'use server';
 
-import userDb from '@/lib/db/userDb';
-import cacheUtils from '@/lib/utils/cacheUtils';
-import { AuthUser } from '@/types/service/userServiceType';
 import { cookies } from 'next/headers';
+import { cache } from 'react';
+
+import userDb from '@/lib/db/userDb';
 import { createClient } from '@/lib/supabase/server';
+import cacheUtils from '@/lib/utils/cacheUtils';
 import type { User } from '@/types/service/userServiceType';
 
 /**
@@ -22,18 +23,19 @@ export async function invalidateUserCache() {
 }
 
 /**
- * Get the current authenticated user
+ * Get the current authenticated user with proper caching
  * Returns the user data directly without needing mapping
  */
-export async function getUser(): Promise<User | null> {
+export const getUser = cache(async (): Promise<User | null> => {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const supabase = await createClient(cookieStore);
 
     const {
       data: { user: authUser },
       error: authError,
     } = await supabase.auth.getUser();
+
     if (authError || !authUser) {
       console.error('[@action:user:getUser] Auth error:', authError);
       return null;
@@ -68,9 +70,9 @@ export async function getUser(): Promise<User | null> {
           }))
         : [];
 
-    // Get selected team from cookie
-    const selectedTeamCookie = cookieStore.get(`selected_team_${authUser.id}`);
-    const selectedTeamId = selectedTeamCookie?.value || undefined;
+    // Get selected team from cookie - properly awaited
+    const selectedTeamCookie = await cookieStore.get(`selected_team_${authUser.id}`);
+    const selectedTeamId = selectedTeamCookie?.value;
 
     // Construct user object
     return {
@@ -90,7 +92,7 @@ export async function getUser(): Promise<User | null> {
     console.error('[@action:user:getUser] Error:', error);
     return null;
   }
-}
+});
 
 /**
  * Update user profile

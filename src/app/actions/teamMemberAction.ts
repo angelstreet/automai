@@ -2,25 +2,18 @@
 
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
+import { cache } from 'react';
 
 import { getUser } from '@/app/actions/userAction';
 import teamMemberDb from '@/lib/db/teamMemberDb';
 import permissionDb from '@/lib/db/permissionDb';
 import type { ResourceType } from '@/types/context/permissionsContextType';
-import {  ResourcePermissions  } from '@/types/context/teamContextType';
+import { ResourcePermissions } from '@/types/context/teamContextType';
 
-/**
- * Add a new member to a team with a specified role
- * @param teamId The ID of the team
- * @param email Email address of the user to add
- * @param role Role to assign to the new member
- */
 /**
  * Get team members for a specific team
  */
-export async function getTeamMembers(
-  teamId: string
-): Promise<{ success: boolean; error?: string; data?: any }> {
+export const getTeamMembers = cache(async (teamId: string) => {
   try {
     // Verify the current user is authenticated
     const user = await getUser();
@@ -29,17 +22,17 @@ export async function getTeamMembers(
     }
 
     const cookieStore = await cookies();
-    
+
     // Get team members
     const result = await teamMemberDb.getTeamMembers(teamId, cookieStore);
-    
+
     if (!result.success) {
       return {
         success: false,
         error: result.error || 'Failed to get team members',
       };
     }
-    
+
     return { success: true, data: result.data };
   } catch (error) {
     console.error('Error getting team members:', error);
@@ -48,53 +41,50 @@ export async function getTeamMembers(
       error: error instanceof Error ? error.message : 'Failed to get team members',
     };
   }
-}
+});
 
 /**
  * Update a team member's role
  */
-export async function updateTeamMemberRole(
-  teamId: string,
-  profileId: string,
-  role: string
-): Promise<{ success: boolean; error?: string; data?: any }> {
-  try {
-    // Verify the current user is authenticated
-    const user = await getUser();
-    if (!user) {
-      return { success: false, error: 'User not authenticated' };
-    }
+export const updateTeamMemberRole = cache(
+  async (teamId: string, profileId: string, role: string) => {
+    try {
+      // Verify the current user is authenticated
+      const user = await getUser();
+      if (!user) {
+        return { success: false, error: 'User not authenticated' };
+      }
 
-    const cookieStore = await cookies();
-    
-    // Update role
-    const result = await teamMemberDb.updateTeamMemberRole(teamId, profileId, role, cookieStore);
-    
-    if (!result.success) {
+      const cookieStore = await cookies();
+
+      // Update role
+      const result = await teamMemberDb.updateTeamMemberRole(teamId, profileId, role, cookieStore);
+
+      if (!result.success) {
+        return {
+          success: false,
+          error: result.error || 'Failed to update role',
+        };
+      }
+
+      // Revalidate team-related paths
+      revalidatePath('/[locale]/[tenant]/team');
+
+      return { success: true, data: result.data };
+    } catch (error) {
+      console.error('Error updating team member role:', error);
       return {
         success: false,
-        error: result.error || 'Failed to update role',
+        error: error instanceof Error ? error.message : 'Failed to update role',
       };
     }
-    
-    // Revalidate team-related paths
-    revalidatePath('/[locale]/[tenant]/team');
-    
-    return { success: true, data: result.data };
-  } catch (error) {
-    console.error('Error updating team member role:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to update role',
-    };
-  }
-}
+  },
+);
 
-export async function addTeamMember(
-  teamId: string,
-  email: string,
-  role: string,
-): Promise<{ success: boolean; error?: string; data?: any }> {
+/**
+ * Add a new member to a team with a specified role
+ */
+export const addTeamMember = cache(async (teamId: string, email: string, role: string) => {
   try {
     // Verify the current user is authenticated
     const user = await getUser();
@@ -103,8 +93,6 @@ export async function addTeamMember(
     }
 
     // Lookup the user ID from the email
-    // This is a simplified example - in a real app, you'd query the database
-    // to find the user by email
     const cookieStore = await cookies();
     const { createClient } = await import('@/lib/supabase/server');
     const supabase = await createClient(cookieStore);
@@ -163,86 +151,76 @@ export async function addTeamMember(
       error: error instanceof Error ? error.message : 'Failed to add team member',
     };
   }
-}
+});
 
 /**
  * Update a team member's permissions
- * @param teamId The ID of the team
- * @param profileId The ID of the user to update
- * @param permissions The permission matrix to apply
  */
-export async function updateMemberPermissions(
-  teamId: string,
-  profileId: string,
-  permissions: ResourcePermissions,
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    // Verify the current user is authenticated
-    const user = await getUser();
-    if (!user) {
-      return { success: false, error: 'User not authenticated' };
-    }
-
-    const cookieStore = await cookies();
-
-    // Update permissions for each resource type
-    const resourceTypes = Object.keys(permissions) as ResourceType[];
-    let failedUpdates = 0;
-
-    for (const resourceType of resourceTypes) {
-      const resourcePermissions = permissions[resourceType];
-
-      const result = await permissionDb.setUserPermission(
-        teamId,
-        profileId,
-        resourceType,
-        {
-          can_select: resourcePermissions.select,
-          can_insert: resourcePermissions.insert,
-          can_update: resourcePermissions.update,
-          can_delete: resourcePermissions.delete,
-          can_update_own: resourcePermissions.update_own,
-          can_delete_own: resourcePermissions.delete_own,
-          can_execute: resourcePermissions.execute,
-        },
-        cookieStore,
-      );
-
-      if (!result.success) {
-        console.error(`Failed to update permissions for ${resourceType}:`, result.error);
-        failedUpdates++;
+export const updateMemberPermissions = cache(
+  async (teamId: string, profileId: string, permissions: ResourcePermissions) => {
+    try {
+      // Verify the current user is authenticated
+      const user = await getUser();
+      if (!user) {
+        return { success: false, error: 'User not authenticated' };
       }
-    }
 
-    // Revalidate team-related paths
-    revalidatePath('/[locale]/[tenant]/team');
+      const cookieStore = await cookies();
 
-    if (failedUpdates > 0) {
+      // Update permissions for each resource type
+      const resourceTypes = Object.keys(permissions) as ResourceType[];
+      let failedUpdates = 0;
+
+      for (const resourceType of resourceTypes) {
+        const resourcePermissions = permissions[resourceType];
+
+        const result = await permissionDb.setUserPermission(
+          teamId,
+          profileId,
+          resourceType,
+          {
+            can_select: resourcePermissions.select,
+            can_insert: resourcePermissions.insert,
+            can_update: resourcePermissions.update,
+            can_delete: resourcePermissions.delete,
+            can_update_own: resourcePermissions.update_own,
+            can_delete_own: resourcePermissions.delete_own,
+            can_execute: resourcePermissions.execute,
+          },
+          cookieStore,
+        );
+
+        if (!result.success) {
+          console.error(`Failed to update permissions for ${resourceType}:`, result.error);
+          failedUpdates++;
+        }
+      }
+
+      // Revalidate team-related paths
+      revalidatePath('/[locale]/[tenant]/team');
+
+      if (failedUpdates > 0) {
+        return {
+          success: false,
+          error: `Failed to update ${failedUpdates} resource types`,
+        };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error updating member permissions:', error);
       return {
         success: false,
-        error: `Failed to update ${failedUpdates} resource types`,
+        error: error instanceof Error ? error.message : 'Failed to update permissions',
       };
     }
-
-    return { success: true };
-  } catch (error) {
-    console.error('Error updating member permissions:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to update permissions',
-    };
-  }
-}
+  },
+);
 
 /**
  * Remove a member from a team
- * @param teamId The ID of the team
- * @param profileId The ID of the user to remove
  */
-export async function removeTeamMember(
-  teamId: string,
-  profileId: string,
-): Promise<{ success: boolean; error?: string }> {
+export const removeTeamMember = cache(async (teamId: string, profileId: string) => {
   try {
     // Verify the current user is authenticated
     const user = await getUser();
@@ -273,17 +251,12 @@ export async function removeTeamMember(
       error: error instanceof Error ? error.message : 'Failed to remove team member',
     };
   }
-}
+});
 
 /**
  * Get the permissions for a team member
- * @param teamId The ID of the team
- * @param profileId The ID of the user
  */
-export async function getMemberPermissions(
-  teamId: string,
-  profileId: string,
-): Promise<{ success: boolean; error?: string; data?: ResourcePermissions }> {
+export const getMemberPermissions = cache(async (teamId: string, profileId: string) => {
   try {
     // Verify the current user is authenticated
     const user = await getUser();
@@ -328,54 +301,57 @@ export async function getMemberPermissions(
       error: error instanceof Error ? error.message : 'Failed to get member permissions',
     };
   }
-}
+});
 
 /**
  * Apply a role template to a team member
- * @param teamId The ID of the team
- * @param profileId The ID of the user
- * @param role The role template to apply
  */
-export async function applyRolePermissionTemplate(
-  teamId: string,
-  profileId: string,
-  role: string,
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    // Verify the current user is authenticated
-    const user = await getUser();
-    if (!user) {
-      return { success: false, error: 'User not authenticated' };
-    }
+export const applyRolePermissionTemplate = cache(
+  async (teamId: string, profileId: string, role: string) => {
+    try {
+      // Verify the current user is authenticated
+      const user = await getUser();
+      if (!user) {
+        return { success: false, error: 'User not authenticated' };
+      }
 
-    const cookieStore = await cookies();
+      const cookieStore = await cookies();
 
-    // Apply the role template
-    const result = await dbApplyRoleTemplate(teamId, profileId, role, cookieStore);
+      // Apply the role template
+      const result = await permissionDb.applyRoleTemplate(teamId, profileId, role, cookieStore);
 
-    if (!result.success) {
+      if (!result.success) {
+        return {
+          success: false,
+          error: result.error || 'Failed to apply role template',
+        };
+      }
+
+      // Also update their role in the team_members table
+      const roleResult = await teamMemberDb.updateTeamMemberRole(
+        teamId,
+        profileId,
+        role,
+        cookieStore,
+      );
+
+      if (!roleResult.success) {
+        console.warn(
+          'Failed to update member role, but permissions were applied:',
+          roleResult.error,
+        );
+      }
+
+      // Revalidate team-related paths
+      revalidatePath('/[locale]/[tenant]/team');
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error applying role template:', error);
       return {
         success: false,
-        error: result.error || 'Failed to apply role template',
+        error: error instanceof Error ? error.message : 'Failed to apply role template',
       };
     }
-
-    // Also update their role in the team_members table
-    const roleResult = await teamMemberDb.updateTeamMemberRole(teamId, profileId, role, cookieStore);
-
-    if (!roleResult.success) {
-      console.warn('Failed to update member role, but permissions were applied:', roleResult.error);
-    }
-
-    // Revalidate team-related paths
-    revalidatePath('/[locale]/[tenant]/team');
-
-    return { success: true };
-  } catch (error) {
-    console.error('Error applying role template:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to apply role template',
-    };
-  }
-}
+  },
+);
