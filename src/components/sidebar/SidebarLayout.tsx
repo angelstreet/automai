@@ -20,7 +20,7 @@ export function SidebarFooter({
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn('mt-auto border-t border-sidebar-border bg-sidebar', className)} {...props}>
+    <div className={cn('mt-auto bg-sidebar', className)} {...props}>
       {children}
     </div>
   );
