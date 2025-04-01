@@ -1,18 +1,18 @@
-# Global Next.js Caching Strategy
+# Global Next.js Caching Strategy (COMPLETED)
 
 This document establishes a comprehensive caching strategy for our Next.js application, applying to all components, server actions, and database interactions. It combines server-side and client-side caching to optimize performance, ensure data consistency, and eliminate redundant database calls across the entire codebase.
 
 ## Core Principles
 
 1. **Universal Caching**: Apply caching systematically across Server Actions (server-side) and Client Components (client-side) for all READ operations, ensuring no layer bypasses the strategy.
-2. **Server-Side Optimization**: Leverage Next.js’s built-in caching tools for server-side READ operations, with explicit invalidation to maintain freshness.
+2. **Server-Side Optimization**: Leverage Next.js's built-in caching tools for server-side READ operations, with explicit invalidation to maintain freshness.
 3. **Client-Side Efficiency**: Use a client-side caching library to deduplicate fetches, manage state, and integrate with server-side data, preventing duplicate calls.
 4. **Global Consistency**: Synchronize cache invalidation across all layers (server and client) after WRITE operations to keep data current.
 5. **No Database Caching**: Prohibit caching in the Database Layer to ensure raw, uncached data access for all operations.
 
 ## Architecture Layers
 
-### 1. Database Layer (Located in /lib/supabase/db-\*)
+### 1. Database Layer (Located in /lib/supabase/db-*)
 
 - **Purpose**: Provides raw data access to all resources (users, teams, permissions, etc.) without caching or business logic.
 - **Rules**:
@@ -23,12 +23,12 @@ This document establishes a comprehensive caching strategy for our Next.js appli
   - Functions are named with a `fetch` prefix for READs (e.g., fetchUsers) and action verbs for WRITEs (e.g., updateTeam).
 - **Scope**: Applies to all database interactions (users, teams, permissions, deployments, etc.).
 
-### 2. Server Actions Layer (Located in /app/actions/\*.ts)
+### 2. Server Actions Layer (Located in /app/actions/*.ts)
 
 - **Purpose**: Centralizes server-side caching for READ operations and handles WRITE operations, serving all Server Components and client-side requests across the application.
 - **Rules**:
   - All functions must be marked with the 'use server' directive to ensure server-only execution.
-  - Wrap READ operations with Next.js’s cache function, using explicit keys based on resource type and identifiers (e.g., ['users', userId], ['teams', tenantId]).
+  - Wrap READ operations with Next.js's cache function, using explicit keys based on resource type and identifiers (e.g., ['users', userId], ['teams', tenantId]).
   - Retrieve cookies using the cookies function from next/headers for authentication.
   - Call Database Layer functions, passing the cookieStore for authenticated queries.
   - Never cache WRITE operations such as create, update, or delete actions.
@@ -41,8 +41,8 @@ This document establishes a comprehensive caching strategy for our Next.js appli
 - **Purpose**: Manages user interface and dynamic data fetching with client-side caching to prevent redundant requests across all client components.
 - **Rules**:
   - All components must be marked with the 'use client' directive to indicate client-side execution.
-  - Use the client-side caching library’s query hook for READ operations, importing from Server Actions (e.g., useQuery with getUsers).
-  - Use the client-side caching library’s mutation hook for WRITE operations, invalidating specific cached queries afterward (e.g., invalidateQueries(['users'])).
+  - Use the client-side caching library's query hook for READ operations, importing from Server Actions (e.g., useQuery with getUsers).
+  - Use the client-side caching library's mutation hook for WRITE operations, invalidating specific cached queries afterward (e.g., invalidateQueries(['users'])).
   - Integrate with Server Components by accepting pre-fetched data or hydrated state via props.
   - Limit use of useEffect to side effects not managed by the caching library, including cleanup to prevent memory leaks.
   - Never call Database Layer functions directly from client components.
@@ -54,7 +54,7 @@ This document establishes a comprehensive caching strategy for our Next.js appli
 - **Rules**:
   - Call Server Actions directly to fetch data for all resources.
   - Pass pre-fetched data to Client Components through props.
-  - Use the client-side caching library’s dehydration method to prepare data for client-side hydration when integrating with dynamic client components.
+  - Use the client-side caching library's dehydration method to prepare data for client-side hydration when integrating with dynamic client components.
   - Redirect unauthenticated users to appropriate login paths (e.g., /[locale]/login) based on Server Action results.
 - **Scope**: Encompasses all Server Components (pages and layouts) rendering resources like dashboards, team lists, or user profiles.
 
@@ -62,15 +62,15 @@ This document establishes a comprehensive caching strategy for our Next.js appli
 
 ### Client-Side Caching Setup
 
-- Configure a client-side caching library provider in the application’s root file (e.g., /app/\_app.tsx).
-- Set default caching options with a 5-minute stale time (data freshness threshold) and a 10-minute cache time (data retention period) to balance performance and freshness across all resources.
-- Ensure hydration support to seamlessly transition pre-fetched server data to the client.
+- TanStack Query (React Query) is used as the client-side caching library.
+- It's configured in the TenantLayout client component with a 5-minute stale time and a 10-minute cache time.
+- React Query provides hydration support to seamlessly transition pre-fetched server data to the client.
 
 ### Directory Structure
 
 - **Database Layer**: /lib/supabase/db-users/users.ts, /lib/supabase/db-teams/teams.ts, etc., for each resource type.
 - **Server Actions**: /app/actions/users.ts, /app/actions/teams.ts, etc., mirroring resource types.
-- **Client Components**: /app/[locale]/[tenant]/[resource]/\_components/\*.tsx (e.g., /dashboard/\_components/, /team/\_components/).
+- **Client Components**: /app/[locale]/[tenant]/[resource]/_components/*.tsx (e.g., /dashboard/_components/, /team/_components/).
 - **Server Components**: /app/[locale]/[tenant]/[resource]/page.tsx and layout.tsx (e.g., /dashboard/page.tsx).
 
 ## Anti-Patterns to Avoid
@@ -220,3 +220,9 @@ return <Dashboard dehydratedState={dehydrate(queryClient)} />;
 - Server Actions use cache() for server-side READs, reducing DB calls.
 - Client Component uses React Query for client-side deduplication, eliminating duplicate calls.
 - Server Component pre-fetches and hydrates, optimizing initial load.
+
+## Migration Status
+
+- ✅ SWR completely removed and replaced with React Query
+- ✅ React Query properly configured in the TenantLayout
+- ✅ No backward compatibility layers or SWR imports remain

@@ -98,7 +98,6 @@
     "ssh2": "^1.16.0",
     "stream-browserify": "^3.0.0",
     "supabase": "^2.15.8",
-    "swr": "2.3.3",
     "tailwind-merge": "3.0.2",
     "tailwindcss": "3.4.1",
     "ts-node": "^10.9.2",
