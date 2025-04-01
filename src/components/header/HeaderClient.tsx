@@ -1,7 +1,7 @@
 'use client';
 
-import { ChevronUp } from 'lucide-react';
-import { Suspense } from 'react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
+import { Suspense, useState } from 'react';
 
 import { HeaderUserProfile } from '@/components/header';
 import { Button } from '@/components/shadcn/button';
@@ -28,10 +28,12 @@ export function HeaderClient({
 }: HeaderClientProps) {
   const { state } = useSidebar();
   const isCollapsed = state === 'collapsed';
+  const [headerVisible, setHeaderVisible] = useState(true);
 
-  // Function to toggle header (can be implemented later)
+  // Function to toggle header visibility
   const toggleHeader = () => {
-    console.log('Toggle header visibility');
+    setHeaderVisible(!headerVisible);
+    console.log(`Header is now ${!headerVisible ? 'visible' : 'hidden'}`);
   };
 
   return (
@@ -50,45 +52,59 @@ export function HeaderClient({
           : undefined
       }
     >
-      <div className="flex h-14 items-center border-b">
-        {/* Left section */}
-        <div className="relative flex items-center h-full">
-          <div className={cn('flex items-center ml-4')}>
-            {/* This is where SidebarTrigger would go */}
-            <Separator orientation="vertical" className="h-8 opacity-50 mx-2" />
-          </div>
-        </div>
+      <div className={cn('flex h-14 items-center border-b relative', !headerVisible && 'h-8')}>
+        {headerVisible && (
+          <>
+            {/* Left section */}
+            <div className="relative flex items-center h-full">
+              <div className={cn('flex items-center ml-4')}>
+                {/* This is where SidebarTrigger would go */}
+                <Separator orientation="vertical" className="h-8 opacity-50 mx-2" />
+              </div>
+            </div>
 
-        {/* Center section - can be used for tabs or other content */}
-        <div className="flex-1" />
+            {/* Center section - can be used for tabs or other content */}
+            <div className="flex-1" />
 
-        {/* Right section */}
-        <div className="flex items-center gap-2 px-4 h-full">
-          <div className="flex-none w-36 mr-12">
-            {user ? (
-              <RoleSwitcher key={`role-switcher-${user.role || 'default'}`} user={user} />
-            ) : (
-              <div className="w-[180px] h-10 bg-muted animate-pulse rounded-md"></div>
-            )}
-          </div>
-          <Separator orientation="vertical" className="h-8 opacity-30" />
-          <div className="flex items-center">
-            <ThemeToggleStatic />
-          </div>
-          <Separator orientation="vertical" className="h-8 opacity-30" />
-          <Suspense fallback={<div className="h-8 w-8 bg-muted/30 rounded-full animate-pulse" />}>
-            <HeaderUserProfile user={user} activeTeam={activeTeam} />
-          </Suspense>
-          <Separator orientation="vertical" className="h-8 opacity-30" />
+            {/* Right section */}
+            <div className="flex items-center gap-2 px-4 h-full pr-14">
+              <div className="flex-none w-36 mr-12">
+                {user ? (
+                  <RoleSwitcher key={`role-switcher-${user.role || 'default'}`} user={user} />
+                ) : (
+                  <div className="w-[180px] h-10 bg-muted animate-pulse rounded-md"></div>
+                )}
+              </div>
+              <Separator orientation="vertical" className="h-8 opacity-30" />
+              <div className="flex items-center">
+                <ThemeToggleStatic />
+              </div>
+              <Separator orientation="vertical" className="h-8 opacity-30" />
+              <Suspense
+                fallback={<div className="h-8 w-8 bg-muted/30 rounded-full animate-pulse" />}
+              >
+                <HeaderUserProfile user={user} activeTeam={activeTeam} />
+              </Suspense>
+              <Separator orientation="vertical" className="h-8 opacity-30" />
+            </div>
+          </>
+        )}
+
+        {/* Always show toggle button at the end - positioned absolutely */}
+        <div className="absolute right-4 flex items-center h-full">
           <Button
             variant="outline"
             size="icon"
             className="h-8 w-8"
             onClick={toggleHeader}
-            title="Hide Header"
+            title={headerVisible ? 'Hide Header' : 'Show Header'}
           >
-            <ChevronUp className="h-4 w-4" />
-            <span className="sr-only">Hide Header</span>
+            {headerVisible ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
+            <span className="sr-only">{headerVisible ? 'Hide Header' : 'Show Header'}</span>
           </Button>
         </div>
       </div>
