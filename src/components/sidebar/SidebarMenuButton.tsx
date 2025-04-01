@@ -4,7 +4,7 @@ import type { VariantProps } from 'class-variance-authority';
 import * as React from 'react';
 
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/shadcn/tooltip';
-import { useSidebar } from '@/context';
+import { useSidebar } from '@/hooks';
 import { useIsMobile } from '@/hooks/useMobile';
 import { cn } from '@/lib/utils';
 

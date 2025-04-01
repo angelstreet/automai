@@ -4,12 +4,12 @@ import { ChevronLeft, ChevronRight, GitBranch, PlusCircle, Search } from 'lucide
 import { useTranslations } from 'next-intl';
 import React, { useState, useEffect } from 'react';
 
-import { useRepository } from '@/context';
+import { useRepository } from '@/hooks';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
-import {  Repository  } from '@/types/context/repositoryContextType';
+import { Repository } from '@/types/context/repositoryContextType';
 
 import { EnhancedRepositoryCard } from '../EnhancedRepositoryCard';
 
@@ -20,7 +20,7 @@ interface ClientRepositoryListProps {
 
 export function ClientRepositoryList({
   initialRepositories,
- _initialStarredIds = [], // Default to empty array
+  _initialStarredIds = [], // Default to empty array
 }: ClientRepositoryListProps) {
   const t = useTranslations('repositories');
 
@@ -34,7 +34,11 @@ export function ClientRepositoryList({
   const itemsPerPage = 12;
 
   // Use the repository hook
-  const { repositories: hookRepositories, isLoading: isLoadingRepositories, refetchRepositories } = useRepository();
+  const {
+    repositories: hookRepositories,
+    isLoading: isLoadingRepositories,
+    refetchRepositories,
+  } = useRepository();
 
   // Update local state when repositories change
   useEffect(() => {

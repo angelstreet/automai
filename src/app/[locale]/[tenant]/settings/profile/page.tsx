@@ -7,7 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/shadcn/card';
-import { useUser } from '@/context';
+import { useUser } from '@/hooks';
 
 export default function ProfileSettingsPage() {
   const { user } = useUser();

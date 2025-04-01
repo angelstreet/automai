@@ -7,9 +7,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/shadcn/select';
-import { useUser } from '@/context';
+import { useUser } from '@/hooks';
 import { cn } from '@/lib/utils';
-import {  Role  } from '@/types/service/userServiceType';
+import { Role } from '@/types/service/userServiceType';
 
 // Define roles based on the Role type definition
 const roles: { value: Role; label: string }[] = [

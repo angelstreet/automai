@@ -23,7 +23,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/shadcn/table';
-import { ResourceType, usePermission } from '@/context';
+import type { ResourceType } from '@/types/context/permissionsContextType';
+import { usePermission } from '@/hooks';
 import { TeamMemberResource, TeamMemberDetails } from '@/types/context/teamContextType';
 import { User } from '@/types/service/userServiceType';
 import { useRemoveTeamMember } from '@/hooks/teamMember';

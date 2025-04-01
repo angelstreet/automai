@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { usePermission, ResourceType, Operation } from '@/context/PermissionContext';
+import type { ResourceType, Operation } from '@/types/context/permissionsContextType';
+import { usePermission } from '@/hooks';
 
 interface PermissionGuardProps {
   resourceType: ResourceType;

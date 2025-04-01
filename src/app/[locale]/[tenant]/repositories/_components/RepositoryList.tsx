@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import React, { useState } from 'react';
 
-import { useRepository } from '@/context';
+import { useRepository } from '@/hooks';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/shadcn/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
@@ -69,10 +69,10 @@ export function RepositoryList({ repositories, starredRepos, error }: Repository
 
       // Use the sync function from the hook
       await syncRepository(id);
-      
+
       // Refresh the repositories data
       await refetchRepositories();
-      
+
       // Also refresh the UI
       router.refresh();
     } catch (error) {

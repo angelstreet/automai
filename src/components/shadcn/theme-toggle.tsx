@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { Moon, Sun, Laptop } from 'lucide-react';
 import { useTheme as useNextThemes } from 'next-themes';
-import { useTheme as useCustomTheme } from '@/context';
+import { useTheme } from '@/hooks';
 
 import { Button } from '@/components/shadcn/button';
 import {
@@ -17,7 +17,7 @@ import {
 export function ThemeToggle() {
   // Use both theme hooks for compatibility
   const nextThemes = useNextThemes();
-  const customTheme = useCustomTheme();
+  const customTheme = useTheme();
   const [mounted, setMounted] = useState(false);
 
   // Determine which theme API to use (prefer next-themes)

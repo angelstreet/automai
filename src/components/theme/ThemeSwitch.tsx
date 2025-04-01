@@ -10,7 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
-import { useTheme } from '@/context';
+import { useTheme } from '@/hooks';
 import { cn } from '@/lib/utils';
 
 export function ThemeSwitch() {

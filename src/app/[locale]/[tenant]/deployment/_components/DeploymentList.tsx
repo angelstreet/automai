@@ -4,7 +4,7 @@ import { Search, Clock, Play, Eye, PlayCircle, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
 
-import { useDeployment } from '@/context';
+import { useDeployment } from '@/hooks';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,7 +17,7 @@ import {
 } from '@/components/shadcn/alert-dialog';
 import { Button } from '@/components/shadcn/button';
 import { useToast } from '@/components/shadcn/use-toast';
-import {  Deployment, Repository  } from '@/types/component/deploymentComponentType';
+import { Deployment, Repository } from '@/types/component/deploymentComponentType';
 import { getFormattedTime } from '@/lib/utils/deploymentUtils';
 
 import StatusBadge from './StatusBadge';

@@ -2,7 +2,7 @@ import { PanelLeft } from 'lucide-react';
 import * as React from 'react';
 
 import { Button } from '@/components/shadcn/button';
-import { useSidebar } from '@/context';
+import { useSidebar } from '@/hooks';
 import { cn } from '@/lib/utils';
 
 export const SidebarTrigger = React.forwardRef<

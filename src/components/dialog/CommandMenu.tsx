@@ -15,8 +15,8 @@ import {
 } from '@/components/shadcn/command';
 import { ScrollArea } from '@/components/shadcn/scroll-area';
 import { sidebarData } from '@/components/sidebar/sidebarData';
-import { useSearch } from '@/context/SearchContext';
-import { useTheme } from '@/context/ThemeContext';
+import { useSearch } from '@/hooks';
+import { useTheme } from '@/hooks';
 
 interface NavItem {
   title: string;

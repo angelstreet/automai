@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import type {  ResourceType, Operation  } from '@/types/context/permissionsContextType';
-import { usePermission } from '@/context';
+import type { ResourceType, Operation } from '@/types/context/permissionsContextType';
+import { usePermission } from '@/hooks';
 
 interface PermissionAwareActionsProps {
   resourceType: ResourceType;

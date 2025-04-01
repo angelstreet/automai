@@ -2,9 +2,9 @@ import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import * as React from 'react';
 
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/shadcn/sheet';
-import { useSidebar } from '@/context';
+import { useSidebar } from '@/hooks';
 import { cn } from '@/lib/utils';
-import {  SidebarProps  } from '@/types/context/sidebarContextType';
+import { SidebarProps } from '@/types/context/sidebarContextType';
 
 import { SIDEBAR_WIDTH_MOBILE } from './constants';
 

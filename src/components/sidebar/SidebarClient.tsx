@@ -15,7 +15,7 @@ import { APP_SIDEBAR_WIDTH, APP_SIDEBAR_WIDTH_ICON } from '@/components/sidebar/
 import { sidebarData } from '@/components/sidebar/sidebarData';
 import TeamSelector from '@/components/team/TeamSelector';
 import { TeamSwitcher } from '@/components/team/TeamSwitcher';
-import { useSidebar, useUser } from '@/context';
+import { useSidebar, useUser } from '@/hooks';
 import { cn } from '@/lib/utils';
 import { User } from '@/types/service/userServiceType';
 

@@ -7,7 +7,7 @@ import * as React from 'react';
 import { updatePassword } from '@/app/actions/authAction';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
-import { useUser } from '@/context';
+import { useUser } from '@/hooks';
 
 export default function ResetPasswordPage() {
   const router = useRouter();

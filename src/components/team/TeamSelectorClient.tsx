@@ -12,7 +12,7 @@ import {
   CommandItem,
 } from '@/components/shadcn/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/shadcn/popover';
-import { useUser } from '@/context';
+import { useUser } from '@/hooks';
 import { cn } from '@/lib/utils';
 
 export function TeamSelectorClient() {

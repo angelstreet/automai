@@ -8,7 +8,7 @@ import * as React from 'react';
 import { signInWithOAuth as signInWithOAuthAction } from '@/app/actions/authAction';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
-import { useUser } from '@/context';
+import { useUser } from '@/hooks';
 
 export default function LoginPage() {
   const router = useRouter();

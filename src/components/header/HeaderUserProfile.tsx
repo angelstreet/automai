@@ -15,7 +15,7 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
-import { useUser } from '@/context';
+import { useUser } from '@/hooks';
 
 export function HeaderUserProfile() {
   const router = useRouter();

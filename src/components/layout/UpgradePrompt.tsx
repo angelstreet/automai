@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import * as React from 'react';
 
 import { Button } from '@/components/shadcn/button';
-import { useUser } from '@/context';
+import { useUser } from '@/hooks';
 
 interface UpgradePromptProps {
   feature: string;

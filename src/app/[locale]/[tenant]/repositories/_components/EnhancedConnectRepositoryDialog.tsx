@@ -3,7 +3,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 
-import { useRepository } from '@/context';
+import { useRepository } from '@/hooks';
 import { GitHubIcon, GitLabIcon, GiteaIcon } from '@/components/icons';
 import { Alert, AlertDescription } from '@/components/shadcn/alert';
 import { Badge } from '@/components/shadcn/badge';
@@ -21,7 +21,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/ta
 import { useToast } from '@/components/shadcn/use-toast';
 
 import { CONNECT_REPOSITORY_TABS, AUTH_METHODS } from '../constants';
-import {  EnhancedConnectRepositoryDialogProps, CreateGitProviderParams  } from '@/types/context/repositoryContextType';
+import {
+  EnhancedConnectRepositoryDialogProps,
+  CreateGitProviderParams,
+} from '@/types/context/repositoryContextType';
 
 export function EnhancedConnectRepositoryDialog({
   open,
@@ -43,11 +46,7 @@ export function EnhancedConnectRepositoryDialog({
   const router = useRouter();
 
   // Use the repository hook
-  const { 
-    createGitProvider, 
-    testConnection,
-    connectRepository
-  } = useRepository();
+  const { createGitProvider, testConnection, connectRepository } = useRepository();
 
   const handleConnect = (provider: string) => {
     setCurrentProvider(provider);
@@ -104,7 +103,7 @@ export function EnhancedConnectRepositoryDialog({
         token: accessToken,
         server_url: currentProvider === 'gitea' ? serverUrl : undefined,
       };
-      
+
       const result = await createGitProvider(params);
 
       if (result.success) {
@@ -112,13 +111,13 @@ export function EnhancedConnectRepositoryDialog({
           title: 'Success',
           description: `${currentProvider} provider connected successfully`,
         });
-        
+
         // Refresh the page
         router.refresh();
-        
+
         // Close the dialog
         onOpenChange(false);
-        
+
         if (onSubmit) {
           onSubmit({
             provider: currentProvider,
@@ -167,7 +166,7 @@ export function EnhancedConnectRepositoryDialog({
       const result = await connectRepository({
         url: quickCloneUrl,
         isPrivate: false,
-        description: ''
+        description: '',
       });
 
       if (result.success) {
@@ -296,9 +295,7 @@ export function EnhancedConnectRepositoryDialog({
                       {currentProvider !== 'gitea' && (
                         <TabsTrigger value={AUTH_METHODS.OAUTH}>OAuth</TabsTrigger>
                       )}
-                      <TabsTrigger value={AUTH_METHODS.TOKEN}>
-                        {t('accessToken')}
-                      </TabsTrigger>
+                      <TabsTrigger value={AUTH_METHODS.TOKEN}>{t('accessToken')}</TabsTrigger>
                     </TabsList>
 
                     {currentProvider !== 'gitea' && (

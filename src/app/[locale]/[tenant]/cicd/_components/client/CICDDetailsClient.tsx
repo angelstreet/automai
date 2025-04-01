@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import React, { useState, useCallback } from 'react';
 
-import { useCICD } from '@/context';
+import { useCICD } from '@/hooks';
 import { EmptyState } from '@/components/ui/EmptyState';
 import {
   AlertDialog,
@@ -112,7 +112,7 @@ export default function CICDDetailsClient({
       setIsLoading(true);
       // Use the hook's deleteProvider function instead of the direct action
       const result = await deleteProvider(selectedProvider.id);
-      
+
       if (result.success) {
         router.refresh(); // Use Next.js router refresh to trigger server revalidation
       }

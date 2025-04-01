@@ -5,7 +5,10 @@ import { useTranslations } from 'next-intl';
 import React from 'react';
 
 import { Button } from '@/components/shadcn/button';
-import { ResourceType, usePermission } from '@/context';
+// Import the ResourceType from its actual type file
+import type { ResourceType } from '@/types/context/permissionsContextType';
+// Import the hook from hooks directory
+import { usePermission } from '@/hooks';
 import { useTeam } from '@/hooks/team';
 import { TeamDetails } from '@/types/context/teamContextType';
 

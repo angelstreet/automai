@@ -16,7 +16,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
 } from '@/components/sidebar';
-import { useSidebar } from '@/context';
+import { useSidebar } from '@/hooks';
 import { cn } from '@/lib/utils';
 
 interface SidebarNavGroupProps {

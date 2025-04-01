@@ -11,9 +11,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
-import { useUser } from '@/context';
+import { useUser } from '@/hooks';
 import { cn } from '@/lib/utils';
-import {  User  } from '@/types/service/userServiceType';
+import { User } from '@/types/service/userServiceType';
 
 // Define team type for visual consistency
 type VisualTeam = {

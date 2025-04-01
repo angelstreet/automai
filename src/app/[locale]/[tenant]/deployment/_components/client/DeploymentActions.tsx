@@ -4,7 +4,7 @@ import { PlusCircle, RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React, { useState, useEffect } from 'react';
 
-import { useHost, useCICD, useRepository } from '@/context';
+import { useHost, useCICD, useRepository } from '@/hooks';
 import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent } from '@/components/shadcn/dialog';
 
@@ -25,11 +25,7 @@ export function DeploymentActions() {
     setIsRefreshing(true);
     try {
       // Use hooks to refresh all data in parallel
-      await Promise.all([
-        refetchHosts(),
-        refetchProviders(),
-        refetchRepositories()
-      ]);
+      await Promise.all([refetchHosts(), refetchProviders(), refetchRepositories()]);
     } catch (error) {
       console.error('Error refreshing data:', error);
     } finally {

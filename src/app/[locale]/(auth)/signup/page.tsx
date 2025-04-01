@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/shadcn/select';
 import { useToast } from '@/components/shadcn/use-toast';
-import { useUser } from '@/context';
+import { useUser } from '@/hooks';
 
 export default function SignUpPage() {
   const router = useRouter();
