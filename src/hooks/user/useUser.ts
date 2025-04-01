@@ -1,25 +1,90 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useContext, useEffect, useMemo } from 'react';
+import { useEffect, useRef } from 'react';
 
-import { getUser, updateProfile } from '@/app/actions/userAction';
-import { UserContext } from '@/context/UserContext';
-import type { User } from '@/types/service/userServiceType';
+import { getUser, updateProfile, invalidateUserCache } from '@/app/actions/userAction';
+import type { User, Role } from '@/types/service/userServiceType';
+
+// Generate a unique ID for each hook instance
+let hookInstanceCounter = 0;
 
 /**
- * Hook for fetching user data with React Query
- * Handles caching and persistence
+ * Main hook for accessing and managing user data
+ * Uses React Query for client-side caching
+ *
+ * @param initialUser Optional initial user data
+ * @param componentName Optional component name for debugging
  */
-export function useUserQuery(initialUser: User | null = null) {
+export function useUser(initialUser: User | null = null, componentName = 'unknown') {
   const queryClient = useQueryClient();
+  const isMounted = useRef(false);
+  const instanceId = useRef(++hookInstanceCounter);
+
+  // Log on first render
+  useEffect(() => {
+    // Store instanceId.current in a variable that won't change between effect and cleanup
+    const currentInstanceId = instanceId.current;
+
+    if (!isMounted.current) {
+      console.log(
+        `[@hook:useUser:useUser] Hook mounted #${currentInstanceId} in component: ${componentName}`,
+      );
+      isMounted.current = true;
+    }
+
+    return () => {
+      console.log(
+        `[@hook:useUser:useUser] Hook unmounted #${currentInstanceId} from component: ${componentName}`,
+      );
+    };
+  }, [componentName]);
 
   // User profile update mutation
   const { mutate: updateUser, isPending: isUpdating } = useMutation({
-    mutationFn: (userData: Record<string, any>) => updateProfile(userData),
+    mutationFn: (userData: Record<string, any>) => {
+      console.log(
+        `[@hook:useUser:updateUser] #${instanceId.current} Updating user profile`,
+        userData,
+      );
+      return updateProfile(userData);
+    },
     onSuccess: () => {
+      console.log(
+        `[@hook:useUser:updateUser] #${instanceId.current} Successfully updated user profile`,
+      );
       // Invalidate user query to refetch data
       queryClient.invalidateQueries({ queryKey: ['user'] });
+    },
+  });
+
+  // Role update mutation (uses updateProfile with role data)
+  const { mutate: updateRole, isPending: isRoleUpdating } = useMutation({
+    mutationFn: (role: Role) => {
+      console.log(`[@hook:useUser:updateRole] #${instanceId.current} Updating user role`, role);
+      return updateProfile({ role });
+    },
+    onSuccess: () => {
+      console.log(
+        `[@hook:useUser:updateRole] #${instanceId.current} Successfully updated user role`,
+      );
+      queryClient.invalidateQueries({ queryKey: ['user'] });
+    },
+  });
+
+  // Cache clearing mutation
+  const { mutate: clearCache, isPending: isClearing } = useMutation({
+    mutationFn: () => {
+      console.log(`[@hook:useUser:clearCache] #${instanceId.current} Clearing user cache`);
+      return invalidateUserCache();
+    },
+    onSuccess: () => {
+      console.log(
+        `[@hook:useUser:clearCache] #${instanceId.current} Successfully cleared user cache`,
+      );
+      queryClient.invalidateQueries({ queryKey: ['user'] });
+      localStorage.removeItem('cached_user');
+      localStorage.removeItem('user_cache_timestamp');
     },
   });
 
@@ -28,10 +93,18 @@ export function useUserQuery(initialUser: User | null = null) {
     data: user,
     isLoading,
     error,
-    refetch,
+    refetch: refreshUser,
   } = useQuery({
     queryKey: ['user'],
-    queryFn: getUser,
+    queryFn: async () => {
+      console.log(`[@hook:useUser:useUser] #${instanceId.current} Fetching user data from server`);
+      const result = await getUser();
+      console.log(
+        `[@hook:useUser:useUser] #${instanceId.current} Received user data:`,
+        result ? 'User found' : 'No user',
+      );
+      return result;
+    },
     initialData: initialUser,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
@@ -41,57 +114,35 @@ export function useUserQuery(initialUser: User | null = null) {
   useEffect(() => {
     if (user) {
       try {
+        console.log(
+          `[@hook:useUser:useUser] #${instanceId.current} Caching user data to localStorage`,
+        );
         localStorage.setItem('cached_user', JSON.stringify(user));
         localStorage.setItem('user_cache_timestamp', Date.now().toString());
       } catch (error) {
-        console.error('[@hook:useUser] Error caching user data:', error);
+        console.error(
+          `[@hook:useUser:useUser] #${instanceId.current} Error caching user data:`,
+          error,
+        );
       }
     }
   }, [user]);
 
   return {
+    // User data
     user,
     isLoading,
     error,
-    updateUser,
+
+    // User operations
+    updateProfile: updateUser,
+    refreshUser,
+    updateRole,
+    clearCache,
+
+    // Operation states
     isUpdating,
-    refetch,
+    isRoleUpdating,
+    isClearing,
   };
-}
-
-/**
- * Access the user context directly
- * This is a simple hook that provides access to the context
- */
-export function useUserContext() {
-  const context = useContext(UserContext);
-  if (!context) {
-    throw new Error('useUserContext must be used within a UserProvider');
-  }
-  return context;
-}
-
-/**
- * Memoized hook for accessing user data from context
- * Returns a stable reference to prevent unnecessary re-renders
- */
-export function useUser() {
-  const userContext = useUserContext();
-
-  return useMemo(() => {
-    return {
-      user: userContext.user,
-      loading: userContext.loading,
-      error: userContext.error,
-      updateProfile: userContext.updateProfile,
-      refreshUser: userContext.refreshUser,
-      updateRole: userContext.updateRole,
-      clearCache: userContext.clearCache,
-      teams: userContext.teams,
-      selectedTeam: userContext.selectedTeam,
-      teamMembers: userContext.teamMembers,
-      setSelectedTeam: userContext.setSelectedTeam,
-      checkResourceLimit: userContext.checkResourceLimit,
-    };
-  }, [userContext]);
 }

@@ -39,7 +39,7 @@ export default function TeamSwitcherClient({
   defaultCollapsed = false,
   initialUser,
 }: TeamSwitcherClientProps) {
-  const { user, teams, selectedTeam, setSelectedTeam } = useUser();
+  const { user, teams, selectedTeam, setSelectedTeam } = useUser(null, 'TeamSwitcherClient');
   const currentUser = initialUser || user;
 
   // If no user data yet, show a minimal loading state

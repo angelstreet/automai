@@ -24,7 +24,7 @@ interface SidebarUserProfileProps {
 export function SidebarUserProfile({ tenant }: SidebarUserProfileProps) {
   const router = useRouter();
   const params = useParams();
-  const { user } = useUser();
+  const { user } = useUser(null, 'SidebarUserProfile');
   const locale = (params?.locale as string) || 'en';
 
   const handleSignOut = async () => {

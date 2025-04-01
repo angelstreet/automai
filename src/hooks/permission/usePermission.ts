@@ -30,7 +30,7 @@ export function usePermissionContext() {
  * @param specificTeamId Optional team ID to override the active team from context
  */
 export function usePermission(specificTeamId?: string) {
-  const { user } = useUser();
+  const { user } = useUser(null, 'usePermission');
   const { activeTeam } = useTeam();
   const queryClient = useQueryClient();
   const userId = user?.id;

@@ -25,7 +25,7 @@ interface SidebarClientProps {
 
 // Wrap the component with React.memo to prevent unnecessary re-renders
 const SidebarClient = React.memo(function SidebarClient({ user: propUser }: SidebarClientProps) {
-  const userContext = useUser();
+  const userContext = useUser(null, 'SidebarClient');
   // Use prop user if available, otherwise fall back to context
   const user = propUser || userContext?.user || null;
   const { open } = useSidebar();

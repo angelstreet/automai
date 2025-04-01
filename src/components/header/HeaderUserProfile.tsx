@@ -20,7 +20,7 @@ import { useUser } from '@/hooks';
 export function HeaderUserProfile() {
   const router = useRouter();
   const params = useParams();
-  const { user } = useUser();
+  const { user } = useUser(null, 'HeaderUserProfile');
   const locale = params.locale as string;
   const tenant = (params.tenant as string) || 'trial';
 

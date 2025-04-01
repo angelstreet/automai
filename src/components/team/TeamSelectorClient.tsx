@@ -16,7 +16,13 @@ import { useUser } from '@/hooks';
 import { cn } from '@/lib/utils';
 
 export function TeamSelectorClient() {
-  const { user, teams: userTeams, selectedTeam, setSelectedTeam, refreshUser } = useUser();
+  const {
+    user,
+    teams: userTeams,
+    selectedTeam,
+    setSelectedTeam,
+    refreshUser,
+  } = useUser(null, 'TeamSelectorClient');
   const [open, setOpen] = useState(false);
 
   useEffect(() => {

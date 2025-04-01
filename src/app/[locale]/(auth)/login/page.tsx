@@ -22,7 +22,7 @@ export default function LoginPage() {
   const [isAuthenticating, setIsAuthenticating] = React.useState(false);
 
   // Use the user hook only for user data and loading state
-  const { user, loading, error: authError } = useUser();
+  const { user, loading, error: authError } = useUser(null, 'LoginPage');
 
   // Check for prefilled credentials from URL
   React.useEffect(() => {
