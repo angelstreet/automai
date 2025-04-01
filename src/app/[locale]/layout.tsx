@@ -22,7 +22,7 @@ export default async function LocaleLayout({ children, params }: Props) {
   try {
     console.log('About to render NextIntlClientProvider with locale:', locale);
     console.log('Messages sample:', Object.keys(messages).slice(0, 3));
-    
+
     return (
       <NextIntlClientProvider locale={locale} messages={messages} timeZone="UTC">
         {children}
