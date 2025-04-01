@@ -6,7 +6,7 @@ import { useLocale } from 'next-intl';
 
 import { Button } from '@/components/shadcn/button';
 import { LanguageSwitcher } from '@/components/shadcn/language-switcher';
-import { ThemeToggle } from '@/components/shadcn/theme-toggle';
+import { ThemeToggleStatic } from '@/components/theme/ThemeToggleStatic';
 
 interface HeaderProps {
   showAuth?: boolean;
@@ -44,7 +44,7 @@ export function SiteHeader({ showAuth = true }: HeaderProps) {
         <div className="flex flex-1 items-center justify-end space-x-2">
           <nav className="flex items-center space-x-2">
             <LanguageSwitcher />
-            <ThemeToggle />
+            <ThemeToggleStatic />
             {showAuth && (
               <>
                 <Button variant="ghost" asChild>

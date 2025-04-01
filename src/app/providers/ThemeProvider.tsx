@@ -2,11 +2,11 @@
 
 import { ThemeProvider as NextThemesProvider } from 'next-themes';
 import { createContext, useContext } from 'react';
+import { useTheme as useNextTheme } from 'next-themes';
 
 import { TooltipProvider } from '@/components/shadcn/tooltip';
 import { FontProvider } from '@/context/FontContext';
 import { SearchProvider } from '@/context/SearchContext';
-import { useThemeLogic } from '@/hooks/theme';
 
 // Define theme context
 type Theme = 'light' | 'dark' | 'system';
@@ -16,34 +16,26 @@ export interface ThemeContextType {
   setTheme: (theme: Theme) => void;
 }
 
+// Create a context for compatibility, but it will just forward to next-themes
 export const ThemeContext = createContext<ThemeContextType>({
   theme: 'system',
   setTheme: () => null,
 });
 
+// Simple provider that just forwards to next-themes
 export function ThemeProvider({
   children,
   defaultTheme = 'system',
-  initialTheme,
 }: {
   children: React.ReactNode;
   defaultTheme?: Theme;
-  initialTheme?: ThemeContextType;
 }) {
-  // Use the theme logic hook instead of managing state directly
-  const themeLogic = useThemeLogic(defaultTheme);
-  
-  // Use the provider as a pure data container
-  return (
-    <ThemeContext.Provider value={initialTheme || themeLogic}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  return <>{children}</>;
 }
 
-// Simple context accessor
+// Simple context accessor that forwards to next-themes
 export function useTheme() {
-  return useContext(ThemeContext);
+  return useNextTheme();
 }
 
 interface ThemeProvidersProps {
@@ -53,20 +45,18 @@ interface ThemeProvidersProps {
 
 export function ThemeProviders({ children, defaultTheme = 'system' }: ThemeProvidersProps) {
   return (
-    // Use both theme providers, with next-themes as the outer one
+    // Only use next-themes provider
     <NextThemesProvider
       attribute="class"
       defaultTheme={defaultTheme}
       enableSystem
       disableTransitionOnChange
     >
-      <ThemeProvider defaultTheme={defaultTheme}>
-        <FontProvider>
-          <TooltipProvider>
-            <SearchProvider>{children}</SearchProvider>
-          </TooltipProvider>
-        </FontProvider>
-      </ThemeProvider>
+      <FontProvider>
+        <TooltipProvider>
+          <SearchProvider>{children}</SearchProvider>
+        </TooltipProvider>
+      </FontProvider>
     </NextThemesProvider>
   );
 }

@@ -7,24 +7,14 @@ import { useTheme as useNextTheme } from 'next-themes';
 type Theme = 'light' | 'dark' | 'system';
 
 export function useThemeLogic(defaultTheme: Theme = 'system') {
-  const [theme, setTheme] = useState<Theme>(defaultTheme);
-  const { setTheme: setNextTheme, theme: nextTheme } = useNextTheme();
-
-  // Sync our state with next-themes
-  useEffect(() => {
-    if (nextTheme && (nextTheme === 'light' || nextTheme === 'dark' || nextTheme === 'system')) {
-      setTheme(nextTheme as Theme);
-    }
-  }, [nextTheme]);
-
-  // Update both our state and next-themes when theme changes
-  const updateTheme = (newTheme: Theme) => {
-    setTheme(newTheme);
-    setNextTheme(newTheme);
-  };
-
+  // We'll just forward the Next.js theme - no need for duplicate state
+  const { theme: nextTheme, setTheme: setNextTheme } = useNextTheme();
+  
+  // Safely typed theme value
+  const theme = (nextTheme || defaultTheme) as Theme;
+  
   return {
     theme,
-    setTheme: updateTheme
+    setTheme: setNextTheme
   };
 }

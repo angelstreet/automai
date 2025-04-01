@@ -2,7 +2,8 @@ import './globals.css';
 import { Inter } from 'next/font/google';
 import { cookies } from 'next/headers';
 
-import { ThemeProviders, SWRProvider, ToastProvider } from '@/app/providers';
+import { ThemeProvider } from '@/components/theme/ThemeProvider'; 
+import { SWRProvider, ToastProvider } from '@/app/providers';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -41,11 +42,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
       </head>
       <body>
-        <ThemeProviders defaultTheme={theme}>
+        <ThemeProvider defaultTheme={theme}>
           <SWRProvider>
             <ToastProvider>{children}</ToastProvider>
           </SWRProvider>
-        </ThemeProviders>
+        </ThemeProvider>
       </body>
     </html>
   );

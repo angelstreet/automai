@@ -4,26 +4,27 @@ import type { UserContextType } from '@/types/context/user';
 export { 
   UserProvider,
   SidebarProvider,
-  ThemeProviders,
   TeamProvider
 } from '@/app/providers';
 
-// Export ThemeProvider with correct name
-export { ThemeProvider } from '@/app/providers/theme';
+// Export theme functionality from components
+export { ThemeProvider } from '@/components/theme/ThemeProvider';
 
 // Export basic data context hooks that access provider data only
 export { 
   useUser, 
   useSidebar,
-  useTheme,
   useTeam
 } from '@/app/providers';
+
+// Use next-themes directly
+export { useTheme } from 'next-themes';
 
 // Export business logic hooks from hooks directory
 export { usePermission } from '@/hooks/permission';
 export { useUserLogic, useUserData } from '@/hooks/user';
 export { useSidebarLogic } from '@/hooks/sidebar';
-export { useThemeLogic } from '@/hooks/theme';
+// Theme logic is now handled by next-themes
 
 // Re-export the specialized team hooks from TeamContext for backward compatibility
 export {
