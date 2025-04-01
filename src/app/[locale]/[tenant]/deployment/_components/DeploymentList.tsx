@@ -18,7 +18,7 @@ import {
 import { Button } from '@/components/shadcn/button';
 import { useToast } from '@/components/shadcn/use-toast';
 import {  Deployment, Repository  } from '@/types/component/deploymentComponentType';
-import { getFormattedTime } from '@/utils/deployment';
+import { getFormattedTime } from '@/lib/utils/deploymentUtils';
 
 import StatusBadge from './StatusBadge';
 
