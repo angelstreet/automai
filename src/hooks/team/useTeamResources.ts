@@ -8,7 +8,7 @@ import {
   checkResourceLimit,
 } from '@/app/actions/teamAction';
 import { useToast } from '@/components/shadcn/use-toast';
-import { useUser } from '@/context/UserContext';
+import { useUser } from '@/hooks/user/useUser';
 
 /**
  * Hook for accessing unassigned resources
@@ -21,6 +21,7 @@ export function useUnassignedResources() {
     },
     refetchOnWindowFocus: false,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 }
 
@@ -89,5 +90,6 @@ export function useResourceLimit(resourceType: string) {
     enabled: !!user,
     refetchOnWindowFocus: false,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 }

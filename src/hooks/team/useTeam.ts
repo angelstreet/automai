@@ -4,8 +4,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useContext } from 'react';
 
 import { getUserTeams, getUserActiveTeam, setUserActiveTeam } from '@/app/actions/teamAction';
-import { useUser } from '@/app/providers';
 import { TeamContext } from '@/context/TeamContext';
+import { useUser } from '@/hooks/user/useUser';
 
 /**
  * Hook to access team data from context
