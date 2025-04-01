@@ -1,5 +1,4 @@
-import { Features, Hero } from './(marketing)/_components';
-import { SiteHeader } from './(marketing)/_components/client/SiteHeader';
+import { Features, Hero, SiteHeader } from './(marketing)/_components';
 
 export default async function Page() {
   return (
