@@ -37,7 +37,10 @@ const features = [
 ];
 
 export function Features() {
-  return (
+  console.log('Rendering Features component');
+  
+  try {
+    return (
     <div className="py-16 sm:py-24">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <div className="mx-auto max-w-2xl lg:text-center">
@@ -68,4 +71,13 @@ export function Features() {
       </div>
     </div>
   );
+  } catch (error) {
+    console.error('Error rendering Features component:', error);
+    return (
+      <div className="p-4 text-red-500 bg-red-50 rounded-md">
+        <h2 className="font-bold mb-2">Features component error</h2>
+        <p>{error instanceof Error ? error.message : 'Unknown error'}</p>
+      </div>
+    );
+  }
 }

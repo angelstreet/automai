@@ -6,10 +6,13 @@ import { useTranslations, useLocale } from 'next-intl';
 import { Button } from '@/components/shadcn/button';
 
 export function Hero() {
-  const t = useTranslations('Index');
-  const locale = useLocale();
-
-  return (
+  console.log('Rendering Hero component');
+  
+  try {
+    const t = useTranslations('Index');
+    const locale = useLocale();
+    
+    return (
     <div className="relative isolate px-6 pt-24 lg:px-8">
       <div className="mx-auto max-w-2xl py-32 sm:py-12 lg:py-53">
         <div className="text-center">
@@ -39,4 +42,13 @@ export function Hero() {
       </div>
     </div>
   );
+  } catch (error) {
+    console.error('Error rendering Hero component:', error);
+    return (
+      <div className="p-4 text-red-500 bg-red-50 rounded-md">
+        <h2 className="font-bold mb-2">Hero component error</h2>
+        <p>{error instanceof Error ? error.message : 'Unknown error'}</p>
+      </div>
+    );
+  }
 }

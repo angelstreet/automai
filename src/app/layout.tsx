@@ -13,9 +13,11 @@ const inter = Inter({
 });
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  console.log('Rendering RootLayout');
   const cookieStore = await cookies();
   const themeCookie = cookieStore.get('theme');
   const theme = (themeCookie?.value ?? 'system') as 'light' | 'dark' | 'system';
+  console.log('RootLayout theme:', theme);
 
   return (
     <html lang="en" className={`${inter.className} js-loading`} suppressHydrationWarning>
