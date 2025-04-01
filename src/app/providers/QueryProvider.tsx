@@ -13,12 +13,8 @@ export function QueryProvider({ children }: { children: ReactNode }) {
             gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
           },
         },
-      })
+      }),
   );
 
-  return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-    </QueryClientProvider>
-  );
+  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 }
