@@ -9,6 +9,7 @@ import { Separator } from '@/components/shadcn/separator';
 import { SidebarTrigger } from '@/components/sidebar';
 import { RoleSwitcher } from '@/components/team/RoleSwitcher';
 import { ThemeToggleStatic } from '@/components/theme/ThemeToggleStatic';
+import { Search } from '@/components/ui/Search';
 import { useSidebar } from '@/hooks';
 import { cn } from '@/lib/utils';
 import { Team } from '@/types/context/teamContextType';
@@ -77,16 +78,20 @@ export function HeaderClient({
                 )}
               </div>
               <Separator orientation="vertical" className="h-8 opacity-30" />
-              <div className="flex items-center">
-                <ThemeToggleStatic />
+              <div className="flex-1 max-w-[32rem] min-w-[12.5rem]">
+                <Search />
               </div>
-              <Separator orientation="vertical" className="h-8 opacity-30" />
-              <Suspense
-                fallback={<div className="h-8 w-8 bg-muted/30 rounded-full animate-pulse" />}
-              >
-                <HeaderUserProfile user={user} activeTeam={activeTeam} />
-              </Suspense>
-              <Separator orientation="vertical" className="h-8 opacity-30" />
+              <div className="flex items-center gap-1">
+                <Separator orientation="vertical" className="h-8 opacity-30" />
+                <ThemeToggleStatic />
+                <Separator orientation="vertical" className="h-8 opacity-30" />
+                <Suspense
+                  fallback={<div className="h-8 w-8 bg-muted/30 rounded-full animate-pulse" />}
+                >
+                  <HeaderUserProfile user={user} activeTeam={activeTeam} />
+                </Suspense>
+                <Separator orientation="vertical" className="h-8 opacity-30" />
+              </div>
             </div>
           </>
         )}

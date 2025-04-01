@@ -20,7 +20,7 @@ export const SidebarMenuItem = forwardRef<HTMLLIElement, React.ComponentProps<'l
     <li
       ref={ref}
       data-sidebar="menu-item"
-      className={cn('group/menu-item relative', className)}
+      className={cn('group/menu-item relative list-none', className)}
       {...props}
     />
   ),
