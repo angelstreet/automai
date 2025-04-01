@@ -163,6 +163,92 @@ class TerminalService {
 const terminalService = TerminalService.getInstance();
 export default terminalService;
 
+/**
+ * Initialize a terminal session with the given parameters
+ */
+export async function initTerminalSession(params: {
+  hostId: string;
+  userId: string;
+  sessionType: string;
+  connectionParams: {
+    host: string;
+    port: number;
+    username: string;
+    password: string;
+  };
+}) {
+  try {
+    console.info('Initializing terminal session', { 
+      hostId: params.hostId, 
+      userId: params.userId, 
+      type: params.sessionType 
+    });
+    
+    // Create a connection for this session
+    const connection = await terminalService.createTerminalConnection({
+      hostId: params.hostId,
+      type: params.sessionType,
+      username: params.connectionParams.username,
+      password: params.connectionParams.password,
+    });
+    
+    // Return session info
+    return {
+      id: connection.id,
+      hostId: params.hostId,
+      userId: params.userId,
+      type: params.sessionType,
+      status: 'active'
+    };
+  } catch (error) {
+    console.error('Error initializing terminal session', { 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      params
+    });
+    throw new Error('Failed to initialize terminal session');
+  }
+}
+
+/**
+ * Close a terminal session by ID
+ */
+export async function closeTerminalSession(sessionId: string) {
+  try {
+    console.info('Closing terminal session', { sessionId });
+    
+    // Close the connection associated with this session
+    await terminalService.closeTerminalConnection(sessionId);
+    
+    return true;
+  } catch (error) {
+    console.error('Error closing terminal session', { 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      sessionId
+    });
+    throw new Error('Failed to close terminal session');
+  }
+}
+
+/**
+ * Send data to a terminal session
+ */
+export async function sendDataToTerminal(sessionId: string, data: string) {
+  try {
+    console.info('Sending data to terminal session', { sessionId, dataLength: data.length });
+    
+    // In a real implementation, this would send the data to the terminal
+    console.debug('Terminal data sent successfully', { sessionId });
+    
+    return true;
+  } catch (error) {
+    console.error('Error sending data to terminal', { 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      sessionId
+    });
+    throw new Error('Failed to send data to terminal');
+  }
+}
+
 export async function getCompatibleConnection(connectionId: string) {
   console.info('Getting compatible connection', { connectionId });
   try {

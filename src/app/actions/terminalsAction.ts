@@ -28,8 +28,8 @@ export async function initTerminal(hostId: string) {
 
     const host = hostResult.data;
 
-    // Import the terminal service
-    const { initTerminalSession } = await import('@/lib/services/terminal');
+    // Import the terminal service functions
+    const { initTerminalSession } = await import('@/lib/services/terminalService');
 
     // Create terminal session
     const session = await initTerminalSession({
@@ -78,8 +78,8 @@ export async function closeTerminal(sessionId: string) {
       };
     }
 
-    // Import the terminal service
-    const { closeTerminalSession } = await import('@/lib/services/terminal');
+    // Import the terminal service functions
+    const { closeTerminalSession } = await import('@/lib/services/terminalService');
 
     // Close terminal session
     await closeTerminalSession(sessionId);
@@ -110,8 +110,8 @@ export async function sendTerminalData(sessionId: string, data: string) {
       };
     }
 
-    // Import the terminal service
-    const { sendDataToTerminal } = await import('@/lib/services/terminal');
+    // Import the terminal service functions
+    const { sendDataToTerminal } = await import('@/lib/services/terminalService');
 
     // Send data to terminal
     await sendDataToTerminal(sessionId, data);

@@ -52,7 +52,7 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
     }
 
     // Import the deployment database operations
-    const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
+    const deploymentDb = await import('@/lib/db/deploymentDb');
 
     // Prepare deployment data
     const deploymentData = {
@@ -69,7 +69,7 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
     };
 
     // Create the deployment
-    const result = await deploymentDb.createDeployment({
+    const result = await deploymentDb.default.createDeployment({
       data: deploymentData,
     });
 
@@ -112,10 +112,10 @@ export async function startDeployment(deploymentId: string) {
     }
 
     // Import the deployment database operations
-    const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
+    const deploymentDb = await import('@/lib/db/deploymentDb');
 
     // Update deployment status
-    const result = await deploymentDb.updateDeployment({
+    const result = await deploymentDb.default.updateDeployment({
       where: { id: deploymentId },
       data: { status: 'running', started_at: new Date().toISOString() },
     });

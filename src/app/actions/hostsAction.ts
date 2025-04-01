@@ -114,7 +114,7 @@ export async function createHost(
     console.info(`[@action:hosts:createHost] Starting host creation for user: ${currentUser.id}`);
     console.info('[@action:hosts:createHost] raw data:', data);
     // Get the active team ID from user context instead of direct cookie access
-    const { getUserActiveTeam, getUserTeams, createTeam } = await import('@/app/actions/team');
+    const { getUserActiveTeam, getUserTeams, createTeam } = await import('@/app/actions/teamAction');
 
     // Try to get active team first
     let teamId;
