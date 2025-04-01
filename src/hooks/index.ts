@@ -9,5 +9,4 @@ export * from './team';
 export * from './teamMember';
 export * from './permission';
 export * from './user';
-export * from './sidebar';
 export * from './theme';

@@ -1,6 +1,7 @@
 import { PostgrestError } from '@supabase/supabase-js';
+
 import { createClient } from '@/lib/supabase/server';
-import { DbResponse } from './dbUtils';
+import { type DbResponse } from '@/lib/utils/dbUtils';
 
 export interface Team {
   id: string;
@@ -327,10 +328,7 @@ export async function updateTeam(
 /**
  * Delete a team
  */
-export async function deleteTeam(
-  teamId: string,
-  cookieStore?: any,
-): Promise<DbResponse<null>> {
+export async function deleteTeam(teamId: string, cookieStore?: any): Promise<DbResponse<null>> {
   try {
     const supabase = await createClient(cookieStore);
     const { error } = await supabase.from('teams').delete().eq('id', teamId);
@@ -339,7 +337,7 @@ export async function deleteTeam(
 
     return {
       success: true,
-      data: null
+      data: null,
     };
   } catch (error) {
     console.error('[@db:teamDb:deleteTeam] Error deleting team:', error);
@@ -353,7 +351,10 @@ export async function deleteTeam(
 /**
  * Get the active team for a user
  */
-export async function getUserActiveTeam(userId: string, cookieStore?: any): Promise<DbResponse<Team>> {
+export async function getUserActiveTeam(
+  userId: string,
+  cookieStore?: any,
+): Promise<DbResponse<Team>> {
   try {
     console.log(`[@db:teamDb:getUserActiveTeam] Getting active team for user: ${userId}`);
 
@@ -433,7 +434,9 @@ export async function setUserActiveTeam(
   cookieStore?: any,
 ): Promise<DbResponse<null>> {
   try {
-    console.log(`[@db:teamDb:setUserActiveTeam] Setting active team: ${teamId} for user: ${userId}`);
+    console.log(
+      `[@db:teamDb:setUserActiveTeam] Setting active team: ${teamId} for user: ${userId}`,
+    );
 
     // First check if the team exists and the user is a member
     const teamResult = await getTeamById(teamId, cookieStore);
@@ -466,7 +469,7 @@ export async function setUserActiveTeam(
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to set user active team',
-      data: null
+      data: null,
     };
   }
 }

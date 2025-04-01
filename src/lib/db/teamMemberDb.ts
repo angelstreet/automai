@@ -1,11 +1,4 @@
 import { createClient } from '@/lib/supabase/server';
-
-export default {
-  getTeamMembers,
-  addTeamMember,
-  updateTeamMemberRole,
-  removeTeamMember
-};
 import type { TeamMember, TeamMemberCreateInput } from '@/types/context/teamContextType';
 import { DbResponse } from './dbUtils';
 
@@ -264,3 +257,11 @@ export async function removeTeamMember(
     };
   }
 }
+
+// Export at the end of the file
+export default {
+  getTeamMembers,
+  addTeamMember,
+  updateTeamMemberRole,
+  removeTeamMember,
+};

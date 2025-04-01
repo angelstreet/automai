@@ -1,13 +1,30 @@
 'use client';
 
-import { createContext, useContext, Suspense } from 'react';
+import Cookies from 'js-cookie';
+import {
+  createContext,
+  useContext,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  Suspense,
+} from 'react';
+
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from '@/components/sidebar';
 import { SidebarClient } from '@/components/sidebar/SidebarClient';
-import { APP_SIDEBAR_WIDTH, APP_SIDEBAR_WIDTH_ICON } from '@/components/sidebar/constants';
-import { SidebarContext as SidebarContextType } from '@/types/context/sidebarContextType';
-import { useSidebar } from '@/hooks/sidebar';
-import { User } from '@/types/service/userServiceType';
+import {
+  APP_SIDEBAR_WIDTH,
+  APP_SIDEBAR_WIDTH_ICON,
+  SIDEBAR_COOKIE_NAME,
+} from '@/components/sidebar/constants';
 import { cn } from '@/lib/utils';
+import { SidebarContext as SidebarContextType } from '@/types/context/sidebarContextType';
+import { User } from '@/types/service/userServiceType';
+
+// Create a safe version of useLayoutEffect that falls back to useEffect during SSR
+const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 // Create context with a null default value
 export const SidebarContext = createContext<SidebarContextType | null>(null);
@@ -19,14 +36,143 @@ interface SidebarProviderProps {
   user: User | null;
 }
 
+// Internal hook for sidebar logic
+function useSidebarLogic(defaultOpen = true) {
+  // States
+  const [open, setOpen] = useState(defaultOpen);
+  const [state, setState] = useState<'expanded' | 'collapsed'>(
+    defaultOpen ? 'expanded' : 'collapsed',
+  );
+  const [openMobile, setOpenMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Reference to track if singleton is initialized
+  const contextInitializedRef = useRef(false);
+
+  // Check for multiple instances
+  useEffect(() => {
+    if (contextInitializedRef.current) {
+      console.warn(
+        '[@hooks:useSidebarLogic] Multiple instances detected. This may cause unexpected behavior.',
+      );
+    } else {
+      contextInitializedRef.current = true;
+      console.log('[@hooks:useSidebarLogic] Successfully initialized singleton instance');
+    }
+
+    return () => {
+      if (contextInitializedRef.current) {
+        contextInitializedRef.current = false;
+      }
+    };
+  }, []);
+
+  // Sync with localStorage/cookies after initial render
+  useEffect(() => {
+    if (typeof window === 'undefined' || isInitialized) return;
+
+    try {
+      localStorage.setItem(SIDEBAR_COOKIE_NAME, String(open));
+      Cookies.set(SIDEBAR_COOKIE_NAME, String(open), { path: '/' });
+      console.log(
+        `[@hooks:useSidebarLogic:useEffect] Synced initial state to storage: ${open ? 'expanded' : 'collapsed'}`,
+      );
+    } catch (e) {
+      console.error('[@hooks:useSidebarLogic:useEffect] ERROR: Error syncing sidebar state', e);
+    }
+
+    setIsInitialized(true);
+  }, [open, isInitialized]);
+
+  // Handle mobile detection
+  const checkIsMobile = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      setIsMobile(window.innerWidth < 768);
+    }
+  }, []);
+
+  useEffect(() => {
+    checkIsMobile();
+
+    if (typeof window !== 'undefined') {
+      let resizeTimer: NodeJS.Timeout;
+      const handleResize = () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(checkIsMobile, 100);
+      };
+
+      window.addEventListener('resize', handleResize);
+      return () => {
+        window.removeEventListener('resize', handleResize);
+        clearTimeout(resizeTimer);
+      };
+    }
+  }, [checkIsMobile]);
+
+  // Toggle sidebar state
+  const toggleSidebar = useCallback(() => {
+    const newOpen = !open;
+    setOpen(newOpen);
+    setState(newOpen ? 'expanded' : 'collapsed');
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(SIDEBAR_COOKIE_NAME, String(newOpen));
+        Cookies.set(SIDEBAR_COOKIE_NAME, String(newOpen), { path: '/' });
+      } catch (e) {
+        console.error(
+          '[@hooks:useSidebarLogic:toggleSidebar] ERROR: Error storing sidebar state',
+          e,
+        );
+        Cookies.set(SIDEBAR_COOKIE_NAME, String(newOpen), { path: '/' });
+      }
+    }
+  }, [open]);
+
+  // Handle CSS variables
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      const root = document.documentElement;
+      const sidebarOffset = open ? APP_SIDEBAR_WIDTH : APP_SIDEBAR_WIDTH_ICON;
+      root.style.setProperty('--sidebar-width-offset', sidebarOffset);
+    }
+  }, [open]);
+
+  // Initial CSS setup
+  useIsomorphicLayoutEffect(() => {
+    if (typeof document !== 'undefined') {
+      const root = document.documentElement;
+      root.style.setProperty('transition', 'none');
+      const initialOffset = open ? APP_SIDEBAR_WIDTH : APP_SIDEBAR_WIDTH_ICON;
+      root.style.setProperty('--sidebar-width-offset', initialOffset);
+      document.body.offsetHeight;
+      const timer = setTimeout(() => {
+        root.style.removeProperty('transition');
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  return {
+    state,
+    open,
+    setOpen,
+    openMobile,
+    setOpenMobile,
+    isMobile,
+    toggleSidebar,
+  };
+}
+
 export function SidebarProvider({
   children,
   defaultOpen = true,
   initialState,
   user,
 }: SidebarProviderProps) {
-  // Use the hook for all business logic
-  const sidebarLogic = useSidebar(defaultOpen);
+  // Use the internal hook for all business logic
+  const sidebarLogic = useSidebarLogic(defaultOpen);
 
   // Use initialState if provided (for hydration/SSR purposes)
   const contextValue = initialState || sidebarLogic;
@@ -90,7 +236,7 @@ export function SidebarProvider({
   );
 }
 
-// Basic context accessor with no side effects
+// Hook to access sidebar context
 export const useSidebar = () => {
   const context = useContext(SidebarContext);
 

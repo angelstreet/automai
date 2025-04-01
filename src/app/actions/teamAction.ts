@@ -4,10 +4,22 @@ import { cookies } from 'next/headers';
 import { cache } from 'react';
 
 import { getUser } from '@/app/actions/userAction';
-import { getUserTeams as dbGetUserTeams } from '@/lib/db/teamDb';
+import {
+  getUserTeams as dbGetUserTeams,
+  getTeamById as dbGetTeamById,
+  getTeams as dbGetTeams,
+  createTeam as dbCreateTeam,
+  updateTeam as dbUpdateTeam,
+  deleteTeam as dbDeleteTeam,
+  getUserActiveTeam as dbGetUserActiveTeam,
+  setUserActiveTeam as dbSetUserActiveTeam,
+  type Team,
+} from '@/lib/db/teamDb';
+import teamMemberDb from '@/lib/db/teamMemberDb';
 import { createClient } from '@/lib/supabase/server';
+import { type DbResponse } from '@/lib/utils/dbUtils';
 import type { ActionResult } from '@/types/context/cicdContextType';
-import { Team, TeamMember } from '@/types/context/teamContextType';
+import { TeamMember } from '@/types/context/teamContextType';
 import type {
   TeamCreateInput,
   TeamUpdateInput,
@@ -15,6 +27,8 @@ import type {
   ResourceLimit,
 } from '@/types/context/teamContextType';
 import { User } from '@/types/service/userServiceType';
+
+type TeamResult = DbResponse<Team>;
 
 // Use TeamMemberType consistently throughout this file
 
@@ -146,43 +160,27 @@ function sanitizeForClient<T>(data: T): T {
 /**
  * Get teams that a user belongs to
  */
-export const getUserTeams = cache(async (profileId: string) => {
+export async function getUserTeams(profileId: string): Promise<Team[]> {
   try {
     console.log(`[@action:team:getUserTeams] Getting teams for profile: ${profileId}`);
     const cookieStore = await cookies();
-    const dbResult = await dbGetUserTeams(profileId, cookieStore);
+    const result = await dbGetUserTeams(profileId, cookieStore);
 
-    if (!dbResult.success || !dbResult.data) {
-      console.log(`[@action:team:getUserTeams] No teams found for user: ${profileId}`);
-      return {
-        success: false,
-        data: undefined,
-        error: dbResult.error || 'Unknown error',
-      };
+    if (!result.success || !result.data) {
+      throw new Error(result.error || 'Failed to get user teams');
     }
 
-    // Sanitize data to ensure it's serializable
-    const sanitizedTeams = sanitizeForClient(dbResult.data);
-    console.log(`[@action:team:getUserTeams] Found ${sanitizedTeams.length} teams`);
-
-    return {
-      success: true,
-      data: sanitizedTeams,
-      error: undefined,
-    };
-  } catch (error: any) {
-    console.error(`[@action:team:getUserTeams] Error getting teams:`, error);
-    return {
-      success: false,
-      error: error.message || 'Failed to get user teams',
-    };
+    return result.data;
+  } catch (e) {
+    console.error('[@action:team:getUserTeams] Error:', e);
+    throw e;
   }
-});
+}
 
 /**
  * Get a team by ID
  */
-export async function getTeamById(teamId: string): Promise<TeamResult> {
+export async function getTeamById(teamId: string): Promise<Team> {
   try {
     console.log(`[@action:team:getTeamById] Getting team: ${teamId}`);
     const cookieStore = await cookies();
@@ -192,89 +190,53 @@ export async function getTeamById(teamId: string): Promise<TeamResult> {
     );
 
     if (!result.success || !result.data) {
-      return {
-        success: false,
-        error: result.error || `Team not found: ${teamId}`,
-      };
+      throw new Error(result.error || 'Failed to get team');
     }
 
-    // Sanitize before returning
-    console.debug(`[@action:team:getTeamById] Sanitizing team data for serialization`);
-    const sanitizedTeam = sanitizeForClient(result.data);
-
-    // Add debugging log
-    console.log('[@action:team:getTeamById] Sanitized team data:', JSON.stringify(sanitizedTeam));
-
-    return {
-      success: true,
-      data: sanitizedTeam,
-    };
-  } catch (error: any) {
-    console.error(`[@action:team:getTeamById] Error getting team:`, error);
-    return {
-      success: false,
-      error: error.message || 'Failed to get team',
-    };
+    return result.data;
+  } catch (e) {
+    console.error('[@action:team:getTeamById] Error:', e);
+    throw e;
   }
 }
 
 /**
  * Get the active team for a user
  */
-export const getUserActiveTeam = cache(async (userId: string) => {
+export async function getUserActiveTeam(userId: string): Promise<Team> {
   try {
     console.log(`[@action:team:getUserActiveTeam] Getting active team for user: ${userId}`);
     const cookieStore = await cookies();
-    const dbResult = await dbGetUserActiveTeam(userId, cookieStore);
+    const result = await dbGetUserActiveTeam(userId, cookieStore);
 
-    if (!dbResult.success || !dbResult.data) {
-      console.log(`[@action:team:getUserActiveTeam] No active team found for user: ${userId}`);
-      return {
-        success: false,
-        data: undefined,
-        error: dbResult.error || 'Unknown error',
-      };
+    if (!result.success || !result.data) {
+      throw new Error(result.error || 'Failed to get user active team');
     }
 
-    // Sanitize before returning - this ensures data is serializable
-    const sanitizedTeam = sanitizeForClient(dbResult.data);
-    console.log(`[@action:team:getUserActiveTeam] Found active team: ${sanitizedTeam.id}`);
-
-    return {
-      success: true,
-      data: sanitizedTeam,
-      error: undefined,
-    };
-  } catch (error: any) {
-    console.error(`[@action:team:getUserActiveTeam] Error:`, error);
-    return {
-      success: false,
-      error: error.message || 'Failed to get active team',
-    };
+    return result.data;
+  } catch (e) {
+    console.error('[@action:team:getUserActiveTeam] Error:', e);
+    throw e;
   }
-});
+}
 
 /**
  * Set the active team for a user
  */
-export async function setUserActiveTeam(
-  userId: string,
-  teamId: string,
-): Promise<{ success: boolean; error?: string }> {
+export async function setUserActiveTeam(userId: string, teamId: string): Promise<void> {
   try {
     console.log(
       `[@action:team:setUserActiveTeam] Setting active team: ${teamId} for user: ${userId}`,
     );
-    // Implementation note: this might need to be updated if the DB function is not working
     const cookieStore = await cookies();
     const result = await dbSetUserActiveTeam(userId, teamId, cookieStore);
-    console.log(
-      `[@action:team:setUserActiveTeam] ${result.success ? 'Successfully set active team' : 'Failed to set active team'}`,
-    );
-    return result;
-  } catch (error: any) {
-    console.error(`[@action:team:setUserActiveTeam] Error setting active team:`, error);
-    return { success: false, error: error.message || 'Failed to set active team' };
+
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to set user active team');
+    }
+  } catch (e) {
+    console.error('[@action:team:setUserActiveTeam] Error:', e);
+    throw e;
   }
 }
 
@@ -331,16 +293,8 @@ export const getTeams = cache(async (providedUser?: User | null): Promise<Action
  * @param providedUser Optional user object to avoid redundant getUser calls
  * @returns Action result containing created team or error
  */
-export async function createTeam(
-  input: TeamCreateInput,
-  providedUser?: User | null,
-): Promise<ActionResult<Team>> {
+export async function createTeam(input: TeamCreateInput, user: User): Promise<Team> {
   try {
-    const user = providedUser || (await getUser());
-    if (!user || !user.tenant_id) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
     console.log(`[@action:team:createTeam] Creating team for tenant: ${user.tenant_id}`);
     const cookieStore = await cookies();
     const result = await dbCreateTeam({ ...input, tenant_id: user.tenant_id }, cookieStore);
@@ -348,10 +302,14 @@ export async function createTeam(
       `[@action:team:createTeam] ${result.success ? 'Successfully created team' : 'Failed to create team'}`,
     );
 
-    return result;
-  } catch (error: any) {
-    console.error(`[@action:team:createTeam] Error creating team:`, error);
-    return { success: false, error: error.message || 'Failed to create team' };
+    if (!result.success || !result.data) {
+      throw new Error(result.error || 'Failed to create team');
+    }
+
+    return result.data;
+  } catch (e) {
+    console.error('[@action:team:createTeam] Error:', e);
+    throw e;
   }
 }
 
@@ -362,17 +320,8 @@ export async function createTeam(
  * @param providedUser Optional user object to avoid redundant getUser calls
  * @returns Action result containing updated team or error
  */
-export async function updateTeam(
-  teamId: string,
-  input: TeamUpdateInput,
-  providedUser?: User | null,
-): Promise<ActionResult<Team>> {
+export async function updateTeam(teamId: string, input: TeamUpdateInput): Promise<Team> {
   try {
-    const user = providedUser || (await getUser());
-    if (!user || !user.tenant_id) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
     console.log(`[@action:team:updateTeam] Updating team: ${teamId}`);
     const cookieStore = await cookies();
     const result = await dbUpdateTeam(teamId, input, cookieStore);
@@ -380,10 +329,14 @@ export async function updateTeam(
       `[@action:team:updateTeam] ${result.success ? 'Successfully updated team' : 'Failed to update team'}`,
     );
 
-    return result;
-  } catch (error: any) {
-    console.error(`[@action:team:updateTeam] Error updating team:`, error);
-    return { success: false, error: error.message || 'Failed to update team' };
+    if (!result.success || !result.data) {
+      throw new Error(result.error || 'Failed to update team');
+    }
+
+    return result.data;
+  } catch (e) {
+    console.error('[@action:team:updateTeam] Error:', e);
+    throw e;
   }
 }
 
@@ -393,16 +346,8 @@ export async function updateTeam(
  * @param providedUser Optional user object to avoid redundant getUser calls
  * @returns Action result with success status or error
  */
-export async function deleteTeam(
-  teamId: string,
-  providedUser?: User | null,
-): Promise<ActionResult<null>> {
+export async function deleteTeam(teamId: string): Promise<void> {
   try {
-    const user = providedUser || (await getUser());
-    if (!user || !user.tenant_id) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
     console.log(`[@action:team:deleteTeam] Deleting team: ${teamId}`);
     const cookieStore = await cookies();
     const result = await dbDeleteTeam(teamId, cookieStore);
@@ -410,10 +355,12 @@ export async function deleteTeam(
       `[@action:team:deleteTeam] ${result.success ? 'Successfully deleted team' : 'Failed to delete team'}`,
     );
 
-    return result;
-  } catch (error: any) {
-    console.error(`[@action:team:deleteTeam] Error deleting team:`, error);
-    return { success: false, error: error.message || 'Failed to delete team' };
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to delete team');
+    }
+  } catch (e) {
+    console.error('[@action:team:deleteTeam] Error:', e);
+    throw e;
   }
 }
 
@@ -422,7 +369,7 @@ export async function deleteTeam(
  * @param teamId Team ID to get members for
  * @returns Action result containing team members or error
  */
-export const getTeamMembers = cache(async (teamId: string) => {
+export const getTeamMembers = cache(async (teamId: string): Promise<TeamMember[]> => {
   try {
     console.log(`[@action:team:getTeamMembers] Getting members for team: ${teamId}`);
     // First check if the team exists
@@ -430,41 +377,21 @@ export const getTeamMembers = cache(async (teamId: string) => {
     const teamResult = await dbGetTeamById(teamId, cookieStore);
 
     if (!teamResult.success || !teamResult.data) {
-      console.error(`[@action:team:getTeamMembers] Team not found: ${teamId}`);
-      return { success: false, error: 'Team not found' };
+      throw new Error('Team not found');
     }
 
     // Get team members with profiles
-    const result = await dbGetTeamMembers(teamId, cookieStore);
+    const result = await teamMemberDb.getTeamMembers(teamId, cookieStore);
     console.log(`[@action:team:getTeamMembers] Found ${result.data?.length || 0} team members`);
 
     if (!result.success || !result.data) {
-      return {
-        success: false,
-        error: result.error || 'No team members found',
-      };
+      throw new Error(result.error || 'Failed to get team members');
     }
 
-    // Sanitize the result before returning
-    console.debug(`[@action:team:getTeamMembers] Sanitizing team members data for serialization`);
-    const sanitizedMembers = sanitizeForClient(result.data);
-
-    // Add debugging log - using a count to avoid huge logs
-    console.log(
-      `[@action:team:getTeamMembers] Sanitized ${sanitizedMembers.length} members, first member:`,
-      sanitizedMembers.length > 0 ? JSON.stringify(sanitizedMembers[0]) : 'none',
-    );
-
-    return {
-      success: true,
-      data: sanitizedMembers,
-    };
+    return result.data;
   } catch (error) {
     console.error(`[@action:team:getTeamMembers] Error fetching team members:`, error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch team members',
-    };
+    throw error;
   }
 });
 
@@ -474,27 +401,23 @@ export const getTeamMembers = cache(async (teamId: string) => {
  * @param providedUser Optional user object to avoid redundant getUser calls
  * @returns Action result containing created team member or error
  */
-export async function addTeamMember(
-  input: TeamMemberCreateInput,
-  providedUser?: User | null,
-): Promise<ActionResult<TeamMember>> {
+export async function addTeamMember(input: TeamMemberCreateInput): Promise<TeamMember> {
   try {
-    const user = providedUser || (await getUser());
-    if (!user || !user.tenant_id) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
     console.log(`[@action:team:addTeamMember] Adding member to team: ${input.team_id}`);
     const cookieStore = await cookies();
-    const result = await dbAddTeamMember(input, cookieStore);
+    const result = await teamMemberDb.addTeamMember(input, cookieStore);
     console.log(
       `[@action:team:addTeamMember] ${result.success ? 'Successfully added team member' : 'Failed to add team member'}`,
     );
 
-    return result as unknown as ActionResult<TeamMember>; // Type cast to resolve potential type issue
-  } catch (error: any) {
+    if (!result.success || !result.data) {
+      throw new Error(result.error || 'Failed to add team member');
+    }
+
+    return result.data;
+  } catch (error) {
     console.error(`[@action:team:addTeamMember] Error adding team member:`, error);
-    return { success: false, error: error.message || 'Failed to add team member' };
+    throw error;
   }
 }
 
@@ -510,27 +433,25 @@ export async function updateTeamMemberRole(
   teamId: string,
   profileId: string,
   role: string,
-  providedUser?: User | null,
-): Promise<ActionResult<TeamMember>> {
+): Promise<TeamMember> {
   try {
-    const user = providedUser || (await getUser());
-    if (!user || !user.tenant_id) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
     console.log(
       `[@action:team:updateTeamMemberRole] Updating role for member: ${profileId} in team: ${teamId}`,
     );
     const cookieStore = await cookies();
-    const result = await dbUpdateTeamMemberRole(teamId, profileId, role, cookieStore);
+    const result = await teamMemberDb.updateTeamMemberRole(teamId, profileId, role, cookieStore);
     console.log(
       `[@action:team:updateTeamMemberRole] ${result.success ? 'Successfully updated team member role' : 'Failed to update team member role'}`,
     );
 
-    return result as unknown as ActionResult<TeamMember>; // Type cast to resolve potential type issue
-  } catch (error: any) {
+    if (!result.success || !result.data) {
+      throw new Error(result.error || 'Failed to update team member role');
+    }
+
+    return result.data;
+  } catch (error) {
     console.error(`[@action:team:updateTeamMemberRole] Error updating team member role:`, error);
-    return { success: false, error: error.message || 'Failed to update team member role' };
+    throw error;
   }
 }
 
@@ -541,30 +462,23 @@ export async function updateTeamMemberRole(
  * @param providedUser Optional user object to avoid redundant getUser calls
  * @returns Action result with success status or error
  */
-export async function removeTeamMember(
-  teamId: string,
-  profileId: string,
-  providedUser?: User | null,
-): Promise<ActionResult<null>> {
+export async function removeTeamMember(teamId: string, profileId: string): Promise<void> {
   try {
-    const user = providedUser || (await getUser());
-    if (!user || !user.tenant_id) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
     console.log(
       `[@action:team:removeTeamMember] Removing member: ${profileId} from team: ${teamId}`,
     );
     const cookieStore = await cookies();
-    const result = await dbRemoveTeamMember(teamId, profileId, cookieStore);
+    const result = await teamMemberDb.removeTeamMember(teamId, profileId, cookieStore);
     console.log(
       `[@action:team:removeTeamMember] ${result.success ? 'Successfully removed team member' : 'Failed to remove team member'}`,
     );
 
-    return result;
-  } catch (error: any) {
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to remove team member');
+    }
+  } catch (error) {
     console.error(`[@action:team:removeTeamMember] Error removing team member:`, error);
-    return { success: false, error: error.message || 'Failed to remove team member' };
+    throw error;
   }
 }
 
@@ -575,44 +489,28 @@ export async function removeTeamMember(
  * @returns Action result containing limit check data or error
  */
 export const checkResourceLimit = cache(
-  async (
-    resourceType: string,
-    providedUser?: User | null,
-  ): Promise<ActionResult<ResourceLimit>> => {
+  async (resourceType: string, providedUser?: User | null): Promise<ResourceLimit> => {
     try {
       const user = providedUser || (await getUser());
       if (!user || !user.tenant_id) {
-        return { success: false, error: 'Unauthorized' };
+        throw new Error('Unauthorized');
       }
 
       console.log(
         `[@action:team:checkResourceLimit] Checking resource limit for: ${resourceType} in tenant: ${user.tenant_id}`,
       );
-      const cookieStore = await cookies();
-      const result = await dbCheckResourceLimit(user.tenant_id, resourceType, cookieStore);
 
-      // Transform result to match the expected ResourceLimit interface
-      if (result.success && result.data) {
-        return {
-          success: true,
-          data: {
-            ...result.data,
-            type: resourceType,
-            current: result.data.max_count || 0,
-            limit: result.data.max_count || 0,
-            isUnlimited: result.data.is_unlimited,
-            canCreate: true, // This would need to be determined based on current usage
-          } as unknown as ResourceLimit,
-        };
-      }
-
-      console.log(
-        `[@action:team:checkResourceLimit] ${result.success ? 'Successfully checked resource limit' : 'Failed to check resource limit'}`,
-      );
-      return { success: false, error: result.error || 'Failed to check resource limit' };
-    } catch (error: any) {
+      // TODO: Implement resource limit checking
+      return {
+        type: resourceType,
+        current: 0,
+        limit: 0,
+        isUnlimited: true,
+        canCreate: true,
+      };
+    } catch (error) {
       console.error(`[@action:team:checkResourceLimit] Error checking resource limit:`, error);
-      return { success: false, error: error.message || 'Failed to check resource limit' };
+      throw error;
     }
   },
 );
@@ -650,9 +548,9 @@ export const getTeamDetails = cache(async (userId?: string) => {
     const cookieStore = await cookies();
 
     // Get the user's teams
-    const teamsResult = await getUserTeams(user.id);
+    const teams = await dbGetUserTeams(user.id, cookieStore);
 
-    if (!teamsResult.success || !teamsResult.data || teamsResult.data.length === 0) {
+    if (!teams.success || !teams.data || teams.data.length === 0) {
       console.log(
         `[@action:team:getTeamDetails] No teams found for user, returning default values`,
       );
@@ -667,16 +565,18 @@ export const getTeamDetails = cache(async (userId?: string) => {
       };
     }
 
-    const team = teamsResult.data[0];
+    const team = teams.data[0];
 
     // Get member count and user's role
-    const membersResult = await getTeamMembers(team.id);
-    const memberCount = membersResult.success ? membersResult.data?.length || 0 : 0;
+    const members = await teamMemberDb.getTeamMembers(team.id, cookieStore);
+    const memberCount = members.success ? members.data?.length || 0 : 0;
 
     // Find the user's role in the team
     let role = null;
-    if (membersResult.success && membersResult.data) {
-      const userMember = membersResult.data.find((member) => member.profile_id === user.id);
+    if (members.success && members.data) {
+      const userMember = members.data.find(
+        (member: { profile_id: string; role: string }) => member.profile_id === user.id,
+      );
       if (userMember) {
         role = userMember.role;
         console.log(
@@ -753,21 +653,13 @@ export const getTeamDetails = cache(async (userId?: string) => {
         const { default: deploymentDb } = await import('@/lib/db/deploymentDb');
 
         // Get deployments directly from the database
-        const result = await deploymentDb.findMany(
+        const deployments = await deploymentDb.findMany(
           { where: { tenant_id: team.tenant_id } },
           cookieStore,
         );
 
-        // Handle the response based on its structure
-        if (result && Array.isArray(result)) {
-          deploymentsCount = result.length;
-        } else if (
-          result &&
-          typeof result === 'object' &&
-          'data' in result &&
-          Array.isArray((result as any).data)
-        ) {
-          deploymentsCount = (result as any).data.length;
+        if (deployments.success && deployments.data) {
+          deploymentsCount = deployments.data.length;
         }
 
         console.log('[@action:team:getTeamDetails] Found deployments count:', deploymentsCount);
@@ -781,10 +673,10 @@ export const getTeamDetails = cache(async (userId?: string) => {
         const { default: hostDb } = await import('@/lib/db/hostDb');
 
         // Get hosts from the database - no filters needed as RLS will handle access control
-        const hosts = await hostDb.findMany();
+        const hosts = await hostDb.getHosts(team.tenant_id);
 
-        if (Array.isArray(hosts)) {
-          hostsCount = hosts.length;
+        if (hosts.success && hosts.data) {
+          hostsCount = hosts.data.length;
           console.log(
             `[@action:team:getTeamDetails] Found ${hostsCount} hosts for tenant ${team.tenant_id}`,
           );
