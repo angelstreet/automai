@@ -2,9 +2,9 @@
  * Deployment Service
  * Business logic for deployment operations
  */
-import deploymentDb from '@/lib/supabase/db-deployment';
-import hostDb from '@/lib/supabase/db-hosts/host';
-import repositoryDb from '@/lib/supabase/db-repositories/db-repository';
+import deploymentDb from '@/lib/db/deploymentDb';
+import hostDb from '@/lib/db/hostDb';
+import repositoryDb from '@/lib/db/repositoryDb';
 import sshService from '@/lib/services/sshService';
 
 // Types from deployment component type

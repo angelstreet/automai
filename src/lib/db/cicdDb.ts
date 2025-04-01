@@ -271,6 +271,245 @@ export async function updateCICDBuild(id: string, build: Partial<CICDBuild>): Pr
   }
 }
 
+/**
+ * Get a CICD provider with query options
+ */
+export async function getCICDProvider(options: { where: any }, cookieStore?: any): Promise<DbResponse<CICDProvider>> {
+  try {
+    const supabase = createClient(cookieStore);
+    
+    let query = supabase
+      .from('cicd_providers')
+      .select('*');
+    
+    // Apply where conditions if provided
+    if (options.where) {
+      Object.entries(options.where).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          query = query.eq(key, value);
+        }
+      });
+    }
+    
+    const { data, error } = await query.single();
+      
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    
+    return { success: true, data };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Failed to get CICD provider' };
+  }
+}
+
+/**
+ * Create a CICD job
+ */
+export async function createCICDJob(options: { data: any }, cookieStore?: any): Promise<DbResponse<any>> {
+  try {
+    const supabase = createClient(cookieStore);
+    
+    const { data, error } = await supabase
+      .from('cicd_jobs')
+      .insert([{
+        ...options.data,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+      
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    
+    return { success: true, data, id: data.id };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Failed to create CICD job' };
+  }
+}
+
+/**
+ * Create a deployment-CICD mapping
+ */
+export async function createDeploymentCICDMapping(data: any, cookieStore?: any): Promise<DbResponse<any>> {
+  try {
+    const supabase = createClient(cookieStore);
+    
+    const { data: mappingData, error } = await supabase
+      .from('deployment_cicd_mappings')
+      .insert([{
+        ...data,
+        created_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+      
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    
+    return { success: true, data: mappingData };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Failed to create deployment-CICD mapping' };
+  }
+}
+
+/**
+ * Get deployment-CICD mappings
+ */
+export async function getDeploymentCICDMappings(options: { where: any }, cookieStore?: any): Promise<DbResponse<any[]>> {
+  try {
+    const supabase = createClient(cookieStore);
+    
+    let query = supabase
+      .from('deployment_cicd_mappings')
+      .select('*');
+    
+    // Apply where conditions if provided
+    if (options.where) {
+      Object.entries(options.where).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          query = query.eq(key, value);
+        }
+      });
+    }
+    
+    const { data, error } = await query;
+      
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    
+    return { success: true, data };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Failed to get deployment-CICD mappings' };
+  }
+}
+
+/**
+ * Get a CICD job
+ */
+export async function getCICDJob(options: { where: any }, cookieStore?: any): Promise<DbResponse<any>> {
+  try {
+    const supabase = createClient(cookieStore);
+    
+    let query = supabase
+      .from('cicd_jobs')
+      .select('*');
+    
+    // Apply where conditions if provided
+    if (options.where) {
+      Object.entries(options.where).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          query = query.eq(key, value);
+        }
+      });
+    }
+    
+    const { data, error } = await query.single();
+      
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    
+    return { success: true, data };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Failed to get CICD job' };
+  }
+}
+
+/**
+ * Delete a CICD job
+ */
+export async function deleteCICDJob(options: { where: any }, cookieStore?: any): Promise<DbResponse<null>> {
+  try {
+    const supabase = createClient(cookieStore);
+    
+    let query = supabase
+      .from('cicd_jobs')
+      .delete();
+    
+    // Apply where conditions if provided
+    if (options.where) {
+      Object.entries(options.where).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          query = query.eq(key, value);
+        }
+      });
+    }
+    
+    const { error } = await query;
+      
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    
+    return { success: true, data: null };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Failed to delete CICD job' };
+  }
+}
+
+/**
+ * Delete a deployment-CICD mapping
+ */
+export async function deleteDeploymentCICDMapping(id: string, cookieStore?: any): Promise<DbResponse<null>> {
+  try {
+    const supabase = createClient(cookieStore);
+    
+    const { error } = await supabase
+      .from('deployment_cicd_mappings')
+      .delete()
+      .eq('id', id);
+      
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    
+    return { success: true, data: null };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Failed to delete deployment-CICD mapping' };
+  }
+}
+
+/**
+ * Get a deployment-CICD mapping
+ */
+export async function getCICDDeploymentMapping(options: { where: any }, cookieStore?: any): Promise<DbResponse<any>> {
+  try {
+    const supabase = createClient(cookieStore);
+    
+    let query = supabase
+      .from('deployment_cicd_mappings')
+      .select('*');
+    
+    // Apply where conditions if provided
+    if (options.where) {
+      Object.entries(options.where).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          query = query.eq(key, value);
+        }
+      });
+    }
+    
+    const { data, error } = await query.single();
+      
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // No rows returned - not an error for our purposes
+        return { success: true, data: null };
+      }
+      return { success: false, error: error.message };
+    }
+    
+    return { success: true, data };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Failed to get deployment-CICD mapping' };
+  }
+}
+
 // Default export for all CICD database operations
 const cicdDb = {
   getCICDProviders,
@@ -282,7 +521,16 @@ const cicdDb = {
   getCICDJobById,
   getCICDBuilds,
   createCICDBuild,
-  updateCICDBuild
+  updateCICDBuild,
+  // Add adapter methods
+  getCICDProvider,
+  createCICDJob,
+  createDeploymentCICDMapping,
+  getDeploymentCICDMappings, 
+  getCICDJob,
+  deleteCICDJob,
+  deleteDeploymentCICDMapping,
+  getCICDDeploymentMapping
 };
 
 export default cicdDb;

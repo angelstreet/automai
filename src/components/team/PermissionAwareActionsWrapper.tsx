@@ -1,7 +1,7 @@
 import React from 'react';
 import { PermissionAwareActions } from '@/components/team/PermissionAwareActions';
 import { CreatorBadge } from '@/components/team/CreatorBadge';
-import { ResourceType } from '@/lib/supabase/db-teams/permissions';
+import { ResourceType } from '@/types/context/permissionsContextType';
 
 interface PermissionAwareActionsWrapperProps {
   resourceType: ResourceType;

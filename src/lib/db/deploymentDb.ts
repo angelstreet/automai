@@ -156,6 +156,99 @@ export async function deleteDeployment(id: string): Promise<DbResponse<null>> {
   }
 }
 
+/**
+ * Find many deployments based on criteria
+ */
+export async function findMany(options: { where?: any } = {}, cookieStore?: any): Promise<DbResponse<Deployment[]>> {
+  try {
+    const supabase = createClient(cookieStore);
+    
+    let query = supabase.from('deployments').select('*');
+    
+    // Apply where conditions if provided
+    if (options.where) {
+      Object.entries(options.where).forEach(([key, value]) => {
+        query = query.eq(key, value);
+      });
+    }
+    
+    // Order by created_at desc
+    query = query.order('created_at', { ascending: false });
+    
+    const { data, error } = await query;
+      
+    if (error) {
+      return { success: false, error: error.message, data: [] };
+    }
+    
+    return { success: true, data };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Failed to find deployments', data: [] };
+  }
+}
+
+/**
+ * Find a unique deployment by ID
+ */
+export async function findUnique(id: string, cookieStore?: any): Promise<Deployment | null> {
+  try {
+    const supabase = createClient(cookieStore);
+    
+    const { data, error } = await supabase
+      .from('deployments')
+      .select('*')
+      .eq('id', id)
+      .single();
+      
+    if (error) {
+      console.error('Error in findUnique:', error);
+      return null;
+    }
+    
+    return data;
+  } catch (error: any) {
+    console.error('Error in findUnique:', error);
+    return null;
+  }
+}
+
+/**
+ * Create a deployment
+ */
+export async function create(options: { data: any }, cookieStore?: any): Promise<DbResponse<Deployment>> {
+  try {
+    const supabase = createClient(cookieStore);
+    
+    const { data, error } = await supabase
+      .from('deployments')
+      .insert([options.data])
+      .select()
+      .single();
+      
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    
+    return { success: true, data };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Failed to create deployment' };
+  }
+}
+
+/**
+ * Update a deployment 
+ */
+export async function update(id: string, data: any, cookieStore?: any): Promise<DbResponse<Deployment>> {
+  return updateDeployment(id, data);
+}
+
+/**
+ * Delete a deployment
+ */
+export async function delete_(id: string, cookieStore?: any): Promise<DbResponse<null>> {
+  return deleteDeployment(id);
+}
+
 // Default export for all deployment database operations
 const deploymentDb = {
   getDeployments,
@@ -163,7 +256,13 @@ const deploymentDb = {
   createDeployment,
   updateDeployment,
   updateDeploymentStatus,
-  deleteDeployment
+  deleteDeployment,
+  // Add new adapter methods
+  findMany,
+  findUnique,
+  create,
+  update,
+  delete: delete_
 };
 
 export default deploymentDb;

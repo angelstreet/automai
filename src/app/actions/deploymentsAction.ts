@@ -245,7 +245,7 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
         environment_vars: formData.environmentVars || [],
       };
 
-      const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
+      const { default: deploymentDb } = await import('@/lib/db/deploymentDb');
       const failedResult = await deploymentDb.create({ data: failedDeploymentData }, cookieStore);
 
       return {
@@ -281,7 +281,7 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
         environment_vars: formData.environmentVars || [],
       };
 
-      const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
+      const { default: deploymentDb } = await import('@/lib/db/deploymentDb');
       const failedResult = await deploymentDb.create({ data: failedDeploymentData }, cookieStore);
 
       return {
@@ -360,7 +360,7 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
         environment_vars: formData.environmentVars || [],
       };
 
-      const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
+      const { default: deploymentDb } = await import('@/lib/db/deploymentDb');
       const failedResult = await deploymentDb.create({ data: failedDeploymentData }, cookieStore);
 
       return {
@@ -409,7 +409,7 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
         environment_vars: formData.environmentVars || [],
       };
 
-      const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
+      const { default: deploymentDb } = await import('@/lib/db/deploymentDb');
       const failedResult = await deploymentDb.create({ data: failedDeploymentData }, cookieStore);
 
       return {
@@ -444,7 +444,7 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
       '📦 [DEPLOYMENT_CREATE] Creating deployment with data:',
       JSON.stringify(deploymentData, null, 2),
     );
-    const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
+    const { default: deploymentDb } = await import('@/lib/db/deploymentDb');
     const result = await deploymentDb.create({ data: deploymentData }, cookieStore);
 
     if (!result || (result && 'success' in result && !result.success)) {
@@ -584,7 +584,7 @@ export async function deleteDeployment(id: string): Promise<boolean> {
 
     // Import the required database modules
     console.log(`Actions layer: Importing database modules...`);
-    const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
+    const { default: deploymentDb } = await import('@/lib/db/deploymentDb');
     const { default: cicdDb } = await import('@/lib/db/cicdDb');
     console.log(`Actions layer: Database modules imported successfully`);
 
@@ -892,7 +892,7 @@ export async function runDeployment(
     const cookieStore = await cookies();
 
     // Import dependencies
-    const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
+    const { default: deploymentDb } = await import('@/lib/db/deploymentDb');
     const { default: cicdDb } = await import('@/lib/db/cicdDb');
 
     // Get the deployment details

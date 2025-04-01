@@ -9,7 +9,7 @@ import {
 } from '@/types/service/cicdServiceTypes';
 import { ServiceResponse } from './teamService';
 import { DbResponse } from '../utils/dbUtils';
-import { getCICDProviders, getCICDProviderById, createCICDProvider, updateCICDProvider, deleteCICDProvider } from '../supabase/db-cicd';
+import cicdDb from '../db/cicdDb';
 
 /**
  * GitHub Actions CI/CD Provider Implementation
@@ -694,7 +694,10 @@ export const cicdService = {
    */
   async getAllProviders(tenantId: string, cookieStore?: any): Promise<ServiceResponse<any[]>> {
     try {
-      const result = await getCICDProviders(tenantId);
+      const result = await cicdDb.getCICDProviders({
+        where: { tenant_id: tenantId }
+      }, cookieStore);
+      
       return {
         success: result.success,
         data: result.data,
@@ -714,7 +717,10 @@ export const cicdService = {
    */
   async getProviderById(id: string, cookieStore?: any): Promise<ServiceResponse<any>> {
     try {
-      const result = await getCicdProviderById(id, cookieStore);
+      const result = await cicdDb.getCICDProvider({
+        where: { id }
+      }, cookieStore);
+      
       return {
         success: result.success,
         data: result.data,
@@ -734,7 +740,13 @@ export const cicdService = {
    */
   async createProvider(providerData: any, userId: string, cookieStore?: any): Promise<ServiceResponse<any>> {
     try {
-      const result = await createCicdProvider(providerData, userId, cookieStore);
+      const result = await cicdDb.createCICDProvider({
+        data: {
+          ...providerData,
+          user_id: userId
+        }
+      }, cookieStore);
+      
       return {
         success: result.success,
         data: result.data,
@@ -754,7 +766,11 @@ export const cicdService = {
    */
   async updateProvider(id: string, updates: any, userId: string, cookieStore?: any): Promise<ServiceResponse<any>> {
     try {
-      const result = await updateCicdProvider(id, updates, userId, cookieStore);
+      const result = await cicdDb.updateCICDProvider({
+        where: { id },
+        data: updates
+      }, cookieStore);
+      
       return {
         success: result.success,
         data: result.data,
@@ -774,7 +790,10 @@ export const cicdService = {
    */
   async deleteProvider(id: string, userId: string, cookieStore?: any): Promise<ServiceResponse<null>> {
     try {
-      const result = await deleteCicdProvider(id, userId, cookieStore);
+      const result = await cicdDb.deleteCICDProvider({
+        where: { id }
+      }, cookieStore);
+      
       return {
         success: result.success,
         data: null,
@@ -816,7 +835,9 @@ export const cicdService = {
   async getAvailableJobs(providerId: string, cookieStore?: any): Promise<ServiceResponse<CICDJob[]>> {
     try {
       // First get the provider data from the database
-      const providerResult = await getCicdProviderById(providerId, cookieStore);
+      const providerResult = await cicdDb.getCICDProvider({
+        where: { id: providerId }
+      }, cookieStore);
       if (!providerResult.success || !providerResult.data) {
         return {
           success: false,
@@ -849,7 +870,9 @@ export const cicdService = {
   async getJobDetails(providerId: string, jobId: string, cookieStore?: any): Promise<ServiceResponse<CICDJob>> {
     try {
       // First get the provider data from the database
-      const providerResult = await getCicdProviderById(providerId, cookieStore);
+      const providerResult = await cicdDb.getCICDProvider({
+        where: { id: providerId }
+      }, cookieStore);
       if (!providerResult.success || !providerResult.data) {
         return {
           success: false,
@@ -887,7 +910,9 @@ export const cicdService = {
   ): Promise<ServiceResponse<CICDBuild>> {
     try {
       // First get the provider data from the database
-      const providerResult = await getCicdProviderById(providerId, cookieStore);
+      const providerResult = await cicdDb.getCICDProvider({
+        where: { id: providerId }
+      }, cookieStore);
       if (!providerResult.success || !providerResult.data) {
         return {
           success: false,
@@ -914,6 +939,54 @@ export const cicdService = {
     }
   }
 };
+
+/**
+ * Get a CICD provider by ID
+ * @param providerId Provider ID
+ * @param tenantId Tenant ID (for security)
+ * @returns Service response with provider instance
+ */
+export async function getCICDProvider(
+  providerId: string,
+  tenantId: string,
+  cookieStore?: any
+): Promise<ServiceResponse<CICDProvider>> {
+  try {
+    // Get the provider from the database
+    const providerResult = await cicdDb.getCICDProvider({
+      where: { id: providerId, tenant_id: tenantId }
+    }, cookieStore);
+
+    if (!providerResult.success || !providerResult.data) {
+      console.error('[@service:getCICDProvider] Failed to get provider:', providerResult.error);
+      return {
+        success: false,
+        error: providerResult.error || 'Provider not found'
+      };
+    }
+
+    // Create a provider instance
+    try {
+      const provider = CICDProviderFactory.createProvider(providerResult.data);
+      return {
+        success: true,
+        data: provider
+      };
+    } catch (error) {
+      console.error('[@service:getCICDProvider] Error creating provider instance:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to initialize provider'
+      };
+    }
+  } catch (error) {
+    console.error('[@service:getCICDProvider] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error getting CICD provider'
+    };
+  }
+}
 
 export default cicdService;
 
