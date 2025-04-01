@@ -4,13 +4,22 @@ import { revalidatePath } from 'next/cache';
 import { cache } from 'react';
 import { cookies } from 'next/headers';
 
-import type {
-  ActionResult,
+import type { ActionResult } from '@/types/context/cicdContextType';
+import { 
+  CICDProvider,
   CICDProviderPayload,
-  CICDProviderListResult,
-  CICDProviderActionResult,
-  CICDJob,
-} from '@/app/[locale]/[tenant]/cicd/types';
+  CICDJob 
+} from '@/types/component/cicdComponentType';
+import cicdService from '@/lib/services/cicdService';
+
+interface CICDProviderListResult extends ActionResult {
+  data: CICDProvider[];
+}
+
+interface CICDProviderActionResult extends ActionResult {
+  data?: CICDProvider;
+}
+
 import { getUser } from '@/app/actions/userAction';
 
 /**

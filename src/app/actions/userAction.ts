@@ -1,6 +1,8 @@
 'use server';
 
-import userDB from '@/lib/supabase/db-users';
+import userDb from '@/lib/db/userDb';
+import authService from '@/lib/services/authService';
+import cacheUtils from '@/lib/utils/cacheUtils';
 import {  AuthUser  } from '@/types/service/userServiceType';
 
 /**
@@ -8,8 +10,8 @@ import {  AuthUser  } from '@/types/service/userServiceType';
  * Clears both client-side storage and server-side cache
  */
 export async function invalidateUserCache() {
-  // Forward to the DB module to clear its cache
-  await userDB.clearCache();
+  // Clear the cache using the cacheUtils
+  cacheUtils.clearCache();
 
   return {
     success: true,

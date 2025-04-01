@@ -2,8 +2,8 @@
 
 import dynamic from 'next/dynamic';
 
-// Import chart config
-import '@/lib/chart';
+// Import chart utility
+import chartUtils from '@/lib/utils/chartUtils';
 
 // Use dynamic import with ssr: false to prevent hydration issues
 const LineChart = dynamic(() => import('react-chartjs-2').then((mod) => mod.Line), {
