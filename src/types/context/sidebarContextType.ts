@@ -13,6 +13,7 @@ export type SidebarContext = {
   setOpenMobile: (open: boolean) => void;
   isMobile: boolean;
   toggleSidebar: () => void;
+  showTooltips: boolean;
 };
 
 /**
@@ -22,6 +23,7 @@ export type SidebarProviderProps = React.ComponentProps<'div'> & {
   defaultOpen?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  showTooltips?: boolean;
 };
 
 /**

@@ -45,7 +45,7 @@ export default function TenantLayoutClient({
       <UserProvider user={user}>
         <TeamProvider teams={teams} activeTeam={teamDetails} setSelectedTeam={setSelectedTeam}>
           <PermissionProvider>
-            <SidebarProvider>
+            <SidebarProvider showTooltips={false}>
               <div className="flex">
                 <Suspense fallback={<SidebarSkeleton />}>
                   <aside>

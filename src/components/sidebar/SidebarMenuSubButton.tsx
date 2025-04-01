@@ -73,6 +73,12 @@ export const SidebarMenuSubButton = React.forwardRef<
       };
     }
 
+    const showTooltips = state === 'collapsed' || false;
+
+    if (!showTooltips) {
+      return button;
+    }
+
     return (
       <Tooltip>
         <TooltipTrigger asChild>{button}</TooltipTrigger>

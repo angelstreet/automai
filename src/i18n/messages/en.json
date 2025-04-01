@@ -284,6 +284,7 @@
     "all": "All",
     "public": "Public",
     "private": "Private",
+    "selfHosted": "Self-Hosted",
     "syncSuccess": "Repository synchronized successfully",
     "syncFailed": "Failed to synchronize repository",
     "refreshSuccess": "All repositories refreshed successfully",

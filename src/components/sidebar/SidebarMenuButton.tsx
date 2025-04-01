@@ -97,6 +97,14 @@ export const SidebarMenuButton = React.forwardRef<
       };
     }
 
+    // Get showTooltips from context
+    const showTooltips = sidebarContext?.showTooltips ?? false;
+
+    // If tooltips are disabled, just return the button without the tooltip wrapper
+    if (!showTooltips) {
+      return button;
+    }
+
     return (
       <Tooltip>
         <TooltipTrigger asChild>{button}</TooltipTrigger>

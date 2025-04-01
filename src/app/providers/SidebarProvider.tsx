@@ -15,11 +15,13 @@ export function SidebarProvider({
   initialOpen = true,
   initialOpenMobile = false,
   initialIsMobile = false,
+  showTooltips = false,
 }: {
   children: React.ReactNode;
   initialOpen?: boolean;
   initialOpenMobile?: boolean;
   initialIsMobile?: boolean;
+  showTooltips?: boolean;
 }) {
   const [open, setOpen] = React.useState<boolean>(initialOpen);
   const [openMobile, setOpenMobile] = React.useState<boolean>(initialOpenMobile);
@@ -39,6 +41,7 @@ export function SidebarProvider({
     isMobile,
     toggleSidebar,
     state,
+    showTooltips,
   };
 
   return <SidebarContext.Provider value={value}>{children}</SidebarContext.Provider>;

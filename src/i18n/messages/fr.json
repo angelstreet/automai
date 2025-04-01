@@ -261,6 +261,7 @@
     "searchRepositories": "Rechercher des dépôts",
     "public": "Public",
     "private": "Privé",
+    "selfHosted": "Auto-hébergé",
     "connectRepository": "Connecter un dépôt",
     "connect_to_git_provider": "Connectez-vous à un fournisseur Git ou importez un dépôt",
     "gitProvider": "Fournisseur Git",
