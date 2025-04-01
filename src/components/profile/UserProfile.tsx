@@ -1,6 +1,5 @@
 import { User } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { signOut } from 'next-auth/react';
+import { useRouter, useParams } from 'next/navigation';
 import * as React from 'react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
@@ -14,7 +13,7 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
-import { useUser } from '@/context/UserContext';
+import { useUser } from '@/context';
 
 interface UserProfileProps {
   tenant?: string;
@@ -22,13 +21,17 @@ interface UserProfileProps {
 
 export function UserProfile({ tenant }: UserProfileProps) {
   const router = useRouter();
-  const { logout, user } = useUser();
-  const locale = 'en'; // You might want to get this from your i18n system
+  const params = useParams();
+  const { user } = useUser();
+  const locale = (params?.locale as string) || 'en';
 
   const handleSignOut = async () => {
     try {
-      await signOut({ redirect: false });
-      logout();
+      // Use formData to pass the locale
+      const formData = new FormData();
+      formData.append('locale', locale);
+      
+      // Redirect to login page
       router.push(`/${locale}/login`);
     } catch (error) {
       console.error('Error during sign out:', error);
