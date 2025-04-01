@@ -4,14 +4,9 @@ import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 
 import { getUser } from '@/app/actions/userAction';
-import {
-  addTeamMember as dbAddTeamMember,
-  updateTeamMemberRole as dbUpdateTeamMemberRole,
-  removeTeamMember as dbRemoveTeamMember,
-  setUserPermission as dbSetUserPermission,
-  applyRoleTemplate as dbApplyRoleTemplate,
-  ResourceType,
-} from '@/lib/supabase/db-teams';
+import teamMemberDb from '@/lib/db/teamMemberDb';
+import permissionDb from '@/lib/db/permissionDb';
+import type { ResourceType } from '@/types/context/permissionsContextType';
 import {  ResourcePermissions  } from '@/types/context/teamContextType';
 
 /**
@@ -56,7 +51,7 @@ export async function addTeamMember(
     const profileId = profileData.id;
 
     // Add the member to the team
-    const result = await dbAddTeamMember(
+    const result = await teamMemberDb.addTeamMember(
       {
         team_id: teamId,
         profile_id: profileId,
@@ -73,7 +68,7 @@ export async function addTeamMember(
     }
 
     // If successful, also apply the role template to set permissions
-    const roleResult = await dbApplyRoleTemplate(teamId, profileId, role, cookieStore);
+    const roleResult = await permissionDb.applyRoleTemplate(teamId, profileId, role, cookieStore);
 
     if (!roleResult.success) {
       console.warn('Failed to apply role template, but user was added to team:', roleResult.error);
@@ -122,7 +117,7 @@ export async function updateMemberPermissions(
     for (const resourceType of resourceTypes) {
       const resourcePermissions = permissions[resourceType];
 
-      const result = await dbSetUserPermission(
+      const result = await permissionDb.setUserPermission(
         teamId,
         profileId,
         resourceType,
@@ -183,7 +178,7 @@ export async function removeTeamMember(
     const cookieStore = await cookies();
 
     // Remove the member from the team
-    const result = await dbRemoveTeamMember(teamId, profileId, cookieStore);
+    const result = await teamMemberDb.removeTeamMember(teamId, profileId, cookieStore);
 
     if (!result.success) {
       return {
@@ -224,8 +219,7 @@ export async function getMemberPermissions(
     const cookieStore = await cookies();
 
     // Get all permissions for this user in this team
-    const { getUserPermissions } = await import('@/lib/supabase/db-teams/permissions');
-    const result = await getUserPermissions(profileId, teamId, cookieStore);
+    const result = await permissionDb.getUserPermissions(profileId, teamId, cookieStore);
 
     if (!result.success || !result.data) {
       return {
@@ -292,7 +286,7 @@ export async function applyRolePermissionTemplate(
     }
 
     // Also update their role in the team_members table
-    const roleResult = await dbUpdateTeamMemberRole(teamId, profileId, role, cookieStore);
+    const roleResult = await teamMemberDb.updateTeamMemberRole(teamId, profileId, role, cookieStore);
 
     if (!roleResult.success) {
       console.warn('Failed to update member role, but permissions were applied:', roleResult.error);

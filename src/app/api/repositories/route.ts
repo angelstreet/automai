@@ -4,7 +4,7 @@ import {
   getRepositories,
   createRepository,
   createRepositoryFromUrl,
-} from '@/app/actions/repositories';
+} from '@/app/actions/repositoriesAction';
 
 /**
  * GET /api/repositories
