@@ -40,6 +40,17 @@ This document outlines the standard caching rules for our Next.js application, e
 └──────────────────────┘
 ```
 
+## File Structure Guidelines
+
+| File Type                | Location                        | Purpose                                              |
+|--------------------------|----------------------------------|------------------------------------------------------|
+| Database Layer           | `/lib/supabase/db-*/*.ts`        | Raw database operations                              |
+| Server Actions           | `/app/actions/*.ts`              | Server-side functions with caching                   |
+| Context Definitions      | `/src/context/*.ts`              | Define context types and createContext               |
+| Provider Components      | `/app/providers/*.tsx`           | Provide context to component tree                    |
+| React Query Hooks        | `/hooks/*/*.ts`                  | Data fetching with client-side caching              |
+| UI Components            | `/components/*/*.tsx`            | Render UI based on data from hooks                  |
+
 ## Core Principles
 
 1. **Layered Caching**: Implement caching for READ operations at the Server Actions Layer on the server and extend caching to the Client Layer for dynamic client-side interactions.
@@ -48,6 +59,110 @@ This document outlines the standard caching rules for our Next.js application, e
 4. **Data Consistency**: Ensure cache invalidation is synchronized across server and client layers after WRITE operations to maintain up-to-date data.
 5. **No Database Caching**: Keep the Database Layer free of any caching logic to provide raw, uncached data access.
 6. **DB Layer Independence**: Each database module must be fully independent and never import from other DB modules. If data from another entity is needed, it must be passed as a parameter.
+
+## Import Patterns
+
+### Context Definition Files
+```typescript
+// src/context/TeamContext.ts
+'use client';
+
+import { createContext } from 'react';
+
+import type { Team } from '@/types/context/teamContextType';
+
+export interface TeamContextState {
+  teams: Team[];
+  activeTeam: Team | null;
+}
+
+export const TeamContext = createContext<TeamContextState>({
+  teams: [],
+  activeTeam: null,
+});
+```
+
+### Provider Components
+```typescript
+// src/app/providers/TeamProvider.tsx
+'use client';
+
+import React from 'react';
+
+import { TeamContext } from '@/context/TeamContext';
+import type { Team } from '@/types/context/teamContextType';
+
+interface TeamProviderProps {
+  children: React.ReactNode;
+  teams: Team[];
+  activeTeam: Team | null;
+}
+
+export function TeamProvider({ children, teams, activeTeam }: TeamProviderProps) {
+  return <TeamContext.Provider value={{ teams, activeTeam }}>{children}</TeamContext.Provider>;
+}
+```
+
+### React Query Hooks
+```typescript
+// src/hooks/team/useTeam.ts
+'use client';
+
+import { useContext } from 'react';
+import { useQuery } from '@tanstack/react-query';
+
+import { TeamContext } from '@/context/TeamContext';
+import { getTeams } from '@/app/actions/teamAction';
+
+export function useTeam() {
+  const context = useContext(TeamContext);
+  if (!context) throw new Error('useTeam must be used within a TeamProvider');
+  return context;
+}
+
+export function useTeamQuery(userId: string) {
+  return useQuery({
+    queryKey: ['teams', userId],
+    queryFn: () => getTeams(userId),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000,   // 10 minutes
+  });
+}
+```
+
+## Responsibility Table
+
+| Layer              | Responsibility                              | Non-responsibility                       |
+|--------------------|---------------------------------------------|------------------------------------------|
+| Database Layer     | Raw database access                         | ❌ No caching                            |
+| Server Actions     | Server-side caching, data transformation    | ❌ No UI logic                           |
+| Context Files      | Define context shape and createContext      | ❌ No components, no providers           |
+| Provider Components| Pure data containers via React Context      | ❌ No business logic, no data fetching   |
+| React Query Hooks  | Data fetching, business logic, state mgmt   | ❌ No rendering                          |
+| UI Components      | Rendering based on data from hooks          | ❌ No direct data fetching               |
+
+## Cross-Referencing Between Layers
+
+- **Context Files** (`/src/context/*.ts`)
+  - ✅ Can import types from `/types/*`
+  - ❌ Cannot import from providers, hooks, or server actions
+  - ❌ Cannot contain React components
+
+- **Provider Components** (`/src/app/providers/*.tsx`)
+  - ✅ Must import context from `/src/context/*.ts`
+  - ✅ Can accept data as props
+  - ❌ Cannot fetch data directly or contain business logic
+
+- **React Query Hooks** (`/src/hooks/*/*.ts`)
+  - ✅ Can import context from `/src/context/*.ts`
+  - ✅ Can import actions from `/src/app/actions/*.ts`
+  - ✅ Contains business logic and data fetching
+  - ❌ Cannot contain React components (except for connector components)
+
+- **UI Components**
+  - ✅ Must import hooks from `/src/hooks/*`
+  - ✅ Can use context through hooks
+  - ❌ Should not import context directly
 
 ## Three-Tier Architecture
 
@@ -120,6 +235,28 @@ This document outlines the standard caching rules for our Next.js application, e
   - Focus on rendering and user interaction logic.
   - Never call Database Layer functions directly from components.
 
+## Migration Guidelines
+
+When converting existing code to follow this architecture:
+
+1. **Start with Context Definitions**:
+   - Create/update context files in `/src/context/`
+   - Define only the shape of data and createContext
+
+2. **Update Providers**:
+   - Remove business logic and data fetching
+   - Import context from `/src/context/`
+   - Accept data as props
+
+3. **Create/Update React Query Hooks**:
+   - Move business logic from providers to hooks
+   - Use useQuery with proper caching parameters
+   - Handle loading states and errors
+
+4. **Update Component Imports**:
+   - Change imports from `@/context` to `@/hooks/*`
+   - Use the hooks instead of direct context access
+
 ## Anti-Patterns to Avoid
 
 - Do not implement caching in the Database Layer.
@@ -129,6 +266,8 @@ This document outlines the standard caching rules for our Next.js application, e
 - Do not omit cache invalidation (revalidateTag or invalidateQueries) after WRITE operations.
 - Do not use excessive dependencies in useEffect hooks that trigger unnecessary refetching.
 - Do not perform database queries directly in render functions.
+- Do not create contexts in provider files - keep them in `/src/context/`.
+- Do not mix provider and context in the same file.
 
 ## Debugging Caching Problems
 

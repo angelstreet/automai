@@ -12,12 +12,11 @@ import {
   CommandItem,
 } from '@/components/shadcn/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/shadcn/popover';
-import { useUser, useTeam } from '@/context';
+import { useUser } from '@/app/providers';
 import { cn } from '@/lib/utils';
 
 export function TeamSelectorClient() {
   const { user, teams: userTeams, selectedTeam, setSelectedTeam, refreshUser } = useUser();
-  const { syncWithUserContext } = useTeam();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -33,8 +32,6 @@ export function TeamSelectorClient() {
 
   const handleTeamSelect = async (teamId: string) => {
     await setSelectedTeam(teamId);
-    // Make sure the permission system is aware of the team change
-    await syncWithUserContext();
     setOpen(false);
   };
 

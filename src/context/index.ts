@@ -5,7 +5,10 @@ import type { UserContextType } from '@/types/context/userContextType';
 export { UserProvider, SidebarProvider, TeamProvider } from '@/app/providers';
 
 // Export basic data context hooks that access provider data only
-export { useUser, useSidebar, useTeam, useTheme } from '@/app/providers';
+export { useUser, useSidebar, useTheme } from '@/app/providers';
+
+// IMPORTANT: useTeam has moved to @/hooks/team
+// Import it with: import { useTeam } from '@/hooks/team';
 
 // Export hooks from hooks directory for more specialized usage
 export { usePermission } from '@/hooks/permission';
@@ -49,7 +52,7 @@ export type {
   User,
   Role,
   UserTeam,
-  TeamMember,
+  TeamMember as UserTeamMember,
   ResourceLimit,
   AuthUser,
 } from '@/types/component/userComponentType';
@@ -74,3 +77,13 @@ export const userSelectors = {
   // Get just the selected team
   selectedTeam: (context: UserContextType) => context.selectedTeam,
 };
+
+// Export context-related types
+
+// Import these hooks from '@/hooks' instead
+// export type { Team } from './TeamContext';
+// export { default as TeamContext, TeamProvider, useTeam } from './TeamContext';
+
+// DEPRECATED: Import hooks from @/hooks instead
+// For example, instead of importing from '@/context':
+// import { useTeam } from '@/hooks';

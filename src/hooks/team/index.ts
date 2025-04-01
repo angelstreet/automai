@@ -1,3 +1,7 @@
 // Export all team-related hooks
-export * from './useTeamResources';
-export * from './useTeam';
+export { useTeam, useTeamData } from './useTeam';
+export {
+  useResourceAssignment,
+  useResourceLimit,
+  useUnassignedResources,
+} from './useTeamResources';

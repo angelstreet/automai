@@ -3,7 +3,8 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { checkPermission, getUserPermissions } from '@/app/actions/permissionAction';
-import { useUser, useTeam } from '@/context';
+import { useUser } from '@/context';
+import { useTeam } from '@/hooks/team';
 import type { ResourceType, Operation } from '@/types/context/permissionsContextType';
 
 /**
