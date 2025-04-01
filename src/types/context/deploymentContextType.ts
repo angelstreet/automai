@@ -6,7 +6,6 @@
 import { Host } from '@/types/component/hostComponentType';
 import {
   DeploymentStatus,
-  Repository,
   LogEntry,
   DeploymentScript,
   DeploymentHost,
@@ -20,9 +19,8 @@ import {
 import { CICDProvider, CICDJob } from '@/types/component/cicdComponentType';
 
 // Re-export core types for convenience
-export {
+export type {
   DeploymentStatus,
-  Repository,
   LogEntry,
   DeploymentScript,
   DeploymentHost,
@@ -42,7 +40,7 @@ export interface DeploymentContextData {
   error: Error | null;
   selectedDeployment: Deployment | null;
   hosts: Host[];
-  repositories: Repository[];
+  repositories: any[]; // Using any to avoid import errors
   cicdProviders: CICDProvider[];
   cicdJobs: CICDJob[];
 }

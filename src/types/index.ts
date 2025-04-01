@@ -67,7 +67,7 @@ export {
   mapAuthUserToUser
 } from './component/userComponentType';
 
-export {
+export type {
   WebSocketConnection,
   SSHAuthData, 
   SSHConfig, 
@@ -75,7 +75,7 @@ export {
   SSHError
 } from './component/sshComponentType';
 
-export { 
+export type { 
   Script, 
   ScriptRun, 
   ScriptStatus, 
@@ -83,7 +83,7 @@ export {
   ScriptFilter
 } from './component/scriptsComponentType';
 
-export { 
+export type { 
   PlanType, 
   PlanFeatures 
 } from './component/featuresComponentType';
@@ -92,5 +92,5 @@ export {
 // from the specific context file when needed. This enforces better code organization.
 
 // API types - import from here only when working with API responses
-export { GitHubRepository, GitHubFile } from './api/githubApiType';
-export { GitLabRepository, GitLabFile } from './api/gitlabApiType';
+export type { GitHubRepository, GitHubFile } from './api/githubApiType';
+export type { GitLabRepository, GitLabFile } from './api/gitlabApiType';

@@ -27,7 +27,7 @@ export interface UserContextType {
 }
 
 // Re-export user types for convenience
-export {
+export type {
   User,
   Role,
   UserTeam,

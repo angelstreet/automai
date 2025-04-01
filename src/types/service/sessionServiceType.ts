@@ -1,7 +1,7 @@
 /**
  * Authentication and session type definitions
  */
-import { User, UserSession } from './user';
+import { User, UserSession } from './userServiceType';
 
 /**
  * Authentication session data

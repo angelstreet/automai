@@ -14,7 +14,7 @@ import {
 } from '../component/cicdComponentType';
 
 // Export core types for convenience
-export {
+export type {
   CICDAuthType,
   CICDCredentials,
   CICDProviderConfig

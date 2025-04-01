@@ -14,7 +14,7 @@ import {
 } from '@/types/component/userComponentType';
 
 // Re-export all core user types
-export {
+export type {
   Role,
   UIRole,
   User,
@@ -22,6 +22,8 @@ export {
   UserSession,
   UserTeam,
   TeamMember,
-  ResourceLimit,
-  mapAuthUserToUser
+  ResourceLimit
 };
+
+// Export function normally (not a type)
+export { mapAuthUserToUser };

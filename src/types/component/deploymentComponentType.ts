@@ -1,8 +1,8 @@
 /**
  * Core Deployment type definitions
  */
-import { Host } from './host';
-import { Repository } from './repository';
+import { Host } from './hostComponentType';
+import { Repository } from './repositoryComponentType';
 
 /**
  * Deployment status types

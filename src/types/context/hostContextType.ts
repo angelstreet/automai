@@ -15,7 +15,7 @@ import {
 } from '@/types/component/hostComponentType';
 
 // Re-export core types for convenience
-export {
+export type {
   Host,
   HostStatus,
   HostConnectionType,
