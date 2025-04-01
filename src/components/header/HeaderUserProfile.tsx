@@ -15,7 +15,6 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
-import { useUser } from '@/hooks';
 import { User as UserType } from '@/types/service/userServiceType';
 
 // Add interface for props
@@ -24,12 +23,9 @@ interface HeaderUserProfileProps {
 }
 
 // Update function signature to accept user prop
-export function HeaderUserProfile({ user: providedUser }: HeaderUserProfileProps) {
+export function HeaderUserProfile({ user }: HeaderUserProfileProps) {
   const router = useRouter();
   const params = useParams();
-  // Use hook as a fallback if user prop wasn't provided
-  const { user: userFromHook } = useUser(null, 'HeaderUserProfile');
-  const user = providedUser || userFromHook;
   const locale = params.locale as string;
   const tenant = (params.tenant as string) || 'trial';
 

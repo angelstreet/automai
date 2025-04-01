@@ -1,7 +1,7 @@
 'use client';
 
 import { Check, ChevronsUpDown, Users } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import {
@@ -12,32 +12,34 @@ import {
   CommandItem,
 } from '@/components/shadcn/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/shadcn/popover';
-import { useUser } from '@/hooks';
 import { cn } from '@/lib/utils';
+import { Team } from '@/types/context/teamContextType';
+import { User } from '@/types/service/userServiceType';
 
-export function TeamSelectorClient() {
-  const {
-    user,
-    teams: userTeams,
-    selectedTeam,
-    setSelectedTeam,
-    refreshUser,
-  } = useUser(null, 'TeamSelectorClient');
+interface TeamSelectorClientProps {
+  user: User | null;
+  teams?: Team[];
+  selectedTeam?: Team | null;
+  onTeamSelect?: (teamId: string) => Promise<void>;
+}
+
+export function TeamSelectorClient({
+  user,
+  teams = [],
+  selectedTeam = null,
+  onTeamSelect,
+}: TeamSelectorClientProps) {
   const [open, setOpen] = useState(false);
 
-  useEffect(() => {
-    if (user && user.tenant_name === 'enterprise') {
-      refreshUser();
-    }
-  }, [user, refreshUser]);
-
   // Only show for enterprise users with multiple teams
-  if (!user || user.tenant_name !== 'enterprise' || userTeams.length <= 1) {
+  if (!user || user.tenant_name !== 'enterprise' || teams.length <= 1) {
     return null;
   }
 
   const handleTeamSelect = async (teamId: string) => {
-    await setSelectedTeam(teamId);
+    if (onTeamSelect) {
+      await onTeamSelect(teamId);
+    }
     setOpen(false);
   };
 
@@ -62,7 +64,7 @@ export function TeamSelectorClient() {
           <CommandInput placeholder="Search team..." />
           <CommandEmpty>No team found.</CommandEmpty>
           <CommandGroup>
-            {userTeams.map((team) => (
+            {teams.map((team) => (
               <CommandItem
                 key={team.id}
                 value={team.name}

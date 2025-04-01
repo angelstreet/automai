@@ -11,8 +11,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
-import { useUser } from '@/hooks';
 import { cn } from '@/lib/utils';
+import { Team } from '@/types/context/teamContextType';
 import { User } from '@/types/service/userServiceType';
 
 // Define team type for visual consistency
@@ -25,7 +25,10 @@ type VisualTeam = {
 
 interface TeamSwitcherClientProps {
   defaultCollapsed?: boolean;
-  initialUser?: User | null;
+  user: User | null;
+  teams?: Team[];
+  selectedTeam?: Team | null;
+  onTeamSelect?: (teamId: string) => Promise<void>;
 }
 
 // Icons mapping for different subscription tiers
@@ -37,13 +40,13 @@ const tierIcons = {
 
 export default function TeamSwitcherClient({
   defaultCollapsed = false,
-  initialUser,
+  user,
+  teams = [],
+  selectedTeam = null,
+  onTeamSelect,
 }: TeamSwitcherClientProps) {
-  const { user, teams, selectedTeam, setSelectedTeam } = useUser(null, 'TeamSwitcherClient');
-  const currentUser = initialUser || user;
-
   // If no user data yet, show a minimal loading state
-  if (!currentUser) {
+  if (!user) {
     if (defaultCollapsed) {
       return (
         <div className="flex items-center justify-center p-1.5">
@@ -60,7 +63,7 @@ export default function TeamSwitcherClient({
   const displayTeams = React.useMemo(() => {
     let teamsList: VisualTeam[] = [];
 
-    if (currentUser.tenant_name === 'trial') {
+    if (user.tenant_name === 'trial') {
       teamsList = [
         {
           name: 'Trial',
@@ -68,7 +71,7 @@ export default function TeamSwitcherClient({
           plan: 'trial',
         },
       ];
-    } else if (currentUser.tenant_name === 'pro') {
+    } else if (user.tenant_name === 'pro') {
       teamsList = [
         {
           id: teams.length > 0 ? teams[0].id : undefined,
@@ -77,7 +80,7 @@ export default function TeamSwitcherClient({
           plan: 'pro',
         },
       ];
-    } else if (currentUser.tenant_name === 'enterprise') {
+    } else if (user.tenant_name === 'enterprise') {
       teamsList = teams.map((team) => ({
         id: team.id,
         name: team.name,
@@ -86,18 +89,18 @@ export default function TeamSwitcherClient({
       }));
     }
     return teamsList;
-  }, [currentUser.tenant_name, teams]);
+  }, [user.tenant_name, teams]);
 
   // Determine active team
   const activeTeam = React.useMemo(() => {
     if (displayTeams.length === 0) return null;
 
-    if (selectedTeam && currentUser.tenant_name === 'enterprise') {
+    if (selectedTeam && user.tenant_name === 'enterprise') {
       const matchingTeam = displayTeams.find((t) => t.id === selectedTeam.id);
       return matchingTeam || displayTeams[0];
     }
     return displayTeams[0];
-  }, [displayTeams, selectedTeam, currentUser.tenant_name]);
+  }, [displayTeams, selectedTeam, user.tenant_name]);
 
   // If no active team determined, return null
   if (!activeTeam) return null;
@@ -105,8 +108,8 @@ export default function TeamSwitcherClient({
   // Handle team selection
   const handleTeamSelect = (team: VisualTeam) => {
     // Only select in context if team has ID and we're on enterprise tier
-    if (team.id && currentUser.tenant_name === 'enterprise') {
-      setSelectedTeam(team.id);
+    if (team.id && user.tenant_name === 'enterprise' && onTeamSelect) {
+      onTeamSelect(team.id);
     }
   };
 
@@ -124,7 +127,7 @@ export default function TeamSwitcherClient({
   }
 
   // For trial and pro, or when there's only one team, don't show dropdown
-  if (currentUser.tenant_name !== 'enterprise' || displayTeams.length <= 1) {
+  if (user.tenant_name !== 'enterprise' || displayTeams.length <= 1) {
     return (
       <button className="flex w-full items-center justify-between rounded-lg border border-border p-2">
         <div className="flex items-center gap-2">

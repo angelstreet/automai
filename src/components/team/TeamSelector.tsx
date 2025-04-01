@@ -1,5 +1,21 @@
 import { TeamSelectorClient } from './TeamSelectorClient';
+import { useTeam } from '@/hooks/team/useTeam';
 
-export default function TeamSelector() {
-  return <TeamSelectorClient />;
+interface TeamSelectorProps {
+  user?: any;
+  teams?: any[];
+  activeTeam?: any;
+}
+
+export default function TeamSelector({ user, teams, activeTeam }: TeamSelectorProps) {
+  const { setSelectedTeam } = useTeam();
+
+  return (
+    <TeamSelectorClient
+      user={user}
+      teams={teams}
+      selectedTeam={activeTeam}
+      onTeamSelect={setSelectedTeam}
+    />
+  );
 }

@@ -15,7 +15,7 @@ import { APP_SIDEBAR_WIDTH, APP_SIDEBAR_WIDTH_ICON } from '@/components/sidebar/
 import { sidebarData } from '@/components/sidebar/sidebarData';
 import TeamSelector from '@/components/team/TeamSelector';
 import { TeamSwitcher } from '@/components/team/TeamSwitcher';
-import { useSidebar, useUser } from '@/hooks';
+import { useSidebar } from '@/hooks';
 import { cn } from '@/lib/utils';
 import { User } from '@/types/service/userServiceType';
 
@@ -24,10 +24,7 @@ interface SidebarClientProps {
 }
 
 // Wrap the component with React.memo to prevent unnecessary re-renders
-const SidebarClient = React.memo(function SidebarClient({ user: propUser }: SidebarClientProps) {
-  const userContext = useUser(null, 'SidebarClient');
-  // Use prop user if available, otherwise fall back to context
-  const user = propUser || userContext?.user || null;
+const SidebarClient = React.memo(function SidebarClient({ user }: SidebarClientProps) {
   const { open } = useSidebar();
 
   // Simplified role resolution
@@ -79,7 +76,7 @@ const SidebarClient = React.memo(function SidebarClient({ user: propUser }: Side
         ))}
       </SidebarContent>
       <SidebarFooter className="pb-2">
-        {user && <SidebarUserProfile tenant={user.tenant_name} />}
+        {user && <SidebarUserProfile user={user} tenant={user.tenant_name} />}
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

@@ -15,16 +15,16 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
-import { useUser } from '@/hooks';
+import { User as UserType } from '@/types/service/userServiceType';
 
 interface SidebarUserProfileProps {
   tenant?: string;
+  user: UserType;
 }
 
-export function SidebarUserProfile({ tenant }: SidebarUserProfileProps) {
+export function SidebarUserProfile({ tenant, user }: SidebarUserProfileProps) {
   const router = useRouter();
   const params = useParams();
-  const { user } = useUser(null, 'SidebarUserProfile');
   const locale = (params?.locale as string) || 'en';
 
   const handleSignOut = async () => {
@@ -53,7 +53,7 @@ export function SidebarUserProfile({ tenant }: SidebarUserProfileProps) {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full mx-2">
           <Avatar className="h-8 w-8">
-            <AvatarImage src={user?.image || '/avatars/01.svg'} alt={user?.name || 'User'} />
+            <AvatarImage src={user?.avatar_url || '/avatars/01.svg'} alt={user?.name || 'User'} />
             <AvatarFallback>
               {user?.name ? getInitials(user.name) : <User className="h-4 w-4" />}
             </AvatarFallback>
