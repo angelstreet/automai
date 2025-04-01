@@ -11,7 +11,7 @@ export default async function Layout({
   params: { tenant: string; locale: string };
 }) {
   const user = await getUser();
-  const teamDetails = user ? await getTeamDetails(user.id) : null;
+  const teamDetails = user ? await getTeamDetails(user.id, 'TenantLayout') : null;
 
   return (
     <TooltipProvider>

@@ -12,11 +12,7 @@ import { locales, defaultLocale } from '@/config';
 export const createClient = (request: NextRequest) => {
   // Log request details with enhanced debugging
   console.log(
-    `[Middleware:createClient] 
-    URL: ${request.nextUrl.pathname}${request.nextUrl.search}
-    Method: ${request.method}
-    Host: ${request.headers.get('host')}
-    Referer: ${request.headers.get('referer')}`,
+    `[Middleware:createClient] URL: ${request.nextUrl.pathname}${request.nextUrl.search} Method: ${request.method} Host: ${request.headers.get('host')} Referer: ${request.headers.get('referer')}`,
   );
 
   // Create response to manipulate cookies
@@ -39,12 +35,6 @@ export const createClient = (request: NextRequest) => {
 
   if (authCookies.length > 0) {
     console.log(`[Middleware:auth-cookies] Found ${authCookies.length} auth cookies:`);
-    authCookies.forEach((cookie) => {
-      // Only log the cookie name and a hint about its value (not the full value for security)
-      console.log(
-        `[Middleware:auth-cookie] ${cookie.name}: length=${cookie.value.length}, expires=${cookie.expires || 'session'}`,
-      );
-    });
   }
 
   // Enhanced cookie handling
@@ -150,7 +140,6 @@ export async function updateSession(
 
   if (clientData) {
     // Use pre-validated session
-    console.log('[Middleware:updateSession] Using pre-validated authentication from middleware');
     const result = await supabase.auth.getSession();
     sessionData = result.data;
     sessionError = result.error;
@@ -171,9 +160,6 @@ export async function updateSession(
 
   const isDataFetchRequest =
     request.method === 'POST' && !request.nextUrl.pathname.startsWith('/api/');
-  console.log(
-    `[Middleware:check] isDataFetchRequest=${isDataFetchRequest}, Method=${request.method}, Path=${request.nextUrl.pathname}`,
-  );
 
   const isAuthError =
     (sessionError || userError) &&

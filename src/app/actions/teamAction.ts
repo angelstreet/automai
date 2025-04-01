@@ -496,8 +496,13 @@ export const checkResourceLimit = cache(
   },
 );
 
-// Cache resource counts for a tenant
-export const getTenantResourceCounts = cache(async (tenantId: string) => {
+/**
+ * Get resource counts for a tenant
+ * @param tenantId The tenant ID
+ * @param caller Optional caller identifier for debugging
+ * @returns Counts of various resources
+ */
+export const getTenantResourceCounts = cache(async (tenantId: string, caller = 'unknown') => {
   const cookieStore = await cookies();
   const supabase = await createClient(cookieStore);
 
@@ -505,6 +510,7 @@ export const getTenantResourceCounts = cache(async (tenantId: string) => {
   let cicdCount = 0;
   let deploymentsCount = 0;
   let hostsCount = 0;
+  let teamsCount = 0;
 
   try {
     // First get all teams in this tenant
@@ -513,9 +519,7 @@ export const getTenantResourceCounts = cache(async (tenantId: string) => {
     if (!teamsResult.error && teamsResult.data && teamsResult.data.length > 0) {
       // Get all team IDs in this tenant
       const teamIds = teamsResult.data.map((t) => t.id);
-      console.log(
-        `[@action:team:getTenantResourceCounts] Found ${teamIds.length} teams in tenant ${tenantId}`,
-      );
+      teamsCount = teamIds.length;
 
       // Get repositories from all teams in this tenant
       const reposResult = await supabase
@@ -525,9 +529,6 @@ export const getTenantResourceCounts = cache(async (tenantId: string) => {
 
       if (!reposResult.error) {
         reposCount = reposResult.data.length;
-        console.log(
-          `[@action:team:getTenantResourceCounts] Found ${reposCount} repositories across all teams in tenant ${tenantId}`,
-        );
       }
     }
 
@@ -539,9 +540,6 @@ export const getTenantResourceCounts = cache(async (tenantId: string) => {
 
     if (!cicdResult.error) {
       cicdCount = cicdResult.data.length;
-      console.log(
-        `[@action:team:getTenantResourceCounts] Found ${cicdCount} CICD providers for tenant ${tenantId}`,
-      );
     }
 
     // Get deployments count
@@ -555,12 +553,11 @@ export const getTenantResourceCounts = cache(async (tenantId: string) => {
       if (deployments.success && deployments.data) {
         deploymentsCount = deployments.data.length;
       }
-      console.log(
-        '[@action:team:getTenantResourceCounts] Found deployments count:',
-        deploymentsCount,
-      );
     } catch (err) {
-      console.error('[@action:team:getTenantResourceCounts] Error getting deployments count:', err);
+      console.error(
+        `[@action:team:getTenantResourceCounts] Called by: ${caller} - Error getting deployments count:`,
+        err,
+      );
     }
 
     // Count hosts
@@ -570,15 +567,25 @@ export const getTenantResourceCounts = cache(async (tenantId: string) => {
 
       if (hosts.success && hosts.data) {
         hostsCount = hosts.data.length;
-        console.log(
-          `[@action:team:getTenantResourceCounts] Found ${hostsCount} hosts for tenant ${tenantId}`,
-        );
       }
     } catch (err) {
-      console.error('[@action:team:getTenantResourceCounts] Error counting hosts:', err);
+      console.error(
+        `[@action:team:getTenantResourceCounts] Called by: ${caller} - Error counting hosts:`,
+        err,
+      );
     }
+
+    // Log all resource counts in a single, comprehensive log
+    console.log(
+      `[@action:team:getTenantResourceCounts] Called by: ${caller} - Resource counts for tenant ${tenantId}: ` +
+        `Teams: ${teamsCount}, Repositories: ${reposCount}, CICD Providers: ${cicdCount}, ` +
+        `Deployments: ${deploymentsCount}, Hosts: ${hostsCount}`,
+    );
   } catch (err) {
-    console.error('[@action:team:getTenantResourceCounts] Exception counting resources:', err);
+    console.error(
+      `[@action:team:getTenantResourceCounts] Called by: ${caller} - Exception counting resources:`,
+      err,
+    );
   }
 
   return {
@@ -591,11 +598,13 @@ export const getTenantResourceCounts = cache(async (tenantId: string) => {
 
 /**
  * Gets basic details about the user's team
+ * @param userId Optional user ID
+ * @param caller Optional caller identifier for debugging
  */
-export const getTeamDetails = cache(async (userId?: string) => {
+export const getTeamDetails = cache(async (userId?: string, caller = 'unknown') => {
   try {
     console.log(
-      `[@action:team:getTeamDetails] Getting team details${userId ? ` for user: ${userId}` : ''}`,
+      `[@action:team:getTeamDetails] Called by: ${caller} - Getting team details${userId ? ` for user: ${userId}` : ''}`,
     );
     let user;
     if (userId) {
@@ -607,7 +616,9 @@ export const getTeamDetails = cache(async (userId?: string) => {
     }
 
     if (!user) {
-      console.log(`[@action:team:getTeamDetails] No user found, returning default values`);
+      console.log(
+        `[@action:team:getTeamDetails] Called by: ${caller} - No user found, returning default values`,
+      );
       return {
         id: null,
         name: 'No Team',
@@ -624,7 +635,7 @@ export const getTeamDetails = cache(async (userId?: string) => {
 
     if (!teams || teams.length === 0) {
       console.log(
-        `[@action:team:getTeamDetails] No teams found for user, returning default values`,
+        `[@action:team:getTeamDetails] Called by: ${caller} - No teams found for user, returning default values`,
       );
       return {
         id: null,
@@ -651,17 +662,24 @@ export const getTeamDetails = cache(async (userId?: string) => {
     if (userMember) {
       role = userMember.role;
       console.log(
-        `[@action:team:getTeamDetails] Found user role: ${role} for user ${user.id} in team ${team.id}`,
+        `[@action:team:getTeamDetails] Called by: ${caller} - Found user role: ${role} for user ${user.id} in team ${team.id}`,
       );
     }
 
-    console.log(`[@action:team:getTeamDetails] Returning team details with role: ${role}`);
+    console.log(
+      `[@action:team:getTeamDetails] Called by: ${caller} - Returning team details with role: ${role}`,
+    );
 
     // Get resource counts using cached function
-    const resourceCounts = await getTenantResourceCounts(team.tenant_id);
+    const resourceCounts = await getTenantResourceCounts(
+      team.tenant_id,
+      `getTeamDetails(${caller})`,
+    );
 
     // Return team details with actual resource counts
-    console.log(`[@action:team:getTeamDetails] Successfully obtained team details`);
+    console.log(
+      `[@action:team:getTeamDetails] Called by: ${caller} - Successfully obtained team details`,
+    );
     return {
       ...team,
       memberCount,
@@ -671,7 +689,10 @@ export const getTeamDetails = cache(async (userId?: string) => {
       resourceCounts,
     };
   } catch (error) {
-    console.error('[@action:team:getTeamDetails] Error fetching team details', error);
+    console.error(
+      `[@action:team:getTeamDetails] Called by: ${caller} - Error fetching team details`,
+      error,
+    );
     throw new Error('Failed to fetch team details');
   }
 });
