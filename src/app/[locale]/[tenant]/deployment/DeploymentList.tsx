@@ -13,10 +13,14 @@ import {
 } from '@/components/shadcn/table';
 import { useToast } from '@/components/shadcn/use-toast';
 import { PermissionAwareActionsWrapper } from '@/components/team/PermissionAwareActionsWrapper';
-import { usePermission } from '@/context/PermissionContext';
-import {  Deployment  } from '@/types/component/deploymentComponentType';
+import { usePermission } from '@/hooks';
+import { Deployment } from '@/types/component/deploymentComponentType';
 
-import { getDeployments, deleteDeployment, executeDeployment } from '@/app/actions/deploymentsAction';
+import {
+  getDeployments,
+  deleteDeployment,
+  executeDeployment,
+} from '@/app/actions/deploymentsAction';
 
 export default function DeploymentList() {
   const router = useRouter();

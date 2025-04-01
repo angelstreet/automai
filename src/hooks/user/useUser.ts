@@ -1,10 +1,10 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo } from 'react';
+import { useContext, useEffect, useMemo } from 'react';
 
 import { getUser, updateProfile } from '@/app/actions/userAction';
-import { useUser as useUserContext } from '@/app/providers';
+import { UserContext } from '@/context/UserContext';
 import type { User } from '@/types/service/userServiceType';
 
 /**
@@ -60,6 +60,18 @@ export function useUserQuery(initialUser: User | null = null) {
 }
 
 /**
+ * Access the user context directly
+ * This is a simple hook that provides access to the context
+ */
+export function useUserContext() {
+  const context = useContext(UserContext);
+  if (!context) {
+    throw new Error('useUserContext must be used within a UserProvider');
+  }
+  return context;
+}
+
+/**
  * Memoized hook for accessing user data from context
  * Returns a stable reference to prevent unnecessary re-renders
  */
@@ -69,6 +81,17 @@ export function useUser() {
   return useMemo(() => {
     return {
       user: userContext.user,
+      loading: userContext.loading,
+      error: userContext.error,
+      updateProfile: userContext.updateProfile,
+      refreshUser: userContext.refreshUser,
+      updateRole: userContext.updateRole,
+      clearCache: userContext.clearCache,
+      teams: userContext.teams,
+      selectedTeam: userContext.selectedTeam,
+      teamMembers: userContext.teamMembers,
+      setSelectedTeam: userContext.setSelectedTeam,
+      checkResourceLimit: userContext.checkResourceLimit,
     };
-  }, [userContext.user]);
+  }, [userContext]);
 }

@@ -2,9 +2,9 @@
 
 import { Button } from '@/components/ui/button';
 import { Plus, Edit, Trash2, Play } from 'lucide-react';
-import { usePermission } from '@/context/PermissionContext';
+import { usePermission } from '@/hooks';
 import { PermissionGuard } from '@/components/ui/PermissionGuard';
-import {  Host  } from '@/types/component/hostComponentType';
+import { Host } from '@/types/component/hostComponentType';
 
 interface HostActionButtonsProps {
   host?: Host;
