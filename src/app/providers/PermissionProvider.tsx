@@ -1,56 +1,31 @@
 'use client';
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { useContext } from 'react';
 
-import type {  PermissionsResult  } from '@/types/context/permissionsContextType';
+import { PermissionContext } from '@/context/PermissionContext';
+import type { PermissionsResult } from '@/types/context/permissionsContextType';
 
-// Define a minimal permission context that only holds data
-interface PermissionContextType {
-  permissionsData: PermissionsResult | null;
-  permissionsLoading: boolean;
-  permissionsError: string | null;
-}
-
-// Create context with default values
-const PermissionContext = createContext<PermissionContextType>({
-  permissionsData: null,
-  permissionsLoading: false,
-  permissionsError: null,
-});
-
-export function PermissionProvider({
-  children,
-  initialPermissions = null,
-}: {
+interface PermissionProviderProps {
   children: React.ReactNode;
-  initialPermissions?: PermissionsResult | null;
-}) {
-  // Simple state for permissions data
-  const [permissionsData, setPermissionsData] = useState<PermissionsResult | null>(
-    initialPermissions,
-  );
-  const [permissionsLoading, setPermissionsLoading] = useState(false);
-  const [permissionsError, setPermissionsError] = useState<string | null>(null);
+  permissions: PermissionsResult | null;
+}
 
-  // Just provide data, no logic
+/**
+ * PermissionProvider - Pure data container for permissions state
+ * No business logic, no data fetching, no side effects
+ */
+export function PermissionProvider({ children, permissions }: PermissionProviderProps) {
   return (
-    <PermissionContext.Provider
-      value={{
-        permissionsData,
-        permissionsLoading,
-        permissionsError,
-      }}
-    >
-      {children}
-    </PermissionContext.Provider>
+    <PermissionContext.Provider value={{ permissions }}>{children}</PermissionContext.Provider>
   );
 }
 
-// Export a simple hook to access the permission context
+/**
+ * Context accessor - only exports the context value
+ * Business logic should be in hooks/permission/usePermission.ts
+ */
 export function usePermissionContext() {
   const context = useContext(PermissionContext);
-  if (context === undefined) {
-    throw new Error('usePermissionContext must be used within a PermissionProvider');
-  }
+  if (!context) throw new Error('usePermissionContext must be used within a PermissionProvider');
   return context;
 }
