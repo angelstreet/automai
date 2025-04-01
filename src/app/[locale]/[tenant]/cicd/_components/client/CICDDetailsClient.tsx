@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import React, { useState, useCallback } from 'react';
 
-import { deleteCICDProvider, testCICDProvider } from '@/app/actions/cicd';
+import { deleteCICDProvider, testCICDProvider } from '@/app/actions/cicdAction';
 import { EmptyState } from '@/components/layout/EmptyState';
 import {
   AlertDialog,

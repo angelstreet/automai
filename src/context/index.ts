@@ -19,6 +19,8 @@ export {
 
 // Export hooks from hooks directory for more specialized usage
 export { usePermission } from '@/hooks/permission';
+export { useHost } from '@/hooks/host';
+export { useCICD } from '@/hooks/cicd';
 
 // Re-export the specialized team hooks from TeamContext for backward compatibility
 export {

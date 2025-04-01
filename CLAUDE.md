@@ -55,6 +55,9 @@ alwaysApply: true
 - **All imports** must reference the file with the Action suffix
   - Example: `import { getUser } from '@/app/actions/userAction'`
 - **NO aliases or backward compatibility** imports are allowed
+- **IMPORTANT**: Components should use hooks from context when available instead of directly importing actions
+  - Preferred: `import { useUser } from '@/context'` and use hooks methods
+  - Only use direct action imports when no hook is available yet
 
 ### Context and Hooks
 - **Hook Files**: Must use `use[Domain].ts` naming pattern (no suffixes)
@@ -71,10 +74,15 @@ alwaysApply: true
 
 ### Context/Hooks Structure
 - **Provider Components**: Located in `/src/app/providers/*.tsx`
+  - Only used for domains requiring global state (e.g., User, Team)
   - Are data-only containers with minimal state
   - No business logic, side effects, or data fetching
   - Export basic context access hooks (e.g., `useUser`)
 - **Business Logic Hooks**: Located in `/src/hooks/*/*.ts`
+  - Primary pattern for all domains including those without providers
   - Contain all data fetching and business logic
-  - Use React Query for data management
+  - Use React Query for data management and caching
+  - Standalone for domains without global state requirements (e.g., Hosts, CICD)
 - **Context Exports**: All exports centralized through `/src/context/index.ts`
+  - Both provider hooks and business logic hooks exported here
+  - Components always import from this central location

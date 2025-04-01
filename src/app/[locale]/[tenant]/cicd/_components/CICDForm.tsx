@@ -4,7 +4,7 @@ import { CheckCircle } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 
-import { createCICDProvider, updateCICDProvider, testCICDProvider } from '@/app/actions/cicd';
+import { createCICDProvider, updateCICDProvider, testCICDProvider } from '@/app/actions/cicdAction';
 import { Button } from '@/components/shadcn/button';
 import {
   Form,

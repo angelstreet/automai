@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 import {
   runDeployment as runDeploymentAction,
   deleteDeployment as deleteDeploymentAction,
-} from '@/app/actions/deployments';
+} from '@/app/actions/deploymentsAction';
 import {
   AlertDialog,
   AlertDialogAction,
