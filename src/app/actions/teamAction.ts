@@ -26,14 +26,14 @@ import {
   getUserActiveTeam as dbGetUserActiveTeam,
 } from '@/lib/supabase/db-teams/teams';
 import { createClient } from '@/lib/supabase/server';
-import { User } from '@/types/auth/user';
-import type { ActionResult } from '@/types/context/cicd';
-import type {
+import {  User  } from '@/types/service/userServiceType';
+import type {  ActionResult  } from '@/types/context/cicdContextType';
+import type { 
   TeamCreateInput,
   TeamUpdateInput,
   TeamMemberCreateInput,
   ResourceLimit,
-} from '@/types/context/team';
+ } from '@/types/context/teamContextType';
 
 // Use TeamMemberType consistently throughout this file
 type TeamMember = TeamMemberType;

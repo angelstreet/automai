@@ -9,7 +9,7 @@ import {
   GitProvider as DbGitProvider,
 } from '@/lib/supabase/db-repositories/db-git-provider';
 import { repository as dbRepository } from '@/lib/supabase/db-repositories/db-repository';
-import {
+import { 
   Repository,
   GitProvider,
   GitProviderType,
@@ -20,8 +20,8 @@ import {
   RepositoryFilter,
   gitProviderCreateSchema,
   testRepositorySchema,
-} from '@/types/context/repository';
-import { AuthUser } from '@/types/auth/user';
+ } from '@/types/context/repositoryContextType';
+import {  AuthUser  } from '@/types/service/userServiceType';
 
 /**
  * Convert DB repository to our Repository type

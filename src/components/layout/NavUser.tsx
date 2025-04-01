@@ -16,7 +16,7 @@ import {
 import { useSidebar, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/sidebar';
 import { useUser } from '@/context';
 import { cn } from '@/lib/utils';
-import { User as UserType } from '@/types/auth/user';
+import {  User as UserType  } from '@/types/service/userServiceType';
 
 interface NavUserProps {
   user: UserType;

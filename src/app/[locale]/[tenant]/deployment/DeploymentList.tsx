@@ -2,7 +2,6 @@ import { formatDistanceToNow } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
 
-import { getDeployments, deleteDeployment, executeDeployment } from '@/app/actions/deployments';
 import { Button } from '@/components/shadcn/button';
 import {
   Table,
@@ -15,7 +14,9 @@ import {
 import { useToast } from '@/components/shadcn/use-toast';
 import { PermissionAwareActionsWrapper } from '@/components/team/PermissionAwareActionsWrapper';
 import { usePermission } from '@/context/PermissionContext';
-import { Deployment } from '@/types/core/deployment';
+import {  Deployment  } from '@/types/component/deploymentComponentType';
+
+import { getDeployments, deleteDeployment, executeDeployment } from '@/app/actions/deployments';
 
 export default function DeploymentList() {
   const router = useRouter();

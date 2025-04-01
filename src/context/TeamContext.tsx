@@ -6,11 +6,11 @@ import {
   checkPermission,
   getUserPermissions,
 } from '@/app/actions/permissionAction';
-import type {
+import type { 
   ResourceType,
   Operation,
   PermissionMatrix,
-} from '@/types/context/permissions';
+ } from '@/types/context/permissionsContextType';
 import {
   Team,
   getTeamById,
@@ -34,8 +34,8 @@ import {
 } from '@/app/actions/teamMemberAction';
 import { useToast } from '@/components/shadcn/use-toast';
 import { useUser } from '@/app/providers';
-import { ResourcePermissions } from '@/types/context/team';
-import type { TeamMember, TeamCreateInput, TeamUpdateInput } from '@/types/context/team';
+import {  ResourcePermissions  } from '@/types/context/teamContextType';
+import type {  TeamMember, TeamCreateInput, TeamUpdateInput  } from '@/types/context/teamContextType';
 
 interface TeamContextState {
   teams: Team[];

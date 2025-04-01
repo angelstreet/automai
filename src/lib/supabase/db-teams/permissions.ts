@@ -1,12 +1,12 @@
 import { createClient } from '@/lib/supabase/server';
-import {
+import { 
   PermissionMatrix,
   PermissionsResult,
   RoleTemplatesResult,
   RoleTemplateResult,
   ResourceType,
   Operation,
-} from '@/types/context/permissions';
+ } from '@/types/context/permissionsContextType';
 
 /**
  * Format permissions into a readable log output

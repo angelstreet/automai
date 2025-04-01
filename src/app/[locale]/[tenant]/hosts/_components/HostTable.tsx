@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/shadcn/table';
-import { Host } from '@/types/core/host';
+import {  Host  } from '@/types/component/hostComponentType';
 
 interface HostTableProps {
   hosts: (Host & { animationDelay?: number })[];

@@ -1,4 +1,4 @@
-import { ResourceType } from '@/types/context/permissions';
+import {  ResourceType  } from '@/types/context/permissionsContextType';
 
 // Team related types
 export interface Team {

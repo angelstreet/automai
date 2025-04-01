@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getUser } from '@/app/actions/userAction';
-import { User } from '@/types/auth/user';
+import { User } from '@/types/service/userServiceType';
 
 export function useUser(initialUser: User | null = null) {
   // State for managing user data

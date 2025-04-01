@@ -1,4 +1,14 @@
-import { AuthUser } from '../user';
+import { AuthUser } from '../service/userServiceType';
+import {
+  Repository, 
+  GitProvider, 
+  RepositoryFile,
+  GitProviderType,
+  CreateGitProviderParams,
+  CreateRepositoryParams,
+  RepositorySyncStatus
+} from '../component/repositoryComponentType';
+import { z } from 'zod';
 
 /**
  * Repository data interface - contains all state
@@ -64,63 +74,8 @@ export const REPOSITORY_CACHE_KEYS = {
 };
 
 /**
- * Types for Git repositories and providers
+ * API response types
  */
-import { z } from 'zod';
-
-export type GitProviderType = 'github' | 'gitlab' | 'gitea' | 'self-hosted';
-
-export type GitProviderStatus = 'connected' | 'disconnected' | 'error';
-
-export type RepositorySyncStatus = 'SYNCED' | 'SYNCING' | 'ERROR' | 'IDLE' | 'PENDING' | 'FAILED';
-
-export interface GitProvider {
-  id: string;
-  type: GitProviderType;
-  name: GitProviderType | string;
-  displayName: string;
-  status: GitProviderStatus;
-  serverUrl?: string;
-  lastSyncedAt?: string;
-  repositoryCount?: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface Repository {
-  id: string;
-  name: string;
-  description?: string;
-  url?: string;
-  isPrivate: boolean;
-  defaultBranch: string;
-  language?: string;
-  providerType: GitProviderType;
-  providerId: string;
-  owner: string;
-  lastSyncedAt?: string;
-  syncStatus: RepositorySyncStatus;
-  createdAt: string;
-  updated_at: string;
-  provider?: GitProvider;
-}
-
-export interface RepositoryFile {
-  name: string;
-  path: string;
-  type: 'file' | 'dir';
-  size?: string;
-  lastModified?: string;
-  content?: string;
-  children?: Record<string, RepositoryFile>;
-  encoding?: string;
-}
-
-export interface RepositoryExplorerProps {
-  repository: Repository;
-  onBack: () => void;
-}
-
 export interface FileAPIResponse {
   success: boolean;
   data?: {
@@ -136,6 +91,9 @@ export interface FilesAPIResponse {
   error?: string;
 }
 
+/**
+ * UI-specific types
+ */
 export interface ConnectRepositoryValues {
   type?: GitProviderType | 'quick-clone';
   method?: 'oauth' | 'token' | 'url';
@@ -147,24 +105,11 @@ export interface ConnectRepositoryValues {
   token?: string;
 }
 
-export interface CreateGitProviderParams {
-  name: string;
-  provider_type: string;
-  auth_type: 'oauth' | 'token';
-  url?: string;
-  token?: string;
-}
-
 export interface CreateGitProviderResult {
   success: boolean;
   data: any | null;
   error?: string | null;
   authUrl?: string | null;
-}
-
-export interface CreateRepositoryParams {
-  url: string;
-  name: string;
 }
 
 export interface CreateRepositoryResult {
@@ -193,6 +138,11 @@ export interface EnhancedRepositoryCardProps {
   repository: Repository;
   isDeleting?: boolean;
   onDelete?: (id: string) => void;
+}
+
+export interface RepositoryExplorerProps {
+  repository: Repository;
+  onBack: () => void;
 }
 
 // Schema definitions for validation

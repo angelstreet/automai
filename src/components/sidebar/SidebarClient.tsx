@@ -17,7 +17,7 @@ import { APP_SIDEBAR_WIDTH, APP_SIDEBAR_WIDTH_ICON } from '@/components/sidebar/
 import { sidebarData } from '@/components/sidebar/sidebarData';
 import TeamSelector from '@/components/team/TeamSelector';
 import { useUser } from '@/context';
-import { User } from '@/types/auth/user';
+import {  User  } from '@/types/service/userServiceType';
 
 interface SidebarClientProps {
   user?: User | null;

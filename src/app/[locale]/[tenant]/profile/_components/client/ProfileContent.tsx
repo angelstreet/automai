@@ -15,7 +15,7 @@ import {
 } from '@/components/shadcn/card';
 import { Input } from '@/components/shadcn/input';
 import { useUser } from '@/context';
-import { User } from '@/types/auth/user';
+import {  User  } from '@/types/service/userServiceType';
 
 interface ProfileContentProps {
   user?: User | null;

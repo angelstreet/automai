@@ -5,7 +5,7 @@ import { AppSidebar } from '@/components/layout/AppSidebar';
 import { AppSidebarSkeleton } from '@/components/layout/AppSidebarSkeleton';
 import { WorkspaceHeader } from '@/components/workspace/WorkspaceHeader';
 import { WorkspaceHeaderSkeleton } from '@/components/workspace/WorkspaceHeaderSkeleton';
-import { mapAuthUserToUser } from '@/types/user';
+import {  mapAuthUserToUser  } from '@/types/component/userComponentType';
 
 import TenantLayoutClient from './_components/client/TenantLayoutClient';
 

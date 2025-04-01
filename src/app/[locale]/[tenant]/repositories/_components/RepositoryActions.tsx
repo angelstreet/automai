@@ -1,7 +1,7 @@
 import { useTranslations } from 'next-intl';
 
 import { useToast } from '@/components/shadcn/use-toast';
-import { Repository } from '@/types/context/repository';
+import {  Repository  } from '@/types/context/repositoryContextType';
 
 interface RepositoryActionsProps {
   repositories?: Repository[];

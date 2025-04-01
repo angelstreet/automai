@@ -1,6 +1,6 @@
 import { Checkbox } from '@/components/shadcn/checkbox';
 import { cn } from '@/lib/utils';
-import { Host } from '@/types/core/host';
+import {  Host  } from '@/types/component/hostComponentType';
 
 import { HostCard } from './HostCard';
 

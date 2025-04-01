@@ -4,7 +4,7 @@ import * as React from 'react';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/shadcn/sheet';
 import { useSidebar } from '@/context';
 import { cn } from '@/lib/utils';
-import { SidebarProps } from '@/types/sidebar';
+import {  SidebarProps  } from '@/types/context/sidebarContextType';
 
 import { SIDEBAR_WIDTH_MOBILE } from './constants';
 

@@ -1,4 +1,4 @@
-import { User } from '@/types/auth/user';
+import {  User  } from '@/types/service/userServiceType';
 
 import { SidebarClient } from '@/components/sidebar/SidebarClient';
 

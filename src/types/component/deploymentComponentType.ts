@@ -2,23 +2,12 @@
  * Core Deployment type definitions
  */
 import { Host } from './host';
+import { Repository } from './repository';
 
 /**
  * Deployment status types
  */
 export type DeploymentStatus = 'pending' | 'running' | 'success' | 'failed' | 'cancelled';
-
-/**
- * Repository information used in deployments
- */
-export interface Repository {
-  id: string;
-  name: string;
-  owner: string;
-  provider_id?: string;
-  provider_type?: string;
-  default_branch?: string;
-}
 
 /**
  * Log entry structure for deployment logs

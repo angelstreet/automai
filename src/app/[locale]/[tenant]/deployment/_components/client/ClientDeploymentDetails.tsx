@@ -6,7 +6,7 @@ import React from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/shadcn/card';
-import { Deployment } from '@/types/core/deployment';
+import {  Deployment  } from '@/types/component/deploymentComponentType';
 
 import { ClientDeploymentRunAction } from './ClientDeploymentRunAction';
 

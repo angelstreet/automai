@@ -9,8 +9,8 @@ import {
   CardTitle,
 } from '@/components/shadcn/card';
 import { ResourceCard } from '@/components/ui/resource-card';
-import { TeamDetails, UnassignedResources } from '@/types/context/team';
-import { User } from '@/types/auth/user';
+import {  TeamDetails, UnassignedResources  } from '@/types/context/teamContextType';
+import {  User  } from '@/types/service/userServiceType';
 
 interface TeamOverviewProps {
   team: TeamDetails | null;

@@ -3,11 +3,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 
-import {
-  createGitProvider,
-  testGitRepository,
-  createRepositoryFromUrl,
-} from '@/app/actions/repositories';
+import { useRepository } from '@/context';
 import { GitHubIcon, GitLabIcon, GiteaIcon } from '@/components/icons';
 import { Alert, AlertDescription } from '@/components/shadcn/alert';
 import { Badge } from '@/components/shadcn/badge';
@@ -25,7 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/ta
 import { useToast } from '@/components/shadcn/use-toast';
 
 import { CONNECT_REPOSITORY_TABS, AUTH_METHODS } from '../constants';
-import { EnhancedConnectRepositoryDialogProps, CreateGitProviderParams } from '@/types/context/repository';
+import {  EnhancedConnectRepositoryDialogProps, CreateGitProviderParams  } from '@/types/context/repositoryContextType';
 
 export function EnhancedConnectRepositoryDialog({
   open,
@@ -45,6 +41,13 @@ export function EnhancedConnectRepositoryDialog({
 
   // Use router for refreshing data after actions
   const router = useRouter();
+
+  // Use the repository hook
+  const { 
+    createGitProvider, 
+    testConnection,
+    connectRepository
+  } = useRepository();
 
   const handleConnect = (provider: string) => {
     setCurrentProvider(provider);
@@ -94,45 +97,34 @@ export function EnhancedConnectRepositoryDialog({
     setIsConnecting(true);
 
     try {
-      if (!repositoryContext) {
-        toast({
-          title: 'Error',
-          description: 'Repository context not initialized yet. Please try again later.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Create git provider with token authentication
       const params: CreateGitProviderParams = {
         name: `${currentProvider} Provider`,
         provider_type: currentProvider.toLowerCase(),
         auth_type: AUTH_METHODS.TOKEN,
-        url: serverUrl, // Optional server URL for self-hosted instances
         token: accessToken,
+        server_url: currentProvider === 'gitea' ? serverUrl : undefined,
       };
+      
       const result = await createGitProvider(params);
 
       if (result.success) {
         toast({
           title: 'Success',
-          description: 'Git provider connected successfully',
-          variant: 'default',
+          description: `${currentProvider} provider connected successfully`,
         });
-
-        // Refresh the page to show the new provider
+        
+        // Refresh the page
         router.refresh();
-
+        
+        // Close the dialog
+        onOpenChange(false);
+        
         if (onSubmit) {
           onSubmit({
-            provider: currentProvider.toLowerCase(),
+            provider: currentProvider,
             method: AUTH_METHODS.TOKEN,
-            token: accessToken,
-            url: serverUrl,
           });
         }
-
-        onOpenChange(false);
       } else {
         toast({
           title: 'Connection Failed',
@@ -141,7 +133,7 @@ export function EnhancedConnectRepositoryDialog({
         });
       }
     } catch (error: any) {
-      console.error('Error connecting with token:', error);
+      console.error('Error during token connection:', error);
       toast({
         title: 'Error',
         description: error.message || 'An unexpected error occurred',
@@ -159,7 +151,7 @@ export function EnhancedConnectRepositoryDialog({
 
     try {
       // First verify the URL is valid
-      const verifyResult = await testGitRepository({ url: quickCloneUrl });
+      const verifyResult = await testConnection({ url: quickCloneUrl });
 
       if (!verifyResult.success) {
         toast({
@@ -172,8 +164,11 @@ export function EnhancedConnectRepositoryDialog({
       }
 
       // Create the repository
-      const repoName = quickCloneUrl.split('/').pop()?.replace('.git', '') || 'Repository';
-      const result = await createRepositoryFromUrl(quickCloneUrl, false, '');
+      const result = await connectRepository({
+        url: quickCloneUrl,
+        isPrivate: false,
+        description: ''
+      });
 
       if (result.success) {
         toast({
@@ -276,80 +271,75 @@ export function EnhancedConnectRepositoryDialog({
                   <p className="text-xs text-center text-muted-foreground mt-1">
                     {t('connectViaToken')}
                   </p>
+                  <Badge variant="secondary" className="mt-2">
+                    {t('selfHosted')}
+                  </Badge>
                 </div>
               </div>
 
               {currentProvider && (
-                <div className="mt-6 space-y-4">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-medium">
-                      {t('connectTo')}{' '}
-                      {currentProvider === 'github'
-                        ? 'GitHub'
-                        : currentProvider === 'gitlab'
-                          ? 'GitLab'
-                          : 'Gitea'}
-                    </h3>
-                    <Badge variant="outline">{currentProvider.toUpperCase()}</Badge>
-                  </div>
+                <div className="mt-6 border rounded-lg p-6">
+                  <h3 className="text-lg font-medium mb-4 flex items-center">
+                    {currentProvider === 'github' ? (
+                      <GitHubIcon className="h-5 w-5 mr-2" />
+                    ) : currentProvider === 'gitlab' ? (
+                      <GitLabIcon className="h-5 w-5 mr-2" />
+                    ) : (
+                      <GiteaIcon className="h-5 w-5 mr-2" />
+                    )}
+                    {currentProvider.charAt(0).toUpperCase() + currentProvider.slice(1)}{' '}
+                    {t('connection')}
+                  </h3>
 
-                  <Tabs
-                    defaultValue={
-                      currentProvider === 'gitea' ? AUTH_METHODS.TOKEN : AUTH_METHODS.OAUTH
-                    }
-                    className="w-full"
-                  >
+                  <Tabs defaultValue={AUTH_METHODS.TOKEN} className="w-full">
                     <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger
-                        value={AUTH_METHODS.OAUTH}
-                        disabled={currentProvider === 'gitea'}
-                      >
-                        OAuth
+                      {currentProvider !== 'gitea' && (
+                        <TabsTrigger value={AUTH_METHODS.OAUTH}>OAuth</TabsTrigger>
+                      )}
+                      <TabsTrigger value={AUTH_METHODS.TOKEN}>
+                        {t('accessToken')}
                       </TabsTrigger>
-                      <TabsTrigger value={AUTH_METHODS.TOKEN}>{t('accessToken')}</TabsTrigger>
                     </TabsList>
 
-                    <TabsContent value={AUTH_METHODS.OAUTH}>
-                      {currentProvider !== 'gitea' ? (
-                        <div className="space-y-4 mt-4">
-                          <p className="text-sm">
-                            {t('oauthDescription', {
-                              provider: currentProvider === 'github' ? 'GitHub' : 'GitLab',
-                            })}
-                          </p>
+                    {currentProvider !== 'gitea' && (
+                      <TabsContent value={AUTH_METHODS.OAUTH} className="space-y-4 mt-4">
+                        <p className="text-sm">{t('oauthExplanation')}</p>
 
-                          <Alert>
-                            <AlertDescription>{t('oauthPermissionsInfo')}</AlertDescription>
-                          </Alert>
+                        <Alert>
+                          <AlertDescription>{t('oauthPermissions')}</AlertDescription>
+                        </Alert>
 
-                          <Button
-                            className="w-full"
-                            onClick={handleOAuthConnect}
-                            disabled={isConnecting}
-                          >
-                            {isConnecting ? (
-                              <>
-                                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                                {t('connecting')}
-                              </>
-                            ) : (
-                              <>
-                                {t('continueWith')}{' '}
-                                {currentProvider === 'github' ? 'GitHub' : 'GitLab'}
-                                <ArrowRight className="w-4 h-4 ml-2" />
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="space-y-4 mt-4">
-                          <p className="text-sm">{t('giteaOAuthNotSupported')}</p>
-                        </div>
-                      )}
-                    </TabsContent>
+                        <Button
+                          className="w-full"
+                          onClick={handleOAuthConnect}
+                          disabled={isConnecting}
+                        >
+                          {isConnecting ? (
+                            <>
+                              <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                              {t('connecting')}
+                            </>
+                          ) : (
+                            <>
+                              {currentProvider === 'github' ? (
+                                <GitHubIcon className="h-4 w-4 mr-2" />
+                              ) : (
+                                <GitLabIcon className="h-4 w-4 mr-2" />
+                              )}
+                              {t('connectWith', {
+                                provider:
+                                  currentProvider.charAt(0).toUpperCase() +
+                                  currentProvider.slice(1),
+                              })}
+                              <ArrowRight className="w-4 h-4 ml-2" />
+                            </>
+                          )}
+                        </Button>
+                      </TabsContent>
+                    )}
 
-                    <TabsContent value={AUTH_METHODS.TOKEN}>
-                      <div className="space-y-4 mt-4">
+                    <TabsContent value={AUTH_METHODS.TOKEN} className="space-y-4 mt-4">
+                      <div className="space-y-4">
                         {currentProvider === 'gitea' && (
                           <div className="space-y-2">
                             <Label htmlFor="serverUrl">{t('serverUrl')}</Label>
@@ -454,7 +444,10 @@ export function EnhancedConnectRepositoryDialog({
                     {t('cloning')}
                   </>
                 ) : (
-                  <>{t('cloneAndExplore')}</>
+                  <>
+                    <Globe className="w-4 h-4 mr-2" />
+                    {t('cloneRepository')}
+                  </>
                 )}
               </Button>
             </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState } from 'react';
-import { Team } from '@/types/context/team';
+import {  Team  } from '@/types/context/teamContextType';
 
 // Create a minimal Team context interface with just data
 interface TeamContextState {

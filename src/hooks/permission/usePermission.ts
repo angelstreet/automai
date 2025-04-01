@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { checkPermission, getUserPermissions } from '@/app/actions/permissionAction';
 import { useUser } from '@/context';
 import { useTeam } from '@/context';
-import type { ResourceType, Operation, PermissionMatrix } from '@/types/context/permissions';
+import type {  ResourceType, Operation, PermissionMatrix  } from '@/types/context/permissionsContextType';
 
 /**
  * Hook for checking user permissions
@@ -68,8 +68,6 @@ export function usePermission(specificTeamId?: string) {
 
   return {
     permissions: permissionsResponse?.data || [],
-    data: permissionsResponse?.data, // Added for compatibility with components using useUserPermissions
-    success: permissionsResponse?.success || false, // Added for compatibility
     isLoading,
     error,
     hasPermission,

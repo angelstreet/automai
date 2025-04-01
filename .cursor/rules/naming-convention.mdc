@@ -5,7 +5,7 @@ alwaysApply: false
 ---
 # Naming Conventions
 
-This document defines the naming conventions for files, components, and functions within the codebase.
+This document defines the naming conventions for files, components, functions, and types within the codebase.
 
 ## Component Naming Conventions
 
@@ -163,11 +163,80 @@ Examples:
 - `[@action:team:getTeam] Found team: ${id}`
 - `[@component:TeamMembersTable:render] Rendering members: ${members.length}`
 
+## Types Naming Conventions
+
+### Directory Structure
+
+```
+/src/types/
+├── component/                       # Component entity types (data models)
+│   ├── [domain]ComponentType.ts     
+├── context/                         # Context types (React context)
+│   ├── [domain]ContextType.ts  
+├── api/                             # API types
+│   ├── [domain]ApiType.ts
+├── service/                         # Service/auth types
+│   ├── [domain]ServiceType.ts
+├── db/                              # Database types
+│   ├── [domain]DbType.ts 
+└── ... 
+```
+
+### Component Types
+
+Component types represent the fundamental data models of the application and should be defined in `/src/types/component/[domain]ComponentType.ts` files.
+
+Examples:
+- `/src/types/component/repositoryComponentType.ts`
+- `/src/types/component/hostComponentType.ts`
+- `/src/types/component/cicdComponentType.ts`
+- `/src/types/component/deploymentComponentType.ts`
+
+### Context Types
+
+Context types extend component types with React context specific functionality and should be defined in `/src/types/context/[domain]ContextType.ts` files.
+
+Examples:
+- `/src/types/context/repositoryContextType.ts`
+- `/src/types/context/hostContextType.ts`
+- `/src/types/context/cicdContextType.ts`
+- `/src/types/context/deploymentContextType.ts`
+
+### Service Types
+
+Service types are used for authentication and service functionality and should be defined in `/src/types/service/[domain]ServiceType.ts` files.
+
+Examples:
+- `/src/types/service/userServiceType.ts`
+- `/src/types/service/sessionServiceType.ts`
+
+### Type Interface Naming Pattern
+
+```
+export interface [Entity] { ... }               # Component entity type
+export interface [Entity]Data { ... }           # Context state
+export interface [Entity]Actions { ... }        # Context actions
+export interface [Entity]ContextType { ... }    # Combined context type
+```
+
+Examples:
+- `Repository` (component entity)
+- `RepositoryData` (context state)
+- `RepositoryActions` (context actions)
+- `RepositoryContextType` (combined context type)
+
 ## General Rules
 
-1. Always use PascalCase for React components
+1. Always use PascalCase for React components and type interfaces
 2. Always use camelCase for functions, variables, and file names
 3. Always add suffix "Client" to client components
 4. Always group related components in appropriate folders
 5. Always use explicit and descriptive names over abbreviations
-6. Maintain consistent naming across the entire codebase 
+6. Maintain consistent naming across the entire codebase
+7. Define component types in `/types/component/` with suffix `ComponentType`
+8. Define context types in `/types/context/` with suffix `ContextType`
+9. Define service types in `/types/service/` with suffix `ServiceType` 
+10. Define API types in `/types/api/` with suffix `ApiType`
+11. Define database types in `/types/db/` with suffix `DbType`
+12. Always suffix action files with "Action" (e.g., teamAction.ts)
+13. Always use hook naming pattern `use[Domain]` without suffixes

@@ -24,8 +24,8 @@ import {
   TableRow,
 } from '@/components/shadcn/table';
 import { ResourceType, usePermission, useTeam } from '@/context';
-import { TeamMemberResource, TeamMemberDetails } from '@/types/context/team';
-import { User } from '@/types/auth/user';
+import {  TeamMemberResource, TeamMemberDetails  } from '@/types/context/teamContextType';
+import {  User  } from '@/types/service/userServiceType';
 import { useRemoveTeamMember } from '@/hooks/teamMember';
 
 import TeamMembersTableSkeleton from '../TeamMembersTableSkeleton';

@@ -12,7 +12,7 @@ import {
   applyRoleTemplate as dbApplyRoleTemplate,
   ResourceType,
 } from '@/lib/supabase/db-teams';
-import { ResourcePermissions } from '@/types/context/team';
+import {  ResourcePermissions  } from '@/types/context/teamContextType';
 
 /**
  * Add a new member to a team with a specified role

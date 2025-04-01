@@ -1,3 +1,10 @@
+/**
+ * Sidebar context types
+ */
+
+/**
+ * Main sidebar context type
+ */
 export type SidebarContext = {
   state: 'expanded' | 'collapsed';
   open: boolean;
@@ -8,12 +15,18 @@ export type SidebarContext = {
   toggleSidebar: () => void;
 };
 
+/**
+ * Props for the sidebar provider component
+ */
 export type SidebarProviderProps = React.ComponentProps<'div'> & {
   defaultOpen?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 };
 
+/**
+ * Props for the sidebar component
+ */
 export type SidebarProps = React.ComponentProps<'div'> & {
   side?: 'left' | 'right';
   variant?: 'sidebar' | 'floating' | 'inset';

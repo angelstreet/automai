@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/shadcn/select';
-import { CICDProvider, CICDProviderPayload, CICDProviderType } from '@/types/context/cicd';
+import {  CICDProvider, CICDProviderPayload, CICDProviderType  } from '@/types/context/cicdContextType';
 
 interface CICDFormProps {
   providerId?: string;

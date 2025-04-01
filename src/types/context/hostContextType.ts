@@ -1,8 +1,20 @@
 /**
- * Re-exports of Host types from the core module
- * This file maintains backward compatibility during the migration
+ * Host context types
  */
 
+// Import component types
+import {
+  Host,
+  HostStatus,
+  HostConnectionType,
+  HostFormData,
+  HostConnectionStatus,
+  HostAnalytics,
+  VMType,
+  VMConfig
+} from '@/types/component/hostComponentType';
+
+// Re-export core types for convenience
 export {
   Host,
   HostStatus,
@@ -10,7 +22,9 @@ export {
   HostFormData,
   HostConnectionStatus,
   HostAnalytics,
-} from '@/types/core/host';
+  VMType,
+  VMConfig
+};
 
 /**
  * Host data interface for the context
@@ -38,20 +52,3 @@ export interface HostActions {
  * Host context type combining data and actions
  */
 export interface HostContextType extends HostData, HostActions {}
-
-/**
- * VM type identifiers
- */
-export type VMType = 'docker' | 'vm' | 'kubernetes' | 'aws' | 'gcp' | 'azure';
-
-/**
- * VM configuration for provisioning
- */
-export interface VMConfig {
-  name: string;
-  description: string;
-  type: VMType;
-  image: string;
-  cpu: number;
-  memory: number;
-}

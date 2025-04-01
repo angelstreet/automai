@@ -10,7 +10,7 @@ import {
   getHostById,
 } from '@/app/actions/hostsAction';
 import { useToast } from '@/components/shadcn/use-toast';
-import type { Host, HostInput } from '@/types/core/host';
+import type { Host, HostFormData } from '@/types/component/hostComponentType';
 
 /**
  * Hook for managing hosts

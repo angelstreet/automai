@@ -1,7 +1,7 @@
 /**
  * GitLab-specific type definitions
  */
-import { GitRepository, GitFile, GitBranch } from './common';
+import { GitRepository, GitFile, GitBranch } from './gitCommonApiType';
 
 /**
  * GitLab-specific repository fields

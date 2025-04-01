@@ -13,13 +13,18 @@ import {
   deleteGitProvider,
 } from '@/app/actions/repositoriesAction';
 import { useToast } from '@/components/shadcn/use-toast';
-import type { 
-  Repository, 
-  GitProvider,
+// Import component types for data models
+import type {
+  Repository,
+  GitProvider
+} from '@/types/component/repositoryComponentType';
+
+// Import context types for UI-specific types and input types
+import type {
   GitProviderCreateInput,
   TestRepositoryInput,
   RepositoryFilter
-} from '@/types/context/repository';
+} from '@/types/context/repositoryContextType';
 
 /**
  * Hook for managing repositories and git providers

@@ -1,22 +1,96 @@
 /**
  * Main types export file
- * Re-exports commonly used types from their new locations
+ * Re-exports commonly used types from their component locations
+ * IMPORTANT: For most cases, prefer importing directly from the specific type file
+ * This file is primarily for convenience in cases where you need many component entity types
  */
 
-// Core types
-export { Host, HostStatus, HostConnectionType } from './core/host';
-export { Repository, Deployment, DeploymentStatus } from './core/deployment';
+// Component entity types - use for data models and database entities
+export { 
+  Host, 
+  HostStatus, 
+  HostConnectionType, 
+  VMType, 
+  VMConfig,
+  HostFormData,
+  HostConnectionStatus,
+  HostAnalytics
+} from './component/hostComponentType';
 
-// Auth types
-export { User, Role, TeamMember, UserTeam, ResourceLimit } from './auth/user';
-export { AuthSession, SessionData, AuthResult, OAuthProvider, Tenant } from './auth/session';
+export { 
+  Repository, 
+  GitProvider, 
+  GitProviderType,
+  RepositorySyncStatus,
+  GitProviderStatus,
+  RepositoryFile,
+  CreateGitProviderParams,
+  CreateRepositoryParams
+} from './component/repositoryComponentType';
 
-// API types
-export { GitProvider, GitProviderType } from './api/git/common';
-export { GitHubRepository, GitHubFile } from './api/git/github';
-export { GitLabRepository, GitLabFile } from './api/git/gitlab';
+export { 
+  Deployment, 
+  DeploymentStatus, 
+  DeploymentHost,
+  DeploymentScript,
+  LogEntry,
+  DeploymentFormData,
+  DeploymentConfig,
+  DeploymentData
+} from './component/deploymentComponentType';
 
-// Re-export types from the legacy locations for backward compatibility
-// These will be removed progressively as imports are updated
-export * from './context/host-new';
-export * from './context/deployment-new';
+export { 
+  CICDProvider, 
+  CICDJob, 
+  CICDBuild, 
+  CICDProviderType,
+  CICDAuthType,
+  CICDCredentials,
+  CICDProviderConfig,
+  CICDProviderPayload
+} from './component/cicdComponentType';
+
+export { 
+  User, 
+  Role, 
+  UserTeam, 
+  TeamMember, 
+  ResourceLimit,
+  UIRole,
+  AuthUser,
+  UserSession,
+  Tenant,
+  AuthSession,
+  SessionData,
+  AuthResult,
+  OAuthProvider,
+  mapAuthUserToUser
+} from './component/userComponentType';
+
+export {
+  WebSocketConnection,
+  SSHAuthData, 
+  SSHConfig, 
+  SSHExecutionResult,
+  SSHError
+} from './component/sshComponentType';
+
+export { 
+  Script, 
+  ScriptRun, 
+  ScriptStatus, 
+  ScriptLanguage,
+  ScriptFilter
+} from './component/scriptsComponentType';
+
+export { 
+  PlanType, 
+  PlanFeatures 
+} from './component/featuresComponentType';
+
+// We do NOT export context types from here to encourage importing directly
+// from the specific context file when needed. This enforces better code organization.
+
+// API types - import from here only when working with API responses
+export { GitHubRepository, GitHubFile } from './api/githubApiType';
+export { GitLabRepository, GitLabFile } from './api/gitlabApiType';

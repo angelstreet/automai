@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useMemo } from 'react';
-import { SidebarContext as SidebarContextType } from '@/types/sidebar';
+import {  SidebarContext as SidebarContextType  } from '@/types/context/sidebarContextType';
 import { useSidebar } from '@/hooks/sidebar';
 
 // Create context with a null default value

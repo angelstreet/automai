@@ -1,4 +1,4 @@
-import { PlanType, PlanFeatures } from '@/types/features';
+import {  PlanType, PlanFeatures  } from '@/types/component/featuresComponentType';
 
 // Re-export types for backward compatibility
 export type { PlanType, PlanFeatures };

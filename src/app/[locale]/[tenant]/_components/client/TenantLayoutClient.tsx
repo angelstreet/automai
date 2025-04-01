@@ -6,7 +6,7 @@ import Cookies from 'js-cookie';
 
 import { TeamProvider, UserProvider, SidebarProvider, PermissionProvider } from '@/app/providers';
 import { SIDEBAR_COOKIE_NAME } from '@/components/sidebar/constants';
-import { User } from '@/types/auth/user';
+import {  User  } from '@/types/service/userServiceType';
 
 // Create a client - moved here from server component
 const queryClient = new QueryClient({

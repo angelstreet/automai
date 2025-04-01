@@ -4,7 +4,7 @@ import { Suspense } from 'react';
 import { UserProfileDropdownClient } from '@/components/layout/UserProfileDropdownClient';
 import { ThemeToggleStatic } from '@/components/theme/ThemeToggleStatic';
 import { WorkspaceHeaderClient } from '@/components/workspace/WorkspaceHeaderClient';
-import { User } from '@/types/auth/user';
+import {  User  } from '@/types/service/userServiceType';
 
 interface WorkspaceHeaderProps {
   className?: string;

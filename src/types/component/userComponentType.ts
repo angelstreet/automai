@@ -1,5 +1,5 @@
 /**
- * Core user types for authentication and authorization
+ * Core User type definitions
  */
 
 /**
@@ -68,32 +68,6 @@ export type AuthUser = {
 };
 
 /**
- * Session user data
- */
-export interface UserSession {
-  id: string;
-  email?: string | null;
-  name?: string | null;
-  image?: string | null;
-  avatar_url?: string | null;
-  role?: string;
-  tenant_id?: string;
-  tenant_name?: string | null;
-  created_at?: string;
-  updated_at?: string;
-  user_metadata?: {
-    name?: string;
-    full_name?: string;
-    preferred_username?: string;
-    avatar_url?: string;
-    tenant_id?: string;
-    tenant_name?: string;
-    role?: string;
-    [key: string]: any;
-  };
-}
-
-/**
  * Team related types
  */
 export interface UserTeam {
@@ -133,6 +107,67 @@ export interface ResourceLimit {
   isUnlimited: boolean;
   canCreate: boolean;
 }
+
+/**
+ * Session user data
+ */
+export interface UserSession {
+  id: string;
+  email?: string | null;
+  name?: string | null;
+  image?: string | null;
+  avatar_url?: string | null;
+  role?: string;
+  tenant_id?: string;
+  tenant_name?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  user_metadata?: {
+    name?: string;
+    full_name?: string;
+    preferred_username?: string;
+    avatar_url?: string;
+    tenant_id?: string;
+    tenant_name?: string;
+    role?: string;
+    [key: string]: any;
+  };
+}
+
+/**
+ * Tenant type
+ */
+export interface Tenant {
+  id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Auth session
+ */
+export interface AuthSession {
+  user: User;
+  accessToken: string;
+}
+
+export interface SessionData {
+  user: UserSession;
+  accessToken: string;
+  expires: string;
+}
+
+/**
+ * Result types
+ */
+export interface AuthResult<T = any> {
+  success: boolean;
+  error?: string;
+  data?: T;
+}
+
+export type OAuthProvider = 'google' | 'github' | 'gitlab';
 
 /**
  * Utility function to map from auth user to our User type

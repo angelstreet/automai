@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
-import type { TeamMember, TeamMemberCreateInput } from '@/types/context/team';
+import type {  TeamMember, TeamMemberCreateInput  } from '@/types/context/teamContextType';
 
 // Define a generic response type
 interface DbResponse<T> {

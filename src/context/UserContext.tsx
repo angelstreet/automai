@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-import { User } from '@/types/auth/user';
+import {  User  } from '@/types/service/userServiceType';
 
 // Define the minimal context type needed
 interface UserContextType {

@@ -16,7 +16,7 @@ import {
   SIDEBAR_WIDTH,
   SIDEBAR_WIDTH_ICON,
 } from '@/components/sidebar/constants';
-import { SidebarContext as SidebarContextType } from '@/types/sidebar';
+import {  SidebarContext as SidebarContextType  } from '@/types/context/sidebarContextType';
 
 // Singleton flag to prevent multiple instances
 let SIDEBAR_CONTEXT_INITIALIZED = false;

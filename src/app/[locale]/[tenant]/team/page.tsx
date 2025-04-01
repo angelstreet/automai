@@ -3,7 +3,7 @@ import { Suspense } from 'react';
 
 import { getUser } from '@/app/actions/userAction';
 import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
-import { mapAuthUserToUser } from '@/types/user';
+import {  mapAuthUserToUser  } from '@/types/component/userComponentType';
 
 import TeamHeader from './_components/TeamHeader';
 import TeamOverviewSkeleton from './_components/TeamOverviewSkeleton';

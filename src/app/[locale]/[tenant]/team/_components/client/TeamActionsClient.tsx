@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/shadcn/button';
 import { ResourceType, usePermission, useTeam } from '@/context';
-import { TeamDetails } from '@/types/context/team';
+import {  TeamDetails  } from '@/types/context/teamContextType';
 
 export default function TeamActions() {
   const t = useTranslations('team');

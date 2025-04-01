@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState } from 'react';
-import { User } from '@/types/auth/user';
+import {  User  } from '@/types/service/userServiceType';
 import { useUser } from '@/hooks/user';
 
 // Define the minimal context type needed - data only

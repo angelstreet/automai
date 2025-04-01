@@ -17,7 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
 import { useUser } from '@/context';
-import { User } from '@/types/auth/user';
+import {  User  } from '@/types/service/userServiceType';
 
 interface UserProfileDropdownProps {
   user: User | null;

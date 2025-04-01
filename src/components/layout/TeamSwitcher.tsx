@@ -1,8 +1,8 @@
 import { Building2 } from 'lucide-react';
 import { Suspense } from 'react';
 
-import type { Team } from '@/types/context/team';
-import type { User } from '@/types/user';
+import type {  Team  } from '@/types/context/teamContextType';
+import type {  User  } from '@/types/component/userComponentType';
 
 import TeamSwitcherClient from './client/TeamSwitcherClient';
 

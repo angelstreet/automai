@@ -5,7 +5,7 @@ import { cookies } from 'next/headers';
 
 import { getUser } from '@/app/actions/userAction';
 import { CICDPipelineConfig } from '@/lib/services/cicd/interfaces';
-import { AuthUser, User } from '@/types/auth/user';
+import {  AuthUser, User  } from '@/types/service/userServiceType';
 
 import {
   Deployment,

@@ -1,3 +1,6 @@
+/**
+ * SSH connection and authentication types
+ */
 import { WebSocket } from 'ws';
 
 /**
@@ -29,4 +32,27 @@ export interface SSHAuthData {
 export interface SSHError extends Error {
   code?: string;
   level?: string;
+}
+
+/**
+ * SSH connection configuration
+ */
+export interface SSHConfig {
+  host: string;
+  port: number;
+  username: string;
+  password?: string;
+  privateKey?: string;
+  passphrase?: string;
+  timeout?: number;
+}
+
+/**
+ * SSH execution result
+ */
+export interface SSHExecutionResult {
+  success: boolean;
+  output?: string;
+  error?: string;
+  exitCode?: number;
 }

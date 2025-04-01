@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { testHostConnection, deleteHost as deleteHostAction } from '@/app/actions/hosts';
 import { EmptyState } from '@/components/layout/EmptyState';
 import { Button } from '@/components/shadcn/button';
-import { Host } from '@/types/core/host';
+import {  Host  } from '@/types/component/hostComponentType';
 
 import { HostGrid } from '../HostGrid';
 import { HostTable } from '../HostTable';

@@ -1,4 +1,4 @@
-import { User } from '@/types/auth/user';
+import {  User  } from '@/types/service/userServiceType';
 
 import { ProfileContent as ClientProfileContent } from './client/ProfileContent';
 

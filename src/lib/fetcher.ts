@@ -3,7 +3,7 @@
  * This file provides generic fetcher functions for use with SWR
  */
 
-import type { ActionResult } from '@/types/context/constants';
+import type {  ActionResult  } from '@/types/context/constantsContextType';
 
 /**
  * Generic fetcher for server actions

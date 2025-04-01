@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState } from 'react';
 
-import type { PermissionsResult } from '@/types/context/permissions';
+import type {  PermissionsResult  } from '@/types/context/permissionsContextType';
 
 // Define a minimal permission context that only holds data
 interface PermissionContextType {

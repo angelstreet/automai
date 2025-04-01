@@ -4,10 +4,7 @@ import { Search, Clock, Play, Eye, PlayCircle, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
 
-import {
-  runDeployment as runDeploymentAction,
-  deleteDeployment as deleteDeploymentAction,
-} from '@/app/actions/deploymentsAction';
+import { useDeployment } from '@/context';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,7 +17,7 @@ import {
 } from '@/components/shadcn/alert-dialog';
 import { Button } from '@/components/shadcn/button';
 import { useToast } from '@/components/shadcn/use-toast';
-import { Deployment, Repository } from '@/types/core/deployment';
+import {  Deployment, Repository  } from '@/types/component/deploymentComponentType';
 import { getFormattedTime } from '@/utils/deployment';
 
 import StatusBadge from './StatusBadge';
@@ -88,12 +85,15 @@ export function DeploymentList({
     setIsDeleteDialogOpen(true);
   };
 
+  // Use the deployment hook
+  const { deleteDeployment, runDeployment } = useDeployment();
+
   const handleConfirmDelete = async () => {
     if (!selectedDeployment) return;
     try {
       setActionInProgress(selectedDeployment.id);
-      const success = await deleteDeploymentAction(selectedDeployment.id);
-      if (success) {
+      const result = await deleteDeployment(selectedDeployment.id);
+      if (result.success) {
         toast({
           title: 'Deployment Deleted',
           description: 'Successfully deleted.',
@@ -187,7 +187,7 @@ export function DeploymentList({
 
     setIsRunning(deployment.id);
     try {
-      const result = await runDeploymentAction(deployment.id);
+      const result = await runDeployment(deployment.id);
 
       if (result.success) {
         toast({

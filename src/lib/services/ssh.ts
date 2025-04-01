@@ -2,7 +2,7 @@
 import { Client } from 'ssh2';
 import { WebSocket } from 'ws';
 import { logger } from '../logger';
-import { WebSocketConnection, SSHAuthData, SSHError } from '@/types/ssh';
+import {  WebSocketConnection, SSHAuthData, SSHError  } from '@/types/component/sshComponentType';
 
 /**
  * Handle SSH connection for a WebSocket client

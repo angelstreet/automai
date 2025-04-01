@@ -1,5 +1,9 @@
 /**
- * Script to help update type imports after reorganization
+ * Type Import Migration Script
+ * 
+ * This script updates imports across the codebase to use the new type organization
+ * structure with the suffixed naming convention. It handles different import styles
+ * and performs direct replacements without backward compatibility.
  *
  * Usage:
  * node scripts/update-type-imports.js
@@ -8,178 +12,141 @@
 import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
-import { exec } from 'child_process';
+import { exec as execCallback } from 'child_process';
 
-const execAsync = promisify(exec);
+const exec = promisify(execCallback);
 
-// Type mapping from old to new paths
-const TYPE_MAPPINGS = {
-  // Host types
-  '@/types/context/host': {
-    Host: '@/types/core/host',
-    HostStatus: '@/types/core/host',
-    HostConnectionType: '@/types/core/host',
-    HostFormData: '@/types/core/host',
-    HostConnectionStatus: '@/types/core/host',
-    HostAnalytics: '@/types/core/host',
-    VMConfig: '@/types/context/host-new',
-    VMType: '@/types/context/host-new',
-    HostData: '@/types/context/host-new',
-    HostActions: '@/types/context/host-new',
-    HostContextType: '@/types/context/host-new',
-  },
-
-  // Deployment types
-  '@/types/context/deployment': {
-    Host: '@/types/core/host',
-    Repository: '@/types/core/deployment',
-    LogEntry: '@/types/core/deployment',
-    DeploymentScript: '@/types/core/deployment',
-    DeploymentHost: '@/types/core/deployment',
-    Deployment: '@/types/core/deployment',
-    DeploymentStatus: '@/types/core/deployment',
-    DeploymentFormData: '@/types/core/deployment',
-    DeploymentConfig: '@/types/core/deployment',
-    DeploymentData: '@/types/core/deployment',
-    CICDProvider: '@/types/context/deployment-new',
-    CICDJob: '@/types/context/deployment-new',
-    DeploymentContextData: '@/types/context/deployment-new',
-    DeploymentContextActions: '@/types/context/deployment-new',
-    DeploymentContextType: '@/types/context/deployment-new',
-  },
-
-  // User types
-  '@/types/user': {
-    User: '@/types/auth/user',
-    AuthUser: '@/types/auth/user',
-    Role: '@/types/auth/user',
-    UIRole: '@/types/auth/user',
-    UserTeam: '@/types/auth/user',
-    TeamMember: '@/types/auth/user',
-    ResourceLimit: '@/types/auth/user',
-    Tenant: '@/types/auth/session',
-    AuthSession: '@/types/auth/session',
-    SessionData: '@/types/auth/session',
-    AuthResult: '@/types/auth/session',
-    OAuthProvider: '@/types/auth/session',
-    UserContextType: '@/types/context/user',
-  },
+// Define path mappings for import updates
+const PATH_MAPPINGS = {
+  // Component types (from core)
+  '@/types/core/host': '@/types/component/hostComponentType',
+  '@/types/core/repository': '@/types/component/repositoryComponentType',
+  '@/types/core/deployment': '@/types/component/deploymentComponentType',
+  '@/types/core/cicd': '@/types/component/cicdComponentType',
+  '@/types/core/ssh': '@/types/component/sshComponentType',
+  '@/types/core/scripts': '@/types/component/scriptsComponentType',
+  '@/types/core/features': '@/types/component/featuresComponentType',
+  
+  // Service types (from auth)
+  '@/types/auth/user': '@/types/service/userServiceType',
+  '@/types/auth/session': '@/types/service/sessionServiceType',
+  
+  // Context types (from original to suffixed)
+  '@/types/context/host': '@/types/context/hostContextType',
+  '@/types/context/repository': '@/types/context/repositoryContextType',
+  '@/types/context/deployment': '@/types/context/deploymentContextType',
+  '@/types/context/cicd': '@/types/context/cicdContextType',
+  '@/types/context/user': '@/types/context/userContextType',
+  '@/types/context/sidebar': '@/types/context/sidebarContextType',
+  '@/types/context/app': '@/types/context/appContextType',
+  '@/types/context/dashboard': '@/types/context/dashboardContextType',
+  '@/types/context/constants': '@/types/context/constantsContextType',
+  '@/types/context/permissions': '@/types/context/permissionsContextType',
+  '@/types/context/team': '@/types/context/teamContextType',
+  
+  // API types (from original to suffixed)
+  '@/types/api/git/github': '@/types/api/githubApiType',
+  '@/types/api/git/gitlab': '@/types/api/gitlabApiType',
+  '@/types/api/git/common': '@/types/api/gitCommonApiType',
+  
+  // DB types (from original to suffixed)
+  '@/types/db/supabase': '@/types/db/supabaseDbType',
+  
+  // Root level imports
+  '@/types/user': '@/types/component/userComponentType',
+  '@/types/sidebar': '@/types/context/sidebarContextType',
+  '@/types/ssh': '@/types/component/sshComponentType',
+  '@/types/scripts': '@/types/component/scriptsComponentType',
+  '@/types/features': '@/types/component/featuresComponentType',
+  '@/types/supabase': '@/types/db/supabaseDbType',
 };
 
-// Regex patterns to find different import styles
-const IMPORT_PATTERNS = [
-  // Named imports: import { X, Y } from 'path';
-  /import\s+{([^}]+)}\s+from\s+['"]([^'"]+)['"]/g,
-
-  // Named imports with renamed: import { X as Z, Y } from 'path';
-  /import\s+{\s*([^}]+)\s*}\s+from\s+['"]([^'"]+)['"]/g,
-
-  // Default import: import X from 'path';
-  /import\s+(\w+)\s+from\s+['"]([^'"]+)['"]/g,
-
-  // Import type: import type { X, Y } from 'path';
-  /import\s+type\s+{([^}]+)}\s+from\s+['"]([^'"]+)['"]/g,
-];
-
-async function findFilesWithImport(importPath) {
+/**
+ * Find all TypeScript files in the project
+ */
+async function findAllTsFiles() {
   try {
-    const { stdout } = await execAsync(
-      `grep -l "from '${importPath}'" --include="*.ts" --include="*.tsx" -r src/`,
-    );
+    const { stdout } = await exec('find src -type f -name "*.ts" -o -name "*.tsx"');
     return stdout.trim().split('\n').filter(Boolean);
   } catch (error) {
-    if (error.code === 1) {
-      // grep returns 1 when no matches found
-      return [];
-    }
-    throw error;
+    console.error('Error finding TypeScript files:', error);
+    return [];
   }
 }
 
-function updateImports(content, oldImportPath, typeMappings) {
-  let updatedContent = content;
-
-  // Find import statements with the old path
-  const importRegex = new RegExp(
-    `import\\s+(?:type\\s+)?{([^}]+)}\\s+from\\s+['"]${oldImportPath.replace('/', '\\/')}['"]`,
-    'g',
-  );
-
-  // Replace with new imports
-  updatedContent = updatedContent.replace(importRegex, (match, importedTypes) => {
-    // Split the imported types
-    const typesList = importedTypes.split(',').map((t) => t.trim());
-
-    // Group by their new path
-    const typesByNewPath = {};
-
-    typesList.forEach((typeItem) => {
-      // Handle "X as Y" renames
-      const [rawType, alias] = typeItem.split(/\s+as\s+/).map((t) => t.trim());
-      const type = rawType.trim();
-
-      // Find the new path for this type
-      const newPath = typeMappings[type] || oldImportPath;
-
-      if (!typesByNewPath[newPath]) {
-        typesByNewPath[newPath] = [];
-      }
-
-      typesByNewPath[newPath].push(alias ? `${type} as ${alias}` : type);
-    });
-
-    // Build the new import statements
-    return Object.entries(typesByNewPath)
-      .map(([newPath, types]) => `import { ${types.join(', ')} } from '${newPath}'`)
-      .join(';\n');
-  });
-
-  return updatedContent;
-}
-
-async function processFile(filePath, oldImportPath, typeMappings) {
+/**
+ * Update imports in a single file
+ */
+function updateFileImports(filePath) {
   try {
-    const content = fs.readFileSync(filePath, 'utf8');
-    const updatedContent = updateImports(content, oldImportPath, typeMappings);
+    // Read file content
+    let content = fs.readFileSync(filePath, 'utf8');
+    let wasUpdated = false;
 
-    if (content !== updatedContent) {
-      fs.writeFileSync(filePath, updatedContent);
-      console.log(`✅ Updated imports in ${filePath}`);
+    // Process each old path mapping
+    for (const [oldPath, newPath] of Object.entries(PATH_MAPPINGS)) {
+      // Handle different import formats
+      
+      // Standard imports: import { X } from '@/types/core/host';
+      const stdImportRegex = new RegExp(`import\\s+{([^}]+)}\\s+from\\s+['"]${oldPath.replace(/\//g, '\\/')}['"]`, 'g');
+      if (stdImportRegex.test(content)) {
+        content = content.replace(stdImportRegex, `import { $1 } from '${newPath}'`);
+        wasUpdated = true;
+      }
+      
+      // Type imports: import type { X } from '@/types/core/host';
+      const typeImportRegex = new RegExp(`import\\s+type\\s+{([^}]+)}\\s+from\\s+['"]${oldPath.replace(/\//g, '\\/')}['"]`, 'g');
+      if (typeImportRegex.test(content)) {
+        content = content.replace(typeImportRegex, `import type { $1 } from '${newPath}'`);
+        wasUpdated = true;
+      }
+      
+      // Default imports: import X from '@/types/core/host';
+      const defaultImportRegex = new RegExp(`import\\s+(\\w+)\\s+from\\s+['"]${oldPath.replace(/\//g, '\\/')}['"]`, 'g');
+      if (defaultImportRegex.test(content)) {
+        content = content.replace(defaultImportRegex, `import $1 from '${newPath}'`);
+        wasUpdated = true;
+      }
+    }
+
+    // Save updated content if changes were made
+    if (wasUpdated) {
+      fs.writeFileSync(filePath, content);
       return true;
     }
+    
     return false;
   } catch (error) {
-    console.error(`❌ Error processing file ${filePath}:`, error);
+    console.error(`Error processing file ${filePath}:`, error);
     return false;
   }
 }
 
+/**
+ * Main function to run the migration
+ */
 async function main() {
-  let totalFilesUpdated = 0;
-
-  for (const [oldPath, typeMappings] of Object.entries(TYPE_MAPPINGS)) {
-    console.log(`\nProcessing imports from ${oldPath}...`);
-
-    // Find all files that import from this path
-    const files = await findFilesWithImport(oldPath);
-    console.log(`Found ${files.length} files with imports from ${oldPath}`);
-
-    // Process each file
-    let updatedCount = 0;
-    for (const file of files) {
-      const updated = await processFile(file, oldPath, typeMappings);
-      if (updated) updatedCount++;
+  console.log('🚀 Starting type import migration...');
+  
+  // Find all TypeScript files
+  const files = await findAllTsFiles();
+  console.log(`Found ${files.length} TypeScript files to process.`);
+  
+  // Update imports in each file
+  let updatedFiles = 0;
+  for (const file of files) {
+    const updated = updateFileImports(file);
+    if (updated) {
+      console.log(`✓ Updated imports in ${file}`);
+      updatedFiles++;
     }
-
-    console.log(`Updated ${updatedCount} files for ${oldPath}`);
-    totalFilesUpdated += updatedCount;
   }
-
-  console.log(`\n🎉 Migration completed! Updated ${totalFilesUpdated} files total.`);
+  
+  console.log(`\n🎉 Migration completed! Updated ${updatedFiles} files.`);
 }
 
-// Execute the main function
-main().catch((error) => {
+// Run the script
+main().catch(error => {
   console.error('Error running migration script:', error);
   process.exit(1);
 });

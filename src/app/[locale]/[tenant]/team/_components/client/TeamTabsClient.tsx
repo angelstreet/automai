@@ -3,8 +3,8 @@
 import { useSearchParams } from 'next/navigation';
 
 import { useTeam } from '@/context';
-import { TeamDetails } from '@/types/context/team';
-import { User } from '@/types/auth/user';
+import {  TeamDetails  } from '@/types/context/teamContextType';
+import {  User  } from '@/types/service/userServiceType';
 
 import TeamOverviewSkeleton from '../TeamOverviewSkeleton';
 import TeamOverview from '../TeamOverview';

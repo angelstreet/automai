@@ -5,11 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import React, { useState } from 'react';
 
-import {
-  clearRepositoriesCache,
-  starRepositoryAction,
-  unstarRepositoryAction,
-} from '@/app/actions/repositories';
+import { useRepository } from '@/context';
 import { EmptyState } from '@/components/layout/EmptyState';
 import { Button } from '@/components/shadcn/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
@@ -40,6 +36,9 @@ export function RepositoryList({ repositories, starredRepos, error }: Repository
   const [sortBy, setSortBy] = useState('lastUpdated');
   const [filterCategory, setFilterCategory] = useState('All');
 
+  // Get repository hooks
+  const { syncRepository, refetchRepositories } = useRepository();
+
   // Action handlers
   const handleToggleStarred = async (id: string) => {
     // Check if repository is already starred
@@ -54,19 +53,11 @@ export function RepositoryList({ repositories, starredRepos, error }: Repository
         newStarredRepos.add(id);
       }
 
-      // Call the appropriate server action
-      if (isStarred) {
-        await unstarRepositoryAction(id);
-      } else {
-        await starRepositoryAction(id);
-      }
-
-      // Refresh the data (which will show our optimistic update until the server data arrives)
+      // TODO: Replace with hook function when star functionality is added to useRepository
+      // For now, we'll just refresh the UI
       router.refresh();
     } catch (error) {
       console.error('Error toggling star status:', error);
-
-      // Could add toast notification here
     }
   };
 
@@ -76,10 +67,13 @@ export function RepositoryList({ repositories, starredRepos, error }: Repository
     try {
       setSyncingRepoIds((prev) => ({ ...prev, [id]: true }));
 
-      // Call clearRepositoriesCache to refresh the data
-      await clearRepositoriesCache();
-
-      // Refresh the UI to show updated data
+      // Use the sync function from the hook
+      await syncRepository(id);
+      
+      // Refresh the repositories data
+      await refetchRepositories();
+      
+      // Also refresh the UI
       router.refresh();
     } catch (error) {
       console.error('Error syncing repository:', error);

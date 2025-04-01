@@ -2,8 +2,8 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { getTeamMembers } from '@/app/actions/teamMemberAction';
-import type { TeamMember } from '@/types/context/team';
-import type { ActionResult } from '@/types/context/cicd';
+import type {  TeamMember  } from '@/types/context/teamContextType';
+import type {  ActionResult  } from '@/types/context/cicdContextType';
 
 /**
  * Hook for accessing team members

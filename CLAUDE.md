@@ -6,8 +6,16 @@ alwaysApply: true
 
 ## CRITICAL RULES - ALWAYS FOLLOW
 
-1. **✅ NEVER modify code without understanding its purpose and context**
-2. **✅ ALWAYS adhere to the three-layer architecture**
+1. **✅ NEVER implement backward compatibility hacks or create aliases**
+   - Break imports directly to fix issues properly
+   - Update references to use the correct paths and names
+   - No aliases, compatibility layers, re-exports, or "legacy support" code
+   - Prefer breaking changes over maintaining backward compatibility
+   - Force direct migration to the new structure without transition layers
+
+2. **✅ NEVER modify code without understanding its purpose and context**
+
+3. **✅ ALWAYS adhere to the three-layer architecture**
    - DB Layer (Core):
      - Feature-specific modules: `/src/lib/supabase/db-{feature}/` folders
      - Handles direct database interaction via Supabase
@@ -21,11 +29,8 @@ alwaysApply: true
      - Business logic hooks in `/src/hooks/*/`
      - Centralized exports through `/src/context/index.ts`
      - NEVER calls DB Layer directly, only through Server Actions
-3. **✅ NEVER expose sensitive data or credentials**
-4. **✅ NEVER implement backward compatibility hacks or create aliases**
-   - Break imports directly to fix issues properly
-   - Update references to use the correct hooks or providers
-   - No aliases, compatibility layers, or "legacy support" code
+
+4. **✅ NEVER expose sensitive data or credentials**
 5. **✅ NEVER modify shadcn components**
 6. **✅ NEVER run servers, builds, or any other command that starts processes without explicit permission**
    - No `npm run dev`, `npm run build`, `npm start`, etc.

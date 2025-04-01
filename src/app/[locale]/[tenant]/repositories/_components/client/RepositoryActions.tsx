@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import React, { useState } from 'react';
 
 import { Button } from '@/components/shadcn/button';
-import { ConnectRepositoryValues } from '@/types/context/repository';
+import {  ConnectRepositoryValues  } from '@/types/context/repositoryContextType';
 
 import { EnhancedConnectRepositoryDialog } from '../EnhancedConnectRepositoryDialog';
 

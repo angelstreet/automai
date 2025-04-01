@@ -4,7 +4,7 @@ import { logger } from '../logger';
 import { IncomingMessage } from 'http';
 import { Socket } from 'net';
 import { handleSshConnection } from './ssh';
-import { WebSocketConnection } from '@/types/ssh';
+import {  WebSocketConnection  } from '@/types/component/sshComponentType';
 
 interface ExtendedWebSocket extends WebSocket {
   ws_isAlive?: boolean;

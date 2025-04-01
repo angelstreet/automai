@@ -13,7 +13,7 @@ import {
 } from '@/components/shadcn/dropdown-menu';
 import { useUser } from '@/context';
 import { cn } from '@/lib/utils';
-import { User } from '@/types/auth/user';
+import {  User  } from '@/types/service/userServiceType';
 
 // Define team type for visual consistency
 type VisualTeam = {

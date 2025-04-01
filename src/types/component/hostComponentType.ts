@@ -81,3 +81,20 @@ export interface HostAnalytics {
   uptime: string;
   lastUpdated: string;
 }
+
+/**
+ * VM type identifiers
+ */
+export type VMType = 'docker' | 'vm' | 'kubernetes' | 'aws' | 'gcp' | 'azure';
+
+/**
+ * VM configuration for provisioning
+ */
+export interface VMConfig {
+  name: string;
+  description: string;
+  type: VMType;
+  image: string;
+  cpu: number;
+  memory: number;
+}

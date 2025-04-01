@@ -14,7 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/shadcn/card';
-import { EnhancedRepositoryCardProps } from '@/types/context/repository';
+import {  EnhancedRepositoryCardProps  } from '@/types/context/repositoryContextType';
 
 import { LANGUAGE_COLORS } from '../constants';
 

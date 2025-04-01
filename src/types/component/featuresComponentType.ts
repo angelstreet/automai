@@ -1,4 +1,8 @@
 /**
+ * Core feature and subscription plan types
+ */
+
+/**
  * Subscription plan types
  */
 export type PlanType = 'TRIAL' | 'PRO' | 'ENTERPRISE';

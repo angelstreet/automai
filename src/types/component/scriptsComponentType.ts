@@ -1,7 +1,25 @@
+/**
+ * Core Script type definitions
+ */
+
+/**
+ * Supported script languages
+ */
 export type ScriptLanguage = 'bash' | 'python' | 'javascript' | 'typescript';
+
+/**
+ * Script activation status
+ */
 export type ScriptStatus = 'active' | 'inactive' | 'draft';
+
+/**
+ * Script execution status
+ */
 export type ScriptRunStatus = 'success' | 'failed' | 'pending' | 'running';
 
+/**
+ * Script entity
+ */
 export interface Script {
   id: string;
   name: string;
@@ -18,6 +36,9 @@ export interface Script {
   tags?: string[];
 }
 
+/**
+ * Script execution record
+ */
 export interface ScriptRun {
   id: string;
   script_id: string;
@@ -30,6 +51,9 @@ export interface ScriptRun {
   duration_ms?: number;
 }
 
+/**
+ * Script filtering options
+ */
 export interface ScriptFilter {
   status?: ScriptStatus;
   language?: ScriptLanguage;

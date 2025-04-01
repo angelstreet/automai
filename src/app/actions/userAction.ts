@@ -1,7 +1,7 @@
 'use server';
 
 import userDB from '@/lib/supabase/db-users';
-import { AuthUser } from '@/types/auth/user';
+import {  AuthUser  } from '@/types/service/userServiceType';
 
 /**
  * Invalidate user-related cache

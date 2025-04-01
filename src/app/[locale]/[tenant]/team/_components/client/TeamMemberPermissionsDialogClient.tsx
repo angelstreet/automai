@@ -32,12 +32,12 @@ import {
   TableRow,
 } from '@/components/shadcn/table';
 import { useToast } from '@/components/shadcn/use-toast';
-import {
+import { 
   EditPermissionsDialogProps,
   ROLE_TEMPLATES,
   PERMISSION_LABELS,
   ResourcePermissions,
-} from '@/types/context/team';
+ } from '@/types/context/teamContextType';
 import { useUpdateMemberRole } from '@/hooks/teamMember';
 import { usePermission } from '@/context';
 

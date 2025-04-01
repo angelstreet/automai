@@ -1,7 +1,7 @@
 /**
  * User context type definitions
  */
-import { Role, User, UserTeam, TeamMember, ResourceLimit } from '@/types/auth/user';
+import { User, Role, UserTeam, TeamMember, ResourceLimit } from '@/types/component/userComponentType';
 
 /**
  * Type definition for UserContext
@@ -25,3 +25,12 @@ export interface UserContextType {
   setSelectedTeam: (teamId: string) => Promise<void>;
   checkResourceLimit: (resourceType: string) => Promise<ResourceLimit | null>;
 }
+
+// Re-export user types for convenience
+export {
+  User,
+  Role,
+  UserTeam,
+  TeamMember,
+  ResourceLimit
+};

@@ -3,14 +3,11 @@
 import { ArrowLeft } from 'lucide-react';
 import React, { useState, useTransition } from 'react';
 
-import { Repository as RepositoryInterface } from '@/app/[locale]/[tenant]/repositories/types';
-import { saveDeploymentConfiguration, startDeployment } from '@/app/actions/deploymentWizardAction';
 import { toast } from '@/components/shadcn/use-toast';
-import { useUser } from '@/context';
-import { CICDProviderType } from '@/types/context/cicd';
-import { DeploymentData, DeploymentFormData } from '@/types/core/deployment';
-import { Host as HostType } from '@/types/core/host';
-import { Host as SystemHost } from '@/types/core/host';
+import { useUser, useDeploymentWizard } from '@/context';
+import {  CICDProviderType  } from '@/types/context/cicdContextType';
+import {  DeploymentData, DeploymentFormData  } from '@/types/component/deploymentComponentType';
+import {  Host as HostType, Host as SystemHost  } from '@/types/component/hostComponentType';
 
 import DeploymentWizardStep1 from '../DeploymentWizardStep1';
 import DeploymentWizardStep2 from '../DeploymentWizardStep2';
@@ -18,6 +15,8 @@ import DeploymentWizardStep3 from '../DeploymentWizardStep3';
 import DeploymentWizardStep4 from '../DeploymentWizardStep4';
 
 import DeploymentWizardStep5 from './DeploymentWizardStep5';
+
+import { Repository as RepositoryInterface } from '@types/context/repository';
 
 // Helper function to adapt system hosts to the format expected by the deployment module
 const adaptHostsForDeployment = (systemHosts: SystemHost[]): HostType[] => {
@@ -84,6 +83,9 @@ export default function ClientDeploymentWizard({
     onCancel();
   };
 
+  // Get the deployment wizard hooks
+  const { saveDeploymentConfiguration, startDeployment } = useDeploymentWizard();
+
   // Final submit handler
   const handleSubmit = () => {
     // Convert deployment data to form data
@@ -103,11 +105,11 @@ export default function ClientDeploymentWizard({
     // Start transition to prevent UI freezing during the operation
     startTransition(async () => {
       try {
-        // Save deployment configuration
+        // Save deployment configuration using the hook
         const result = await saveDeploymentConfiguration(formData);
 
         if (result.success && result.data) {
-          // If auto-start is enabled, start the deployment
+          // If auto-start is enabled, start the deployment using the hook
           if (deploymentData.autoStart) {
             await startDeployment(result.data.id);
           }

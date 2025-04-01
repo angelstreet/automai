@@ -4,12 +4,12 @@ import { ChevronLeft, ChevronRight, GitBranch, PlusCircle, Search } from 'lucide
 import { useTranslations } from 'next-intl';
 import React, { useState, useEffect } from 'react';
 
-import { getAllRepositories } from '@/app/actions/repositories';
+import { useRepository } from '@/context';
 import { EmptyState } from '@/components/layout/EmptyState';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
-import { Repository } from '@/types/context/repository';
+import {  Repository  } from '@/types/context/repositoryContextType';
 
 import { EnhancedRepositoryCard } from '../EnhancedRepositoryCard';
 
@@ -33,25 +33,25 @@ export function ClientRepositoryList({
   const [searchQuery, setSearchQuery] = useState('');
   const itemsPerPage = 12;
 
-  // Refresh repositories on client side
-  useEffect(() => {
-    const fetchRepositories = async () => {
-      try {
-        setLoading(true);
-        const result = await getAllRepositories();
-        if (result.success && result.data) {
-          setRepositories(result.data);
-        }
-      } catch (error) {
-        console.error('[@component:ClientRepositoryList:fetchRepositories] Error:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Use the repository hook
+  const { repositories: hookRepositories, isLoading: isLoadingRepositories, refetchRepositories } = useRepository();
 
-    // Optionally refresh repositories after component mounts
-    // fetchRepositories();
-  }, []);
+  // Update local state when repositories change
+  useEffect(() => {
+    if (hookRepositories && hookRepositories.length > 0) {
+      setRepositories(hookRepositories);
+    }
+  }, [hookRepositories]);
+
+  // Set loading state
+  useEffect(() => {
+    setLoading(isLoadingRepositories);
+  }, [isLoadingRepositories]);
+
+  // Refresh repositories on component mount
+  useEffect(() => {
+    refetchRepositories();
+  }, [refetchRepositories]);
 
   const handleViewRepository = (repo: Repository) => {
     window.dispatchEvent(

@@ -38,12 +38,12 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/Breadcrumb';
 import { cn } from '@/lib/utils';
-import {
+import { 
   RepositoryExplorerProps,
   RepositoryFile,
   FilesAPIResponse,
   FileAPIResponse,
-} from '@/types/context/repository';
+ } from '@/types/context/repositoryContextType';
 
 import { FILE_EXTENSION_COLORS, EXPLORER_TABS } from '../constants';
 
