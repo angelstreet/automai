@@ -4,17 +4,16 @@ import { cookies } from 'next/headers';
 import { cache } from 'react';
 
 import { getUser } from '@/app/actions/userAction';
-import { Team, TeamMember } from '@/types/context/teamContextType';
-import teamDb from '@/lib/db/teamDb';
 import { createClient } from '@/lib/supabase/server';
-import {  User  } from '@/types/service/userServiceType';
-import type {  ActionResult  } from '@/types/context/cicdContextType';
-import type { 
+import type { ActionResult } from '@/types/context/cicdContextType';
+import { Team, TeamMember } from '@/types/context/teamContextType';
+import type {
   TeamCreateInput,
   TeamUpdateInput,
   TeamMemberCreateInput,
   ResourceLimit,
- } from '@/types/context/teamContextType';
+} from '@/types/context/teamContextType';
+import { User } from '@/types/service/userServiceType';
 
 // Use TeamMemberType consistently throughout this file
 type TeamMember = TeamMemberType;

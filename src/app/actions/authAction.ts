@@ -330,7 +330,7 @@ export async function handleAuthWithEmail(formData: FormData) {
     }
 
     console.log('[@action:auth:handleAuthWithEmail] Attempting sign in with email');
-    const result = await supabaseAuth.signInWithPassword({ email, password });
+    const result = await supabaseAuth.signInWithPassword(email, password);
 
     // Handle sign-in failure
     if (!result.success) {

@@ -5,7 +5,7 @@ import { cookies } from 'next/headers';
 
 import { getUser } from '@/app/actions/userAction';
 import repositoryDb, { GitProvider as DbGitProvider } from '@/lib/db/repositoryDb';
-import { 
+import {
   Repository,
   GitProvider,
   GitProviderType,
@@ -16,8 +16,8 @@ import {
   RepositoryFilter,
   gitProviderCreateSchema,
   testRepositorySchema,
- } from '@/types/context/repositoryContextType';
-import {  AuthUser  } from '@/types/service/userServiceType';
+} from '@/types/context/repositoryContextType';
+import { AuthUser } from '@/types/service/userServiceType';
 
 /**
  * Convert DB repository to our Repository type
@@ -528,21 +528,27 @@ export async function getRepositoryById(
 /**
  * Test repository connection with specific credentials
  */
-export async function testRepositoryConnection(data: TestRepositoryInput): Promise<{ success: boolean; error?: string; status?: number }> {
+export async function testRepositoryConnection(
+  data: TestRepositoryInput,
+): Promise<{ success: boolean; error?: string; status?: number }> {
   return testGitRepository(data);
 }
 
 /**
  * Connect a repository
  */
-export async function connectRepository(data: any): Promise<{ success: boolean; error?: string; data?: Repository }> {
+export async function connectRepository(
+  data: any,
+): Promise<{ success: boolean; error?: string; data?: Repository }> {
   return createRepository(data);
 }
 
 /**
  * Disconnect a repository
  */
-export async function disconnectRepository(id: string): Promise<{ success: boolean; error?: string }> {
+export async function disconnectRepository(
+  id: string,
+): Promise<{ success: boolean; error?: string }> {
   return deleteRepository(id);
 }
 
@@ -676,9 +682,9 @@ export async function getGitProviders(): Promise<{
     }
 
     // Map DB results to interface type
-    const providers = result.data ? result.data.map((provider: DbGitProvider) =>
-      mapDbGitProviderToGitProvider(provider)
-    ) : [];
+    const providers = result.data
+      ? result.data.map((provider: DbGitProvider) => mapDbGitProviderToGitProvider(provider))
+      : [];
 
     return { success: true, data: providers };
   } catch (error: any) {

@@ -1,9 +1,8 @@
 'use server';
 
 import userDb from '@/lib/db/userDb';
-import authService from '@/lib/services/authService';
 import cacheUtils from '@/lib/utils/cacheUtils';
-import {  AuthUser  } from '@/types/service/userServiceType';
+import { AuthUser } from '@/types/service/userServiceType';
 
 /**
  * Invalidate user-related cache

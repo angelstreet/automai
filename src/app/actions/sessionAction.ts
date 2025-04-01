@@ -1,9 +1,10 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
 import { cookies } from 'next/headers';
+
 import userDb from '@/lib/db/userDb';
-import {  AuthUser  } from '@/types/service/userServiceType';
+import { createClient } from '@/lib/supabase/server';
+import { AuthUser } from '@/types/service/userServiceType';
 
 /**
  * Get the current session on the server

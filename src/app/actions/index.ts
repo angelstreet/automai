@@ -8,7 +8,6 @@ export * from './terminalsAction';
 export * from './authAction';
 export * from './permissionAction';
 export * from './teamAction';
-export * from './teamMemberAction';
 export * from './sessionAction';
 export * from './sidebarAction';
 export * from './deploymentWizardAction';

@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 import { cache } from 'react';
 
+import { getUser } from '@/app/actions/userAction';
 import { CICDProvider, CICDProviderPayload, CICDJob } from '@/types/component/cicdComponentType';
 import type { ActionResult } from '@/types/context/cicdContextType';
 
@@ -14,8 +15,6 @@ interface CICDProviderListResult extends ActionResult {
 interface CICDProviderActionResult extends ActionResult {
   data?: CICDProvider;
 }
-
-import { getUser } from '@/app/actions/userAction';
 
 /**
  * Fetch all CI/CD providers for the current tenant
@@ -148,7 +147,10 @@ export async function createCICDProvider(
     });
 
     // Create the provider
-    const result = await cicdDb.default.createCICDProvider({ data: providerData as any }, cookieStore);
+    const result = await cicdDb.default.createCICDProvider(
+      { data: providerData as any },
+      cookieStore,
+    );
 
     if (!result.success) {
       console.error(
@@ -401,17 +403,17 @@ export async function runCICDJob(providerId: string, jobId: string): Promise<Act
       console.error('[@action:cicd:runCICDJob] User not authenticated');
       return { success: false, error: 'User not authenticated' };
     }
-    
+
     // This would call the actual CICD service to run the job
     // For now, return a mock success
-    return { 
-      success: true, 
-      data: { 
+    return {
+      success: true,
+      data: {
         id: jobId,
         provider_id: providerId,
         status: 'running',
-        started_at: new Date().toISOString()
-      } 
+        started_at: new Date().toISOString(),
+      },
     };
   } catch (error: any) {
     console.error('[@action:cicd:runCICDJob] Error:', error);
@@ -439,7 +441,7 @@ export async function testJenkinsAPI(): Promise<ActionResult<boolean>> {
     console.log('[@action:cicd:testJenkinsAPI] Using mock implementation');
     return {
       success: true,
-      data: true
+      data: true,
     };
   } catch (error: any) {
     console.error('[@action:cicd:testJenkinsAPI] Error testing Jenkins API:', error);
