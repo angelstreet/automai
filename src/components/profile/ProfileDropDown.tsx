@@ -69,16 +69,31 @@ export function ProfileDropDown({
           variant="ghost"
           className={
             compact
-              ? 'relative flex items-center justify-center w-full rounded-md'
+              ? 'relative flex items-center justify-between w-full rounded-md p-2 hover:bg-sidebar-hover'
               : 'relative h-8 w-8 rounded-full'
           }
         >
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={user.avatar_url || undefined} alt={user.name || 'User'} />
-            <AvatarFallback>
-              {user?.name ? getInitials(user.name) : <User className="h-4 w-4" />}
-            </AvatarFallback>
-          </Avatar>
+          {compact ? (
+            <div className="flex items-center gap-3">
+              <Avatar className="h-10 w-10">
+                <AvatarImage src={user.avatar_url || undefined} alt={user.name || 'User'} />
+                <AvatarFallback>
+                  {user?.name ? getInitials(user.name) : <User className="h-4 w-4" />}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col text-left">
+                <span className="text-sm font-medium">{user.name}</span>
+                <span className="text-xs text-muted-foreground">Role: {user.role || 'viewer'}</span>
+              </div>
+            </div>
+          ) : (
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={user.avatar_url || undefined} alt={user.name || 'User'} />
+              <AvatarFallback>
+                {user?.name ? getInitials(user.name) : <User className="h-4 w-4" />}
+              </AvatarFallback>
+            </Avatar>
+          )}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>

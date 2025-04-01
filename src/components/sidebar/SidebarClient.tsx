@@ -98,10 +98,6 @@ const SidebarClient = React.memo(function SidebarClient({
       <SidebarFooter className="pb-2">
         {user && (
           <div className="w-full p-2 border-t border-border">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-sm font-medium">{user.name}</span>
-              <span className="text-xs text-muted-foreground">{user.email}</span>
-            </div>
             <ProfileDropDown user={user} activeTeam={activeTeam} compact={true} />
           </div>
         )}
