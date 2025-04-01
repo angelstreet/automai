@@ -165,6 +165,7 @@
     "title": "Profile",
     "profile": "Profile",
     "description": "Manage your profile settings and preferences",
+    "profileDescription": "View and update your personal information and account settings",
     "settings": "Profile Settings",
     "edit": "Edit Profile",
     "save": "Save Changes",

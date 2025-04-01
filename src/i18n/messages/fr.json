@@ -153,6 +153,7 @@
     "title": "Profil",
     "profile": "Profil",
     "description": "Gérez vos paramètres de profil et vos préférences",
+    "profileDescription": "Consultez et mettez à jour vos informations personnelles et les paramètres de votre compte",
     "settings": "Paramètres du profil",
     "edit": "Modifier le profil",
     "save": "Enregistrer les modifications",
