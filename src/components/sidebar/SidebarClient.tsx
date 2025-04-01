@@ -97,7 +97,7 @@ const SidebarClient = React.memo(function SidebarClient({
       </SidebarContent>
       <SidebarFooter className="pb-2">
         {user && (
-          <div className="w-full p-2 border-t border-border">
+          <div className="w-full p-2">
             <ProfileDropDown user={user} activeTeam={activeTeam} compact={true} />
           </div>
         )}
