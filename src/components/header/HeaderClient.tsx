@@ -72,7 +72,7 @@ export function HeaderClient({
             <div className="flex-1" />
 
             {/* Right section */}
-            <div className="header-right-section">
+            <div className="flex items-center gap-4 px-4 h-full pr-14">
               <div className="flex-none w-36 mr-4">
                 {user ? (
                   <RoleSwitcher key={`role-switcher-${user.role || 'default'}`} user={user} />
@@ -84,7 +84,7 @@ export function HeaderClient({
               <div className="flex-1 max-w-[32rem] min-w-[12.5rem]">
                 <Search />
               </div>
-              <div className="flex items-center gap-1 flex-shrink-0">
+              <div className="flex items-center gap-1">
                 <Separator orientation="vertical" className="h-8 opacity-30" />
                 <ThemeToggleStatic />
                 <Separator orientation="vertical" className="h-8 opacity-30" />
