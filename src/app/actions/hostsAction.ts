@@ -374,7 +374,7 @@ async function testConnectionCore(data: {
       type: data.type as any, // Cast to expected type
       ip: data.ip,
       port: data.port,
-      user: data.username,
+      user: data.username, // Map username to user
       password: data.password,
     };
 

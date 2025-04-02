@@ -3,7 +3,16 @@
  * Handles SSH connections and operations
  */
 import { StandardResponse } from '@/lib/utils/commonUtils';
-import { SSHExecutionResult } from '@/types/component/sshComponentType';
+
+/**
+ * Interface for SSH execution result
+ */
+export interface SSHExecutionResult {
+  stdout: string;
+  stderr: string;
+  code: number;
+}
+
 /**
  * Interface for SSH connection options
  */
@@ -88,68 +97,10 @@ export async function executeCommand(
   }
 }
 
-/**
- * Upload a file via SSH/SCP
- */
-export async function uploadFile(
-  options: SSHConnectionOptions & { localPath: string; remotePath: string },
-): Promise<StandardResponse<boolean>> {
-  try {
-    // In a real implementation, this would use an SSH/SCP library to upload the file
-    // Simulate file upload
-    if (!options.localPath || !options.remotePath) {
-      return {
-        success: false,
-        error: 'Invalid file paths',
-      };
-    }
-
-    return {
-      success: true,
-      data: true,
-    };
-  } catch (error: any) {
-    return {
-      success: false,
-      error: error.message || 'Failed to upload file',
-    };
-  }
-}
-
-/**
- * Download a file via SSH/SCP
- */
-export async function downloadFile(
-  options: SSHConnectionOptions & { remotePath: string; localPath: string },
-): Promise<StandardResponse<boolean>> {
-  try {
-    // In a real implementation, this would use an SSH/SCP library to download the file
-    // Simulate file download
-    if (!options.remotePath || !options.localPath) {
-      return {
-        success: false,
-        error: 'Invalid file paths',
-      };
-    }
-
-    return {
-      success: true,
-      data: true,
-    };
-  } catch (error: any) {
-    return {
-      success: false,
-      error: error.message || 'Failed to download file',
-    };
-  }
-}
-
 // Export all SSH service functions
 const sshService = {
   testConnection,
   executeCommand,
-  uploadFile,
-  downloadFile,
 };
 
 export default sshService;

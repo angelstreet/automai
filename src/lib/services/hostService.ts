@@ -19,21 +19,23 @@ export interface ServiceResponse<T> {
 /**
  * Test connection to a host
  */
-export async function testHostConnection(host: Partial<Host>): Promise<ServiceResponse<HostConnectionStatus>> {
+export async function testHostConnection(
+  host: Partial<Host>,
+): Promise<ServiceResponse<HostConnectionStatus>> {
   try {
     // First test the SSH connection
     const sshResult = await sshService.testConnection({
       host: host.ip || '',
       port: host.port || 22,
-      username: host.username || '',
+      username: host.user || '',
       password: host.password,
-      privateKey: host.private_key
+      privateKey: host.private_key,
     });
 
     if (!sshResult.success) {
       return {
         success: false,
-        error: sshResult.error || 'Failed to establish SSH connection'
+        error: sshResult.error || 'Failed to establish SSH connection',
       };
     }
 
@@ -41,14 +43,15 @@ export async function testHostConnection(host: Partial<Host>): Promise<ServiceRe
     return {
       success: true,
       data: {
-        connected: true,
-        message: 'Successfully connected to host'
-      }
+        status: 'connected',
+        lastChecked: new Date().toISOString(),
+        message: 'Successfully connected to host',
+      },
     };
   } catch (error: any) {
     return {
       success: false,
-      error: error.message || 'Failed to test host connection'
+      error: error.message || 'Failed to test host connection',
     };
   }
 }
@@ -60,41 +63,41 @@ export async function getHostSystemInfo(hostId: string): Promise<ServiceResponse
   try {
     // Get host from database
     const hostResult = await hostDb.getHostById(hostId);
-    
+
     if (!hostResult.success || !hostResult.data) {
       return {
         success: false,
-        error: hostResult.error || 'Host not found'
+        error: hostResult.error || 'Host not found',
       };
     }
-    
+
     const host = hostResult.data;
-    
+
     // Execute command to get system info
     const sshResult = await sshService.executeCommand({
       host: host.ip || '',
       port: host.port || 22,
-      username: host.username || '',
+      username: host.user || '',
       password: host.password,
       privateKey: host.private_key,
-      command: 'uname -a && cat /proc/cpuinfo | grep "model name" | head -1 && free -h && df -h'
+      command: 'uname -a && cat /proc/cpuinfo | grep "model name" | head -1 && free -h && df -h',
     });
-    
+
     if (!sshResult.success) {
       return {
         success: false,
-        error: sshResult.error || 'Failed to get system information'
+        error: sshResult.error || 'Failed to get system information',
       };
     }
-    
+
     return {
       success: true,
-      data: sshResult.data
+      data: sshResult.data,
     };
   } catch (error: any) {
     return {
       success: false,
-      error: error.message || 'Failed to get host system information'
+      error: error.message || 'Failed to get host system information',
     };
   }
 }
@@ -102,7 +105,7 @@ export async function getHostSystemInfo(hostId: string): Promise<ServiceResponse
 // Export all host service functions
 const hostService = {
   testHostConnection,
-  getHostSystemInfo
+  getHostSystemInfo,
 };
 
 export default hostService;
