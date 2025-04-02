@@ -3,7 +3,7 @@
 import { AlertCircle, Check, CheckCircle, Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import * as React from 'react';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 
 import {
@@ -67,6 +67,31 @@ export function ClientConnectionForm({
 
   // State for Windows detection
   const [isWindowsOS, setIsWindowsOS] = useState<boolean | undefined>(undefined);
+
+  // State for storing active team ID
+  const [activeTeamId, setActiveTeamId] = useState<string | null>(null);
+
+  // Fetch active team ID on component mount
+  useEffect(() => {
+    const fetchActiveTeam = async () => {
+      try {
+        const response = await fetch('/api/user/active-team');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data?.id) {
+            setActiveTeamId(data.data.id);
+            console.log('[@ui:ClientConnectionForm] Got active team ID:', data.data.id);
+          } else {
+            console.error('[@ui:ClientConnectionForm] Failed to get active team ID');
+          }
+        }
+      } catch (error) {
+        console.error('[@ui:ClientConnectionForm] Error fetching active team:', error);
+      }
+    };
+
+    fetchActiveTeam();
+  }, []);
 
   const handleTypeChange = (value: string) => {
     setConnectionType(value as 'ssh' | 'docker' | 'portainer');
@@ -201,6 +226,8 @@ export function ClientConnectionForm({
         is_windows: isWindowsOS !== undefined ? isWindowsOS : false,
         created_at: new Date(),
         updated_at: new Date(),
+        // Add team_id if available
+        team_id: activeTeamId || undefined,
       };
 
       console.log('[@ui:ClientConnectionForm:createHostDirectly] Checking credentials passing:', {

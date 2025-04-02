@@ -249,7 +249,6 @@ export async function createHost(
 
     // Revalidate paths
     revalidatePath('/[locale]/[tenant]/hosts');
-    revalidatePath('/[locale]/[tenant]/dashboard');
 
     console.info(`[@action:hosts:createHost] Successfully created host: ${result.data.id}`);
     return { success: true, data: result.data };
@@ -292,8 +291,6 @@ export async function updateHost(
 
     // Revalidate paths
     revalidatePath('/[locale]/[tenant]/hosts');
-    revalidatePath(`/[locale]/[tenant]/hosts/${id}`);
-    revalidatePath('/[locale]/[tenant]/dashboard');
 
     return { success: true, data: result.data };
   } catch (error: any) {
@@ -335,7 +332,6 @@ export async function deleteHost(id: string): Promise<{ success: boolean; error?
 
     // Revalidate paths
     revalidatePath('/[locale]/[tenant]/hosts');
-    revalidatePath('/[locale]/[tenant]/dashboard');
 
     return { success: true };
   } catch (error: any) {
@@ -534,7 +530,6 @@ export async function testConnection(data: {
     // Revalidate paths if we have a host ID
     if (data.hostId) {
       revalidatePath('/[locale]/[tenant]/hosts');
-      revalidatePath(`/[locale]/[tenant]/hosts/${data.hostId}`);
     }
 
     return result;

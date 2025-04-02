@@ -1,10 +1,11 @@
-import { getCICDProviders } from '@/app/actions/cicdAction';
+'use client';
 
 import CICDDetailsClient from './client/CICDDetailsClient';
+import { useCICD } from './providers';
 
-export default async function CICDContent() {
-  const providersResponse = await getCICDProviders();
-  const providers = providersResponse.success ? providersResponse.data || [] : [];
+export default function CICDContent() {
+  // Use hook instead of fetching data directly
+  const { providers } = useCICD('CICDContent');
 
   return (
     <div className="w-full border-0 shadow-none">
