@@ -15,8 +15,9 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
-import { useSidebar } from '@/hooks';
+import { useSidebar, useAuth } from '@/hooks';
 import { cn } from '@/lib/utils';
+import { SidebarContext } from '@/types/context/sidebarContextType';
 import { Team } from '@/types/context/teamContextType';
 import { User as UserType } from '@/types/service/userServiceType';
 
@@ -37,23 +38,24 @@ export function ProfileDropDown({
   const tenant = (params.tenant as string) || user?.tenant_name || 'trial';
 
   // Add sidebar state detection (only affects compact mode)
-  const { state } = useSidebar('ProfileDropDown');
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(state === 'collapsed');
-  
+  const sidebarContext = useSidebar('ProfileDropDown');
+  const sidebarState = (sidebarContext as SidebarContext)?.state;
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(sidebarState === 'collapsed');
+
   // Cache avatar URL to prevent unnecessary reloads
   const [cachedAvatarUrl, setCachedAvatarUrl] = React.useState<string | undefined>(undefined);
-  
+
   // Initialize and update cached avatar URL
   React.useEffect(() => {
     if (user?.avatar_url && user.avatar_url !== cachedAvatarUrl) {
       // Store in state for component use
       setCachedAvatarUrl(user.avatar_url);
-      
+
       // Also cache in localStorage for persistence
       try {
         localStorage.setItem(`avatar_${user.id}`, user.avatar_url);
-      } catch (e) {
-        console.warn('Failed to cache avatar URL in localStorage', e);
+      } catch {
+        console.warn('Failed to cache avatar URL in localStorage');
       }
     } else if (!cachedAvatarUrl && user?.id) {
       // Try to load from localStorage on initial mount
@@ -64,7 +66,7 @@ export function ProfileDropDown({
         } else if (user.avatar_url) {
           setCachedAvatarUrl(user.avatar_url);
         }
-      } catch (e) {
+      } catch {
         // Fallback to user.avatar_url if localStorage fails
         if (user.avatar_url) {
           setCachedAvatarUrl(user.avatar_url);
@@ -75,7 +77,7 @@ export function ProfileDropDown({
 
   // Add a small delay when expanding to avoid flash of content during transition
   React.useEffect(() => {
-    if (state === 'collapsed') {
+    if (sidebarState === 'collapsed') {
       setIsSidebarCollapsed(true);
     } else {
       // When expanding, delay showing text content
@@ -84,7 +86,7 @@ export function ProfileDropDown({
       }, 200); // Slight delay when expanding
       return () => clearTimeout(timer);
     }
-  }, [state]);
+  }, [sidebarState]);
 
   // Get user's initials for avatar fallback
   const getInitials = (name: string) => {
@@ -95,15 +97,8 @@ export function ProfileDropDown({
       .toUpperCase();
   };
 
-  const handleLogout = async () => {
-    try {
-      // Redirect to login page
-      router.push(`/${locale}/login`);
-    } catch (error) {
-      console.error('Error during sign out:', error);
-      router.push(`/${locale}/login`);
-    }
-  };
+  // Use the auth hook for logout functionality
+  const { logout, isLoggingOut } = useAuth('ProfileDropDown');
 
   if (!user) return null;
 
@@ -124,7 +119,11 @@ export function ProfileDropDown({
             // Expanded sidebar - show full profile
             <div className="flex items-center gap-3">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={cachedAvatarUrl || undefined} alt={user.name || 'User'} crossOrigin="anonymous" />
+                <AvatarImage
+                  src={cachedAvatarUrl || undefined}
+                  alt={user.name || 'User'}
+                  crossOrigin="anonymous"
+                />
                 <AvatarFallback>
                   {user?.name ? getInitials(user.name) : <User className="h-4 w-4" />}
                 </AvatarFallback>
@@ -139,7 +138,11 @@ export function ProfileDropDown({
           ) : (
             // Collapsed sidebar or header - show avatar only
             <Avatar className={cn(compact && isSidebarCollapsed ? 'h-8 w-8' : 'h-10 w-10')}>
-              <AvatarImage src={cachedAvatarUrl || undefined} alt={user.name || 'User'} crossOrigin="anonymous" />
+              <AvatarImage
+                src={cachedAvatarUrl || undefined}
+                alt={user.name || 'User'}
+                crossOrigin="anonymous"
+              />
               <AvatarFallback>
                 {user?.name ? getInitials(user.name) : <User className="h-4 w-4" />}
               </AvatarFallback>
@@ -166,9 +169,13 @@ export function ProfileDropDown({
           <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout} className="text-red-500 focus:text-red-500">
+        <DropdownMenuItem
+          onClick={() => logout()}
+          disabled={isLoggingOut}
+          className="text-red-500 focus:text-red-500"
+        >
           <LogOut className="mr-2 h-4 w-4 text-red-500" />
-          Log out
+          {isLoggingOut ? 'Logging out...' : 'Log out'}
           <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
         </DropdownMenuItem>
       </DropdownMenuContent>

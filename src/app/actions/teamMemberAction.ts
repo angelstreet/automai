@@ -1,12 +1,12 @@
 'use server';
 
-import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
+import { cookies } from 'next/headers';
 import { cache } from 'react';
 
 import { getUser } from '@/app/actions/userAction';
-import teamMemberDb from '@/lib/db/teamMemberDb';
 import permissionDb from '@/lib/db/permissionDb';
+import teamMemberDb from '@/lib/db/teamMemberDb';
 import type { ResourceType } from '@/types/context/permissionsContextType';
 import { ResourcePermissions } from '@/types/context/teamContextType';
 

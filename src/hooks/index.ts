@@ -8,6 +8,7 @@ export * from './query/useQueryHelpers';
 // Domain-specific hooks
 export * from './team';
 export * from './user';
+export * from './auth';
 export * from './permission';
 export * from './teamMember';
 export * from './host';
