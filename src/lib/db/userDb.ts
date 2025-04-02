@@ -1,4 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
+import { DbResponse } from '@/lib/utils/dbUtils';
+import { AuthUser, UserTeam } from '@/types/service/userServiceType';
 
 export default {
   findMany,
@@ -10,11 +12,8 @@ export default {
   setSelectedTeam,
   create,
   update,
-  deleteUser
+  deleteUser,
 };
-import { AuthUser, UserTeam } from '@/types/service/userServiceType';
-import { DbResponse } from './dbUtils';
-
 // Cache for user data
 const CACHE_TTL = 300000;
 const userCache = new Map<string, { user: AuthUser | null; timestamp: number }>();
@@ -72,7 +71,10 @@ export async function findMany(options: any = {}, cookieStore?: any): Promise<an
  * @param cookieStore Cookie store
  * @returns User profile or null
  */
-export async function findUnique({ where }: { where: any }, cookieStore?: any): Promise<any | null> {
+export async function findUnique(
+  { where }: { where: any },
+  cookieStore?: any,
+): Promise<any | null> {
   const supabase = await createClient(cookieStore);
 
   // Apply the 'where' conditions
@@ -170,13 +172,13 @@ export async function getUser(userId: string, cookieStore?: any): Promise<DbResp
         // Add missing properties to match AuthUser type
         created_at: authData.user.created_at || '',
         updated_at: authData.user.updated_at || '',
-      }
+      },
     };
   } catch (error) {
     console.error('[@db:userDb:getUser] Error in getUser:', error);
-    return { 
+    return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error getting user'
+      error: error instanceof Error ? error.message : 'Unknown error getting user',
     };
   }
 }
@@ -228,9 +230,9 @@ export async function getCurrentUser(cookieStore?: any): Promise<DbResponse<Auth
     return userResult;
   } catch (error) {
     console.error('[@db:userDb:getCurrentUser] Error in getCurrentUser:', error);
-    return { 
+    return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error getting current user'
+      error: error instanceof Error ? error.message : 'Unknown error getting current user',
     };
   }
 }
@@ -301,9 +303,9 @@ export async function updateProfile(
     };
   } catch (error) {
     console.error('[@db:userDb:updateProfile] Error in updateProfile:', error);
-    return { 
+    return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error updating profile'
+      error: error instanceof Error ? error.message : 'Unknown error updating profile',
     };
   }
 }
@@ -315,14 +317,18 @@ export async function updateProfile(
  * @param cookieStore Cookie store
  * @returns Operation result
  */
-export async function setSelectedTeam(userId: string, teamId: string, cookieStore?: any): Promise<DbResponse<null>> {
+export async function setSelectedTeam(
+  userId: string,
+  teamId: string,
+  cookieStore?: any,
+): Promise<DbResponse<null>> {
   try {
     if (!cookieStore) {
       console.error('[@db:userDb:setSelectedTeam] No cookieStore provided');
       return {
         success: false,
         error: 'No cookieStore provided',
-        data: null
+        data: null,
       };
     }
 
@@ -336,14 +342,14 @@ export async function setSelectedTeam(userId: string, teamId: string, cookieStor
 
     return {
       success: true,
-      data: null
+      data: null,
     };
   } catch (error) {
     console.error('[@db:userDb:setSelectedTeam] Error in setSelectedTeam:', error);
-    return { 
+    return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error setting selected team',
-      data: null
+      data: null,
     };
   }
 }
@@ -368,9 +374,9 @@ export async function create({ data }: { data: any }, cookieStore?: any): Promis
     return { success: true, data: result };
   } catch (error) {
     console.error('[@db:userDb:create] Error in create:', error);
-    return { 
+    return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error creating user profile' 
+      error: error instanceof Error ? error.message : 'Unknown error creating user profile',
     };
   }
 }
@@ -382,7 +388,10 @@ export async function create({ data }: { data: any }, cookieStore?: any): Promis
  * @param cookieStore Cookie store
  * @returns Updated user profile
  */
-export async function update({ where, data }: { where: any; data: any }, cookieStore?: any): Promise<DbResponse<any>> {
+export async function update(
+  { where, data }: { where: any; data: any },
+  cookieStore?: any,
+): Promise<DbResponse<any>> {
   try {
     const supabase = await createClient(cookieStore);
 
@@ -401,9 +410,9 @@ export async function update({ where, data }: { where: any; data: any }, cookieS
     return { success: true, data: result };
   } catch (error) {
     console.error('[@db:userDb:update] Error in update:', error);
-    return { 
+    return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error updating user profile' 
+      error: error instanceof Error ? error.message : 'Unknown error updating user profile',
     };
   }
 }
@@ -414,7 +423,10 @@ export async function update({ where, data }: { where: any; data: any }, cookieS
  * @param cookieStore Cookie store
  * @returns Operation result
  */
-export async function deleteUser({ where }: { where: any }, cookieStore?: any): Promise<DbResponse<null>> {
+export async function deleteUser(
+  { where }: { where: any },
+  cookieStore?: any,
+): Promise<DbResponse<null>> {
   try {
     const supabase = await createClient(cookieStore);
 
@@ -430,10 +442,10 @@ export async function deleteUser({ where }: { where: any }, cookieStore?: any): 
     return { success: true, data: null };
   } catch (error) {
     console.error('[@db:userDb:deleteUser] Error in deleteUser:', error);
-    return { 
+    return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error deleting user profile',
-      data: null
+      data: null,
     };
   }
 }

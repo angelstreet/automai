@@ -3,8 +3,6 @@
  * Handles database operations for CI/CD providers and jobs
  */
 import { createClient } from '@/lib/supabase/server';
-
-// Types from CICD component type
 import {
   CICDProvider,
   CICDJob,

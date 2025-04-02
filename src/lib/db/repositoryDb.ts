@@ -1,6 +1,8 @@
 import { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies';
+
 import { createClient } from '@/lib/supabase/server';
-import { DbResponse } from './dbUtils';
+
+import { DbResponse } from '@/lib/db/utils/dbUtils';
 
 export type Repository = {
   id: string;
@@ -30,10 +32,13 @@ export default {
   updateRepository,
   deleteRepository,
   createRepositoryFromUrl,
-  getAllGitProviders
+  getAllGitProviders,
 };
 
-export async function getById(id: string, cookieStore?: ReadonlyRequestCookies): Promise<DbResponse<Repository>> {
+export async function getById(
+  id: string,
+  cookieStore?: ReadonlyRequestCookies,
+): Promise<DbResponse<Repository>> {
   try {
     const supabase = await createClient(cookieStore);
     const { data, error } = await supabase.from('repositories').select('*').eq('id', id).single();
@@ -258,7 +263,9 @@ export async function createRepositoryFromUrl(
 /**
  * Get all git providers
  */
-export async function getAllGitProviders(cookieStore?: ReadonlyRequestCookies): Promise<DbResponse<GitProvider[]>> {
+export async function getAllGitProviders(
+  cookieStore?: ReadonlyRequestCookies,
+): Promise<DbResponse<GitProvider[]>> {
   try {
     const supabase = await createClient(cookieStore);
     const { data, error } = await supabase.from('git_providers').select('*');

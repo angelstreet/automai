@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import type { TeamMember, TeamMemberCreateInput } from '@/types/context/teamContextType';
 
-import { DbResponse } from './dbUtils';
+import { DbResponse } from '@/lib/types/supabaseDbType';
 
 /**
  * Get team members for a specific team
