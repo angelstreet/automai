@@ -5,8 +5,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getRepositories,
   getRepository,
-  connectRepository,
-  disconnectRepository,
+  connectRepository as connectRepositoryAction,
+  disconnectRepository as disconnectRepositoryAction,
   testGitRepository,
 } from '@/app/actions/repositoriesAction';
 import { useToast } from '@/components/shadcn/use-toast';
@@ -42,7 +42,7 @@ export function useRepository() {
 
   // Connect repository mutation
   const connectRepositoryMutation = useMutation({
-    mutationFn: (data: any) => connectRepository(data),
+    mutationFn: (data: any) => connectRepositoryAction(data),
     onSuccess: (response) => {
       if (response.success) {
         toast({
@@ -67,9 +67,14 @@ export function useRepository() {
     },
   });
 
+  // Connect repository function that returns the result
+  const connectRepository = async (data: any) => {
+    return await connectRepositoryMutation.mutateAsync(data);
+  };
+
   // Disconnect repository mutation
   const disconnectRepositoryMutation = useMutation({
-    mutationFn: (id: string) => disconnectRepository(id),
+    mutationFn: (id: string) => disconnectRepositoryAction(id),
     onSuccess: (response) => {
       if (response.success) {
         toast({
@@ -94,31 +99,61 @@ export function useRepository() {
     },
   });
 
-  // Test repository connection mutation
-  const testRepositoryMutation = useMutation({
+  // Disconnect repository function that returns the result
+  const disconnectRepository = async (id: string) => {
+    return await disconnectRepositoryMutation.mutateAsync(id);
+  };
+
+  // URL validation mutation - checks if a repository URL is valid and accessible
+  const validateRepositoryUrlMutation = useMutation({
     mutationFn: (data: TestRepositoryInput) => testGitRepository(data),
     onSuccess: (response) => {
       if (response.success) {
         toast({
-          title: 'Connection Successful',
-          description: 'Repository connection verified',
+          title: 'URL Valid',
+          description: 'Repository URL is valid and accessible',
         });
       } else {
         toast({
-          title: 'Connection Failed',
-          description: response.error || 'Could not connect to repository',
+          title: 'URL Invalid',
+          description: response.error || 'Repository URL is not accessible',
           variant: 'destructive',
         });
       }
     },
     onError: (error: any) => {
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to test repository connection',
+        title: 'Validation Error',
+        description: error.message || 'Failed to validate repository URL',
         variant: 'destructive',
       });
     },
   });
+
+  // Test repository function - validates URL first and returns early if invalid
+  const testRepository = async (
+    data: TestRepositoryInput,
+  ): Promise<{
+    success: boolean;
+    error?: string;
+    status?: number;
+    message?: string;
+  }> => {
+    if (!data.url) {
+      return { success: false, error: 'Repository URL is required' };
+    }
+
+    // First validate the URL
+    const validationResult = await validateRepositoryUrlMutation.mutateAsync(data);
+
+    // If URL validation fails, return early
+    if (!validationResult.success) {
+      return validationResult;
+    }
+
+    // If we get here, the URL is valid, and we can return the validation result
+    return validationResult;
+  };
 
   return {
     // Data and loading states
@@ -130,9 +165,10 @@ export function useRepository() {
     getRepositoryQuery,
 
     // Action functions
-    connectRepository: connectRepositoryMutation.mutate,
-    disconnectRepository: disconnectRepositoryMutation.mutate,
-    testRepository: testRepositoryMutation.mutate,
+    connectRepository,
+    disconnectRepository,
+    testRepository,
+    validateRepositoryUrl: validateRepositoryUrlMutation.mutate,
 
     // Refetch functions
     refetchRepositories,
@@ -140,6 +176,6 @@ export function useRepository() {
     // Mutation states
     isConnecting: connectRepositoryMutation.isPending,
     isDisconnecting: disconnectRepositoryMutation.isPending,
-    isTesting: testRepositoryMutation.isPending,
+    isValidating: validateRepositoryUrlMutation.isPending,
   };
 }

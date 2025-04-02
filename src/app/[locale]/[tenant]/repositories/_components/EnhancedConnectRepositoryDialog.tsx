@@ -18,7 +18,7 @@ import { Input } from '@/components/shadcn/input';
 import { Label } from '@/components/shadcn/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 import { useToast } from '@/components/shadcn/use-toast';
-import { useRepository } from '@/hooks/repository';
+import { useRepository } from '@/hooks/repository/useRepository';
 import { EnhancedConnectRepositoryDialogProps } from '@/types/context/repositoryContextType';
 
 import { CONNECT_REPOSITORY_TABS, AUTH_METHODS } from '../constants';
@@ -105,13 +105,13 @@ export function EnhancedConnectRepositoryDialog({
     setIsCloning(true);
 
     try {
-      // First verify the URL is valid
+      // First validate the URL
       const verifyResult = await testRepository({ url: quickCloneUrl });
 
-      if (!verifyResult.success) {
+      if (!verifyResult || !verifyResult.success) {
         toast({
           title: 'Invalid Repository URL',
-          description: verifyResult.error || 'The repository URL appears to be invalid',
+          description: verifyResult?.error || 'The repository URL appears to be invalid',
           variant: 'destructive',
         });
         setIsCloning(false);
@@ -119,13 +119,15 @@ export function EnhancedConnectRepositoryDialog({
       }
 
       // Create the repository
-      const result = await connectRepository({
+      const repositoryData = {
         url: quickCloneUrl,
         isPrivate: false,
         description: '',
-      });
+      };
 
-      if (result.success) {
+      const result = await connectRepository(repositoryData);
+
+      if (result && result.success) {
         toast({
           title: 'Success',
           description: 'Repository cloned successfully',
@@ -138,7 +140,7 @@ export function EnhancedConnectRepositoryDialog({
         if (onSubmit) {
           onSubmit({
             url: quickCloneUrl,
-            method: AUTH_METHODS.URL,
+            method: 'url' as const,
           });
         }
 
@@ -146,7 +148,7 @@ export function EnhancedConnectRepositoryDialog({
       } else {
         toast({
           title: 'Clone Failed',
-          description: result.error || 'Failed to clone the repository',
+          description: result?.error || 'Failed to clone the repository',
           variant: 'destructive',
         });
       }
