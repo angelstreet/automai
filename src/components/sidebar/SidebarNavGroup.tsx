@@ -18,6 +18,18 @@ import {
 } from '@/components/sidebar';
 import { useSidebar } from '@/hooks';
 import { cn } from '@/lib/utils';
+import { Role } from '@/types/service/userServiceType';
+
+// Add type definitions for the custom event
+declare global {
+  interface WindowEventMap {
+    'debug-role-change': CustomEvent<{
+      role: Role;
+      user: any;
+      previousRole?: Role;
+    }>;
+  }
+}
 
 interface SidebarNavGroupProps {
   title: string;
@@ -25,12 +37,12 @@ interface SidebarNavGroupProps {
     title: string;
     href: string;
     icon?: React.ComponentType<{ className?: string }>;
-    roles?: string[];
+    roles?: Role[];
     items?: {
       title: string;
       href: string;
       icon: React.ComponentType<{ className?: string }>;
-      roles?: string[];
+      roles?: Role[];
     }[];
   }[];
 }
@@ -47,8 +59,39 @@ export const SidebarNavGroup = React.memo(function SidebarNavGroup({
   // Use state for isCollapsed to ensure hydration consistency
   const [isCollapsed, setIsCollapsed] = React.useState(false);
 
+  // Add state for tracking the current role
+  const [currentRole, setCurrentRole] = React.useState<Role>(
+    typeof window !== 'undefined' && window.__debugRole ? window.__debugRole : 'viewer',
+  );
+
+  // Add event listener for role changes
+  React.useEffect(() => {
+    const handleRoleChange = (event: CustomEvent<{ role: Role; user: any }>) => {
+      console.log('[SidebarNavGroup] Role changed to:', event.detail.role);
+      setCurrentRole(event.detail.role);
+    };
+
+    window.addEventListener('debug-role-change', handleRoleChange);
+
+    return () => {
+      window.removeEventListener('debug-role-change', handleRoleChange);
+    };
+  }, []);
+
   // Create a memoized version of items to prevent layout shifts
   const stableItems = React.useMemo(() => items, [items]);
+
+  // Filter items based on current role
+  const filteredItems = React.useMemo(() => {
+    return stableItems
+      .filter((item) => !item.roles || item.roles.includes(currentRole))
+      .map((item) => ({
+        ...item,
+        items: item.items?.filter(
+          (subItem) => !subItem.roles || subItem.roles.includes(currentRole),
+        ),
+      }));
+  }, [stableItems, currentRole]);
 
   // Update isCollapsed after initial render to prevent hydration mismatch
   React.useEffect(() => {
@@ -86,7 +129,7 @@ export const SidebarNavGroup = React.memo(function SidebarNavGroup({
       <SidebarGroupContent className={cn('py-0.5', isCollapsed && 'mt-1.5')}>
         <ScrollArea className="h-full">
           <SidebarMenu>
-            {stableItems.map((item) => {
+            {filteredItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.href);
               const hasSubmenu = item.items && item.items.length > 0;

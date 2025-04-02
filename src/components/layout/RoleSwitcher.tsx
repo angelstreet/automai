@@ -91,15 +91,16 @@ function RoleSwitcherComponent({ className, user: propUser }: RoleSwitcherProps)
 
             // Dispatch event for components listening for role changes
             const event = new CustomEvent('debug-role-change', {
-              detail: { role: newRole, user: patchedUser },
+              detail: {
+                role: newRole,
+                user: patchedUser,
+                previousRole: activeRole,
+              },
             });
             window.dispatchEvent(event);
 
             // Also set in window.__debugRole
             window.__debugRole = newRole;
-
-            // Force a custom sync event to trigger re-renders
-            window.dispatchEvent(new CustomEvent('force-ui-update'));
           } catch (e) {
             console.error('Failed to update user in localStorage', e);
           }
