@@ -78,7 +78,7 @@ export async function getTeamMembers(
       });
     }
 
-    console.log('[@db:teamMemberDb:getTeamMembers] Team members with user info:', data);
+    //console.log('[@db:teamMemberDb:getTeamMembers] Team members with user info:', data);
 
     // Cast to TeamMember[] with unknown intermediate to satisfy TypeScript
     return {
