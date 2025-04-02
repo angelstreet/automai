@@ -35,10 +35,23 @@ export function ProfileDropDown({
   const params = useParams();
   const locale = params.locale as string;
   const tenant = (params.tenant as string) || user?.tenant_name || 'trial';
-  
+
   // Add sidebar state detection (only affects compact mode)
-  const { state } = useSidebar();
-  const isSidebarCollapsed = state === 'collapsed';
+  const { state, open } = useSidebar();
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(state === 'collapsed');
+
+  // Add a small delay when expanding to avoid flash of content during transition
+  React.useEffect(() => {
+    if (state === 'collapsed') {
+      setIsSidebarCollapsed(true);
+    } else {
+      // When expanding, delay showing text content
+      const timer = setTimeout(() => {
+        setIsSidebarCollapsed(false);
+      }, 200); // Slight delay when expanding
+      return () => clearTimeout(timer);
+    }
+  }, [state]);
 
   // Get user's initials for avatar fallback
   const getInitials = (name: string) => {
@@ -67,10 +80,10 @@ export function ProfileDropDown({
         <Button
           variant="ghost"
           className={cn(
-            compact 
-              ? "relative flex items-center justify-between rounded-md p-2 hover:bg-sidebar-accent/50" 
-              : "relative h-10 w-10 rounded-full",
-            compact && isSidebarCollapsed && "justify-center w-full px-0"
+            compact
+              ? 'relative flex items-center justify-between rounded-md p-2 hover:bg-sidebar-accent/50'
+              : 'relative h-10 w-10 rounded-full',
+            compact && isSidebarCollapsed && 'justify-center w-full px-0',
           )}
           data-sidebar-profile="true"
         >
@@ -92,7 +105,7 @@ export function ProfileDropDown({
             </div>
           ) : (
             // Collapsed sidebar or header - show avatar only
-            <Avatar className={cn(compact && isSidebarCollapsed ? "h-8 w-8" : "h-10 w-10")}>
+            <Avatar className={cn(compact && isSidebarCollapsed ? 'h-8 w-8' : 'h-10 w-10')}>
               <AvatarImage src={user.avatar_url || undefined} alt={user.name || 'User'} />
               <AvatarFallback>
                 {user?.name ? getInitials(user.name) : <User className="h-4 w-4" />}

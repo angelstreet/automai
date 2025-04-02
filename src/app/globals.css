@@ -254,11 +254,23 @@
   [data-sidebar-profile='true'] {
     transition: all var(--sidebar-transition-duration) var(--sidebar-transition-timing);
   }
-
+  
+  /* Text in profile - delay appearance when expanding */
+  [data-sidebar-profile='true'] .flex-col {
+    transition: opacity calc(var(--sidebar-transition-duration) + 100ms) var(--sidebar-transition-timing),
+                width var(--sidebar-transition-duration) var(--sidebar-transition-timing);
+  }
+  
   /* Hide text in profile when collapsed */
   [data-state='collapsed'] [data-sidebar-profile='true'] .flex-col {
     opacity: 0;
     width: 0;
     overflow: hidden;
+  }
+  
+  /* Main content transitions with sidebar */
+  [data-sidebar-content="main"] {
+    transition: margin-left var(--sidebar-transition-duration) var(--sidebar-transition-timing),
+                width var(--sidebar-transition-duration) var(--sidebar-transition-timing);
   }
 }

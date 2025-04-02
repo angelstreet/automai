@@ -33,7 +33,7 @@ const SidebarClient = React.memo(function SidebarClient({
   activeTeam = null,
   setSelectedTeam,
 }: SidebarClientProps) {
-  const { open } = useSidebar();
+  const { open, state } = useSidebar();
 
   // Simplified role resolution
   const effectiveRole = user?.role || 'viewer';
@@ -42,6 +42,22 @@ const SidebarClient = React.memo(function SidebarClient({
   const navGroups = sidebarNavigationData.groups;
   const groupTitles = navGroups.map((group) => group.title);
   const items = navGroups.map((group) => group.items);
+  
+  // Update root CSS variable for main content offset when sidebar state changes
+  React.useEffect(() => {
+    // Remove 'rem' and convert to number for calculations
+    const expandedWidth = Number(APP_SIDEBAR_WIDTH.replace('rem', ''));
+    const collapsedWidth = Number(APP_SIDEBAR_WIDTH_ICON.replace('rem', ''));
+    
+    // Add a small buffer (0.2rem) to collapsed width to prevent overlap
+    const collapsedOffset = collapsedWidth + 0.5;
+    
+    // Set the CSS variable based on sidebar state
+    document.documentElement.style.setProperty(
+      '--sidebar-width-offset', 
+      state === 'collapsed' ? `${collapsedOffset}rem` : `${expandedWidth}rem`
+    );
+  }, [state]);
 
   return (
     <Sidebar
