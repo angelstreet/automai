@@ -11,6 +11,18 @@ import { useUser } from '@/hooks';
 import { cn } from '@/lib/utils';
 import { Role } from '@/types/service/userServiceType';
 
+// Add type declarations at the top of the file
+declare global {
+  interface Window {
+    __userContext?: {
+      user?: {
+        role: Role;
+      };
+    };
+    __debugRole?: Role;
+  }
+}
+
 // Define roles based on the Role type definition
 const roles: { value: Role; label: string }[] = [
   { value: 'admin', label: 'Admin' },
@@ -95,9 +107,12 @@ function RoleSwitcherComponent({ className, user: propUser }: RoleSwitcherProps)
       }
 
       // Update role through UserContext (in background)
-      userContext.updateRole(newRole).catch((error) => {
-        console.error('[RoleSwitcher] Background role update error:', error);
-      });
+      try {
+        // Call updateRole without trying to chain .catch on the result
+        userContext.updateRole(newRole);
+      } catch (updateError) {
+        console.error('[RoleSwitcher] Error calling updateRole:', updateError);
+      }
     } catch (error) {
       console.error('[RoleSwitcher] Error updating role:', error);
       // Revert to previous role on error
