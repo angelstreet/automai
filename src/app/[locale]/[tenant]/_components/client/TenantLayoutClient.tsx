@@ -1,7 +1,7 @@
 'use client';
 
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
-import { ReactNode, Suspense, useCallback, isValidElement, cloneElement } from 'react';
+import { ReactNode, Suspense, useCallback, isValidElement } from 'react';
 
 import { setUserActiveTeam } from '@/app/actions/teamAction';
 import { TeamProvider, UserProvider, SidebarProvider, PermissionProvider } from '@/app/providers';
@@ -30,7 +30,7 @@ function wrapWithFeaturePageContainer(child: ReactNode): ReactNode {
   if (isValidElement(child) && child.type === FeaturePageContainer) {
     return child;
   }
-  
+
   // Otherwise just wrap it - FeaturePageContainer will extract metadata if present
   return <FeaturePageContainer>{child}</FeaturePageContainer>;
 }
@@ -92,9 +92,9 @@ export default function TenantLayoutClient({
                   */}
                   <main
                     className="flex-1 px-6 py-4 w-full max-w-full border border-gray-30 rounded-md overflow-auto mr-4"
-                    style={{ 
+                    style={{
                       height: 'calc(100vh - var(--header-height) - 1rem)',
-                      marginBottom: '1rem' // Add bottom margin to align with sidebar
+                      marginBottom: '0.5rem', // Add bottom margin to align with sidebar
                     }}
                   >
                     {/* 
