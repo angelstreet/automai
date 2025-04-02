@@ -1,11 +1,12 @@
 'use client';
 
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
-import { ReactNode, Suspense, useCallback } from 'react';
+import { ReactNode, Suspense, useCallback, isValidElement, cloneElement } from 'react';
 
 import { setUserActiveTeam } from '@/app/actions/teamAction';
 import { TeamProvider, UserProvider, SidebarProvider, PermissionProvider } from '@/app/providers';
 import { HeaderClient, HeaderSkeleton } from '@/components/header';
+import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 import { SidebarSkeleton, SidebarClient } from '@/components/sidebar';
 import { Team } from '@/types/context/teamContextType';
 import { User } from '@/types/service/userServiceType';
@@ -19,6 +20,50 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+/**
+ * Helper function to determine if the child is already a FeaturePageContainer
+ * If not, it wraps the child in a FeaturePageContainer
+ */
+function wrapWithFeaturePageContainer(child: ReactNode, defaultTitle: string = '', defaultDescription: string = ''): ReactNode {
+  // Check if child is a FeaturePageContainer by examining its type
+  const isFeaturePageContainer = 
+    isValidElement(child) && 
+    child.type === FeaturePageContainer;
+
+  // If it's already a FeaturePageContainer, return as is
+  if (isFeaturePageContainer) {
+    return child;
+  }
+
+  // If it's a valid React element but not a FeaturePageContainer
+  if (isValidElement(child)) {
+    // Check if it has its own page metadata
+    const pageMetadata = (child.props as any)?.pageMetadata;
+    if (pageMetadata) {
+      // Use provided metadata
+      return (
+        <FeaturePageContainer 
+          title={pageMetadata.title || defaultTitle}
+          description={pageMetadata.description || defaultDescription}
+          actions={pageMetadata.actions}
+        >
+          {child}
+        </FeaturePageContainer>
+      );
+    }
+  }
+
+  // Default case: wrap with default FeaturePageContainer
+  return (
+    <FeaturePageContainer 
+      title={defaultTitle}
+      description={defaultDescription}
+    >
+      {child}
+    </FeaturePageContainer>
+  );
+}
 
 export default function TenantLayoutClient({
   children,
@@ -79,7 +124,12 @@ export default function TenantLayoutClient({
                     className="flex-1 px-6 py-4 w-full max-w-full border border-gray-30 rounded-md overflow-auto"
                     style={{ height: 'calc(100vh - var(--header-height) - 1rem)' }}
                   >
-                    {children}
+                    {/* 
+                      Automatically wrap children with FeaturePageContainer if not already wrapped
+                      This allows pages to be simpler while maintaining consistent layout
+                      Pages can still use their own FeaturePageContainer for custom behavior
+                    */}
+                    {wrapWithFeaturePageContainer(children)}
                   </main>
                 </div>
               </div>

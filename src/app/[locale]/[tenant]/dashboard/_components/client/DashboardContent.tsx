@@ -1,12 +1,21 @@
 'use client';
 
+import { ReactNode } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 
 import { DashboardMainContentClient } from './DashboardMainContentClient';
 import { DashboardStatsCardsClient } from './DashboardStatsCardsClient';
 import { DashboardTabContentCardClient } from './DashboardTabContentCardClient';
 
-export function DashboardContent() {
+interface DashboardContentProps {
+  pageMetadata?: {
+    title: string;
+    description: string;
+    actions?: ReactNode;
+  };
+}
+
+export function DashboardContent({ pageMetadata }: DashboardContentProps = {}) {
   return (
     <Tabs defaultValue="overview" className="space-y-4">
       <div className="flex overflow-x-auto pb-2">
