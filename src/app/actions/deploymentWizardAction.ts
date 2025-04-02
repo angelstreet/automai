@@ -1,12 +1,14 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { cookies } from 'next/headers';
 import { cache } from 'react';
 
 import { getCICDProviders } from '@/app/actions/cicdAction';
 import { getHosts } from '@/app/actions/hostsAction';
 import { getRepositories } from '@/app/actions/repositoriesAction';
 import { getUser } from '@/app/actions/userAction';
+import { createDeployment as dbCreateDeployment } from '@/lib/db/deploymentDb';
 import type { DeploymentFormData } from '@/types/component/deploymentComponentType';
 
 /**
@@ -52,8 +54,17 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
       };
     }
 
-    // Import the deployment database operations
-    const deploymentDb = await import('@/lib/db/deploymentDb');
+    // Get the cookieStore
+    const cookieStore = await cookies();
+
+    // Get current user
+    const user = await getUser();
+    if (!user) {
+      return {
+        success: false,
+        error: 'User not authenticated',
+      };
+    }
 
     // Prepare deployment data
     const deploymentData = {
@@ -67,12 +78,12 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
       status: 'pending',
       scheduled: formData.scheduled || false,
       schedule: formData.schedule || null,
+      tenant_id: user.tenant_id,
+      user_id: user.id,
     };
 
     // Create the deployment
-    const result = await deploymentDb.default.createDeployment({
-      data: deploymentData,
-    });
+    const result = await dbCreateDeployment(deploymentData, cookieStore);
 
     if (!result.success) {
       return {
@@ -112,14 +123,21 @@ export async function startDeployment(deploymentId: string) {
       };
     }
 
-    // Import the deployment database operations
-    const deploymentDb = await import('@/lib/db/deploymentDb');
+    // Get cookieStore
+    const cookieStore = await cookies();
+
+    // Import the updateDeployment function
+    const { updateDeployment } = await import('@/lib/db/deploymentDb');
 
     // Update deployment status
-    const result = await deploymentDb.default.updateDeployment({
-      where: { id: deploymentId },
-      data: { status: 'running', started_at: new Date().toISOString() },
-    });
+    const result = await updateDeployment(
+      deploymentId,
+      {
+        status: 'running',
+        started_at: new Date().toISOString(),
+      },
+      cookieStore,
+    );
 
     if (!result.success) {
       return {

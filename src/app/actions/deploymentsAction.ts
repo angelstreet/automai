@@ -6,6 +6,15 @@ import { cache } from 'react';
 
 import { getUser } from '@/app/actions/userAction';
 import {
+  getDeployments as dbGetDeployments,
+  getDeploymentById as dbGetDeploymentById,
+  createDeployment as dbCreateDeployment,
+  updateDeployment as dbUpdateDeployment,
+  deleteDeployment as dbDeleteDeployment,
+  updateDeploymentStatus as dbUpdateDeploymentStatus,
+  runDeployment as dbRunDeployment,
+} from '@/lib/db/deploymentDb';
+import {
   Deployment,
   DeploymentFormData,
   DeploymentStatus,
@@ -92,11 +101,8 @@ export const getDeployments = cache(
       // Get cookie store once for all operations
       const cookieStore = await cookies();
 
-      // Import the deployment database module
-      const { default: deploymentDb } = await import('@/lib/db/deploymentDb');
-
       // Fetch deployments from the database
-      const result = await deploymentDb.getDeployments(user.tenant_id, cookieStore);
+      const result = await dbGetDeployments(user.tenant_id, cookieStore);
 
       if (!result.success || !result.data) {
         console.error(
@@ -143,11 +149,8 @@ export const getDeploymentById = cache(async (id: string): Promise<Deployment | 
     // Get cookie store once for all operations
     const cookieStore = await cookies();
 
-    // Import the deployment database module
-    const { default: deploymentDb } = await import('@/lib/db/deploymentDb');
-
     // Fetch the deployment from the database
-    const result = await deploymentDb.getDeploymentById(id, cookieStore);
+    const result = await dbGetDeploymentById(id, cookieStore);
 
     if (!result.success || !result.data) {
       console.error(`[@action:deployments:getDeploymentById] Deployment not found: ${id}`);
@@ -209,16 +212,12 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
       }) || [];
 
     // Import dependencies
-    const { default: deploymentDb } = await import('@/lib/db/deploymentDb');
-    const { default: cicdDb } = await import('@/lib/db/cicdDb');
+    const { getCICDProvider } = await import('@/lib/db/cicdDb');
 
     // Get CICD provider if specified
     let providerResult = null;
     if (formData.provider_id) {
-      providerResult = await cicdDb.getCICDProvider(
-        { where: { id: formData.provider_id } },
-        cookieStore,
-      );
+      providerResult = await getCICDProvider({ where: { id: formData.provider_id } }, cookieStore);
     }
 
     // Create deployment data
@@ -248,7 +247,7 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
     );
 
     // Create the deployment
-    const result = await deploymentDb.createDeployment(deploymentData, cookieStore);
+    const result = await dbCreateDeployment(deploymentData, cookieStore);
 
     if (!result.success || !result.data) {
       console.error(
@@ -291,9 +290,6 @@ export async function updateDeployment(
     // Get cookie store
     const cookieStore = await cookies();
 
-    // Import the deployment database module
-    const { default: deploymentDb } = await import('@/lib/db/deploymentDb');
-
     // Map the form data to database format
     const dbData = {
       name: data.name,
@@ -311,7 +307,7 @@ export async function updateDeployment(
     };
 
     // Update the deployment in the database
-    const result = await deploymentDb.updateDeployment(id, dbData, cookieStore);
+    const result = await dbUpdateDeployment(id, dbData, cookieStore);
 
     // Revalidate relevant paths
     revalidatePath('/[locale]/[tenant]/deployment');
@@ -357,11 +353,8 @@ export async function deleteDeployment(id: string): Promise<boolean> {
     // Get cookie store
     const cookieStore = await cookies();
 
-    // Import the required database modules
-    const { default: deploymentDb } = await import('@/lib/db/deploymentDb');
-
     // Delete the deployment
-    const result = await deploymentDb.deleteDeployment(id, cookieStore);
+    const result = await dbDeleteDeployment(id, cookieStore);
 
     // Revalidate relevant paths
     revalidatePath('/[locale]/[tenant]/deployment');
@@ -396,9 +389,6 @@ export async function abortDeployment(id: string): Promise<{
     // Get cookie store
     const cookieStore = await cookies();
 
-    // Import the deployment database module
-    const { default: deploymentDb } = await import('@/lib/db/deploymentDb');
-
     // Update the deployment status to aborted
     const updateData = {
       status: 'aborted' as DeploymentStatus,
@@ -406,7 +396,7 @@ export async function abortDeployment(id: string): Promise<{
     };
 
     // Update the deployment in the database
-    const result = await deploymentDb.updateDeployment(id, updateData, cookieStore);
+    const result = await dbUpdateDeployment(id, updateData, cookieStore);
 
     // Revalidate relevant paths
     revalidatePath('/[locale]/[tenant]/deployment');
@@ -491,11 +481,8 @@ export async function runDeployment(
     // Get cookie store
     const cookieStore = await cookies();
 
-    // Import dependencies
-    const { default: deploymentDb } = await import('@/lib/db/deploymentDb');
-
     // Update deployment status to running
-    const updateResult = await deploymentDb.updateDeployment(
+    const updateResult = await dbUpdateDeployment(
       deploymentId,
       {
         status: 'running',
@@ -511,12 +498,8 @@ export async function runDeployment(
       return { success: false, error: updateResult.error || 'Failed to update deployment status' };
     }
 
-    // Create a run record if needed using the deployment service
-    const runDeploymentResult = await deploymentDb.runDeployment(
-      deploymentId,
-      user.id,
-      cookieStore,
-    );
+    // Create a run record
+    const runDeploymentResult = await dbRunDeployment(deploymentId, user.id, cookieStore);
 
     if (!runDeploymentResult.success) {
       console.error(

@@ -7,7 +7,7 @@ import { ProfileDropDown } from '@/components/profile/ProfileDropDown';
 import { Button } from '@/components/shadcn/button';
 import { Separator } from '@/components/shadcn/separator';
 import { SidebarTrigger } from '@/components/sidebar';
-import { RoleSwitcher } from '@/components/team/RoleSwitcher';
+import { RoleSwitcher } from '@/components/layout/RoleSwitcher';
 import { ThemeToggleStatic } from '@/components/theme/ThemeToggleStatic';
 import { Search } from '@/components/ui/Search';
 import { useSidebar } from '@/hooks';

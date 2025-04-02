@@ -20,20 +20,23 @@ export interface DbResponse<T> {
 /**
  * Get all deployments for a tenant
  */
-export async function getDeployments(tenantId: string): Promise<DbResponse<Deployment[]>> {
+export async function getDeployments(
+  tenantId: string,
+  cookieStore?: any,
+): Promise<DbResponse<Deployment[]>> {
   try {
-    const supabase = createClient();
-    
+    const supabase = await createClient(cookieStore);
+
     const { data, error } = await supabase
       .from('deployments')
       .select('*')
       .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false });
-      
+
     if (error) {
       return { success: false, error: error.message };
     }
-    
+
     return { success: true, data };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to get deployments' };
@@ -43,20 +46,19 @@ export async function getDeployments(tenantId: string): Promise<DbResponse<Deplo
 /**
  * Get a deployment by ID
  */
-export async function getDeploymentById(id: string): Promise<DbResponse<Deployment>> {
+export async function getDeploymentById(
+  id: string,
+  cookieStore?: any,
+): Promise<DbResponse<Deployment>> {
   try {
-    const supabase = createClient();
-    
-    const { data, error } = await supabase
-      .from('deployments')
-      .select('*')
-      .eq('id', id)
-      .single();
-      
+    const supabase = await createClient(cookieStore);
+
+    const { data, error } = await supabase.from('deployments').select('*').eq('id', id).single();
+
     if (error) {
       return { success: false, error: error.message };
     }
-    
+
     return { success: true, data };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to get deployment' };
@@ -66,20 +68,23 @@ export async function getDeploymentById(id: string): Promise<DbResponse<Deployme
 /**
  * Create a new deployment
  */
-export async function createDeployment(deployment: Partial<Deployment>): Promise<DbResponse<Deployment>> {
+export async function createDeployment(
+  deployment: Partial<Deployment>,
+  cookieStore?: any,
+): Promise<DbResponse<Deployment>> {
   try {
-    const supabase = createClient();
-    
+    const supabase = await createClient(cookieStore);
+
     const { data, error } = await supabase
       .from('deployments')
       .insert([deployment])
       .select()
       .single();
-      
+
     if (error) {
       return { success: false, error: error.message };
     }
-    
+
     return { success: true, data };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to create deployment' };
@@ -89,21 +94,25 @@ export async function createDeployment(deployment: Partial<Deployment>): Promise
 /**
  * Update a deployment
  */
-export async function updateDeployment(id: string, deployment: Partial<Deployment>): Promise<DbResponse<Deployment>> {
+export async function updateDeployment(
+  id: string,
+  deployment: Partial<Deployment>,
+  cookieStore?: any,
+): Promise<DbResponse<Deployment>> {
   try {
-    const supabase = createClient();
-    
+    const supabase = await createClient(cookieStore);
+
     const { data, error } = await supabase
       .from('deployments')
       .update(deployment)
       .eq('id', id)
       .select()
       .single();
-      
+
     if (error) {
       return { success: false, error: error.message };
     }
-    
+
     return { success: true, data };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to update deployment' };
@@ -113,21 +122,25 @@ export async function updateDeployment(id: string, deployment: Partial<Deploymen
 /**
  * Update deployment status
  */
-export async function updateDeploymentStatus(id: string, status: DeploymentStatus): Promise<DbResponse<Deployment>> {
+export async function updateDeploymentStatus(
+  id: string,
+  status: DeploymentStatus,
+  cookieStore?: any,
+): Promise<DbResponse<Deployment>> {
   try {
-    const supabase = createClient();
-    
+    const supabase = await createClient(cookieStore);
+
     const { data, error } = await supabase
       .from('deployments')
       .update({ status })
       .eq('id', id)
       .select()
       .single();
-      
+
     if (error) {
       return { success: false, error: error.message };
     }
-    
+
     return { success: true, data };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to update deployment status' };
@@ -137,19 +150,16 @@ export async function updateDeploymentStatus(id: string, status: DeploymentStatu
 /**
  * Delete a deployment
  */
-export async function deleteDeployment(id: string): Promise<DbResponse<null>> {
+export async function deleteDeployment(id: string, cookieStore?: any): Promise<DbResponse<null>> {
   try {
-    const supabase = createClient();
-    
-    const { error } = await supabase
-      .from('deployments')
-      .delete()
-      .eq('id', id);
-      
+    const supabase = await createClient(cookieStore);
+
+    const { error } = await supabase.from('deployments').delete().eq('id', id);
+
     if (error) {
       return { success: false, error: error.message };
     }
-    
+
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to delete deployment' };
@@ -159,28 +169,31 @@ export async function deleteDeployment(id: string): Promise<DbResponse<null>> {
 /**
  * Find many deployments based on criteria
  */
-export async function findMany(options: { where?: any } = {}, cookieStore?: any): Promise<DbResponse<Deployment[]>> {
+export async function findMany(
+  options: { where?: any } = {},
+  cookieStore?: any,
+): Promise<DbResponse<Deployment[]>> {
   try {
-    const supabase = createClient(cookieStore);
-    
+    const supabase = await createClient(cookieStore);
+
     let query = supabase.from('deployments').select('*');
-    
+
     // Apply where conditions if provided
     if (options.where) {
       Object.entries(options.where).forEach(([key, value]) => {
         query = query.eq(key, value);
       });
     }
-    
+
     // Order by created_at desc
     query = query.order('created_at', { ascending: false });
-    
+
     const { data, error } = await query;
-      
+
     if (error) {
       return { success: false, error: error.message, data: [] };
     }
-    
+
     return { success: true, data };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to find deployments', data: [] };
@@ -192,19 +205,15 @@ export async function findMany(options: { where?: any } = {}, cookieStore?: any)
  */
 export async function findUnique(id: string, cookieStore?: any): Promise<Deployment | null> {
   try {
-    const supabase = createClient(cookieStore);
-    
-    const { data, error } = await supabase
-      .from('deployments')
-      .select('*')
-      .eq('id', id)
-      .single();
-      
+    const supabase = await createClient(cookieStore);
+
+    const { data, error } = await supabase.from('deployments').select('*').eq('id', id).single();
+
     if (error) {
       console.error('Error in findUnique:', error);
       return null;
     }
-    
+
     return data;
   } catch (error: any) {
     console.error('Error in findUnique:', error);
@@ -215,20 +224,23 @@ export async function findUnique(id: string, cookieStore?: any): Promise<Deploym
 /**
  * Create a deployment
  */
-export async function create(options: { data: any }, cookieStore?: any): Promise<DbResponse<Deployment>> {
+export async function create(
+  options: { data: any },
+  cookieStore?: any,
+): Promise<DbResponse<Deployment>> {
   try {
-    const supabase = createClient(cookieStore);
-    
+    const supabase = await createClient(cookieStore);
+
     const { data, error } = await supabase
       .from('deployments')
       .insert([options.data])
       .select()
       .single();
-      
+
     if (error) {
       return { success: false, error: error.message };
     }
-    
+
     return { success: true, data };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to create deployment' };
@@ -236,17 +248,56 @@ export async function create(options: { data: any }, cookieStore?: any): Promise
 }
 
 /**
- * Update a deployment 
+ * Update a deployment
  */
-export async function update(id: string, data: any, cookieStore?: any): Promise<DbResponse<Deployment>> {
-  return updateDeployment(id, data);
+export async function update(
+  id: string,
+  data: any,
+  cookieStore?: any,
+): Promise<DbResponse<Deployment>> {
+  return updateDeployment(id, data, cookieStore);
 }
 
 /**
  * Delete a deployment
  */
 export async function delete_(id: string, cookieStore?: any): Promise<DbResponse<null>> {
-  return deleteDeployment(id);
+  return deleteDeployment(id, cookieStore);
+}
+
+/**
+ * Run a deployment
+ */
+export async function runDeployment(
+  id: string,
+  userId: string,
+  cookieStore?: any,
+): Promise<DbResponse<any>> {
+  try {
+    const supabase = await createClient(cookieStore);
+
+    // Create a deployment run record
+    const { data, error } = await supabase
+      .from('deployment_runs')
+      .insert([
+        {
+          deployment_id: id,
+          user_id: userId,
+          status: 'running',
+          started_at: new Date().toISOString(),
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, data };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Failed to run deployment' };
+  }
 }
 
 // Default export for all deployment database operations
@@ -262,7 +313,7 @@ const deploymentDb = {
   findUnique,
   create,
   update,
-  delete: delete_
+  delete: delete_,
 };
 
 export default deploymentDb;
