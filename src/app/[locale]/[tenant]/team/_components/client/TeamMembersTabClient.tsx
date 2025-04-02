@@ -25,6 +25,7 @@ import {
 } from '@/components/shadcn/table';
 import { usePermission } from '@/hooks';
 import { useTeam } from '@/hooks/useTeam';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { useRemoveTeamMember } from '@/hooks/useTeamMemberManagement';
 import type { ResourceType } from '@/types/context/permissionsContextType';
 import { TeamMemberResource, TeamMemberDetails } from '@/types/context/teamContextType';
@@ -235,8 +236,8 @@ function MembersTabContent({
 // Main exported component that provides the dialog context
 export function MembersTab({ teamId, userRole, subscriptionTier, user }: MembersTabProps) {
   const t = useTranslations('team');
-  const { getTeamMembers, invalidateTeamMembersCache, membersLoading } =
-    useTeam('TeamMembersTabClient');
+  const { membersLoading } = useTeam('TeamMembersTabClient');
+  const teamMembersQuery = useTeamMembers(teamId);
   const [members, setMembers] = useState<TeamMemberDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -255,9 +256,12 @@ export function MembersTab({ teamId, userRole, subscriptionTier, user }: Members
 
       try {
         setIsLoading(true);
-        // Use the cached function from context instead of direct server action
-        const membersData = await getTeamMembers(teamId);
-        setMembers(membersData as TeamMemberDetails[]);
+        // Use the data from the useTeamMembers hook
+        if (teamMembersQuery.data?.success && teamMembersQuery.data?.data) {
+          setMembers(teamMembersQuery.data.data as TeamMemberDetails[]);
+        } else {
+          setMembers([]);
+        }
       } catch (error) {
         console.error('Failed to fetch team members:', error);
         setMembers([]);
@@ -267,7 +271,7 @@ export function MembersTab({ teamId, userRole, subscriptionTier, user }: Members
     };
 
     fetchMembers();
-  }, [teamId, getTeamMembers]);
+  }, [teamId, teamMembersQuery.data]);
 
   const handleRemoveMember = async (profileId: string) => {
     if (!teamId) return;
@@ -288,16 +292,14 @@ export function MembersTab({ teamId, userRole, subscriptionTier, user }: Members
   };
 
   // Use either local loading state or members loading state from context
-  const showLoading = isLoading || membersLoading;
+  const showLoading = isLoading || membersLoading || teamMembersQuery.isLoading;
 
   // Handle members list refresh when dialogs make changes
   const handleMembersChanged = async () => {
     if (teamId) {
       try {
         // Invalidate the cache and fetch fresh data
-        invalidateTeamMembersCache(teamId);
-        const membersData = await getTeamMembers(teamId);
-        setMembers(membersData as TeamMemberDetails[]);
+        teamMembersQuery.refetch();
       } catch (error) {
         console.error('Failed to refresh team members:', error);
       }
