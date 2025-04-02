@@ -7,17 +7,16 @@ export default {
   getRoleTemplate,
   applyRoleTemplate,
   setUserPermission,
-  checkPermission
+  checkPermission,
 };
-import { 
+import {
   PermissionMatrix,
   PermissionsResult,
   RoleTemplatesResult,
   RoleTemplateResult,
   ResourceType,
   Operation,
- } from '@/types/context/permissionsContextType';
-import { DbResponse } from './dbUtils';
+} from '@/types/context/permissionsContextType';
 
 /**
  * Format permissions into a readable log output
@@ -32,7 +31,7 @@ export function formatPermissionsLog(
   teamId: string,
 ): string {
   // Create a header
-  let message = `\n[PERMISSIONS LOG] User ID: ${profileId} | Team ID: ${teamId}\n`;
+  let message = `\n[@db:permissionDb:permissionsLog User ID: ${profileId} | Team ID: ${teamId}\n`;
   message += '='.repeat(80) + '\n';
 
   if (!permissions || permissions.length === 0) {
@@ -64,9 +63,6 @@ export async function getUserPermissions(
   cookieStore?: any,
 ): Promise<PermissionsResult> {
   try {
-    console.log(
-      `[@db:permissionDb:getUserPermissions] Getting permissions for profile: ${profileId}, team: ${teamId}`,
-    );
     const supabase = await createClient(cookieStore);
     const { data, error } = await supabase
       .from('permission_matrix')
@@ -82,7 +78,7 @@ export async function getUserPermissions(
 
     // Add detailed permissions log
     if (data && data.length > 0) {
-      console.log(formatPermissionsLog(data, profileId, teamId));
+      //console.log(formatPermissionsLog(data, profileId, teamId));
     } else {
       console.log(
         `[@db:permissionDb:getUserPermissions] No permissions found for user: ${profileId}`,

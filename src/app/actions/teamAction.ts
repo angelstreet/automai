@@ -594,10 +594,6 @@ export const assignResourceToTeam = cache(
  */
 export const getTenantResourceCounts = cache(async (tenantId: string) => {
   try {
-    console.log(
-      `[@action:team:getTenantResourceCounts] Getting resource counts for tenant: ${tenantId}`,
-    );
-
     const cookieStore = await cookies();
     const supabase = await createClient(cookieStore);
 
