@@ -256,7 +256,7 @@ export async function getUserActiveTeam(
 
     // Use provided teams if available, otherwise fetch them
     if (teams && teams.length > 0) {
-      console.log(`[@db:teamDb:getUserActiveTeam] Using pre-fetched teams for user: ${userId}`);
+      //console.log(`[@db:teamDb:getUserActiveTeam] Using pre-fetched teams for user: ${userId}`);
       userTeams = teams;
     } else {
       // Get the user's teams if not provided

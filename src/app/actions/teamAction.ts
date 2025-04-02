@@ -362,9 +362,8 @@ export const checkResourceLimit = cache(
  */
 export const getTeamDetails = cache(async () => {
   try {
-    console.log(`[@action:team:getTeamDetails] Getting team details`);
+    //console.log(`[@action:team:getTeamDetails] Getting team details`);
 
-    // Get the user
     let user;
     try {
       user = await getUser();
