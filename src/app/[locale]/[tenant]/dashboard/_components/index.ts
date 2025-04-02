@@ -4,16 +4,13 @@
 export { DashboardMainContent as MainContent } from './DashboardMainContent';
 export { DashboardStatsCards as StatsCards } from './DashboardStatsCards';
 export { DashboardTabContentCard as TabContentCard } from './DashboardTabContentCard';
-export { DashboardOverview as Overview } from './DashboardOverview';
 export { DashboardRecentSales as RecentSales } from './DashboardRecentSales';
 
 // New exports with consistent naming
 export { DashboardMainContent } from './DashboardMainContent';
 export { DashboardStatsCards } from './DashboardStatsCards';
 export { DashboardTabContentCard } from './DashboardTabContentCard';
-export { DashboardOverview } from './DashboardOverview';
 export { DashboardRecentSales } from './DashboardRecentSales';
-
 
 // New client exports with consistent naming
 export { DashboardContent } from './client/DashboardContent';

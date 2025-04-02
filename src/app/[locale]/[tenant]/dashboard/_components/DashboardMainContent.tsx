@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from '@/components/shadcn/card';
 
-import { DashboardOverview } from './DashboardOverview';
+import { DashboardOverviewClient } from './client/DashboardOverviewClient';
 import { DashboardRecentSales } from './DashboardRecentSales';
 
 export function DashboardMainContent() {
@@ -46,7 +46,7 @@ export function DashboardMainContent() {
             <CardDescription>Monthly success rate for all test executions</CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
-            <DashboardOverview />
+            <DashboardOverviewClient />
           </CardContent>
         </Card>
 
