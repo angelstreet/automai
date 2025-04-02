@@ -6,55 +6,55 @@
  */
 
 // Component entity types - use for data models and database entities
-export { 
-  Host, 
-  HostStatus, 
-  HostConnectionType, 
-  VMType, 
+export {
+  Host,
+  HostStatus,
+  HostConnectionType,
+  VMType,
   VMConfig,
   HostFormData,
   HostConnectionStatus,
-  HostAnalytics
+  HostAnalytics,
 } from './component/hostComponentType';
 
-export { 
-  Repository, 
-  GitProvider, 
+export {
+  Repository,
+  GitProvider,
   GitProviderType,
   RepositorySyncStatus,
   GitProviderStatus,
   RepositoryFile,
   CreateGitProviderParams,
-  CreateRepositoryParams
+  CreateRepositoryParams,
 } from './component/repositoryComponentType';
 
-export { 
-  Deployment, 
-  DeploymentStatus, 
+export {
+  Deployment,
+  DeploymentStatus,
   DeploymentHost,
   DeploymentScript,
   LogEntry,
   DeploymentFormData,
   DeploymentConfig,
-  DeploymentData
+  DeploymentData,
 } from './component/deploymentComponentType';
 
-export { 
-  CICDProvider, 
-  CICDJob, 
-  CICDBuild, 
+export {
+  CICDProvider,
+  CICDJob,
+  CICDBuild,
   CICDProviderType,
   CICDAuthType,
   CICDCredentials,
   CICDProviderConfig,
-  CICDProviderPayload
+  CICDProviderPayload,
 } from './component/cicdComponentType';
 
-export { 
-  User, 
-  Role, 
-  UserTeam, 
-  TeamMember, 
+export {
+  User,
+  Role,
+  UserTeam,
+  TeamMember,
   ResourceLimit,
   UIRole,
   AuthUser,
@@ -64,29 +64,25 @@ export {
   SessionData,
   AuthResult,
   OAuthProvider,
-  mapAuthUserToUser
 } from './component/userComponentType';
 
 export type {
   WebSocketConnection,
-  SSHAuthData, 
-  SSHConfig, 
+  SSHAuthData,
+  SSHConfig,
   SSHExecutionResult,
-  SSHError
+  SSHError,
 } from './component/sshComponentType';
 
-export type { 
-  Script, 
-  ScriptRun, 
-  ScriptStatus, 
+export type {
+  Script,
+  ScriptRun,
+  ScriptStatus,
   ScriptLanguage,
-  ScriptFilter
+  ScriptFilter,
 } from './component/scriptsComponentType';
 
-export type { 
-  PlanType, 
-  PlanFeatures 
-} from './component/featuresComponentType';
+export type { PlanType, PlanFeatures } from './component/featuresComponentType';
 
 // We do NOT export context types from here to encourage importing directly
 // from the specific context file when needed. This enforces better code organization.

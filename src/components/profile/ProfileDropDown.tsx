@@ -37,7 +37,7 @@ export function ProfileDropDown({
   const tenant = (params.tenant as string) || user?.tenant_name || 'trial';
 
   // Add sidebar state detection (only affects compact mode)
-  const { state, open } = useSidebar();
+  const { state } = useSidebar('ProfileDropDown');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(state === 'collapsed');
   
   // Cache avatar URL to prevent unnecessary reloads

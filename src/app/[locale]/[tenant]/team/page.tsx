@@ -3,7 +3,6 @@ import { Suspense } from 'react';
 
 import { getUser } from '@/app/actions/userAction';
 import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
-import { mapAuthUserToUser } from '@/types/component/userComponentType';
 
 import TeamHeader from './_components/TeamHeader';
 import TeamOverviewSkeleton from './_components/TeamOverviewSkeleton';
@@ -14,9 +13,8 @@ import TeamTabsClient from './_components/client/TeamTabsClient';
 export default async function TeamPage() {
   const t = await getTranslations('team');
 
-  // Get the user from auth
-  const authUser = await getUser();
-  const user = authUser ? mapAuthUserToUser(authUser) : null;
+  // Get the user from auth - it's already a User type, no need to map
+  const user = await getUser();
 
   // Using FeaturePageContainer directly like repositories page
   return (
