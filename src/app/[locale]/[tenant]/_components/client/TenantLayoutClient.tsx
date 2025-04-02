@@ -22,47 +22,17 @@ const queryClient = new QueryClient({
 });
 
 /**
- * Helper function to determine if the child is already a FeaturePageContainer
- * If not, it wraps the child in a FeaturePageContainer
+ * Helper function to wrap content with FeaturePageContainer
+ * Much simpler with the enhanced FeaturePageContainer that can extract pageMetadata
  */
-function wrapWithFeaturePageContainer(child: ReactNode, defaultTitle: string = '', defaultDescription: string = ''): ReactNode {
-  // Check if child is a FeaturePageContainer by examining its type
-  const isFeaturePageContainer = 
-    isValidElement(child) && 
-    child.type === FeaturePageContainer;
-
-  // If it's already a FeaturePageContainer, return as is
-  if (isFeaturePageContainer) {
+function wrapWithFeaturePageContainer(child: ReactNode): ReactNode {
+  // Check if child is already a FeaturePageContainer
+  if (isValidElement(child) && child.type === FeaturePageContainer) {
     return child;
   }
-
-  // If it's a valid React element but not a FeaturePageContainer
-  if (isValidElement(child)) {
-    // Check if it has its own page metadata
-    const pageMetadata = (child.props as any)?.pageMetadata;
-    if (pageMetadata) {
-      // Use provided metadata
-      return (
-        <FeaturePageContainer 
-          title={pageMetadata.title || defaultTitle}
-          description={pageMetadata.description || defaultDescription}
-          actions={pageMetadata.actions}
-        >
-          {child}
-        </FeaturePageContainer>
-      );
-    }
-  }
-
-  // Default case: wrap with default FeaturePageContainer
-  return (
-    <FeaturePageContainer 
-      title={defaultTitle}
-      description={defaultDescription}
-    >
-      {child}
-    </FeaturePageContainer>
-  );
+  
+  // Otherwise just wrap it - FeaturePageContainer will extract metadata if present
+  return <FeaturePageContainer>{child}</FeaturePageContainer>;
 }
 
 export default function TenantLayoutClient({
@@ -125,9 +95,12 @@ export default function TenantLayoutClient({
                     style={{ height: 'calc(100vh - var(--header-height) - 1rem)' }}
                   >
                     {/* 
-                      Automatically wrap children with FeaturePageContainer if not already wrapped
-                      This allows pages to be simpler while maintaining consistent layout
-                      Pages can still use their own FeaturePageContainer for custom behavior
+                      Automatically wrap content with FeaturePageContainer
+                      The enhanced FeaturePageContainer will extract metadata if available
+                      Three ways to provide metadata:
+                      1. Wrap with FeaturePageContainer directly (most control)
+                      2. Add pageMetadata prop to any component
+                      3. Let FeaturePageContainer use defaults
                     */}
                     {wrapWithFeaturePageContainer(children)}
                   </main>

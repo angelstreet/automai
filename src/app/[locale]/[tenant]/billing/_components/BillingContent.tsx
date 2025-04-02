@@ -1,8 +1,17 @@
+import { ReactNode } from 'react';
 import { getTranslations } from 'next-intl/server';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
 
-export default async function BillingContent() {
+interface BillingContentProps {
+  pageMetadata?: {
+    title: string;
+    description: string;
+    actions?: ReactNode;
+  };
+}
+
+export default async function BillingContent({ pageMetadata }: BillingContentProps = {}) {
   const t = await getTranslations('billing');
 
   return (

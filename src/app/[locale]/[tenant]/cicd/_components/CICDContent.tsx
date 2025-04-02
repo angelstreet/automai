@@ -1,8 +1,12 @@
+import { ReactNode } from 'react';
 import { getCICDProviders } from '@/app/actions/cicdAction';
+import { WithPageMetadata } from '@/components/layout/PageMetadata';
 
 import CICDDetailsClient from './client/CICDDetailsClient';
 
-export default async function CICDContent() {
+interface CICDContentProps extends WithPageMetadata {}
+
+export default async function CICDContent({ pageMetadata }: CICDContentProps = {}) {
   const providersResponse = await getCICDProviders();
   const providers = providersResponse.success ? providersResponse.data || [] : [];
 

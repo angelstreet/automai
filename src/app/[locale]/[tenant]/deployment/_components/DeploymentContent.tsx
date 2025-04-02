@@ -1,10 +1,14 @@
+import { ReactNode } from 'react';
 import { getDeployments } from '@/app/actions/deploymentsAction';
 import { getRepositories } from '@/app/actions/repositoriesAction';
+import { WithPageMetadata } from '@/components/layout/PageMetadata';
 
 import { DeploymentList } from './DeploymentList';
 import { DeploymentEmptyStateClient } from './client/DeploymentEmptyStateClient';
 
-export async function DeploymentContent() {
+interface DeploymentContentProps extends WithPageMetadata {}
+
+export async function DeploymentContent({ pageMetadata }: DeploymentContentProps = {}) {
   // Fetch deployments directly on the server
   const deployments = await getDeployments();
 

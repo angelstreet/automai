@@ -2,18 +2,23 @@ import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
 import { getUser } from '@/app/actions/userAction';
-import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 
 import { ProfileContent, ProfileSkeleton } from './_components';
 
 export default async function ProfilePage() {
   const userData = await getUser();
   const t = await getTranslations('Profile');
+  
+  // Using pageMetadata that will be automatically extracted by FeaturePageContainer
   return (
     <Suspense fallback={<ProfileSkeleton />}>
-      <FeaturePageContainer title={t('title')} description={t('description')} actions={null}>
-        <ProfileContent user={userData} />
-      </FeaturePageContainer>
+      <ProfileContent 
+        user={userData}
+        pageMetadata={{
+          title: t('title'),
+          description: t('description')
+        }}
+      />
     </Suspense>
   );
 }

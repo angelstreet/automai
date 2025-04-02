@@ -1,8 +1,10 @@
-import {  User  } from '@/types/service/userServiceType';
+import { ReactNode } from 'react';
+import { User } from '@/types/service/userServiceType';
+import { WithPageMetadata } from '@/components/layout/PageMetadata';
 
 import { ProfileContent as ClientProfileContent } from './client/ProfileContent';
 
-interface ProfileContentProps {
+interface ProfileContentProps extends WithPageMetadata {
   user?: User | null;
 }
 
@@ -10,6 +12,6 @@ interface ProfileContentProps {
  * Server component wrapper for ProfileContent
  * Allows passing server-fetched data to client component
  */
-export function ProfileContent({ user }: ProfileContentProps) {
+export function ProfileContent({ user, pageMetadata }: ProfileContentProps) {
   return <ClientProfileContent user={user} />;
 }
