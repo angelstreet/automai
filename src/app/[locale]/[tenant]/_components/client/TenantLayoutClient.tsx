@@ -59,7 +59,7 @@ export default function TenantLayoutClient({
                 </Suspense>
                 <div
                   id="main-content"
-                  className="flex-1 flex flex-col min-w-0 overflow-hidden transition-all duration-300 ease-in-out"
+                  className="flex-1 flex flex-col min-w-0 overflow-hidden"
                   data-sidebar-content="main"
                 >
                   <Suspense fallback={<HeaderSkeleton />}>

@@ -43,30 +43,16 @@ const SidebarClient = React.memo(function SidebarClient({
   const groupTitles = navGroups.map((group) => group.title);
   const items = navGroups.map((group) => group.items);
   
-  // Update root CSS variable for main content offset when sidebar state changes
+  // Update CSS variables when sidebar state changes
   React.useEffect(() => {
-    // Remove 'rem' and convert to number for calculations
-    const expandedWidth = Number(APP_SIDEBAR_WIDTH.replace('rem', ''));
-    const collapsedWidth = Number(APP_SIDEBAR_WIDTH_ICON.replace('rem', ''));
-    
-    // Add a fixed buffer to ensure no overlap (1rem)
-    const buffer = 1;
-    
-    // Calculate offsets with fixed buffer
-    const expandedOffset = expandedWidth + buffer;
-    const collapsedOffset = collapsedWidth + buffer;
-    
-    // Set the CSS variable based on sidebar state
+    // Simply set the offset based on the state - all calculations now in CSS
     document.documentElement.style.setProperty(
       '--sidebar-width-offset', 
-      state === 'collapsed' ? `${collapsedOffset}rem` : `${expandedOffset}rem`
+      state === 'collapsed' ? 'var(--sidebar-width-icon)' : 'var(--sidebar-width)'
     );
     
-    // Set the sidebar state as a CSS variable for direct targeting
-    document.documentElement.style.setProperty(
-      '--sidebar-state', 
-      state
-    );
+    // Set the sidebar state attribute for debugging and targeting
+    document.documentElement.setAttribute('data-sidebar-state', state);
   }, [state]);
 
   return (

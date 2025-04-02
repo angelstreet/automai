@@ -138,9 +138,19 @@
     @apply bg-background text-foreground;
   }
 
-  /* Set default sidebar width to prevent layout shifts */
+  /* CSS variables for sidebar and layout */
   :root {
-    --sidebar-width-offset: 14.5rem;
+    /* Base sidebar dimensions */
+    --sidebar-width: 14rem;
+    --sidebar-width-icon: 2.6rem;
+    
+    /* Spacing variables - adjust this single value to control all gaps */
+    --sidebar-spacing: 1rem; /* Adjustable spacing between sidebar and content */
+    
+    /* Dynamic offset - will be set via JS */
+    --sidebar-width-offset: var(--sidebar-width);
+    
+    /* Transition properties */
     --sidebar-transition-duration: 250ms;
     --sidebar-transition-timing: ease-in-out;
   }
@@ -204,16 +214,7 @@
     width: var(--sidebar-width-icon) !important;
   }
   
-  /* Specific adjustments for collapsed and expanded states */
-  html[style*="--sidebar-state:collapsed"] #main-content {
-    margin-left: calc(var(--sidebar-width-icon) + 3rem) !important;
-    width: calc(100% - var(--sidebar-width-icon) - 3rem) !important;
-  }
-  
-  html[style*="--sidebar-state:expanded"] #main-content {
-    margin-left: calc(var(--sidebar-width) + 1rem) !important;
-    width: calc(100% - var(--sidebar-width) - 1rem) !important;
-  }
+  /* Remove hardcoded rules - use variables instead */
 
   /* Set fixed heights for menu items to prevent jumps */
   [data-sidebar='menu-button'] {
@@ -281,11 +282,11 @@
     overflow: hidden;
   }
   
-  /* Main content transitions with sidebar */
+  /* Main content transitions with sidebar - using CSS variables for maintainability */
   [data-sidebar-content="main"] {
     transition: margin-left var(--sidebar-transition-duration) var(--sidebar-transition-timing),
                 width var(--sidebar-transition-duration) var(--sidebar-transition-timing);
-    margin-left: var(--sidebar-width-offset, 0) !important;
-    width: calc(100% - var(--sidebar-width-offset, 0) - 2rem) !important; /* Force width adjustment */
+    margin-left: calc(var(--sidebar-width-offset) + var(--sidebar-spacing));
+    width: calc(100% - var(--sidebar-width-offset) - var(--sidebar-spacing) * 2);
   }
 }
