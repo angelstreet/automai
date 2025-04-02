@@ -9,8 +9,6 @@ import {
   syncRepository,
   testRepositoryConnection,
   getGitProviders,
-  createGitProvider,
-  deleteGitProvider,
 } from '@/app/actions/repositoriesAction';
 import { useToast } from '@/components/shadcn/use-toast';
 // Import component types for data models
@@ -189,7 +187,10 @@ export function useRepository() {
 
   // Create git provider mutation
   const createProviderMutation = useMutation({
-    mutationFn: (data: GitProviderCreateInput) => createGitProvider(data),
+    mutationFn: (data: GitProviderCreateInput) => {
+      console.error('createGitProvider function not implemented');
+      return Promise.reject(new Error('createGitProvider function not implemented'));
+    },
     onSuccess: (response) => {
       if (response.success) {
         toast({
@@ -217,7 +218,10 @@ export function useRepository() {
 
   // Delete git provider mutation
   const deleteProviderMutation = useMutation({
-    mutationFn: (id: string) => deleteGitProvider(id),
+    mutationFn: (id: string) => {
+      console.error('deleteGitProvider function not implemented');
+      return Promise.reject(new Error('deleteGitProvider function not implemented'));
+    },
     onSuccess: (response) => {
       if (response.success) {
         toast({
