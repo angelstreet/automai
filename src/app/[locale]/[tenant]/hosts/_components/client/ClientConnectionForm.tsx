@@ -161,7 +161,7 @@ export function ClientConnectionForm({
             : 'error' in result
               ? result.error
               : t('errors.testFailed');
-        setTestError(errorMessage);
+        setTestError(errorMessage || t('errors.testFailed'));
       }
     } catch (error) {
       console.error(
@@ -227,7 +227,7 @@ export function ClientConnectionForm({
       const result = await createHostAction(hostData as any);
 
       if (result.success && result.data) {
-        toast.success(t('success.connected', { name: formData.name }));
+        // Removed success toast
 
         // Trigger refresh of host list without testing all connections
         window.dispatchEvent(

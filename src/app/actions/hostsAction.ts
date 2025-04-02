@@ -327,7 +327,7 @@ export async function testHostConnection(
     // Update status to failed on error
     try {
       await hostDb.updateHostStatus(id, 'failed');
-    } catch (_updateError) {
+    } catch {
       // Ignore update error
     }
 
