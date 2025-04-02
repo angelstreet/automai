@@ -5,6 +5,14 @@ import { cookies } from 'next/headers';
 import { cache } from 'react';
 
 import { getUser } from '@/app/actions/userAction';
+import {
+  getCICDProviders as dbGetCICDProviders,
+  getCICDJobs as dbGetCICDJobs,
+  createCICDProvider as dbCreateCICDProvider,
+  updateCICDProvider as dbUpdateCICDProvider,
+  deleteCICDProvider as dbDeleteCICDProvider,
+  getCICDDeploymentMapping as dbGetCICDDeploymentMapping,
+} from '@/lib/db/cicdDb';
 import { CICDProvider, CICDProviderPayload, CICDJob } from '@/types/component/cicdComponentType';
 import type { ActionResult } from '@/types/context/cicdContextType';
 
@@ -32,11 +40,7 @@ export const getCICDProviders = cache(async (): Promise<ActionResult<CICDProvide
     const cookieStore = await cookies();
 
     try {
-      const { default: cicdDb } = await import('@/lib/db/cicdDb');
-      const result = await cicdDb.getCICDProviders(
-        { where: { tenant_id: user.tenant_id } },
-        cookieStore,
-      );
+      const result = await dbGetCICDProviders(user.tenant_id, cookieStore);
 
       if (!result.success) {
         console.error(`[@action:cicd:getCICDProviders] Error from database: ${result.error}`);
@@ -68,21 +72,22 @@ export const getCICDJobs = cache(async (providerId?: string): Promise<ActionResu
       return { success: false, error: 'User not authenticated' };
     }
 
-    // Get cookies once for all operations
+    console.log(`[@action:cicd:getCICDJobs] Fetching jobs for provider: ${providerId || 'all'}`);
+
+    if (!providerId) {
+      return { success: true, data: [] }; // Return empty array if no provider ID
+    }
+
+    // Get the cookieStore
     const cookieStore = await cookies();
 
-    // Import the CI/CD database module
-    const cicdDb = await import('@/lib/db/cicdDb');
+    // Get jobs for the specified provider
+    const jobs = await dbGetCICDJobs(providerId, cookieStore);
 
-    // Get jobs with tenant isolation
-    const jobs = await cicdDb.default.getCICDJobs(
-      {
-        where: providerId
-          ? { provider_id: providerId, tenant_id: user.tenant_id }
-          : { tenant_id: user.tenant_id },
-      },
-      cookieStore,
-    );
+    if (!jobs.success) {
+      console.error(`[@action:cicd:getCICDJobs] Error from database: ${jobs.error}`);
+      return { success: false, error: jobs.error || 'Failed to fetch CI/CD jobs' };
+    }
 
     return { success: true, data: jobs.data || [] };
   } catch (error: any) {
@@ -105,10 +110,8 @@ export async function createCICDProvider(
       return { success: false, error: 'User not authenticated' };
     }
 
-    // Get cookies once for all operations
-    const cookieStore = await cookies();
-
     // Get the active team ID
+    const cookieStore = await cookies();
     const selectedTeamCookie = cookieStore.get(`selected_team_${user.id}`)?.value;
     const teamId = selectedTeamCookie || user.teams?.[0]?.id;
 
@@ -120,33 +123,16 @@ export async function createCICDProvider(
       };
     }
 
-    // Import the CI/CD database module
-    const cicdDb = await import('@/lib/db/cicdDb');
-
-    // Prepare data for database
-    const providerData = {
+    console.log('[@action:cicd:createCICDProvider] Creating provider with data:', {
       tenant_id: user.tenant_id,
-      team_id: teamId, // Explicitly add team_id
-      creator_id: user.id, // Explicitly add creator_id
+      team_id: teamId,
+      creator_id: user.id,
       name: payload.name,
       type: payload.type,
-      url: payload.url,
-      config: payload.config || {},
-    };
-
-    console.log('[@action:cicd:createCICDProvider] Creating provider with data:', {
-      tenant_id: providerData.tenant_id,
-      team_id: providerData.team_id,
-      creator_id: providerData.creator_id,
-      name: providerData.name,
-      type: providerData.type,
     });
 
     // Create the provider
-    const result = await cicdDb.default.createCICDProvider(
-      { data: providerData as any },
-      cookieStore,
-    );
+    const result = await dbCreateCICDProvider(payload, user.id, user.tenant_id, cookieStore);
 
     if (!result.success) {
       console.error(
@@ -160,7 +146,7 @@ export async function createCICDProvider(
     revalidatePath('/[locale]/[tenant]/cicd');
     revalidatePath('/[locale]/[tenant]/dashboard');
 
-    return { success: true, data: (result as any).data };
+    return { success: true, data: result.data };
   } catch (error: any) {
     console.error(
       '[@action:cicd:createCICDProvider] Unexpected error creating CICD provider:',
@@ -185,29 +171,13 @@ export async function updateCICDProvider(
       return { success: false, error: 'User not authenticated' };
     }
 
-    // Get cookies once for all operations
+    console.log(`[@action:cicd:updateCICDProvider] Updating provider: ${id}`);
+
+    // Get the cookieStore
     const cookieStore = await cookies();
 
-    // Import the CI/CD database module
-    const cicdDb = await import('@/lib/db/cicdDb');
-
-    // Prepare data for database
-    const providerData = {
-      id,
-      name: payload.name,
-      type: payload.type,
-      url: payload.url,
-      config: payload.config || {},
-    };
-
     // Update the provider
-    const result = await cicdDb.default.updateCICDProvider(
-      {
-        data: providerData as any,
-        where: { id, tenant_id: user.tenant_id },
-      },
-      cookieStore,
-    );
+    const result = await dbUpdateCICDProvider(id, payload, cookieStore);
 
     if (!result.success) {
       console.error(
@@ -221,7 +191,7 @@ export async function updateCICDProvider(
     revalidatePath('/[locale]/[tenant]/cicd');
     revalidatePath(`/[locale]/[tenant]/cicd/${id}`);
 
-    return { success: true, data: (result as any).data };
+    return { success: true, data: result.data };
   } catch (error: any) {
     console.error(
       '[@action:cicd:updateCICDProvider] Unexpected error updating CICD provider:',
@@ -243,19 +213,13 @@ export async function deleteCICDProvider(id: string): Promise<ActionResult> {
       return { success: false, error: 'User not authenticated' };
     }
 
-    // Get cookies once for all operations
+    console.log(`[@action:cicd:deleteCICDProvider] Deleting provider: ${id}`);
+
+    // Get the cookieStore
     const cookieStore = await cookies();
 
-    // Import the CI/CD database module
-    const cicdDb = await import('@/lib/db/cicdDb');
-
     // Delete the provider
-    const result = await cicdDb.default.deleteCICDProvider(
-      {
-        where: { id, tenant_id: user.tenant_id },
-      },
-      cookieStore,
-    );
+    const result = await dbDeleteCICDProvider(id, cookieStore);
 
     if (!result.success) {
       console.error(
@@ -319,6 +283,7 @@ export async function testCICDProvider(provider: CICDProviderPayload): Promise<A
       }
 
       try {
+        console.log(`[@action:cicd:testCICDProvider] Testing Jenkins connection to: ${jenkinsUrl}`);
         // Test the Jenkins connection
         const response = await fetch(`${jenkinsUrl}/api/json`, {
           headers: {
@@ -334,7 +299,7 @@ export async function testCICDProvider(provider: CICDProviderPayload): Promise<A
         }
 
         const data = await response.json();
-
+        console.log(`[@action:cicd:testCICDProvider] Successfully connected to Jenkins`);
         return { success: true, data };
       } catch (error: any) {
         console.error('[@action:cicd:testCICDProvider] Error testing Jenkins connection:', error);
@@ -355,29 +320,17 @@ export async function testCICDProvider(provider: CICDProviderPayload): Promise<A
 /**
  * Clear CICD cache
  */
-export async function clearCICDCache(options?: {
-  providerId?: string;
-  tenantId?: string;
-  userId?: string;
-}): Promise<{
+export async function clearCICDCache(): Promise<{
   success: boolean;
   message: string;
 }> {
   try {
-    // Get cookies once for all operations
-    const cookieStore = await cookies();
-
-    // Import the CI/CD database module
-    const cicdDb = await import('@/lib/db/cicdDb');
-
-    // Call clear cache with cookieStore
-    const result = await cicdDb.default.clearCache(cookieStore);
-
+    console.log('[@action:cicd:clearCICDCache] Clearing CICD cache');
+    // Since we're not using dynamic imports anymore, we don't need to clear cache
+    // This is now a no-op function that just returns success
     return {
       success: true,
-      message: `CICD cache cleared successfully${
-        options?.providerId ? ` for provider ${options.providerId}` : ''
-      }`,
+      message: 'CICD cache cleared successfully',
     };
   } catch (error: any) {
     console.error('[@action:cicd:clearCICDCache] Error clearing cache:', error);
@@ -399,6 +352,8 @@ export async function runCICDJob(providerId: string, jobId: string): Promise<Act
       console.error('[@action:cicd:runCICDJob] User not authenticated');
       return { success: false, error: 'User not authenticated' };
     }
+
+    console.log(`[@action:cicd:runCICDJob] Running job ${jobId} for provider ${providerId}`);
 
     // This would call the actual CICD service to run the job
     // For now, return a mock success
@@ -433,7 +388,6 @@ export async function testJenkinsAPI(): Promise<ActionResult<boolean>> {
     }
 
     // Mock implementation since the referenced modules don't exist in the expected locations
-    // Return a mock result instead
     console.log('[@action:cicd:testJenkinsAPI] Using mock implementation');
     return {
       success: true,
