@@ -1,11 +1,14 @@
-import { DashboardHeaderClient } from './_components/client/DashboardHeaderClient';
+import { getTranslations } from 'next-intl/server';
+
+import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
+
 import { DashboardTabsClient } from './_components/client/DashboardTabsClient';
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const t = await getTranslations('Dashboard');
   return (
-    <div className="flex-1 space-y-2">
-      <DashboardHeaderClient />
+    <FeaturePageContainer title={t('title')} description={''} actions={null}>
       <DashboardTabsClient />
-    </div>
+    </FeaturePageContainer>
   );
 }
