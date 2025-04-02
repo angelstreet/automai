@@ -7,7 +7,11 @@ import { Sidebar } from '@/components/sidebar';
 import { SidebarContent, SidebarFooter, SidebarHeader } from '@/components/sidebar/SidebarLayout';
 import { SidebarNavigation } from '@/components/sidebar/SidebarNavigation';
 import { SidebarRail } from '@/components/sidebar/SidebarRail';
-import { APP_SIDEBAR_WIDTH, APP_SIDEBAR_WIDTH_ICON, sidebarNavigationData } from '@/components/sidebar/constants';
+import {
+  APP_SIDEBAR_WIDTH,
+  APP_SIDEBAR_WIDTH_COLLAPSED,
+  sidebarNavigationData,
+} from '@/components/sidebar/constants';
 import TeamSelector from '@/components/team/TeamSelector';
 import { TeamSwitcher } from '@/components/team/TeamSwitcher';
 import { useSidebar } from '@/hooks';
@@ -36,8 +40,8 @@ const SidebarClient = React.memo(function SidebarClient({
 
   // Extract navigation data from constants
   const navGroups = sidebarNavigationData.groups;
-  const groupTitles = navGroups.map(group => group.title);
-  const items = navGroups.map(group => group.items);
+  const groupTitles = navGroups.map((group) => group.title);
+  const items = navGroups.map((group) => group.items);
 
   return (
     <Sidebar
@@ -47,7 +51,7 @@ const SidebarClient = React.memo(function SidebarClient({
       style={
         {
           '--sidebar-width': APP_SIDEBAR_WIDTH,
-          '--sidebar-width-icon': APP_SIDEBAR_WIDTH_ICON,
+          '--sidebar-width-collapsed': APP_SIDEBAR_WIDTH_COLLAPSED,
         } as React.CSSProperties
       }
     >
@@ -69,11 +73,7 @@ const SidebarClient = React.memo(function SidebarClient({
         </div>
       </SidebarHeader>
       <SidebarContent className={cn('pt-2', !open && 'pt-4')}>
-        <SidebarNavigation 
-          items={items}
-          groupTitles={groupTitles}
-          currentRole={effectiveRole}
-        />
+        <SidebarNavigation items={items} groupTitles={groupTitles} currentRole={effectiveRole} />
       </SidebarContent>
       <SidebarFooter className="pb-2">
         {user && (
