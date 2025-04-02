@@ -3,7 +3,7 @@ import { Suspense } from 'react';
 
 import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 
-import { HostActionsClient } from './_components/HostActionsClient';
+import { HostActions } from './_components/client/HostActions';
 import HostContent from './_components/HostContent';
 import HostSkeleton from './_components/HostSkeleton';
 
@@ -15,7 +15,7 @@ export default async function HostsPage() {
     <FeaturePageContainer
       title={t('hosts')}
       description={t('hosts_description')}
-      actions={<HostActionsClient />}
+      actions={<HostActions />}
     >
       <Suspense fallback={<HostSkeleton />}>
         <HostContent />

@@ -14,10 +14,5 @@ export { default as HostSkeleton } from './HostSkeleton';
 
 // Client Components
 export { ClientConnectionForm } from './client/ClientConnectionForm';
-export { ConnectionFormClient } from './client/ConnectionFormClient';
-
-export { ClientHostList } from './client/ClientHostList';
-export { HostListClient } from './client/HostListClient';
-
 export { HostActions } from './client/HostActions';
-export { HostActionsClient } from './HostActionsClient';
+export { default as ClientHostList } from './client/ClientHostList';
