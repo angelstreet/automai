@@ -45,19 +45,18 @@ export function HeaderClient({
         fixed ? 'fixed top-0 z-50' : '',
         className,
       )}
-      style={
-        isCollapsed
-          ? {
-              marginLeft: 'var(--sidebar-width-offset, 0)',
-              width: 'calc(100% - var(--sidebar-width-offset, 0))',
-              transition: 'margin-left 200ms ease, width 200ms ease',
-            }
-          : {
-              transition: 'margin-left 200ms ease, width 200ms ease',
-            }
-      }
+      style={{
+        marginLeft: 'var(--sidebar-width-offset, 0)',
+        width: 'calc(100% - var(--sidebar-width-offset, 0))',
+        transition: 'margin-left var(--sidebar-transition-duration) var(--sidebar-transition-timing), width var(--sidebar-transition-duration) var(--sidebar-transition-timing)'
+      }}
+      data-sidebar-header="true"
     >
-      <div className={cn('flex h-14 items-center border-b relative', !headerVisible && 'h-8')}>
+      <div className={cn(
+          'flex h-14 items-center border-b relative', 
+          !headerVisible && 'h-8',
+          isCollapsed && 'pl-4'
+        )}>
         {headerVisible && (
           <>
             {/* Left section */}
@@ -65,7 +64,7 @@ export function HeaderClient({
               <div
                 className={cn(
                   'absolute flex items-center transition-all duration-200 ease-in-out',
-                  isCollapsed ? '-ml-16' : 'ml-1',
+                  isCollapsed ? 'ml-1' : 'ml-1',
                 )}
               >
                 <SidebarTrigger />

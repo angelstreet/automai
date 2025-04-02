@@ -39,6 +39,39 @@ export function ProfileDropDown({
   // Add sidebar state detection (only affects compact mode)
   const { state, open } = useSidebar();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(state === 'collapsed');
+  
+  // Cache avatar URL to prevent unnecessary reloads
+  const [cachedAvatarUrl, setCachedAvatarUrl] = React.useState<string | undefined>(undefined);
+  
+  // Initialize and update cached avatar URL
+  React.useEffect(() => {
+    if (user?.avatar_url && user.avatar_url !== cachedAvatarUrl) {
+      // Store in state for component use
+      setCachedAvatarUrl(user.avatar_url);
+      
+      // Also cache in localStorage for persistence
+      try {
+        localStorage.setItem(`avatar_${user.id}`, user.avatar_url);
+      } catch (e) {
+        console.warn('Failed to cache avatar URL in localStorage', e);
+      }
+    } else if (!cachedAvatarUrl && user?.id) {
+      // Try to load from localStorage on initial mount
+      try {
+        const storedAvatar = localStorage.getItem(`avatar_${user.id}`);
+        if (storedAvatar) {
+          setCachedAvatarUrl(storedAvatar);
+        } else if (user.avatar_url) {
+          setCachedAvatarUrl(user.avatar_url);
+        }
+      } catch (e) {
+        // Fallback to user.avatar_url if localStorage fails
+        if (user.avatar_url) {
+          setCachedAvatarUrl(user.avatar_url);
+        }
+      }
+    }
+  }, [user?.id, user?.avatar_url, cachedAvatarUrl]);
 
   // Add a small delay when expanding to avoid flash of content during transition
   React.useEffect(() => {
@@ -91,7 +124,7 @@ export function ProfileDropDown({
             // Expanded sidebar - show full profile
             <div className="flex items-center gap-3">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={user.avatar_url || undefined} alt={user.name || 'User'} />
+                <AvatarImage src={cachedAvatarUrl || undefined} alt={user.name || 'User'} crossOrigin="anonymous" />
                 <AvatarFallback>
                   {user?.name ? getInitials(user.name) : <User className="h-4 w-4" />}
                 </AvatarFallback>
@@ -106,7 +139,7 @@ export function ProfileDropDown({
           ) : (
             // Collapsed sidebar or header - show avatar only
             <Avatar className={cn(compact && isSidebarCollapsed ? 'h-8 w-8' : 'h-10 w-10')}>
-              <AvatarImage src={user.avatar_url || undefined} alt={user.name || 'User'} />
+              <AvatarImage src={cachedAvatarUrl || undefined} alt={user.name || 'User'} crossOrigin="anonymous" />
               <AvatarFallback>
                 {user?.name ? getInitials(user.name) : <User className="h-4 w-4" />}
               </AvatarFallback>

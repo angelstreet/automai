@@ -291,6 +291,11 @@
     width: calc(100% - var(--sidebar-width-offset) - var(--sidebar-spacing) * 2);
   }
   
+  /* Header positioning with sidebar - ensure consistent alignment */
+  [data-sidebar-header="true"] {
+    padding-left: var(--sidebar-spacing);
+  }
+  
   /* Custom scrollbar styling */
   ::-webkit-scrollbar {
     width: 8px;
