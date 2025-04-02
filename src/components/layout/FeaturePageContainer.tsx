@@ -70,18 +70,18 @@ export function FeaturePageContainer({
   const actions = propActions || pageMetadata?.actions || childMetadata?.actions || null;
 
   return (
-    <div className={`flex-1 mx-auto space-y-2 ${className}`} data-page-content="container">
+    <div className={`flex-1 mx-auto flex flex-col ${className}`} data-page-content="container">
       {/* Header Section - Only render if title or description is provided */}
       {(title || description || actions) && (
-        <div className="">
+        <div className="mb-4">
           <PageHeader title={title} description={description}>
             {actions}
           </PageHeader>
         </div>
       )}
 
-      {/* Content Container - Uses CSS variables for consistent height */}
-      <div className="overflow-auto h-[calc(100vh-var(--header-height)-8rem)]">{children}</div>
+      {/* Content Container - Let the parent container handle scrolling */}
+      <div className="flex-1">{children}</div>
     </div>
   );
 }
