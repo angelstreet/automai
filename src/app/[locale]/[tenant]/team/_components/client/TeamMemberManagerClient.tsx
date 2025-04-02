@@ -5,10 +5,8 @@ import { useTranslations } from 'next-intl';
 import React, { useState } from 'react';
 
 import { Button } from '@/components/shadcn/button';
-import { usePermission, useTeam, useTeamMember, TeamMemberResource, ResourceType } from '@/context';
+import { usePermission, useTeam } from '@/hooks';
 
-import TeamMemberAddDialogClient from './TeamMemberAddDialogClient';
-import TeamMemberPermissionsDialogClient from './TeamMemberPermissionsDialogClient';
 import { MembersTab } from './TeamMembersTabClient';
 
 interface TeamMemberManagerProps {

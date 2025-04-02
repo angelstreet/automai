@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import React, { useState } from 'react';
 
-import {  TeamMemberResource  } from '@/types/context/teamContextType';
+import { TeamMemberResource } from '@/types/context/teamContextType';
 
 // Import the components with their actual names
 import AddMemberDialog from './TeamMemberAddDialogClient';

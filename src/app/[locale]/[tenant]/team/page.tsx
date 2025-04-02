@@ -1,6 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
+import { getTeamDetails, getTenantResourceCounts } from '@/app/actions/teamAction';
 import { getUser } from '@/app/actions/userAction';
 import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 
@@ -16,6 +17,31 @@ export default async function TeamPage() {
   // Get the user from auth - it's already a User type, no need to map
   const user = await getUser();
 
+  // Get team details including the tenant ID
+  const teamDetailsResult = await getTeamDetails();
+  const teamDetails = teamDetailsResult.success ? teamDetailsResult.data : null;
+  const tenantId = teamDetails?.team?.tenant_id;
+
+  // Fetch resource counts directly if we have a tenant ID
+  let resourceCounts = {
+    repositories: 0,
+    hosts: 0,
+    cicd: 0,
+    deployments: 0,
+  };
+
+  if (tenantId) {
+    const countsResult = await getTenantResourceCounts(tenantId);
+    if (countsResult.success && countsResult.data) {
+      resourceCounts = {
+        repositories: countsResult.data.repositories || 0,
+        hosts: countsResult.data.hosts || 0,
+        cicd: countsResult.data.cicdProviders || 0,
+        deployments: countsResult.data.deployments || 0,
+      };
+    }
+  }
+
   // Using FeaturePageContainer directly like repositories page
   return (
     <FeaturePageContainer
@@ -27,7 +53,7 @@ export default async function TeamPage() {
         {/* TeamHeader gets details from TeamContext */}
         <TeamHeader user={user} />
         <Suspense fallback={<TeamOverviewSkeleton />}>
-          <TeamTabsClient user={user} />
+          <TeamTabsClient user={user} resourceCounts={resourceCounts} />
         </Suspense>
       </Suspense>
     </FeaturePageContainer>

@@ -25,8 +25,8 @@ import {
 } from '@/components/shadcn/table';
 import { usePermission } from '@/hooks';
 import { useTeam } from '@/hooks/useTeam';
-import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { useRemoveTeamMember } from '@/hooks/useTeamMemberManagement';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
 import type { ResourceType } from '@/types/context/permissionsContextType';
 import { TeamMemberResource, TeamMemberDetails } from '@/types/context/teamContextType';
 import { User } from '@/types/service/userServiceType';

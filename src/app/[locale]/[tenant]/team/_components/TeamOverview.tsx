@@ -9,8 +9,8 @@ import {
   CardTitle,
 } from '@/components/shadcn/card';
 import { ResourceCard } from '@/components/ui/resource-card';
-import {  TeamDetails, UnassignedResources  } from '@/types/context/teamContextType';
-import {  User  } from '@/types/service/userServiceType';
+import { TeamDetails, UnassignedResources } from '@/types/context/teamContextType';
+import { User } from '@/types/service/userServiceType';
 
 interface TeamOverviewProps {
   team: TeamDetails | null;
@@ -26,6 +26,9 @@ export default function TeamOverview({
   const t = useTranslations('team');
   const hasTeam = Boolean(team?.id);
 
+  // Log team data for debugging
+  console.log('TeamOverview - team:', team);
+
   // Ensure resourceCounts always exists by providing default values
   const resourceCounts = team?.resourceCounts || {
     repositories: 0,
@@ -33,6 +36,10 @@ export default function TeamOverview({
     cicd: 0,
     deployments: 0,
   };
+
+  // Check for both cicd and cicdProviders fields to handle different data structures
+  const cicdCount =
+    resourceCounts.cicd !== undefined ? resourceCounts.cicd : resourceCounts.cicdProviders || 0;
 
   // Create resource cards for the overview
   const resourceCards = [
@@ -49,7 +56,7 @@ export default function TeamOverview({
     {
       type: 'cicd',
       name: t('resources.cicd'),
-      count: resourceCounts.cicd,
+      count: cicdCount, // Use the cicdCount variable
     },
     {
       type: 'deployment',
@@ -98,7 +105,7 @@ export default function TeamOverview({
             <p className="text-xl font-semibold">
               {resourceCounts.repositories +
                 resourceCounts.hosts +
-                resourceCounts.cicd +
+                cicdCount + // Use the cicdCount variable
                 resourceCounts.deployments}
             </p>
           </div>
