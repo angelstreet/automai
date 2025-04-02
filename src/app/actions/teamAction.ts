@@ -443,7 +443,8 @@ export const getTeamDetails = cache(async () => {
     let activeTeam;
     try {
       const cookieStore = await cookies();
-      const activeTeamResult = await dbGetUserActiveTeam(user.id, cookieStore);
+      // Pass the already retrieved teams to avoid duplicate getUserTeams calls
+      const activeTeamResult = await dbGetUserActiveTeam(user.id, cookieStore, teams.data);
       if (activeTeamResult.success && activeTeamResult.data) {
         activeTeam = activeTeamResult.data;
       } else {

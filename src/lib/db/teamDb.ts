@@ -242,31 +242,43 @@ export async function deleteTeam(teamId: string, cookieStore?: any): Promise<DbR
 
 /**
  * Get the active team for a user
+ * @param userId The user ID
+ * @param cookieStore The cookie store for creating the Supabase client
+ * @param teams Optional pre-fetched teams to avoid duplicate database calls
  */
 export async function getUserActiveTeam(
   userId: string,
   cookieStore?: any,
+  teams?: Team[],
 ): Promise<DbResponse<Team>> {
   try {
-    // Get the user's teams
-    const result = await getUserTeams(userId, cookieStore);
+    let userTeams: Team[] = [];
 
-    if (result.success && result.data && result.data.length > 0) {
-      // Extract the first team
-      const plainTeam = result.data[0];
-
-      console.log(`[@db:teamDb:getUserActiveTeam] Retrieved active team for user: ${userId}`);
-
-      return {
-        success: true,
-        data: plainTeam,
-      };
+    // Use provided teams if available, otherwise fetch them
+    if (teams && teams.length > 0) {
+      console.log(`[@db:teamDb:getUserActiveTeam] Using pre-fetched teams for user: ${userId}`);
+      userTeams = teams;
+    } else {
+      // Get the user's teams if not provided
+      const result = await getUserTeams(userId, cookieStore);
+      if (!result.success || !result.data || result.data.length === 0) {
+        console.error(`[@db:teamDb:getUserActiveTeam] No teams found for user: ${userId}`);
+        return {
+          success: false,
+          error: 'No teams found for user',
+        };
+      }
+      userTeams = result.data;
     }
 
-    console.error(`[@db:teamDb:getUserActiveTeam] No teams found for user: ${userId}`);
+    // Extract the first team
+    const plainTeam = userTeams[0];
+
+    console.log(`[@db:teamDb:getUserActiveTeam] Retrieved active team for user: ${userId}`);
+
     return {
-      success: false,
-      error: 'No teams found for user',
+      success: true,
+      data: plainTeam,
     };
   } catch (error) {
     console.error(`[@db:teamDb:getUserActiveTeam] Error fetching user active team:`, error);
