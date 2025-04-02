@@ -15,8 +15,6 @@ import {
   testRepositorySchema,
 } from '@/types/context/repositoryContextType';
 
-// Repository related functions
-
 /**
  * Get all repositories with optional filtering
  * @param filter Optional filter criteria for repositories

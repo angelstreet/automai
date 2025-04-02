@@ -2,60 +2,29 @@
 
 import { ChevronLeft, ChevronRight, GitBranch, PlusCircle, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
-import { useRepository } from '@/hooks';
-import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
-import { Repository } from '@/types/context/repositoryContextType';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { useRepository } from '@/hooks/repository/useRepository';
+import { Repository } from '@/types/component/repositoryComponentType';
 
 import { EnhancedRepositoryCard } from '../EnhancedRepositoryCard';
 
-interface ClientRepositoryListProps {
-  initialRepositories: Repository[];
-  initialStarredIds?: string[]; // Make this optional
-}
-
-export function ClientRepositoryList({
-  initialRepositories,
-  _initialStarredIds = [], // Default to empty array
-}: ClientRepositoryListProps) {
+export function ClientRepositoryList() {
   const t = useTranslations('repositories');
 
-  // Local state
-  const [repositories, setRepositories] = useState<Repository[]>(initialRepositories);
+  // Use the repository hook to get data
+  const { repositories, isLoadingRepositories } = useRepository();
+
+  // UI state
   const [activeTab, setActiveTab] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [isDeleting, _setIsDeleting] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState('');
   const itemsPerPage = 12;
-
-  // Use the repository hook
-  const {
-    repositories: hookRepositories,
-    isLoading: isLoadingRepositories,
-    refetchRepositories,
-  } = useRepository();
-
-  // Update local state when repositories change
-  useEffect(() => {
-    if (hookRepositories && hookRepositories.length > 0) {
-      setRepositories(hookRepositories);
-    }
-  }, [hookRepositories]);
-
-  // Set loading state
-  useEffect(() => {
-    setLoading(isLoadingRepositories);
-  }, [isLoadingRepositories]);
-
-  // Refresh repositories on component mount
-  useEffect(() => {
-    refetchRepositories();
-  }, [refetchRepositories]);
 
   const handleViewRepository = (repo: Repository) => {
     window.dispatchEvent(
@@ -135,7 +104,7 @@ export function ClientRepositoryList({
 
       {/* Repository cards grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {loading ? (
+        {isLoadingRepositories ? (
           <div className="col-span-full flex justify-center p-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
@@ -158,7 +127,7 @@ export function ClientRepositoryList({
             />
           </div>
         ) : (
-          currentRepositories.map((repo) => (
+          currentRepositories.map((repo: Repository) => (
             <div
               key={repo.id}
               onClick={() => handleViewRepository(repo)}

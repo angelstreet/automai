@@ -1,12 +1,12 @@
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
-import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 
 import { getRepositories } from '@/app/actions/repositoriesAction';
+import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 
+import { RepositoryActionsClient } from './_components/RepositoryActionsClient';
 import { RepositoryContent } from './_components/RepositoryContent';
 import { RepositorySkeleton } from './_components/RepositorySkeleton';
-import { RepositoryActionsClient } from './_components/RepositoryActionsClient';
 
 export default async function RepositoriesPage() {
   const t = await getTranslations('repositories');

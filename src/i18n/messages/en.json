@@ -447,7 +447,7 @@
     }
   },
   "cicd": {
-    "title": "CI/CD Integration",
+    "title": "CI/CD",
     "description": "Configure CI/CD providers for automated deployments",
     "providers": "CI/CD Providers",
     "add_cicd": "Add CI/CD",
@@ -466,7 +466,7 @@
     "delete": "Delete",
     "confirm_delete": "Are you sure you want to delete this CI/CD provider?",
     "delete_warning": "This will remove all associated jobs and pipelines. This action cannot be undone.",
-    "add_provider": "Add Provider",
+    "add_provider": "Add CI/CD",
     "add_provider_dialog_title": "Add CI/CD Provider",
     "edit_provider_dialog_title": "Edit CI/CD Provider",
     "no_providers_title": "No CI/CD Providers",
