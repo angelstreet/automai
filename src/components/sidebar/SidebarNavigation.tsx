@@ -17,12 +17,33 @@ const SidebarMenuButton = React.forwardRef<
     asChild?: boolean;
     isActive?: boolean;
     tooltip?: string;
+    href?: string;
   }
->(({ asChild = false, isActive = false, tooltip, className, children, ...props }, ref) => {
-  const Comp = asChild ? 'a' : 'button';
+>(({ asChild = false, isActive = false, tooltip, className, children, href, ...props }, ref) => {
+  // If href is provided, render a Link, otherwise a button
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className={cn(
+          'flex w-full items-center gap-2 rounded-md p-2 text-left text-sm',
+          'hover:bg-accent/50 data-[active=true]:bg-accent/50',
+          'focus-visible:ring-2 ring-sidebar-ring',
+          'transition-all duration-200',
+          '[&>svg]:size-4 [&>svg]:shrink-0',
+          '[&>span:last-child]:truncate',
+          className
+        )}
+        data-active={isActive}
+        data-sidebar="menu-button"
+      >
+        {children}
+      </Link>
+    );
+  }
   
   return (
-    <Comp
+    <button
       ref={ref}
       data-sidebar="menu-button"
       data-active={isActive}
@@ -38,7 +59,7 @@ const SidebarMenuButton = React.forwardRef<
       {...props}
     >
       {children}
-    </Comp>
+    </button>
   );
 });
 
@@ -51,12 +72,33 @@ const SidebarMenuSubButton = React.forwardRef<
     asChild?: boolean;
     isActive?: boolean;
     tooltip?: string;
+    href?: string;
   }
->(({ asChild = false, isActive = false, tooltip, className, children, ...props }, ref) => {
-  const Comp = asChild ? 'a' : 'button';
+>(({ asChild = false, isActive = false, tooltip, className, children, href, ...props }, ref) => {
+  // If href is provided, render a Link, otherwise a button
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className={cn(
+          'flex w-full items-center gap-2 rounded-md p-2 text-left text-sm',
+          'hover:bg-accent/50 data-[active=true]:bg-accent/50',
+          'focus-visible:ring-2 ring-sidebar-ring',
+          'transition-all duration-200',
+          '[&>svg]:size-4 [&>svg]:shrink-0',
+          '[&>span:last-child]:truncate',
+          className
+        )}
+        data-active={isActive}
+        data-sidebar="menu-sub-button"
+      >
+        {children}
+      </Link>
+    );
+  }
 
   return (
-    <Comp
+    <button
       ref={ref}
       data-sidebar="menu-sub-button"
       data-active={isActive}
@@ -72,7 +114,7 @@ const SidebarMenuSubButton = React.forwardRef<
       {...props}
     >
       {children}
-    </Comp>
+    </button>
   );
 });
 
@@ -217,6 +259,11 @@ export function SidebarNavigation({ items, groupTitles, currentRole }: SidebarNa
     );
   }, [items, currentRole]);
 
+  // Build full path for links
+  const getFullPath = (href: string) => {
+    return `/${params.locale as string}/${params.tenant as string}${href.startsWith('/') ? href : `/${href}`}`;
+  };
+
   return (
     <ScrollArea className="h-full">
       {filteredItems.map((group, groupIndex) => (
@@ -253,15 +300,11 @@ export function SidebarNavigation({ items, groupTitles, currentRole }: SidebarNa
                         </SidebarMenuButton>
                       ) : (
                         <SidebarMenuButton
-                          asChild
                           isActive={active}
+                          href={getFullPath(item.href)}
                         >
-                          <Link
-                            href={`/${params.locale as string}/${params.tenant as string}${item.href.startsWith('/') ? item.href : `/${item.href}`}`}
-                          >
-                            {Icon && <Icon className="h-4 w-4" />}
-                            <span>{item.title}</span>
-                          </Link>
+                          {Icon && <Icon className="h-4 w-4" />}
+                          <span>{item.title}</span>
                         </SidebarMenuButton>
                       )}
 
@@ -279,15 +322,11 @@ export function SidebarNavigation({ items, groupTitles, currentRole }: SidebarNa
                             return (
                               <SidebarMenuSubButton
                                 key={subItem.href}
-                                asChild
                                 isActive={isSubActive}
+                                href={getFullPath(subItem.href)}
                               >
-                                <Link
-                                  href={`/${params.locale as string}/${params.tenant as string}${subItem.href.startsWith('/') ? subItem.href : `/${subItem.href}`}`}
-                                >
-                                  <SubIcon className="h-4 w-4" />
-                                  <span>{subItem.title}</span>
-                                </Link>
+                                <SubIcon className="h-4 w-4" />
+                                <span>{subItem.title}</span>
                               </SidebarMenuSubButton>
                             );
                           })}
