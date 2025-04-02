@@ -53,7 +53,7 @@ export function HeaderClient({
       data-sidebar-header="true"
     >
       <div className={cn(
-          'flex h-14 items-center border-b relative', 
+          'flex h-14 items-center border-b relative pl-2', 
           !headerVisible && 'h-8'
         )}>
         {headerVisible && (
