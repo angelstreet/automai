@@ -1,4 +1,4 @@
-import { getPermissions } from '@/app/actions/permissionAction';
+import { getUserPermissions } from '@/app/actions/permissionAction';
 import { getTeamDetails } from '@/app/actions/teamAction';
 import { getUser } from '@/app/actions/userAction';
 import { TooltipProvider } from '@/components/shadcn/tooltip';
@@ -30,7 +30,7 @@ export default async function Layout({
   }
 
   // 3. Fetch permissions data
-  const permissions = user ? await getPermissions(user.id, teamDetails?.id) : null;
+  const permissions = user ? await getUserPermissions(user.id, teamDetails?.id) : null;
 
   return (
     <TooltipProvider>

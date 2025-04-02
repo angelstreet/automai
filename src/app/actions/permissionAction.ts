@@ -14,9 +14,18 @@ import type {
 /**
  * Get all permissions for a user in a specific team
  * Cached for better performance
+ * Use this in layout and client components
  */
 export const getUserPermissions = cache(
-  async (profileId: string, teamId: string): Promise<PermissionsResult> => {
+  async (profileId: string, teamId?: string | null): Promise<PermissionsResult | null> => {
+    // Return null if either parameter is missing
+    if (!profileId || !teamId) {
+      console.log(
+        `[@action:permission:getUserPermissions] Missing profileId or teamId, returning null`,
+      );
+      return null;
+    }
+
     try {
       console.log(
         `[@action:permission:getUserPermissions] Getting permissions for profile: ${profileId}, team: ${teamId}`,
@@ -87,30 +96,6 @@ export const getCurrentUserPermissions = cache(
         error,
       );
       return {};
-    }
-  },
-);
-
-/**
- * Get permissions for a user and team - use this in layout
- */
-export const getPermissions = cache(
-  async (userId: string, teamId?: string | null): Promise<any> => {
-    if (!userId || !teamId) {
-      console.log(`[@action:permission:getPermissions] Missing userId or teamId, returning null`);
-      return null;
-    }
-
-    try {
-      console.log(
-        `[@action:permission:getPermissions] Getting permissions for user: ${userId}, team: ${teamId}`,
-      );
-      const result = await getUserPermissions(userId, teamId);
-      console.log(`[@action:permission:getPermissions] Successfully retrieved permissions`);
-      return result;
-    } catch (error) {
-      console.error(`[@action:permission:getPermissions] Error getting permissions:`, error);
-      return null;
     }
   },
 );
