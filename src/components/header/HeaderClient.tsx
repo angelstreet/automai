@@ -54,18 +54,14 @@ export function HeaderClient({
     >
       <div className={cn(
           'flex h-14 items-center border-b relative', 
-          !headerVisible && 'h-8',
-          isCollapsed && 'pl-4'
+          !headerVisible && 'h-8'
         )}>
         {headerVisible && (
           <>
             {/* Left section */}
             <div className="relative flex items-center h-full">
               <div
-                className={cn(
-                  'absolute flex items-center transition-all duration-200 ease-in-out',
-                  isCollapsed ? 'ml-1' : 'ml-1',
-                )}
+                className="absolute flex items-center ml-2"
               >
                 <SidebarTrigger />
                 <Separator orientation="vertical" className="h-8 opacity-50 ml-2" />

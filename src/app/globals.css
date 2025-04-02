@@ -291,10 +291,7 @@
     width: calc(100% - var(--sidebar-width-offset) - var(--sidebar-spacing) * 2);
   }
   
-  /* Header positioning with sidebar - ensure consistent alignment */
-  [data-sidebar-header="true"] {
-    padding-left: var(--sidebar-spacing);
-  }
+  /* We don't need additional header styles - the inline styles handle transitions */
   
   /* Custom scrollbar styling */
   ::-webkit-scrollbar {
