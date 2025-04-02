@@ -370,12 +370,13 @@ async function testConnectionCore(data: {
     });
 
     // Convert data to the format expected by hostService.testHostConnection
-    const hostData: Partial<Host> = {
-      type: data.type as any, // Cast to expected type
+    const hostData = {
+      type: data.type,
       ip: data.ip,
       port: data.port,
-      user: data.username, // Map username to user
+      username: data.username, // Keep username as username, not user
       password: data.password,
+      hostId: data.hostId,
     };
 
     // Call the service function that handles the actual testing logic
@@ -385,8 +386,9 @@ async function testConnectionCore(data: {
     const response = {
       success: result.success,
       error: result.error,
-      message: result.data?.message,
-      is_windows: false, // Default to false
+      // The service doesn't return a message property directly but may log one
+      message: result.error || (result.success ? 'Connection successful' : 'Connection failed'),
+      is_windows: result.is_windows || false, // Use is_windows from result or default to false
     };
 
     // Log concise result summary
@@ -472,8 +474,6 @@ export async function testHostConnection(
 
     // Revalidate paths
     revalidatePath('/[locale]/[tenant]/hosts');
-    revalidatePath(`/[locale]/[tenant]/hosts/${id}`);
-    revalidatePath('/[locale]/[tenant]/dashboard');
 
     return result;
   } catch (error: any) {
@@ -502,8 +502,6 @@ export async function testHostConnection(
 
     // Revalidate paths
     revalidatePath('/[locale]/[tenant]/hosts');
-    revalidatePath(`/[locale]/[tenant]/hosts/${id}`);
-
     return { success: false, error: error.message || 'Failed to test connection' };
   }
 }

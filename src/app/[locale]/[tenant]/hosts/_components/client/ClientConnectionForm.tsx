@@ -111,21 +111,27 @@ export function ClientConnectionForm({
     setIsWindowsOS(undefined); // Reset Windows detection
 
     try {
-      console.log('[@ui:ClientConnectionForm:testHostConnection] Testing connection with data:', {
-        type: formData.type,
-        ip: formData.ip,
-        port: parseInt(formData.port),
-        username: formData.username,
-        hasPassword: !!formData.password,
-      });
-
-      const result = await testConnectionAction({
+      // Create data object for testing
+      const testData = {
         type: formData.type,
         ip: formData.ip,
         port: parseInt(formData.port),
         username: formData.username,
         password: formData.password,
-      });
+      };
+
+      console.log(
+        '[@ui:ClientConnectionForm:testHostConnection] Testing connection with exact data:',
+        {
+          ...testData,
+          password: testData.password ? '********' : null,
+          hasUsername: !!testData.username,
+          usernameLength: testData.username?.length || 0,
+          hasPassword: !!testData.password,
+        },
+      );
+
+      const result = await testConnectionAction(testData);
 
       console.log('[@ui:ClientConnectionForm:testHostConnection] Test result:', {
         success: result.success,
@@ -178,12 +184,6 @@ export function ClientConnectionForm({
     setIsCreating(true);
 
     try {
-      console.log('[@ui:ClientConnectionForm:createHostDirectly] Creating host with data:', {
-        ...formData,
-        password: '[REDACTED]',
-        is_windows: isWindowsOS,
-      });
-
       // Create the hostData object with all required fields
       const hostData = {
         name: formData.name,
@@ -191,8 +191,10 @@ export function ClientConnectionForm({
         type: formData.type as 'ssh' | 'docker' | 'portainer',
         ip: formData.ip,
         port: parseInt(formData.port),
-        // Map username to user for the server
+        // Map username to user for the server - this is critical!
         user: formData.username,
+        // Also include username field as a backup
+        username: formData.username,
         password: formData.password,
         // CRITICAL: Explicitly set status to 'connected' (NOT 'pending')
         status: 'connected' as 'connected',
@@ -201,6 +203,14 @@ export function ClientConnectionForm({
         updated_at: new Date(),
       };
 
+      console.log('[@ui:ClientConnectionForm:createHostDirectly] Checking credentials passing:', {
+        hasUsername: !!formData.username,
+        usernameLength: formData.username?.length || 0,
+        hasPassword: !!formData.password,
+        userField: !!hostData.user,
+        usernameField: !!hostData.username,
+      });
+
       // Add explicit log for status
       console.log(
         '[@ui:ClientConnectionForm:createHostDirectly] Host status is set to:',
@@ -208,10 +218,10 @@ export function ClientConnectionForm({
       );
 
       // Call the server action
-      console.log(
-        '[@ui:ClientConnectionForm:createHostDirectly] Creating host with data:',
-        hostData,
-      );
+      console.log('[@ui:ClientConnectionForm:createHostDirectly] Creating host with data:', {
+        ...hostData,
+        password: '[REDACTED]',
+      });
       const result = await createHostAction(hostData as any);
 
       if (result.success && result.data) {

@@ -1,11 +1,6 @@
-import { ReactNode } from 'react';
-import { WithPageMetadata } from '@/components/layout/PageMetadata';
-
-interface ReportsContentProps extends WithPageMetadata {}
-
-export function ReportsContent({ pageMetadata }: ReportsContentProps = {}) {
+export function ReportsContent() {
   return (
-    <div className="p-4">
+    <div>
       <p>Reports will be available here.</p>
     </div>
   );

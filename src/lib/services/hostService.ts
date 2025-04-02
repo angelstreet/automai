@@ -3,7 +3,14 @@
  */
 import { Client } from 'ssh2';
 
+import { createClient } from '@/lib/supabase/server';
 import { StandardResponse } from '@/lib/utils/commonUtils';
+
+// Extended response type that includes message and is_windows properties
+interface ConnectionResponse extends StandardResponse<boolean> {
+  message?: string;
+  is_windows?: boolean;
+}
 
 export async function testHostConnection(data: {
   type: string;
@@ -12,16 +19,16 @@ export async function testHostConnection(data: {
   username?: string;
   password?: string;
   hostId?: string;
-}): Promise<StandardResponse<boolean> & { is_windows?: boolean }> {
+}): Promise<ConnectionResponse> {
   console.log('\n====== SERVER-SIDE HOST CONNECTION TEST STARTED ======');
   console.log(`Testing host connection at ${new Date().toISOString()}`);
   console.log(`Host: ${data.ip}:${data.port || '(default port)'} (${data.type})`);
   console.log(`Host ID: ${data.hostId || 'New host (not in database)'}`);
   console.log('============================================\n');
 
-  console.info('Testing host connection', { ip: data.ip });
+  console.info('Testing host connection', { ip: data.ip, username: data.username });
 
-  let result: StandardResponse<boolean> & { is_windows?: boolean } = {
+  let result: ConnectionResponse = {
     success: false,
   };
 
@@ -127,39 +134,41 @@ export async function testHostConnection(data: {
         );
 
         try {
+          // Get Supabase client for database operations
+          const supabase = await createClient();
+
           // Try to update with is_windows field
-          await db.host.update({
-            where: { id: data.hostId },
-            data: {
+          const { error } = await supabase
+            .from('hosts')
+            .update({
               status: result.success ? 'connected' : 'failed',
               is_windows: detectedWindows,
-              // Using updated_at instead of updatedAt - snake_case vs camelCase
               updated_at: new Date().toISOString(),
-            },
-          });
-        } catch (schemaError) {
-          console.error('Error updating host:', schemaError);
+            })
+            .eq('id', data.hostId);
 
-          // If the update fails due to missing is_windows field, update without it
-          if (
-            (schemaError as Error).message &&
-            (schemaError as Error).message.includes('Unknown field `is_windows`')
-          ) {
-            console.log(
-              `[Windows Detection] is_windows field not in database schema, updating without it`,
-            );
-            await db.host.update({
-              where: { id: data.hostId },
-              data: {
-                status: result.success ? 'connected' : 'failed',
-                updated_at: new Date().toISOString(),
-                // is_windows field is omitted
-              },
-            });
-          } else {
-            // Re-throw if it's a different error
-            throw schemaError;
+          if (error) {
+            // Handle case where is_windows field might not exist
+            if (error.message.includes('Unknown field `is_windows`')) {
+              console.log(
+                `[Windows Detection] is_windows field not in database schema, updating without it`,
+              );
+
+              // Update without is_windows field
+              await supabase
+                .from('hosts')
+                .update({
+                  status: result.success ? 'connected' : 'failed',
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', data.hostId);
+            } else {
+              throw error;
+            }
           }
+        } catch (dbError) {
+          console.error('Error updating host:', dbError);
+          throw dbError;
         }
 
         console.log(
