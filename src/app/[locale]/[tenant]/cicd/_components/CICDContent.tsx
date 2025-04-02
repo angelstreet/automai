@@ -1,11 +1,12 @@
 'use client';
 
+import { useCICD } from '@/hooks/useCICD';
+
 import CICDDetailsClient from './client/CICDDetailsClient';
-import { useCICD } from './providers';
 
 export default function CICDContent() {
   // Use hook instead of fetching data directly
-  const { providers } = useCICD('CICDContent');
+  const { providers } = useCICD();
 
   return (
     <div className="w-full border-0 shadow-none">

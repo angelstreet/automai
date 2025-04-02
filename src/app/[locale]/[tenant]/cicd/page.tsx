@@ -7,7 +7,7 @@ import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 import CICDContent from './_components/CICDContent';
 import CICDSkeleton from './_components/CICDSkeleton';
 import { CICDActionsClient } from './_components/client/CICDActionsClient';
-import { CICDProvider } from './_components/providers';
+import { CICDProvider } from './_components/client/CICDProvider';
 
 export default async function CICDPage() {
   const t = await getTranslations('cicd');

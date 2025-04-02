@@ -35,10 +35,9 @@ import {
 import { useToast } from '@/components/shadcn/use-toast';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useCICD } from '@/hooks';
+import type { CICDProviderType } from '@/types/component/cicdComponentType';
 
 import CICDForm from '../CICDForm';
-
-import type { CICDProviderType } from '@/types/service';
 
 interface CICDDetailsClientProps {
   initialProviders: CICDProviderType[];
