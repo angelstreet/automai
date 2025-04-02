@@ -56,7 +56,7 @@ export function HeaderClient({
       data-sidebar-header="true"
     >
       <div 
-        className={cn('flex items-center relative pl-2')}
+        className={cn('flex h-14 items-center relative')}
         data-header-state={headerVisible ? 'expanded' : 'collapsed'}>
         {headerVisible && (
           <>
