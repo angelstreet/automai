@@ -56,7 +56,7 @@ export function DashboardMainContent() {
             <CardDescription>Your upcoming tasks and assignments</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-4 h-[180px]">
               {tasks.map((task) => (
                 <div key={task.id} className="flex items-center justify-between">
                   <div>
@@ -91,7 +91,7 @@ export function DashboardMainContent() {
             <CardDescription>Recent conversations with team members</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-4 h-[180px]">
               {teamChat.map((chat) => (
                 <div key={chat.id} className="flex items-start gap-4">
                   <Avatar className="h-8 w-8">
