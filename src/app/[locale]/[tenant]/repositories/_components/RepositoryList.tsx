@@ -8,7 +8,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/shadcn/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { useRepository } from '@/hooks/repository/useRepository';
+import { useRepository } from '@/hooks/useRepository';
 
 import { Repository } from '../types';
 

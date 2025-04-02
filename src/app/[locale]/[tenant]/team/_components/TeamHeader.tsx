@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 
 import { Skeleton } from '@/components/shadcn/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
-import { useTeam } from '@/hooks/team';
+import { useTeam } from '@/hooks/useTeam';
 import { TeamDetails } from '@/types/context/teamContextType';
 import { User } from '@/types/service/userServiceType';
 

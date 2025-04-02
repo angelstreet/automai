@@ -8,7 +8,7 @@ import {
   checkResourceLimit,
 } from '@/app/actions/teamAction';
 import { useToast } from '@/components/shadcn/use-toast';
-import { useUser } from '@/hooks/user/useUser';
+import { useUser } from '@/hooks/useUser';
 
 /**
  * Hook for accessing unassigned resources

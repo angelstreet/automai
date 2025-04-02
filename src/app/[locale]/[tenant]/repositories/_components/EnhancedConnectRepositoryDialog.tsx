@@ -18,7 +18,7 @@ import { Input } from '@/components/shadcn/input';
 import { Label } from '@/components/shadcn/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 import { useToast } from '@/components/shadcn/use-toast';
-import { useRepository } from '@/hooks/repository/useRepository';
+import { useRepository } from '@/hooks/useRepository';
 import { EnhancedConnectRepositoryDialogProps } from '@/types/context/repositoryContextType';
 
 import { CONNECT_REPOSITORY_TABS, AUTH_METHODS } from '../constants';

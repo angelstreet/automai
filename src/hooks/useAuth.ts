@@ -1,7 +1,7 @@
 'use client';
 
-import { useRouter, useParams } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
+import { useRouter, useParams } from 'next/navigation';
 import { useRef, useEffect } from 'react';
 
 import { signOut } from '@/app/actions/authAction';

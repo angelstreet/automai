@@ -2,12 +2,12 @@
 
 import { PlusCircle, RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
-import { useHost, useCICD } from '@/hooks';
-import { useRepository } from '@/hooks/repository/useRepository';
 import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent } from '@/components/shadcn/dialog';
+import { useHost, useCICD } from '@/hooks';
+import { useRepository } from '@/hooks/useRepository';
 
 // Import required components
 import { DeploymentWizardClient } from './DeploymentWizardClient';

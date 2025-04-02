@@ -23,8 +23,8 @@ import {
   SelectValue,
 } from '@/components/shadcn/select';
 import { useToast } from '@/components/shadcn/use-toast';
-import {  AddMemberDialogProps  } from '@/types/context/teamContextType';
-import { useAddTeamMember } from '@/hooks/teamMember';
+import { useAddTeamMember } from '@/hooks/useTeamMemberManagement';
+import { AddMemberDialogProps } from '@/types/context/teamContextType';
 
 const AddMemberDialog = ({ open, onOpenChange, onAddMember, teamId }: AddMemberDialogProps) => {
   const t = useTranslations('team');

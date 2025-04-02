@@ -1,23 +1,25 @@
 'use client';
 
 import { useMutation, useQuery } from '@tanstack/react-query';
+
 import {
   getDeploymentWizardData,
   saveDeploymentConfiguration,
   startDeployment,
 } from '@/app/actions/deploymentWizardAction';
 import { useToast } from '@/components/shadcn/use-toast';
-import type { DeploymentFormData } from '@/app/[locale]/[tenant]/deployment/types';
+
+import type { DeploymentFormData } from '@/app/types/deployment';
 
 /**
  * Hook for managing the deployment wizard
- * 
+ *
  * Provides functions for getting wizard data and managing deployment configurations
  * Uses React Query for data fetching and caching
  */
 export function useDeploymentWizard() {
   const { toast } = useToast();
-  
+
   // Get all data needed for the deployment wizard
   const {
     data: wizardData,
@@ -88,18 +90,18 @@ export function useDeploymentWizard() {
     repositories: wizardData?.repositories || [],
     hosts: wizardData?.hosts || [],
     cicdProviders: wizardData?.cicdProviders || [],
-    
+
     // Status
     isLoading,
     error,
-    
+
     // Query functions
     refetchWizardData: refetch,
-    
+
     // Mutation functions
     saveDeploymentConfiguration: saveConfigMutation.mutateAsync,
     startDeployment: startDeploymentMutation.mutateAsync,
-    
+
     // Mutation status
     isSaving: saveConfigMutation.isPending,
     isStarting: startDeploymentMutation.isPending,

@@ -5,8 +5,8 @@ import { useCallback, useContext } from 'react';
 
 import { checkPermission, getUserPermissions } from '@/app/actions/permissionAction';
 import { PermissionContext } from '@/context/PermissionContext';
-import { useTeam } from '@/hooks/team/useTeam';
-import { useUser } from '@/hooks/user/useUser';
+import { useTeam } from '@/hooks/useTeam';
+import { useUser } from '@/hooks/useUser';
 import type {
   ResourceType,
   Operation,

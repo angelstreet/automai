@@ -32,7 +32,7 @@ export function SidebarProvider({
     setOpen(!open);
     setState(!open ? 'collapsed' : 'expanded');
   }, [open]);
-  
+
   // Update state when open changes
   React.useEffect(() => {
     setState(open ? 'expanded' : 'collapsed');

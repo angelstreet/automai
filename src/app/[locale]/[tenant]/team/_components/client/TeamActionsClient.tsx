@@ -6,10 +6,10 @@ import React from 'react';
 
 import { Button } from '@/components/shadcn/button';
 // Import the ResourceType from its actual type file
-import type { ResourceType } from '@/types/context/permissionsContextType';
 // Import the hook from hooks directory
-import { usePermission } from '@/hooks';
-import { useTeam } from '@/hooks/team';
+import { usePermission } from '@/hooks/usePermission';
+import { useTeam } from '@/hooks/useTeam';
+import type { ResourceType } from '@/types/context/permissionsContextType';
 import { TeamDetails } from '@/types/context/teamContextType';
 
 export default function TeamActions() {

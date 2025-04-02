@@ -5,7 +5,7 @@ import { useContext, useRef, useEffect } from 'react';
 
 import { getUserTeams, getUserActiveTeam, setUserActiveTeam } from '@/app/actions/teamAction';
 import { TeamContext } from '@/context/TeamContext';
-import { useUser } from '@/hooks/user/useUser';
+import { useUser } from '@/hooks/useUser';
 
 // Generate a unique ID for each hook instance
 let hookInstanceCounter = 0;

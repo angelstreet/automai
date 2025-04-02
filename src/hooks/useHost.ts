@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
 import {
   getHosts,
   createHost,
@@ -10,18 +11,17 @@ import {
   getHostById,
 } from '@/app/actions/hostsAction';
 import { useToast } from '@/components/shadcn/use-toast';
-import type { Host, HostFormData } from '@/types/component/hostComponentType';
 
 /**
  * Hook for managing hosts
- * 
+ *
  * Provides functions for fetching, creating, updating, deleting, and testing hosts
  * Uses React Query for data fetching and caching
  */
 export function useHost() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  
+
   // Get all hosts query
   const {
     data: hostsResponse,
@@ -160,21 +160,21 @@ export function useHost() {
   return {
     // Data
     hosts: hostsResponse?.data || [],
-    
+
     // Status
     isLoading: isLoadingHosts,
     error: hostsError,
-    
+
     // Query functions
     getHostById: getHostQuery,
     refetchHosts,
-    
+
     // Mutation functions
     createHost: createHostMutation.mutateAsync,
     updateHost: updateHostMutation.mutateAsync,
     deleteHost: deleteHostMutation.mutateAsync,
     testConnection: testConnectionMutation.mutateAsync,
-    
+
     // Mutation status
     isCreating: createHostMutation.isPending,
     isUpdating: updateHostMutation.isPending,

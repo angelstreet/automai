@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
 import {
   getDeployments,
   getDeploymentById,
@@ -10,18 +11,19 @@ import {
   runDeployment,
 } from '@/app/actions/deploymentsAction';
 import { useToast } from '@/components/shadcn/use-toast';
-import type { Deployment, DeploymentFormData } from '@/app/[locale]/[tenant]/deployment/types';
+
+import type { DeploymentFormData } from '@/app/types/deployment';
 
 /**
  * Hook for managing deployments
- * 
+ *
  * Provides functions for fetching, creating, updating, deleting, and running deployments
  * Uses React Query for data fetching and caching
  */
 export function useDeployment() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  
+
   // Get all deployments
   const {
     data: deploymentsResponse,
@@ -72,7 +74,7 @@ export function useDeployment() {
 
   // Update deployment mutation
   const updateDeploymentMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<DeploymentFormData> }) => 
+    mutationFn: ({ id, data }: { id: string; data: Partial<DeploymentFormData> }) =>
       updateDeployment(id, data),
     onSuccess: (response) => {
       if (response.success) {
@@ -160,21 +162,21 @@ export function useDeployment() {
   return {
     // Data
     deployments: deploymentsResponse?.data || [],
-    
+
     // Status
     isLoading: isLoadingDeployments,
     error: deploymentsError,
-    
+
     // Query functions
     getDeploymentById: getDeploymentQuery,
     refetchDeployments,
-    
+
     // Mutation functions
     createDeployment: createDeploymentMutation.mutateAsync,
     updateDeployment: updateDeploymentMutation.mutateAsync,
     deleteDeployment: deleteDeploymentMutation.mutateAsync,
     runDeployment: runDeploymentMutation.mutateAsync,
-    
+
     // Mutation status
     isCreating: createDeploymentMutation.isPending,
     isUpdating: updateDeploymentMutation.isPending,
