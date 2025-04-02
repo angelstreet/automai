@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -15,6 +17,11 @@ interface FeaturePageContainerProps {
   children: React.ReactNode;
   className?: string;
   pageMetadata?: PageMetadata;
+}
+
+interface ComponentWithPageMetadata {
+  pageMetadata?: PageMetadata;
+  children?: React.ReactNode;
 }
 
 /**
@@ -37,16 +44,16 @@ export function FeaturePageContainer({
 }: FeaturePageContainerProps) {
   // Extract metadata from props and children (recursively if needed)
   const extractChildMetadata = (child: React.ReactNode): PageMetadata | null => {
-    if (!React.isValidElement(child)) return null;
+    if (!React.isValidElement<ComponentWithPageMetadata>(child)) return null;
 
     // Direct pageMetadata prop on the child
-    if (child.props?.pageMetadata) {
+    if (child.props.pageMetadata) {
       return child.props.pageMetadata;
     }
 
     // Special handling for Suspense and similar wrapping components
     // This handles the case when a page wraps content in Suspense
-    if (child.props?.children && React.isValidElement(child.props.children)) {
+    if (child.props.children && React.isValidElement(child.props.children)) {
       return extractChildMetadata(child.props.children);
     }
 
@@ -70,10 +77,10 @@ export function FeaturePageContainer({
   const actions = propActions || pageMetadata?.actions || childMetadata?.actions || null;
 
   return (
-    <div className={'flex-1 flex flex-col ${className} px-3 py-1'}>
+    <div className={`flex-1 flex flex-col h-[calc(100vh-4rem)] ${className} px-3 py-1`}>
       {/* Header Section - Only render if title or description is provided */}
       {(title || description || actions) && (
-        <div className={'mb-2'}>
+        <div className="mb-2">
           <PageHeader title={title} description={description}>
             {actions}
           </PageHeader>
@@ -81,7 +88,7 @@ export function FeaturePageContainer({
       )}
 
       {/* Content Container - Let the parent container handle scrolling */}
-      <div className="flex-1 overflow-visible">{children}</div>
+      <div className="flex-1 overflow-visible pb-4">{children}</div>
     </div>
   );
 }
