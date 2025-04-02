@@ -195,11 +195,24 @@
     transition: width var(--sidebar-transition-duration) var(--sidebar-transition-timing);
     transform: translateZ(0); /* Force GPU acceleration */
     backface-visibility: hidden; /* Prevent rendering artifacts */
+    z-index: 30; /* Ensure sidebar stays above content */
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.05); /* Subtle shadow to visually separate */
   }
 
   /* Make the width transition more responsive */
   [data-state='collapsed'] [data-sidebar='sidebar'] {
     width: var(--sidebar-width-icon) !important;
+  }
+  
+  /* Specific adjustments for collapsed and expanded states */
+  html[style*="--sidebar-state:collapsed"] #main-content {
+    margin-left: calc(var(--sidebar-width-icon) + 3rem) !important;
+    width: calc(100% - var(--sidebar-width-icon) - 3rem) !important;
+  }
+  
+  html[style*="--sidebar-state:expanded"] #main-content {
+    margin-left: calc(var(--sidebar-width) + 1rem) !important;
+    width: calc(100% - var(--sidebar-width) - 1rem) !important;
   }
 
   /* Set fixed heights for menu items to prevent jumps */
@@ -272,5 +285,7 @@
   [data-sidebar-content="main"] {
     transition: margin-left var(--sidebar-transition-duration) var(--sidebar-transition-timing),
                 width var(--sidebar-transition-duration) var(--sidebar-transition-timing);
+    margin-left: var(--sidebar-width-offset, 0) !important;
+    width: calc(100% - var(--sidebar-width-offset, 0) - 2rem) !important; /* Force width adjustment */
   }
 }

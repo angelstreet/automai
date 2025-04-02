@@ -49,13 +49,23 @@ const SidebarClient = React.memo(function SidebarClient({
     const expandedWidth = Number(APP_SIDEBAR_WIDTH.replace('rem', ''));
     const collapsedWidth = Number(APP_SIDEBAR_WIDTH_ICON.replace('rem', ''));
     
-    // Add a small buffer (0.2rem) to collapsed width to prevent overlap
-    const collapsedOffset = collapsedWidth + 0.5;
+    // Add a fixed buffer to ensure no overlap (1rem)
+    const buffer = 1;
+    
+    // Calculate offsets with fixed buffer
+    const expandedOffset = expandedWidth + buffer;
+    const collapsedOffset = collapsedWidth + buffer;
     
     // Set the CSS variable based on sidebar state
     document.documentElement.style.setProperty(
       '--sidebar-width-offset', 
-      state === 'collapsed' ? `${collapsedOffset}rem` : `${expandedWidth}rem`
+      state === 'collapsed' ? `${collapsedOffset}rem` : `${expandedOffset}rem`
+    );
+    
+    // Set the sidebar state as a CSS variable for direct targeting
+    document.documentElement.style.setProperty(
+      '--sidebar-state', 
+      state
     );
   }, [state]);
 
