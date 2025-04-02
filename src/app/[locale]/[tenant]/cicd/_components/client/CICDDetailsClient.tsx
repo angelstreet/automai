@@ -35,16 +35,16 @@ import {
 import { useToast } from '@/components/shadcn/use-toast';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useCICD } from '@/hooks';
-import type { CICDProviderType } from '@/types/component/cicdComponentType';
+import type { CICDProvider } from '@/types/component/cicdComponentType';
 
 import CICDForm from '../CICDForm';
 
 interface CICDDetailsClientProps {
-  initialProviders: CICDProviderType[];
+  initialProviders: CICDProvider[];
 }
 
 export default function CICDDetailsClient({ initialProviders }: CICDDetailsClientProps) {
-  const [selectedProvider, setSelectedProvider] = useState<CICDProviderType | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<CICDProvider | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -54,7 +54,7 @@ export default function CICDDetailsClient({ initialProviders }: CICDDetailsClien
   const router = useRouter();
 
   // Memoize dialog handlers
-  const handleAddEditProvider = useCallback((provider?: CICDProviderType) => {
+  const handleAddEditProvider = useCallback((provider?: CICDProvider) => {
     if (provider) {
       setSelectedProvider(provider);
       setIsEditing(true);
@@ -66,17 +66,17 @@ export default function CICDDetailsClient({ initialProviders }: CICDDetailsClien
   }, []);
 
   // Memoize delete handler
-  const handleDeleteClick = useCallback((provider: CICDProviderType) => {
+  const handleDeleteClick = useCallback((provider: CICDProvider) => {
     setSelectedProvider(provider);
     setIsDeleteDialogOpen(true);
   }, []);
 
   // Use the CICD hook
-  const { testProvider, deleteProvider, isTesting, isDeleting } = useCICD();
+  const { testProvider, deleteProvider } = useCICD();
 
   // Memoize test provider handler
   const handleTestProvider = useCallback(
-    async (provider: CICDProviderType) => {
+    async (provider: CICDProvider) => {
       try {
         setIsLoading(true);
         // Use the hook's testProvider function instead of the direct action
@@ -152,7 +152,13 @@ export default function CICDDetailsClient({ initialProviders }: CICDDetailsClien
               fallback: 'Add a CI/CD provider to start creating deployments',
             })}
             action={
-              <Button onClick={() => handleAddEditProvider()}>
+              <Button
+                onClick={() => {
+                  setSelectedProvider(null);
+                  setIsEditing(false);
+                  setIsAddEditDialogOpen(true);
+                }}
+              >
                 <PlusCircle className="h-4 w-4 mr-2" />
                 {t('add_provider', { fallback: 'Add Provider' })}
               </Button>
