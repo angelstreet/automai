@@ -1,5 +1,12 @@
 import { createClient } from '@/lib/supabase/server';
-
+import {
+  PermissionMatrix,
+  PermissionsResult,
+  RoleTemplatesResult,
+  RoleTemplateResult,
+  ResourceType,
+  Operation,
+} from '@/types/context/permissionsContextType';
 export default {
   formatPermissionsLog,
   getUserPermissions,
@@ -9,15 +16,6 @@ export default {
   setUserPermission,
   checkPermission,
 };
-import {
-  PermissionMatrix,
-  PermissionsResult,
-  RoleTemplatesResult,
-  RoleTemplateResult,
-  ResourceType,
-  Operation,
-} from '@/types/context/permissionsContextType';
-
 /**
  * Format permissions into a readable log output
  * @param permissions Array of permission matrices

@@ -1,0 +1,119 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Database Access Rules
+
+## CRITICAL: Always Await createClient()
+
+The most important rule when working with Supabase in this codebase is to **always await the `createClient()` function**. This function returns a Promise, not the actual client.
+
+```typescript
+// ❌ INCORRECT - will cause errors about missing methods
+const supabase = createClient();
+
+// ✅ CORRECT - properly awaits to get the actual client
+const supabase = await createClient();
+```
+
+## Standard Database Function Pattern
+
+All database functions should follow this pattern:
+
+```typescript
+export async function someDbFunction(params): Promise<DbResponse<ResultType>> {
+  try {
+    // Always await createClient
+    const supabase = await createClient();
+
+    // Perform database operations
+    const { data, error } = await supabase
+      .from('table_name')
+      .select('*')
+      .eq('some_field', someValue);
+
+    // Handle errors consistently
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    // Log success with meaningful information
+    console.log(`[@db:fileName:functionName] Successfully retrieved ${data?.length || 0} records`);
+
+    // Return consistent response format
+    return { success: true, data };
+  } catch (error: any) {
+    // Consistent error handling
+    return {
+      success: false,
+      error: error.message || 'Failed to perform operation',
+    };
+  }
+}
+```
+
+## Logging Best Practices
+
+- Always include proper context in log messages: `[@db:fileName:functionName]`
+- For arrays, log the count rather than the entire object: `${data?.length || 0} items`
+- Do not log sensitive information like passwords or tokens
+- Log both successful and failed operations
+
+## Common Issues to Avoid
+
+1. **Not awaiting createClient()**:
+
+   ```typescript
+   // ❌ BAD:
+   const supabase = createClient();
+   ```
+
+2. **Poor error handling**:
+
+   ```typescript
+   // ❌ BAD - doesn't handle DB errors:
+   const { data } = await supabase.from('table').select('*');
+   return { success: true, data };
+   ```
+
+3. **Inconsistent response formats**:
+
+   ```typescript
+   // ❌ BAD - inconsistent return values:
+   if (error) return error;
+   else return data;
+   ```
+
+4. **Incomplete type information**:
+   ```typescript
+   // ❌ BAD - missing response type:
+   export async function getItems() {
+     // ...
+   }
+   ```
+
+## Row-Level Security Considerations
+
+- Remember that all database access is governed by Row-Level Security (RLS) policies
+- Queries should filter by team_id, not tenant_id directly
+- Always include necessary join conditions when querying across related tables
+
+## Permission System Integration
+
+- Resources (like hosts) belong to teams via the team_id field
+- Teams belong to tenants via the tenant_id field
+- Permissions are managed at the team level
+- User access is determined via team_membership and permission_matrix
+
+## Working with Team IDs
+
+Always query resources by team_id, not tenant_id:
+
+```typescript
+// ❌ INCORRECT - tenant_id isn't on the hosts table
+const { data } = await supabase.from('hosts').select('*').eq('tenant_id', tenantId);
+
+// ✅ CORRECT - use team_id which is the field on the hosts table
+const { data } = await supabase.from('hosts').select('*').eq('team_id', teamId);
+```

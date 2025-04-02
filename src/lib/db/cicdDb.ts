@@ -187,7 +187,7 @@ export async function getCICDJobs(
  */
 export async function getCICDJobById(id: string): Promise<DbResponse<CICDJob>> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     const { data, error } = await supabase.from('cicd_jobs').select('*').eq('id', id).single();
 
@@ -206,7 +206,7 @@ export async function getCICDJobById(id: string): Promise<DbResponse<CICDJob>> {
  */
 export async function getCICDBuilds(jobId: string): Promise<DbResponse<CICDBuild[]>> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     const { data, error } = await supabase
       .from('cicd_builds')
@@ -229,7 +229,7 @@ export async function getCICDBuilds(jobId: string): Promise<DbResponse<CICDBuild
  */
 export async function createCICDBuild(build: Partial<CICDBuild>): Promise<DbResponse<CICDBuild>> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     const { data, error } = await supabase
       .from('cicd_builds')
@@ -261,7 +261,7 @@ export async function updateCICDBuild(
   build: Partial<CICDBuild>,
 ): Promise<DbResponse<CICDBuild>> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     const { data, error } = await supabase
       .from('cicd_builds')

@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { cache } from 'react';
 
+import { getUserActiveTeam } from '@/app/actions/teamAction';
 import { getUser } from '@/app/actions/userAction';
 import hostDb from '@/lib/db/hostDb';
 import hostService from '@/lib/services/hostService';
@@ -18,23 +19,26 @@ export interface HostFilter {
 export const getHosts = cache(
   async (filter?: HostFilter): Promise<{ success: boolean; error?: string; data?: Host[] }> => {
     try {
-      console.info('[@action:hosts:getHosts] Getting all hosts');
       // Get current user
-      const currentUser = await getUser();
+      const user = await getUser();
 
-      if (!currentUser) {
+      if (!user) {
         return {
           success: false,
           error: 'Unauthorized - Please sign in',
         };
       }
 
-      // Get the user's tenant ID
-      const tenantId = currentUser.tenant_id;
-      console.info(`[@action:hosts:getHosts] Getting hosts for tenant: ${tenantId}`);
+      // Get the user's active team ID
+      const activeTeamResult = await getUserActiveTeam(user.id);
+      const teamId = activeTeamResult.id;
+      console.info(`[@action:hosts:getHosts] Getting hosts for team: ${teamId}`);
 
-      // Call hostDb.getHosts with the tenant ID
-      const result = await hostDb.getHosts(tenantId);
+      // Call hostDb.getHosts with the team ID
+      const result = await hostDb.getHosts(teamId);
+      console.info(
+        `[@action:hosts:getHosts] Result success: ${result.success}, hosts found: ${result.data?.length || 0}`,
+      );
 
       if (!result.success || !result.data) {
         return {
@@ -49,7 +53,7 @@ export const getHosts = cache(
         filteredData = filteredData.filter((host) => host.status === filter.status);
       }
 
-      console.info('[@action:hosts:getHosts] Found hosts:', filteredData.length);
+      console.info(`[@action:hosts:getHosts] Found hosts: ${filteredData.length}`);
       return { success: true, data: filteredData };
     } catch (error: any) {
       console.error('[@action:hosts:getHosts] Error fetching hosts:', error);
@@ -69,8 +73,8 @@ export const getHostById = cache(
       }
 
       // Get current user
-      const currentUser = await getUser();
-      if (!currentUser) {
+      const user = await getUser();
+      if (!user) {
         return {
           success: false,
           error: 'Unauthorized - Please sign in',
@@ -100,30 +104,28 @@ export async function createHost(
 ): Promise<{ success: boolean; error?: string; data?: Host }> {
   try {
     // Get current user
-    const currentUser = await getUser();
-    if (!currentUser) {
+    const user = await getUser();
+    if (!user) {
       return {
         success: false,
         error: 'Unauthorized - Please sign in',
       };
     }
 
-    console.info(`[@action:hosts:createHost] Starting host creation for user: ${currentUser.id}`);
+    console.info(`[@action:hosts:createHost] Starting host creation for user: ${user.id}`);
     console.info('[@action:hosts:createHost] raw data:', data);
     // Get the active team ID from user context instead of direct cookie access
-    const { getUserActiveTeam, getUserTeams, createTeam } = await import(
-      '@/app/actions/teamAction'
-    );
+    const { getUserTeams, createTeam } = await import('@/app/actions/teamAction');
 
     // Try to get active team first
     let teamId;
-    const activeTeamResult = await getUserActiveTeam(currentUser.id);
+    const activeTeamResult = await getUserActiveTeam(user.id);
     if (activeTeamResult && activeTeamResult.id) {
       teamId = activeTeamResult.id;
       console.info(`[@action:hosts:createHost] Using active team: ${teamId}`);
     } else {
       // If no active team, try to get any team the user belongs to
-      const teamsResult = await getUserTeams(currentUser.id);
+      const teamsResult = await getUserTeams(user.id);
       if (teamsResult && teamsResult.length > 0) {
         teamId = teamsResult[0].id;
         console.info(`[@action:hosts:createHost] Using first available team: ${teamId}`);
@@ -137,7 +139,7 @@ export async function createHost(
             name: 'Personal Team',
             description: 'Default team created for host management',
           },
-          currentUser,
+          user,
         );
 
         if (createTeamResult && createTeamResult.id) {
@@ -177,8 +179,8 @@ export async function createHost(
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       team_id: teamId,
-      creator_id: currentUser.id,
-      tenant_id: currentUser.tenant_id, // Add tenant ID for proper RLS filtering
+      creator_id: user.id,
+      tenant_id: user.tenant_id, // Add tenant ID for proper RLS filtering
     };
 
     // Handle the case where we might receive data from a form with 'username' instead of 'user'
@@ -270,8 +272,8 @@ export async function updateHost(
     }
 
     // Get current user
-    const currentUser = await getUser();
-    if (!currentUser) {
+    const user = await getUser();
+    if (!user) {
       return {
         success: false,
         error: 'Unauthorized - Please sign in',
@@ -310,8 +312,8 @@ export async function deleteHost(id: string): Promise<{ success: boolean; error?
     }
 
     // Get current user
-    const currentUser = await getUser();
-    if (!currentUser) {
+    const user = await getUser();
+    if (!user) {
       return {
         success: false,
         error: 'Unauthorized - Please sign in',
@@ -426,8 +428,8 @@ export async function testHostConnection(
     }
 
     // Get current user
-    const currentUser = await getUser();
-    if (!currentUser) {
+    const user = await getUser();
+    if (!user) {
       return {
         success: false,
         error: 'Unauthorized - Please sign in',
@@ -484,8 +486,8 @@ export async function testHostConnection(
 
     // Update status to failed on error
     try {
-      const currentUser = await getUser();
-      if (currentUser) {
+      const user = await getUser();
+      if (user) {
         // Update the host status to failed
         await hostDb.updateHostStatus(id, 'failed');
         console.info(
