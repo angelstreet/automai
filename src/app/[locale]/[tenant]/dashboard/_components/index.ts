@@ -16,7 +16,7 @@ export { DashboardRecentSales } from './DashboardRecentSales';
 
 // Client components - backward compatibility
 export { DashboardHeaderClient as DashboardHeader } from './client/DashboardHeaderClient';
-export { DashboardTabsClient as DashboardTabs } from './client/DashboardTabsClient';
+export { DashboardTabsClient as DashboardTabs } from './client/DashboardContent';
 export { DashboardOverviewClient as Overview } from './client/DashboardOverviewClient';
 export { DashboardRecentSalesClient as RecentSales } from './client/DashboardRecentSalesClient';
 export { DashboardMainContentClient } from './client/DashboardMainContentClient';
@@ -25,7 +25,7 @@ export { DashboardTabContentCardClient } from './client/DashboardTabContentCardC
 
 // New client exports with consistent naming
 export { DashboardHeaderClient } from './client/DashboardHeaderClient';
-export { DashboardTabsClient } from './client/DashboardTabsClient';
+export { DashboardTabsClient } from './client/DashboardContent';
 export { DashboardOverviewClient } from './client/DashboardOverviewClient';
 export { DashboardRecentSalesClient } from './client/DashboardRecentSalesClient';
 export { DashboardMainContentClient } from './client/DashboardMainContentClient';

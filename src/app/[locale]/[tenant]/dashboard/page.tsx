@@ -2,7 +2,7 @@ import { getTranslations } from 'next-intl/server';
 
 import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 
-import { DashboardTabsClient } from './_components/client/DashboardTabsClient';
+import { DashboardTabsClient } from './_components/client/DashboardContent';
 
 export default async function DashboardPage() {
   const t = await getTranslations('Dashboard');
