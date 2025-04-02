@@ -4,6 +4,10 @@ import { MoreHorizontal, PlusIcon, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 
+import {
+  TeamMemberDialogProvider,
+  useTeamMemberDialog,
+} from '@/app/providers/TeamMemberDialogProvider';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
 import { Badge } from '@/components/shadcn/badge';
 import { Button } from '@/components/shadcn/button';
@@ -24,7 +28,6 @@ import {
   TableRow,
 } from '@/components/shadcn/table';
 import { usePermission } from '@/hooks';
-import { useTeam } from '@/hooks/useTeam';
 import { useRemoveTeamMember } from '@/hooks/useTeamMemberManagement';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
 import type { ResourceType } from '@/types/context/permissionsContextType';
@@ -33,19 +36,16 @@ import { User } from '@/types/service/userServiceType';
 
 import TeamMembersTableSkeleton from '../TeamMembersTableSkeleton';
 
-import { MemberDialogProvider, useMemberDialog } from './TeamMemberDialogClient';
-
 interface MembersTabProps {
   teamId: string | null;
-  userRole?: string;
   subscriptionTier?: string;
+  userRole?: string | null;
   user?: User | null;
 }
 
 // Inner component that uses the dialog context
 function MembersTabContent({
   teamId,
-  userRole,
   subscriptionTier,
   members,
   onRemoveMember,
@@ -54,7 +54,6 @@ function MembersTabContent({
   setSearchQuery,
 }: {
   teamId: string | null;
-  userRole?: string;
   subscriptionTier?: string;
   members: TeamMemberDetails[];
   onRemoveMember: (memberId: string) => Promise<void>;
@@ -64,11 +63,11 @@ function MembersTabContent({
 }) {
   const t = useTranslations('team');
   const { hasPermission } = usePermission();
-  const { openAddDialog, openEditDialog } = useMemberDialog();
+  const { openAddDialog, openEditDialog } = useTeamMemberDialog();
 
-  // Check permissions for managing members
+  // Check permissions for managing members - Using team_members resource type
   const canManageMembers =
-    hasPermission('repositories' as ResourceType, 'insert') && subscriptionTier !== 'trial';
+    hasPermission('team_members' as ResourceType, 'insert') && subscriptionTier !== 'trial';
 
   // Filter members based on search
   const filteredMembers = members.filter(
@@ -234,14 +233,16 @@ function MembersTabContent({
 }
 
 // Main exported component that provides the dialog context
-export function MembersTab({ teamId, userRole, subscriptionTier, user }: MembersTabProps) {
-  const t = useTranslations('team');
-  const { membersLoading } = useTeam('TeamMembersTabClient');
+export function MembersTab({
+  teamId,
+  subscriptionTier,
+  userRole: _userRole,
+  user: _user,
+}: MembersTabProps) {
   const teamMembersQuery = useTeamMembers(teamId);
   const [members, setMembers] = useState<TeamMemberDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isRemoving, setIsRemoving] = useState(false);
 
   // Use our new React Query hook for removing team members
   const removeTeamMemberMutation = useRemoveTeamMember();
@@ -257,8 +258,15 @@ export function MembersTab({ teamId, userRole, subscriptionTier, user }: Members
       try {
         setIsLoading(true);
         // Use the data from the useTeamMembers hook
-        if (teamMembersQuery.data?.success && teamMembersQuery.data?.data) {
-          setMembers(teamMembersQuery.data.data as TeamMemberDetails[]);
+        const queryData = teamMembersQuery.data;
+        if (
+          queryData &&
+          'success' in queryData &&
+          queryData.success &&
+          'data' in queryData &&
+          queryData.data
+        ) {
+          setMembers(queryData.data as TeamMemberDetails[]);
         } else {
           setMembers([]);
         }
@@ -277,7 +285,6 @@ export function MembersTab({ teamId, userRole, subscriptionTier, user }: Members
     if (!teamId) return;
 
     try {
-      setIsRemoving(true);
       // Use the mutation hook instead of direct action call
       await removeTeamMemberMutation.mutateAsync({ teamId, profileId });
 
@@ -286,13 +293,8 @@ export function MembersTab({ teamId, userRole, subscriptionTier, user }: Members
       setMembers((current) => current.filter((member) => member.profile_id !== profileId));
     } catch (error) {
       console.error('Error removing team member:', error);
-    } finally {
-      setIsRemoving(false);
     }
   };
-
-  // Use either local loading state or members loading state from context
-  const showLoading = isLoading || membersLoading || teamMembersQuery.isLoading;
 
   // Handle members list refresh when dialogs make changes
   const handleMembersChanged = async () => {
@@ -307,17 +309,16 @@ export function MembersTab({ teamId, userRole, subscriptionTier, user }: Members
   };
 
   return (
-    <MemberDialogProvider teamId={teamId} onMembersChanged={handleMembersChanged}>
+    <TeamMemberDialogProvider teamId={teamId} onMembersChanged={handleMembersChanged}>
       <MembersTabContent
         teamId={teamId}
-        userRole={userRole}
         subscriptionTier={subscriptionTier}
         members={members}
         onRemoveMember={handleRemoveMember}
-        isLoading={showLoading}
+        isLoading={isLoading || teamMembersQuery.isLoading}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
       />
-    </MemberDialogProvider>
+    </TeamMemberDialogProvider>
   );
 }

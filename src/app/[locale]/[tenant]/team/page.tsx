@@ -9,7 +9,7 @@ import TeamHeader from './_components/TeamHeader';
 import TeamOverviewSkeleton from './_components/TeamOverviewSkeleton';
 import TeamSkeleton from './_components/TeamSkeleton';
 import TeamActionsClient from './_components/client/TeamActionsClient';
-import TeamTabsClient from './_components/client/TeamTabsClient';
+import TeamTabContainerClient from './_components/client/TeamTabContainerClient';
 
 export default async function TeamPage() {
   const t = await getTranslations('team');
@@ -58,7 +58,7 @@ export default async function TeamPage() {
         {/* TeamHeader gets details from TeamContext */}
         <TeamHeader user={user} />
         <Suspense fallback={<TeamOverviewSkeleton />}>
-          <TeamTabsClient user={user} resourceCounts={resourceCounts} />
+          <TeamTabContainerClient user={user} resourceCounts={resourceCounts} />
         </Suspense>
       </Suspense>
     </FeaturePageContainer>

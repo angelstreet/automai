@@ -94,3 +94,16 @@ export const userSelectors = {
  *    - useFont (still in FontContext.tsx)
  *    - useSearch (still in SearchContext.tsx)
  */
+
+// Export from context files
+export { TeamContext, type TeamContextState } from './TeamContext';
+export { PermissionContext } from './PermissionContext';
+export { UserContext, type UserContextState } from './UserContext';
+export { ThemeContext } from './ThemeContext';
+export { SidebarContext } from './SidebarContext';
+export { SearchContext } from './SearchContext';
+export { FontContext } from './FontContext';
+export {
+  TeamMemberDialogContext,
+  type TeamMemberDialogContextState,
+} from './TeamMemberDialogContext';

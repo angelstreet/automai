@@ -11,3 +11,4 @@ export { TeamProvider } from './TeamProvider';
 export { ThemeProvider } from './ThemeProvider';
 export { UserProvider } from './UserProvider';
 export { ToastProvider } from './ToastProvider';
+export { TeamMemberDialogProvider } from './TeamMemberDialogProvider';

@@ -1,5 +1,5 @@
 ---
-description: 
+description: Schema and rules database and db layer supabase
 globs: 
 alwaysApply: false
 ---

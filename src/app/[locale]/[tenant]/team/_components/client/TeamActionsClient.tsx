@@ -30,9 +30,9 @@ export default function TeamActions() {
     );
   }
 
-  // Check if user has permission to add members
+  // Check if user has permission to add members - Updated to use team_members resource type
   const canAddMembers =
-    hasPermission('repositories' as ResourceType, 'insert') && team.subscription_tier !== 'trial';
+    hasPermission('team_members' as ResourceType, 'insert') && team.subscription_tier !== 'trial';
 
   // Don't show any buttons if user can't add members
   if (!canAddMembers) {
