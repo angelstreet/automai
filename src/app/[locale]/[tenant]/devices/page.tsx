@@ -1,4 +1,5 @@
 'use client';
+import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 
 // Simple component that doesn't need to handle pageMetadata internally
 function DevicesContent() {
@@ -10,13 +11,13 @@ function DevicesContent() {
 }
 
 export default function DevicesPage() {
-  // Using pageMetadata pattern - FeaturePageContainer will automatically extract this
+  // Using direct FeaturePageContainer approach
   return (
-    <DevicesContent 
-      pageMetadata={{
-        title: 'Devices', 
-        description: 'Manage your connected devices'
-      }}
-    />
+    <FeaturePageContainer
+      title="Devices"
+      description="Manage your connected devices"
+    >
+      <DevicesContent />
+    </FeaturePageContainer>
   );
 }

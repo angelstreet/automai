@@ -1,4 +1,5 @@
 import React from 'react';
+
 import { PageHeader } from '@/components/layout/PageHeader';
 
 export interface PageMetadata {
@@ -18,12 +19,12 @@ interface FeaturePageContainerProps {
 
 /**
  * FeaturePageContainer provides consistent layout for feature pages
- * 
+ *
  * It accepts metadata in three ways (in order of precedence):
  * 1. Direct props (title, description, actions)
  * 2. pageMetadata prop object
  * 3. Child component's pageMetadata prop
- * 
+ *
  * This allows for maximum flexibility while keeping the API simple.
  */
 export function FeaturePageContainer({
@@ -34,14 +35,38 @@ export function FeaturePageContainer({
   className = '',
   pageMetadata,
 }: FeaturePageContainerProps) {
-  // Get metadata from props, pageMetadata prop, or child's pageMetadata prop
-  const childMetadata = React.isValidElement(children) && 
-    children.props && children.props.pageMetadata ? 
-    children.props.pageMetadata : null;
-  
+  // Extract metadata from props and children (recursively if needed)
+  const extractChildMetadata = (child: React.ReactNode): PageMetadata | null => {
+    if (!React.isValidElement(child)) return null;
+
+    // Direct pageMetadata prop on the child
+    if (child.props?.pageMetadata) {
+      return child.props.pageMetadata;
+    }
+
+    // Special handling for Suspense and similar wrapping components
+    // This handles the case when a page wraps content in Suspense
+    if (child.props?.children && React.isValidElement(child.props.children)) {
+      return extractChildMetadata(child.props.children);
+    }
+
+    return null;
+  };
+
+  const childMetadata = extractChildMetadata(children);
+
+  // For debugging:
+  // console.log('FeaturePageContainer metadata:', {
+  //   propTitle,
+  //   propDescription,
+  //   pageMetadata,
+  //   childMetadata
+  // });
+
   // Determine which metadata to use based on priority
   const title = propTitle || pageMetadata?.title || childMetadata?.title || '';
-  const description = propDescription || pageMetadata?.description || childMetadata?.description || '';
+  const description =
+    propDescription || pageMetadata?.description || childMetadata?.description || '';
   const actions = propActions || pageMetadata?.actions || childMetadata?.actions || null;
 
   return (

@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
+import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 
 import { getRepositories } from '@/app/actions/repositoriesAction';
 
@@ -12,16 +13,16 @@ export default async function RepositoriesPage() {
   const reposResult = await getRepositories();
   const repositories = reposResult.success && reposResult.data ? reposResult.data : [];
 
-  // Using pageMetadata that will be automatically extracted by FeaturePageContainer
+  // Using direct approach for clarity
   return (
-    <Suspense fallback={<RepositorySkeleton />}>
-      <RepositoryContent 
-        pageMetadata={{
-          title: t('repositories'),
-          description: t('repositories_description'),
-          actions: <RepositoryActionsClient repositoryCount={repositories.length} />
-        }}
-      />
-    </Suspense>
+    <FeaturePageContainer
+      title={t('repositories')}
+      description={t('repositories_description')}
+      actions={<RepositoryActionsClient repositoryCount={repositories.length} />}
+    >
+      <Suspense fallback={<RepositorySkeleton />}>
+        <RepositoryContent />
+      </Suspense>
+    </FeaturePageContainer>
   );
 }
