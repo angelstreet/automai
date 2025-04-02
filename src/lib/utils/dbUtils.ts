@@ -2,12 +2,7 @@
  * Standard response type for database operations
  * This ensures consistent error handling and type safety
  */
-export interface DbResponse<T> {
-  success: boolean;
-  data?: T | null;
-  error?: string;
-  count?: number;
-}
+import { DbResponse } from './commonUtils';
 
 /**
  * Helper function to create a successful database response
@@ -53,14 +48,14 @@ export function handleDbError<T>(error: unknown, context = 'database operation')
  * @returns Error string if validation fails, null if passes
  */
 export function validateRequiredParams(
-  params: Record<string, any>, 
-  requiredParams: string[]
+  params: Record<string, any>,
+  requiredParams: string[],
 ): string | null {
-  const missingParams = requiredParams.filter(param => params[param] === undefined);
-  
+  const missingParams = requiredParams.filter((param) => params[param] === undefined);
+
   if (missingParams.length > 0) {
     return `Missing required parameters: ${missingParams.join(', ')}`;
   }
-  
+
   return null;
 }

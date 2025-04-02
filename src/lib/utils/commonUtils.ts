@@ -3,6 +3,25 @@
  * General utility functions used throughout the application
  */
 
+/**
+ * Standard api service response interface
+ */
+export interface StandardResponse<T> {
+  success: boolean;
+  data?: T | null;
+  error?: string;
+}
+
+/**
+ * Standard db response interface
+ */
+export interface DbResponse<T> {
+  success: boolean;
+  data?: T | null;
+  error?: string;
+  count?: number;
+}
+
 import { ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -71,16 +90,16 @@ export function deepClone<T>(obj: T): T {
  */
 export function deepMerge<T>(target: T, source: Partial<T>): T {
   const output = { ...target };
-  
+
   if (isObject(target) && isObject(source)) {
-    Object.keys(source).forEach(key => {
+    Object.keys(source).forEach((key) => {
       if (isObject(source[key as keyof typeof source])) {
         if (!(key in target)) {
           Object.assign(output, { [key]: source[key as keyof typeof source] });
         } else {
           (output as any)[key] = deepMerge(
             (target as any)[key],
-            source[key as keyof typeof source] as any
+            source[key as keyof typeof source] as any,
           );
         }
       } else {
@@ -88,7 +107,7 @@ export function deepMerge<T>(target: T, source: Partial<T>): T {
       }
     });
   }
-  
+
   return output;
 }
 
@@ -105,14 +124,14 @@ export function isObject(item: any): boolean {
 export function getNestedValue<T>(obj: any, path: string, defaultValue: T): T {
   const keys = path.split('.');
   let result = obj;
-  
+
   for (const key of keys) {
     if (result === undefined || result === null) {
       return defaultValue;
     }
     result = result[key];
   }
-  
+
   return (result as T) ?? defaultValue;
 }
 
@@ -121,16 +140,16 @@ export function getNestedValue<T>(obj: any, path: string, defaultValue: T): T {
  */
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
-  wait: number
+  wait: number,
 ): (...args: Parameters<T>) => void {
   let timeout: NodeJS.Timeout | null = null;
-  
-  return function(...args: Parameters<T>): void {
+
+  return function (...args: Parameters<T>): void {
     const later = () => {
       timeout = null;
       func(...args);
     };
-    
+
     if (timeout) clearTimeout(timeout);
     timeout = setTimeout(later, wait);
   };
@@ -141,11 +160,11 @@ export function debounce<T extends (...args: any[]) => any>(
  */
 export function throttle<T extends (...args: any[]) => any>(
   func: T,
-  limit: number
+  limit: number,
 ): (...args: Parameters<T>) => void {
   let inThrottle = false;
-  
-  return function(...args: Parameters<T>): void {
+
+  return function (...args: Parameters<T>): void {
     if (!inThrottle) {
       func(...args);
       inThrottle = true;
@@ -168,7 +187,7 @@ const commonUtils = {
   isObject,
   getNestedValue,
   debounce,
-  throttle
+  throttle,
 };
 
 export default commonUtils;

@@ -4,14 +4,7 @@
  */
 import { Octokit } from '@octokit/rest';
 
-/**
- * Standard API response interface
- */
-export interface ApiResponse<T> {
-  success: boolean;
-  data?: T | null;
-  error?: string;
-}
+import { ApiResponse } from '@/lib/utils/dbUtils';
 
 /**
  * GitHub API client options
@@ -73,14 +66,14 @@ export interface GitHubFile {
  */
 export class GitHubApiClient {
   private octokit: Octokit;
-  
+
   constructor(options: GitHubApiClientOptions) {
     this.octokit = new Octokit({
       auth: options.accessToken,
       baseUrl: options.baseUrl || 'https://api.github.com',
     });
   }
-  
+
   /**
    * List repositories for the authenticated user
    */
@@ -90,7 +83,7 @@ export class GitHubApiClient {
         sort: 'updated',
         per_page: 100,
       });
-      
+
       return {
         success: true,
         data: data as GitHubRepository[],
@@ -102,7 +95,7 @@ export class GitHubApiClient {
       };
     }
   }
-  
+
   /**
    * Get a repository by owner and name
    */
@@ -112,7 +105,7 @@ export class GitHubApiClient {
         owner,
         repo,
       });
-      
+
       return {
         success: true,
         data: data as GitHubRepository,
@@ -124,7 +117,7 @@ export class GitHubApiClient {
       };
     }
   }
-  
+
   /**
    * List branches for a repository
    */
@@ -135,7 +128,7 @@ export class GitHubApiClient {
         repo,
         per_page: 100,
       });
-      
+
       return {
         success: true,
         data: data as GitHubBranch[],
@@ -147,7 +140,7 @@ export class GitHubApiClient {
       };
     }
   }
-  
+
   /**
    * List contents of a repository path
    */
@@ -155,7 +148,7 @@ export class GitHubApiClient {
     owner: string,
     repo: string,
     path: string = '',
-    branch?: string
+    branch?: string,
   ): Promise<ApiResponse<GitHubFile[]>> {
     try {
       const { data } = await this.octokit.repos.getContent({
@@ -164,9 +157,9 @@ export class GitHubApiClient {
         path,
         ref: branch,
       });
-      
+
       const files = Array.isArray(data) ? data : [data];
-      
+
       return {
         success: true,
         data: files as GitHubFile[],
@@ -178,7 +171,7 @@ export class GitHubApiClient {
       };
     }
   }
-  
+
   /**
    * Get content of a file
    */
@@ -186,7 +179,7 @@ export class GitHubApiClient {
     owner: string,
     repo: string,
     path: string,
-    branch?: string
+    branch?: string,
   ): Promise<ApiResponse<string>> {
     try {
       const { data } = await this.octokit.repos.getContent({
@@ -195,23 +188,23 @@ export class GitHubApiClient {
         path,
         ref: branch,
       });
-      
+
       if (Array.isArray(data)) {
         return {
           success: false,
           error: 'Path is a directory, not a file',
         };
       }
-      
+
       if (!data.content || data.encoding !== 'base64') {
         return {
           success: false,
           error: 'File content not available or not base64 encoded',
         };
       }
-      
+
       const content = Buffer.from(data.content, 'base64').toString('utf-8');
-      
+
       return {
         success: true,
         data: content,
@@ -223,14 +216,14 @@ export class GitHubApiClient {
       };
     }
   }
-  
+
   /**
    * Test connection to the GitHub API
    */
   async testConnection(): Promise<ApiResponse<boolean>> {
     try {
       const { data } = await this.octokit.users.getAuthenticated();
-      
+
       return {
         success: true,
         data: true,

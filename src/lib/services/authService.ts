@@ -2,8 +2,8 @@
  * Authentication Service
  * Handles authentication and user sessions
  */
-import { createClient } from '@/lib/supabase/server';
 import userDb from '@/lib/db/userDb';
+import { createClient } from '@/lib/supabase/server';
 
 // Types
 import { AuthResult } from '@/types/service/sessionServiceType';

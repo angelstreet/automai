@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
-import { DbResponse } from '@/lib/utils/dbUtils';
+import { DbResponse } from '@/lib/utils/commonUtils';
 import { AuthUser, UserTeam } from '@/types/service/userServiceType';
 
 export default {
@@ -7,16 +7,12 @@ export default {
   findUnique,
   getUser,
   getCurrentUser,
-  clearCache,
   updateProfile,
   setSelectedTeam,
   create,
   update,
   deleteUser,
 };
-// Cache for user data
-const CACHE_TTL = 300000;
-const userCache = new Map<string, { user: AuthUser | null; timestamp: number }>();
 
 /**
  * Find multiple users based on options
@@ -190,20 +186,6 @@ export async function getUser(userId: string, cookieStore?: any): Promise<DbResp
  */
 export async function getCurrentUser(cookieStore?: any): Promise<DbResponse<AuthUser>> {
   try {
-    // Check for auth cookie and use cache
-    if (cookieStore) {
-      const authCookie = cookieStore.get('sb-wexkgcszrwxqsthahfyq-auth-token.0');
-      if (!authCookie?.value) return { success: false, error: 'No auth cookie found' };
-
-      const cacheKey = `user_cache_${authCookie.value.slice(0, 32)}`;
-      const cachedEntry = userCache.get(cacheKey);
-      const now = Date.now();
-
-      if (cachedEntry && now - cachedEntry.timestamp < CACHE_TTL) {
-        return { success: true, data: cachedEntry.user };
-      }
-    }
-
     const supabase = await createClient(cookieStore);
 
     // Get the current user
@@ -219,14 +201,6 @@ export async function getCurrentUser(cookieStore?: any): Promise<DbResponse<Auth
 
     const userResult = await getUser(authUser.id, cookieStore);
 
-    if (userResult.success && userResult.data && cookieStore) {
-      const authCookie = cookieStore.get('sb-wexkgcszrwxqsthahfyq-auth-token.0');
-      if (authCookie?.value) {
-        const cacheKey = `user_cache_${authCookie.value.slice(0, 32)}`;
-        userCache.set(cacheKey, { user: userResult.data, timestamp: Date.now() });
-      }
-    }
-
     return userResult;
   } catch (error) {
     console.error('[@db:userDb:getCurrentUser] Error in getCurrentUser:', error);
@@ -235,21 +209,6 @@ export async function getCurrentUser(cookieStore?: any): Promise<DbResponse<Auth
       error: error instanceof Error ? error.message : 'Unknown error getting current user',
     };
   }
-}
-
-/**
- * Clear user cache
- */
-export async function clearCache(): Promise<void> {
-  userCache.clear();
-
-  // Clear client-side cache in case we're in a client context
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem('user-data-cache');
-    localStorage.removeItem('cached_user');
-  }
-
-  return;
 }
 
 /**
@@ -294,9 +253,6 @@ export async function updateProfile(
       }
     }
 
-    // Clear cache to ensure fresh data on next fetch
-    await clearCache();
-
     return {
       success: true,
       data: authData.user,
@@ -336,9 +292,6 @@ export async function setSelectedTeam(
     cookieStore.set(`selected_team_${userId}`, teamId, {
       maxAge: 60 * 60 * 24 * 365, // 1 year
     });
-
-    // Clear cache to ensure fresh data on next fetch
-    await clearCache();
 
     return {
       success: true,

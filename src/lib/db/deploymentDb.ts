@@ -3,19 +3,8 @@
  * Handles database operations for deployments
  */
 import { createClient } from '@/lib/supabase/server';
-
-// Types from deployment component type
+import { DbResponse } from '@/lib/utils/commonUtils';
 import { Deployment, DeploymentStatus } from '@/types/component/deploymentComponentType';
-
-/**
- * Standard database response interface
- */
-export interface DbResponse<T> {
-  success: boolean;
-  data?: T | null;
-  error?: string;
-  count?: number;
-}
 
 /**
  * Get all deployments for a tenant

@@ -65,5 +65,5 @@ export const logUtils = {
         console.error(`[ERROR] ${message}`);
       }
     }
-  }
+  },
 };

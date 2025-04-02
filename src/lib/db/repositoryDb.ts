@@ -1,8 +1,7 @@
 import { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies';
 
 import { createClient } from '@/lib/supabase/server';
-
-import { DbResponse } from '@/lib/db/utils/dbUtils';
+import { DbResponse } from '@/lib/utils/commonUtils';
 
 export type Repository = {
   id: string;

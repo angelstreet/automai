@@ -3,25 +3,14 @@
  * Business logic for repository operations
  */
 import repositoryDb from '@/lib/db/repositoryDb';
+import giteaApi from '@/lib/git/giteaApi';
 import githubApi from '@/lib/git/githubApi';
 import gitlabApi from '@/lib/git/gitlabApi';
-import giteaApi from '@/lib/git/giteaApi';
-import logUtils from '@/lib/utils/logUtils';
-
-// Types
+import { logUtils } from '@/lib/utils/logUtils';
 import { Repository } from '@/types/component/repositoryComponentType';
 
 // Create a logger for repository service
 const logger = logUtils.createModuleLogger('repositoryService');
-
-/**
- * Standard service response interface
- */
-export interface ServiceResponse<T> {
-  success: boolean;
-  data?: T | null;
-  error?: string;
-}
 
 /**
  * Get provider client based on repository type
@@ -30,7 +19,7 @@ function getProviderClient(repository: Repository) {
   if (!repository.credentials?.token) {
     throw new Error('Repository credentials not found');
   }
-  
+
   switch (repository.provider_type) {
     case 'github':
       return githubApi.createGitHubApiClient({
@@ -60,11 +49,11 @@ function getProviderClient(repository: Repository) {
 export async function testRepositoryConnection(
   providerType: string,
   url: string,
-  token: string
+  token: string,
 ): Promise<ServiceResponse<boolean>> {
   try {
     logger.info('Testing repository connection', { providerType, url });
-    
+
     switch (providerType) {
       case 'github': {
         const client = githubApi.createGitHubApiClient({ accessToken: token });
@@ -112,39 +101,39 @@ export async function testRepositoryConnection(
  * List branches for a repository
  */
 export async function listRepositoryBranches(
-  repositoryId: string
+  repositoryId: string,
 ): Promise<ServiceResponse<{ name: string; commit: any }[]>> {
   try {
     logger.info('Listing repository branches', { repositoryId });
-    
+
     // Get the repository from the database
     const repositoryResult = await repositoryDb.getRepositoryById(repositoryId);
-    
+
     if (!repositoryResult.success || !repositoryResult.data) {
       return {
         success: false,
         error: repositoryResult.error || 'Repository not found',
       };
     }
-    
+
     const repository = repositoryResult.data;
-    
+
     // Get the client for the repository provider
     const client = getProviderClient(repository);
-    
+
     // Extract owner and repo from the repository URL
     const { owner, repo } = extractOwnerAndRepo(repository.url, repository.provider_type);
-    
+
     if (!owner || !repo) {
       return {
         success: false,
         error: 'Could not extract owner and repo from repository URL',
       };
     }
-    
+
     // List branches using the appropriate client
     let result;
-    
+
     switch (repository.provider_type) {
       case 'github':
         result = await client.listBranches(owner, repo);
@@ -161,22 +150,23 @@ export async function listRepositoryBranches(
           error: `Unsupported repository provider: ${repository.provider_type}`,
         };
     }
-    
+
     if (!result.success) {
       return result;
     }
-    
+
     // Normalize branch data
-    const branches = result.data?.map(branch => ({
-      name: branch.name,
-      commit: branch.commit,
-    })) || [];
-    
+    const branches =
+      result.data?.map((branch) => ({
+        name: branch.name,
+        commit: branch.commit,
+      })) || [];
+
     logger.info('Repository branches retrieved successfully', {
       repositoryId,
       branchCount: branches.length,
     });
-    
+
     return {
       success: true,
       data: branches,
@@ -195,18 +185,18 @@ export async function listRepositoryBranches(
  */
 function extractOwnerAndRepo(
   url: string,
-  providerType: string
+  providerType: string,
 ): { owner: string | null; repo: string | null } {
   try {
     // Remove .git extension if present
     const cleanUrl = url.replace(/\.git$/, '');
-    
+
     // Parse the URL
     const urlObj = new URL(cleanUrl);
-    
+
     // Extract path parts
     const pathParts = urlObj.pathname.split('/').filter(Boolean);
-    
+
     // Different providers have different URL formats
     switch (providerType) {
       case 'github':
@@ -242,7 +232,7 @@ function extractOwnerAndRepo(
   } catch (error) {
     logger.error('Failed to extract owner and repo from URL', { url, error });
   }
-  
+
   return { owner: null, repo: null };
 }
 
@@ -252,39 +242,39 @@ function extractOwnerAndRepo(
 export async function listRepositoryFiles(
   repositoryId: string,
   path: string = '',
-  branch: string = 'main'
+  branch: string = 'main',
 ): Promise<ServiceResponse<{ name: string; path: string; type: string }[]>> {
   try {
     logger.info('Listing repository files', { repositoryId, path, branch });
-    
+
     // Get the repository from the database
     const repositoryResult = await repositoryDb.getRepositoryById(repositoryId);
-    
+
     if (!repositoryResult.success || !repositoryResult.data) {
       return {
         success: false,
         error: repositoryResult.error || 'Repository not found',
       };
     }
-    
+
     const repository = repositoryResult.data;
-    
+
     // Get the client for the repository provider
     const client = getProviderClient(repository);
-    
+
     // Extract owner and repo from the repository URL
     const { owner, repo } = extractOwnerAndRepo(repository.url, repository.provider_type);
-    
+
     if (!owner || !repo) {
       return {
         success: false,
         error: 'Could not extract owner and repo from repository URL',
       };
     }
-    
+
     // List files using the appropriate client
     let result;
-    
+
     switch (repository.provider_type) {
       case 'github':
         result = await client.listContents(owner, repo, path, branch);
@@ -301,23 +291,24 @@ export async function listRepositoryFiles(
           error: `Unsupported repository provider: ${repository.provider_type}`,
         };
     }
-    
+
     if (!result.success) {
       return result;
     }
-    
+
     // Normalize file data
-    const files = result.data?.map(file => ({
-      name: file.name || file.file_name,
-      path: file.path || file.file_path,
-      type: file.type || (file.type === 'dir' ? 'dir' : 'file'),
-    })) || [];
-    
+    const files =
+      result.data?.map((file) => ({
+        name: file.name || file.file_name,
+        path: file.path || file.file_path,
+        type: file.type || (file.type === 'dir' ? 'dir' : 'file'),
+      })) || [];
+
     logger.info('Repository files retrieved successfully', {
       repositoryId,
       fileCount: files.length,
     });
-    
+
     return {
       success: true,
       data: files,
@@ -337,39 +328,39 @@ export async function listRepositoryFiles(
 export async function getRepositoryFileContent(
   repositoryId: string,
   path: string,
-  branch: string = 'main'
+  branch: string = 'main',
 ): Promise<ServiceResponse<string>> {
   try {
     logger.info('Getting repository file content', { repositoryId, path, branch });
-    
+
     // Get the repository from the database
     const repositoryResult = await repositoryDb.getRepositoryById(repositoryId);
-    
+
     if (!repositoryResult.success || !repositoryResult.data) {
       return {
         success: false,
         error: repositoryResult.error || 'Repository not found',
       };
     }
-    
+
     const repository = repositoryResult.data;
-    
+
     // Get the client for the repository provider
     const client = getProviderClient(repository);
-    
+
     // Extract owner and repo from the repository URL
     const { owner, repo } = extractOwnerAndRepo(repository.url, repository.provider_type);
-    
+
     if (!owner || !repo) {
       return {
         success: false,
         error: 'Could not extract owner and repo from repository URL',
       };
     }
-    
+
     // Get file content using the appropriate client
     let result;
-    
+
     switch (repository.provider_type) {
       case 'github':
         result = await client.getFileContent(owner, repo, path, branch);
@@ -386,9 +377,9 @@ export async function getRepositoryFileContent(
           error: `Unsupported repository provider: ${repository.provider_type}`,
         };
     }
-    
+
     logger.info('Repository file content retrieved successfully', { repositoryId, path });
-    
+
     return result;
   } catch (error: any) {
     logger.error('Failed to get repository file content', { error: error.message });

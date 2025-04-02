@@ -3,22 +3,13 @@
  * Handles database operations for CI/CD providers and jobs
  */
 import { createClient } from '@/lib/supabase/server';
+import { DbResponse } from '@/lib/utils/commonUtils';
 import {
   CICDProvider,
   CICDJob,
   CICDBuild,
   CICDProviderPayload,
 } from '@/types/component/cicdComponentType';
-
-/**
- * Standard database response interface
- */
-export interface DbResponse<T> {
-  success: boolean;
-  data?: T | null;
-  error?: string;
-  count?: number;
-}
 
 /**
  * Get all CI/CD providers for a tenant

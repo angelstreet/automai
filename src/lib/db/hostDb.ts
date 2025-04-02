@@ -3,19 +3,9 @@
  * Handles database operations for hosts
  */
 import { createClient } from '@/lib/supabase/server';
-
+import { DbResponse } from '@/lib/utils/commonUtils';
 // Types from host component type
 import { Host, HostStatus } from '@/types/component/hostComponentType';
-
-/**
- * Standard database response interface
- */
-export interface DbResponse<T> {
-  success: boolean;
-  data?: T | null;
-  error?: string;
-  count?: number;
-}
 
 /**
  * Get all hosts for a team
