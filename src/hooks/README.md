@@ -142,7 +142,7 @@ const { data } = useQuery({
 - `useCICD`: CICD provider management
 - `useDeployment`: Deployment operations
 - `useDeploymentWizard`: Deployment configuration wizard
-- `useRepository`: Repository and git provider management
+- `useRepository`: Repository management with essential functions for fetching, connecting, disconnecting, and testing repositories
 
 ## Real-World Examples
 

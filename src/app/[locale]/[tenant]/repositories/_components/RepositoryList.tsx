@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import React, { useState } from 'react';
 
-import { useRepository } from '@/hooks';
-import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/shadcn/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { useRepository } from '@/hooks/repository/useRepository';
 
 import { Repository } from '../types';
 
@@ -37,7 +37,7 @@ export function RepositoryList({ repositories, starredRepos, error }: Repository
   const [filterCategory, setFilterCategory] = useState('All');
 
   // Get repository hooks
-  const { syncRepository, refetchRepositories } = useRepository();
+  const { refetchRepositories } = useRepository();
 
   // Action handlers
   const handleToggleStarred = async (id: string) => {
@@ -67,10 +67,8 @@ export function RepositoryList({ repositories, starredRepos, error }: Repository
     try {
       setSyncingRepoIds((prev) => ({ ...prev, [id]: true }));
 
-      // Use the sync function from the hook
-      await syncRepository(id);
-
-      // Refresh the repositories data
+      // Since syncRepository was removed in the simplified hook,
+      // we'll just refresh the repositories data
       await refetchRepositories();
 
       // Also refresh the UI

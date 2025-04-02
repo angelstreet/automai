@@ -3,7 +3,6 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 
-import { useRepository } from '@/hooks';
 import { GitHubIcon, GitLabIcon, GiteaIcon } from '@/components/icons';
 import { Alert, AlertDescription } from '@/components/shadcn/alert';
 import { Badge } from '@/components/shadcn/badge';
@@ -19,12 +18,10 @@ import { Input } from '@/components/shadcn/input';
 import { Label } from '@/components/shadcn/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 import { useToast } from '@/components/shadcn/use-toast';
+import { useRepository } from '@/hooks/repository';
+import { EnhancedConnectRepositoryDialogProps } from '@/types/context/repositoryContextType';
 
 import { CONNECT_REPOSITORY_TABS, AUTH_METHODS } from '../constants';
-import {
-  EnhancedConnectRepositoryDialogProps,
-  CreateGitProviderParams,
-} from '@/types/context/repositoryContextType';
 
 export function EnhancedConnectRepositoryDialog({
   open,
@@ -46,7 +43,7 @@ export function EnhancedConnectRepositoryDialog({
   const router = useRouter();
 
   // Use the repository hook
-  const { createGitProvider, testConnection, connectRepository } = useRepository();
+  const { connectRepository, testRepository } = useRepository();
 
   const handleConnect = (provider: string) => {
     setCurrentProvider(provider);
@@ -58,26 +55,13 @@ export function EnhancedConnectRepositoryDialog({
     setIsConnecting(true);
 
     try {
-      const params: CreateGitProviderParams = {
-        name: `${currentProvider} Provider`,
-        provider_type: currentProvider.toLowerCase(),
-        auth_type: AUTH_METHODS.OAUTH,
-      };
-      const result = await createGitProvider(params);
-
-      if (result.success && result.authUrl) {
-        // Store a flag in sessionStorage to refresh on return
-        sessionStorage.setItem('shouldRefreshRepos', 'true');
-
-        // Redirect to the OAuth login page
-        window.location.href = result.authUrl;
-      } else {
-        toast({
-          title: 'Connection Failed',
-          description: result.error || 'Failed to connect to the git provider',
-          variant: 'destructive',
-        });
-      }
+      // Since the createGitProvider was removed in the simplified hook,
+      // we'll just show a toast message about the feature being unavailable
+      toast({
+        title: 'Feature Unavailable',
+        description: 'Git provider OAuth connection has been simplified in this version.',
+        variant: 'destructive',
+      });
     } catch (error: any) {
       console.error('Error during OAuth connection:', error);
       toast({
@@ -96,41 +80,13 @@ export function EnhancedConnectRepositoryDialog({
     setIsConnecting(true);
 
     try {
-      const params: CreateGitProviderParams = {
-        name: `${currentProvider} Provider`,
-        provider_type: currentProvider.toLowerCase(),
-        auth_type: AUTH_METHODS.TOKEN,
-        token: accessToken,
-        server_url: currentProvider === 'gitea' ? serverUrl : undefined,
-      };
-
-      const result = await createGitProvider(params);
-
-      if (result.success) {
-        toast({
-          title: 'Success',
-          description: `${currentProvider} provider connected successfully`,
-        });
-
-        // Refresh the page
-        router.refresh();
-
-        // Close the dialog
-        onOpenChange(false);
-
-        if (onSubmit) {
-          onSubmit({
-            provider: currentProvider,
-            method: AUTH_METHODS.TOKEN,
-          });
-        }
-      } else {
-        toast({
-          title: 'Connection Failed',
-          description: result.error || 'Failed to connect to the git provider',
-          variant: 'destructive',
-        });
-      }
+      // Since the createGitProvider was removed in the simplified hook,
+      // we'll just show a toast message about the feature being unavailable
+      toast({
+        title: 'Feature Unavailable',
+        description: 'Git provider token connection has been simplified in this version.',
+        variant: 'destructive',
+      });
     } catch (error: any) {
       console.error('Error during token connection:', error);
       toast({
@@ -150,7 +106,7 @@ export function EnhancedConnectRepositoryDialog({
 
     try {
       // First verify the URL is valid
-      const verifyResult = await testConnection({ url: quickCloneUrl });
+      const verifyResult = await testRepository({ url: quickCloneUrl });
 
       if (!verifyResult.success) {
         toast({

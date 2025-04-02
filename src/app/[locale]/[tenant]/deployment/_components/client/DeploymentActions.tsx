@@ -4,7 +4,8 @@ import { PlusCircle, RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React, { useState, useEffect } from 'react';
 
-import { useHost, useCICD, useRepository } from '@/hooks';
+import { useHost, useCICD } from '@/hooks';
+import { useRepository } from '@/hooks/repository/useRepository';
 import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent } from '@/components/shadcn/dialog';
 

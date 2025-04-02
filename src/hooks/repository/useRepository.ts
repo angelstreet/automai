@@ -10,7 +10,7 @@ import {
   testGitRepository,
 } from '@/app/actions/repositoriesAction';
 import { useToast } from '@/components/shadcn/use-toast';
-import type { TestRepositoryInput, RepositoryFilter } from '@/types/context/repositoryContextType';
+import type { TestRepositoryInput } from '@/types/context/repositoryContextType';
 
 /**
  * Hook for managing repositories
