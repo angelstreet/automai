@@ -34,7 +34,7 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
     return () => window.removeEventListener(VIEW_MODE_CHANGE, handleViewModeChange);
   }, []);
 
-  const handleTestConnection = async (host: Host): Promise<boolean> => {
+  const handleTestConnection = useCallback(async (host: Host): Promise<boolean> => {
     try {
       console.log(`[ClientHostList] Testing connection for host: ${host.name}`);
       const result = await testHostConnection(host.id);
@@ -57,7 +57,7 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
 
       return false;
     }
-  };
+  }, []);
 
   // Handle refresh all hosts
   const handleRefreshAll = useCallback(async () => {
@@ -110,7 +110,7 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
           if (data.success && data.data) {
             // CRITICAL FIX: Ensure any host with 'pending' status is updated to 'connected'
             // if it was recently created
-            const updatedHosts = data.data.map((host) => {
+            const updatedHosts = data.data.map((host: Host) => {
               // If host is in 'pending' state but was created recently,
               // assume it should be 'connected'
               if (host.status === 'pending') {

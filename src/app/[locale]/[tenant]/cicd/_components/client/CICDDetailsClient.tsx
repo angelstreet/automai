@@ -4,8 +4,6 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import React, { useState, useCallback } from 'react';
 
-import { useCICD } from '@/hooks';
-import { EmptyState } from '@/components/ui/EmptyState';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,7 +16,7 @@ import {
 } from '@/components/shadcn/alert-dialog';
 import { Badge } from '@/components/shadcn/badge';
 import { Button } from '@/components/shadcn/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
+import { Card, CardContent } from '@/components/shadcn/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
 import {
   DropdownMenu,
@@ -35,19 +33,18 @@ import {
   TableRow,
 } from '@/components/shadcn/table';
 import { useToast } from '@/components/shadcn/use-toast';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { useCICD } from '@/hooks';
 
-import type { CICDProviderType } from '../../types';
 import CICDForm from '../CICDForm';
+
+import type { CICDProviderType } from '@/types/service';
 
 interface CICDDetailsClientProps {
   initialProviders: CICDProviderType[];
-  removeTitle?: boolean;
 }
 
-export default function CICDDetailsClient({
-  initialProviders,
-  removeTitle = false,
-}: CICDDetailsClientProps) {
+export default function CICDDetailsClient({ initialProviders }: CICDDetailsClientProps) {
   const [selectedProvider, setSelectedProvider] = useState<CICDProviderType | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
@@ -169,13 +166,6 @@ export default function CICDDetailsClient({
 
   return (
     <Card className="border-0">
-      {!removeTitle && (
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-xl font-bold">
-            {t('providers_title', { fallback: 'CI/CD Providers' })}
-          </CardTitle>
-        </CardHeader>
-      )}
       <CardContent>
         <Table>
           <TableHeader>
