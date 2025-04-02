@@ -3,11 +3,11 @@
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Suspense, useState } from 'react';
 
+import { RoleSwitcher } from '@/components/layout/RoleSwitcher';
 import { ProfileDropDown } from '@/components/profile/ProfileDropDown';
 import { Button } from '@/components/shadcn/button';
 import { Separator } from '@/components/shadcn/separator';
 import { SidebarTrigger } from '@/components/sidebar';
-import { RoleSwitcher } from '@/components/layout/RoleSwitcher';
 import { ThemeToggleStatic } from '@/components/theme/ThemeToggleStatic';
 import { Search } from '@/components/ui/Search';
 import { useSidebar } from '@/hooks';
@@ -48,21 +48,17 @@ export function HeaderClient({
       style={{
         marginLeft: 'var(--sidebar-width-offset, 0)',
         width: 'calc(100% - var(--sidebar-width-offset, 0))',
-        transition: 'margin-left var(--sidebar-transition-duration) var(--sidebar-transition-timing), width var(--sidebar-transition-duration) var(--sidebar-transition-timing)'
+        transition:
+          'margin-left var(--sidebar-transition-duration) var(--sidebar-transition-timing), width var(--sidebar-transition-duration) var(--sidebar-transition-timing)',
       }}
       data-sidebar-header="true"
     >
-      <div className={cn(
-          'flex h-14 items-center border-b relative pl-2', 
-          !headerVisible && 'h-8'
-        )}>
+      <div className={cn('flex h-14 items-center relative pl-2', !headerVisible && 'h-8')}>
         {headerVisible && (
           <>
             {/* Left section */}
             <div className="relative flex items-center h-full">
-              <div
-                className="absolute flex items-center ml-2"
-              >
+              <div className="absolute flex items-center ml-2">
                 <SidebarTrigger />
                 <Separator orientation="vertical" className="h-8 opacity-50 ml-2" />
               </div>
