@@ -631,3 +631,62 @@ export const getTenantResourceCounts = cache(async (tenantId: string) => {
     };
   }
 });
+
+/**
+ * Get resource counts for a specific team
+ */
+export const getTeamResourceCounts = cache(async (teamId: string) => {
+  try {
+    const cookieStore = await cookies();
+    const supabase = await createClient(cookieStore);
+
+    console.log(`[@action:team:getTeamResourceCounts] Getting resource counts for team: ${teamId}`);
+
+    // Get repository count
+    const { count: repositories } = await supabase
+      .from('repositories')
+      .select('id', { count: 'exact', head: true })
+      .eq('team_id', teamId);
+
+    // Get host count
+    const { count: hosts } = await supabase
+      .from('hosts')
+      .select('id', { count: 'exact', head: true })
+      .eq('team_id', teamId);
+
+    // Get deployment count
+    const { count: deployments } = await supabase
+      .from('deployments')
+      .select('id', { count: 'exact', head: true })
+      .eq('team_id', teamId);
+
+    // Get cicd provider count
+    const { count: cicdProviders } = await supabase
+      .from('cicd_providers')
+      .select('id', { count: 'exact', head: true })
+      .eq('team_id', teamId);
+
+    console.log(
+      `[@action:team:getTeamResourceCounts] Successfully got resource counts for team ${teamId}`,
+    );
+    console.log(
+      `[@action:team:getTeamResourceCounts] Counts: repos=${repositories || 0}, hosts=${hosts || 0}, cicd=${cicdProviders || 0}, deployments=${deployments || 0}`,
+    );
+
+    return {
+      success: true,
+      data: {
+        repositories: repositories || 0,
+        hosts: hosts || 0,
+        cicdProviders: cicdProviders || 0,
+        deployments: deployments || 0,
+      },
+    };
+  } catch (error: any) {
+    console.error(`[@action:team:getTeamResourceCounts] Error:`, error);
+    return {
+      success: false,
+      error: error.message || 'Failed to get resource counts',
+    };
+  }
+});

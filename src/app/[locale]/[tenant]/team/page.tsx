@@ -1,7 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
-import { getTeamDetails, getTenantResourceCounts } from '@/app/actions/teamAction';
+import { getTeamDetails, getTeamResourceCounts } from '@/app/actions/teamAction';
 import { getUser } from '@/app/actions/userAction';
 import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 
@@ -20,9 +20,9 @@ export default async function TeamPage() {
   // Get team details including the tenant ID
   const teamDetailsResult = await getTeamDetails();
   const teamDetails = teamDetailsResult.success ? teamDetailsResult.data : null;
-  const tenantId = teamDetails?.team?.tenant_id;
+  const teamId = teamDetails?.team?.id;
 
-  // Fetch resource counts directly if we have a tenant ID
+  // Fetch resource counts directly if we have a team ID
   let resourceCounts = {
     repositories: 0,
     hosts: 0,
@@ -30,8 +30,9 @@ export default async function TeamPage() {
     deployments: 0,
   };
 
-  if (tenantId) {
-    const countsResult = await getTenantResourceCounts(tenantId);
+  if (teamId) {
+    // Use the team-specific function to get resources for this team
+    const countsResult = await getTeamResourceCounts(teamId);
     if (countsResult.success && countsResult.data) {
       resourceCounts = {
         repositories: countsResult.data.repositories || 0,
@@ -39,6 +40,10 @@ export default async function TeamPage() {
         cicd: countsResult.data.cicdProviders || 0,
         deployments: countsResult.data.deployments || 0,
       };
+
+      // Log the actual resource counts for debugging
+      console.log('Server-side team resourceCounts:', resourceCounts);
+      console.log('Raw team countsResult.data:', countsResult.data);
     }
   }
 
