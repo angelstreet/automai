@@ -8,7 +8,6 @@ import * as React from 'react';
 import { signInWithOAuth as signInWithOAuthAction } from '@/app/actions/authAction';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
-import { useUser } from '@/hooks';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -21,46 +20,23 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isAuthenticating, setIsAuthenticating] = React.useState(false);
 
-  // Use the user hook only for user data and loading state
-  const { user, loading, error: authError } = useUser(null, 'LoginPage');
-
   // Check for prefilled credentials from URL
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       const emailParam = urlParams.get('email');
       const passwordParam = urlParams.get('password');
+      const errorParam = urlParams.get('error');
 
       if (emailParam) setEmail(emailParam);
       if (passwordParam) setPassword(passwordParam);
+      if (errorParam) setError(decodeURIComponent(errorParam));
 
       // Clear the URL parameters after getting the values
       if (emailParam || passwordParam) {
         const newUrl = window.location.pathname;
         window.history.replaceState({}, '', newUrl);
       }
-    }
-  }, []);
-
-  // Middleware now handles redirect if user is already logged in
-
-  // Set error from auth hook if present
-  React.useEffect(() => {
-    if (authError) {
-      setError(authError.message);
-      setIsAuthenticating(false);
-    }
-  }, [authError]);
-
-  // Check if we were redirected back to login page after an OAuth attempt
-  React.useEffect(() => {
-    // If we have an error in the URL, it means we were redirected back after a failed OAuth attempt
-    const urlParams = new URLSearchParams(window.location.search);
-    const errorParam = urlParams.get('error');
-
-    if (errorParam) {
-      setError(decodeURIComponent(errorParam));
-      setIsAuthenticating(false);
     }
   }, []);
 
@@ -82,7 +58,7 @@ export default function LoginPage() {
     e.preventDefault();
 
     // Prevent multiple submissions
-    if (isSubmitting || loading || isAuthenticating) {
+    if (isSubmitting || isAuthenticating) {
       return;
     }
 
@@ -139,7 +115,7 @@ export default function LoginPage() {
     }
   };
 
-  // Determine if buttons should be disabled - simplify by removing redundant loading state
+  // Determine if buttons should be disabled
   const isButtonDisabled = isSubmitting || isAuthenticating;
 
   return (
