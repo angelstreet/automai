@@ -16,7 +16,7 @@ export function FeaturePageContainer({
   return (
     <div className="flex-1 mx-auto space-y-2" data-page-content="container">
       {/* Header Section */}
-      <div className="mb-2">
+      <div className="">
         <PageHeader title={title} description={description}>
           {actions}
         </PageHeader>
