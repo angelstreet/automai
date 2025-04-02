@@ -1,4 +1,4 @@
-import { Features, Hero, SiteHeader } from './(marketing)/_components';
+import { Features, Hero, SiteHeader, Footer } from './(marketing)/_components';
 
 export default async function Page() {
   return (
@@ -8,6 +8,7 @@ export default async function Page() {
         <div className="flex flex-col">
           <Hero />
           <Features />
+          <Footer />
         </div>
       </main>
     </div>
