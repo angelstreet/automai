@@ -12,10 +12,10 @@ import {
 } from '@/types/component/cicdComponentType';
 
 /**
- * Get all CI/CD providers for a tenant
+ * Get all CI/CD providers for a team
  */
 export async function getCICDProviders(
-  tenantId: string,
+  teamId: string,
   cookieStore?: any,
 ): Promise<DbResponse<CICDProvider[]>> {
   try {
@@ -24,7 +24,7 @@ export async function getCICDProviders(
     const { data, error } = await supabase
       .from('cicd_providers')
       .select('*')
-      .eq('tenant_id', tenantId)
+      .eq('team_id', teamId)
       .order('created_at', { ascending: false });
 
     if (error) {

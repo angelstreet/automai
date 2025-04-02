@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 import { cache } from 'react';
 
+import { getUserActiveTeam } from '@/app/actions/teamAction';
 import { getUser } from '@/app/actions/userAction';
 import {
   getCICDProviders as dbGetCICDProviders,
@@ -36,11 +37,15 @@ export const getCICDProviders = cache(async (): Promise<ActionResult<CICDProvide
       return { success: true, data: [] }; // Return empty array instead of error
     }
 
-    console.log(`[@action:cicd:getCICDProviders] Fetching providers for tenant: ${user.tenant_id}`);
+    // Get the user's active team ID
+    const activeTeamResult = await getUserActiveTeam(user.id);
+    const teamId = activeTeamResult.id;
+    console.log(`[@action:cicd:getCICDProviders] Fetching providers for team: ${teamId}`);
+
     const cookieStore = await cookies();
 
     try {
-      const result = await dbGetCICDProviders(user.tenant_id, cookieStore);
+      const result = await dbGetCICDProviders(teamId, cookieStore);
 
       if (!result.success) {
         console.error(`[@action:cicd:getCICDProviders] Error from database: ${result.error}`);
