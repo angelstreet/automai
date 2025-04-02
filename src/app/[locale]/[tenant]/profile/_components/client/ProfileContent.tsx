@@ -4,7 +4,6 @@ import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useState, useEffect } from 'react';
 
-import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/shadcn/button';
 import {
   Card,
@@ -97,7 +96,6 @@ export function ProfileContent({
 
   return (
     <div className="container mx-auto py-4 px-4 space-y-6">
-      <PageHeader title={t('title')} description={t('settings')} />
       <div className="space-y-6">
         <div className="grid gap-6">
           {/* Personal Information */}

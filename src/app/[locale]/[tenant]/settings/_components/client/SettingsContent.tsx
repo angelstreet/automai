@@ -2,7 +2,6 @@
 
 import { useTranslations } from 'next-intl';
 
-import { PageHeader } from '@/components/layout/PageHeader';
 import { LanguageSettings } from '@/components/settings/LanguageSettings';
 import {
   Card,
@@ -17,7 +16,6 @@ export function SettingsContent() {
 
   return (
     <div className="container mx-auto py-4 px-4 space-y-6">
-      <PageHeader title={t('title')} description={t('description')} />
       <div className="space-y-6">
         <div className="grid gap-6">
           {/* General Settings */}
