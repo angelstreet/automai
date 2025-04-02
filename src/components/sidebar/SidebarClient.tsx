@@ -35,8 +35,28 @@ const SidebarClient = React.memo(function SidebarClient({
 }: SidebarClientProps) {
   const { open, state } = useSidebar();
 
-  // Simplified role resolution
-  const effectiveRole = user?.role || 'viewer';
+  // Track role changes with local state
+  const [currentRole, setCurrentRole] = React.useState(user?.role || 'viewer');
+
+  // Update local role state when user role changes
+  React.useEffect(() => {
+    if (user?.role) {
+      setCurrentRole(user.role);
+    }
+  }, [user?.role]);
+
+  // Listen for role changes from RoleSwitcher through the custom event
+  React.useEffect(() => {
+    const handleRoleChange = (event: CustomEvent) => {
+      console.log('[SidebarClient] Detected role change:', event.detail.role);
+      setCurrentRole(event.detail.role);
+    };
+
+    window.addEventListener('debug-role-change', handleRoleChange as EventListener);
+    return () => {
+      window.removeEventListener('debug-role-change', handleRoleChange as EventListener);
+    };
+  }, []);
 
   // Extract navigation data from constants
   const navGroups = sidebarNavigationData.groups;
@@ -85,7 +105,7 @@ const SidebarClient = React.memo(function SidebarClient({
         </div>
       </SidebarHeader>
       <SidebarContent className={cn('pt-2', !open && 'pt-4')}>
-        <SidebarNavigation items={items} groupTitles={groupTitles} currentRole={effectiveRole} />
+        <SidebarNavigation items={items} groupTitles={groupTitles} currentRole={currentRole} />
       </SidebarContent>
       <SidebarFooter className="pb-2">
         {user && (
