@@ -29,29 +29,28 @@ export const getHosts = cache(
         };
       }
 
-      // No need to add filter parameters - the RLS policies
-      // are already set up to handle team-based access control
+      // Get the user's tenant ID
+      const tenantId = currentUser.tenant_id;
+      console.info(`[@action:hosts:getHosts] Getting hosts for tenant: ${tenantId}`);
 
-      // Set up query filters
-      const where: Record<string, any> = {};
+      // Call hostDb.getHosts with the tenant ID
+      const result = await hostDb.getHosts(tenantId);
 
-      if (filter?.status) {
-        where.status = filter.status;
-      }
-
-      const data = await hostDb.findMany({
-        where,
-        orderBy: { created_at: 'desc' },
-      });
-
-      if (!data) {
+      if (!result.success || !result.data) {
         return {
           success: false,
-          error: 'Failed to fetch hosts',
+          error: result.error || 'Failed to fetch hosts',
         };
       }
-      console.info('[@action:hosts:getHosts] Found hosts:', data);
-      return { success: true, data };
+
+      // If we have a status filter, apply it after fetching
+      let filteredData = result.data;
+      if (filter?.status) {
+        filteredData = filteredData.filter((host) => host.status === filter.status);
+      }
+
+      console.info('[@action:hosts:getHosts] Found hosts:', filteredData.length);
+      return { success: true, data: filteredData };
     } catch (error: any) {
       console.error('[@action:hosts:getHosts] Error fetching hosts:', error);
       return { success: false, error: error.message || 'Failed to fetch hosts' };
@@ -78,17 +77,14 @@ export const getHostById = cache(
         };
       }
 
-      // No need to filter by team_id - the RLS policies
-      // will handle access control
-      const data = await hostDb.findUnique({
-        where: { id },
-      });
+      // Call the hostDb.getHostById method
+      const result = await hostDb.getHostById(id);
 
-      if (!data) {
-        return { success: false, error: 'Host not found' };
+      if (!result.success || !result.data) {
+        return { success: false, error: result.error || 'Host not found' };
       }
 
-      return { success: true, data };
+      return { success: true, data: result.data };
     } catch (error: any) {
       console.error('[@action:hosts:getHostById] Error fetching host:', error);
       return { success: false, error: error.message || 'Failed to fetch host' };
@@ -122,14 +118,14 @@ export async function createHost(
     // Try to get active team first
     let teamId;
     const activeTeamResult = await getUserActiveTeam(currentUser.id);
-    if (activeTeamResult.success && activeTeamResult.data) {
-      teamId = activeTeamResult.data.id;
+    if (activeTeamResult && activeTeamResult.id) {
+      teamId = activeTeamResult.id;
       console.info(`[@action:hosts:createHost] Using active team: ${teamId}`);
     } else {
       // If no active team, try to get any team the user belongs to
       const teamsResult = await getUserTeams(currentUser.id);
-      if (teamsResult.success && teamsResult.data && teamsResult.data.length > 0) {
-        teamId = teamsResult.data[0].id;
+      if (teamsResult && teamsResult.length > 0) {
+        teamId = teamsResult[0].id;
         console.info(`[@action:hosts:createHost] Using first available team: ${teamId}`);
       } else {
         // No teams found, create a default personal team
@@ -141,16 +137,14 @@ export async function createHost(
             name: 'Personal Team',
             description: 'Default team created for host management',
           },
-          null, // Use null instead of currentUser to let createTeam use its own getUser call
+          currentUser,
         );
 
-        if (createTeamResult.success && createTeamResult.data) {
-          teamId = createTeamResult.data.id;
+        if (createTeamResult && createTeamResult.id) {
+          teamId = createTeamResult.id;
           console.info(`[@action:hosts:createHost] Created default team: ${teamId}`);
         } else {
-          console.error(`[@action:hosts:createHost] Failed to create default team:`, {
-            error: createTeamResult.error,
-          });
+          console.error(`[@action:hosts:createHost] Failed to create default team`);
           return {
             success: false,
             error: 'Failed to create a team for host creation',
@@ -184,6 +178,7 @@ export async function createHost(
       updated_at: new Date().toISOString(),
       team_id: teamId,
       creator_id: currentUser.id,
+      tenant_id: currentUser.tenant_id, // Add tenant ID for proper RLS filtering
     };
 
     // Handle the case where we might receive data from a form with 'username' instead of 'user'
@@ -237,41 +232,25 @@ export async function createHost(
       password: hostData.password ? '***' : undefined,
     });
 
-    // Create a clean hostData object without any extra fields not in the database schema
-    const cleanHostData = {
-      name: hostData.name,
-      description: hostData.description,
-      type: hostData.type,
-      ip: hostData.ip,
-      port: hostData.port,
-      user: hostData.user,
-      password: hostData.password,
-      status: hostData.status === 'connected' ? 'connected' : 'connected',
-      is_windows: hostData.is_windows,
-      created_at: hostData.created_at,
-      updated_at: hostData.updated_at,
-      team_id: hostData.team_id,
-      creator_id: hostData.creator_id,
-    };
+    // Call hostDb.createHost with the hostData
+    const result = await hostDb.createHost(hostData);
 
-    const newHost = await hostDb.create({ data: cleanHostData });
-
-    if (!newHost) {
+    if (!result.success || !result.data) {
       return {
         success: false,
-        error: 'Failed to add host',
+        error: result.error || 'Failed to add host',
       };
     }
 
     // Verify the status of the created host
-    console.info(`[@action:hosts:createHost] New host created with status: ${newHost.status}`);
+    console.info(`[@action:hosts:createHost] New host created with status: ${result.data.status}`);
 
     // Revalidate paths
     revalidatePath('/[locale]/[tenant]/hosts');
     revalidatePath('/[locale]/[tenant]/dashboard');
 
-    console.info(`[@action:hosts:createHost] Successfully created host: ${newHost.id}`);
-    return { success: true, data: newHost };
+    console.info(`[@action:hosts:createHost] Successfully created host: ${result.data.id}`);
+    return { success: true, data: result.data };
   } catch (error: any) {
     console.error(`[@action:hosts:createHost] Error creating host:`, { error });
     return { success: false, error: error.message || 'Failed to add host' };
@@ -299,15 +278,13 @@ export async function updateHost(
       };
     }
 
-    const data = await hostDb.update({
-      where: { id },
-      data: updates,
-    });
+    // Call hostDb.updateHost with id and updates
+    const result = await hostDb.updateHost(id, updates);
 
-    if (!data) {
+    if (!result.success || !result.data) {
       return {
         success: false,
-        error: 'Host not found or update failed',
+        error: result.error || 'Host not found or update failed',
       };
     }
 
@@ -316,7 +293,7 @@ export async function updateHost(
     revalidatePath(`/[locale]/[tenant]/hosts/${id}`);
     revalidatePath('/[locale]/[tenant]/dashboard');
 
-    return { success: true, data };
+    return { success: true, data: result.data };
   } catch (error: any) {
     console.error('[@action:hosts:updateHost] Error updating host:', error);
     return { success: false, error: error.message || 'Failed to update host' };
@@ -347,9 +324,12 @@ export async function deleteHost(id: string): Promise<{ success: boolean; error?
       return { success: false, error: 'Host not found' };
     }
 
-    await hostDb.delete({
-      where: { id },
-    });
+    // Call hostDb.deleteHost with id
+    const result = await hostDb.deleteHost(id);
+
+    if (!result.success) {
+      return { success: false, error: result.error || 'Failed to delete host' };
+    }
 
     // Revalidate paths
     revalidatePath('/[locale]/[tenant]/hosts');
@@ -387,23 +367,40 @@ async function testConnectionCore(data: {
       hasPassword: !!data.password,
     });
 
+    // Convert data to the format expected by hostService.testHostConnection
+    const hostData: Partial<Host> = {
+      type: data.type as any, // Cast to expected type
+      ip: data.ip,
+      port: data.port,
+      user: data.username,
+      password: data.password,
+    };
+
     // Call the service function that handles the actual testing logic
-    const result = await hostService.testHostConnection(data);
+    const result = await hostService.testHostConnection(hostData);
+
+    // Create response in the format expected by the caller
+    const response = {
+      success: result.success,
+      error: result.error,
+      message: result.data?.message,
+      is_windows: false, // Default to false
+    };
 
     // Log concise result summary
     if (result.success) {
-      console.info(
-        `[@action:hosts:testConnectionCore] Connection successful to ${data.ip}, Windows detected: ${!!result.is_windows}`,
-      );
+      // If the result was successful, we can infer OS type in a real implementation
+      // For now just log that the connection was successful
+      console.info(`[@action:hosts:testConnectionCore] Connection successful to ${data.ip}`);
     } else {
       // Extract error message in a concise form
-      const errorMessage = result.error || result.message || 'Unknown error';
+      const errorMessage = result.error || 'Unknown error';
       console.error(`[@action:hosts:testConnectionCore] Connection failed to ${data.ip}:`, {
         error: errorMessage,
       });
     }
 
-    return result;
+    return response;
   } catch (error: any) {
     console.error(`[@action:hosts:testConnectionCore] Error testing connection to ${data.ip}:`, {
       error: error.message || 'Unknown error',
@@ -452,13 +449,7 @@ export async function testHostConnection(
     );
 
     // First update the host to testing state
-    await hostDb.update({
-      where: { id },
-      data: {
-        status: 'testing',
-        updated_at: new Date().toISOString(),
-      },
-    });
+    await hostDb.updateHostStatus(id, 'testing');
     console.info(`[@action:hosts:testHostConnection] Updated host status to 'testing'`);
 
     // Use the core testing function
@@ -472,13 +463,7 @@ export async function testHostConnection(
     });
 
     // Update the host status based on the test result
-    await hostDb.update({
-      where: { id },
-      data: {
-        status: result.success ? 'connected' : 'failed',
-        updated_at: new Date().toISOString(),
-      },
-    });
+    await hostDb.updateHostStatus(id, result.success ? 'connected' : 'failed');
     console.info(
       `[@action:hosts:testHostConnection] Updated host status to '${result.success ? 'connected' : 'failed'}'`,
     );
@@ -502,13 +487,7 @@ export async function testHostConnection(
       const currentUser = await getUser();
       if (currentUser) {
         // Update the host status to failed
-        await hostDb.update({
-          where: { id },
-          data: {
-            status: 'failed',
-            updated_at: new Date().toISOString(),
-          },
-        });
+        await hostDb.updateHostStatus(id, 'failed');
         console.info(
           `[@action:hosts:testHostConnection] Updated host status to 'failed' after error`,
         );

@@ -36,9 +36,59 @@ This directory contains all server actions for the application. Server actions a
    ```
 
 3. **Error Handling**
+
    - All actions MUST implement proper try/catch blocks
    - Log errors with standardized format: `[@action:module:function]`
    - Return typed error responses
+
+4. **Mandatory Use of Library Layers**
+   - NEVER access database directly from actions
+   - ALWAYS use appropriate library layer:
+     - Database operations: Use the DB layer (`src/lib/db/*`)
+     - Business logic: Use the service layer (`src/lib/services/*`)
+     - Git operations: Use the Git API layer (`src/lib/git/*`)
+
+## Layered Architecture
+
+1. **Base Library Layers** (`/src/lib/*`)
+
+   - **Database Layer** (`/src/lib/db/*`)
+
+     - Direct database operations
+     - CRUD operations for each entity
+     - NO business logic, only data access
+     - Example: `hostDb.getHosts()`, `teamDb.createTeam()`
+
+   - **Service Layer** (`/src/lib/services/*`)
+
+     - Business logic and operations
+     - Handles complex operations that might use multiple DB calls
+     - Example: `hostService.testHostConnection()`, `deploymentService.deploy()`
+
+   - **Git API Layer** (`/src/lib/git/*`)
+     - Git provider-specific API implementations
+     - Handles GitHub, GitLab, Gitea operations
+     - Example: `githubApi.getRepositories()`, `gitlabApi.createWebhook()`
+
+2. **Server Actions Layer** (`/app/actions/*`)
+
+   - Mandatory caching for all READ operations
+   - Error handling and logging
+   - Calls the appropriate library layers
+   - NEVER accesses database directly
+   - Handles authentication and permissions
+   - Example: Using DB layer - `const result = await hostDb.getHosts(tenantId);`
+
+3. **React Query Layer** (`/hooks/*`)
+
+   - Client-side caching
+   - Uses cached server actions
+   - Manages loading and error states
+
+4. **Provider Layer** (`/app/providers/*`)
+   - Pure data containers
+   - No business logic
+   - Uses React Query hooks
 
 ## Action Structure
 
@@ -48,11 +98,27 @@ This directory contains all server actions for the application. Server actions a
 export const myReadAction = cache(async (param: ParamType): Promise<ResultType> => {
   try {
     console.log(`[@action:module:myReadAction] Starting with param: ${param}`);
-    const cookieStore = await cookies();
 
-    // Implementation
+    // Get user for authentication
+    const currentUser = await getUser();
+    if (!currentUser) {
+      return {
+        success: false,
+        error: 'Unauthorized - Please sign in',
+      };
+    }
 
-    return result;
+    // Call the appropriate db layer
+    const result = await moduleDb.getData(param);
+
+    if (!result.success || !result.data) {
+      return {
+        success: false,
+        error: result.error || 'Failed to fetch data',
+      };
+    }
+
+    return { success: true, data: result.data };
   } catch (error) {
     console.error(`[@action:module:myReadAction] Error:`, error);
     return { success: false, error: error.message || 'Operation failed' };
@@ -66,46 +132,36 @@ export const myReadAction = cache(async (param: ParamType): Promise<ResultType> 
 export async function updateAction(param: ParamType): Promise<ResponseType> {
   try {
     console.log(`[@action:module:updateAction] Starting update`);
-    const cookieStore = await cookies();
 
-    // Implementation
+    // Get user for authentication
+    const currentUser = await getUser();
+    if (!currentUser) {
+      return {
+        success: false,
+        error: 'Unauthorized - Please sign in',
+      };
+    }
+
+    // Call the appropriate db layer
+    const result = await moduleDb.updateData(param);
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error || 'Update failed',
+      };
+    }
 
     // Revalidate affected paths
     revalidatePath('/affected/path');
 
-    return { success: true };
+    return { success: true, data: result.data };
   } catch (error) {
     console.error(`[@action:module:updateAction] Error:`, error);
     return { success: false, error: error.message || 'Update failed' };
   }
 }
 ```
-
-## Layered Architecture
-
-1. **Database Layer** (`/lib/db/*`)
-
-   - No caching
-   - Direct database operations
-   - Accepts cookieStore parameter
-
-2. **Server Actions Layer** (`/app/actions/*`)
-
-   - Mandatory caching for all READ operations
-   - Error handling
-   - Data validation
-   - Cookie management
-
-3. **React Query Layer** (`/hooks/*`)
-
-   - Client-side caching
-   - Uses cached server actions
-   - Manages loading and error states
-
-4. **Provider Layer** (`/app/providers/*`)
-   - Pure data containers
-   - No business logic
-   - Uses React Query hooks
 
 ## Current Action Modules
 
@@ -166,7 +222,9 @@ export const getProtectedData = cache(async () => {
   if (!user) {
     return { success: false, error: 'Unauthorized' };
   }
-  // Fetch data for authenticated user
+  // Call appropriate DB layer to fetch data
+  const result = await dataDb.getProtectedData(user.id);
+  return result;
 });
 ```
 
@@ -174,38 +232,90 @@ export const getProtectedData = cache(async () => {
 
 ```typescript
 export async function updateData(data: DataType) {
-  // Implementation
+  // Call appropriate DB layer
+  const result = await dataDb.updateData(data);
+  // Revalidate paths
   revalidatePath('/affected/path');
+  return result;
 }
 ```
 
 ## Real-World Examples
 
-### Proper Caching Implementation
+### Proper Implementation with DB Layer
 
 ```typescript
-// From sessionAction.ts
-export const getCurrentUser = cache(async (): Promise<AuthUser | null> => {
-  try {
-    const cookieStore = await cookies();
-    const user = await userDb.getCurrentUser(cookieStore);
-    return user;
-  } catch (error) {
-    console.error('[@action:session:getCurrentUser] Error:', error);
-    return null;
-  }
-});
-
 // From hostsAction.ts
 export const getHosts = cache(
   async (filter?: HostFilter): Promise<{ success: boolean; error?: string; data?: Host[] }> => {
     try {
-      // Implementation
+      // Get current user
+      const currentUser = await getUser();
+      if (!currentUser) {
+        return { success: false, error: 'Unauthorized - Please sign in' };
+      }
+
+      // Get the user's tenant ID
+      const tenantId = currentUser.tenant_id;
+
+      // Call hostDb.getHosts with the tenant ID - using the DB layer
+      const result = await hostDb.getHosts(tenantId);
+
+      if (!result.success || !result.data) {
+        return { success: false, error: result.error || 'Failed to fetch hosts' };
+      }
+
+      // Additional filtering in the action if needed
+      let filteredData = result.data;
+      if (filter?.status) {
+        filteredData = filteredData.filter((host) => host.status === filter.status);
+      }
+
+      return { success: true, data: filteredData };
     } catch (error: any) {
-      // Error handling
+      console.error('[@action:hosts:getHosts] Error fetching hosts:', error);
+      return { success: false, error: error.message || 'Failed to fetch hosts' };
     }
   },
 );
+```
+
+### Using Service Layer for Complex Operations
+
+```typescript
+// From hostsAction.ts - testing a connection
+export async function testHostConnection(id: string) {
+  try {
+    // Get user for authentication
+    const currentUser = await getUser();
+    if (!currentUser) {
+      return { success: false, error: 'Unauthorized - Please sign in' };
+    }
+
+    // Get the host from DB layer
+    const hostResult = await hostDb.getHostById(id);
+    if (!hostResult.success || !hostResult.data) {
+      return { success: false, error: 'Host not found' };
+    }
+
+    // Update host status using DB layer
+    await hostDb.updateHostStatus(id, 'testing');
+
+    // Use service layer for complex business logic
+    const result = await hostService.testHostConnection(hostResult.data);
+
+    // Update host status based on test result
+    await hostDb.updateHostStatus(id, result.success ? 'connected' : 'failed');
+
+    // Revalidate paths
+    revalidatePath('/[locale]/[tenant]/hosts');
+
+    return result;
+  } catch (error) {
+    console.error('[@action:hosts:testHostConnection] Error:', error);
+    return { success: false, error: error.message };
+  }
+}
 ```
 
 ## Best Practices
@@ -281,7 +391,7 @@ export const getData = cache(async () => {
 });
 
 // GOOD
-// Business logic in hooks
+// Business logic in hooks or service layer
 export const getData = cache(async () => {
   return rawData;
 });
@@ -301,6 +411,22 @@ export async function updateData(data) {
   // Update implementation
   revalidatePath('/path');
 }
+```
+
+❌ **DON'T** access the database directly from actions
+
+```typescript
+// BAD
+export const getData = cache(async () => {
+  const { data } = await supabase.from('table').select('*');
+  return data;
+});
+
+// GOOD
+export const getData = cache(async () => {
+  const result = await tableDb.getData();
+  return result;
+});
 ```
 
 ## Testing
