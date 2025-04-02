@@ -70,7 +70,7 @@ export function FeaturePageContainer({
   const actions = propActions || pageMetadata?.actions || childMetadata?.actions || null;
 
   return (
-    <div className={`flex-1 mx-auto flex flex-col ${className}`} data-page-content="container">
+    <div className={`flex-1 flex flex-col h-full ${className}`} data-page-content="container">
       {/* Header Section - Only render if title or description is provided */}
       {(title || description || actions) && (
         <div className="mb-4">
@@ -81,7 +81,7 @@ export function FeaturePageContainer({
       )}
 
       {/* Content Container - Let the parent container handle scrolling */}
-      <div className="flex-1">{children}</div>
+      <div className="flex-1 overflow-visible">{children}</div>
     </div>
   );
 }

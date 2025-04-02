@@ -91,8 +91,11 @@ export default function TenantLayoutClient({
                     Height calculated based on header height CSS variable
                   */}
                   <main
-                    className="flex-1 px-6 py-4 w-full max-w-full border border-gray-30 rounded-md overflow-auto"
-                    style={{ height: 'calc(100vh - var(--header-height) - 1rem)' }}
+                    className="flex-1 px-6 py-4 w-full max-w-full border border-gray-30 rounded-md overflow-auto mr-4"
+                    style={{ 
+                      height: 'calc(100vh - var(--header-height) - 1rem)',
+                      marginBottom: '1rem' // Add bottom margin to align with sidebar
+                    }}
                   >
                     {/* 
                       Automatically wrap content with FeaturePageContainer
