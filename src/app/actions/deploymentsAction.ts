@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 import { cache } from 'react';
 
+import { getUserActiveTeam } from '@/app/actions/teamAction';
 import { getUser } from '@/app/actions/userAction';
 import {
   getDeployments as dbGetDeployments,
@@ -93,16 +94,21 @@ export const getDeployments = cache(
         return [];
       }
 
-      console.log(
-        '[@action:deployments:getDeployments] Fetching deployments for tenant:',
-        user.tenant_id,
-      );
+      // Get the user's active team ID
+      const activeTeamResult = await getUserActiveTeam(user.id);
+      if (!activeTeamResult || !activeTeamResult.id) {
+        console.error('[@action:deployments:getDeployments] No active team found for user');
+        return [];
+      }
+
+      const teamId = activeTeamResult.id;
+      console.log(`[@action:deployments:getDeployments] Fetching deployments for team: ${teamId}`);
 
       // Get cookie store once for all operations
       const cookieStore = await cookies();
 
       // Fetch deployments from the database
-      const result = await dbGetDeployments(user.tenant_id, cookieStore);
+      const result = await dbGetDeployments(teamId, cookieStore);
 
       if (!result.success || !result.data) {
         console.error(

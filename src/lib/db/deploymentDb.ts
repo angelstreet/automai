@@ -7,10 +7,10 @@ import { DbResponse } from '@/lib/utils/commonUtils';
 import { Deployment, DeploymentStatus } from '@/types/component/deploymentComponentType';
 
 /**
- * Get all deployments for a tenant
+ * Get all deployments for a team
  */
 export async function getDeployments(
-  tenantId: string,
+  teamId: string,
   cookieStore?: any,
 ): Promise<DbResponse<Deployment[]>> {
   try {
@@ -19,7 +19,7 @@ export async function getDeployments(
     const { data, error } = await supabase
       .from('deployments')
       .select('*')
-      .eq('tenant_id', tenantId)
+      .eq('team_id', teamId)
       .order('created_at', { ascending: false });
 
     if (error) {

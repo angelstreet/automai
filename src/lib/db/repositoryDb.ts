@@ -228,7 +228,7 @@ export async function deleteRepository(
  * Create a repository from a URL
  */
 export async function createRepositoryFromUrl(
-  data: { url: string; is_private?: boolean; description?: string },
+  data: { url: string; is_private?: boolean; description?: string; team_id?: string },
   userId: string,
   cookieStore?: ReadonlyRequestCookies,
 ): Promise<DbResponse<any>> {
@@ -249,6 +249,8 @@ export async function createRepositoryFromUrl(
       description: data.description || null,
       owner: owner,
       profile_id: userId,
+      team_id: data.team_id,
+      creator_id: userId,
       provider_type: 'git',
       default_branch: 'main',
       created_at: new Date().toISOString(),
