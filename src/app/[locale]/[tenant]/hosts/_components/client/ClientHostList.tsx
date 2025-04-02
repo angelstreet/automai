@@ -3,10 +3,14 @@
 import { Server, PlusCircle } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 
-import { testHostConnection, deleteHost as deleteHostAction } from '@/app/actions/hostsAction';
+import {
+  testHostConnection,
+  deleteHost as deleteHostAction,
+  getHosts as getHostsAction,
+} from '@/app/actions/hostsAction';
 import { Button } from '@/components/shadcn/button';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { Host } from '@/types/component/hostComponentType';
+import { Host, HostStatus } from '@/types/component/hostComponentType';
 
 import { HostGrid } from '../HostGrid';
 import { HostTable } from '../HostTable';
@@ -103,48 +107,44 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
         );
         setIsRefreshing(true);
 
-        // Fetch the latest hosts from the server
-        const response = await fetch('/api/hosts');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.data) {
-            // CRITICAL FIX: Ensure any host with 'pending' status is updated to 'connected'
-            // if it was recently created
-            const updatedHosts = data.data.map((host: Host) => {
-              // If host is in 'pending' state but was created recently,
-              // assume it should be 'connected'
-              if (host.status === 'pending') {
-                const createTime = new Date(host.created_at).getTime();
-                const now = new Date().getTime();
-                const isRecentlyCreated = now - createTime < 1000 * 60 * 5; // Within 5 minutes
+        // Use the server action directly instead of fetch API
+        const hostsResponse = await getHostsAction();
+        if (hostsResponse.success && hostsResponse.data) {
+          // CRITICAL FIX: Ensure any host with 'pending' status is updated to 'connected'
+          // if it was recently created
+          const updatedHosts = hostsResponse.data.map((host: Host) => {
+            // If host is in 'pending' state but was created recently,
+            // assume it should be 'connected'
+            if (host.status === 'pending') {
+              const createTime = new Date(host.created_at).getTime();
+              const now = new Date().getTime();
+              const isRecentlyCreated = now - createTime < 1000 * 60 * 5; // Within 5 minutes
 
-                if (isRecentlyCreated) {
-                  console.log(
-                    `[ClientHostList] Setting recently created host ${host.name} status from 'pending' to 'connected'`,
-                  );
-                  return { ...host, status: 'connected' };
-                }
+              if (isRecentlyCreated) {
+                console.log(
+                  `[ClientHostList] Setting recently created host ${host.name} status from 'pending' to 'connected'`,
+                );
+                return { ...host, status: 'connected' as HostStatus };
               }
-              return host;
-            });
-
-            setHosts(updatedHosts);
-            console.log('[ClientHostList] Hosts refreshed from server:', updatedHosts.length);
-
-            // Only test connections if explicitly requested
-            if (shouldTestConnections) {
-              console.log('[ClientHostList] Testing all host connections');
-              handleRefreshAll();
-            } else {
-              console.log('[ClientHostList] Skipping connection testing');
-              setIsRefreshing(false);
-              window.dispatchEvent(new CustomEvent('refresh-hosts-complete'));
             }
+            return host;
+          });
+
+          setHosts(updatedHosts as Host[]);
+          console.log('[ClientHostList] Hosts refreshed from server:', updatedHosts.length);
+
+          // Only test connections if explicitly requested
+          if (shouldTestConnections) {
+            console.log('[ClientHostList] Testing all host connections');
+            handleRefreshAll();
           } else {
+            console.log('[ClientHostList] Skipping connection testing');
             setIsRefreshing(false);
+            window.dispatchEvent(new CustomEvent('refresh-hosts-complete'));
           }
         } else {
           setIsRefreshing(false);
+          console.error('[ClientHostList] Error fetching hosts:', hostsResponse.error);
         }
       } catch (error) {
         console.error('[ClientHostList] Error refreshing hosts from server:', error);
