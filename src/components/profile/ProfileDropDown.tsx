@@ -15,6 +15,8 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
+import { useSidebar } from '@/hooks';
+import { cn } from '@/lib/utils';
 import { Team } from '@/types/context/teamContextType';
 import { User as UserType } from '@/types/service/userServiceType';
 
@@ -33,6 +35,10 @@ export function ProfileDropDown({
   const params = useParams();
   const locale = params.locale as string;
   const tenant = (params.tenant as string) || user?.tenant_name || 'trial';
+  
+  // Add sidebar state detection (only affects compact mode)
+  const { state } = useSidebar();
+  const isSidebarCollapsed = state === 'collapsed';
 
   // Get user's initials for avatar fallback
   const getInitials = (name: string) => {
@@ -55,41 +61,38 @@ export function ProfileDropDown({
 
   if (!user) return null;
 
-  // Add console log for visibility tracking
-  React.useEffect(() => {
-    console.log(
-      '[@component:ProfileDropDown:mount] Component mounted in ' + (compact ? 'sidebar' : 'header'),
-    );
-  }, [compact]);
-
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className={
-            compact
-              ? 'relative flex items-center justify-between w-full rounded-md p-2 hover:bg-sidebar-hover'
-              : 'relative h-10 w-10 rounded-full'
-          }
+          className={cn(
+            compact 
+              ? "relative flex items-center justify-between rounded-md p-2 hover:bg-sidebar-accent/50" 
+              : "relative h-10 w-10 rounded-full",
+            compact && isSidebarCollapsed && "justify-center w-full px-0"
+          )}
+          data-sidebar-profile="true"
         >
-          {compact ? (
+          {compact && !isSidebarCollapsed ? (
+            // Expanded sidebar - show full profile
             <div className="flex items-center gap-3">
-              <Avatar className="h-12 w-12">
+              <Avatar className="h-8 w-8">
                 <AvatarImage src={user.avatar_url || undefined} alt={user.name || 'User'} />
                 <AvatarFallback>
                   {user?.name ? getInitials(user.name) : <User className="h-4 w-4" />}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex flex-col text-left">
-                <span className="text-xs font-medium">{user.name}</span>
-                <span className="text-[11px] text-muted-foreground">
+              <div className="flex flex-col text-left overflow-hidden">
+                <span className="text-xs font-medium truncate max-w-[100px]">{user.name}</span>
+                <span className="text-[10px] text-muted-foreground">
                   Role: {user.role || 'viewer'}
                 </span>
               </div>
             </div>
           ) : (
-            <Avatar className="h-10 w-10">
+            // Collapsed sidebar or header - show avatar only
+            <Avatar className={cn(compact && isSidebarCollapsed ? "h-8 w-8" : "h-10 w-10")}>
               <AvatarImage src={user.avatar_url || undefined} alt={user.name || 'User'} />
               <AvatarFallback>
                 {user?.name ? getInitials(user.name) : <User className="h-4 w-4" />}
