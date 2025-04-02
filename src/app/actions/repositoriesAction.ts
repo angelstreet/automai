@@ -118,8 +118,6 @@ export async function connectRepository(
 ): Promise<{ success: boolean; error?: string; data?: Repository }> {
   try {
     console.log('[@action:repositories:connectRepository] Starting...', {
-      name: data.name,
-      providerType: data.providerType,
       url: data.url,
     });
 

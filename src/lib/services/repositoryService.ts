@@ -6,11 +6,8 @@ import repositoryDb from '@/lib/db/repositoryDb';
 import giteaApi from '@/lib/git/giteaApi';
 import githubApi from '@/lib/git/githubApi';
 import gitlabApi from '@/lib/git/gitlabApi';
-import { logUtils } from '@/lib/utils/logUtils';
+import { StandardResponse } from '@/lib/utils/commonUtils';
 import { Repository } from '@/types/component/repositoryComponentType';
-
-// Create a logger for repository service
-const logger = logUtils.createModuleLogger('repositoryService');
 
 /**
  * Get provider client based on repository type
@@ -50,9 +47,9 @@ export async function testRepositoryConnection(
   providerType: string,
   url: string,
   token: string,
-): Promise<ServiceResponse<boolean>> {
+): Promise<StandardResponse<boolean>> {
   try {
-    logger.info('Testing repository connection', { providerType, url });
+    console.info('Testing repository connection', { providerType, url });
 
     switch (providerType) {
       case 'github': {
@@ -89,7 +86,7 @@ export async function testRepositoryConnection(
         };
     }
   } catch (error: any) {
-    logger.error('Repository connection test failed', { error: error.message });
+    console.error('Repository connection test failed', { error: error.message });
     return {
       success: false,
       error: error.message || 'Connection test failed',
@@ -102,9 +99,9 @@ export async function testRepositoryConnection(
  */
 export async function listRepositoryBranches(
   repositoryId: string,
-): Promise<ServiceResponse<{ name: string; commit: any }[]>> {
+): Promise<StandardResponse<{ name: string; commit: any }[]>> {
   try {
-    logger.info('Listing repository branches', { repositoryId });
+    console.info('Listing repository branches', { repositoryId });
 
     // Get the repository from the database
     const repositoryResult = await repositoryDb.getRepositoryById(repositoryId);
@@ -162,7 +159,7 @@ export async function listRepositoryBranches(
         commit: branch.commit,
       })) || [];
 
-    logger.info('Repository branches retrieved successfully', {
+    console.info('Repository branches retrieved successfully', {
       repositoryId,
       branchCount: branches.length,
     });
@@ -172,7 +169,7 @@ export async function listRepositoryBranches(
       data: branches,
     };
   } catch (error: any) {
-    logger.error('Failed to list repository branches', { error: error.message });
+    console.error('Failed to list repository branches', { error: error.message });
     return {
       success: false,
       error: error.message || 'Failed to list repository branches',
@@ -230,7 +227,7 @@ function extractOwnerAndRepo(
         break;
     }
   } catch (error) {
-    logger.error('Failed to extract owner and repo from URL', { url, error });
+    console.error('Failed to extract owner and repo from URL', { url, error });
   }
 
   return { owner: null, repo: null };
@@ -243,9 +240,9 @@ export async function listRepositoryFiles(
   repositoryId: string,
   path: string = '',
   branch: string = 'main',
-): Promise<ServiceResponse<{ name: string; path: string; type: string }[]>> {
+): Promise<StandardResponse<{ name: string; path: string; type: string }[]>> {
   try {
-    logger.info('Listing repository files', { repositoryId, path, branch });
+    console.info('Listing repository files', { repositoryId, path, branch });
 
     // Get the repository from the database
     const repositoryResult = await repositoryDb.getRepositoryById(repositoryId);
@@ -304,7 +301,7 @@ export async function listRepositoryFiles(
         type: file.type || (file.type === 'dir' ? 'dir' : 'file'),
       })) || [];
 
-    logger.info('Repository files retrieved successfully', {
+    console.info('Repository files retrieved successfully', {
       repositoryId,
       fileCount: files.length,
     });
@@ -314,7 +311,7 @@ export async function listRepositoryFiles(
       data: files,
     };
   } catch (error: any) {
-    logger.error('Failed to list repository files', { error: error.message });
+    console.error('Failed to list repository files', { error: error.message });
     return {
       success: false,
       error: error.message || 'Failed to list repository files',
@@ -329,9 +326,9 @@ export async function getRepositoryFileContent(
   repositoryId: string,
   path: string,
   branch: string = 'main',
-): Promise<ServiceResponse<string>> {
+): Promise<StandardResponse<string>> {
   try {
-    logger.info('Getting repository file content', { repositoryId, path, branch });
+    console.info('Getting repository file content', { repositoryId, path, branch });
 
     // Get the repository from the database
     const repositoryResult = await repositoryDb.getRepositoryById(repositoryId);
@@ -378,11 +375,11 @@ export async function getRepositoryFileContent(
         };
     }
 
-    logger.info('Repository file content retrieved successfully', { repositoryId, path });
+    console.info('Repository file content retrieved successfully', { repositoryId, path });
 
     return result;
   } catch (error: any) {
-    logger.error('Failed to get repository file content', { error: error.message });
+    console.error('Failed to get repository file content', { error: error.message });
     return {
       success: false,
       error: error.message || 'Failed to get repository file content',

@@ -354,7 +354,9 @@
     "connect_repository": "Connect Repository",
     "error_loading": "Error loading repositories",
     "unauthorized": "Please sign in to view repositories",
-    "try_refreshing": "Try refreshing the page or check your connection"
+    "try_refreshing": "Try refreshing the page or check your connection",
+    "viewOnProvider": "View on Provider",
+    "never": "Never"
   },
   "Settings": {
     "title": "Settings",

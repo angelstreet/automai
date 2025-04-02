@@ -5,13 +5,15 @@ import { useTranslations } from 'next-intl';
 import React, { useState } from 'react';
 
 import { Button } from '@/components/shadcn/button';
-import {  ConnectRepositoryValues  } from '@/types/context/repositoryContextType';
+import { useToast } from '@/components/shadcn/use-toast';
+import { ConnectRepositoryValues } from '@/types/context/repositoryContextType';
 
 import { EnhancedConnectRepositoryDialog } from '../EnhancedConnectRepositoryDialog';
 
 export function RepositoryActions() {
   const t = useTranslations('repositories');
   const [connectDialogOpen, setConnectDialogOpen] = useState<boolean>(false);
+  const { toast } = useToast();
 
   // Handle repository connection
   const handleConnectRepository = async (values: ConnectRepositoryValues): Promise<void> => {
@@ -24,8 +26,16 @@ export function RepositoryActions() {
       });
 
       if (!connectResponse.ok) {
-        const errorData = await connectResponse.json();
-        throw new Error(errorData.error || 'Failed to connect repository');
+        let errorMessage = 'Failed to connect repository';
+        try {
+          const errorData = await connectResponse.json();
+          if (errorData && typeof errorData.error === 'string') {
+            errorMessage = errorData.error;
+          }
+        } catch (parseError) {
+          console.error('Error parsing error response:', parseError);
+        }
+        throw new Error(errorMessage);
       }
 
       // Close dialog
@@ -36,6 +46,12 @@ export function RepositoryActions() {
     } catch (error: unknown) {
       console.error('Error connecting repository:', error);
       // Show error message
+      toast({
+        title: 'Repository Connection Failed',
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
+        variant: 'destructive',
+      });
+
       window.dispatchEvent(
         new CustomEvent('repository-connection-error', {
           detail: { message: error instanceof Error ? error.message : 'Unknown error' },

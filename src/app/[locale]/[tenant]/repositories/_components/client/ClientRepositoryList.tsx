@@ -1,11 +1,10 @@
 'use client';
 
-import { ChevronLeft, ChevronRight, GitBranch, PlusCircle, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, GitBranch, PlusCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React, { useState } from 'react';
 
 import { Button } from '@/components/shadcn/button';
-import { Input } from '@/components/shadcn/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useRepository } from '@/hooks/repository/useRepository';
@@ -89,16 +88,6 @@ export function ClientRepositoryList() {
 
         <div className="invisible">
           <div className="w-[300px]" />
-        </div>
-
-        <div className="relative w-[300px]">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder={t('searchRepositories')}
-            className="pl-8"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
         </div>
       </div>
 

@@ -318,7 +318,9 @@
     "cancelAction": "Annuler",
     "deleteSuccess": "Dépôt supprimé avec succès",
     "deleteFailed": "Échec de la suppression du dépôt",
-    "connectFailed": "Échec de la connexion au dépôt"
+    "connectFailed": "Échec de la connexion au dépôt",
+    "viewOnProvider": "Voir sur le fournisseur",
+    "never": "Jamais"
   },
   "Settings": {
     "title": "Paramètres",

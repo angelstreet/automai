@@ -45,10 +45,6 @@ export function useRepository() {
     mutationFn: (data: any) => connectRepositoryAction(data),
     onSuccess: (response) => {
       if (response.success) {
-        toast({
-          title: 'Success',
-          description: 'Repository connected successfully',
-        });
         queryClient.invalidateQueries({ queryKey: ['repositories'] });
       } else {
         toast({

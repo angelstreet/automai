@@ -5,11 +5,12 @@ import {
   CICDProvider,
   CICDProviderConfig,
   CICDPipelineConfig,
-  CICDResponse
+  CICDResponse,
 } from '@/types/service/cicdServiceTypes';
-import { ServiceResponse } from './teamService';
-import { DbResponse } from '../utils/dbUtils';
+
 import cicdDb from '../db/cicdDb';
+
+import { ServiceResponse } from './teamService';
 
 /**
  * GitHub Actions CI/CD Provider Implementation
@@ -506,12 +507,12 @@ export class GitHubProvider implements CICDProvider {
   async createJob(
     jobName: string,
     pipelineConfig: CICDPipelineConfig,
-    folderPath?: string
+    folderPath?: string,
   ): Promise<CICDResponse<string>> {
     // Implementation would depend on GitHub's API for creating workflow files
     return {
       success: false,
-      error: 'Creating GitHub workflows is not currently supported through the API'
+      error: 'Creating GitHub workflows is not currently supported through the API',
     };
   }
 
@@ -522,7 +523,7 @@ export class GitHubProvider implements CICDProvider {
     // Implementation would depend on GitHub's API for deleting workflow files
     return {
       success: false,
-      error: 'Deleting GitHub workflows is not currently supported through the API'
+      error: 'Deleting GitHub workflows is not currently supported through the API',
     };
   }
 }
@@ -593,7 +594,7 @@ export class JenkinsProvider implements CICDProvider {
     // Basic implementation placeholder
     return {
       success: false,
-      error: 'Jenkins integration not fully implemented'
+      error: 'Jenkins integration not fully implemented',
     };
   }
 
@@ -601,15 +602,18 @@ export class JenkinsProvider implements CICDProvider {
     // Basic implementation placeholder
     return {
       success: false,
-      error: 'Jenkins integration not fully implemented'
+      error: 'Jenkins integration not fully implemented',
     };
   }
 
-  async triggerJob(jobId: string, parameters?: Record<string, any>): Promise<CICDResponse<CICDBuild>> {
+  async triggerJob(
+    jobId: string,
+    parameters?: Record<string, any>,
+  ): Promise<CICDResponse<CICDBuild>> {
     // Basic implementation placeholder
     return {
       success: false,
-      error: 'Jenkins integration not fully implemented'
+      error: 'Jenkins integration not fully implemented',
     };
   }
 
@@ -617,7 +621,7 @@ export class JenkinsProvider implements CICDProvider {
     // Basic implementation placeholder
     return {
       success: false,
-      error: 'Jenkins integration not fully implemented'
+      error: 'Jenkins integration not fully implemented',
     };
   }
 
@@ -625,19 +629,19 @@ export class JenkinsProvider implements CICDProvider {
     // Basic implementation placeholder
     return {
       success: false,
-      error: 'Jenkins integration not fully implemented'
+      error: 'Jenkins integration not fully implemented',
     };
   }
 
   async createJob(
     jobName: string,
     pipelineConfig: CICDPipelineConfig,
-    folderPath?: string
+    folderPath?: string,
   ): Promise<CICDResponse<string>> {
     // Basic implementation placeholder
     return {
       success: false,
-      error: 'Jenkins integration not fully implemented'
+      error: 'Jenkins integration not fully implemented',
     };
   }
 
@@ -645,7 +649,7 @@ export class JenkinsProvider implements CICDProvider {
     // Basic implementation placeholder
     return {
       success: false,
-      error: 'Jenkins integration not fully implemented'
+      error: 'Jenkins integration not fully implemented',
     };
   }
 }
@@ -694,20 +698,23 @@ export const cicdService = {
    */
   async getAllProviders(tenantId: string, cookieStore?: any): Promise<ServiceResponse<any[]>> {
     try {
-      const result = await cicdDb.getCICDProviders({
-        where: { tenant_id: tenantId }
-      }, cookieStore);
-      
+      const result = await cicdDb.getCICDProviders(
+        {
+          where: { tenant_id: tenantId },
+        },
+        cookieStore,
+      );
+
       return {
         success: result.success,
         data: result.data,
-        error: result.error
+        error: result.error,
       };
     } catch (error) {
       console.error('[@service:cicdService:getAllProviders] Error:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error fetching CICD providers'
+        error: error instanceof Error ? error.message : 'Unknown error fetching CICD providers',
       };
     }
   },
@@ -717,20 +724,23 @@ export const cicdService = {
    */
   async getProviderById(id: string, cookieStore?: any): Promise<ServiceResponse<any>> {
     try {
-      const result = await cicdDb.getCICDProvider({
-        where: { id }
-      }, cookieStore);
-      
+      const result = await cicdDb.getCICDProvider(
+        {
+          where: { id },
+        },
+        cookieStore,
+      );
+
       return {
         success: result.success,
         data: result.data,
-        error: result.error
+        error: result.error,
       };
     } catch (error) {
       console.error('[@service:cicdService:getProviderById] Error:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error fetching CICD provider'
+        error: error instanceof Error ? error.message : 'Unknown error fetching CICD provider',
       };
     }
   },
@@ -738,25 +748,32 @@ export const cicdService = {
   /**
    * Create a new CICD provider
    */
-  async createProvider(providerData: any, userId: string, cookieStore?: any): Promise<ServiceResponse<any>> {
+  async createProvider(
+    providerData: any,
+    userId: string,
+    cookieStore?: any,
+  ): Promise<ServiceResponse<any>> {
     try {
-      const result = await cicdDb.createCICDProvider({
-        data: {
-          ...providerData,
-          user_id: userId
-        }
-      }, cookieStore);
-      
+      const result = await cicdDb.createCICDProvider(
+        {
+          data: {
+            ...providerData,
+            user_id: userId,
+          },
+        },
+        cookieStore,
+      );
+
       return {
         success: result.success,
         data: result.data,
-        error: result.error
+        error: result.error,
       };
     } catch (error) {
       console.error('[@service:cicdService:createProvider] Error:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error creating CICD provider'
+        error: error instanceof Error ? error.message : 'Unknown error creating CICD provider',
       };
     }
   },
@@ -764,23 +781,31 @@ export const cicdService = {
   /**
    * Update a CICD provider
    */
-  async updateProvider(id: string, updates: any, userId: string, cookieStore?: any): Promise<ServiceResponse<any>> {
+  async updateProvider(
+    id: string,
+    updates: any,
+    userId: string,
+    cookieStore?: any,
+  ): Promise<ServiceResponse<any>> {
     try {
-      const result = await cicdDb.updateCICDProvider({
-        where: { id },
-        data: updates
-      }, cookieStore);
-      
+      const result = await cicdDb.updateCICDProvider(
+        {
+          where: { id },
+          data: updates,
+        },
+        cookieStore,
+      );
+
       return {
         success: result.success,
         data: result.data,
-        error: result.error
+        error: result.error,
       };
     } catch (error) {
       console.error('[@service:cicdService:updateProvider] Error:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error updating CICD provider'
+        error: error instanceof Error ? error.message : 'Unknown error updating CICD provider',
       };
     }
   },
@@ -788,22 +813,29 @@ export const cicdService = {
   /**
    * Delete a CICD provider
    */
-  async deleteProvider(id: string, userId: string, cookieStore?: any): Promise<ServiceResponse<null>> {
+  async deleteProvider(
+    id: string,
+    userId: string,
+    cookieStore?: any,
+  ): Promise<ServiceResponse<null>> {
     try {
-      const result = await cicdDb.deleteCICDProvider({
-        where: { id }
-      }, cookieStore);
-      
+      const result = await cicdDb.deleteCICDProvider(
+        {
+          where: { id },
+        },
+        cookieStore,
+      );
+
       return {
         success: result.success,
         data: null,
-        error: result.error
+        error: result.error,
       };
     } catch (error) {
       console.error('[@service:cicdService:deleteProvider] Error:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error deleting CICD provider'
+        error: error instanceof Error ? error.message : 'Unknown error deleting CICD provider',
       };
     }
   },
@@ -818,13 +850,13 @@ export const cicdService = {
       return {
         success: result.success,
         data: result.data,
-        error: result.error
+        error: result.error,
       };
     } catch (error) {
       console.error('[@service:cicdService:testConnection] Error:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error testing connection'
+        error: error instanceof Error ? error.message : 'Unknown error testing connection',
       };
     }
   },
@@ -832,34 +864,40 @@ export const cicdService = {
   /**
    * Get available jobs from a provider
    */
-  async getAvailableJobs(providerId: string, cookieStore?: any): Promise<ServiceResponse<CICDJob[]>> {
+  async getAvailableJobs(
+    providerId: string,
+    cookieStore?: any,
+  ): Promise<ServiceResponse<CICDJob[]>> {
     try {
       // First get the provider data from the database
-      const providerResult = await cicdDb.getCICDProvider({
-        where: { id: providerId }
-      }, cookieStore);
+      const providerResult = await cicdDb.getCICDProvider(
+        {
+          where: { id: providerId },
+        },
+        cookieStore,
+      );
       if (!providerResult.success || !providerResult.data) {
         return {
           success: false,
-          error: providerResult.error || 'Failed to get CICD provider'
+          error: providerResult.error || 'Failed to get CICD provider',
         };
       }
 
       // Create a provider instance
       const provider = CICDProviderFactory.createProvider(providerResult.data);
-      
+
       // Get available jobs
       const jobsResult = await provider.getAvailableJobs();
       return {
         success: jobsResult.success,
         data: jobsResult.data,
-        error: jobsResult.error
+        error: jobsResult.error,
       };
     } catch (error) {
       console.error('[@service:cicdService:getAvailableJobs] Error:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error getting available jobs'
+        error: error instanceof Error ? error.message : 'Unknown error getting available jobs',
       };
     }
   },
@@ -867,34 +905,41 @@ export const cicdService = {
   /**
    * Get job details
    */
-  async getJobDetails(providerId: string, jobId: string, cookieStore?: any): Promise<ServiceResponse<CICDJob>> {
+  async getJobDetails(
+    providerId: string,
+    jobId: string,
+    cookieStore?: any,
+  ): Promise<ServiceResponse<CICDJob>> {
     try {
       // First get the provider data from the database
-      const providerResult = await cicdDb.getCICDProvider({
-        where: { id: providerId }
-      }, cookieStore);
+      const providerResult = await cicdDb.getCICDProvider(
+        {
+          where: { id: providerId },
+        },
+        cookieStore,
+      );
       if (!providerResult.success || !providerResult.data) {
         return {
           success: false,
-          error: providerResult.error || 'Failed to get CICD provider'
+          error: providerResult.error || 'Failed to get CICD provider',
         };
       }
 
       // Create a provider instance
       const provider = CICDProviderFactory.createProvider(providerResult.data);
-      
+
       // Get job details
       const jobResult = await provider.getJobDetails(jobId);
       return {
         success: jobResult.success,
         data: jobResult.data,
-        error: jobResult.error
+        error: jobResult.error,
       };
     } catch (error) {
       console.error('[@service:cicdService:getJobDetails] Error:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error getting job details'
+        error: error instanceof Error ? error.message : 'Unknown error getting job details',
       };
     }
   },
@@ -903,41 +948,44 @@ export const cicdService = {
    * Trigger a job
    */
   async triggerJob(
-    providerId: string, 
-    jobId: string, 
+    providerId: string,
+    jobId: string,
     parameters?: Record<string, any>,
-    cookieStore?: any
+    cookieStore?: any,
   ): Promise<ServiceResponse<CICDBuild>> {
     try {
       // First get the provider data from the database
-      const providerResult = await cicdDb.getCICDProvider({
-        where: { id: providerId }
-      }, cookieStore);
+      const providerResult = await cicdDb.getCICDProvider(
+        {
+          where: { id: providerId },
+        },
+        cookieStore,
+      );
       if (!providerResult.success || !providerResult.data) {
         return {
           success: false,
-          error: providerResult.error || 'Failed to get CICD provider'
+          error: providerResult.error || 'Failed to get CICD provider',
         };
       }
 
       // Create a provider instance
       const provider = CICDProviderFactory.createProvider(providerResult.data);
-      
+
       // Trigger the job
       const buildResult = await provider.triggerJob(jobId, parameters);
       return {
         success: buildResult.success,
         data: buildResult.data,
-        error: buildResult.error
+        error: buildResult.error,
       };
     } catch (error) {
       console.error('[@service:cicdService:triggerJob] Error:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error triggering job'
+        error: error instanceof Error ? error.message : 'Unknown error triggering job',
       };
     }
-  }
+  },
 };
 
 /**
@@ -949,19 +997,22 @@ export const cicdService = {
 export async function getCICDProvider(
   providerId: string,
   tenantId: string,
-  cookieStore?: any
+  cookieStore?: any,
 ): Promise<ServiceResponse<CICDProvider>> {
   try {
     // Get the provider from the database
-    const providerResult = await cicdDb.getCICDProvider({
-      where: { id: providerId, tenant_id: tenantId }
-    }, cookieStore);
+    const providerResult = await cicdDb.getCICDProvider(
+      {
+        where: { id: providerId, tenant_id: tenantId },
+      },
+      cookieStore,
+    );
 
     if (!providerResult.success || !providerResult.data) {
       console.error('[@service:getCICDProvider] Failed to get provider:', providerResult.error);
       return {
         success: false,
-        error: providerResult.error || 'Provider not found'
+        error: providerResult.error || 'Provider not found',
       };
     }
 
@@ -970,20 +1021,20 @@ export async function getCICDProvider(
       const provider = CICDProviderFactory.createProvider(providerResult.data);
       return {
         success: true,
-        data: provider
+        data: provider,
       };
     } catch (error) {
       console.error('[@service:getCICDProvider] Error creating provider instance:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to initialize provider'
+        error: error instanceof Error ? error.message : 'Failed to initialize provider',
       };
     }
   } catch (error) {
     console.error('[@service:getCICDProvider] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error getting CICD provider'
+      error: error instanceof Error ? error.message : 'Unknown error getting CICD provider',
     };
   }
 }
@@ -998,5 +1049,5 @@ export type {
   CICDProvider,
   CICDProviderConfig,
   CICDPipelineConfig,
-  CICDResponse
+  CICDResponse,
 };
