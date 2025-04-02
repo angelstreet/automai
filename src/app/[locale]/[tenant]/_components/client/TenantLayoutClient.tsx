@@ -65,9 +65,7 @@ export default function TenantLayoutClient({
                   <Suspense fallback={<HeaderSkeleton />}>
                     <HeaderClient user={user} activeTeam={teamDetails} />
                   </Suspense>
-                  <main className="flex-1 px-4 py-2 w-full max-w-full border border-gray-30 rounded-md">
-                    {children}
-                  </main>
+                  <main className="px-4 border border-gray-30 rounded-md">{children}</main>
                 </div>
               </div>
             </SidebarProvider>

@@ -291,7 +291,22 @@
     width: calc(100% - var(--sidebar-width-offset) - var(--sidebar-spacing) * 2);
   }
   
-  /* We don't need additional header styles - the inline styles handle transitions */
+  /* Header styling to match sidebar transitions */
+  [data-sidebar-header="true"] {
+    transition: margin-left var(--sidebar-transition-duration) var(--sidebar-transition-timing),
+                width var(--sidebar-transition-duration) var(--sidebar-transition-timing);
+    margin-left: var(--sidebar-width-offset);
+    width: calc(100% - var(--sidebar-width-offset));
+  }
+  
+  /* Ensure sidebar trigger button is positioned at extreme left */
+  .sidebar-trigger-container {
+    position: absolute;
+    left: 0;
+    display: flex;
+    align-items: center;
+    padding-left: 0.5rem;
+  }
   
   /* Custom scrollbar styling */
   ::-webkit-scrollbar {

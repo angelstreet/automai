@@ -45,12 +45,6 @@ export function HeaderClient({
         fixed ? 'fixed top-0 z-50' : '',
         className,
       )}
-      style={{
-        marginLeft: 'var(--sidebar-width-offset, 0)',
-        width: 'calc(100% - var(--sidebar-width-offset, 0))',
-        transition:
-          'margin-left var(--sidebar-transition-duration) var(--sidebar-transition-timing), width var(--sidebar-transition-duration) var(--sidebar-transition-timing)',
-      }}
       data-sidebar-header="true"
     >
       <div className={cn('flex h-14 items-center relative pl-2', !headerVisible && 'h-8')}>
@@ -58,7 +52,7 @@ export function HeaderClient({
           <>
             {/* Left section */}
             <div className="relative flex items-center h-full">
-              <div className="absolute flex items-center ml-2">
+              <div className="sidebar-trigger-container">
                 <SidebarTrigger />
                 <Separator orientation="vertical" className="h-8 opacity-50 ml-2" />
               </div>
