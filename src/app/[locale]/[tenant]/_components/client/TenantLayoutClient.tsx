@@ -70,13 +70,13 @@ export default function TenantLayoutClient({
                   <Suspense fallback={<HeaderSkeleton />}>
                     <HeaderClient user={user} activeTeam={teamDetails} />
                   </Suspense>
-                  
+
                   {/* 
                     Main content area - contains the actual page content
                     Height calculated based on header height CSS variable
                   */}
-                  <main 
-                    className="flex-1 px-4 py-2 w-full max-w-full border border-gray-30 rounded-md overflow-auto"
+                  <main
+                    className="flex-1 px-6 py-4 w-full max-w-full border border-gray-30 rounded-md overflow-auto"
                     style={{ height: 'calc(100vh - var(--header-height) - 1rem)' }}
                   >
                     {children}
