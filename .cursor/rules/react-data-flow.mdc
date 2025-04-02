@@ -24,7 +24,7 @@ export default async function Layout({ children }) {
   // FETCH DATA SERVER-SIDE
   const user = await getUser();
   const teamResponse = await getTeamDetails();
-  const permissions = await getUserPermissions(user?.id, teamResponse?.data?.team?.id);
+  const permissions = await getPermissions();
 
   // Extract & transform data as needed
   const teamDetails = teamResponse.success ? teamResponse.data.team : null;
@@ -41,3 +41,100 @@ export default async function Layout({ children }) {
   );
 }
 ```
+
+### 2. Client Bridge Component
+
+```typescript
+// In ClientComponent.tsx ('use client')
+export default function ClientComponent({
+  children, user, teamDetails, permissions
+}) {
+  return (
+    <QueryClientProvider>
+      {/* Initialize providers with server data */}
+      <UserProvider user={user} initialLoading={false}>
+        <TeamProvider activeTeam={teamDetails} initialLoading={false}>
+          <PermissionProvider initialPermissions={permissions}>
+            {/* Layout structure */}
+            {children}
+          </PermissionProvider>
+        </TeamProvider>
+      </UserProvider>
+    </QueryClientProvider>
+  );
+}
+```
+
+### 3. Page Components
+
+```typescript
+// In any component that needs data
+export function TeamComponent() {
+  // USE HOOKS - include component name for debugging
+  const { user } = useUser('TeamComponent');
+  const { activeTeam, resourceCounts } = useTeam('TeamComponent');
+  const { hasPermission } = usePermission('TeamComponent');
+
+  // Component logic here using data from hooks
+}
+```
+
+## When to Use Different Patterns
+
+| Pattern | When to Use |
+|---------|-------------|
+| **Server Fetching** | Initial page load data, SEO-critical content, data needed by multiple components |
+| **Client Fetching** | User-triggered actions, polling for updates, pagination |
+| **Providers** | Cross-cutting concerns, global state, data needed by many components |
+| **Local State** | Component-specific state, form inputs, UI state |
+
+## Example: Team Page Implementation
+
+```typescript
+// 1. Server Component (team/page.tsx)
+export default async function TeamPage() {
+  const user = await getUser();
+  const teamData = await getTeamDetails();
+  
+  return (
+    <TeamContent 
+      user={user}
+      teamData={teamData.success ? teamData.data : null}
+    />
+  );
+}
+
+// 2. Client Component (TeamContent.tsx)
+'use client';
+function TeamContent({ user, teamData }) {
+  // Initialize providers or use existing ones
+  return (
+    <div>
+      <TeamHeader />
+      <TeamTabs />
+    </div>
+  );
+}
+
+// 3. Consumer Component (TeamHeader.tsx)
+function TeamHeader() {
+  const { user } = useUser('TeamHeader');
+  const { activeTeam } = useTeam('TeamHeader');
+  
+  return <h1>{activeTeam?.name}</h1>;
+}
+```
+
+## Provider Implementation Guidelines
+
+- Add `initialLoading` prop to all providers that might receive server-fetched data
+- Set proper initial state based on passed data
+- Implement proper data refreshing in hooks when needed
+- Ensure providers handle both SSR and CSR scenarios
+
+## Troubleshooting Common Issues
+
+1. **Hydration Errors**: Make sure server and client render the same initial UI
+2. **Missing Data**: Check if data passes through all providers correctly
+3. **Multiple Fetches**: Look for redundant data fetching in providers and hooks
+4. **Type Mismatches**: Use type assertions (`as any`) only when necessary for compatibility 
