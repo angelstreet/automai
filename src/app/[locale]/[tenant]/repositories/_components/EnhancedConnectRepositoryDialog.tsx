@@ -43,7 +43,7 @@ export function EnhancedConnectRepositoryDialog({
   const router = useRouter();
 
   // Use the repository hook
-  const { connectRepository, testRepository } = useRepository();
+  const { connectRepository, validateRepositoryUrl } = useRepository();
 
   const handleConnect = (provider: string) => {
     setCurrentProvider(provider);
@@ -106,14 +106,10 @@ export function EnhancedConnectRepositoryDialog({
 
     try {
       // First validate the URL
-      const verifyResult = await testRepository({ url: quickCloneUrl });
+      const verifyResult = await validateRepositoryUrl({ url: quickCloneUrl });
 
       if (!verifyResult || !verifyResult.success) {
-        toast({
-          title: 'Invalid Repository URL',
-          description: verifyResult?.error || 'The repository URL appears to be invalid',
-          variant: 'destructive',
-        });
+        // Validation already shows toast, no need to show another one
         setIsCloning(false);
         return;
       }
@@ -128,12 +124,6 @@ export function EnhancedConnectRepositoryDialog({
       const result = await connectRepository(repositoryData);
 
       if (result && result.success) {
-        toast({
-          title: 'Success',
-          description: 'Repository cloned successfully',
-          variant: 'default',
-        });
-
         // Refresh the page to show the new repository
         router.refresh();
 
@@ -145,12 +135,6 @@ export function EnhancedConnectRepositoryDialog({
         }
 
         onOpenChange(false);
-      } else {
-        toast({
-          title: 'Clone Failed',
-          description: result?.error || 'Failed to clone the repository',
-          variant: 'destructive',
-        });
       }
     } catch (error: any) {
       console.error('Error cloning repository:', error);

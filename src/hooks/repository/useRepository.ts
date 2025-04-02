@@ -104,34 +104,13 @@ export function useRepository() {
     return await disconnectRepositoryMutation.mutateAsync(id);
   };
 
-  // URL validation mutation - checks if a repository URL is valid and accessible
-  const validateRepositoryUrlMutation = useMutation({
+  // Internal mutation for URL validation
+  const _validateUrlMutation = useMutation({
     mutationFn: (data: TestRepositoryInput) => testGitRepository(data),
-    onSuccess: (response) => {
-      if (response.success) {
-        toast({
-          title: 'URL Valid',
-          description: 'Repository URL is valid and accessible',
-        });
-      } else {
-        toast({
-          title: 'URL Invalid',
-          description: response.error || 'Repository URL is not accessible',
-          variant: 'destructive',
-        });
-      }
-    },
-    onError: (error: any) => {
-      toast({
-        title: 'Validation Error',
-        description: error.message || 'Failed to validate repository URL',
-        variant: 'destructive',
-      });
-    },
   });
 
-  // Test repository function - validates URL first and returns early if invalid
-  const testRepository = async (
+  // Simplified URL validation function
+  const validateRepositoryUrl = async (
     data: TestRepositoryInput,
   ): Promise<{
     success: boolean;
@@ -143,16 +122,48 @@ export function useRepository() {
       return { success: false, error: 'Repository URL is required' };
     }
 
-    // First validate the URL
-    const validationResult = await validateRepositoryUrlMutation.mutateAsync(data);
+    try {
+      const result = await _validateUrlMutation.mutateAsync(data);
 
-    // If URL validation fails, return early
-    if (!validationResult.success) {
-      return validationResult;
+      // Show relevant toast based on result
+      if (result.success) {
+        toast({
+          title: 'URL Valid',
+          description: 'Repository URL is valid and accessible',
+        });
+      } else {
+        toast({
+          title: 'URL Invalid',
+          description: result.error || 'Repository URL is not accessible',
+          variant: 'destructive',
+        });
+      }
+
+      return result;
+    } catch (error: any) {
+      toast({
+        title: 'Validation Error',
+        description: error.message || 'Failed to validate repository URL',
+        variant: 'destructive',
+      });
+
+      return {
+        success: false,
+        error: error.message || 'Failed to validate repository URL',
+      };
     }
+  };
 
-    // If we get here, the URL is valid, and we can return the validation result
-    return validationResult;
+  // Test repository - calls validateRepositoryUrl
+  const testRepository = async (
+    data: TestRepositoryInput,
+  ): Promise<{
+    success: boolean;
+    error?: string;
+    status?: number;
+    message?: string;
+  }> => {
+    return validateRepositoryUrl(data);
   };
 
   return {
@@ -168,7 +179,7 @@ export function useRepository() {
     connectRepository,
     disconnectRepository,
     testRepository,
-    validateRepositoryUrl: validateRepositoryUrlMutation.mutate,
+    validateRepositoryUrl,
 
     // Refetch functions
     refetchRepositories,
@@ -176,6 +187,6 @@ export function useRepository() {
     // Mutation states
     isConnecting: connectRepositoryMutation.isPending,
     isDisconnecting: disconnectRepositoryMutation.isPending,
-    isValidating: validateRepositoryUrlMutation.isPending,
+    isValidating: _validateUrlMutation.isPending,
   };
 }
