@@ -5,7 +5,7 @@ import { cookies } from 'next/headers';
 import { cache } from 'react';
 
 import { getUser } from '@/app/actions/userAction';
-import repositoryDb, { GitProvider as DbGitProvider } from '@/lib/db/repositoryDb';
+import repositoryDb from '@/lib/db/repositoryDb';
 import {
   Repository,
   GitProvider,
@@ -20,72 +20,6 @@ import {
 } from '@/types/context/repositoryContextType';
 import { AuthUser } from '@/types/service/userServiceType';
 
-/**
- * Convert DB repository to our Repository type
- * @param dbRepo The database repository
- */
-function mapDbRepositoryToRepository(dbRepo: any): Repository {
-  // If the repository is null or undefined, return a default repository
-  if (!dbRepo) {
-    return {
-      id: '',
-      providerId: '',
-      providerType: 'github',
-      name: '',
-      owner: '',
-      defaultBranch: 'main',
-      isPrivate: false,
-      syncStatus: 'IDLE',
-      createdAt: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-  }
-
-  // Set sync status with a special case for synced repositories
-  let syncStatus: RepositorySyncStatus = (dbRepo.sync_status || 'IDLE') as RepositorySyncStatus;
-
-  // Special case for repositories that just had their timestamp updated
-  if (dbRepo.last_synced_at && (!dbRepo.sync_status || dbRepo.sync_status === 'SYNCING')) {
-    syncStatus = 'SYNCED';
-  }
-
-  return {
-    id: String(dbRepo.id || ''),
-    providerId: String(dbRepo.provider_id || ''),
-    providerType: (dbRepo.provider_type || 'github') as GitProviderType,
-    name: String(dbRepo.name || ''),
-    owner: String(dbRepo.owner || ''),
-    defaultBranch: String(dbRepo.default_branch || 'main'),
-    isPrivate: Boolean(dbRepo.is_private),
-    url: dbRepo.url ? String(dbRepo.url) : undefined,
-    description: dbRepo.description ? String(dbRepo.description) : undefined,
-    syncStatus: syncStatus,
-    createdAt: dbRepo.created_at
-      ? new Date(dbRepo.created_at).toISOString()
-      : new Date().toISOString(),
-    updated_at: dbRepo.updated_at
-      ? new Date(dbRepo.updated_at).toISOString()
-      : new Date().toISOString(),
-    lastSyncedAt: dbRepo.last_synced_at ? new Date(dbRepo.last_synced_at).toISOString() : undefined,
-    // Optional fields
-    language: dbRepo.language || undefined,
-  };
-}
-
-// Add a mapping function to convert DB GitProvider to interface GitProvider
-function mapDbGitProviderToGitProvider(dbProvider: DbGitProvider): GitProvider {
-  return {
-    id: dbProvider.id,
-    type: dbProvider.type,
-    name: dbProvider.name,
-    displayName: dbProvider.name, // Use name as displayName
-    status: 'connected', // Default status
-    serverUrl: dbProvider.server_url,
-    createdAt: dbProvider.created_at,
-    updatedAt: dbProvider.updated_at,
-  };
-}
-
 // Repository related functions
 
 /**
@@ -98,11 +32,8 @@ export const getRepositories = cache(
   ): Promise<{ success: boolean; error?: string; data?: Repository[] }> => {
     try {
       console.log('[@action:repositories:getRepositories] Starting...', { filter });
-
-      // Get cookies once for all operations
       const cookieStore = await cookies();
 
-      console.log('[@action:repositories:getRepositories] Fetching repositories from database');
       // Call the repository module instead of direct db access
       const result = await repositoryDb.getRepositories(cookieStore);
 
@@ -111,16 +42,13 @@ export const getRepositories = cache(
         return { success: false, error: 'No repositories found' };
       }
 
-      // Map DB repositories to our Repository type
-      const repositories = result.data.map(mapDbRepositoryToRepository);
-
       console.log('[@action:repositories:getRepositories] Successfully fetched repositories', {
-        count: repositories.length,
+        count: result.data.length,
       });
 
       return {
         success: true,
-        data: repositories,
+        data: result.data,
       };
     } catch (error: any) {
       console.log('[@action:repositories:getRepositories] Error fetching repositories', {
@@ -184,8 +112,8 @@ export async function createRepository(
       default_branch: data.defaultBranch || 'main',
       is_private: data.isPrivate || false,
       owner: data.owner || null,
-      team_id: teamId, // Explicitly add team_id
-      creator_id: currentUser.id, // Explicitly add creator_id
+      team_id: teamId,
+      creator_id: currentUser.id,
     };
 
     console.log('[@action:repositories:createRepository] Calling repository.createRepository', {
@@ -210,19 +138,16 @@ export async function createRepository(
       };
     }
 
-    // Map to our Repository type
-    const mappedRepository: Repository = mapDbRepositoryToRepository(result.data);
-
     // Revalidate repository paths
     revalidatePath('/[locale]/[tenant]/repositories');
 
     console.log('[@action:repositories:createRepository] Successfully created repository', {
-      id: mappedRepository.id,
-      name: mappedRepository.name,
+      id: result.data.id,
+      name: result.data.name,
       userId: currentUser.id,
     });
 
-    return { success: true, data: mappedRepository };
+    return { success: true, data: result.data };
   } catch (error: any) {
     console.log('[@action:repositories:createRepository] Error creating repository', {
       error: error.message,
@@ -283,9 +208,6 @@ export async function updateRepository(
       };
     }
 
-    // Map to our Repository type
-    const mappedRepository: Repository = mapDbRepositoryToRepository(result.data);
-
     // Revalidate repository paths
     revalidatePath('/[locale]/[tenant]/repositories');
 
@@ -294,7 +216,7 @@ export async function updateRepository(
       userId: currentUser.id,
     });
 
-    return { success: true, data: mappedRepository };
+    return { success: true, data: result.data };
   } catch (error: any) {
     console.log('[@action:repositories:updateRepository] Error updating repository', {
       repositoryId: id,
@@ -405,8 +327,6 @@ export async function syncRepository(
 
     // In a real application, this would trigger a sync with the remote repository
     // For now, we'll just update the last_synced_at timestamp
-
-    // Call the repository module to update
     const updates = {
       last_synced_at: new Date().toISOString(),
       sync_status: 'SYNCED',
@@ -431,9 +351,6 @@ export async function syncRepository(
       };
     }
 
-    // Map to our Repository type
-    const mappedRepository: Repository = mapDbRepositoryToRepository(result.data);
-
     // Revalidate repository paths
     revalidatePath('/[locale]/[tenant]/repositories');
 
@@ -442,7 +359,7 @@ export async function syncRepository(
       userId: currentUser.id,
     });
 
-    return { success: true, data: mappedRepository };
+    return { success: true, data: result.data };
   } catch (error: any) {
     console.log('[@action:repositories:syncRepository] Error synchronizing repository', {
       repositoryId: id,
@@ -500,13 +417,10 @@ export async function createRepositoryFromUrl(
       return { success: false, error: result.error };
     }
 
-    // Transform the repository to match the UI's expected format
-    const repoData: Repository = mapDbRepositoryToRepository(result.data);
-
     // Revalidate repository paths
     revalidatePath('/[locale]/[tenant]/repositories');
 
-    return { success: true, data: repoData };
+    return { success: true, data: result.data };
   } catch (error: any) {
     console.error('[@action:repositories:createRepositoryFromUrl] Error:', error);
     return { success: false, error: error.message || 'Failed to create repository from URL' };
@@ -555,8 +469,6 @@ export const getRepository = cache(
     try {
       console.log(`[Server] getRepository: Starting for repository ${id}`);
 
-      console.log(`[Server] Fetching repository ${id} from database`);
-
       // Call the repository module - don't need to pass profile ID for non-tenant specific queries
       const result = await repositoryDb.getRepository(id);
 
@@ -566,7 +478,7 @@ export const getRepository = cache(
 
       return {
         success: true,
-        data: mapDbRepositoryToRepository(result.data),
+        data: result.data,
       };
     } catch (error: any) {
       console.error('[@action:repositories:getRepository] Error:', error);
@@ -589,9 +501,8 @@ export async function testGitProviderConnection(
       serverUrl: data.serverUrl || 'undefined',
       hasToken: data.token ? 'YES' : 'NO',
     });
-    console.log('[@action:repositories:testGitProviderConnection] Data validated successfully');
 
-    // Test connection with timeout
+    // This should be moved to repositoryDb or a gitService
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
 
@@ -669,7 +580,7 @@ export const getGitProviders = cache(
         return { success: false, error: 'Unauthorized', data: [] };
       }
 
-      // Call the gitProvider module instead of direct db access
+      // Call the repository module instead of direct db access
       const result = await repositoryDb.getAllGitProviders();
 
       if (!result.success || !result.data) {
@@ -680,12 +591,7 @@ export const getGitProviders = cache(
         };
       }
 
-      // Map DB results to interface type
-      const providers = result.data
-        ? result.data.map((provider: DbGitProvider) => mapDbGitProviderToGitProvider(provider))
-        : [];
-
-      return { success: true, data: providers };
+      return { success: true, data: result.data };
     } catch (error: any) {
       console.error('[@action:repositories:getGitProviders] Error:', error);
       return { success: false, error: error.message || 'Failed to fetch git providers' };
@@ -705,412 +611,18 @@ export const getGitProvider = cache(
         return { success: false, error: 'Unauthorized' };
       }
 
-      // Call the gitProvider module instead of direct db access
-      const result = await repositoryDb.getAllGitProviders();
+      // Call the repository module to get the git provider
+      const result = await repositoryDb.getGitProvider(id);
 
       if (!result.success || !result.data) {
         console.error(`[Server] Git provider not found:`, result.error);
         return { success: false, error: 'Git provider not found' };
       }
 
-      // Map DB result to interface type
-      const provider = mapDbGitProviderToGitProvider(result.data);
-
-      return { success: true, data: provider };
+      return { success: true, data: result.data };
     } catch (error: any) {
       console.error('[@action:repositories:getGitProvider] Error:', error);
       return { success: false, error: error.message || 'Failed to fetch git provider' };
-    }
-  },
-);
-
-/**
- * Delete a git provider by ID
- */
-export async function deleteGitProvider(id: string): Promise<{ success: boolean; error?: string }> {
-  try {
-    console.log(`[Server] deleteGitProvider: Starting for provider ${id}`);
-    const user = await getUser();
-    if (!user) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
-    // Call the gitProvider module instead of direct db access
-    // Call the repository db to delete git provider
-    // This would need to be implemented with a function in repositoryDb
-    // For now, return a mock success
-    const result = { success: true };
-
-    if (!result.success) {
-      console.error(`[Server] Failed to delete git provider:`, result.error);
-      return { success: false, error: result.error };
-    }
-
-    // Revalidate repository paths
-    revalidatePath('/[locale]/[tenant]/repositories');
-
-    return { success: true };
-  } catch (error: any) {
-    console.error('[@action:repositories:deleteGitProvider] Error:', error);
-    return { success: false, error: error.message || 'Failed to delete git provider' };
-  }
-}
-
-export async function addGitProvider(provider: {
-  name: string;
-  type: 'github' | 'gitlab' | 'gitea' | 'self-hosted';
-  access_token?: string;
-  profile_id: string;
-  server_url?: string;
-}): Promise<GitProvider> {
-  try {
-    console.log(`[Server] addGitProvider: Starting...`);
-
-    // Map to DB schema
-    const gitProviderData = {
-      name: provider.name,
-      type: provider.type,
-      access_token: provider.access_token || '',
-      profile_id: provider.profile_id,
-    };
-
-    // Call the gitProvider module instead of direct db access
-    const result = await dbGitProvider.createGitProvider(gitProviderData);
-
-    if (!result.success || !result.data) {
-      console.error(`[Server] Failed to create git provider:`, result.error);
-      throw new Error(result.error || 'Failed to create git provider');
-    }
-
-    // Revalidate repository paths
-    revalidatePath('/[locale]/[tenant]/repositories');
-
-    return mapDbGitProviderToGitProvider(result.data);
-  } catch (error) {
-    console.error('[@action:repositories:addGitProvider] Error:', error);
-    throw error;
-  }
-}
-
-export async function updateGitProvider(
-  id: string,
-  updates: Partial<{
-    name: string;
-    type: string;
-    access_token: string;
-    server_url?: string;
-  }>,
-): Promise<GitProvider> {
-  try {
-    console.log(`[Server] updateGitProvider: Starting for provider ${id}`);
-    const user = await getUser();
-
-    if (!user) {
-      throw new Error('Unauthorized');
-    }
-
-    // Map updates to DB schema
-    const gitProviderUpdates = {
-      ...updates,
-      // Ensure no profile_id override for security
-      profile_id: undefined,
-    };
-
-    // Call the gitProvider module instead of direct db access
-    const result = await dbGitProvider.updateGitProvider(id, gitProviderUpdates, user.id);
-
-    if (!result.success || !result.data) {
-      console.error(`[Server] Failed to update git provider:`, result.error);
-      throw new Error(result.error || 'Failed to update git provider');
-    }
-
-    // Revalidate repository paths
-    revalidatePath('/[locale]/[tenant]/repositories');
-
-    return mapDbGitProviderToGitProvider(result.data);
-  } catch (error) {
-    console.error('[@action:repositories:updateGitProvider] Error:', error);
-    throw error;
-  }
-}
-
-export async function refreshGitProvider(id: string): Promise<GitProvider> {
-  try {
-    console.log(`[Server] refreshGitProvider: Starting for provider ${id}`);
-    const user = await getUser();
-
-    if (!user) {
-      throw new Error('Unauthorized');
-    }
-
-    // Call the gitProvider.refreshGitProvider method instead of updateGitProvider
-    const result = await dbGitProvider.refreshGitProvider(id, user.id);
-
-    if (!result.success || !result.data) {
-      console.error(`[Server] Failed to refresh git provider:`, result.error);
-      throw new Error(result.error || 'Failed to refresh git provider');
-    }
-
-    // Revalidate repository paths
-    revalidatePath('/[locale]/[tenant]/repositories');
-
-    return mapDbGitProviderToGitProvider(result.data);
-  } catch (error) {
-    console.error('[@action:repositories:refreshGitProvider] Error:', error);
-    throw error;
-  }
-}
-
-/**
- * Handle OAuth callback for git providers
- */
-export async function handleOAuthCallback(
-  code: string,
-  state: string,
-): Promise<{ success: boolean; error?: string; redirectUrl?: string }> {
-  try {
-    const user = await getUser();
-    if (!user) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
-    // Parse the state parameter
-    let stateData;
-    try {
-      stateData = JSON.parse(Buffer.from(state, 'base64').toString('utf-8'));
-    } catch {
-      return { success: false, error: 'Invalid state parameter' };
-    }
-
-    const { providerId, redirectUri } = stateData;
-
-    // Call the gitProvider module instead of direct db access
-    const result = await dbGitProvider.handleOAuthCallback(code, providerId, user.id);
-
-    if (!result.success) {
-      console.error(
-        '[@action:repositories:handleOAuthCallback] Failed to handle callback:',
-        result.error,
-      );
-      return { success: false, error: result.error || 'Failed to handle OAuth callback' };
-    }
-
-    // Revalidate repository paths
-    revalidatePath('/[locale]/[tenant]/repositories');
-
-    return {
-      success: true,
-      redirectUrl: redirectUri || '/repositories',
-    };
-  } catch (error: any) {
-    console.error('[@action:repositories:handleOAuthCallback] Error:', error);
-    return { success: false, error: error.message || 'Failed to handle OAuth callback' };
-  }
-}
-
-/**
- * Create a git provider
- */
-export async function createGitProvider(
-  data: GitProviderCreateInput,
-): Promise<{ success: boolean; error?: string; data?: any; authUrl?: string }> {
-  try {
-    const user = await getUser();
-    if (!user) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
-    // Validate input data
-    const validatedData = gitProviderCreateSchema.parse(data);
-
-    // Call the gitProvider module instead of direct db access
-    const result = await dbGitProvider.createGitProviderWithSchema(
-      {
-        type: validatedData.type,
-        displayName: validatedData.displayName,
-        serverUrl: validatedData.serverUrl,
-        token: validatedData.token,
-      },
-      user.id,
-    );
-
-    if (!result.success || !result.data) {
-      console.error(
-        '[@action:repositories:createGitProvider] Failed to create provider:',
-        result.error,
-      );
-      return { success: false, error: result.error };
-    }
-
-    // Extract provider and authUrl from the result
-    const { provider, authUrl } = result.data;
-
-    // Revalidate repository paths
-    revalidatePath('/[locale]/[tenant]/repositories');
-
-    return {
-      success: true,
-      data: provider,
-      authUrl,
-    };
-  } catch (error: any) {
-    console.error('[@action:repositories:createGitProvider] Error:', error);
-    return { success: false, error: error.message || 'Failed to create git provider' };
-  }
-}
-
-/**
- * Get files from a repository
- * @param repositoryId The repository ID
- * @param path The directory path (optional)
- * @param user Optional pre-fetched user data to avoid redundant auth calls
- */
-export const getRepositoryFiles = cache(
-  async (
-    repositoryId: string,
-    path?: string,
-    user?: AuthUser | null,
-  ): Promise<{ success: boolean; error?: string; data?: any[] }> => {
-    try {
-      console.log(
-        '[actions.getRepositoryFiles] Starting with repository ID:',
-        repositoryId,
-        'path:',
-        path,
-      );
-
-      // Use provided user data or fetch it if not provided
-      const currentUser = user || (await getUser());
-      if (!currentUser) {
-        console.log('[actions.getRepositoryFiles] No authenticated user found');
-        return { success: false, error: 'Unauthorized' };
-      }
-
-      // Since we don't store files in the database, return a mock empty result
-      console.log(
-        '[actions.getRepositoryFiles] Files are not stored in the database, returning empty result',
-      );
-      return { success: true, data: [] };
-    } catch (error: any) {
-      console.error('[@action:repositories:getRepositoryFiles] Error:', error);
-      return { success: false, error: error.message || 'Failed to fetch repository files' };
-    }
-  },
-);
-
-/**
- * Get file content from a repository
- * @param repositoryId The repository ID
- * @param path The file path
- * @param user Optional pre-fetched user data to avoid redundant auth calls
- */
-export const getFileContent = cache(
-  async (
-    repositoryId: string,
-    path: string,
-    user?: AuthUser | null,
-  ): Promise<{ success: boolean; error?: string; data?: any }> => {
-    try {
-      console.log(
-        '[actions.getFileContent] Starting with repository ID:',
-        repositoryId,
-        'path:',
-        path,
-      );
-
-      // Use provided user data or fetch it if not provided
-      const currentUser = user || (await getUser());
-      if (!currentUser) {
-        console.log('[actions.getFileContent] No authenticated user found');
-        return { success: false, error: 'Unauthorized' };
-      }
-
-      if (!path) {
-        return { success: false, error: 'File path is required' };
-      }
-
-      // Since we don't store files in the database, return a mock result
-      console.log(
-        '[actions.getFileContent] Files are not stored in the database, returning mock result',
-      );
-      return {
-        success: true,
-        data: {
-          id: 'mock-file',
-          repository_id: repositoryId,
-          path: path,
-          content: '',
-          size: 0,
-          last_commit: null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-      };
-    } catch (error: any) {
-      console.error('Error in getFileContent:', error);
-      return { success: false, error: error.message || 'Failed to fetch file content' };
-    }
-  },
-);
-
-/**
- * Get all repositories with optional filtering
- * This is the main function for fetching repositories for display
- * @param filter Optional filter criteria for repositories
- * @param user Optional pre-fetched user data to avoid redundant auth calls
- */
-export const getAllRepositories = cache(
-  async (
-    filter?: RepositoryFilter,
-    user?: AuthUser | null,
-  ): Promise<{
-    success: boolean;
-    error?: string;
-    data?: Repository[];
-  }> => {
-    try {
-      console.log('[@action:repositories:getAllRepositories] Starting...');
-
-      // Try to use provided user data or fetch it if not provided
-      let currentUser = user;
-      if (!currentUser) {
-        try {
-          const userResult = await getUser();
-          currentUser = userResult;
-        } catch (userError) {
-          console.error(
-            '[@action:repositories:getAllRepositories] Error fetching current user:',
-            userError,
-          );
-          // Continue with null user in case of error
-        }
-      }
-
-      // Fetch repositories
-      const reposResult = await getRepositories(filter);
-      console.log('[@action:repositories:getAllRepositories] Repository fetch result:', {
-        success: reposResult.success,
-        count: reposResult.data?.length || 0,
-        error: reposResult.error,
-      });
-
-      if (!reposResult.success || !reposResult.data) {
-        return {
-          success: false,
-          error: reposResult.error || 'Failed to fetch repositories',
-        };
-      }
-
-      return {
-        success: true,
-        data: reposResult.data,
-      };
-    } catch (error: any) {
-      console.error('[@action:repositories:getAllRepositories] Error:', error);
-      return {
-        success: false,
-        error: error.message || 'Failed to fetch repository data',
-      };
     }
   },
 );
@@ -1187,11 +699,8 @@ export async function clearRepositoriesCache(): Promise<{
   message: string;
 }> {
   try {
-    // Get cookie store
-    const cookieStore = await cookies();
-
-    // Clear the cache
-    const result = await dbRepository.clearCache(cookieStore);
+    // Revalidate repository paths
+    revalidatePath('/[locale]/[tenant]/repositories');
 
     return {
       success: true,
