@@ -30,6 +30,12 @@ export function SidebarProvider({
 
   const toggleSidebar = React.useCallback(() => {
     setOpen(!open);
+    setState(!open ? 'collapsed' : 'expanded');
+  }, [open]);
+  
+  // Update state when open changes
+  React.useEffect(() => {
+    setState(open ? 'expanded' : 'collapsed');
   }, [open]);
 
   // Provide state container only, business logic in hooks/sidebar

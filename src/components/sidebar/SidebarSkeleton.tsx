@@ -1,7 +1,7 @@
 'use client';
 
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from '@/components/sidebar';
-import { APP_SIDEBAR_WIDTH, APP_SIDEBAR_WIDTH_COLLAPSED } from '@/components/sidebar/constants';
+import { APP_SIDEBAR_WIDTH, APP_SIDEBAR_WIDTH_ICON } from '@/components/sidebar/constants';
 
 export function SidebarSkeleton() {
   return (
@@ -12,7 +12,7 @@ export function SidebarSkeleton() {
       style={
         {
           '--sidebar-width': APP_SIDEBAR_WIDTH,
-          '--sidebar-width-collapsed': APP_SIDEBAR_WIDTH_COLLAPSED,
+          '--sidebar-width-icon': APP_SIDEBAR_WIDTH_ICON,
         } as React.CSSProperties
       }
     >

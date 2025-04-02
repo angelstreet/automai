@@ -9,7 +9,7 @@ import { SidebarNavigation } from '@/components/sidebar/SidebarNavigation';
 import { SidebarRail } from '@/components/sidebar/SidebarRail';
 import {
   APP_SIDEBAR_WIDTH,
-  APP_SIDEBAR_WIDTH_COLLAPSED,
+  APP_SIDEBAR_WIDTH_ICON,
   sidebarNavigationData,
 } from '@/components/sidebar/constants';
 import TeamSelector from '@/components/team/TeamSelector';
@@ -51,7 +51,7 @@ const SidebarClient = React.memo(function SidebarClient({
       style={
         {
           '--sidebar-width': APP_SIDEBAR_WIDTH,
-          '--sidebar-width-collapsed': APP_SIDEBAR_WIDTH_COLLAPSED,
+          '--sidebar-width-icon': APP_SIDEBAR_WIDTH_ICON, // Use correct variable names to match CSS selectors
         } as React.CSSProperties
       }
     >

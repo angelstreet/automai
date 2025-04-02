@@ -26,7 +26,7 @@ export const SIDEBAR_WIDTH = '14.5rem';
 export const SIDEBAR_WIDTH_ICON = '4rem';
 
 export const APP_SIDEBAR_WIDTH = '14rem';
-export const APP_SIDEBAR_WIDTH_COLLAPSED = '2.6rem';
+export const APP_SIDEBAR_WIDTH_ICON = '2.6rem';
 
 export const SIDEBAR_WIDTH_MOBILE = '16rem';
 export const SIDEBAR_KEYBOARD_SHORTCUT = 'b';
