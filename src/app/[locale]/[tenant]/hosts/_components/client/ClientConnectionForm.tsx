@@ -3,7 +3,7 @@
 import { AlertCircle, Check, CheckCircle, Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import * as React from 'react';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { toast } from 'sonner';
 
 import {
@@ -64,34 +64,8 @@ export function ClientConnectionForm({
 
   // State for host creation
   const [isCreating, setIsCreating] = useState(false);
-
-  // State for Windows detection
-  const [isWindowsOS, setIsWindowsOS] = useState<boolean | undefined>(undefined);
-
-  // State for storing active team ID
-  const [activeTeamId, setActiveTeamId] = useState<string | null>(null);
-
-  // Fetch active team ID on component mount
-  useEffect(() => {
-    const fetchActiveTeam = async () => {
-      try {
-        const response = await fetch('/api/user/active-team');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.data?.id) {
-            setActiveTeamId(data.data.id);
-            console.log('[@ui:ClientConnectionForm] Got active team ID:', data.data.id);
-          } else {
-            console.error('[@ui:ClientConnectionForm] Failed to get active team ID');
-          }
-        }
-      } catch (error) {
-        console.error('[@ui:ClientConnectionForm] Error fetching active team:', error);
-      }
-    };
-
-    fetchActiveTeam();
-  }, []);
+  // State for storing last test result
+  const [lastTestResult, setLastTestResult] = useState<any>(null);
 
   const handleTypeChange = (value: string) => {
     setConnectionType(value as 'ssh' | 'docker' | 'portainer');
@@ -133,7 +107,7 @@ export function ClientConnectionForm({
     setTesting(true);
     setTestError(null);
     setTestSuccess(false);
-    setIsWindowsOS(undefined); // Reset Windows detection
+    setLastTestResult(null);
 
     try {
       // Create data object for testing
@@ -157,6 +131,8 @@ export function ClientConnectionForm({
       );
 
       const result = await testConnectionAction(testData);
+      // Store the result for later use
+      setLastTestResult(result);
 
       console.log('[@ui:ClientConnectionForm:testHostConnection] Test result:', {
         success: result.success,
@@ -172,7 +148,6 @@ export function ClientConnectionForm({
             '[@ui:ClientConnectionForm:testHostConnection] Windows OS detected:',
             result.is_windows,
           );
-          setIsWindowsOS(result.is_windows);
         }
 
         if (onTestSuccess) {
@@ -223,11 +198,11 @@ export function ClientConnectionForm({
         password: formData.password,
         // CRITICAL: Explicitly set status to 'connected' (NOT 'pending')
         status: 'connected' as 'connected',
-        is_windows: isWindowsOS !== undefined ? isWindowsOS : false,
+        // Use is_windows from the last test result if available
+        is_windows: lastTestResult?.is_windows || false,
         created_at: new Date(),
         updated_at: new Date(),
-        // Add team_id if available
-        team_id: activeTeamId || undefined,
+        // Note: team_id will be determined by the server action
       };
 
       console.log('[@ui:ClientConnectionForm:createHostDirectly] Checking credentials passing:', {

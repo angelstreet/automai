@@ -180,7 +180,6 @@ export async function createHost(
       updated_at: new Date().toISOString(),
       team_id: teamId,
       creator_id: user.id,
-      tenant_id: user.tenant_id, // Add tenant ID for proper RLS filtering
     };
 
     // Handle the case where we might receive data from a form with 'username' instead of 'user'
