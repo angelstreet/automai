@@ -14,14 +14,16 @@ import { UserContextType } from '@/types/context/userContextType';
 export function UserProvider({
   children,
   user,
+  initialLoading = false,
 }: {
   children: React.ReactNode;
   user?: User | null;
+  initialLoading?: boolean;
 }) {
   const [userData, _setUserData] = React.useState<User | null>(user || null);
-  const [loading, _setLoading] = React.useState<boolean>(false);
+  const [loading, _setLoading] = React.useState<boolean>(initialLoading);
   const [error, _setError] = React.useState<Error | null>(null);
-  const [isInitialized, _setIsInitialized] = React.useState<boolean>(false);
+  const [isInitialized, _setIsInitialized] = React.useState<boolean>(!initialLoading);
 
   // Dummy function implementations for the context interface
   // The actual implementations will be in the useUser hook

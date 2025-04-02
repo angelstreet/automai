@@ -91,5 +91,29 @@ export const getCurrentUserPermissions = cache(
   },
 );
 
+/**
+ * Get permissions for a user and team - use this in layout
+ */
+export const getPermissions = cache(
+  async (userId: string, teamId?: string | null): Promise<any> => {
+    if (!userId || !teamId) {
+      console.log(`[@action:permission:getPermissions] Missing userId or teamId, returning null`);
+      return null;
+    }
+
+    try {
+      console.log(
+        `[@action:permission:getPermissions] Getting permissions for user: ${userId}, team: ${teamId}`,
+      );
+      const result = await getUserPermissions(userId, teamId);
+      console.log(`[@action:permission:getPermissions] Successfully retrieved permissions`);
+      return result;
+    } catch (error) {
+      console.error(`[@action:permission:getPermissions] Error getting permissions:`, error);
+      return null;
+    }
+  },
+);
+
 // Export types for client usage
 export type { ResourceType, Operation, PermissionMatrix, PermissionsResult };
