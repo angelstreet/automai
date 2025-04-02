@@ -59,16 +59,31 @@ export async function getById(
  */
 export async function getRepositories(
   cookieStore?: ReadonlyRequestCookies,
+  teamId?: string,
 ): Promise<DbResponse<any[]>> {
   try {
-    console.log(`[@db:repositoryDb:getRepositories] Starting to fetch repositories`);
+    console.log(
+      `[@db:repositoryDb:getRepositories] Starting to fetch repositories${teamId ? ` for team: ${teamId}` : ''}`,
+    );
     const supabase = await createClient(cookieStore);
-    const { data, error } = await supabase.from('repositories').select('*');
+
+    // Query repositories with optional team_id filter
+    let query = supabase.from('repositories').select('*');
+
+    // Apply team_id filter if provided
+    if (teamId) {
+      query = query.eq('team_id', teamId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       return { success: false, error: error.message };
     }
-    console.log(`[@db:repositoryDb:getRepositories] Successfully fetched ${data}`);
+
+    console.log(
+      `[@db:repositoryDb:getRepositories] Successfully fetched ${data.length} repositories`,
+    );
     return { success: true, data };
   } catch (error: unknown) {
     const err = error instanceof Error ? error : new Error(String(error));

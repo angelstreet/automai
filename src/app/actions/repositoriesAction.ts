@@ -4,18 +4,15 @@ import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 import { cache } from 'react';
 
+import { getUserActiveTeam } from '@/app/actions/teamAction';
 import { getUser } from '@/app/actions/userAction';
 import repositoryDb from '@/lib/db/repositoryDb';
 import {
   Repository,
   GitProvider,
-  GitProviderType,
-  RepositorySyncStatus,
   TestConnectionInput,
-  GitProviderCreateInput,
   TestRepositoryInput,
   RepositoryFilter,
-  gitProviderCreateSchema,
   testRepositorySchema,
 } from '@/types/context/repositoryContextType';
 import { AuthUser } from '@/types/service/userServiceType';
@@ -32,10 +29,30 @@ export const getRepositories = cache(
   ): Promise<{ success: boolean; error?: string; data?: Repository[] }> => {
     try {
       console.log('[@action:repositories:getRepositories] Starting...', { filter });
+
+      // Get the authenticated user
+      const user = await getUser();
+      if (!user) {
+        console.log('[@action:repositories:getRepositories] No authenticated user found');
+        return { success: false, error: 'Unauthorized' };
+      }
+
+      // Get the user's active team ID
+      const activeTeamResult = await getUserActiveTeam(user.id);
+      if (!activeTeamResult || !activeTeamResult.id) {
+        console.log('[@action:repositories:getRepositories] No active team found for user');
+        return { success: false, error: 'No active team found' };
+      }
+
+      const teamId = activeTeamResult.id;
+      console.log(
+        `[@action:repositories:getRepositories] Fetching repositories for team: ${teamId}`,
+      );
+
       const cookieStore = await cookies();
 
-      // Call the repository module instead of direct db access
-      const result = await repositoryDb.getRepositories(cookieStore);
+      // Call the repository module with team_id filter
+      const result = await repositoryDb.getRepositories(cookieStore, teamId);
 
       if (!result.success || !result.data) {
         console.log('[@action:repositories:getRepositories] No repositories found');
