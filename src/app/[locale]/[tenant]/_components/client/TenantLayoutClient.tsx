@@ -57,15 +57,30 @@ export default function TenantLayoutClient({
                     />
                   </aside>
                 </Suspense>
+                {/* 
+                  Main content wrapper - adapts to sidebar state
+                  Styling in globals.css: [data-sidebar-content="main"]
+                */}
                 <div
                   id="main-content"
-                  className="flex-1 flex flex-col min-w-0 overflow-x-hidden"
+                  className="flex-1 flex flex-col min-w-0"
                   data-sidebar-content="main"
                 >
+                  {/* Header - adapts to sidebar state */}
                   <Suspense fallback={<HeaderSkeleton />}>
                     <HeaderClient user={user} activeTeam={teamDetails} />
                   </Suspense>
-                  <main className="px-4 border border-gray-30 rounded-md">{children}</main>
+                  
+                  {/* 
+                    Main content area - contains the actual page content
+                    Height calculated based on header height CSS variable
+                  */}
+                  <main 
+                    className="flex-1 px-4 py-2 w-full max-w-full border border-gray-30 rounded-md overflow-auto"
+                    style={{ height: 'calc(100vh - var(--header-height) - 1rem)' }}
+                  >
+                    {children}
+                  </main>
                 </div>
               </div>
             </SidebarProvider>

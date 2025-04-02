@@ -14,7 +14,7 @@ export function FeaturePageContainer({
   children,
 }: FeaturePageContainerProps) {
   return (
-    <div className="container mx-auto py-4 px-4">
+    <div className="container mx-auto py-4 px-4" data-page-content="container">
       {/* Header Section */}
       <div className="mb-2">
         <PageHeader title={title} description={description}>
@@ -22,8 +22,8 @@ export function FeaturePageContainer({
         </PageHeader>
       </div>
 
-      {/* Content Container */}
-      <div className="overflow-auto h-[calc(100vh-200px)]">{children}</div>
+      {/* Content Container - Uses CSS variables for consistent height */}
+      <div className="overflow-auto h-[calc(100vh-var(--header-height)-8rem)]">{children}</div>
     </div>
   );
 }

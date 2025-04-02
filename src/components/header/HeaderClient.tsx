@@ -1,7 +1,7 @@
 'use client';
 
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 
 import { RoleSwitcher } from '@/components/layout/RoleSwitcher';
 import { ProfileDropDown } from '@/components/profile/ProfileDropDown';
@@ -37,6 +37,14 @@ export function HeaderClient({
     setHeaderVisible(!headerVisible);
     console.log(`Header is now ${!headerVisible ? 'visible' : 'hidden'}`);
   };
+  
+  // Update document with header state for global CSS targeting
+  useEffect(() => {
+    document.documentElement.setAttribute(
+      'data-header-state', 
+      headerVisible ? 'expanded' : 'collapsed'
+    );
+  }, [headerVisible]);
 
   return (
     <header
@@ -47,7 +55,9 @@ export function HeaderClient({
       )}
       data-sidebar-header="true"
     >
-      <div className={cn('flex h-14 items-center relative pl-2', !headerVisible && 'h-8')}>
+      <div 
+        className={cn('flex items-center relative pl-2')}
+        data-header-state={headerVisible ? 'expanded' : 'collapsed'}>
         {headerVisible && (
           <>
             {/* Left section */}
@@ -62,8 +72,8 @@ export function HeaderClient({
             <div className="flex-1" />
 
             {/* Right section */}
-            <div className="flex items-center gap-2 px-4 h-full pr-14">
-              <div className="flex-none w-36 mr-12">
+            <div className="header-right-section">
+              <div className="flex-none w-36 mr-4">
                 {user ? (
                   <RoleSwitcher key={`role-switcher-${user.role || 'default'}`} user={user} />
                 ) : (
@@ -74,7 +84,7 @@ export function HeaderClient({
               <div className="flex-1 max-w-[32rem] min-w-[12.5rem]">
                 <Search />
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 flex-shrink-0">
                 <Separator orientation="vertical" className="h-8 opacity-30" />
                 <ThemeToggleStatic />
                 <Separator orientation="vertical" className="h-8 opacity-30" />

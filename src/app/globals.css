@@ -139,21 +139,29 @@
     overflow-x: hidden; /* Prevent horizontal scrollbar */
   }
 
-  /* CSS variables for sidebar and layout */
+  /* Layout CSS Variables 
+   * These variables control core layout dimensions and behavior
+   * IMPORTANT: These variables are used by multiple components - changing them affects the entire layout
+   */
   :root {
-    /* Base sidebar dimensions */
+    /* Base sidebar dimensions - match values in sidebar/constants.ts */
     --sidebar-width: 14rem;
     --sidebar-width-icon: 2.6rem;
     
-    /* Spacing variables - adjust this single value to control all gaps */
-    --sidebar-spacing: 1rem; /* Adjustable spacing between sidebar and content */
+    /* Spacing variables */
+    --sidebar-spacing: 1rem; /* Space between sidebar and main content */
+    --content-padding: 1rem; /* Default padding inside content areas */
     
-    /* Dynamic offset - will be set via JS */
+    /* Dynamic offset - set via JS in SidebarClient.tsx useEffect */
     --sidebar-width-offset: var(--sidebar-width);
     
-    /* Transition properties */
+    /* Transition properties - used by sidebar, main content, and header */
     --sidebar-transition-duration: 250ms;
     --sidebar-transition-timing: ease-in-out;
+    
+    /* Header dimensions */
+    --header-height: 3.5rem; /* 14px = 3.5rem */
+    --header-height-collapsed: 2rem; /* 8px = 2rem */
   }
 
   /* Handle sidebar visibility with multiple fallbacks */
@@ -201,16 +209,34 @@
     display: flex !important;
   }
 
-  /* Fix sidebar transition and prevent vertical jumps */
+  /* 
+   * Sidebar Component Styling
+   * Controls the sidebar's dimensions, appearance, and transition behavior
+   * Used in components/sidebar/Sidebar.tsx
+   *
+   * CUSTOMIZATION:
+   * - Width: Modify --sidebar-width and --sidebar-width-icon in :root
+   * - Transitions: Modify --sidebar-transition-* variables
+   */
   [data-sidebar='sidebar'] {
+    /* Core transitions */
     transition: width var(--sidebar-transition-duration) var(--sidebar-transition-timing);
+    
+    /* Performance optimizations */
     transform: translateZ(0); /* Force GPU acceleration */
     backface-visibility: hidden; /* Prevent rendering artifacts */
+    
+    /* Positioning and visual separation */
     z-index: 30; /* Ensure sidebar stays above content */
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.05); /* Subtle shadow to visually separate */
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.05); /* Subtle shadow */
+    
+    /* Fixed dimensions */
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 
-  /* Make the width transition more responsive */
+  /* Collapsed sidebar state */
   [data-state='collapsed'] [data-sidebar='sidebar'] {
     width: var(--sidebar-width-icon) !important;
   }
@@ -283,29 +309,90 @@
     overflow: hidden;
   }
   
-  /* Main content transitions with sidebar - using CSS variables for maintainability */
+  /* 
+   * Main Content Component Styling
+   * Controls the main container that wraps all page content
+   * Used by TenantLayoutClient.tsx with data-sidebar-content="main"
+   * 
+   * CUSTOMIZATION:
+   * - Spacing: Modify --sidebar-spacing in :root
+   * - Transitions: Modify --sidebar-transition-* variables
+   * - Content padding: Modify --content-padding
+   */
   [data-sidebar-content="main"] {
+    /* Synchronized transitions with sidebar */
     transition: margin-left var(--sidebar-transition-duration) var(--sidebar-transition-timing),
                 width var(--sidebar-transition-duration) var(--sidebar-transition-timing);
+    
+    /* Positioning relative to sidebar with spacing */
     margin-left: calc(var(--sidebar-width-offset) + var(--sidebar-spacing));
     width: calc(100% - var(--sidebar-width-offset) - var(--sidebar-spacing) * 2);
+    
+    /* Prevent content overflow */
+    overflow-x: hidden;
+    min-height: calc(100vh - var(--header-height));
   }
   
-  /* Header styling to match sidebar transitions */
+  /* Page content - the actual content inside feature pages */
+  [data-page-content="container"] {
+    padding: var(--content-padding);
+    height: 100%;
+    overflow: auto;
+  }
+  
+  /* 
+   * Header Component Styling
+   * Controls the header's position, size, and transition behavior
+   * Used in components/header/HeaderClient.tsx
+   */
   [data-sidebar-header="true"] {
+    /* Transitions synchronized with sidebar */
     transition: margin-left var(--sidebar-transition-duration) var(--sidebar-transition-timing),
                 width var(--sidebar-transition-duration) var(--sidebar-transition-timing);
-    margin-left: var(--sidebar-width-offset);
-    width: calc(100% - var(--sidebar-width-offset));
+    
+    /* Position directly at the top of main content, not offset by sidebar */
+    /* No margin-left needed since header is inside the main content container */
+    width: 100%;
+    
+    /* Ensure content doesn't get clipped */
+    overflow-x: visible;
+    
+    /* Default height from variables */
+    height: var(--header-height);
+    
+    /* Position properly */
+    position: sticky;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 20;
   }
   
-  /* Ensure sidebar trigger button is positioned at extreme left */
+  /* Header in collapsed state */
+  [data-sidebar-header="true"][data-header-state="collapsed"] {
+    height: var(--header-height-collapsed);
+  }
+  
+  /* Sidebar trigger positioning - extreme left alignment */
   .sidebar-trigger-container {
     position: absolute;
     left: 0;
     display: flex;
     align-items: center;
     padding-left: 0.5rem;
+    height: 100%;
+    z-index: 5; /* Ensure it's above other header elements */
+  }
+  
+  /* Ensure the right side components are properly positioned */
+  [data-sidebar-header="true"] .header-right-section {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    height: 100%;
+    padding-right: 1rem;
+    min-width: 400px; /* Ensure there's enough space for components */
+    flex-shrink: 0;
   }
   
   /* Custom scrollbar styling */
