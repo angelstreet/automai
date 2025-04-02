@@ -76,7 +76,11 @@ export function HeaderClient({
             <div className="flex items-center gap-4 px-4 h-full pr-14">
               <div className="flex-none w-36 mr-4">
                 {user ? (
-                  <RoleSwitcher key={`role-switcher-${user.role || 'default'}`} user={user} />
+                  <RoleSwitcher
+                    key={`role-switcher-${user.role || 'default'}`}
+                    user={user}
+                    instanceId="header"
+                  />
                 ) : (
                   <div className="w-[180px] h-10 bg-muted animate-pulse rounded-md"></div>
                 )}

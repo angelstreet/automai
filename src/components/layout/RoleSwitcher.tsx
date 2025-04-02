@@ -34,10 +34,15 @@ const roles: { value: Role; label: string }[] = [
 interface RoleSwitcherProps {
   className?: string;
   user?: any; // Allow passing user directly
+  instanceId?: string; // Add optional instance identifier
 }
 
-function RoleSwitcherComponent({ className, user: propUser }: RoleSwitcherProps) {
-  const userContext = useUser(null, 'RoleSwitcher');
+function RoleSwitcherComponent({
+  className,
+  user: propUser,
+  instanceId = 'unknown',
+}: RoleSwitcherProps) {
+  const userContext = useUser(null, `RoleSwitcher-${instanceId}`);
   const [isUpdating, setIsUpdating] = React.useState(false);
 
   // Use prop user if available, otherwise fall back to context
@@ -46,6 +51,15 @@ function RoleSwitcherComponent({ className, user: propUser }: RoleSwitcherProps)
 
   // Track local changes with state
   const [currentRole, setCurrentRole] = React.useState<Role>(activeRole);
+
+  // Log mount once
+  React.useEffect(() => {
+    console.log(`[RoleSwitcher:${instanceId}] Mounted`);
+
+    return () => {
+      console.log(`[RoleSwitcher:${instanceId}] Unmounted`);
+    };
+  }, [instanceId]);
 
   // Make sure currentRole updates when user role changes
   React.useEffect(() => {
@@ -60,7 +74,7 @@ function RoleSwitcherComponent({ className, user: propUser }: RoleSwitcherProps)
 
     try {
       setIsUpdating(true);
-      console.log('[RoleSwitcher] Updating role to:', newRole);
+      console.log(`[RoleSwitcher:${instanceId}] Updating role to:`, newRole);
 
       // Set current role immediately for faster UI response
       setCurrentRole(newRole);
@@ -95,6 +109,7 @@ function RoleSwitcherComponent({ className, user: propUser }: RoleSwitcherProps)
                 role: newRole,
                 user: patchedUser,
                 previousRole: activeRole,
+                source: instanceId, // Add source to event
               },
             });
             window.dispatchEvent(event);
@@ -112,10 +127,10 @@ function RoleSwitcherComponent({ className, user: propUser }: RoleSwitcherProps)
         // Call updateRole without trying to chain .catch on the result
         userContext.updateRole(newRole);
       } catch (updateError) {
-        console.error('[RoleSwitcher] Error calling updateRole:', updateError);
+        console.error(`[RoleSwitcher:${instanceId}] Error calling updateRole:`, updateError);
       }
     } catch (error) {
-      console.error('[RoleSwitcher] Error updating role:', error);
+      console.error(`[RoleSwitcher:${instanceId}] Error updating role:`, error);
       // Revert to previous role on error
       setCurrentRole(activeRole);
     } finally {
