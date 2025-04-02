@@ -14,7 +14,7 @@ import { TeamDetails } from '@/types/context/teamContextType';
 
 export default function TeamActions() {
   const t = useTranslations('team');
-  const { activeTeam } = useTeam();
+  const { activeTeam } = useTeam('TeamActionsClient');
   const { hasPermission } = usePermission();
 
   // Treat activeTeam as TeamDetails

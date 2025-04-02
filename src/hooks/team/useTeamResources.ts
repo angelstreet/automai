@@ -79,7 +79,7 @@ export function useResourceAssignment() {
  * @param resourceType The type of resource to check (hosts, repositories, etc.)
  */
 export function useResourceLimit(resourceType: string) {
-  const { user } = useUser();
+  const { user } = useUser(null, 'useTeamResources');
 
   return useQuery({
     queryKey: ['resourceLimit', resourceType],

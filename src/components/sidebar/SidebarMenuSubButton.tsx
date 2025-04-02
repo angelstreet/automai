@@ -50,7 +50,7 @@ export const SidebarMenuSubButton = React.forwardRef<
     ref,
   ) => {
     const Comp = asChild ? Slot : 'button';
-    const { isMobile, state } = useSidebar();
+    const { isMobile, state } = useSidebar('SidebarMenuSubButton');
 
     const button = (
       <Comp

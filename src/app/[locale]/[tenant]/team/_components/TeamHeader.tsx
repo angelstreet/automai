@@ -18,7 +18,7 @@ export default function TeamHeader({ user }: { user?: User | null }) {
   const activeTab = searchParams.get('tab') || 'overview';
 
   // Get team data and loading state from context
-  const { activeTeam, loading } = useTeam();
+  const { activeTeam, loading } = useTeam('TeamHeader');
 
   // Treat activeTeam as TeamDetails - adjust as needed based on your type structure
   const team = activeTeam as unknown as TeamDetails;

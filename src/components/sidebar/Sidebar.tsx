@@ -20,7 +20,7 @@ const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
     },
     ref,
   ) => {
-    const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
+    const { isMobile, state, openMobile, setOpenMobile } = useSidebar('Sidebar');
 
     if (collapsible === 'none') {
       return (
@@ -76,7 +76,7 @@ const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
           top: 0,
           left: 0,
           bottom: 0,
-          zIndex: 40
+          zIndex: 40,
         }}
       >
         {/* Sidebar gap on desktop */}

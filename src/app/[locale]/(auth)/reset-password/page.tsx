@@ -21,7 +21,7 @@ export default function ResetPasswordPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   // Use the auth hook only for loading state
-  const { error: authError, loading } = useUser();
+  const { error: authError, loading } = useUser(null, 'ResetPasswordPage');
 
   // Set error from auth hook if present
   React.useEffect(() => {

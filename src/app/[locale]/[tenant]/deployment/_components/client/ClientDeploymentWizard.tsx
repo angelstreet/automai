@@ -58,7 +58,7 @@ export default function ClientDeploymentWizard({
   onCancel,
   onDeploymentCreated,
 }: ClientDeploymentWizardProps) {
-  const { user } = useUser();
+  const { user } = useUser(null, 'ClientDeploymentWizard');
   const [isPending, startTransition] = useTransition();
   const [step, setStep] = useState(1);
   const [deploymentData, setDeploymentData] = useState<DeploymentData>(initialDeploymentData);

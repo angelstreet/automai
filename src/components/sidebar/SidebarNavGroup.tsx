@@ -54,7 +54,7 @@ export const SidebarNavGroup = React.memo(function SidebarNavGroup({
 }: SidebarNavGroupProps) {
   const pathname = usePathname();
   const params = useParams();
-  const { open } = useSidebar();
+  const { open } = useSidebar('SidebarNavGroup');
 
   // Use state for isCollapsed to ensure hydration consistency
   const [isCollapsed, setIsCollapsed] = React.useState(false);

@@ -11,7 +11,7 @@ interface CreatorBadgeProps {
 }
 
 export function CreatorBadge({ creatorId, variant = 'outline' }: CreatorBadgeProps) {
-  const { user } = useUser();
+  const { user } = useUser(null, 'CreatorBadge');
 
   if (!creatorId || !user || creatorId !== user.id) {
     return null;

@@ -235,7 +235,8 @@ function MembersTabContent({
 // Main exported component that provides the dialog context
 export function MembersTab({ teamId, userRole, subscriptionTier, user }: MembersTabProps) {
   const t = useTranslations('team');
-  const { getTeamMembers, invalidateTeamMembersCache, membersLoading } = useTeam();
+  const { getTeamMembers, invalidateTeamMembersCache, membersLoading } =
+    useTeam('TeamMembersTabClient');
   const [members, setMembers] = useState<TeamMemberDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');

@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 
 export const SidebarRail = React.forwardRef<HTMLButtonElement, React.ComponentProps<'button'>>(
   ({ className, ...props }, ref) => {
-    const { toggleSidebar } = useSidebar();
+    const { toggleSidebar } = useSidebar('SidebarRail');
 
     return (
       <button

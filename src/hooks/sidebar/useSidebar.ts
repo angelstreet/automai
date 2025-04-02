@@ -18,9 +18,23 @@ export function useSidebarContext() {
 }
 
 /**
- * Primary sidebar hook with business logic
- * Use this hook in components
+ * Hook for interacting with the sidebar state
+ * Provides access to sidebar state and methods to control it
+ *
+ * @param componentName Name of the component using this hook (for debugging)
  */
-export function useSidebar() {
-  return useSidebarContext();
+export function useSidebar(componentName = 'unknown') {
+  const context = useContext(SidebarContext);
+
+  if (context === undefined) {
+    console.error(`[useSidebar] Hook used outside of SidebarProvider in ${componentName}`);
+    throw new Error('useSidebar must be used within a SidebarProvider');
+  }
+
+  // Log usage in development
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[@hook:useSidebar:useSidebar] Hook used in component: ${componentName}`);
+  }
+
+  return context;
 }

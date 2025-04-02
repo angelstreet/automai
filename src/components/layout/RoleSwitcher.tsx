@@ -37,7 +37,7 @@ interface RoleSwitcherProps {
 }
 
 function RoleSwitcherComponent({ className, user: propUser }: RoleSwitcherProps) {
-  const userContext = useUser();
+  const userContext = useUser(null, 'RoleSwitcher');
   const [isUpdating, setIsUpdating] = React.useState(false);
 
   // Use prop user if available, otherwise fall back to context

@@ -27,7 +27,7 @@ export default function TeamTabs({
   const activeTab = searchParams.get('tab') || 'overview';
 
   // Get team data and loading state from context
-  const { activeTeam, loading } = useTeam();
+  const { activeTeam, loading } = useTeam('TeamTabsClient');
 
   // Convert activeTeam to TeamDetails type with proper structure
   const teamDetails: TeamDetails = activeTeam

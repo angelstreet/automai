@@ -43,7 +43,7 @@ export const SidebarMenuButton = React.forwardRef<
     ref,
   ) => {
     const Comp = asChild ? Slot : 'button';
-    const sidebarContext = useSidebar();
+    const sidebarContext = useSidebar('SidebarMenuButton');
     const isOpen = sidebarContext?.isOpen ?? false;
     const isMobile = useIsMobile();
 

@@ -32,7 +32,7 @@ const SidebarMenuButton = React.forwardRef<
           'transition-all duration-200',
           '[&>svg]:size-4 [&>svg]:shrink-0',
           '[&>span:last-child]:truncate',
-          className
+          className,
         )}
         data-active={isActive}
         data-sidebar="menu-button"
@@ -41,7 +41,7 @@ const SidebarMenuButton = React.forwardRef<
       </Link>
     );
   }
-  
+
   return (
     <button
       ref={ref}
@@ -54,7 +54,7 @@ const SidebarMenuButton = React.forwardRef<
         'transition-all duration-200',
         '[&>svg]:size-4 [&>svg]:shrink-0',
         '[&>span:last-child]:truncate',
-        className
+        className,
       )}
       {...props}
     >
@@ -87,7 +87,7 @@ const SidebarMenuSubButton = React.forwardRef<
           'transition-all duration-200',
           '[&>svg]:size-4 [&>svg]:shrink-0',
           '[&>span:last-child]:truncate',
-          className
+          className,
         )}
         data-active={isActive}
         data-sidebar="menu-sub-button"
@@ -109,7 +109,7 @@ const SidebarMenuSubButton = React.forwardRef<
         'transition-all duration-200',
         '[&>svg]:size-4 [&>svg]:shrink-0',
         '[&>span:last-child]:truncate',
-        className
+        className,
       )}
       {...props}
     >
@@ -164,7 +164,11 @@ function SidebarGroup({ className, children, ...props }: React.HTMLAttributes<HT
   );
 }
 
-function SidebarGroupContent({ className, children, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+function SidebarGroupContent({
+  className,
+  children,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div className={cn('', className)} {...props}>
       {children}
@@ -219,7 +223,7 @@ interface SidebarNavigationProps {
 export function SidebarNavigation({ items, groupTitles, currentRole }: SidebarNavigationProps) {
   const pathname = usePathname();
   const params = useParams();
-  const { open } = useSidebar();
+  const { open } = useSidebar('SidebarNavigation');
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const [expandedItems, setExpandedItems] = React.useState<Record<string, boolean>>({});
 
@@ -248,14 +252,15 @@ export function SidebarNavigation({ items, groupTitles, currentRole }: SidebarNa
 
   // Filter items based on current role
   const filteredItems = React.useMemo(() => {
-    return items.map((group) => 
-      group.filter((item) => !item.roles || item.roles.includes(currentRole))
+    return items.map((group) =>
+      group
+        .filter((item) => !item.roles || item.roles.includes(currentRole))
         .map((item) => ({
           ...item,
           items: item.items?.filter(
             (subItem) => !subItem.roles || subItem.roles.includes(currentRole),
           ),
-        }))
+        })),
     );
   }, [items, currentRole]);
 
@@ -266,80 +271,78 @@ export function SidebarNavigation({ items, groupTitles, currentRole }: SidebarNa
 
   return (
     <ScrollArea className="h-full">
-      {filteredItems.map((group, groupIndex) => (
-        group.length > 0 && (
-          <SidebarGroup key={groupTitles[groupIndex]}>
-            {!isCollapsed && (
-              <SidebarGroupLabel className="text-gray-500 font-medium px-2 py-0.5 text-xs">
-                {groupTitles[groupIndex]}
-              </SidebarGroupLabel>
-            )}
-            <SidebarGroupContent className={cn('py-0.5', isCollapsed && 'mt-1.5')}>
-              <SidebarMenu>
-                {group.map((item) => {
-                  const Icon = item.icon;
-                  const active = isActive(item.href);
-                  const hasSubmenu = item.items && item.items.length > 0;
-                  const isExpanded = expandedItems[item.href];
+      {filteredItems.map(
+        (group, groupIndex) =>
+          group.length > 0 && (
+            <SidebarGroup key={groupTitles[groupIndex]}>
+              {!isCollapsed && (
+                <SidebarGroupLabel className="text-gray-500 font-medium px-2 py-0.5 text-xs">
+                  {groupTitles[groupIndex]}
+                </SidebarGroupLabel>
+              )}
+              <SidebarGroupContent className={cn('py-0.5', isCollapsed && 'mt-1.5')}>
+                <SidebarMenu>
+                  {group.map((item) => {
+                    const Icon = item.icon;
+                    const active = isActive(item.href);
+                    const hasSubmenu = item.items && item.items.length > 0;
+                    const isExpanded = expandedItems[item.href];
 
-                  return (
-                    <SidebarMenuItem key={item.href}>
-                      {hasSubmenu ? (
-                        <SidebarMenuButton
-                          isActive={active}
-                          onClick={() => toggleSubmenu(item.href)}
-                        >
-                          {Icon && <Icon className="h-4 w-4" />}
-                          <span>{item.title}</span>
-                          <ChevronDown
+                    return (
+                      <SidebarMenuItem key={item.href}>
+                        {hasSubmenu ? (
+                          <SidebarMenuButton
+                            isActive={active}
+                            onClick={() => toggleSubmenu(item.href)}
+                          >
+                            {Icon && <Icon className="h-4 w-4" />}
+                            <span>{item.title}</span>
+                            <ChevronDown
+                              className={cn(
+                                'ml-auto h-4 w-4 transition-transform duration-200',
+                                isExpanded && 'transform rotate-180',
+                              )}
+                            />
+                          </SidebarMenuButton>
+                        ) : (
+                          <SidebarMenuButton isActive={active} href={getFullPath(item.href)}>
+                            {Icon && <Icon className="h-4 w-4" />}
+                            <span>{item.title}</span>
+                          </SidebarMenuButton>
+                        )}
+
+                        {hasSubmenu && item.items && (
+                          <SidebarMenuSub
                             className={cn(
-                              'ml-auto h-4 w-4 transition-transform duration-200',
-                              isExpanded && 'transform rotate-180',
+                              'transition-all duration-200 ease-in-out',
+                              !isExpanded && 'hidden',
                             )}
-                          />
-                        </SidebarMenuButton>
-                      ) : (
-                        <SidebarMenuButton
-                          isActive={active}
-                          href={getFullPath(item.href)}
-                        >
-                          {Icon && <Icon className="h-4 w-4" />}
-                          <span>{item.title}</span>
-                        </SidebarMenuButton>
-                      )}
+                          >
+                            {item.items.map((subItem) => {
+                              const SubIcon = subItem.icon;
+                              const isSubActive = isActive(subItem.href);
 
-                      {hasSubmenu && item.items && (
-                        <SidebarMenuSub
-                          className={cn(
-                            'transition-all duration-200 ease-in-out',
-                            !isExpanded && 'hidden',
-                          )}
-                        >
-                          {item.items.map((subItem) => {
-                            const SubIcon = subItem.icon;
-                            const isSubActive = isActive(subItem.href);
-
-                            return (
-                              <SidebarMenuSubButton
-                                key={subItem.href}
-                                isActive={isSubActive}
-                                href={getFullPath(subItem.href)}
-                              >
-                                <SubIcon className="h-4 w-4" />
-                                <span>{subItem.title}</span>
-                              </SidebarMenuSubButton>
-                            );
-                          })}
-                        </SidebarMenuSub>
-                      )}
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )
-      ))}
+                              return (
+                                <SidebarMenuSubButton
+                                  key={subItem.href}
+                                  isActive={isSubActive}
+                                  href={getFullPath(subItem.href)}
+                                >
+                                  <SubIcon className="h-4 w-4" />
+                                  <span>{subItem.title}</span>
+                                </SidebarMenuSubButton>
+                              );
+                            })}
+                          </SidebarMenuSub>
+                        )}
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          ),
+      )}
     </ScrollArea>
   );
 }

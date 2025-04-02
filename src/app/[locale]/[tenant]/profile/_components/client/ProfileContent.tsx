@@ -33,7 +33,7 @@ export function ProfileContent({
     loading,
     refreshUser: contextRefreshUser,
     updateProfile: contextUpdateProfile,
-  } = useUser();
+  } = useUser(null, 'ProfileContent');
 
   // Use provided props or fall back to context
   const user = propUser || contextUser;

@@ -5,13 +5,7 @@ import { useTranslations } from 'next-intl';
 import React, { useState } from 'react';
 
 import { Button } from '@/components/shadcn/button';
-import { 
-  usePermission, 
-  useTeam,
-  useTeamMember,
-  TeamMemberResource,
-  ResourceType
-} from '@/context';
+import { usePermission, useTeam, useTeamMember, TeamMemberResource, ResourceType } from '@/context';
 
 import TeamMemberAddDialogClient from './TeamMemberAddDialogClient';
 import TeamMemberPermissionsDialogClient from './TeamMemberPermissionsDialogClient';
@@ -28,7 +22,7 @@ export default function TeamMemberManager({
 }: TeamMemberManagerProps) {
   const t = useTranslations('team');
   const { hasPermission } = usePermission();
-  const { activeTeam, invalidateTeamCache } = useTeam();
+  const { activeTeam, invalidateTeamCache } = useTeam('TeamMemberManagerClient');
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<TeamMemberResource | null>(null);

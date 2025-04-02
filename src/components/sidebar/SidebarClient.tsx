@@ -33,7 +33,7 @@ const SidebarClient = React.memo(function SidebarClient({
   activeTeam = null,
   setSelectedTeam,
 }: SidebarClientProps) {
-  const { open, state } = useSidebar();
+  const { open, state } = useSidebar('SidebarClient');
 
   // Track role changes with local state
   const [currentRole, setCurrentRole] = React.useState(user?.role || 'viewer');
@@ -62,15 +62,15 @@ const SidebarClient = React.memo(function SidebarClient({
   const navGroups = sidebarNavigationData.groups;
   const groupTitles = navGroups.map((group) => group.title);
   const items = navGroups.map((group) => group.items);
-  
+
   // Update CSS variables when sidebar state changes
   React.useEffect(() => {
     // Simply set the offset based on the state - all calculations now in CSS
     document.documentElement.style.setProperty(
-      '--sidebar-width-offset', 
-      state === 'collapsed' ? 'var(--sidebar-width-icon)' : 'var(--sidebar-width)'
+      '--sidebar-width-offset',
+      state === 'collapsed' ? 'var(--sidebar-width-icon)' : 'var(--sidebar-width)',
     );
-    
+
     // Set the sidebar state attribute for debugging and targeting
     document.documentElement.setAttribute('data-sidebar-state', state);
   }, [state]);

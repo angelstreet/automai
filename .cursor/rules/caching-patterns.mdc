@@ -1,5 +1,5 @@
 ---
-description: 
+description: Caching patterns, react query, deduplication and data flow
 globs: 
 alwaysApply: false
 ---

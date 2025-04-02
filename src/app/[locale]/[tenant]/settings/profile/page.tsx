@@ -10,7 +10,7 @@ import {
 import { useUser } from '@/hooks';
 
 export default function ProfileSettingsPage() {
-  const { user } = useUser();
+  const { user } = useUser(null, 'ProfileSettingsPage');
 
   return (
     <div className="container mx-auto py-6 space-y-8">

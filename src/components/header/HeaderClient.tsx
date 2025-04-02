@@ -28,7 +28,7 @@ export function HeaderClient({
   user,
   activeTeam = null,
 }: HeaderClientProps) {
-  const { state } = useSidebar();
+  const { state } = useSidebar('HeaderClient');
   const isCollapsed = state === 'collapsed';
   const [headerVisible, setHeaderVisible] = useState(true);
 
@@ -37,12 +37,12 @@ export function HeaderClient({
     setHeaderVisible(!headerVisible);
     console.log(`Header is now ${!headerVisible ? 'visible' : 'hidden'}`);
   };
-  
+
   // Update document with header state for global CSS targeting
   useEffect(() => {
     document.documentElement.setAttribute(
-      'data-header-state', 
-      headerVisible ? 'expanded' : 'collapsed'
+      'data-header-state',
+      headerVisible ? 'expanded' : 'collapsed',
     );
   }, [headerVisible]);
 
@@ -55,9 +55,10 @@ export function HeaderClient({
       )}
       data-sidebar-header="true"
     >
-      <div 
+      <div
         className={cn('flex h-14 items-center relative')}
-        data-header-state={headerVisible ? 'expanded' : 'collapsed'}>
+        data-header-state={headerVisible ? 'expanded' : 'collapsed'}
+      >
         {headerVisible && (
           <>
             {/* Left section */}
