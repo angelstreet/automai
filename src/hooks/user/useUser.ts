@@ -40,6 +40,12 @@ export function useUser(initialUser: User | null = null, componentName = 'unknow
     };
   }, [componentName]);
 
+  // Log every access to the hook
+  // This shows which components are using the useUser hook
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[@hook:useUser:useUser] Hook accessed in component: ${componentName}`);
+  }
+
   // User profile update mutation
   const { mutate: updateUser, isPending: isUpdating } = useMutation({
     mutationFn: (userData: Record<string, any>) => {

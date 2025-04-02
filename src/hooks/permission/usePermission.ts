@@ -31,7 +31,7 @@ export function usePermissionContext() {
  */
 export function usePermission(specificTeamId?: string) {
   const { user } = useUser(null, 'usePermission');
-  const { activeTeam } = useTeam();
+  const { activeTeam } = useTeam('usePermission');
   const queryClient = useQueryClient();
   const userId = user?.id;
   const teamId = specificTeamId || activeTeam?.id;

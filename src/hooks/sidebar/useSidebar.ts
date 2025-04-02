@@ -3,7 +3,6 @@
 import { useContext } from 'react';
 
 import { SidebarContext } from '@/context/SidebarContext';
-import type { SidebarContext as SidebarContextType } from '@/types/context/sidebarContextType';
 
 /**
  * Access the sidebar context
@@ -33,7 +32,7 @@ export function useSidebar(componentName = 'unknown') {
 
   // Log usage in development
   if (process.env.NODE_ENV === 'development') {
-    console.log(`[@hook:useSidebar:useSidebar] Hook used in component: ${componentName}`);
+    //console.debug(`[@hook:useSidebar:useSidebar] Hook used in component: ${componentName}`);
   }
 
   return context;
