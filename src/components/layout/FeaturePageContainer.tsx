@@ -70,10 +70,10 @@ export function FeaturePageContainer({
   const actions = propActions || pageMetadata?.actions || childMetadata?.actions || null;
 
   return (
-    <div className={'flex-1 flex flex-col h-full ${className} px-2 py-1'}>
+    <div className={'flex-1 flex flex-col ${className} px-3 py-1'}>
       {/* Header Section - Only render if title or description is provided */}
       {(title || description || actions) && (
-        <div>
+        <div className={'mb-2'}>
           <PageHeader title={title} description={description}>
             {actions}
           </PageHeader>
