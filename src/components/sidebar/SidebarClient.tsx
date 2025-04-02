@@ -3,16 +3,11 @@
 import * as React from 'react';
 
 import { ProfileDropDown } from '@/components/profile/ProfileDropDown';
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarRail,
-} from '@/components/sidebar';
-import { SidebarNavGroup } from '@/components/sidebar/SidebarNavGroup';
-import { APP_SIDEBAR_WIDTH, APP_SIDEBAR_WIDTH_ICON } from '@/components/sidebar/constants';
-import { sidebarData } from '@/components/sidebar/sidebarData';
+import { Sidebar } from '@/components/sidebar';
+import { SidebarContent, SidebarFooter, SidebarHeader } from '@/components/sidebar/SidebarLayout';
+import { SidebarNavigation } from '@/components/sidebar/SidebarNavigation';
+import { SidebarRail } from '@/components/sidebar/SidebarRail';
+import { APP_SIDEBAR_WIDTH, APP_SIDEBAR_WIDTH_ICON, sidebarNavigationData } from '@/components/sidebar/constants';
 import TeamSelector from '@/components/team/TeamSelector';
 import { TeamSwitcher } from '@/components/team/TeamSwitcher';
 import { useSidebar } from '@/hooks';
@@ -39,27 +34,10 @@ const SidebarClient = React.memo(function SidebarClient({
   // Simplified role resolution
   const effectiveRole = user?.role || 'viewer';
 
-  // Filter navigation groups based on role - simplified
-  const filteredNavigation = React.useMemo(() => {
-    return sidebarData.navGroups
-      .map((group) => {
-        // Filter items based on role
-        const filteredItems = group.items.filter((item) => {
-          // If no roles specified, show to everyone
-          if (!item.roles || item.roles.length === 0) {
-            return true;
-          }
-          // Otherwise check if user's role is in the allowed roles
-          return item.roles.includes(effectiveRole);
-        });
-
-        return {
-          ...group,
-          items: filteredItems,
-        };
-      })
-      .filter((group) => group.items.length > 0); // Remove empty groups
-  }, [effectiveRole]);
+  // Extract navigation data from constants
+  const navGroups = sidebarNavigationData.groups;
+  const groupTitles = navGroups.map(group => group.title);
+  const items = navGroups.map(group => group.items);
 
   return (
     <Sidebar
@@ -91,9 +69,11 @@ const SidebarClient = React.memo(function SidebarClient({
         </div>
       </SidebarHeader>
       <SidebarContent className={cn('pt-2', !open && 'pt-4')}>
-        {filteredNavigation.map((group) => (
-          <SidebarNavGroup key={group.title} {...group} />
-        ))}
+        <SidebarNavigation 
+          items={items}
+          groupTitles={groupTitles}
+          currentRole={effectiveRole}
+        />
       </SidebarContent>
       <SidebarFooter className="pb-2">
         {user && (

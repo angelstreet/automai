@@ -1,5 +1,4 @@
 import * as React from 'react';
-
 import { cn } from '@/lib/utils';
 
 export function SidebarContent({
@@ -54,24 +53,5 @@ export function SidebarSeparator({
       )}
       {...props}
     />
-  );
-}
-
-export function SidebarInset({
-  children,
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      className={cn(
-        'group-data-[variant=floating]:px-2 group-data-[variant=floating]:pb-2',
-        'group-data-[variant=inset]:px-2 group-data-[variant=inset]:pb-2',
-        className,
-      )}
-      {...props}
-    >
-      {children}
-    </div>
   );
 }

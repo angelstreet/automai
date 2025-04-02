@@ -1,30 +1,29 @@
+// Core sidebar exports
 export { default as Sidebar } from './Sidebar';
-export { SidebarTrigger } from './SidebarTrigger';
+export { SidebarClient } from './SidebarClient'; 
 export { SidebarRail } from './SidebarRail';
-export { SidebarClient } from './SidebarClient';
-// Layout components - consolidated exports
+export { SidebarTrigger } from './SidebarTrigger';
+
+// Layout components
 export {
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
   SidebarSeparator,
-  SidebarInset,
 } from './SidebarLayout';
-// Skeleton components - consolidated exports
+
+// Skeleton component
 export { SidebarSkeleton } from './SidebarSkeleton';
 
-// Group components - consolidated exports
-export {
+// Navigation components
+export { 
+  SidebarNavigation,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuButton,
+  SidebarMenuSubButton,
   SidebarGroup,
-  SidebarGroupLabel,
-  SidebarGroupAction,
   SidebarGroupContent,
-} from './SidebarGroups';
-
-// Menu components - consolidated exports
-export { SidebarMenu, SidebarMenuItem, SidebarMenuSub } from './SidebarMenuItems';
-
-// Larger standalone components
-export { SidebarMenuButton } from './SidebarMenuButton';
-export { SidebarMenuSubButton } from './SidebarMenuSubButton';
-export { SidebarInput } from './SidebarInput';
+  SidebarGroupLabel,
+} from './SidebarNavigation';
