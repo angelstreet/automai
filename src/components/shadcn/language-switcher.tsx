@@ -20,7 +20,7 @@ interface LanguageSwitcherProps {
 
 const languages = [
   { code: 'en', name: 'English' },
-  { code: 'fr', name: 'Français' },
+  // { code: 'fr', name: 'Français' }, // Temporarily removed during development
 ];
 
 export function LanguageSwitcher({ className }: LanguageSwitcherProps) {

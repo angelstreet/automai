@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter, useParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
 import {
@@ -20,15 +20,13 @@ import {
 
 const languages = [
   { code: 'en', name: 'English' },
-  { code: 'fr', name: 'Français' },
+  //{ code: 'fr', name: 'Français' }, // Temporarily removed during development
 ];
 
 export function LanguageSettings() {
-  const _router = useRouter();
   const params = useParams();
-  const t = useTranslations('Settings');
+  const t = useTranslations('settings');
   const currentLocale = params.locale as string;
-  const tenant = params.tenant as string;
 
   const handleLanguageChange = (newLocale: string) => {
     // Replace the current locale in the URL with the new one
@@ -54,7 +52,7 @@ export function LanguageSettings() {
               <SelectContent>
                 {languages.map((lang) => (
                   <SelectItem key={lang.code} value={lang.code}>
-                    {t(lang.code === 'en' ? 'english' : 'french')}
+                    {lang.name}
                   </SelectItem>
                 ))}
               </SelectContent>
