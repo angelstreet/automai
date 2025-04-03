@@ -33,20 +33,22 @@ export default function TeamTabContainerClient({ user, resourceCounts }: TeamTab
   // Debug output to help troubleshoot the issue
   console.log('TeamTabContainerClient - activeTeam raw:', activeTeam);
 
+  // Check if subscriptionTier exists in the activeTeam from server (it should be added directly)
+  const serverSubscriptionTier = (activeTeam as any)?.subscription_tier;
+  console.log('TeamTabContainerClient - server subscription tier:', serverSubscriptionTier);
+
   // Convert activeTeam to TeamDetails type with proper structure and safe defaults
   const teamDetails: TeamDetails | null = activeTeam
     ? {
         id: activeTeam.id || null,
         name: activeTeam.name || 'Team',
-        // Use the subscription tier from team object or default to trial
+        // Use the subscription tier from server or from tenant
         subscription_tier:
-          // Try to access subscription_tier through a type assertion if needed
-          (activeTeam as any).subscriptionTier || // From getTeamDetails action
-          (activeTeam as any).subscription_tier || // Alternate property name
+          serverSubscriptionTier || // First priority: directly from server
           'trial', // Default fallback
         memberCount: 'memberCount' in activeTeam ? (activeTeam.memberCount as number) : 0,
-        // Change null to undefined to match TeamDetails interface
-        role: 'role' in activeTeam ? (activeTeam.role as string) : undefined,
+        // Fix the role issue - make sure we have a valid role (default to 'admin' for owner)
+        role: 'role' in activeTeam ? (activeTeam.role as string) || 'admin' : 'admin', // Default to admin if missing
         ownerId: 'ownerId' in activeTeam ? (activeTeam.ownerId as string) : null,
         ownerEmail: 'ownerEmail' in activeTeam ? (activeTeam.ownerEmail as string) : null,
         resourceCounts: resourceCounts || {

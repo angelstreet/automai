@@ -510,7 +510,10 @@ export const getTeamDetails = cache(async () => {
     return {
       success: true,
       data: {
-        team: activeTeam,
+        team: {
+          ...activeTeam,
+          subscription_tier: subscriptionTier,
+        },
         memberCount: members.length,
         userRole,
         resourceCounts,
