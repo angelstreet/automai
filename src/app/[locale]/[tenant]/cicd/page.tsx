@@ -20,7 +20,7 @@ export default async function CICDPage() {
     <FeaturePageContainer
       title={t('title') || 'CI/CD Integration'}
       description={t('description') || 'Configure CI/CD providers for automated deployments'}
-      actions={<CICDActionsClient />}
+      actions={<CICDActionsClient providerCount={providers.length} />}
     >
       <CICDProvider initialProviders={providers} initialLoading={false}>
         <Suspense fallback={<CICDSkeleton />}>

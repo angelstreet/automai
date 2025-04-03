@@ -247,14 +247,42 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
   const renderFooterButtons = () => {
     if (isInDialog) {
       return (
-        <div className="flex justify-end space-x-2 mt-6 pt-4 border-t">
-          <Button type="button" variant="outline" onClick={handleCancel} className="h-9 px-4">
-            Cancel
+        <div className="flex justify-between space-x-2 mt-4 pt-4 border-t">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleTestConnection}
+            disabled={isTesting}
+            className="h-8 px-3 text-sm"
+          >
+            {isTesting ? (
+              <>
+                <div className="mr-2 h-3 w-3 animate-spin rounded-full border-b-2 border-current"></div>
+                Testing...
+              </>
+            ) : (
+              'Test Connection'
+            )}
           </Button>
 
-          <Button type="submit" disabled={isSubmitting} className="h-9 px-4">
-            {isSubmitting ? 'Saving...' : 'Create'}
-          </Button>
+          <div className="flex space-x-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCancel}
+              className="h-8 px-3 text-sm"
+            >
+              Cancel
+            </Button>
+
+            <Button
+              type="submit"
+              disabled={isSubmitting || !testMessage?.success}
+              className={`h-8 px-3 text-sm ${testMessage?.success ? 'bg-green-600 hover:bg-green-700' : ''}`}
+            >
+              {isSubmitting ? 'Saving...' : isEditMode ? 'Update' : 'Create'}
+            </Button>
+          </div>
         </div>
       );
     }
@@ -271,7 +299,11 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
             Cancel
           </Button>
 
-          <Button type="submit" disabled={isSubmitting}>
+          <Button
+            type="submit"
+            disabled={isSubmitting || !testMessage?.success}
+            className={testMessage?.success ? 'bg-green-600 hover:bg-green-700' : ''}
+          >
             {isSubmitting ? 'Saving...' : isEditMode ? 'Update Provider' : 'Create Provider'}
           </Button>
         </div>
@@ -281,7 +313,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-2">
         {/* Provider Type */}
         <FormField
           control={form.control}
@@ -351,6 +383,11 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
                   />
                 </FormControl>
                 <FormMessage />
+                {field.value && field.value.startsWith('http://') && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                    For security reasons, we recommend using HTTPS instead of HTTP.
+                  </p>
+                )}
               </FormItem>
             )}
           />
@@ -484,7 +521,11 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
         {/* Test Connection Status */}
         {testMessage && (
           <div
-            className={`p-3 rounded-md ${testMessage.success ? 'bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-100' : 'bg-red-50 text-red-700 dark:bg-red-900 dark:text-red-100'}`}
+            className={`p-2 text-sm rounded-md ${
+              testMessage.success
+                ? 'bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-100'
+                : 'bg-red-50 text-red-700 dark:bg-red-900 dark:text-red-100'
+            }`}
           >
             {testMessage.message}
           </div>
@@ -497,7 +538,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
             variant="outline"
             onClick={handleTestConnection}
             disabled={isTesting}
-            className="mt-4"
+            className="mt-2"
           >
             {isTesting ? 'Testing...' : 'Test Connection'}
           </Button>

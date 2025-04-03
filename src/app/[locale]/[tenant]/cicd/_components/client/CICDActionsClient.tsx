@@ -8,12 +8,27 @@ import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
 
 import { CICDProviderForm } from '../';
-import { REFRESH_CICD_PROVIDERS, REFRESH_CICD_COMPLETE } from './CICDProvider';
+import { REFRESH_CICD_PROVIDERS, REFRESH_CICD_COMPLETE, useCICD } from './CICDProvider';
 
-export function CICDActionsClient() {
+interface CICDActionsClientProps {
+  providerCount: number;
+}
+
+export function CICDActionsClient({
+  providerCount: initialProviderCount = 0,
+}: CICDActionsClientProps) {
   const t = useTranslations('cicd');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [currentProviderCount, setCurrentProviderCount] = useState(initialProviderCount);
+
+  // Use the CICD context to get real-time provider count
+  const { providers } = useCICD('CICDActionsClient');
+
+  // Update provider count whenever the providers array changes
+  useEffect(() => {
+    setCurrentProviderCount(providers.length);
+  }, [providers]);
 
   const handleAddProvider = useCallback(() => {
     setIsAddDialogOpen(true);
@@ -48,16 +63,18 @@ export function CICDActionsClient() {
   return (
     <>
       <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-8"
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-          {t('refresh')}
-        </Button>
+        {currentProviderCount > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {t('refresh')}
+          </Button>
+        )}
         <Button
           id="add-provider-button"
           size="sm"
