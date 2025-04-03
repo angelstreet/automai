@@ -3,7 +3,7 @@ import { getRepositories } from '@/app/actions/repositoriesAction';
 
 import { DeploymentList } from './DeploymentList';
 import { DeploymentEmptyStateClient } from './client/DeploymentEmptyStateClient';
-import { DeploymentProvider } from './client/DeploymentProvider';
+import { DeploymentProvider } from '@/app/providers/DeploymentProvider';
 
 export async function DeploymentContent() {
   // Fetch data at the server level
@@ -13,15 +13,19 @@ export async function DeploymentContent() {
   const repositoriesResult = await getRepositories();
   const repositories = repositoriesResult.success ? repositoriesResult.data || [] : [];
 
-  // If no deployments, show empty state
-  if (deployments.length === 0) {
+  // If deployments failed to load or no deployments found, show empty state
+  if (!deploymentsResponse.success || deployments.length === 0) {
+    if (!deploymentsResponse.success) {
+      console.error('Error loading deployments:', deploymentsResponse.error);
+    }
+
     return (
       <DeploymentProvider
         initialDeployments={[]}
         initialRepositories={repositories}
         initialLoading={false}
       >
-        <DeploymentEmptyStateClient />
+        <DeploymentEmptyStateClient errorMessage={deploymentsResponse.error} />
       </DeploymentProvider>
     );
   }

@@ -14,20 +14,26 @@ export async function getDeployments(
   cookieStore?: any,
 ): Promise<DbResponse<Deployment[]>> {
   try {
+    console.log(`[@db:deploymentDb:getDeployments] Fetching deployments for team: ${teamId}`);
     const supabase = await createClient(cookieStore);
 
     const { data, error } = await supabase
-      .from('Deployments')
+      .from('deployments')
       .select('*')
       .eq('team_id', teamId)
       .order('created_at', { ascending: false });
 
     if (error) {
+      console.error(`[@db:deploymentDb:getDeployments] Error: ${error.message}`);
       return { success: false, error: error.message };
     }
 
+    console.log(
+      `[@db:deploymentDb:getDeployments] Successfully fetched ${data.length} deployments`,
+    );
     return { success: true, data };
   } catch (error: any) {
+    console.error(`[@db:deploymentDb:getDeployments] Error: ${error.message}`);
     return { success: false, error: error.message || 'Failed to get deployments' };
   }
 }
@@ -42,7 +48,7 @@ export async function getDeploymentById(
   try {
     const supabase = await createClient(cookieStore);
 
-    const { data, error } = await supabase.from('Deployments').select('*').eq('id', id).single();
+    const { data, error } = await supabase.from('deployments').select('*').eq('id', id).single();
 
     if (error) {
       return { success: false, error: error.message };
@@ -65,7 +71,7 @@ export async function createDeployment(
     const supabase = await createClient(cookieStore);
 
     const { data, error } = await supabase
-      .from('Deployments')
+      .from('deployments')
       .insert([deployment])
       .select()
       .single();
@@ -92,7 +98,7 @@ export async function updateDeployment(
     const supabase = await createClient(cookieStore);
 
     const { data, error } = await supabase
-      .from('Deployments')
+      .from('deployments')
       .update(deployment)
       .eq('id', id)
       .select()
@@ -120,7 +126,7 @@ export async function updateDeploymentStatus(
     const supabase = await createClient(cookieStore);
 
     const { data, error } = await supabase
-      .from('Deployments')
+      .from('deployments')
       .update({ status })
       .eq('id', id)
       .select()
@@ -143,7 +149,7 @@ export async function deleteDeployment(id: string, cookieStore?: any): Promise<D
   try {
     const supabase = await createClient(cookieStore);
 
-    const { error } = await supabase.from('Deployments').delete().eq('id', id);
+    const { error } = await supabase.from('deployments').delete().eq('id', id);
 
     if (error) {
       return { success: false, error: error.message };
@@ -165,7 +171,7 @@ export async function findMany(
   try {
     const supabase = await createClient(cookieStore);
 
-    let query = supabase.from('Deployments').select('*');
+    let query = supabase.from('deployments').select('*');
 
     // Apply where conditions if provided
     if (options.where) {
@@ -196,7 +202,7 @@ export async function findUnique(id: string, cookieStore?: any): Promise<Deploym
   try {
     const supabase = await createClient(cookieStore);
 
-    const { data, error } = await supabase.from('Deployments').select('*').eq('id', id).single();
+    const { data, error } = await supabase.from('deployments').select('*').eq('id', id).single();
 
     if (error) {
       console.error('Error in findUnique:', error);
@@ -221,7 +227,7 @@ export async function create(
     const supabase = await createClient(cookieStore);
 
     const { data, error } = await supabase
-      .from('Deployments')
+      .from('deployments')
       .insert([options.data])
       .select()
       .single();

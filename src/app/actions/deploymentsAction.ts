@@ -82,7 +82,9 @@ function mapDbDeploymentToDeployment(dbDeployment: any): Deployment {
  * Get all deployments for the current user
  */
 export const getDeployments = cache(
-  async (user?: AuthUser | User | null): Promise<Deployment[]> => {
+  async (
+    user?: AuthUser | User | null,
+  ): Promise<{ success: boolean; data?: Deployment[]; error?: string }> => {
     try {
       // Get current user if not provided
       if (!user) {
@@ -91,14 +93,14 @@ export const getDeployments = cache(
 
       if (!user) {
         console.error('[@action:deployments:getDeployments] User not authenticated');
-        return [];
+        return { success: false, error: 'User not authenticated', data: [] };
       }
 
       // Get the user's active team ID
       const activeTeamResult = await getUserActiveTeam(user.id);
       if (!activeTeamResult || !activeTeamResult.id) {
         console.error('[@action:deployments:getDeployments] No active team found for user');
-        return [];
+        return { success: false, error: 'No active team found', data: [] };
       }
 
       const teamId = activeTeamResult.id;
@@ -110,22 +112,22 @@ export const getDeployments = cache(
       // Fetch deployments from the database
       const result = await dbGetDeployments(teamId, cookieStore);
 
-      if (!result.success || !result.data) {
+      if (!result.success) {
         console.error(
           '[@action:deployments:getDeployments] Error fetching deployments:',
           result.error,
         );
-        return [];
+        return { success: false, error: result.error, data: [] };
       }
 
       console.log(
         '[@action:deployments:getDeployments] Fetched deployments count:',
-        result.data.length,
+        result.data?.length || 0,
       );
-      return result.data;
-    } catch (error) {
+      return { success: true, data: result.data || [] };
+    } catch (error: any) {
       console.error('[@action:deployments:getDeployments] Error:', error);
-      return [];
+      return { success: false, error: error.message, data: [] };
     }
   },
 );
