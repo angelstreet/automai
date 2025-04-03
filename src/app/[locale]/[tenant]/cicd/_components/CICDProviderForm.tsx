@@ -174,6 +174,18 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
     setIsSubmitting(true);
 
     try {
+      // Check if test was successful, if not show a warning
+      if (!testMessage?.success) {
+        // Prompt user to confirm if they want to proceed without a successful test
+        const confirmed = window.confirm(
+          'Warning: The connection test was not successful or has not been run. Do you still want to save this provider? It may not work correctly.',
+        );
+        if (!confirmed) {
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       // Prepare credentials based on auth type
       let credentials: any = {};
 
@@ -279,7 +291,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
 
             <Button
               type="submit"
-              disabled={isSubmitting || !testMessage?.success}
+              disabled={isSubmitting}
               className={`h-7 px-3 text-xs ${testMessage?.success ? 'bg-green-600 hover:bg-green-700' : ''}`}
             >
               {isSubmitting ? 'Saving...' : isEditMode ? 'Update' : 'Create'}
@@ -309,7 +321,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
 
           <Button
             type="submit"
-            disabled={isSubmitting || !testMessage?.success}
+            disabled={isSubmitting}
             className={`h-7 text-xs ${testMessage?.success ? 'bg-green-600 hover:bg-green-700' : ''}`}
           >
             {isSubmitting ? 'Saving...' : isEditMode ? 'Update Provider' : 'Create Provider'}

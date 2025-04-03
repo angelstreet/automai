@@ -12,7 +12,6 @@ import {
   createCICDProvider as dbCreateCICDProvider,
   updateCICDProvider as dbUpdateCICDProvider,
   deleteCICDProvider as dbDeleteCICDProvider,
-  getCICDDeploymentMapping as dbGetCICDDeploymentMapping,
 } from '@/lib/db/cicdDb';
 import { CICDProvider, CICDProviderPayload, CICDJob } from '@/types/component/cicdComponentType';
 import type { ActionResult } from '@/types/context/cicdContextType';
@@ -289,28 +288,64 @@ export async function testCICDProvider(provider: CICDProviderPayload): Promise<A
 
       try {
         console.log(`[@action:cicd:testCICDProvider] Testing Jenkins connection to: ${jenkinsUrl}`);
-        // Test the Jenkins connection
-        const response = await fetch(`${jenkinsUrl}/api/json`, {
-          headers: {
-            Authorization: `Basic ${Buffer.from(`${username}:${apiToken}`).toString('base64')}`,
-          },
-        });
 
-        if (!response.ok) {
-          return {
-            success: false,
-            error: `Failed to connect to Jenkins: ${response.statusText}`,
-          };
+        // Create AbortController with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 8 second timeout
+
+        try {
+          // Test the Jenkins connection
+          const response = await fetch(`${jenkinsUrl}/api/json`, {
+            headers: {
+              Authorization: `Basic ${Buffer.from(`${username}:${apiToken}`).toString('base64')}`,
+            },
+            signal: controller.signal,
+          });
+
+          // Clear the timeout
+          clearTimeout(timeoutId);
+
+          if (!response.ok) {
+            return {
+              success: false,
+              error: `Failed to connect to Jenkins: ${response.statusText} (HTTP ${response.status})`,
+            };
+          }
+
+          const data = await response.json();
+          console.log(`[@action:cicd:testCICDProvider] Successfully connected to Jenkins`);
+          return { success: true, data };
+        } catch (fetchError: any) {
+          // Clear the timeout
+          clearTimeout(timeoutId);
+
+          // Handle specific fetch errors
+          if (fetchError.name === 'AbortError') {
+            console.warn(`[@action:cicd:testCICDProvider] Connection to ${jenkinsUrl} timed out`);
+            return {
+              success: false,
+              error: `Connection to Jenkins timed out. Verify the server URL and that the server is online.`,
+            };
+          }
+
+          // Handle connection refused or other network errors
+          if (fetchError.code === 'ECONNREFUSED' || fetchError.code?.includes('CONNECT_')) {
+            console.warn(
+              `[@action:cicd:testCICDProvider] Connection refused or failed: ${fetchError.message}`,
+            );
+            return {
+              success: false,
+              error: `Cannot connect to Jenkins server. Verify the server URL, port, and that the server is accessible.`,
+            };
+          }
+
+          throw fetchError; // Re-throw for the outer catch
         }
-
-        const data = await response.json();
-        console.log(`[@action:cicd:testCICDProvider] Successfully connected to Jenkins`);
-        return { success: true, data };
       } catch (error: any) {
         console.error('[@action:cicd:testCICDProvider] Error testing Jenkins connection:', error);
         return {
           success: false,
-          error: `Failed to connect to Jenkins: ${error.message}`,
+          error: `Failed to connect to Jenkins: ${error.message || 'Unknown error'}`,
         };
       }
     }
