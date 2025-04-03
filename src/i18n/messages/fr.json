@@ -1,4 +1,31 @@
 {
+  "team": {
+    "team": {
+      "resources": {
+        "hosts": "Hôtes",
+        "repositories": "Dépôts",
+        "deployments": "Déploiements",
+        "cicd_providers": "Fournisseurs CI/CD",
+        "cicd_jobs": "Tâches CI/CD"
+      }
+    }
+  },
+  "permissions": {
+    "select": "Voir",
+    "insert": "Créer",
+    "update": "Modifier (tous)",
+    "delete": "Supprimer (tous)",
+    "update_own": "Modifier (propriétaire)",
+    "delete_own": "Supprimer (propriétaire)",
+    "execute": "Exécuter"
+  },
+  "resources": {
+    "hosts": "Hôtes",
+    "repositories": "Dépôts",
+    "deployments": "Déploiements",
+    "cicd_providers": "Fournisseurs CI/CD",
+    "cicd_jobs": "Tâches CI/CD"
+  },
   "Index": {
     "title": "Automatisez votre infrastructure avec l'IA",
     "description": "Automai est une plateforme d'automatisation d'infrastructure alimentée par l'IA qui vous aide à gérer votre infrastructure facilement. Déployez, surveillez et mettez à l'échelle vos applications en toute confiance.",
@@ -383,6 +410,14 @@
       "teams": "Équipes",
       "settings": "Paramètres"
     },
+    "resources2": {
+      "repositories": "Dépôts",
+      "hosts": "Hôtes",
+      "cicd": "Fournisseurs CI/CD",
+      "cicd_providers": "Fournisseurs CI/CD",
+      "cicd_jobs": "Tâches CI/CD",
+      "deployments": "Déploiements"
+    },
     "membersTab": {
       "title": "Membres de l'équipe",
       "add": "Ajouter un membre",
@@ -439,6 +474,8 @@
       "repositories": "Dépôts",
       "hosts": "Hôtes",
       "cicd": "Fournisseurs CI/CD",
+      "cicd_providers": "Fournisseurs CI/CD",
+      "cicd_jobs": "Tâches CI/CD",
       "deployments": "Déploiements"
     },
     "roles": {

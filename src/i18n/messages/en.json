@@ -1,4 +1,31 @@
 {
+  "team": {
+    "team": {
+      "resources": {
+        "hosts": "Hosts",
+        "repositories": "Repositories",
+        "deployments": "Deployments",
+        "cicd_providers": "CI/CD Providers",
+        "cicd_jobs": "CI/CD Jobs"
+      }
+    }
+  },
+  "permissions": {
+    "select": "View",
+    "insert": "Create",
+    "update": "Edit All",
+    "delete": "Delete All",
+    "update_own": "Edit Own",
+    "delete_own": "Delete Own",
+    "execute": "Execute"
+  },
+  "resources": {
+    "hosts": "Hosts",
+    "repositories": "Repositories",
+    "deployments": "Deployments",
+    "cicd_providers": "CI/CD Providers",
+    "cicd_jobs": "CI/CD Jobs"
+  },
   "Index": {
     "title": "Automate your infrastructure with AI",
     "description": "Automai is an AI-powered infrastructure automation platform that helps you manage your infrastructure with ease. Deploy, monitor, and scale your applications with confidence.",
@@ -419,6 +446,14 @@
       "teams": "Teams",
       "settings": "Settings"
     },
+    "resources2": {
+      "repositories": "Repositories",
+      "hosts": "Hosts",
+      "cicd": "CI/CD Providers",
+      "cicd_providers": "CI/CD Providers",
+      "cicd_jobs": "CI/CD Jobs",
+      "deployments": "Deployments"
+    },
     "membersTab": {
       "title": "Team Members",
       "add": "Add Member",
@@ -475,6 +510,8 @@
       "repositories": "Repositories",
       "hosts": "Hosts",
       "cicd": "CI/CD",
+      "cicd_providers": "CI/CD Providers",
+      "cicd_jobs": "CI/CD Jobs",
       "deployments": "Deployments"
     },
     "roles": {
