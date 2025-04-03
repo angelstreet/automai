@@ -5,13 +5,11 @@
 
 import {
   LayoutDashboard,
-  Code2,
   Rocket,
   BarChart3,
   Settings,
   Users,
   Building,
-  Factory,
   Server,
   GitBranch,
 } from 'lucide-react';
