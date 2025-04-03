@@ -27,7 +27,7 @@ export default function TeamTabContainerClient({ user, resourceCounts }: TeamTab
   const searchParams = useSearchParams();
   const activeTab = searchParams.get('tab') || 'overview';
 
-  // Get team data from context
+  // Get team data from context and user data
   const { activeTeam } = useTeam('TeamTabContainerClient');
 
   // Debug output to help troubleshoot the issue
@@ -39,6 +39,9 @@ export default function TeamTabContainerClient({ user, resourceCounts }: TeamTab
     ('subscription_tier' in activeTeam ? (activeTeam.subscription_tier as string) : null) ||
     ('tenant_name' in activeTeam ? (activeTeam.tenant_name as string) : null) ||
     'pro'; // Default to 'pro' for testing
+    
+  // Debug user data to ensure we have the role
+  console.log('TeamTabContainerClient - user data:', user);
 
   // Convert activeTeam to TeamDetails type with proper structure and safe defaults
   const teamDetails: TeamDetails | null = activeTeam

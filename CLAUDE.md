@@ -37,6 +37,9 @@ alwaysApply: true
    - Only use file manipulation tools like View, Edit, Grep, etc.
    - Do not run any long-running processes that might tie up resources
 7. **✅ NEVER run git commands without explicit permission**
+   - NEVER create git commits automatically
+   - Do not add, commit, or push changes unless specifically instructed
+   - Wait for the user to explicitly request commit creation
 8. **✅ ALWAYS provide clear plans before implementing changes**
 9. **✅ ALWAYS make minimal, focused changes**
 

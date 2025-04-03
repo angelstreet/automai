@@ -52,6 +52,7 @@ function MembersTabContent({
   isLoading,
   searchQuery,
   setSearchQuery,
+  userRole,
 }: {
   teamId: string | null;
   subscriptionTier?: string;
@@ -60,29 +61,31 @@ function MembersTabContent({
   isLoading: boolean;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
+  userRole?: string | null;
 }) {
   const t = useTranslations('team');
-  const { hasPermission } = usePermission();
   const { openAddDialog, openEditDialog, addDialogOpen, setAddDialogOpen } = useTeamMemberDialog();
 
   // Set default for subscription tier if undefined
   const effectiveSubscriptionTier = subscriptionTier || 'pro';
   
   // Check permissions for managing members - Two conditions:
-  // 1. User must have admin role (checked via repository insert permission)
+  // 1. User must have admin role (directly checking role)
   // 2. Subscription tier must not be 'trial'
-  const hasAdminPermission = hasPermission('repositories' as ResourceType, 'insert');
+  const isAdmin = userRole === 'admin';
   const isNotTrialTier = effectiveSubscriptionTier !== 'trial';
-  const canManageMembers = hasAdminPermission && isNotTrialTier;
+  const canManageMembers = isAdmin && isNotTrialTier;
 
   // Debug logging for permission checks
   console.log('== PERMISSION DEBUG ==');
+  console.log('TeamMembersTabClient - userRole:', userRole);
+  console.log('TeamMembersTabClient - isAdmin:', isAdmin);
   console.log('TeamMembersTabClient - subscriptionTier:', subscriptionTier);
-  console.log('TeamMembersTabClient - hasAdminPermission:', hasAdminPermission);
   console.log('TeamMembersTabClient - isNotTrialTier:', isNotTrialTier);
   console.log('TeamMembersTabClient - canManageMembers:', canManageMembers);
   console.log('TeamMembersTabClient - permissions check details:', {
-    hasAdminPermission,
+    userRole,
+    isAdmin,
     isNotTrialTier,
     effectiveSubscriptionTier,
     subscriptionTier,
@@ -93,11 +96,12 @@ function MembersTabContent({
   console.log('== PERMISSION DEBUG BUTTON DISPLAY ==');
   console.log('Button should display:', canManageMembers);
   console.log('Button conditions:', {
-    hasAdminPermission,
+    userRole,
+    isAdmin,
     subscriptionTier,
     effectiveSubscriptionTier,
     isNotTrialTier,
-    bothConditionsMet: hasAdminPermission && isNotTrialTier,
+    bothConditionsMet: isAdmin && isNotTrialTier,
     teamId,
   });
 
@@ -271,7 +275,14 @@ function MembersTabContent({
 }
 
 // Main exported component that provides the dialog context
-export function MembersTab({ teamId, subscriptionTier }: MembersTabProps) {
+export function MembersTab({ teamId, subscriptionTier, userRole, user }: MembersTabProps) {
+  // Get user role either from userRole prop or from user object
+  const effectiveUserRole = userRole || user?.role;
+  
+  // Debug information about roles
+  console.log('MembersTab - userRole prop:', userRole);
+  console.log('MembersTab - user object:', user);
+  console.log('MembersTab - effective user role:', effectiveUserRole);
   const teamMembersQuery = useTeamMembers(teamId);
   const [members, setMembers] = useState<TeamMemberDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -351,6 +362,7 @@ export function MembersTab({ teamId, subscriptionTier }: MembersTabProps) {
         isLoading={isLoading || teamMembersQuery.isLoading}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
+        userRole={effectiveUserRole}
       />
     </TeamMemberDialogProvider>
   );
