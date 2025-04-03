@@ -275,8 +275,8 @@ export async function testCICDProvider(provider: CICDProviderPayload): Promise<A
     // Test Jenkins connection
     if (provider.type === 'jenkins') {
       const jenkinsUrl = provider.url;
-      const username = provider.config.username;
-      const apiToken = provider.config.apiToken;
+      const username = provider.config.credentials?.username;
+      const apiToken = provider.config.credentials?.token;
 
       // Basic validation for Jenkins specific fields
       if (!username) {

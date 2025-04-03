@@ -126,6 +126,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
       const credentials: any = {};
       if (values.auth_type === 'token') {
         credentials.token = values.token;
+        credentials.username = values.username;
       } else if (values.auth_type === 'basic_auth') {
         credentials.username = values.username;
         credentials.password = values.password;
@@ -185,6 +186,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
           break;
         case 'token':
           credentials = {
+            username: data.username,
             token: data.token,
           };
           break;
@@ -448,25 +450,46 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
 
         {/* Authentication Credentials */}
         {form.watch('auth_type') === 'token' && (
-          <FormField
-            control={form.control}
-            name="token"
-            rules={{ required: 'Token is required' }}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>API Token</FormLabel>
-                <FormControl>
-                  <Input
-                    type="password"
-                    placeholder="Enter your API token"
-                    onChange={(e) => handleCredentialChange('token', e.target.value)}
-                    value={field.value}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <>
+            <FormField
+              control={form.control}
+              name="username"
+              rules={{ required: 'Username is required' }}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Username</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Enter username"
+                      onChange={(e) => handleCredentialChange('username', e.target.value)}
+                      value={field.value}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="token"
+              rules={{ required: 'Token is required' }}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>API Token</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="password"
+                      placeholder="Enter your API token"
+                      onChange={(e) => handleCredentialChange('token', e.target.value)}
+                      value={field.value}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
         )}
 
         {form.watch('auth_type') === 'basic_auth' && (
