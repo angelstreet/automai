@@ -1,6 +1,6 @@
 'use client';
 
-import { MoreHorizontal, PlusIcon, Search } from 'lucide-react';
+import { MoreHorizontal, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 
@@ -30,7 +30,6 @@ import {
 import { usePermission } from '@/hooks';
 import { useRemoveTeamMember } from '@/hooks/useTeamMemberManagement';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
-import type { ResourceType } from '@/types/context/permissionsContextType';
 import { TeamMemberResource, TeamMemberDetails } from '@/types/context/teamContextType';
 import { User } from '@/types/service/userServiceType';
 
@@ -46,7 +45,6 @@ interface MembersTabProps {
 // Inner component that uses the dialog context
 function MembersTabContent({
   teamId,
-  subscriptionTier,
   members,
   onRemoveMember,
   isLoading,
@@ -54,7 +52,6 @@ function MembersTabContent({
   setSearchQuery,
 }: {
   teamId: string | null;
-  subscriptionTier?: string;
   members: TeamMemberDetails[];
   onRemoveMember: (memberId: string) => Promise<void>;
   isLoading: boolean;
@@ -62,12 +59,11 @@ function MembersTabContent({
   setSearchQuery: (query: string) => void;
 }) {
   const t = useTranslations('team');
-  const { openAddDialog, openEditDialog, addDialogOpen, setAddDialogOpen } = useTeamMemberDialog();
+  const { openEditDialog, addDialogOpen, setAddDialogOpen } = useTeamMemberDialog();
 
   // Use the centralized permission hook to check if user can manage team members
   const { canManageTeamMembers } = usePermission();
   const canManageMembers = canManageTeamMembers();
-
 
   // Filter members based on search
   const filteredMembers = members.filter(
@@ -124,14 +120,6 @@ function MembersTabContent({
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          {canManageMembers && (
-            <>
-              <Button onClick={openAddDialog}>
-                <PlusIcon className="mr-2 h-4 w-4" />
-                {t('membersTab.add')}
-              </Button>
-            </>
-          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -313,7 +301,6 @@ export function MembersTab({ teamId, subscriptionTier }: MembersTabProps) {
     <TeamMemberDialogProvider teamId={teamId} onMembersChanged={handleMembersChanged}>
       <MembersTabContent
         teamId={teamId}
-        subscriptionTier={subscriptionTier}
         members={members}
         onRemoveMember={handleRemoveMember}
         isLoading={isLoading || teamMembersQuery.isLoading}
