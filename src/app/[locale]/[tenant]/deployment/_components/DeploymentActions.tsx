@@ -19,6 +19,7 @@ import { Button } from '@/components/shadcn/button';
 import { toast } from '@/components/shadcn/use-toast';
 
 import { ClientDeploymentRunAction } from './client';
+import { REFRESH_DEPLOYMENTS } from './client/DeploymentProvider';
 
 interface DeploymentActionsProps {
   deploymentId: string;
@@ -33,8 +34,7 @@ export const DeploymentActions: React.FC<DeploymentActionsProps> = ({
   const params = useParams();
   const { locale, tenant } = params;
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-
-  // Use server action instead of context
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleView = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -48,6 +48,7 @@ export const DeploymentActions: React.FC<DeploymentActionsProps> = ({
 
   const handleConfirmDelete = async () => {
     try {
+      setIsDeleting(true);
       const result = await deleteDeployment(deploymentId);
 
       if (result.success) {
@@ -57,22 +58,11 @@ export const DeploymentActions: React.FC<DeploymentActionsProps> = ({
           variant: 'default',
         });
 
-        // Clear cache first to ensure we get fresh data
-        try {
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem('cached_deployment');
-            localStorage.removeItem('cached_deployment_time');
-          }
-        } catch (e) {
-          console.error('Error clearing localStorage:', e);
-        }
+        // Dispatch refresh event
+        window.dispatchEvent(new CustomEvent(REFRESH_DEPLOYMENTS));
 
-        // Increase timeout and simplify flow to avoid race conditions
-        setTimeout(() => {
-          // Refresh and navigate in sequence rather than parallel
-          router.refresh();
-          router.push(`/${locale}/${tenant}/deployment`);
-        }, 1000);
+        // Navigate back to deployments list
+        router.push(`/${locale}/${tenant}/deployment`);
       } else {
         toast({
           title: 'Error',
@@ -86,6 +76,9 @@ export const DeploymentActions: React.FC<DeploymentActionsProps> = ({
         description: error.message || 'An unexpected error occurred',
         variant: 'destructive',
       });
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteDialogOpen(false);
     }
   };
 
@@ -102,7 +95,10 @@ export const DeploymentActions: React.FC<DeploymentActionsProps> = ({
 
       <ClientDeploymentRunAction
         deployment={{ id: deploymentId }}
-        onDeploymentStarted={() => router.refresh()}
+        onDeploymentStarted={() => {
+          // Dispatch refresh event instead of router.refresh()
+          window.dispatchEvent(new CustomEvent(REFRESH_DEPLOYMENTS));
+        }}
       />
 
       <Button
@@ -110,6 +106,7 @@ export const DeploymentActions: React.FC<DeploymentActionsProps> = ({
         size="sm"
         className="flex items-center text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
         onClick={handleDeleteClick}
+        disabled={isDeleting}
       >
         <Trash2 className="mr-1 h-3 w-3" /> Delete
       </Button>
@@ -124,12 +121,13 @@ export const DeploymentActions: React.FC<DeploymentActionsProps> = ({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDelete}
               className="bg-red-600 hover:bg-red-700"
+              disabled={isDeleting}
             >
-              Delete
+              {isDeleting ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

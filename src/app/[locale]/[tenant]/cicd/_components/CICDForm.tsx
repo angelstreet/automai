@@ -24,6 +24,7 @@ import {
 } from '@/components/shadcn/select';
 import { CICDProviderPayload } from '@/types/component/cicdComponentType';
 import { CICDProvider, CICDProviderType } from '@/types/context/cicdContextType';
+import { REFRESH_CICD_PROVIDERS } from './client/CICDProvider';
 
 interface CICDFormProps {
   providerId?: string;
@@ -150,8 +151,18 @@ const CICDForm: React.FC<CICDFormProps> = ({ providerId, provider, onComplete })
       const result = await action();
 
       if (result.success) {
-        // Close the dialog and refresh the list
+        console.log('[CICDForm] Provider successfully created/updated');
+
+        // Dispatch refresh event before calling onComplete
+        window.dispatchEvent(new CustomEvent(REFRESH_CICD_PROVIDERS));
+
+        // Now call onComplete to close dialog
         onComplete();
+      } else {
+        setTestMessage({
+          success: false,
+          message: result.error || 'Failed to save provider',
+        });
       }
     } catch (error: any) {
       setTestMessage({

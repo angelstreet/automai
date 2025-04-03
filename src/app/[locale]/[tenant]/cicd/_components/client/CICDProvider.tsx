@@ -1,6 +1,11 @@
 'use client';
 
-import { createContext, useContext, ReactNode } from 'react';
+import { createContext, useContext, ReactNode, useState, useEffect } from 'react';
+import { getCICDProviders } from '@/app/actions/cicdAction';
+
+// Event constants
+export const REFRESH_CICD_PROVIDERS = 'refresh-cicd-providers';
+export const REFRESH_CICD_COMPLETE = 'refresh-cicd-complete';
 
 interface CICDProviderProps {
   children: ReactNode;
@@ -20,10 +25,40 @@ export function CICDProvider({
   initialProviders,
   initialLoading = false,
 }: CICDProviderProps) {
+  const [providers, setProviders] = useState(initialProviders);
+  const [isLoading, setIsLoading] = useState(initialLoading);
+
+  // Listen for refresh events
+  useEffect(() => {
+    const handleRefresh = async (event: Event) => {
+      console.log('[CICDProvider] Refresh event received');
+
+      setIsLoading(true);
+
+      try {
+        // Similar to getHosts in HostContent
+        const providersResponse = await getCICDProviders();
+        const newProviders = providersResponse.success ? providersResponse.data || [] : [];
+
+        console.log(`[CICDProvider] Fetched ${newProviders.length} providers`);
+        setProviders(newProviders);
+      } catch (error) {
+        console.error('[CICDProvider] Error fetching providers:', error);
+      } finally {
+        setIsLoading(false);
+        // Dispatch completion event
+        window.dispatchEvent(new CustomEvent(REFRESH_CICD_COMPLETE));
+      }
+    };
+
+    window.addEventListener(REFRESH_CICD_PROVIDERS, handleRefresh);
+    return () => window.removeEventListener(REFRESH_CICD_PROVIDERS, handleRefresh);
+  }, []);
+
   // Context value
   const value = {
-    providers: initialProviders,
-    isLoading: initialLoading,
+    providers,
+    isLoading,
   };
 
   return <CICDContext.Provider value={value}>{children}</CICDContext.Provider>;

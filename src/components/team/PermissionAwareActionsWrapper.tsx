@@ -1,6 +1,7 @@
 import React from 'react';
-import { PermissionAwareActions } from '@/components/team/PermissionAwareActions';
+
 import { CreatorBadge } from '@/components/team/CreatorBadge';
+import { PermissionAwareActions } from '@/components/team/PermissionAwareActions';
 import { ResourceType } from '@/types/context/permissionsContextType';
 
 interface PermissionAwareActionsWrapperProps {

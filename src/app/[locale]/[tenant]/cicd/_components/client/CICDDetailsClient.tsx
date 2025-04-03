@@ -1,6 +1,5 @@
 'use client';
 import { Edit, Trash, AlertCircle, RefreshCcw, MoreHorizontal, PlusCircle } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import React, { useState, useCallback } from 'react';
 
@@ -34,24 +33,28 @@ import {
 } from '@/components/shadcn/table';
 import { useToast } from '@/components/shadcn/use-toast';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { useCICD } from '@/hooks';
+import { deleteCICDProvider, testCICDProvider } from '@/app/actions/cicdAction';
 import type { CICDProvider } from '@/types/component/cicdComponentType';
+import { REFRESH_CICD_PROVIDERS } from './CICDProvider';
 
 import CICDForm from '../CICDForm';
 
 interface CICDDetailsClientProps {
   initialProviders: CICDProvider[];
+  isLoading?: boolean;
 }
 
-export default function CICDDetailsClient({ initialProviders }: CICDDetailsClientProps) {
+export default function CICDDetailsClient({
+  initialProviders,
+  isLoading = false,
+}: CICDDetailsClientProps) {
   const [selectedProvider, setSelectedProvider] = useState<CICDProvider | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   const t = useTranslations('cicd');
-  const router = useRouter();
 
   // Memoize dialog handlers
   const handleAddEditProvider = useCallback((provider?: CICDProvider) => {
@@ -71,16 +74,17 @@ export default function CICDDetailsClient({ initialProviders }: CICDDetailsClien
     setIsDeleteDialogOpen(true);
   }, []);
 
-  // Use the CICD hook
-  const { testProvider, deleteProvider } = useCICD();
-
   // Memoize test provider handler
   const handleTestProvider = useCallback(
     async (provider: CICDProvider) => {
       try {
-        setIsLoading(true);
-        // Use the hook's testProvider function instead of the direct action
-        await testProvider(provider.id);
+        setIsProcessing(true);
+        // Use the direct action
+        await testCICDProvider(provider);
+        toast({
+          title: 'Success',
+          description: 'Connection test was successful',
+        });
       } catch (error: any) {
         toast({
           title: 'Error',
@@ -88,29 +92,41 @@ export default function CICDDetailsClient({ initialProviders }: CICDDetailsClien
           variant: 'destructive',
         });
       } finally {
-        setIsLoading(false);
+        setIsProcessing(false);
       }
     },
-    [toast, testProvider],
+    [toast],
   );
 
   // Memoize dialog completion handler
   const handleDialogComplete = useCallback(() => {
     setIsAddEditDialogOpen(false);
-    router.refresh(); // Use Next.js router refresh to trigger server revalidation
-  }, [router]);
+    // Use custom event instead of router.refresh()
+    window.dispatchEvent(new CustomEvent(REFRESH_CICD_PROVIDERS));
+  }, []);
 
   // Memoize delete confirmation handler
   const handleConfirmDelete = useCallback(async () => {
     if (!selectedProvider) return;
 
     try {
-      setIsLoading(true);
-      // Use the hook's deleteProvider function instead of the direct action
-      const result = await deleteProvider(selectedProvider.id);
+      setIsProcessing(true);
+      // Use direct action
+      const result = await deleteCICDProvider(selectedProvider.id);
 
       if (result.success) {
-        router.refresh(); // Use Next.js router refresh to trigger server revalidation
+        // Use custom event instead of router.refresh()
+        window.dispatchEvent(new CustomEvent(REFRESH_CICD_PROVIDERS));
+        toast({
+          title: 'Success',
+          description: 'Provider deleted successfully',
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: result.error || 'Failed to delete provider',
+          variant: 'destructive',
+        });
       }
     } catch (error: any) {
       toast({
@@ -119,10 +135,10 @@ export default function CICDDetailsClient({ initialProviders }: CICDDetailsClien
         variant: 'destructive',
       });
     } finally {
-      setIsLoading(false);
+      setIsProcessing(false);
       setIsDeleteDialogOpen(false);
     }
-  }, [selectedProvider, deleteProvider, toast, router]);
+  }, [selectedProvider, toast]);
 
   // Memoize provider badge color function
   const getProviderBadgeColor = useCallback((type: string) => {
@@ -154,9 +170,8 @@ export default function CICDDetailsClient({ initialProviders }: CICDDetailsClien
             action={
               <Button
                 onClick={() => {
-                  setSelectedProvider(null);
-                  setIsEditing(false);
-                  setIsAddEditDialogOpen(true);
+                  // Instead of setting state directly, click the global add button
+                  document.getElementById('add-provider-button')?.click();
                 }}
               >
                 <PlusCircle className="h-4 w-4 mr-2" />
@@ -246,13 +261,13 @@ export default function CICDDetailsClient({ initialProviders }: CICDDetailsClien
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isLoading}>{t('cancel')}</AlertDialogCancel>
+            <AlertDialogCancel disabled={isProcessing}>{t('cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={isLoading}
+              disabled={isProcessing}
             >
-              {isLoading ? t('deleting', { fallback: 'Deleting...' }) : t('delete')}
+              {isProcessing ? t('deleting', { fallback: 'Deleting...' }) : t('delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
