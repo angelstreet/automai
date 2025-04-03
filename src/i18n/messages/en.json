@@ -394,6 +394,31 @@
     "addMember": "Add Member",
     "overview": "Overview",
     "members": "Team Members",
+    "permissions": {
+      "view": "View",
+      "create": "Create",
+      "edit": "Edit",
+      "delete": "Delete",
+      "manage": "Manage",
+      "select": "View",
+      "insert": "Create",
+      "update": "Edit All",
+      "delete": "Delete All",
+      "update_own": "Edit Own",
+      "delete_own": "Delete Own",
+      "execute": "Execute"
+    },
+    "resources": {
+      "repositories": "Repositories",
+      "hosts": "Hosts",
+      "cicd": "CI/CD Providers",
+      "cicd_providers": "CI/CD Providers",
+      "cicd_jobs": "CI/CD Jobs",
+      "deployments": "Deployments",
+      "users": "Users",
+      "teams": "Teams",
+      "settings": "Settings"
+    },
     "membersTab": {
       "title": "Team Members",
       "add": "Add Member",
@@ -421,6 +446,21 @@
         "roleLabel": "Role",
         "rolePlaceholder": "Select a role",
         "submitButton": "Add Member"
+      },
+      "editPermissions": {
+        "title": "Edit Member Permissions",
+        "description": "Modify the roles and permissions for this team member",
+        "roleTemplate": "Role Template",
+        "selectRole": "Select a role template",
+        "resource": "Resource",
+        "roleApplied": "Role Applied",
+        "roleAppliedDesc": "The {role} role template has been applied",
+        "roleApplyError": "Error Applying Role",
+        "missingTeamOrMember": "Team ID or member information is missing",
+        "success": "Permissions Updated",
+        "successDesc": "Permissions for {name} have been updated",
+        "saveError": "Error Saving Permissions",
+        "saveButton": "Save Permissions"
       }
     },
     "settings": "Settings",
@@ -439,10 +479,13 @@
     },
     "roles": {
       "admin": "Admin",
+      "adminFull": "Administrator (Full Access)",
       "developer": "Developer",
       "contributor": "Contributor",
       "viewer": "Viewer",
-      "tester": "Tester"
+      "viewerReadOnly": "Viewer (Read-Only)",
+      "tester": "Tester",
+      "custom": "Custom"
     },
     "common": {
       "cancel": "Cancel"

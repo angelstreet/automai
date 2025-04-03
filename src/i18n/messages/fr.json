@@ -358,6 +358,31 @@
     "addMember": "Ajouter un membre",
     "overview": "Aperçu",
     "members": "Membres de l'équipe",
+    "permissions": {
+      "view": "Voir",
+      "create": "Créer",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "manage": "Gérer",
+      "select": "Voir",
+      "insert": "Créer",
+      "update": "Modifier (tous)",
+      "delete": "Supprimer (tous)",
+      "update_own": "Modifier (propriétaire)",
+      "delete_own": "Supprimer (propriétaire)",
+      "execute": "Exécuter"
+    },
+    "resources": {
+      "repositories": "Dépôts",
+      "hosts": "Hôtes",
+      "cicd": "Fournisseurs CI/CD",
+      "cicd_providers": "Fournisseurs CI/CD",
+      "cicd_jobs": "Tâches CI/CD",
+      "deployments": "Déploiements",
+      "users": "Utilisateurs",
+      "teams": "Équipes",
+      "settings": "Paramètres"
+    },
     "membersTab": {
       "title": "Membres de l'équipe",
       "add": "Ajouter un membre",
@@ -385,6 +410,21 @@
         "roleLabel": "Rôle",
         "rolePlaceholder": "Sélectionnez un rôle",
         "submitButton": "Ajouter le membre"
+      },
+      "editPermissions": {
+        "title": "Modifier les permissions",
+        "description": "Modifier les rôles et permissions de ce membre",
+        "roleTemplate": "Modèle de rôle",
+        "selectRole": "Sélectionner un modèle de rôle",
+        "resource": "Ressource",
+        "roleApplied": "Rôle appliqué",
+        "roleAppliedDesc": "Le rôle {role} a été appliqué",
+        "roleApplyError": "Erreur lors de l'application du rôle",
+        "missingTeamOrMember": "L'ID de l'équipe ou les informations du membre sont manquants",
+        "success": "Permissions mises à jour",
+        "successDesc": "Les permissions de {name} ont été mises à jour",
+        "saveError": "Erreur lors de l'enregistrement des permissions",
+        "saveButton": "Enregistrer les permissions"
       }
     },
     "settings": "Paramètres",
@@ -403,10 +443,13 @@
     },
     "roles": {
       "admin": "Administrateur",
+      "adminFull": "Administrateur (Accès complet)",
       "developer": "Développeur",
       "contributor": "Contributeur",
       "viewer": "Visiteur",
-      "tester": "Testeur"
+      "viewerReadOnly": "Visiteur (Lecture seule)",
+      "tester": "Testeur",
+      "custom": "Personnalisé"
     },
     "common": {
       "cancel": "Annuler"

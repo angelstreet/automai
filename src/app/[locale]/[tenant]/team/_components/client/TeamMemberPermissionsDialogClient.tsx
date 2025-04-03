@@ -220,7 +220,7 @@ const EditPermissionsDialog = ({
                   </TableHead>
                   {Object.keys(PERMISSION_LABELS).map((perm) => (
                     <TableHead key={perm} className="text-center w-[100px]">
-                      {t(`permissions.${perm}`)}
+                      {PERMISSION_LABELS[perm]}
                     </TableHead>
                   ))}
                 </TableRow>
@@ -228,7 +228,7 @@ const EditPermissionsDialog = ({
               <TableBody>
                 {Object.keys(permissions).map((resource) => (
                   <TableRow key={resource}>
-                    <TableCell className="font-medium">{t(`resources.${resource}`)}</TableCell>
+                    <TableCell className="font-medium">{resource.replace('_', ' ')}</TableCell>
                     {Object.keys(PERMISSION_LABELS).map((permission) => (
                       <TableCell key={`${resource}-${permission}`} className="text-center">
                         <Checkbox
@@ -236,7 +236,7 @@ const EditPermissionsDialog = ({
                           onCheckedChange={(checked) =>
                             handlePermissionChange(resource, permission, checked)
                           }
-                          aria-label={`${t(`permissions.${permission}`)} ${t(`resources.${resource}`)}`}
+                          aria-label={`${PERMISSION_LABELS[permission]} ${resource.replace('_', ' ')}`}
                         />
                       </TableCell>
                     ))}
