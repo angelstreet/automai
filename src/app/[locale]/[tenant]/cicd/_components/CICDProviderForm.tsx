@@ -113,8 +113,39 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
     }
   };
 
+  // Watch relevant fields to update the Test Connection button state
+  form.watch(['name', 'url', 'port', 'username', 'token', 'password', 'auth_type']);
+
+  // Check if all required fields are filled for test connection
+  const canTestConnection = () => {
+    const values = form.getValues();
+    const hasName = !!values.name.trim();
+    const hasUrl = !!values.url.trim();
+    const hasPort = !!values.port.trim();
+
+    // Check auth credentials
+    let hasValidCredentials = false;
+    if (values.auth_type === 'token') {
+      hasValidCredentials = !!values.username.trim() && !!values.token.trim();
+    } else if (values.auth_type === 'basic_auth') {
+      hasValidCredentials = !!values.username.trim() && !!values.password.trim();
+    }
+
+    return hasName && hasUrl && hasPort && hasValidCredentials;
+  };
+
   // Test the connection to the CI/CD provider
   const handleTestConnection = async () => {
+    // Don't proceed if required fields are missing
+    if (!canTestConnection()) {
+      setTestMessage({
+        success: false,
+        message:
+          'Please fill in all required fields: Display Name, Server URL, Port, and authentication credentials.',
+      });
+      return;
+    }
+
     setIsTesting(true);
     setTestMessage(null);
 
@@ -266,7 +297,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
             type="button"
             variant="outline"
             onClick={handleTestConnection}
-            disabled={isTesting}
+            disabled={isTesting || !canTestConnection()}
             className="h-7 px-3 text-xs"
           >
             {isTesting ? (
@@ -308,7 +339,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
           type="button"
           variant="outline"
           onClick={handleTestConnection}
-          disabled={isTesting}
+          disabled={isTesting || !canTestConnection()}
           className="h-7 text-xs"
         >
           {isTesting ? 'Testing...' : 'Test Connection'}
@@ -417,6 +448,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
           <FormField
             control={form.control}
             name="port"
+            rules={{ required: 'Port is required' }}
             render={({ field }) => (
               <FormItem className="w-1/4" style={{ minWidth: '80px' }}>
                 <FormLabel className="text-xs">Port</FormLabel>
@@ -584,7 +616,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
             type="button"
             variant="outline"
             onClick={handleTestConnection}
-            disabled={isTesting}
+            disabled={isTesting || !canTestConnection()}
             className="h-7 px-2 text-xs mt-1"
           >
             {isTesting ? 'Testing...' : 'Test Connection'}

@@ -16,10 +16,6 @@ import {
 import { CICDProvider, CICDProviderPayload, CICDJob } from '@/types/component/cicdComponentType';
 import type { ActionResult } from '@/types/context/cicdContextType';
 
-interface CICDProviderListResult extends ActionResult {
-  data: CICDProvider[];
-}
-
 interface CICDProviderActionResult extends ActionResult {
   data?: CICDProvider;
 }
@@ -274,6 +270,7 @@ export async function testCICDProvider(provider: CICDProviderPayload): Promise<A
     // Test Jenkins connection
     if (provider.type === 'jenkins') {
       const jenkinsUrl = provider.url;
+      const port = provider.port;
       const username = provider.config.credentials?.username;
       const apiToken = provider.config.credentials?.token;
 
@@ -287,15 +284,24 @@ export async function testCICDProvider(provider: CICDProviderPayload): Promise<A
       }
 
       try {
-        console.log(`[@action:cicd:testCICDProvider] Testing Jenkins connection to: ${jenkinsUrl}`);
+        // Construct the full URL with port if available
+        let baseUrl = jenkinsUrl;
+
+        // Add protocol if missing
+        if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+          baseUrl = `http://${baseUrl}`;
+        }
+
+        const fullUrl = port ? `${baseUrl}:${port}` : baseUrl;
+        console.log(`[@action:cicd:testCICDProvider] Testing Jenkins connection to: ${fullUrl}`);
 
         // Create AbortController with timeout
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 8 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 30 second timeout
 
         try {
           // Test the Jenkins connection
-          const response = await fetch(`${jenkinsUrl}/api/json`, {
+          const response = await fetch(`${fullUrl}/api/json`, {
             headers: {
               Authorization: `Basic ${Buffer.from(`${username}:${apiToken}`).toString('base64')}`,
             },
@@ -321,21 +327,21 @@ export async function testCICDProvider(provider: CICDProviderPayload): Promise<A
 
           // Handle specific fetch errors
           if (fetchError.name === 'AbortError') {
-            console.warn(`[@action:cicd:testCICDProvider] Connection to ${jenkinsUrl} timed out`);
+            console.warn(`[@action:cicd:testCICDProvider] Connection to ${fullUrl} timed out`);
             return {
               success: false,
-              error: `Connection to Jenkins timed out. Verify the server URL and that the server is online.`,
+              error: `Connection to Jenkins server at ${fullUrl} timed out. Verify the server URL and that the server is online.`,
             };
           }
 
           // Handle connection refused or other network errors
           if (fetchError.code === 'ECONNREFUSED' || fetchError.code?.includes('CONNECT_')) {
             console.warn(
-              `[@action:cicd:testCICDProvider] Connection refused or failed: ${fetchError.message}`,
+              `[@action:cicd:testCICDProvider] Connection refused or failed to ${fullUrl}: ${fetchError.message}`,
             );
             return {
               success: false,
-              error: `Cannot connect to Jenkins server. Verify the server URL, port, and that the server is accessible.`,
+              error: `Cannot connect to Jenkins server at ${fullUrl}. Verify the server URL, port, and that the server is accessible.`,
             };
           }
 
