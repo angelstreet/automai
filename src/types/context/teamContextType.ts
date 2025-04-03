@@ -1,11 +1,12 @@
-import {  ResourceType  } from '@/types/context/permissionsContextType';
+import { ResourceType } from '@/types/context/permissionsContextType';
 
 // Team related types
 export interface Team {
   id: string;
   name: string;
   description?: string;
-  tenant_id: string;do
+  tenant_id: string;
+  do;
   created_by?: string;
   is_default: boolean;
   created_at: string;

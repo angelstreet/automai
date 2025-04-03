@@ -25,6 +25,15 @@ export default function TeamMemberDialogsClient() {
     selectedMember,
     onMembersChanged,
   } = useTeamMemberDialog();
+  
+  // Debug dialog state
+  console.log('== DIALOG DEBUG ==');
+  console.log('TeamMemberDialogsClient - dialog state:', {
+    teamId,
+    addDialogOpen,
+    editDialogOpen,
+    hasSelectedMember: !!selectedMember,
+  });
 
   // Handle when a member is added
   const handleMemberAdded = async () => {

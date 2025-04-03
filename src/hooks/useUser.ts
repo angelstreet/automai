@@ -108,6 +108,7 @@ export function useUser(initialUser: User | null = null, componentName = 'unknow
       console.log(
         `[@hook:useUser:useUser] #${instanceId.current} Received user data:`,
         result ? 'User found' : 'No user',
+        user,
       );
       return result;
     },

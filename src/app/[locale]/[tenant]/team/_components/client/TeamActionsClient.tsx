@@ -7,7 +7,7 @@ import React from 'react';
 import { Button } from '@/components/shadcn/button';
 // Import the ResourceType from its actual type file
 // Import the hook from hooks directory
-import { usePermission } from '@/hooks/usePermission';
+import { usePermission, usePermissionWithSubscription } from '@/hooks/usePermission';
 import { useTeam } from '@/hooks/useTeam';
 import type { ResourceType } from '@/types/context/permissionsContextType';
 import { TeamDetails } from '@/types/context/teamContextType';
@@ -15,13 +15,16 @@ import { TeamDetails } from '@/types/context/teamContextType';
 export default function TeamActions() {
   const t = useTranslations('team');
   const { activeTeam } = useTeam('TeamActionsClient');
-  const { hasPermission } = usePermission();
 
-  // Treat activeTeam as TeamDetails
-  const team = activeTeam as unknown as TeamDetails;
+  // Use our combined hook that handles permissions with subscription tier
+  const { canAddMembers } = usePermissionWithSubscription('TeamActionsClient');
+
+  // Debug logging for action permissions
+  console.log('== TEAM ACTIONS PERMISSION ==');
+  console.log('Can add members:', canAddMembers());
 
   // Show the create team button if no team is active
-  if (!team) {
+  if (!activeTeam) {
     return (
       <Button variant="default" size="sm">
         <PlusIcon className="h-4 w-4 mr-1" />
@@ -30,12 +33,8 @@ export default function TeamActions() {
     );
   }
 
-  // Check if user has permission to add members - Updated to use team_members resource type
-  const canAddMembers =
-    hasPermission('team_members' as ResourceType, 'insert') && team.subscription_tier !== 'trial';
-
   // Don't show any buttons if user can't add members
-  if (!canAddMembers) {
+  if (!canAddMembers()) {
     return null;
   }
 

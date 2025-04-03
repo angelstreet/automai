@@ -30,16 +30,23 @@ export default function TeamTabContainerClient({ user, resourceCounts }: TeamTab
   // Get team data from context
   const { activeTeam } = useTeam('TeamTabContainerClient');
 
+  // Debug output to help troubleshoot the issue
+  console.log('TeamTabContainerClient - activeTeam raw:', activeTeam);
+
   // Convert activeTeam to TeamDetails type with proper structure and safe defaults
   const teamDetails: TeamDetails | null = activeTeam
     ? {
         id: activeTeam.id || null,
         name: activeTeam.name || 'Team',
-        // Handle optional properties that might not exist on Team type
+        // Use the subscription tier from team object or default to trial
         subscription_tier:
-          'subscription_tier' in activeTeam ? (activeTeam.subscription_tier as string) : 'trial',
+          // Try to access subscription_tier through a type assertion if needed
+          (activeTeam as any).subscriptionTier || // From getTeamDetails action
+          (activeTeam as any).subscription_tier || // Alternate property name
+          'trial', // Default fallback
         memberCount: 'memberCount' in activeTeam ? (activeTeam.memberCount as number) : 0,
-        role: 'role' in activeTeam ? (activeTeam.role as string) : null,
+        // Change null to undefined to match TeamDetails interface
+        role: 'role' in activeTeam ? (activeTeam.role as string) : undefined,
         ownerId: 'ownerId' in activeTeam ? (activeTeam.ownerId as string) : null,
         ownerEmail: 'ownerEmail' in activeTeam ? (activeTeam.ownerEmail as string) : null,
         resourceCounts: resourceCounts || {
@@ -51,10 +58,8 @@ export default function TeamTabContainerClient({ user, resourceCounts }: TeamTab
       }
     : null;
 
-  // Debug output to help troubleshoot the issue
-  console.log('TeamTabContainerClient - activeTeam:', activeTeam);
-  console.log('TeamTabContainerClient - resourceCounts from props:', resourceCounts);
-  console.log('TeamTabContainerClient - teamDetails:', teamDetails);
+  // Log final team details for debugging
+  console.log('TeamTabContainerClient - final teamDetails:', teamDetails);
 
   // Show skeleton when team data is not available
   if (!activeTeam) {

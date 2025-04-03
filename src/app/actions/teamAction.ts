@@ -485,6 +485,27 @@ export const getTeamDetails = cache(async () => {
       console.error(`[@action:team:getTeamDetails] Error getting resource counts:`, countsError);
     }
 
+    // Get tenant subscription tier
+    let subscriptionTier = 'trial'; // Default to trial
+    try {
+      if (activeTeam.tenant_id) {
+        const cookieStore = await cookies();
+        const supabase = await createClient(cookieStore);
+        const { data: tenantData, error: tenantError } = await supabase
+          .from('tenants')
+          .select('name, subscription_tier_id')
+          .eq('id', activeTeam.tenant_id)
+          .single();
+
+        if (!tenantError && tenantData && tenantData.subscription_tier_id) {
+          subscriptionTier = tenantData.subscription_tier_id;
+          console.log(`[@action:team:getTeamDetails] Found subscription tier: ${subscriptionTier}`);
+        }
+      }
+    } catch (tierError) {
+      console.error(`[@action:team:getTeamDetails] Error getting subscription tier:`, tierError);
+    }
+
     console.log(`[@action:team:getTeamDetails] Successfully retrieved team details`);
     return {
       success: true,
@@ -493,6 +514,7 @@ export const getTeamDetails = cache(async () => {
         memberCount: members.length,
         userRole,
         resourceCounts,
+        subscriptionTier,
       },
     };
   } catch (error: any) {

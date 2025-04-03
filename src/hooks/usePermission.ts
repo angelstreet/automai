@@ -166,3 +166,42 @@ export function usePermissionWithContext() {
     refreshPermissions,
   };
 }
+
+/**
+ * Hook that combines permission checks with subscription tier checks
+ * Use this hook for features that should be limited based on subscription tier
+ * @param componentName Optional component name for debugging
+ */
+export function usePermissionWithSubscription(componentName = 'unknown') {
+  // Get team details which includes the subscription tier
+  const { activeTeam } = useTeam(componentName);
+  
+  // Get permission checking capabilities
+  const { hasPermission } = usePermissionWithContext();
+
+  // Check if the user can manage team members (factoring in subscription tier)
+  const canManageMembers = useCallback(() => {
+    // First check basic permission
+    const hasBasicPermission = hasPermission('repositories' as ResourceType, 'insert');
+    
+    // Then check if not on trial subscription
+    const subscriptionTier = activeTeam?.subscription_tier || 'trial';
+    const isNotTrial = subscriptionTier !== 'trial';
+    
+    // Both conditions must be true
+    return hasBasicPermission && isNotTrial;
+  }, [hasPermission, activeTeam]);
+
+  // Check if the user can add team members (factoring in subscription tier)
+  const canAddMembers = useCallback(() => {
+    // Same logic as canManageMembers for now, but keeping separate for future flexibility
+    return canManageMembers();
+  }, [canManageMembers]);
+
+  return {
+    canManageMembers,
+    canAddMembers,
+    // Expose the original hasPermission for other permission checks
+    hasPermission,
+  };
+}
