@@ -65,9 +65,9 @@ function MembersTabContent({
   const { hasPermission } = usePermission();
   const { openAddDialog, openEditDialog, addDialogOpen, setAddDialogOpen } = useTeamMemberDialog();
 
-  // Check permissions for managing members - Use valid resource type
-  const canManageMembers =
-    hasPermission('repositories' as ResourceType, 'insert') && subscriptionTier !== 'trial';
+  // Check permissions for managing members - For non-trial tiers, allow adding members
+  // The primary condition should only be based on subscription tier
+  const canManageMembers = subscriptionTier !== 'trial';
 
   // Debug logging for permission checks
   console.log('== PERMISSION DEBUG ==');
@@ -136,9 +136,8 @@ function MembersTabContent({
 
   // Use a defaulted subscription tier value if it's undefined
   const effectiveSubscriptionTier = subscriptionTier || 'pro';
-  const canManageMembersWithDefault =
-    hasPermission('repositories' as ResourceType, 'insert') &&
-    effectiveSubscriptionTier !== 'trial';
+  // The only condition should be that the subscription tier is not 'trial'
+  const canManageMembersWithDefault = effectiveSubscriptionTier !== 'trial';
 
   if (isLoading) {
     return <TeamMembersTableSkeleton />;
