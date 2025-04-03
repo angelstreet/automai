@@ -112,6 +112,8 @@
     "created_at": "Created At",
     "updated_at": "Updated At",
     "loading": "Loading...",
+    "selectAll": "Select All",
+    "deselectAll": "Deselect All",
     "refreshing": "Refreshing...",
     "noData": "No data available",
     "devices": "Devices",
@@ -475,12 +477,16 @@
       },
       "addMember": {
         "title": "Add Team Member",
-        "description": "Add a new member to your team",
+        "description": "Add new members to your team",
         "emailLabel": "Email Address",
         "emailPlaceholder": "Enter member's email",
         "roleLabel": "Role",
         "rolePlaceholder": "Select a role",
-        "submitButton": "Add Member"
+        "submitButton": "Add Member",
+        "selectMembers": "Select Members",
+        "searchMembers": "Search members...",
+        "noResults": "No matching members found",
+        "selectedCount": "{count} member(s) selected"
       },
       "editPermissions": {
         "title": "Edit Member Permissions",

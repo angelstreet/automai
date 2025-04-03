@@ -99,6 +99,8 @@
     "created_at": "Créé le",
     "updated_at": "Mis à jour le",
     "loading": "Chargement...",
+    "selectAll": "Sélectionner tout",
+    "deselectAll": "Désélectionner tout",
     "refreshing": "Actualisation...",
     "noData": "Aucune donnée disponible",
     "devices": "Appareils",
@@ -439,12 +441,16 @@
       },
       "addMember": {
         "title": "Ajouter un membre à l'équipe",
-        "description": "Ajoutez un nouveau membre à votre équipe",
+        "description": "Ajoutez de nouveaux membres à votre équipe",
         "emailLabel": "Adresse email",
         "emailPlaceholder": "Entrez l'email du membre",
         "roleLabel": "Rôle",
         "rolePlaceholder": "Sélectionnez un rôle",
-        "submitButton": "Ajouter le membre"
+        "submitButton": "Ajouter le membre",
+        "selectMembers": "Sélectionner des membres",
+        "searchMembers": "Rechercher des membres...",
+        "noResults": "Aucun membre correspondant trouvé",
+        "selectedCount": "{count} membre(s) sélectionné(s)"
       },
       "editPermissions": {
         "title": "Modifier les permissions",

@@ -58,7 +58,7 @@ const EditPermissionsDialog = ({
   // Use our React Query hooks
   const updateRoleMutation = useUpdateMemberRole();
   const { data: permissionsQuery, success } = usePermission(teamId);
-  
+
   // Use the shared dialog utilities
   const { isLoading, executeOperation, showValidationError } = useDialogState();
 
@@ -117,7 +117,7 @@ const EditPermissionsDialog = ({
               role,
             });
           },
-          t('membersTab.editPermissions.roleAppliedDesc', { role })
+          t('membersTab.editPermissions.roleAppliedDesc', { role }),
         );
       }
     }
@@ -142,10 +142,10 @@ const EditPermissionsDialog = ({
             role: roleTemplate !== 'custom' ? roleTemplate : 'contributor', // Default to contributor for custom permissions
           });
         }
-        
+
         onOpenChange(false);
       },
-      t('membersTab.editPermissions.successDesc', { name: member.name })
+      t('membersTab.editPermissions.successDesc', { name: member.name }),
     );
   };
 

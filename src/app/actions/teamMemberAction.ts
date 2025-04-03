@@ -154,6 +154,89 @@ export const addTeamMember = cache(async (teamId: string, email: string, role: s
 });
 
 /**
+ * Get available tenant profiles that can be added to a team
+ */
+export const getAvailableTenantProfiles = cache(async (tenantId: string, teamId: string) => {
+  try {
+    // Verify the current user is authenticated
+    const user = await getUser();
+    if (!user) {
+      return { success: false, error: 'User not authenticated' };
+    }
+
+    const cookieStore = await cookies();
+
+    // Get available tenant profiles
+    const result = await teamMemberDb.getAvailableTenantProfilesForTeam(
+      tenantId,
+      teamId,
+      cookieStore,
+    );
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error || 'Failed to get available tenant profiles',
+      };
+    }
+
+    return { success: true, data: result.data };
+  } catch (error) {
+    console.error('Error getting available tenant profiles:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get available tenant profiles',
+    };
+  }
+});
+
+/**
+ * Add multiple members to a team at once
+ */
+export const addMultipleTeamMembers = cache(
+  async (teamId: string, profileIds: string[], role: string) => {
+    try {
+      // Verify the current user is authenticated
+      const user = await getUser();
+      if (!user) {
+        return { success: false, error: 'User not authenticated' };
+      }
+
+      const cookieStore = await cookies();
+
+      // Add members to the team
+      const result = await teamMemberDb.addMultipleTeamMembers(
+        teamId,
+        profileIds,
+        role,
+        cookieStore,
+      );
+
+      if (!result.success) {
+        return {
+          success: false,
+          error: result.error || 'Failed to add team members',
+        };
+      }
+
+      // Revalidate team-related paths
+      revalidatePath('/[locale]/[tenant]/team');
+
+      return {
+        success: true,
+        data: result.data,
+      };
+    } catch (error) {
+      console.error('Error adding multiple team members:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to add team members',
+      };
+    }
+  },
+);
+
+/**
  * Update a team member's permissions
  */
 export const updateMemberPermissions = cache(
