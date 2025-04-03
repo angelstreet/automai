@@ -229,7 +229,7 @@ export default function CICDProvider({ removeTitle = false }: CICDProviderProps)
           <CardTitle className="text-xl font-bold">CI/CD Providers</CardTitle>
           <Button onClick={() => handleAddEditProvider()} size="sm" className="h-8 gap-1">
             <PlusCircle className="h-4 w-4" />
-            <span>Add Provider</span>
+            <span>{t('add_provider')}</span>
           </Button>
         </CardHeader>
       )}
@@ -257,7 +257,7 @@ export default function CICDProvider({ removeTitle = false }: CICDProviderProps)
               className="mt-2"
             >
               <PlusCircle className="h-4 w-4 mr-2" />
-              Add Provider
+              {t('add_provider')}
             </Button>
           </div>
         ) : (

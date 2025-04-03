@@ -325,7 +325,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
               disabled={isSubmitting}
               className={`h-7 px-3 text-xs ${testMessage?.success ? 'bg-green-600 hover:bg-green-700' : ''}`}
             >
-              {isSubmitting ? 'Saving...' : isEditMode ? 'Update' : 'Create'}
+              {isSubmitting ? 'Saving...' : isEditMode ? 'Update' : 'Save'}
             </Button>
           </div>
         </div>

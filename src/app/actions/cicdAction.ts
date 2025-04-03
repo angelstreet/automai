@@ -113,7 +113,35 @@ export async function createCICDProvider(
     // Get the active team ID
     const cookieStore = await cookies();
     const selectedTeamCookie = cookieStore.get(`selected_team_${user.id}`)?.value;
-    const teamId = selectedTeamCookie || user.teams?.[0]?.id;
+
+    // Try to get team ID from cookie
+    let teamId = selectedTeamCookie;
+
+    // If not available in cookie, try to get from user's teams array
+    if (!teamId && user.teams && user.teams.length > 0) {
+      teamId = user.teams[0].id;
+    }
+
+    // If still not available, try to get from getUserActiveTeam function
+    if (!teamId) {
+      try {
+        const { getUserActiveTeam } = await import('./teamAction');
+        const activeTeamResult = await getUserActiveTeam(user.id);
+        if (activeTeamResult?.id) {
+          teamId = activeTeamResult.id;
+        }
+      } catch (error) {
+        console.error('[@action:cicd:createCICDProvider] Error getting active team:', error);
+      }
+    }
+
+    console.log('[@action:cicd:createCICDProvider] Team data:', {
+      selectedTeamCookie,
+      firstTeamId: user.teams?.[0]?.id,
+      userId: user.id,
+      teamsCount: user.teams?.length || 0,
+      finalTeamId: teamId,
+    });
 
     if (!teamId) {
       console.error('[@action:cicd:createCICDProvider] No team available for provider creation');
@@ -132,7 +160,13 @@ export async function createCICDProvider(
     });
 
     // Create the provider
-    const result = await dbCreateCICDProvider(payload, user.id, user.tenant_id, cookieStore);
+    const result = await dbCreateCICDProvider(
+      payload,
+      user.id,
+      user.tenant_id,
+      teamId,
+      cookieStore,
+    );
 
     if (!result.success) {
       console.error(

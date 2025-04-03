@@ -3,6 +3,7 @@ import { Edit, Trash, AlertCircle, RefreshCcw, MoreHorizontal, PlusCircle } from
 import { useTranslations } from 'next-intl';
 import React, { useState, useCallback } from 'react';
 
+import { deleteCICDProvider, testCICDProvider } from '@/app/actions/cicdAction';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,11 +34,11 @@ import {
 } from '@/components/shadcn/table';
 import { useToast } from '@/components/shadcn/use-toast';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { deleteCICDProvider, testCICDProvider } from '@/app/actions/cicdAction';
 import type { CICDProvider } from '@/types/component/cicdComponentType';
-import { REFRESH_CICD_PROVIDERS } from './CICDProvider';
 
-import { CICDProviderForm } from '../';
+import { CICDProviderForm } from '..';
+
+import { REFRESH_CICD_PROVIDERS } from './CICDProvider';
 
 interface CICDDetailsClientProps {
   initialProviders: CICDProvider[];
@@ -55,6 +56,7 @@ export default function CICDDetailsClient({
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   const t = useTranslations('cicd');
+  const tc = useTranslations('common');
 
   // Memoize dialog handlers
   const handleAddEditProvider = useCallback((provider?: CICDProvider) => {
