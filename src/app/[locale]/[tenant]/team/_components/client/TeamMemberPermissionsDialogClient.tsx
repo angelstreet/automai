@@ -49,6 +49,7 @@ const EditPermissionsDialog = ({
   onSavePermissions,
 }: EditPermissionsDialogProps) => {
   const t = useTranslations('team');
+  const tc = useTranslations('common');
   const [roleTemplate, setRoleTemplate] = useState('custom');
   const [isLoadingPermissions, setIsLoadingPermissions] = useState(false);
   const [permissions, setPermissions] = useState<ResourcePermissions>(
@@ -161,12 +162,12 @@ const EditPermissionsDialog = ({
   if (isLoadingPermissions) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[700px]">
-          <DialogHeader>
+        <DialogContent className="w-full max-w-3xl mx-auto p-4">
+          <DialogHeader className="pb-2">
             <DialogTitle>{t('membersTab.editPermissions.title')}</DialogTitle>
           </DialogHeader>
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <div className="flex items-center justify-center py-6">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             <span className="ml-2 text-muted-foreground">{t('common.loading')}</span>
           </div>
         </DialogContent>
@@ -176,28 +177,32 @@ const EditPermissionsDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px]">
-        <DialogHeader>
+      <DialogContent className="w-full max-w-3xl mx-auto p-4">
+        <DialogHeader className="pb-2 space-y-1">
           <DialogTitle>{t('membersTab.editPermissions.title')}</DialogTitle>
-          <DialogDescription>{t('membersTab.editPermissions.description')}</DialogDescription>
+          <DialogDescription className="text-xs">
+            {t('membersTab.editPermissions.description')}
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="flex items-center space-x-4 py-4">
-          <Avatar>
+        <div className="flex items-center space-x-3 py-2">
+          <Avatar className="h-8 w-8">
             <AvatarImage src={member?.avatar_url || ''} alt={member?.name || ''} />
-            <AvatarFallback>{getInitials(member?.name || 'U')}</AvatarFallback>
+            <AvatarFallback className="text-xs">{getInitials(member?.name || 'U')}</AvatarFallback>
           </Avatar>
           <div>
-            <p className="font-medium">{member?.name}</p>
-            <p className="text-sm text-muted-foreground">{member?.email}</p>
+            <p className="font-medium text-sm leading-tight">{member?.name}</p>
+            <p className="text-xs text-muted-foreground leading-tight">{member?.email}</p>
           </div>
         </div>
 
-        <div className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="role-template">{t('membersTab.editPermissions.roleTemplate')}</Label>
+        <div className="grid gap-3">
+          <div className="grid gap-1">
+            <Label htmlFor="role-template" className="text-sm">
+              {t('membersTab.editPermissions.roleTemplate')}
+            </Label>
             <Select value={roleTemplate} onValueChange={applyRoleTemplate}>
-              <SelectTrigger id="role-template">
+              <SelectTrigger id="role-template" className="h-8">
                 <SelectValue placeholder={t('membersTab.editPermissions.selectRole')} />
               </SelectTrigger>
               <SelectContent>
@@ -211,15 +216,15 @@ const EditPermissionsDialog = ({
             </Select>
           </div>
 
-          <div className="border rounded-md">
-            <Table>
-              <TableHeader className="bg-background z-10">
+          <div className="border rounded-md overflow-x-auto">
+            <Table className="text-xs">
+              <TableHeader className="bg-background sticky top-0 z-10">
                 <TableRow>
-                  <TableHead className="w-[180px]">
+                  <TableHead className="py-2 w-[150px]">
                     {t('membersTab.editPermissions.resource')}
                   </TableHead>
                   {Object.keys(PERMISSION_LABELS).map((perm) => (
-                    <TableHead key={perm} className="text-center w-[100px]">
+                    <TableHead key={perm} className="text-center py-2 px-1 w-[64px]">
                       {PERMISSION_LABELS[perm]}
                     </TableHead>
                   ))}
@@ -227,11 +232,15 @@ const EditPermissionsDialog = ({
               </TableHeader>
               <TableBody>
                 {Object.keys(permissions).map((resource) => (
-                  <TableRow key={resource}>
-                    <TableCell className="font-medium">{resource.replace('_', ' ')}</TableCell>
+                  <TableRow key={resource} className="h-8">
+                    <TableCell className="font-medium py-1">{resource.replace('_', ' ')}</TableCell>
                     {Object.keys(PERMISSION_LABELS).map((permission) => (
-                      <TableCell key={`${resource}-${permission}`} className="text-center">
+                      <TableCell
+                        key={`${resource}-${permission}`}
+                        className="text-center py-1 px-1"
+                      >
                         <Checkbox
+                          className="h-4 w-4"
                           checked={permissions[resource][permission]}
                           onCheckedChange={(checked) =>
                             handlePermissionChange(resource, permission, checked)
@@ -247,12 +256,12 @@ const EditPermissionsDialog = ({
           </div>
         </div>
 
-        <DialogFooter className="mt-6">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {t('common.cancel')}
+        <DialogFooter className="mt-3 space-x-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)} size="sm">
+            {tc('cancel')}
           </Button>
-          <Button onClick={handleSubmit} disabled={isLoading}>
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <Button onClick={handleSubmit} disabled={isLoading} size="sm">
+            {isLoading && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
             {t('membersTab.editPermissions.saveButton')}
           </Button>
         </DialogFooter>

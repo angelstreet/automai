@@ -81,7 +81,7 @@
         "selectedCount": "{count} member(s) selected"
       },
       "editPermissions": {
-        "title": "Edit Member Permissions",
+        "title": "Edit Member",
         "description": "Modify the roles and permissions for this team member",
         "roleTemplate": "Role Template",
         "selectRole": "Select a role template",
@@ -93,7 +93,7 @@
         "success": "Permissions Updated",
         "successDesc": "Permissions for {name} have been updated",
         "saveError": "Error Saving Permissions",
-        "saveButton": "Save Permissions"
+        "saveButton": "Save"
       }
     },
     "settings": "Settings",
