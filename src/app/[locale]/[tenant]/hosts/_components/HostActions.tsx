@@ -1,9 +1,10 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
 import { Plus, Edit, Trash2, Play } from 'lucide-react';
-import { usePermission } from '@/hooks';
+
+import { Button } from '@/components/shadcn/button';
 import { PermissionGuard } from '@/components/ui/PermissionGuard';
+import { usePermission } from '@/hooks';
 import { Host } from '@/types/component/hostComponentType';
 
 interface HostActionButtonsProps {

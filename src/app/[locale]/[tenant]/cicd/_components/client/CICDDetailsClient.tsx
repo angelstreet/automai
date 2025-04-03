@@ -54,6 +54,7 @@ export default function CICDDetailsClient({
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [testingProviders, setTestingProviders] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
   const t = useTranslations('cicd');
 
@@ -80,6 +81,8 @@ export default function CICDDetailsClient({
     async (provider: CICDProvider) => {
       try {
         setIsProcessing(true);
+        // Set the specific provider as testing
+        setTestingProviders((prev) => ({ ...prev, [provider.id]: true }));
 
         // Client-side function to test connection
         const testConnection = async (provider: CICDProvider) => {
@@ -129,6 +132,12 @@ export default function CICDDetailsClient({
         });
       } finally {
         setIsProcessing(false);
+        // Clear the testing state for this provider
+        setTestingProviders((prev) => {
+          const updated = { ...prev };
+          delete updated[provider.id];
+          return updated;
+        });
       }
     },
     [toast],
@@ -223,6 +232,21 @@ export default function CICDDetailsClient({
   return (
     <Card className="border-0">
       <CardContent>
+        <style jsx global>{`
+          .provider-testing-animation {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+          }
+
+          @keyframes pulse {
+            0%,
+            100% {
+              opacity: 1;
+            }
+            50% {
+              opacity: 0.5;
+            }
+          }
+        `}</style>
         <Table>
           <TableHeader>
             <TableRow>
@@ -235,7 +259,10 @@ export default function CICDDetailsClient({
           </TableHeader>
           <TableBody>
             {initialProviders.map((provider) => (
-              <TableRow key={provider.id}>
+              <TableRow
+                key={provider.id}
+                className={testingProviders[provider.id] ? 'provider-testing-animation' : ''}
+              >
                 <TableCell className="font-medium">{provider.name}</TableCell>
                 <TableCell>
                   <Badge className={getProviderBadgeColor(provider.type)} variant="outline">
@@ -257,9 +284,16 @@ export default function CICDDetailsClient({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleTestProvider(provider)}>
-                        <RefreshCcw className="mr-2 h-4 w-4" />
-                        <span>{t('test_connection')}</span>
+                      <DropdownMenuItem
+                        onClick={() => handleTestProvider(provider)}
+                        disabled={testingProviders[provider.id]}
+                      >
+                        <RefreshCcw
+                          className={`mr-2 h-4 w-4 ${testingProviders[provider.id] ? 'animate-spin' : ''}`}
+                        />
+                        <span>
+                          {testingProviders[provider.id] ? t('testing') : t('test_connection')}
+                        </span>
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleAddEditProvider(provider)}>
                         <Edit className="mr-2 h-4 w-4" />
@@ -320,8 +354,8 @@ export default function CICDDetailsClient({
             </DialogTitle>
           </DialogHeader>
           <CICDProviderForm
-            providerId={isEditing ? selectedProvider?.id : undefined}
-            provider={isEditing ? selectedProvider : undefined}
+            providerId={isEditing && selectedProvider ? selectedProvider.id : undefined}
+            provider={isEditing && selectedProvider ? selectedProvider : undefined}
             onComplete={handleDialogComplete}
             isInDialog={true}
           />
