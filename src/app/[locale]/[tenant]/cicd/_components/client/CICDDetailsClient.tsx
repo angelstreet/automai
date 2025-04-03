@@ -38,7 +38,11 @@ import type { CICDProvider } from '@/types/component/cicdComponentType';
 
 import { CICDProviderForm } from '..';
 
-import { REFRESH_CICD_PROVIDERS } from './CICDProvider';
+import {
+  REFRESH_CICD_PROVIDERS,
+  CICD_TESTING_CONNECTION,
+  CICD_TESTING_CONNECTION_COMPLETE,
+} from './CICDProvider';
 
 interface CICDDetailsClientProps {
   initialProviders: CICDProvider[];
@@ -83,6 +87,13 @@ export default function CICDDetailsClient({
         setIsProcessing(true);
         // Set the specific provider as testing
         setTestingProviders((prev) => ({ ...prev, [provider.id]: true }));
+
+        // Dispatch event to notify other components that a test is starting
+        window.dispatchEvent(
+          new CustomEvent(CICD_TESTING_CONNECTION, {
+            detail: { providerId: provider.id },
+          }),
+        );
 
         // Client-side function to test connection
         const testConnection = async (provider: CICDProvider) => {
@@ -138,6 +149,13 @@ export default function CICDDetailsClient({
           delete updated[provider.id];
           return updated;
         });
+
+        // Dispatch event to notify other components that the test is complete
+        window.dispatchEvent(
+          new CustomEvent(CICD_TESTING_CONNECTION_COMPLETE, {
+            detail: { providerId: provider.id },
+          }),
+        );
       }
     },
     [toast],

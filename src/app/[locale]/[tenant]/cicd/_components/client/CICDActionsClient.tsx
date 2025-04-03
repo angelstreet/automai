@@ -7,8 +7,14 @@ import { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
 
-import { CICDProviderForm } from '../';
-import { REFRESH_CICD_PROVIDERS, REFRESH_CICD_COMPLETE } from './CICDProvider';
+import { CICDProviderForm } from '..';
+
+import {
+  REFRESH_CICD_PROVIDERS,
+  REFRESH_CICD_COMPLETE,
+  CICD_TESTING_CONNECTION,
+  CICD_TESTING_CONNECTION_COMPLETE,
+} from './CICDProvider';
 
 interface CICDActionsClientProps {
   providerCount: number;
@@ -67,6 +73,27 @@ export function CICDActionsClient({
 
     window.addEventListener(REFRESH_CICD_COMPLETE, handleRefreshComplete);
     return () => window.removeEventListener(REFRESH_CICD_COMPLETE, handleRefreshComplete);
+  }, []);
+
+  // Listen for connection testing events
+  useEffect(() => {
+    const handleTestingStart = () => {
+      console.log('[CICDActionsClient] Connection testing started');
+      setIsRefreshing(true);
+    };
+
+    const handleTestingComplete = () => {
+      console.log('[CICDActionsClient] Connection testing complete');
+      setIsRefreshing(false);
+    };
+
+    window.addEventListener(CICD_TESTING_CONNECTION, handleTestingStart);
+    window.addEventListener(CICD_TESTING_CONNECTION_COMPLETE, handleTestingComplete);
+
+    return () => {
+      window.removeEventListener(CICD_TESTING_CONNECTION, handleTestingStart);
+      window.removeEventListener(CICD_TESTING_CONNECTION_COMPLETE, handleTestingComplete);
+    };
   }, []);
 
   const handleDialogComplete = useCallback(() => {

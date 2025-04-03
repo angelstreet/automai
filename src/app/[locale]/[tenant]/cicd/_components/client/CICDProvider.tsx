@@ -6,6 +6,8 @@ import { getCICDProviders } from '@/app/actions/cicdAction';
 // Event constants
 export const REFRESH_CICD_PROVIDERS = 'refresh-cicd-providers';
 export const REFRESH_CICD_COMPLETE = 'refresh-cicd-complete';
+export const CICD_TESTING_CONNECTION = 'cicd-testing-connection';
+export const CICD_TESTING_CONNECTION_COMPLETE = 'cicd-testing-connection-complete';
 
 interface CICDProviderProps {
   children: ReactNode;
