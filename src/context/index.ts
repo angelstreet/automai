@@ -22,6 +22,7 @@ export { useRepository } from '@/hooks/repository';
 export { useSidebar } from '@/hooks/sidebar';
 export { useUser } from '@/hooks/user';
 export { useTheme } from '@/hooks/theme';
+export { useTeamMemberDialog } from '@/app/providers/TeamMemberDialogProvider';
 
 // DEPRECATED: Import these from @/hooks in the future
 export { FontProvider, useFont } from './FontContext';

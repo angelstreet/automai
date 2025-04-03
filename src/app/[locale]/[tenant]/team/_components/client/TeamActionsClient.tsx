@@ -4,6 +4,7 @@ import { PlusIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 
+import { useTeamMemberDialog } from '@/context';
 import { Button } from '@/components/shadcn/button';
 import { usePermission } from '@/hooks/usePermission';
 import { useTeam } from '@/hooks/useTeam';
@@ -12,6 +13,7 @@ import { TeamDetails } from '@/types/context/teamContextType';
 export default function TeamActions() {
   const t = useTranslations('team');
   const { activeTeam } = useTeam('TeamActionsClient');
+  const { openAddDialog } = useTeamMemberDialog();
 
   // Treat activeTeam as TeamDetails
   const team = activeTeam as unknown as TeamDetails;
@@ -37,7 +39,7 @@ export default function TeamActions() {
 
   return (
     <div className="flex gap-2 items-center">
-      <Button variant="outline" size="sm">
+      <Button variant="outline" size="sm" onClick={openAddDialog}>
         <PlusIcon className="h-4 w-4 mr-1" />
         {t('membersTab.add')}
       </Button>

@@ -2,7 +2,7 @@
 
 import React from 'react';
 
-import { useTeamMemberDialog } from '@/app/providers/TeamMemberDialogProvider';
+import { useTeamMemberDialog } from '@/context';
 import { TeamMemberResource } from '@/types/context/teamContextType';
 
 // Import the dialog components
@@ -25,27 +25,18 @@ export default function TeamMemberDialogsClient() {
     selectedMember,
     onMembersChanged,
   } = useTeamMemberDialog();
-  
-  // Debug dialog state
-  console.log('== DIALOG DEBUG ==');
-  console.log('TeamMemberDialogsClient - dialog state:', {
-    teamId,
-    addDialogOpen,
-    editDialogOpen,
-    hasSelectedMember: !!selectedMember,
-  });
 
   // Handle when a member is added
-  const handleMemberAdded = async () => {
-    // Trigger the callback to refresh the members list
+  const handleMemberAdded = async (email: string, role: string) => {
+    // Call the member added callback to refresh the members list
     if (onMembersChanged) {
       onMembersChanged();
     }
   };
 
   // Handle when permissions are saved
-  const handlePermissionsSaved = async () => {
-    // Trigger the callback to refresh the members list
+  const handlePermissionsSaved = async (member: TeamMemberResource, permissions: any) => {
+    // Call the members changed callback to refresh the members list
     if (onMembersChanged) {
       onMembersChanged();
     }
@@ -58,9 +49,7 @@ export default function TeamMemberDialogsClient() {
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
         teamId={teamId}
-        onAddMember={async (_email, _role) => {
-          await handleMemberAdded();
-        }}
+        onAddMember={handleMemberAdded}
       />
 
       {/* Edit Permissions Dialog */}
@@ -70,9 +59,7 @@ export default function TeamMemberDialogsClient() {
           onOpenChange={setEditDialogOpen}
           member={selectedMember}
           teamId={teamId}
-          onSavePermissions={async () => {
-            await handlePermissionsSaved();
-          }}
+          onSavePermissions={handlePermissionsSaved}
         />
       )}
     </>

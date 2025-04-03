@@ -4,10 +4,7 @@ import { MoreHorizontal, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 
-import {
-  TeamMemberDialogProvider,
-  useTeamMemberDialog,
-} from '@/app/providers/TeamMemberDialogProvider';
+import { useTeamMemberDialog } from '@/context';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
 import { Badge } from '@/components/shadcn/badge';
 import { Button } from '@/components/shadcn/button';
@@ -218,10 +215,7 @@ function MembersTabContent({
           </TableBody>
         </Table>
       </CardContent>
-      {/* Render the AddMemberDialog */}
-      {canManageMembers && (
-        <AddMemberDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} teamId={teamId} />
-      )}
+      {/* Don't render AddMemberDialog here - it's handled by TeamMemberDialogsClient */}
     </Card>
   );
 }
@@ -298,17 +292,15 @@ export function MembersTab({ teamId, subscriptionTier }: MembersTabProps) {
   };
 
   return (
-    <TeamMemberDialogProvider teamId={teamId} onMembersChanged={handleMembersChanged}>
-      <MembersTabContent
-        teamId={teamId}
-        members={members}
-        onRemoveMember={handleRemoveMember}
-        isLoading={isLoading || teamMembersQuery.isLoading}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-      />
-    </TeamMemberDialogProvider>
+    <MembersTabContent
+      teamId={teamId}
+      members={members}
+      onRemoveMember={handleRemoveMember}
+      isLoading={isLoading || teamMembersQuery.isLoading}
+      searchQuery={searchQuery}
+      setSearchQuery={setSearchQuery}
+    />
   );
 }
 
-import AddMemberDialog from './TeamMemberAddDialogClient';
+// We now use TeamMemberDialogsClient instead of directly using AddMemberDialog
