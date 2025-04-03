@@ -211,9 +211,9 @@ const EditPermissionsDialog = ({
             </Select>
           </div>
 
-          <div className="border rounded-md max-h-[300px] overflow-auto">
+          <div className="border rounded-md">
             <Table>
-              <TableHeader className="sticky top-0 bg-background z-10">
+              <TableHeader className="bg-background z-10">
                 <TableRow>
                   <TableHead className="w-[180px]">
                     {t('membersTab.editPermissions.resource')}
