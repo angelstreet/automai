@@ -29,20 +29,12 @@ export default function TeamTabContainerClient({ user, resourceCounts }: TeamTab
 
   // Get team data from context and user data
   const { activeTeam } = useTeam('TeamTabContainerClient');
-
-  // Debug output to help troubleshoot the issue
-  console.log('TeamTabContainerClient - activeTeam raw:', activeTeam);
-
   // Extract the actual subscription tier with better defaults
   // If the Team object doesn't have a subscription_tier, get it from the user's tenant if possible
   const subscriptionTier =
     ('subscription_tier' in activeTeam ? (activeTeam.subscription_tier as string) : null) ||
     ('tenant_name' in activeTeam ? (activeTeam.tenant_name as string) : null) ||
     'pro'; // Default to 'pro' for testing
-    
-  // Debug user data to ensure we have the role
-  console.log('TeamTabContainerClient - user data:', user);
-
   // Convert activeTeam to TeamDetails type with proper structure and safe defaults
   const teamDetails: TeamDetails | null = activeTeam
     ? {
@@ -63,12 +55,6 @@ export default function TeamTabContainerClient({ user, resourceCounts }: TeamTab
         },
       }
     : null;
-
-  // Debug output to help troubleshoot the issue
-  console.log('TeamTabContainerClient - activeTeam:', activeTeam);
-  console.log('TeamTabContainerClient - resourceCounts from props:', resourceCounts);
-  console.log('TeamTabContainerClient - teamDetails:', teamDetails);
-
   // Show skeleton when team data is not available
   if (!activeTeam) {
     return (
@@ -84,9 +70,7 @@ export default function TeamTabContainerClient({ user, resourceCounts }: TeamTab
         {activeTab === 'members' && (
           <MembersTab
             teamId={teamDetails?.id || null}
-            userRole={teamDetails?.role}
             subscriptionTier={teamDetails?.subscription_tier}
-            user={user}
           />
         )}
 

@@ -5,8 +5,10 @@ import { useCallback, useContext } from 'react';
 
 import { checkPermission, getUserPermissions } from '@/app/actions/permissionAction';
 import { PermissionContext } from '@/context/PermissionContext';
+import { UserContext } from '@/context/UserContext';
 import { useTeam } from '@/hooks/useTeam';
 import { useUser } from '@/hooks/useUser';
+import type { Role } from '@/types/component/userComponentType';
 import type {
   ResourceType,
   Operation,
@@ -128,6 +130,24 @@ export function usePermission(specificTeamId?: string) {
     [userId, teamId],
   );
 
+  // Function to check if user has a specific role
+  const hasRole = useCallback((requiredRole: Role): boolean => {
+    // Get user directly from UserContext for more reliable access
+    const { user } = useContext(UserContext);
+    return user?.role === requiredRole;
+  }, []);
+
+  // Convenience function specifically for checking admin role
+  const isAdmin = useCallback((): boolean => {
+    return hasRole('admin');
+  }, [hasRole]);
+
+  // Convenience function for checking if user can manage team members
+  const canManageTeamMembers = useCallback((): boolean => {
+    // Only admins can manage team members
+    return isAdmin();
+  }, [isAdmin]);
+
   return {
     permissions: permissionsResponse?.data || [],
     permissionsData: permissionsResponse,
@@ -136,6 +156,10 @@ export function usePermission(specificTeamId?: string) {
     hasPermission,
     checkPermissionAsync,
     refreshPermissions,
+    // New role-based permission functions
+    hasRole,
+    isAdmin,
+    canManageTeamMembers,
   };
 }
 
@@ -152,6 +176,9 @@ export function usePermissionWithContext() {
     hasPermission,
     checkPermissionAsync,
     refreshPermissions,
+    hasRole,
+    isAdmin,
+    canManageTeamMembers,
   } = usePermission();
 
   // Use context permissions if available, otherwise use query permissions
@@ -164,5 +191,8 @@ export function usePermissionWithContext() {
     hasPermission,
     checkPermissionAsync,
     refreshPermissions,
+    hasRole,
+    isAdmin,
+    canManageTeamMembers,
   };
 }

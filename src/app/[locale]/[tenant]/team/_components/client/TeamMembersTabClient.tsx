@@ -52,7 +52,6 @@ function MembersTabContent({
   isLoading,
   searchQuery,
   setSearchQuery,
-  userRole,
 }: {
   teamId: string | null;
   subscriptionTier?: string;
@@ -61,35 +60,14 @@ function MembersTabContent({
   isLoading: boolean;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
-  userRole?: string | null;
 }) {
   const t = useTranslations('team');
   const { openAddDialog, openEditDialog, addDialogOpen, setAddDialogOpen } = useTeamMemberDialog();
 
-  // Check permissions for managing members
-  // User must have admin role (directly checking role)
-  const isAdmin = userRole === 'admin';
-  const canManageMembers = isAdmin;
+  // Use the centralized permission hook to check if user can manage team members
+  const { canManageTeamMembers } = usePermission();
+  const canManageMembers = canManageTeamMembers();
 
-  // Debug logging for permission checks
-  console.log('== PERMISSION DEBUG ==');
-  console.log('TeamMembersTabClient - userRole:', userRole);
-  console.log('TeamMembersTabClient - isAdmin:', isAdmin);
-  console.log('TeamMembersTabClient - canManageMembers:', canManageMembers);
-  console.log('TeamMembersTabClient - permissions check details:', {
-    userRole,
-    isAdmin,
-    teamId,
-  });
-
-  // Debug logging for permission checks
-  console.log('== PERMISSION DEBUG BUTTON DISPLAY ==');
-  console.log('Button should display:', canManageMembers);
-  console.log('Button conditions:', {
-    userRole,
-    isAdmin,
-    teamId,
-  });
 
   // Filter members based on search
   const filteredMembers = members.filter(
@@ -261,14 +239,7 @@ function MembersTabContent({
 }
 
 // Main exported component that provides the dialog context
-export function MembersTab({ teamId, subscriptionTier, userRole, user }: MembersTabProps) {
-  // Get user role either from userRole prop or from user object
-  const effectiveUserRole = userRole || user?.role;
-  
-  // Debug information about roles
-  console.log('MembersTab - userRole prop:', userRole);
-  console.log('MembersTab - user object:', user);
-  console.log('MembersTab - effective user role:', effectiveUserRole);
+export function MembersTab({ teamId, subscriptionTier }: MembersTabProps) {
   const teamMembersQuery = useTeamMembers(teamId);
   const [members, setMembers] = useState<TeamMemberDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -348,7 +319,6 @@ export function MembersTab({ teamId, subscriptionTier, userRole, user }: Members
         isLoading={isLoading || teamMembersQuery.isLoading}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
-        userRole={effectiveUserRole}
       />
     </TeamMemberDialogProvider>
   );
