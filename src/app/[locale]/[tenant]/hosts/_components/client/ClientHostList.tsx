@@ -38,6 +38,16 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
     return () => window.removeEventListener(VIEW_MODE_CHANGE, handleViewModeChange);
   }, []);
 
+  // Dispatch event when host count changes
+  useEffect(() => {
+    console.log('[ClientHostList] Host count changed:', hosts.length);
+    window.dispatchEvent(
+      new CustomEvent('host-count-updated', {
+        detail: { count: hosts.length },
+      }),
+    );
+  }, [hosts.length]);
+
   const handleTestConnection = useCallback(async (host: Host): Promise<boolean> => {
     try {
       console.log(`[ClientHostList] Testing connection for host: ${host.name}`);

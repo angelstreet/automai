@@ -42,6 +42,13 @@ export function CICDProvider({
 
         console.log(`[CICDProvider] Fetched ${newProviders.length} providers`);
         setProviders(newProviders);
+
+        // Dispatch event with the provider count
+        window.dispatchEvent(
+          new CustomEvent('provider-count-updated', {
+            detail: { count: newProviders.length },
+          }),
+        );
       } catch (error) {
         console.error('[CICDProvider] Error fetching providers:', error);
       } finally {
@@ -54,6 +61,15 @@ export function CICDProvider({
     window.addEventListener(REFRESH_CICD_PROVIDERS, handleRefresh);
     return () => window.removeEventListener(REFRESH_CICD_PROVIDERS, handleRefresh);
   }, []);
+
+  // Also dispatch event on initial mount with the provider count
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent('provider-count-updated', {
+        detail: { count: initialProviders.length },
+      }),
+    );
+  }, [initialProviders.length]);
 
   // Context value
   const value = {

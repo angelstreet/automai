@@ -10,11 +10,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/s
 import { ClientConnectionForm, FormData as ConnectionFormData } from './ClientConnectionForm';
 import { VIEW_MODE_CHANGE } from './constants';
 
-export function HostActions() {
+interface HostActionsProps {
+  hostCount?: number;
+}
+
+export function HostActions({ hostCount: initialHostCount = 0 }: HostActionsProps) {
   const t = useTranslations('hosts');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showAddHost, setShowAddHost] = useState(false);
+  const [currentHostCount, setCurrentHostCount] = useState(initialHostCount);
   const [formData, setFormData] = useState<ConnectionFormData>({
     name: '',
     description: '',
@@ -24,6 +29,26 @@ export function HostActions() {
     username: '',
     password: '',
   });
+
+  // Update host count when prop changes
+  useEffect(() => {
+    setCurrentHostCount(initialHostCount);
+  }, [initialHostCount]);
+
+  // Listen for host count updates
+  useEffect(() => {
+    const handleHostCountUpdate = (event: CustomEvent) => {
+      if (event.detail && typeof event.detail.count === 'number') {
+        console.log('[HostActions] Host count updated:', event.detail.count);
+        setCurrentHostCount(event.detail.count);
+      }
+    };
+
+    window.addEventListener('host-count-updated', handleHostCountUpdate as EventListener);
+    return () => {
+      window.removeEventListener('host-count-updated', handleHostCountUpdate as EventListener);
+    };
+  }, []);
 
   const handleViewModeChange = () => {
     const newMode = viewMode === 'grid' ? 'table' : 'grid';
@@ -86,19 +111,23 @@ export function HostActions() {
   return (
     <>
       <div className="flex items-center gap-2">
-        <Button variant="outline" size="sm" className="h-8" onClick={handleViewModeChange}>
-          {viewMode === 'grid' ? <List className="h-4 w-4" /> : <Grid className="h-4 w-4" />}
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-8"
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-          {t('refresh', { fallback: 'Refresh' })}
-        </Button>
+        {currentHostCount > 0 && (
+          <>
+            <Button variant="outline" size="sm" className="h-8" onClick={handleViewModeChange}>
+              {viewMode === 'grid' ? <List className="h-4 w-4" /> : <Grid className="h-4 w-4" />}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {t('refresh', { fallback: 'Refresh' })}
+            </Button>
+          </>
+        )}
 
         <Button size="sm" className="h-8 gap-1" onClick={handleAddHost} id="add-host-button">
           <PlusCircle className="h-4 w-4" />

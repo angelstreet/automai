@@ -8,7 +8,7 @@ import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
 
 import { CICDProviderForm } from '../';
-import { REFRESH_CICD_PROVIDERS, REFRESH_CICD_COMPLETE, useCICD } from './CICDProvider';
+import { REFRESH_CICD_PROVIDERS, REFRESH_CICD_COMPLETE } from './CICDProvider';
 
 interface CICDActionsClientProps {
   providerCount: number;
@@ -22,13 +22,28 @@ export function CICDActionsClient({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [currentProviderCount, setCurrentProviderCount] = useState(initialProviderCount);
 
-  // Use the CICD context to get real-time provider count
-  const { providers } = useCICD('CICDActionsClient');
-
-  // Update provider count whenever the providers array changes
+  // Update provider count when prop changes
   useEffect(() => {
-    setCurrentProviderCount(providers.length);
-  }, [providers]);
+    setCurrentProviderCount(initialProviderCount);
+  }, [initialProviderCount]);
+
+  // Listen for provider count updates
+  useEffect(() => {
+    const handleProviderCountUpdate = (event: CustomEvent) => {
+      if (event.detail && typeof event.detail.count === 'number') {
+        console.log('[CICDActionsClient] Provider count updated:', event.detail.count);
+        setCurrentProviderCount(event.detail.count);
+      }
+    };
+
+    window.addEventListener('provider-count-updated', handleProviderCountUpdate as EventListener);
+    return () => {
+      window.removeEventListener(
+        'provider-count-updated',
+        handleProviderCountUpdate as EventListener,
+      );
+    };
+  }, []);
 
   const handleAddProvider = useCallback(() => {
     setIsAddDialogOpen(true);
