@@ -13,15 +13,18 @@ import type { UserContextType } from '@/types/context/userContextType';
 export { UserProvider, SidebarProvider, TeamProvider, PermissionProvider } from '@/app/providers';
 
 // DEPRECATED: Import hooks from @/hooks instead
-export { useTeam, useTeamData, useUnassignedResources, useResourceLimit } from '@/hooks/team';
-export { usePermission } from '@/hooks/permission';
-export { useHost } from '@/hooks/host';
-export { useCICD } from '@/hooks/cicd';
-export { useDeployment, useDeploymentWizard } from '@/hooks/deployment';
-export { useRepository } from '@/hooks/repository';
-export { useSidebar } from '@/hooks/sidebar';
-export { useUser } from '@/hooks/user';
-export { useTheme } from '@/hooks/theme';
+export { useTeam } from '@/hooks/useTeam';
+export { usePermission } from '@/hooks/usePermission';
+export { useHost } from '@/hooks/useHost';
+export { useCICD } from '@/hooks/useCICD';
+export { useDeployment } from '@/hooks/useDeployment';
+export { useDeploymentWizard } from '@/hooks/useDeploymentWizard';
+export { useRepository } from '@/hooks/useRepository';
+export { useSidebar } from '@/hooks/useSidebar';
+export { useUser } from '@/hooks/useUser';
+export { useTheme } from '@/hooks/useTheme';
+export { useTeamMembers } from '@/hooks/useTeamMembers';
+export { useTeamResources } from '@/hooks/useTeamResources';
 export { useTeamMemberDialog } from '@/app/providers/TeamMemberDialogProvider';
 
 // DEPRECATED: Import these from @/hooks in the future

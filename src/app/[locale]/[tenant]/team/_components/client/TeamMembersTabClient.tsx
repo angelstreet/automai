@@ -4,7 +4,8 @@ import { MoreHorizontal, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 
-import { useTeamMemberDialog } from '@/context';
+import { useContext } from 'react';
+import { TeamMemberDialogContext } from '@/context/TeamMemberDialogContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
 import { Badge } from '@/components/shadcn/badge';
 import { Button } from '@/components/shadcn/button';
@@ -56,7 +57,10 @@ function MembersTabContent({
   setSearchQuery: (query: string) => void;
 }) {
   const t = useTranslations('team');
-  const { openEditDialog, addDialogOpen, setAddDialogOpen } = useTeamMemberDialog();
+  // Safely try to access the dialog context - may not be available
+  const dialogContext = useContext(TeamMemberDialogContext);
+  // Use the dialog functions if context is available
+  const openEditDialog = dialogContext?.openEditDialog;
 
   // Use the centralized permission hook to check if user can manage team members
   const { canManageTeamMembers } = usePermission();
@@ -194,7 +198,11 @@ function MembersTabContent({
                                 avatar_url: member.user?.avatar_url,
                                 role: member.role,
                               };
-                              openEditDialog(memberResource);
+                              if (openEditDialog) {
+                                openEditDialog(memberResource);
+                              } else {
+                                console.warn('Dialog context not available');
+                              }
                             }}
                           >
                             {t('membersTab.memberActions.changePermissions')}
@@ -263,6 +271,16 @@ export function MembersTab({ teamId, subscriptionTier }: MembersTabProps) {
 
     fetchMembers();
   }, [teamId, teamMembersQuery.data]);
+  
+  // Listen for refresh events from outside components (like TeamActionsClient)
+  useEffect(() => {
+    const handleRefresh = () => {
+      teamMembersQuery.refetch();
+    };
+    
+    window.addEventListener('refresh-team-members', handleRefresh);
+    return () => window.removeEventListener('refresh-team-members', handleRefresh);
+  }, [teamMembersQuery]);
 
   const handleRemoveMember = async (profileId: string) => {
     if (!teamId) return;

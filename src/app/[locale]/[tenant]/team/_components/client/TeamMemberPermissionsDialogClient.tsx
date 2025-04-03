@@ -31,9 +31,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/shadcn/table';
-import { useToast } from '@/components/shadcn/use-toast';
-import { usePermission } from '@/hooks';
-import { useUpdateMemberRole } from '@/hooks/useTeamMemberManagement';
+// Toast is now handled by useDialogState
+import { usePermission, useUpdateMemberRole, useDialogState } from '@/hooks';
 import {
   EditPermissionsDialogProps,
   ROLE_TEMPLATES,
@@ -50,9 +49,7 @@ const EditPermissionsDialog = ({
   onSavePermissions,
 }: EditPermissionsDialogProps) => {
   const t = useTranslations('team');
-  const { toast } = useToast();
   const [roleTemplate, setRoleTemplate] = useState('custom');
-  const [isLoading, setIsLoading] = useState(false);
   const [isLoadingPermissions, setIsLoadingPermissions] = useState(false);
   const [permissions, setPermissions] = useState<ResourcePermissions>(
     initialPermissions || ROLE_TEMPLATES.contributor,
@@ -61,6 +58,9 @@ const EditPermissionsDialog = ({
   // Use our React Query hooks
   const updateRoleMutation = useUpdateMemberRole();
   const { data: permissionsQuery, success } = usePermission(teamId);
+  
+  // Use the shared dialog utilities
+  const { isLoading, executeOperation, showValidationError } = useDialogState();
 
   // Fetch permissions when the dialog opens if not provided as a prop
   useEffect(() => {
@@ -75,10 +75,9 @@ const EditPermissionsDialog = ({
         } else {
           // Default to contributor if can't fetch permissions
           setPermissions(ROLE_TEMPLATES.contributor);
-          console.warn('Could not fetch permissions');
         }
       } catch (error) {
-        console.error('Error fetching permissions:', error);
+        // Silently handle error by using default permissions
         setPermissions(ROLE_TEMPLATES.contributor);
       } finally {
         setIsLoadingPermissions(false);
@@ -86,7 +85,7 @@ const EditPermissionsDialog = ({
     };
 
     fetchPermissions();
-  }, [open, teamId, member, initialPermissions, permissionsQuery]);
+  }, [open, teamId, member, initialPermissions, permissionsQuery, success]);
 
   const handlePermissionChange = (resource, permission, checked) => {
     setPermissions({
@@ -109,73 +108,45 @@ const EditPermissionsDialog = ({
 
       // If teamId and member are provided, also apply the role template at the server
       if (teamId && member?.profile_id) {
-        try {
-          setIsLoading(true);
-
-          // Use our mutation hook
-          await updateRoleMutation.mutateAsync({
-            teamId,
-            profileId: member.profile_id,
-            role,
-          });
-
-          toast({
-            title: t('membersTab.editPermissions.roleApplied'),
-            description: t('membersTab.editPermissions.roleAppliedDesc', { role }),
-          });
-        } catch (error) {
-          toast({
-            title: t('membersTab.editPermissions.roleApplyError'),
-            description: error instanceof Error ? error.message : String(error),
-            variant: 'destructive',
-          });
-        } finally {
-          setIsLoading(false);
-        }
+        await executeOperation(
+          async () => {
+            // Use our mutation hook
+            await updateRoleMutation.mutateAsync({
+              teamId,
+              profileId: member.profile_id,
+              role,
+            });
+          },
+          t('membersTab.editPermissions.roleAppliedDesc', { role })
+        );
       }
     }
   };
 
   const handleSubmit = async () => {
     if (!teamId || !member) {
-      toast({
-        title: t('common.error'),
-        description: t('membersTab.editPermissions.missingTeamOrMember'),
-        variant: 'destructive',
-      });
+      showValidationError(t('membersTab.editPermissions.missingTeamOrMember'));
       return;
     }
 
-    setIsLoading(true);
-
-    try {
-      // Call custom handler if provided
-      if (onSavePermissions) {
-        await onSavePermissions(member, permissions);
-      } else {
-        // Use our mutation hook for updating the role
-        await updateRoleMutation.mutateAsync({
-          teamId,
-          profileId: member.profile_id,
-          role: roleTemplate !== 'custom' ? roleTemplate : 'contributor', // Default to contributor for custom permissions
-        });
-      }
-
-      toast({
-        title: t('membersTab.editPermissions.success'),
-        description: t('membersTab.editPermissions.successDesc', { name: member.name }),
-      });
-
-      onOpenChange(false);
-    } catch (error) {
-      toast({
-        title: t('membersTab.editPermissions.saveError'),
-        description: error instanceof Error ? error.message : String(error),
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    await executeOperation(
+      async () => {
+        // Call custom handler if provided
+        if (onSavePermissions) {
+          await onSavePermissions(member, permissions);
+        } else {
+          // Use our mutation hook for updating the role
+          await updateRoleMutation.mutateAsync({
+            teamId,
+            profileId: member.profile_id,
+            role: roleTemplate !== 'custom' ? roleTemplate : 'contributor', // Default to contributor for custom permissions
+          });
+        }
+        
+        onOpenChange(false);
+      },
+      t('membersTab.editPermissions.successDesc', { name: member.name })
+    );
   };
 
   const getInitials = (name: string) => {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useCallback } from 'react';
 
 import {
   TeamMemberDialogContext,
@@ -30,16 +30,15 @@ export function TeamMemberDialogProvider({
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<TeamMemberResource | null>(null);
 
-  // Open the add member dialog
-  const openAddDialog = () => {
+  // Memoized dialog control functions to prevent unnecessary re-renders
+  const openAddDialog = useCallback(() => {
     setAddDialogOpen(true);
-  };
+  }, []);
 
-  // Open the edit permissions dialog for a specific member
-  const openEditDialog = (member: TeamMemberResource) => {
+  const openEditDialog = useCallback((member: TeamMemberResource) => {
     setSelectedMember(member);
     setEditDialogOpen(true);
-  };
+  }, []);
 
   // Context value - contains only state and minimal functions
   const contextValue: TeamMemberDialogContextState = {

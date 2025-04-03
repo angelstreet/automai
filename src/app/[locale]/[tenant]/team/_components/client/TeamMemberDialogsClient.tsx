@@ -1,9 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useContext } from 'react';
 
-import { useTeamMemberDialog } from '@/context';
-import { TeamMemberResource } from '@/types/context/teamContextType';
+import { TeamMemberDialogContext } from '@/context/TeamMemberDialogContext';
 
 // Import the dialog components
 import AddMemberDialog from './TeamMemberAddDialogClient';
@@ -15,6 +14,14 @@ import EditPermissionsDialog from './TeamMemberPermissionsDialogClient';
  * It should be included once at the app level where the dialogs are needed
  */
 export default function TeamMemberDialogsClient() {
+  // Safely try to access the dialog context
+  const dialogContext = useContext(TeamMemberDialogContext);
+
+  // If context is not available, don't render anything
+  if (!dialogContext) {
+    return null;
+  }
+
   // Get dialog state from the provider
   const {
     teamId,
@@ -24,19 +31,10 @@ export default function TeamMemberDialogsClient() {
     setEditDialogOpen,
     selectedMember,
     onMembersChanged,
-  } = useTeamMemberDialog();
+  } = dialogContext;
 
-  // Handle when a member is added
-  const handleMemberAdded = async (email: string, role: string) => {
-    // Call the member added callback to refresh the members list
-    if (onMembersChanged) {
-      onMembersChanged();
-    }
-  };
-
-  // Handle when permissions are saved
-  const handlePermissionsSaved = async (member: TeamMemberResource, permissions: any) => {
-    // Call the members changed callback to refresh the members list
+  // Single handler for any operation that changes members
+  const handleMembersChanged = () => {
     if (onMembersChanged) {
       onMembersChanged();
     }
@@ -49,7 +47,7 @@ export default function TeamMemberDialogsClient() {
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
         teamId={teamId}
-        onAddMember={handleMemberAdded}
+        onAddMember={handleMembersChanged}
       />
 
       {/* Edit Permissions Dialog */}
@@ -59,7 +57,7 @@ export default function TeamMemberDialogsClient() {
           onOpenChange={setEditDialogOpen}
           member={selectedMember}
           teamId={teamId}
-          onSavePermissions={handlePermissionsSaved}
+          onSavePermissions={handleMembersChanged}
         />
       )}
     </>

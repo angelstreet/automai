@@ -22,72 +22,53 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/shadcn/select';
-import { useToast } from '@/components/shadcn/use-toast';
-import { useAddTeamMember } from '@/hooks/useTeamMemberManagement';
+import { useAddTeamMember, useDialogState } from '@/hooks';
 import { AddMemberDialogProps } from '@/types/context/teamContextType';
 
 const AddMemberDialog = ({ open, onOpenChange, onAddMember, teamId }: AddMemberDialogProps) => {
   const t = useTranslations('team');
-  const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('contributor');
-  const [isLoading, setIsLoading] = useState(false);
+  
+  // Use the shared dialog utilities
+  const { isLoading, executeOperation, showValidationError } = useDialogState();
 
   // Use the Add Team Member mutation hook
   const addTeamMemberMutation = useAddTeamMember();
 
   const handleSubmit = async () => {
+    // Validate inputs
     if (!teamId) {
-      toast({
-        title: 'Error',
-        description: 'Team ID is required',
-        variant: 'destructive',
-      });
+      showValidationError('Team ID is required');
       return;
     }
 
     if (!email) {
-      toast({
-        title: 'Error',
-        description: 'Email is required',
-        variant: 'destructive',
-      });
+      showValidationError('Email is required');
       return;
     }
 
-    setIsLoading(true);
-
-    try {
-      // Call the server action to add the member
-      if (onAddMember) {
-        // Use the prop callback if provided
-        await onAddMember(email, role);
-      } else {
-        // Use the mutation hook instead of direct action
-        await addTeamMemberMutation.mutateAsync({
-          teamId,
-          profileId: email, // Using email as profileId for demonstration
-          role,
-        });
-      }
-
-      toast({
-        title: 'Success',
-        description: `${email} added to the team`,
-      });
-
-      // Reset form and close dialog
-      setEmail('');
-      onOpenChange(false);
-    } catch (error) {
-      toast({
-        title: 'Error adding team member',
-        description: error instanceof Error ? error.message : 'Unknown error occurred',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    // Execute the add member operation
+    await executeOperation(
+      async () => {
+        if (onAddMember) {
+          // Use the prop callback if provided
+          await onAddMember(email, role);
+        } else {
+          // Use the mutation hook instead of direct action
+          await addTeamMemberMutation.mutateAsync({
+            teamId,
+            profileId: email, // Using email as profileId for demonstration
+            role,
+          });
+        }
+        
+        // Reset form and close dialog
+        setEmail('');
+        onOpenChange(false);
+      },
+      `${email} added to the team`
+    );
   };
 
   return (
