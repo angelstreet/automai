@@ -249,17 +249,17 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
   const renderFooterButtons = () => {
     if (isInDialog) {
       return (
-        <div className="flex justify-between space-x-2 mt-4 pt-4 border-t">
+        <div className="flex justify-between space-x-2 mt-2 pt-2 border-t">
           <Button
             type="button"
             variant="outline"
             onClick={handleTestConnection}
             disabled={isTesting}
-            className="h-8 px-3 text-sm"
+            className="h-7 px-3 text-xs"
           >
             {isTesting ? (
               <>
-                <div className="mr-2 h-3 w-3 animate-spin rounded-full border-b-2 border-current"></div>
+                <div className="mr-1 h-2 w-2 animate-spin rounded-full border-b-2 border-current"></div>
                 Testing...
               </>
             ) : (
@@ -272,7 +272,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
               type="button"
               variant="outline"
               onClick={handleCancel}
-              className="h-8 px-3 text-sm"
+              className="h-7 px-3 text-xs"
             >
               Cancel
             </Button>
@@ -280,7 +280,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
             <Button
               type="submit"
               disabled={isSubmitting || !testMessage?.success}
-              className={`h-8 px-3 text-sm ${testMessage?.success ? 'bg-green-600 hover:bg-green-700' : ''}`}
+              className={`h-7 px-3 text-xs ${testMessage?.success ? 'bg-green-600 hover:bg-green-700' : ''}`}
             >
               {isSubmitting ? 'Saving...' : isEditMode ? 'Update' : 'Create'}
             </Button>
@@ -291,20 +291,26 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
 
     // Default view for standalone form
     return (
-      <div className="flex justify-between pt-4 space-x-2">
-        <Button type="button" variant="outline" onClick={handleTestConnection} disabled={isTesting}>
+      <div className="flex justify-between pt-2 space-x-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleTestConnection}
+          disabled={isTesting}
+          className="h-7 text-xs"
+        >
           {isTesting ? 'Testing...' : 'Test Connection'}
         </Button>
 
         <div className="flex space-x-2">
-          <Button type="button" variant="outline" onClick={handleCancel}>
+          <Button type="button" variant="outline" onClick={handleCancel} className="h-7 text-xs">
             Cancel
           </Button>
 
           <Button
             type="submit"
             disabled={isSubmitting || !testMessage?.success}
-            className={testMessage?.success ? 'bg-green-600 hover:bg-green-700' : ''}
+            className={`h-7 text-xs ${testMessage?.success ? 'bg-green-600 hover:bg-green-700' : ''}`}
           >
             {isSubmitting ? 'Saving...' : isEditMode ? 'Update Provider' : 'Create Provider'}
           </Button>
@@ -315,20 +321,20 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-2">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-1">
         {/* Provider Type */}
         <FormField
           control={form.control}
           name="type"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Provider Type</FormLabel>
+            <FormItem className="mb-1">
+              <FormLabel className="text-xs">Provider Type</FormLabel>
               <Select
                 onValueChange={(value) => handleSelectChange('type', value)}
                 defaultValue={field.value}
               >
                 <FormControl>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-8">
                     <SelectValue placeholder="Select provider type" />
                   </SelectTrigger>
                 </FormControl>
@@ -339,7 +345,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
                   <SelectItem value="azure_devops">Azure DevOps</SelectItem>
                 </SelectContent>
               </Select>
-              <FormMessage />
+              <FormMessage className="text-xs" />
             </FormItem>
           )}
         />
@@ -350,18 +356,18 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
           name="name"
           rules={{ required: 'Name is required' }}
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Display Name</FormLabel>
+            <FormItem className="mb-1">
+              <FormLabel className="text-xs">Display Name</FormLabel>
               <FormControl>
-                <Input placeholder="Enter a display name" {...field} />
+                <Input className="h-8" placeholder="Enter a display name" {...field} />
               </FormControl>
-              <FormMessage />
+              <FormMessage className="text-xs" />
             </FormItem>
           )}
         />
 
         {/* URL and Port - in a flex container */}
-        <div className="flex gap-4">
+        <div className="flex gap-2 mb-1">
           {/* URL */}
           <FormField
             control={form.control}
@@ -369,9 +375,10 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
             rules={{ required: 'URL is required' }}
             render={({ field }) => (
               <FormItem className="flex-grow">
-                <FormLabel>Server URL</FormLabel>
+                <FormLabel className="text-xs">Server URL</FormLabel>
                 <FormControl>
                   <Input
+                    className="h-8"
                     placeholder={
                       form.getValues('type') === 'jenkins'
                         ? 'https://jenkins.example.com'
@@ -384,9 +391,9 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
                     {...field}
                   />
                 </FormControl>
-                <FormMessage />
+                <FormMessage className="text-xs" />
                 {field.value && field.value.startsWith('http://') && (
-                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-0">
                     For security reasons, we recommend using HTTPS instead of HTTP.
                   </p>
                 )}
@@ -399,10 +406,11 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
             control={form.control}
             name="port"
             render={({ field }) => (
-              <FormItem className="w-1/4" style={{ minWidth: '100px' }}>
-                <FormLabel>Port</FormLabel>
+              <FormItem className="w-1/4" style={{ minWidth: '80px' }}>
+                <FormLabel className="text-xs">Port</FormLabel>
                 <FormControl>
                   <Input
+                    className="h-8"
                     type="number"
                     placeholder={form.getValues('type') === 'jenkins' ? '8080' : '443'}
                     {...field}
@@ -413,7 +421,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
                     }}
                   />
                 </FormControl>
-                <FormMessage />
+                <FormMessage className="text-xs" />
               </FormItem>
             )}
           />
@@ -424,14 +432,14 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
           control={form.control}
           name="auth_type"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Authentication</FormLabel>
+            <FormItem className="mb-1">
+              <FormLabel className="text-xs">Authentication</FormLabel>
               <Select
                 defaultValue={field.value}
                 onValueChange={(value) => handleSelectChange('auth_type', value)}
               >
                 <FormControl>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-8">
                     <SelectValue placeholder="Select authentication type" />
                   </SelectTrigger>
                 </FormControl>
@@ -443,29 +451,30 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
                   )}
                 </SelectContent>
               </Select>
-              <FormMessage />
+              <FormMessage className="text-xs" />
             </FormItem>
           )}
         />
 
         {/* Authentication Credentials */}
         {form.watch('auth_type') === 'token' && (
-          <>
+          <div className="space-y-1">
             <FormField
               control={form.control}
               name="username"
               rules={{ required: 'Username is required' }}
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Username</FormLabel>
+                <FormItem className="mb-1">
+                  <FormLabel className="text-xs">Username</FormLabel>
                   <FormControl>
                     <Input
+                      className="h-8"
                       placeholder="Enter username"
                       onChange={(e) => handleCredentialChange('username', e.target.value)}
                       value={field.value}
                     />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-xs" />
                 </FormItem>
               )}
             />
@@ -475,40 +484,42 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
               name="token"
               rules={{ required: 'Token is required' }}
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>API Token</FormLabel>
+                <FormItem className="mb-1">
+                  <FormLabel className="text-xs">API Token</FormLabel>
                   <FormControl>
                     <Input
+                      className="h-8"
                       type="password"
                       placeholder="Enter your API token"
                       onChange={(e) => handleCredentialChange('token', e.target.value)}
                       value={field.value}
                     />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-xs" />
                 </FormItem>
               )}
             />
-          </>
+          </div>
         )}
 
         {form.watch('auth_type') === 'basic_auth' && (
-          <>
+          <div className="space-y-1">
             <FormField
               control={form.control}
               name="username"
               rules={{ required: 'Username is required' }}
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Username</FormLabel>
+                <FormItem className="mb-1">
+                  <FormLabel className="text-xs">Username</FormLabel>
                   <FormControl>
                     <Input
+                      className="h-8"
                       placeholder="Enter username"
                       onChange={(e) => handleCredentialChange('username', e.target.value)}
                       value={field.value}
                     />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-xs" />
                 </FormItem>
               )}
             />
@@ -518,25 +529,26 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
               name="password"
               rules={{ required: 'Password is required' }}
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Password</FormLabel>
+                <FormItem className="mb-1">
+                  <FormLabel className="text-xs">Password</FormLabel>
                   <FormControl>
                     <Input
+                      className="h-8"
                       type="password"
                       placeholder="Enter password"
                       onChange={(e) => handleCredentialChange('password', e.target.value)}
                       value={field.value}
                     />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-xs" />
                 </FormItem>
               )}
             />
-          </>
+          </div>
         )}
 
         {form.watch('auth_type') === 'oauth' && (
-          <div className="text-sm text-muted-foreground">
+          <div className="text-xs text-muted-foreground py-1">
             OAuth configuration requires additional setup. Please contact your administrator.
           </div>
         )}
@@ -544,7 +556,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
         {/* Test Connection Status */}
         {testMessage && (
           <div
-            className={`p-2 text-sm rounded-md ${
+            className={`p-1 text-xs rounded-md mt-1 ${
               testMessage.success
                 ? 'bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-100'
                 : 'bg-red-50 text-red-700 dark:bg-red-900 dark:text-red-100'
@@ -561,7 +573,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
             variant="outline"
             onClick={handleTestConnection}
             disabled={isTesting}
-            className="mt-2"
+            className="h-7 px-2 text-xs mt-1"
           >
             {isTesting ? 'Testing...' : 'Test Connection'}
           </Button>
