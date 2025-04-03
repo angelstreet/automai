@@ -4,7 +4,7 @@ import { IconSearch } from '@tabler/icons-react';
 
 import { cn } from '@/lib/utils';
 
-import { useSearch } from '../../context/SearchContext';
+import { useSearch } from '@/hooks';
 import { Button } from '../shadcn/button';
 
 interface Props {

@@ -5,6 +5,8 @@ export * from './useAuth';
 export * from './useSidebar';
 export * from './useQueryHelpers';
 export * from './useTeamDialogUtils';
+export * from './useSearch';
+export * from './useFont';
 // Domain-specific hooks
 export * from './usePermission';
 export * from './useRepository';

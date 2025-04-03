@@ -1,15 +1,10 @@
 /**
- * Context Utilities for preventing infinite loops and redundant fetches
- * 
- * DEPRECATED: These utilities should be moved to /lib/utils/stateHelpers.ts
- * This file will be removed in a future update
+ * Utilities for preventing infinite loops and redundant fetches
  */
 
 /**
  * Helper to create a request tracker object
  * Used to prevent multiple simultaneous requests
- * 
- * DEPRECATED: Import from '@/lib/utils/stateHelpers' in the future
  */
 export const createRequestTracker = () => {
   const tracker: Record<string, boolean> = {};
@@ -46,8 +41,6 @@ export const createRequestTracker = () => {
  * Helper to check if data has actually changed
  * Prevents unnecessary state updates
  *
- * DEPRECATED: Import from '@/lib/utils/stateHelpers' in the future
- * 
  * @param prevData - Previous data
  * @param newData - New data
  * @returns true if data is different
@@ -59,7 +52,7 @@ export const hasDataChanged = <T>(prevData: T, newData: T): boolean => {
   // Deep comparison
   try {
     return JSON.stringify(prevData) !== JSON.stringify(newData);
-  } catch (_error) {
+  } catch (error) {
     // If stringify fails (circular references, etc.), fall back to considering them different
     return true;
   }
@@ -67,8 +60,6 @@ export const hasDataChanged = <T>(prevData: T, newData: T): boolean => {
 
 /**
  * Creates a safer setState function that only updates if data has changed
- *
- * DEPRECATED: Import from '@/lib/utils/stateHelpers' in the future
  *
  * @param setState - React setState function
  * @returns A function that updates state only when necessary
