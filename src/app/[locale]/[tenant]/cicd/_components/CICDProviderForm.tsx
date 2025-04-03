@@ -257,12 +257,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
       const result = await action();
 
       if (result.success) {
-        toast({
-          title: providerId ? 'Provider Updated' : 'Provider Created',
-          description: `The ${data.name} provider has been successfully ${providerId ? 'updated' : 'created'}.`,
-          variant: 'default',
-        });
-
+        // Remove success toast
         // Close the dialog and refresh the list
         onComplete();
       } else {

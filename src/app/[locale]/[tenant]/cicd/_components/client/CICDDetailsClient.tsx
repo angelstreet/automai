@@ -3,7 +3,7 @@ import { Edit, Trash, AlertCircle, RefreshCcw, MoreHorizontal, PlusCircle } from
 import { useTranslations } from 'next-intl';
 import React, { useState, useCallback } from 'react';
 
-import { deleteCICDProvider, testCICDProvider } from '@/app/actions/cicdAction';
+import { deleteCICDProvider } from '@/app/actions/cicdAction';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -56,7 +56,6 @@ export default function CICDDetailsClient({
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   const t = useTranslations('cicd');
-  const tc = useTranslations('common');
 
   // Memoize dialog handlers
   const handleAddEditProvider = useCallback((provider?: CICDProvider) => {
@@ -81,12 +80,47 @@ export default function CICDDetailsClient({
     async (provider: CICDProvider) => {
       try {
         setIsProcessing(true);
-        // Use the direct action
-        await testCICDProvider(provider);
-        toast({
-          title: 'Success',
-          description: 'Connection test was successful',
-        });
+
+        // Client-side function to test connection
+        const testConnection = async (provider: CICDProvider) => {
+          try {
+            // Use browser fetch for client-side testing
+            const response = await fetch(`/api/cicd/test-connection`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ provider }),
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+              throw new Error(result.error || 'Connection test failed');
+            }
+
+            return result;
+          } catch (error: any) {
+            console.error('Connection test error:', error);
+            throw new Error(error.message || 'Failed to test connection');
+          }
+        };
+
+        // Call the client-side test function
+        const result = await testConnection(provider);
+
+        if (result.success) {
+          toast({
+            title: 'Success',
+            description: 'Connection test was successful',
+          });
+        } else {
+          toast({
+            title: 'Error',
+            description: result.error || 'Connection test failed',
+            variant: 'destructive',
+          });
+        }
       } catch (error: any) {
         toast({
           title: 'Error',
@@ -269,7 +303,7 @@ export default function CICDDetailsClient({
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={isProcessing}
             >
-              {isProcessing ? t('deleting', { fallback: 'Deleting...' }) : t('delete')}
+              {isProcessing ? 'Deleting...' : t('delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
