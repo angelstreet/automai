@@ -289,26 +289,41 @@ export async function getAvailableTenantProfilesForTeam(
     // Extract profile IDs of current members
     const currentMemberIds = currentMembers ? currentMembers.map((member) => member.profile_id) : [];
 
-    // Get tenant profiles that aren't already team members
-    const query = supabase
-      .from('profiles')
-      .select(
-        `
-        id, 
-        email, 
-        avatar_url,
-        tenant_id,
-        role
-      `,
-      )
-      .eq('tenant_id', tenantId);
+    let profiles;
+    let profilesError;
 
-    // Only filter by member IDs if there are any current members
     if (currentMemberIds.length > 0) {
-      query.not('id', 'in', currentMemberIds);
+      // Get all profiles for the tenant except those already in the team
+      const result = await supabase
+        .from('profiles')
+        .select(`
+          id, 
+          email, 
+          avatar_url,
+          tenant_id,
+          role
+        `)
+        .eq('tenant_id', tenantId)
+        .filter('id', 'not.in', `(${currentMemberIds.join(',')})`);
+      
+      profiles = result.data;
+      profilesError = result.error;
+    } else {
+      // If no members yet, just get all profiles for the tenant
+      const result = await supabase
+        .from('profiles')
+        .select(`
+          id, 
+          email, 
+          avatar_url,
+          tenant_id,
+          role
+        `)
+        .eq('tenant_id', tenantId);
+      
+      profiles = result.data;
+      profilesError = result.error;
     }
-
-    const { data: profiles, error: profilesError } = await query;
 
     if (profilesError) {
       console.error(
@@ -320,6 +335,11 @@ export async function getAvailableTenantProfilesForTeam(
 
     // Get full user profiles in a single query
     const profileIds = profiles.map((profile) => profile.id);
+    
+    if (profileIds.length === 0) {
+      return { success: true, data: [] };
+    }
+    
     const { data: userProfiles, error: userProfilesError } = await supabase
       .from('team_user_profiles')
       .select('*')

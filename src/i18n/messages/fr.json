@@ -387,6 +387,12 @@
     "addMember": "Ajouter un membre",
     "overview": "Aperçu",
     "members": "Membres de l'équipe",
+    "common": {
+      "loading": "Chargement...",
+      "error": "Erreur",
+      "selectAll": "Sélectionner tout",
+      "deselectAll": "Désélectionner tout"
+    },
     "permissions": {
       "view": "Voir",
       "create": "Créer",

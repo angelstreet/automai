@@ -423,6 +423,12 @@
     "addMember": "Add Member",
     "overview": "Overview",
     "members": "Team Members",
+    "common": {
+      "loading": "Loading...",
+      "error": "Error",
+      "selectAll": "Select All",
+      "deselectAll": "Deselect All"
+    },
     "permissions": {
       "view": "View",
       "create": "Create",

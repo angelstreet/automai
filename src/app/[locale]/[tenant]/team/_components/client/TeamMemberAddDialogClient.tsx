@@ -175,8 +175,8 @@ const AddMemberDialog = ({ open, onOpenChange, teamId }: AddMemberDialogProps) =
                 disabled={filteredProfiles.length === 0}
               >
                 {selectedProfiles.length === filteredProfiles.length && filteredProfiles.length > 0
-                  ? t('common.deselectAll')
-                  : t('common.selectAll')}
+                  ? t('team.common.deselectAll')
+                  : t('team.common.selectAll')}
               </Button>
             </div>
             
@@ -190,9 +190,9 @@ const AddMemberDialog = ({ open, onOpenChange, teamId }: AddMemberDialogProps) =
                 <CommandList>
                   <CommandEmpty>
                     {isLoadingProfiles 
-                      ? t('common.loading') 
+                      ? t('team.common.loading') 
                       : isError 
-                        ? t('common.error') 
+                        ? t('team.common.error') 
                         : t('membersTab.addMember.noResults')}
                   </CommandEmpty>
                   <CommandGroup>
