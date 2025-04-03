@@ -7,7 +7,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
 
-import CICDForm from '../CICDForm';
+import { CICDProviderForm } from '../';
 import { REFRESH_CICD_PROVIDERS, REFRESH_CICD_COMPLETE } from './CICDProvider';
 
 export function CICDActionsClient() {
@@ -74,7 +74,7 @@ export function CICDActionsClient() {
           <DialogHeader>
             <DialogTitle>{t('add_provider_dialog_title')}</DialogTitle>
           </DialogHeader>
-          <CICDForm onComplete={handleDialogComplete} />
+          <CICDProviderForm onComplete={handleDialogComplete} isInDialog={true} />
         </DialogContent>
       </Dialog>
     </>

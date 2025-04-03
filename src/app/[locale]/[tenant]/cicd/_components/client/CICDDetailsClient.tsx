@@ -37,7 +37,7 @@ import { deleteCICDProvider, testCICDProvider } from '@/app/actions/cicdAction';
 import type { CICDProvider } from '@/types/component/cicdComponentType';
 import { REFRESH_CICD_PROVIDERS } from './CICDProvider';
 
-import CICDForm from '../CICDForm';
+import { CICDProviderForm } from '../';
 
 interface CICDDetailsClientProps {
   initialProviders: CICDProvider[];
@@ -283,10 +283,11 @@ export default function CICDDetailsClient({
                 : t('add_provider_dialog_title', { fallback: 'Add CI/CD Provider' })}
             </DialogTitle>
           </DialogHeader>
-          <CICDForm
-            providerId={selectedProvider?.id}
-            provider={selectedProvider}
+          <CICDProviderForm
+            providerId={isEditing ? selectedProvider?.id : undefined}
+            provider={isEditing ? selectedProvider : undefined}
             onComplete={handleDialogComplete}
+            isInDialog={true}
           />
         </DialogContent>
       </Dialog>

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 
+import { createCICDProvider, updateCICDProvider, testCICDProvider } from '@/app/actions/cicdAction';
 import { Button } from '@/components/shadcn/button';
 import {
   Form,
@@ -28,12 +29,6 @@ import {
   CICDAuthType,
   parseProviderUrl,
 } from '@/types/component/cicdComponentType';
-
-import {
-  createCICDProviderAction,
-  updateCICDProviderAction,
-  testCICDProviderAction,
-} from '../actions';
 
 interface CICDProviderFormProps {
   providerId?: string;
@@ -150,7 +145,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
       };
 
       // Test the connection
-      const result = await testCICDProviderAction(providerData);
+      const result = await testCICDProvider(providerData);
 
       if (result.success) {
         setTestMessage({
@@ -211,8 +206,8 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
 
       // Create or update the provider
       const action = providerId
-        ? () => updateCICDProviderAction(providerId, providerPayload)
-        : () => createCICDProviderAction(providerPayload);
+        ? () => updateCICDProvider(providerId, providerPayload)
+        : () => createCICDProvider(providerPayload);
 
       const result = await action();
 
@@ -220,7 +215,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
         toast({
           title: providerId ? 'Provider Updated' : 'Provider Created',
           description: `The ${data.name} provider has been successfully ${providerId ? 'updated' : 'created'}.`,
-          variant: 'success',
+          variant: 'default',
         });
 
         // Close the dialog and refresh the list
@@ -365,7 +360,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
             control={form.control}
             name="port"
             render={({ field }) => (
-              <FormItem className="w-24">
+              <FormItem className="w-1/4" style={{ minWidth: '100px' }}>
                 <FormLabel>Port</FormLabel>
                 <FormControl>
                   <Input
