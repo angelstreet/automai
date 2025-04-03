@@ -2,7 +2,7 @@
 
 import { ChevronLeft, ChevronRight, GitBranch, PlusCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
@@ -16,7 +16,37 @@ export function ClientRepositoryList() {
   const t = useTranslations('repositories');
 
   // Use the repository hook to get data
-  const { repositories, isLoadingRepositories } = useRepository();
+  const { repositories, isLoadingRepositories, refetchRepositories } = useRepository();
+
+  // Dispatch event when repository count changes
+  useEffect(() => {
+    console.log('[ClientRepositoryList] Repository count changed:', repositories.length);
+    window.dispatchEvent(
+      new CustomEvent('repository-count-updated', {
+        detail: { count: repositories.length },
+      }),
+    );
+  }, [repositories.length]);
+
+  // Handle refresh events
+  useEffect(() => {
+    const handleRefresh = async () => {
+      console.log('[ClientRepositoryList] Handling refresh repositories request');
+      try {
+        // Use the refetchRepositories function from the hook
+        await refetchRepositories();
+        console.log('[ClientRepositoryList] Repositories refresh complete');
+      } catch (error) {
+        console.error('[ClientRepositoryList] Error refreshing repositories:', error);
+      } finally {
+        // Signal that the refresh is complete
+        window.dispatchEvent(new CustomEvent('refresh-repositories-complete'));
+      }
+    };
+
+    window.addEventListener('refresh-repositories', handleRefresh);
+    return () => window.removeEventListener('refresh-repositories', handleRefresh);
+  }, [refetchRepositories]);
 
   // UI state
   const [activeTab, setActiveTab] = useState('all');

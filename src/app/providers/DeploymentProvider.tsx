@@ -66,6 +66,16 @@ export function DeploymentProvider({
     isLoading,
   };
 
+  // Dispatch event when deployment count changes
+  useEffect(() => {
+    console.log('[DeploymentProvider] Deployment count changed:', deployments.length);
+    window.dispatchEvent(
+      new CustomEvent('deployment-count-updated', {
+        detail: { count: deployments.length },
+      }),
+    );
+  }, [deployments.length]);
+
   return <DeploymentContext.Provider value={value}>{children}</DeploymentContext.Provider>;
 }
 

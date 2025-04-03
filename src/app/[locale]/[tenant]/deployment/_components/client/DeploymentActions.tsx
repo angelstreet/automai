@@ -2,7 +2,7 @@
 
 import { PlusCircle, RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent } from '@/components/shadcn/dialog';
@@ -12,25 +12,74 @@ import { useRepository } from '@/hooks/useRepository';
 // Import required components
 import { DeploymentWizardClient } from './DeploymentWizardClient';
 
-export function DeploymentActions() {
+interface DeploymentActionsProps {
+  deploymentCount?: number;
+}
+
+export function DeploymentActions({
+  deploymentCount: initialDeploymentCount = 0,
+}: DeploymentActionsProps) {
   const t = useTranslations('deployments');
   const { hosts, isLoading: isLoadingHosts, refetchHosts } = useHost();
   const { providers: cicdProviders, isLoading: isLoadingCICD, refetchProviders } = useCICD();
   const { repositories, isLoading: isLoadingRepositories, refetchRepositories } = useRepository();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
+  const [currentDeploymentCount, setCurrentDeploymentCount] = useState(initialDeploymentCount);
 
   const isLoading = isLoadingHosts || isLoadingCICD || isLoadingRepositories;
 
+  // Update deployment count when prop changes
+  useEffect(() => {
+    setCurrentDeploymentCount(initialDeploymentCount);
+  }, [initialDeploymentCount]);
+
+  // Listen for deployment count updates
+  useEffect(() => {
+    const handleDeploymentCountUpdate = (event: CustomEvent) => {
+      if (event.detail && typeof event.detail.count === 'number') {
+        console.log('[DeploymentActions] Deployment count updated:', event.detail.count);
+        setCurrentDeploymentCount(event.detail.count);
+      }
+    };
+
+    window.addEventListener(
+      'deployment-count-updated',
+      handleDeploymentCountUpdate as EventListener,
+    );
+    return () => {
+      window.removeEventListener(
+        'deployment-count-updated',
+        handleDeploymentCountUpdate as EventListener,
+      );
+    };
+  }, []);
+
+  // Listen for refresh complete event
+  useEffect(() => {
+    const handleRefreshComplete = () => {
+      console.log('[DeploymentActions] Refresh complete');
+      setIsRefreshing(false);
+    };
+
+    window.addEventListener('refresh-deployments-complete', handleRefreshComplete);
+    return () => window.removeEventListener('refresh-deployments-complete', handleRefreshComplete);
+  }, []);
+
   const handleRefresh = async () => {
+    if (isRefreshing) return;
+
     setIsRefreshing(true);
+    console.log('[DeploymentActions] Triggering refresh');
+
+    // Dispatch refresh event for deployment provider to handle
+    window.dispatchEvent(new CustomEvent('refresh-deployments'));
+
     try {
-      // Use hooks to refresh all data in parallel
+      // Use hooks to refresh all related data in parallel
       await Promise.all([refetchHosts(), refetchProviders(), refetchRepositories()]);
     } catch (error) {
       console.error('Error refreshing data:', error);
-    } finally {
-      setIsRefreshing(false);
     }
   };
 
@@ -45,22 +94,25 @@ export function DeploymentActions() {
 
   const handleDeploymentCreated = () => {
     setShowWizard(false);
-    // Add logic to refresh deployments if needed
+    // Refresh deployments after creation
+    window.dispatchEvent(new CustomEvent('refresh-deployments'));
   };
 
   return (
     <>
       <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-8"
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-          {t('refresh')}
-        </Button>
+        {currentDeploymentCount > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {t('refresh')}
+          </Button>
+        )}
         <Button
           onClick={handleAddDeployment}
           id="add-deployment-button"

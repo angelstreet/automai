@@ -2,6 +2,10 @@
 
 import { DeploymentActions } from './client/DeploymentActions';
 
-export function DeploymentActionsClient(props: React.ComponentProps<typeof DeploymentActions>) {
-  return <DeploymentActions {...props} />;
+interface DeploymentActionsClientProps {
+  deploymentCount?: number;
+}
+
+export function DeploymentActionsClient({ deploymentCount = 0 }: DeploymentActionsClientProps) {
+  return <DeploymentActions deploymentCount={deploymentCount} />;
 }
