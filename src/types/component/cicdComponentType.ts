@@ -38,6 +38,7 @@ export interface CICDProvider {
   name: string;
   type: CICDProviderType;
   url: string;
+  port?: number | null;
   config: CICDProviderConfig;
   status?: string;
   created_at: string;
@@ -54,10 +55,48 @@ export interface CICDProviderPayload {
   name: string;
   type: CICDProviderType;
   url: string;
+  port?: number | null;
   config: {
     auth_type: CICDAuthType;
     credentials: CICDCredentials;
   };
+}
+
+/**
+ * Get full URL including port if present
+ */
+export function getFullProviderUrl(provider: Pick<CICDProvider, 'url' | 'port'>): string {
+  if (!provider.port) {
+    return provider.url;
+  }
+
+  try {
+    const urlObj = new URL(provider.url);
+    urlObj.port = provider.port.toString();
+    return urlObj.toString();
+  } catch (error) {
+    // If URL parsing fails, return original URL
+    return provider.url;
+  }
+}
+
+/**
+ * Parse URL into base URL and port
+ */
+export function parseProviderUrl(fullUrl: string): { url: string; port: number | null } {
+  try {
+    const urlObj = new URL(fullUrl);
+    const port = urlObj.port ? parseInt(urlObj.port, 10) : null;
+
+    // Remove port from URL
+    urlObj.port = '';
+    const url = urlObj.toString();
+
+    return { url, port };
+  } catch (error) {
+    // If URL parsing fails, return original URL with no port
+    return { url: fullUrl, port: null };
+  }
 }
 
 /**

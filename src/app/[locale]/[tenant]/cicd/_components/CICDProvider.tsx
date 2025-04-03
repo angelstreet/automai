@@ -329,15 +329,18 @@ export default function CICDProvider({ removeTitle = false }: CICDProviderProps)
 
         {/* Add/Edit Dialog */}
         <Dialog open={isAddEditDialogOpen} onOpenChange={setIsAddEditDialogOpen}>
-          <DialogContent className="max-w-3xl">
-            <DialogHeader>
+          <DialogContent className="max-w-md p-0 gap-0 overflow-hidden">
+            <DialogHeader className="p-6 pb-2">
               <DialogTitle>{isEditing ? 'Edit CI/CD Provider' : 'Add CI/CD Provider'}</DialogTitle>
             </DialogHeader>
-            <CICDProviderForm
-              providerId={selectedProvider?.id}
-              provider={selectedProvider as any}
-              onComplete={handleDialogComplete}
-            />
+            <div className="px-6">
+              <CICDProviderForm
+                providerId={selectedProvider?.id}
+                provider={selectedProvider as any}
+                onComplete={handleDialogComplete}
+                isInDialog={true}
+              />
+            </div>
           </DialogContent>
         </Dialog>
 

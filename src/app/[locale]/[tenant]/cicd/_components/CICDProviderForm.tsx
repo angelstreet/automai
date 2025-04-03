@@ -21,6 +21,13 @@ import {
   SelectValue,
 } from '@/components/shadcn/select';
 import { toast } from '@/components/shadcn/use-toast';
+import {
+  CICDProvider,
+  CICDProviderPayload,
+  CICDProviderType,
+  CICDAuthType,
+  parseProviderUrl,
+} from '@/types/component/cicdComponentType';
 
 import {
   createCICDProviderAction,
@@ -28,23 +35,18 @@ import {
   testCICDProviderAction,
 } from '../actions';
 
-import {
-  CICDProvider,
-  CICDProviderPayload,
-  CICDProviderType,
-  CICDAuthType,
-} from '@/types/context/cicd';
-
 interface CICDProviderFormProps {
   providerId?: string;
   provider?: CICDProvider;
   onComplete: () => void;
+  isInDialog?: boolean;
 }
 
 interface FormValues {
   name: string;
   type: CICDProviderType;
   url: string;
+  port: string;
   auth_type: CICDAuthType;
   username: string;
   password: string;
@@ -55,6 +57,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
   providerId,
   provider,
   onComplete,
+  isInDialog = false,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
@@ -71,6 +74,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
       name: '',
       type: 'jenkins',
       url: '',
+      port: '',
       auth_type: 'token',
       username: '',
       password: '',
@@ -81,10 +85,14 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
   // Populate form with existing data if in edit mode
   useEffect(() => {
     if (isEditMode && provider) {
+      // Parse URL to extract port if present
+      const { url, port } = parseProviderUrl(provider.url);
+
       form.reset({
         name: provider.name || '',
         type: provider.type || 'jenkins',
-        url: provider.url || '',
+        url: url || '',
+        port: port ? port.toString() : '',
         auth_type: provider.config?.auth_type || 'token',
         username: provider.config?.credentials?.username || '',
         password: '', // Don't populate password for security
@@ -128,14 +136,17 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
         credentials.password = values.password;
       }
 
-      // Create provider data object
+      // Create provider data object with port
       const providerData: CICDProviderPayload = {
         id: providerId,
         name: values.name,
         type: values.type,
         url: values.url,
-        auth_type: values.auth_type,
-        credentials,
+        port: values.port ? parseInt(values.port, 10) : null,
+        config: {
+          auth_type: values.auth_type,
+          credentials,
+        },
       };
 
       // Test the connection
@@ -185,12 +196,13 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
         // Add other auth types as needed
       }
 
-      // Prepare provider payload
+      // Prepare provider payload with port
       const providerPayload: CICDProviderPayload = {
         id: providerId,
         name: data.name,
         type: data.type,
         url: data.url,
+        port: data.port ? parseInt(data.port, 10) : null,
         config: {
           auth_type: data.auth_type,
           credentials,
@@ -236,75 +248,109 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
     onComplete();
   };
 
+  // Footer buttons rendering based on whether in dialog or standalone
+  const renderFooterButtons = () => {
+    if (isInDialog) {
+      return (
+        <div className="flex justify-end space-x-2 mt-6 pt-4 border-t">
+          <Button type="button" variant="outline" onClick={handleCancel} className="h-9 px-4">
+            Cancel
+          </Button>
+
+          <Button type="submit" disabled={isSubmitting} className="h-9 px-4">
+            {isSubmitting ? 'Saving...' : 'Create'}
+          </Button>
+        </div>
+      );
+    }
+
+    // Default view for standalone form
+    return (
+      <div className="flex justify-between pt-4 space-x-2">
+        <Button type="button" variant="outline" onClick={handleTestConnection} disabled={isTesting}>
+          {isTesting ? 'Testing...' : 'Test Connection'}
+        </Button>
+
+        <div className="flex space-x-2">
+          <Button type="button" variant="outline" onClick={handleCancel}>
+            Cancel
+          </Button>
+
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Saving...' : isEditMode ? 'Update Provider' : 'Create Provider'}
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="w-full max-w-2xl mx-auto bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-      <h2 className="text-xl font-semibold mb-4">
-        {isEditMode ? 'Edit CI/CD Provider' : 'Add New CI/CD Provider'}
-      </h2>
-
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-          {/* Provider Type */}
-          <FormField
-            control={form.control}
-            name="type"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Provider Type</FormLabel>
-                <Select
-                  defaultValue={field.value}
-                  onValueChange={(value) => handleSelectChange('type', value)}
-                  disabled={isEditMode} // Can't change type in edit mode
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select provider type" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="jenkins">Jenkins</SelectItem>
-                    <SelectItem value="github">GitHub Actions</SelectItem>
-                    <SelectItem value="gitlab">GitLab CI</SelectItem>
-                    <SelectItem value="azure_devops">Azure DevOps</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Provider Name */}
-          <FormField
-            control={form.control}
-            name="name"
-            rules={{ required: 'Name is required' }}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Name</FormLabel>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+        {/* Provider Type */}
+        <FormField
+          control={form.control}
+          name="type"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Provider Type</FormLabel>
+              <Select
+                onValueChange={(value) => handleSelectChange('type', value)}
+                defaultValue={field.value}
+              >
                 <FormControl>
-                  <Input placeholder="Enter provider name" {...field} />
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select provider type" />
+                  </SelectTrigger>
                 </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+                <SelectContent>
+                  <SelectItem value="jenkins">Jenkins</SelectItem>
+                  <SelectItem value="github">GitHub Actions</SelectItem>
+                  <SelectItem value="gitlab">GitLab CI</SelectItem>
+                  <SelectItem value="azure_devops">Azure DevOps</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-          {/* Provider URL */}
+        {/* Provider Name */}
+        <FormField
+          control={form.control}
+          name="name"
+          rules={{ required: 'Name is required' }}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Display Name</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter a display name" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* URL and Port - in a flex container */}
+        <div className="flex gap-4">
+          {/* URL */}
           <FormField
             control={form.control}
             name="url"
             rules={{ required: 'URL is required' }}
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>URL</FormLabel>
+              <FormItem className="flex-grow">
+                <FormLabel>Server URL</FormLabel>
                 <FormControl>
                   <Input
                     placeholder={
                       form.getValues('type') === 'jenkins'
-                        ? 'http://jenkins.example.com:8080'
+                        ? 'https://jenkins.example.com'
                         : form.getValues('type') === 'github'
-                          ? 'https://github.com/username/repo'
-                          : 'Enter provider URL'
+                          ? 'https://api.github.com'
+                          : form.getValues('type') === 'gitlab'
+                            ? 'https://gitlab.com'
+                            : 'https://example.com'
                     }
                     {...field}
                   />
@@ -314,146 +360,158 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
             )}
           />
 
-          {/* Authentication Type */}
+          {/* Port */}
           <FormField
             control={form.control}
-            name="auth_type"
+            name="port"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Authentication Type</FormLabel>
-                <Select
-                  defaultValue={field.value}
-                  onValueChange={(value) => handleSelectChange('auth_type', value)}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select authentication type" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="token">API Token</SelectItem>
-                    <SelectItem value="basic_auth">Username & Password</SelectItem>
-                    {form.getValues('type') === 'github' && (
-                      <SelectItem value="oauth">OAuth</SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
+              <FormItem className="w-24">
+                <FormLabel>Port</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    placeholder={form.getValues('type') === 'jenkins' ? '8080' : '443'}
+                    {...field}
+                    onChange={(e) => {
+                      // Only allow numeric input
+                      const value = e.target.value.replace(/[^0-9]/g, '');
+                      field.onChange(value);
+                    }}
+                  />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
+        </div>
 
-          {/* Authentication Credentials */}
-          <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-md space-y-4">
-            <h3 className="font-medium">Credentials</h3>
-
-            {form.watch('auth_type') === 'token' && (
-              <FormField
-                control={form.control}
-                name="token"
-                rules={{ required: 'Token is required' }}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>API Token</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="Enter API token"
-                        onChange={(e) => handleCredentialChange('token', e.target.value)}
-                        value={field.value}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-
-            {form.watch('auth_type') === 'basic_auth' && (
-              <>
-                <FormField
-                  control={form.control}
-                  name="username"
-                  rules={{ required: 'Username is required' }}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Username</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Enter username"
-                          onChange={(e) => handleCredentialChange('username', e.target.value)}
-                          value={field.value}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="password"
-                  rules={{ required: 'Password is required' }}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="password"
-                          placeholder="Enter password"
-                          onChange={(e) => handleCredentialChange('password', e.target.value)}
-                          value={field.value}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </>
-            )}
-
-            {form.watch('auth_type') === 'oauth' && (
-              <div className="text-sm text-gray-500">
-                OAuth configuration requires additional setup. Please contact your administrator.
-              </div>
-            )}
-          </div>
-
-          {/* Test Connection Status */}
-          {testMessage && (
-            <div
-              className={`p-3 rounded-md ${testMessage.success ? 'bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-100' : 'bg-red-50 text-red-700 dark:bg-red-900 dark:text-red-100'}`}
-            >
-              {testMessage.message}
-            </div>
-          )}
-
-          {/* Form Actions */}
-          <div className="flex justify-between space-x-4 pt-4">
-            <div>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleTestConnection}
-                disabled={isTesting}
+        {/* Authentication Type */}
+        <FormField
+          control={form.control}
+          name="auth_type"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Authentication</FormLabel>
+              <Select
+                defaultValue={field.value}
+                onValueChange={(value) => handleSelectChange('auth_type', value)}
               >
-                {isTesting ? 'Testing...' : 'Test Connection'}
-              </Button>
-            </div>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select authentication type" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="token">API Token</SelectItem>
+                  <SelectItem value="basic_auth">Username & Password</SelectItem>
+                  {form.getValues('type') === 'github' && (
+                    <SelectItem value="oauth">OAuth</SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-            <div className="flex space-x-2">
-              <Button type="button" variant="outline" onClick={handleCancel}>
-                Cancel
-              </Button>
+        {/* Authentication Credentials */}
+        {form.watch('auth_type') === 'token' && (
+          <FormField
+            control={form.control}
+            name="token"
+            rules={{ required: 'Token is required' }}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>API Token</FormLabel>
+                <FormControl>
+                  <Input
+                    type="password"
+                    placeholder="Enter your API token"
+                    onChange={(e) => handleCredentialChange('token', e.target.value)}
+                    value={field.value}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Saving...' : isEditMode ? 'Update Provider' : 'Create Provider'}
-              </Button>
-            </div>
+        {form.watch('auth_type') === 'basic_auth' && (
+          <>
+            <FormField
+              control={form.control}
+              name="username"
+              rules={{ required: 'Username is required' }}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Username</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Enter username"
+                      onChange={(e) => handleCredentialChange('username', e.target.value)}
+                      value={field.value}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="password"
+              rules={{ required: 'Password is required' }}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="password"
+                      placeholder="Enter password"
+                      onChange={(e) => handleCredentialChange('password', e.target.value)}
+                      value={field.value}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
+        )}
+
+        {form.watch('auth_type') === 'oauth' && (
+          <div className="text-sm text-muted-foreground">
+            OAuth configuration requires additional setup. Please contact your administrator.
           </div>
-        </form>
-      </Form>
-    </div>
+        )}
+
+        {/* Test Connection Status */}
+        {testMessage && (
+          <div
+            className={`p-3 rounded-md ${testMessage.success ? 'bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-100' : 'bg-red-50 text-red-700 dark:bg-red-900 dark:text-red-100'}`}
+          >
+            {testMessage.message}
+          </div>
+        )}
+
+        {/* Test Connection Button (only show when not in dialog, moved outside footers) */}
+        {!isInDialog && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleTestConnection}
+            disabled={isTesting}
+            className="mt-4"
+          >
+            {isTesting ? 'Testing...' : 'Test Connection'}
+          </Button>
+        )}
+
+        {/* Render appropriate footer based on context */}
+        {renderFooterButtons()}
+      </form>
+    </Form>
   );
 };
 

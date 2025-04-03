@@ -19,6 +19,7 @@ export async function getCICDProviders(
   cookieStore?: any,
 ): Promise<DbResponse<CICDProvider[]>> {
   try {
+    console.log(`[@db:cicdDb:getCICDProviders] Getting providers for team: ${teamId}`);
     const supabase = await createClient(cookieStore);
 
     const { data, error } = await supabase
@@ -28,11 +29,14 @@ export async function getCICDProviders(
       .order('created_at', { ascending: false });
 
     if (error) {
+      console.error(`[@db:cicdDb:getCICDProviders] Error: ${error.message}`);
       return { success: false, error: error.message };
     }
 
+    console.log(`[@db:cicdDb:getCICDProviders] Found ${data.length} providers`);
     return { success: true, data };
   } catch (error: any) {
+    console.error(`[@db:cicdDb:getCICDProviders] Error: ${error.message}`);
     return { success: false, error: error.message || 'Failed to get CI/CD providers' };
   }
 }
@@ -45,16 +49,19 @@ export async function getCICDProviderById(
   cookieStore?: any,
 ): Promise<DbResponse<CICDProvider>> {
   try {
+    console.log(`[@db:cicdDb:getCICDProviderById] Getting provider: ${id}`);
     const supabase = await createClient(cookieStore);
 
     const { data, error } = await supabase.from('cicd_providers').select('*').eq('id', id).single();
 
     if (error) {
+      console.error(`[@db:cicdDb:getCICDProviderById] Error: ${error.message}`);
       return { success: false, error: error.message };
     }
 
     return { success: true, data };
   } catch (error: any) {
+    console.error(`[@db:cicdDb:getCICDProviderById] Error: ${error.message}`);
     return { success: false, error: error.message || 'Failed to get CI/CD provider' };
   }
 }
@@ -66,15 +73,18 @@ export async function createCICDProvider(
   provider: CICDProviderPayload,
   userId: string,
   tenantId: string,
+  teamId: string,
   cookieStore?: any,
 ): Promise<DbResponse<CICDProvider>> {
   try {
+    console.log(`[@db:cicdDb:createCICDProvider] Creating provider: ${provider.name}`);
     const supabase = await createClient(cookieStore);
 
     const providerData = {
       ...provider,
-      user_id: userId,
+      team_id: teamId,
       tenant_id: tenantId,
+      creator_id: userId,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -86,11 +96,14 @@ export async function createCICDProvider(
       .single();
 
     if (error) {
+      console.error(`[@db:cicdDb:createCICDProvider] Error: ${error.message}`);
       return { success: false, error: error.message };
     }
 
+    console.log(`[@db:cicdDb:createCICDProvider] Created provider with ID: ${data.id}`);
     return { success: true, data };
   } catch (error: any) {
+    console.error(`[@db:cicdDb:createCICDProvider] Error: ${error.message}`);
     return { success: false, error: error.message || 'Failed to create CI/CD provider' };
   }
 }
@@ -104,24 +117,30 @@ export async function updateCICDProvider(
   cookieStore?: any,
 ): Promise<DbResponse<CICDProvider>> {
   try {
+    console.log(`[@db:cicdDb:updateCICDProvider] Updating provider: ${id}`);
     const supabase = await createClient(cookieStore);
+
+    const updateData = {
+      ...provider,
+      updated_at: new Date().toISOString(),
+    };
 
     const { data, error } = await supabase
       .from('cicd_providers')
-      .update({
-        ...provider,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();
 
     if (error) {
+      console.error(`[@db:cicdDb:updateCICDProvider] Error: ${error.message}`);
       return { success: false, error: error.message };
     }
 
+    console.log(`[@db:cicdDb:updateCICDProvider] Updated provider: ${id}`);
     return { success: true, data };
   } catch (error: any) {
+    console.error(`[@db:cicdDb:updateCICDProvider] Error: ${error.message}`);
     return { success: false, error: error.message || 'Failed to update CI/CD provider' };
   }
 }
