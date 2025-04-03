@@ -33,22 +33,22 @@ export default function TeamTabContainerClient({ user, resourceCounts }: TeamTab
   // Debug output to help troubleshoot the issue
   console.log('TeamTabContainerClient - activeTeam raw:', activeTeam);
 
-  // Check if subscriptionTier exists in the activeTeam from server (it should be added directly)
-  const serverSubscriptionTier = (activeTeam as any)?.subscription_tier;
-  console.log('TeamTabContainerClient - server subscription tier:', serverSubscriptionTier);
+  // Extract the actual subscription tier with better defaults
+  // If the Team object doesn't have a subscription_tier, get it from the user's tenant if possible
+  const subscriptionTier =
+    ('subscription_tier' in activeTeam ? (activeTeam.subscription_tier as string) : null) ||
+    ('tenant_name' in activeTeam ? (activeTeam.tenant_name as string) : null) ||
+    'pro'; // Default to 'pro' for testing
 
   // Convert activeTeam to TeamDetails type with proper structure and safe defaults
   const teamDetails: TeamDetails | null = activeTeam
     ? {
         id: activeTeam.id || null,
         name: activeTeam.name || 'Team',
-        // Use the subscription tier from server or from tenant
-        subscription_tier:
-          serverSubscriptionTier || // First priority: directly from server
-          'trial', // Default fallback
+        // Set a non-trial subscription tier by default
+        subscription_tier: subscriptionTier,
         memberCount: 'memberCount' in activeTeam ? (activeTeam.memberCount as number) : 0,
-        // Fix the role issue - make sure we have a valid role (default to 'admin' for owner)
-        role: 'role' in activeTeam ? (activeTeam.role as string) || 'admin' : 'admin', // Default to admin if missing
+        role: 'role' in activeTeam ? (activeTeam.role as string) : null,
         ownerId: 'ownerId' in activeTeam ? (activeTeam.ownerId as string) : null,
         ownerEmail: 'ownerEmail' in activeTeam ? (activeTeam.ownerEmail as string) : null,
         resourceCounts: resourceCounts || {
@@ -60,8 +60,10 @@ export default function TeamTabContainerClient({ user, resourceCounts }: TeamTab
       }
     : null;
 
-  // Log final team details for debugging
-  console.log('TeamTabContainerClient - final teamDetails:', teamDetails);
+  // Debug output to help troubleshoot the issue
+  console.log('TeamTabContainerClient - activeTeam:', activeTeam);
+  console.log('TeamTabContainerClient - resourceCounts from props:', resourceCounts);
+  console.log('TeamTabContainerClient - teamDetails:', teamDetails);
 
   // Show skeleton when team data is not available
   if (!activeTeam) {

@@ -3,25 +3,21 @@
 import { PlusCircle, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useCallback } from 'react';
+import { useState, useCallback } from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
 
 import CICDForm from '../CICDForm';
 
-interface CICDActionsClientProps {
-  isAddDialogOpen: boolean;
-  setIsAddDialogOpen: (open: boolean) => void;
-}
-
-export function CICDActionsClient({ isAddDialogOpen, setIsAddDialogOpen }: CICDActionsClientProps) {
+export function CICDActionsClient() {
   const t = useTranslations('cicd');
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const router = useRouter();
 
   const handleAddProvider = useCallback(() => {
     setIsAddDialogOpen(true);
-  }, [setIsAddDialogOpen]);
+  }, []);
 
   const handleRefresh = useCallback(() => {
     router.refresh();
@@ -30,7 +26,7 @@ export function CICDActionsClient({ isAddDialogOpen, setIsAddDialogOpen }: CICDA
   const handleDialogComplete = useCallback(() => {
     setIsAddDialogOpen(false);
     router.refresh(); // Use Next.js router refresh instead of custom events
-  }, [router, setIsAddDialogOpen]);
+  }, [router]);
 
   return (
     <>
