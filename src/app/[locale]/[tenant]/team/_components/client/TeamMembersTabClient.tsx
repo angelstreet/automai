@@ -2,7 +2,7 @@
 
 import { MoreHorizontal, PlusIcon, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useEffect, useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 import {
@@ -35,13 +35,9 @@ import type { ResourceType } from '@/types/context/permissionsContextType';
 import { TeamMemberResource, TeamMemberDetails } from '@/types/context/teamContextType';
 import { User } from '@/types/service/userServiceType';
 import { useTeam } from '@/hooks/useTeam';
-import { useTranslation } from 'react-i18next';
-import { Separator } from '@/components/shadcn/separator';
 
 import TeamMembersTableSkeleton from '../TeamMembersTableSkeleton';
-import { EmptyMembers } from '../EmptyMembers';
-import { TeamMembersTable } from '../TeamMembersTable';
-import { AddMemberButton } from '../AddMemberButton';
+import { EmptyState } from '@/components/EmptyState';
 
 interface MembersTabProps {
   teamId: string | null;
@@ -247,6 +243,20 @@ function MembersTabContent({
   );
 }
 
+// Add missing type definition for PaginationState
+interface PaginationState {
+  pageIndex: number;
+  pageSize: number;
+}
+
+// Add missing getTeamMembersData function
+function getTeamMembersData(result: any): TeamMemberDetails[] {
+  if (!result || !result.success || !result.data) {
+    return [];
+  }
+  return result.data;
+}
+
 // Main exported component that provides the dialog context
 export function MembersTab({
   teamId,
@@ -254,14 +264,18 @@ export function MembersTab({
   userRole: _userRole,
   user: _user,
 }: MembersTabProps) {
-  const { t } = useTranslation('team');
+  const t = useTranslations('team');
   const searchParams = useSearchParams();
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Get active team and members
   const { activeTeam } = useTeam('TeamMembersTabClient');
-  const teamIdFromTeam = activeTeam?.id || '';
-  const { data: teamMembersResult, isLoading } = useTeamMembers(teamIdFromTeam);
+  const teamIdToUse = teamId || activeTeam?.id || '';
+  const { data: teamMembersResult, isLoading } = useTeamMembers(teamIdToUse);
   const members = getTeamMembersData(teamMembersResult);
+
+  // Get the remove team member mutation
+  const removeTeamMemberMutation = useRemoveTeamMember();
 
   // Get permissions for the team
   const { canManageMembers } = usePermissionWithSubscription('TeamMembersTabClient');
@@ -271,68 +285,33 @@ export function MembersTab({
   console.log('TeamMembersTabClient - subscriptionTier prop:', subscriptionTier);
   console.log('TeamMembersTabClient - activeTeam:', activeTeam);
 
-  // Get the list of members
-  const membersList = useMemo(() => {
-    if (!members || !Array.isArray(members)) return [];
-    return members.map((m) => ({
-      ...m,
-      name: m.profiles?.email || m.profile_id,
-    }));
-  }, [members]);
-
-  // Pagination state
-  const [pagination, setPagination] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: 10,
-  });
-
-  // The current page of data
-  const currentPageData = useMemo(() => {
-    const start = pagination.pageIndex * pagination.pageSize;
-    const end = start + pagination.pageSize;
-    return [...membersList].slice(start, end);
-  }, [membersList, pagination.pageIndex, pagination.pageSize]);
-
   // Skip loading if we're not on this tab
   if (searchParams.get('tab') !== 'members' && !isLoading) {
     return null;
   }
 
+  const handleRemoveMember = async (profileId: string) => {
+    try {
+      await removeTeamMemberMutation.mutateAsync({ teamId: teamIdToUse, profileId });
+    } catch (error) {
+      console.error('Error removing team member:', error);
+    }
+  };
+
+  // Return to original TeamMembersTabContent structure
   return (
-    <div className="flex flex-col space-y-6 p-4 lg:p-6">
-      <div className="flex justify-between space-x-2">
-        <div>
-          <h3 className="text-lg font-semibold">{t('teamMembers')}</h3>
-          <p className="text-muted-foreground text-sm mt-1">
-            {t('teamMembersDescription', { count: membersList.length })}
-          </p>
-        </div>
-
-        {/* Show action button only if user has necessary permissions */}
-        {canManageMembers() && (
-          <AddMemberButton
-            teamId={teamIdFromTeam}
-            label={t('addTeamMember')}
-            teamName={activeTeam?.name}
-          />
-        )}
-      </div>
-
-      <Separator />
-
-      {isLoading ? (
-        <TeamMembersTableSkeleton />
-      ) : membersList.length === 0 ? (
-        <EmptyMembers />
-      ) : (
-        <TeamMembersTable
-          data={currentPageData}
-          pagination={pagination}
-          pageCount={Math.ceil(membersList.length / pagination.pageSize)}
-          onPaginationChange={setPagination}
-          canManageMembers={canManageMembers()}
+    <div className="space-y-4">
+      <TeamMemberDialogProvider teamId={teamIdToUse} onMembersChanged={() => {}}>
+        <MembersTabContent
+          teamId={teamIdToUse}
+          subscriptionTier={subscriptionTier}
+          members={members}
+          onRemoveMember={handleRemoveMember}
+          isLoading={isLoading}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
         />
-      )}
+      </TeamMemberDialogProvider>
     </div>
   );
 }

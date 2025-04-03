@@ -175,7 +175,7 @@ export function usePermissionWithContext() {
 export function usePermissionWithSubscription(componentName = 'unknown') {
   // Get team details which includes the subscription tier
   const { activeTeam } = useTeam(componentName);
-  
+
   // Get permission checking capabilities
   const { hasPermission } = usePermissionWithContext();
 
@@ -183,11 +183,11 @@ export function usePermissionWithSubscription(componentName = 'unknown') {
   const canManageMembers = useCallback(() => {
     // First check basic permission
     const hasBasicPermission = hasPermission('repositories' as ResourceType, 'insert');
-    
+
     // Then check if not on trial subscription
     const subscriptionTier = activeTeam?.subscription_tier || 'trial';
     const isNotTrial = subscriptionTier !== 'trial';
-    
+
     // Both conditions must be true
     return hasBasicPermission && isNotTrial;
   }, [hasPermission, activeTeam]);

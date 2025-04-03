@@ -76,7 +76,7 @@ export async function getUserPermissions(
 
     // Add detailed permissions log
     if (data && data.length > 0) {
-      console.log(formatPermissionsLog(data, profileId, teamId));
+      //(data, profileId, teamId));
     } else {
       console.log(
         `[@db:permissionDb:getUserPermissions] No permissions found for user: ${profileId}`,

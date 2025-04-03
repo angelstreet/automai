@@ -41,12 +41,17 @@ import CICDForm from '../CICDForm';
 
 interface CICDDetailsClientProps {
   initialProviders: CICDProvider[];
+  isAddDialogOpen: boolean;
+  setIsAddDialogOpen: (open: boolean) => void;
 }
 
-export default function CICDDetailsClient({ initialProviders }: CICDDetailsClientProps) {
+export default function CICDDetailsClient({
+  initialProviders,
+  isAddDialogOpen,
+  setIsAddDialogOpen,
+}: CICDDetailsClientProps) {
   const [selectedProvider, setSelectedProvider] = useState<CICDProvider | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -54,16 +59,19 @@ export default function CICDDetailsClient({ initialProviders }: CICDDetailsClien
   const router = useRouter();
 
   // Memoize dialog handlers
-  const handleAddEditProvider = useCallback((provider?: CICDProvider) => {
-    if (provider) {
-      setSelectedProvider(provider);
-      setIsEditing(true);
-    } else {
-      setSelectedProvider(null);
-      setIsEditing(false);
-    }
-    setIsAddEditDialogOpen(true);
-  }, []);
+  const handleAddEditProvider = useCallback(
+    (provider?: CICDProvider) => {
+      if (provider) {
+        setSelectedProvider(provider);
+        setIsEditing(true);
+      } else {
+        setSelectedProvider(null);
+        setIsEditing(false);
+      }
+      setIsAddDialogOpen(true);
+    },
+    [setIsAddDialogOpen],
+  );
 
   // Memoize delete handler
   const handleDeleteClick = useCallback((provider: CICDProvider) => {
@@ -96,9 +104,9 @@ export default function CICDDetailsClient({ initialProviders }: CICDDetailsClien
 
   // Memoize dialog completion handler
   const handleDialogComplete = useCallback(() => {
-    setIsAddEditDialogOpen(false);
+    setIsAddDialogOpen(false);
     router.refresh(); // Use Next.js router refresh to trigger server revalidation
-  }, [router]);
+  }, [router, setIsAddDialogOpen]);
 
   // Memoize delete confirmation handler
   const handleConfirmDelete = useCallback(async () => {
@@ -156,7 +164,7 @@ export default function CICDDetailsClient({ initialProviders }: CICDDetailsClien
                 onClick={() => {
                   setSelectedProvider(null);
                   setIsEditing(false);
-                  setIsAddEditDialogOpen(true);
+                  setIsAddDialogOpen(true);
                 }}
               >
                 <PlusCircle className="h-4 w-4 mr-2" />
@@ -259,13 +267,11 @@ export default function CICDDetailsClient({ initialProviders }: CICDDetailsClien
       </AlertDialog>
 
       {/* Add/Edit Provider Dialog */}
-      <Dialog open={isAddEditDialogOpen} onOpenChange={setIsAddEditDialogOpen}>
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>
-              {isEditing
-                ? t('edit_provider_dialog_title', { fallback: 'Edit CI/CD Provider' })
-                : t('add_provider_dialog_title', { fallback: 'Add CI/CD Provider' })}
+              {isEditing ? t('edit_provider_dialog_title') : t('add_provider_dialog_title')}
             </DialogTitle>
           </DialogHeader>
           <CICDForm
