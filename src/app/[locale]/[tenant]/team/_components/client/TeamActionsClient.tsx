@@ -40,7 +40,7 @@ export default function TeamActions() {
     <div className="flex gap-2 items-center">
       <Button variant="outline" size="sm">
         <PlusIcon className="h-4 w-4 mr-1" />
-        {t('addMember')}
+        {t('membersTab.add')}
       </Button>
     </div>
   );

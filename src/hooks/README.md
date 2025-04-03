@@ -133,8 +133,74 @@ const { data } = useQuery({
 
 - `useUser`: User authentication and state
 - `useTeam`: Team management and selection
-- `usePermission`: Permission checking and management
+- `usePermission`: Permission checking and management (see Permission Handling section below)
 - `useSidebar`: Sidebar state management
+
+## Permission Handling
+
+The application uses a role-based permission system implemented through the `usePermission` hook. This provides a centralized approach to checking permissions across the application.
+
+### Key Functions
+
+```tsx
+// Check if user has a specific role
+const { hasRole } = usePermission();
+const isAdminUser = hasRole('admin');
+
+// Check if user is an admin (convenience function)
+const { isAdmin } = usePermission();
+if (isAdmin()) {
+  // Perform admin-only action
+}
+
+// Check if user can manage team members
+const { canManageTeamMembers } = usePermission();
+if (canManageTeamMembers()) {
+  // Show team management UI
+}
+
+// Database-level permission check (legacy approach)
+const { hasPermission } = usePermission();
+const canCreateRepositories = hasPermission('repositories', 'insert');
+```
+
+### Implementation Details
+
+- **Role-Based Checks**: The `hasRole`, `isAdmin`, and `canManageTeamMembers` functions check the user's role directly from the UserContext.
+- **Permission Matrix**: The `hasPermission` function checks against the database permission matrix for more granular control.
+
+### Best Practices
+
+1. **Prefer Role-Based Checks**: Use `hasRole`, `isAdmin`, or `canManageTeamMembers` instead of direct permission checks when possible.
+
+2. **Centralized Permission Logic**: All permission-related logic should be defined in the `usePermission` hook, not in individual components.
+
+3. **Consistent Naming**: Use descriptive function names for specific permissions:
+   ```tsx
+   // In usePermission.ts
+   const canEditDeployment = useCallback(() => {
+     return isAdmin() || hasRole('developer');
+   }, [isAdmin, hasRole]);
+
+   // Export the function
+   return {
+     // ... other functions
+     canEditDeployment,
+   };
+   ```
+
+4. **UI Conditionals**: Use permission checks for conditional UI rendering:
+   ```tsx
+   const { canManageTeamMembers } = usePermission();
+
+   return (
+     <div>
+       {canManageTeamMembers() && (
+         <Button>Add Team Member</Button>
+       )}
+     </div>
+   );
+   ```
 
 ### Feature Hooks (Hooks-Only Pattern)
 

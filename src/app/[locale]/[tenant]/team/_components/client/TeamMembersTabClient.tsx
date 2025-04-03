@@ -128,7 +128,7 @@ function MembersTabContent({
             <>
               <Button onClick={openAddDialog}>
                 <PlusIcon className="mr-2 h-4 w-4" />
-                {t('membersTab.addMember')}
+                {t('membersTab.add')}
               </Button>
             </>
           )}
