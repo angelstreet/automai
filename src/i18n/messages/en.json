@@ -410,8 +410,8 @@
       "noEmail": "No email",
       "defaultTeam": "Default Team",
       "memberActions": {
-        "changePermissions": "Change Permissions",
-        "remove": "Remove Member"
+        "changePermissions": "Edit",
+        "remove": "Remove"
       },
       "addMember": {
         "title": "Add Team Member",

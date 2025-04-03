@@ -158,12 +158,6 @@ function MembersTabContent({
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          {canManageMembersWithDefault && (
-            <Button disabled={!teamId} size="sm" onClick={() => openAddDialog()}>
-              <PlusIcon className="h-4 w-4 mr-1" />
-              {t('membersTab.add')}
-            </Button>
-          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -267,12 +261,7 @@ function MembersTabContent({
 }
 
 // Main exported component that provides the dialog context
-export function MembersTab({
-  teamId,
-  subscriptionTier,
-  userRole: _userRole,
-  user: _user,
-}: MembersTabProps) {
+export function MembersTab({ teamId, subscriptionTier }: MembersTabProps) {
   const teamMembersQuery = useTeamMembers(teamId);
   const [members, setMembers] = useState<TeamMemberDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
