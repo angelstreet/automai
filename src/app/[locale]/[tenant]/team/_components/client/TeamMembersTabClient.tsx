@@ -65,11 +65,14 @@ function MembersTabContent({
   const { hasPermission } = usePermission();
   const { openAddDialog, openEditDialog, addDialogOpen, setAddDialogOpen } = useTeamMemberDialog();
 
+  // Set default for subscription tier if undefined
+  const effectiveSubscriptionTier = subscriptionTier || 'pro';
+  
   // Check permissions for managing members - Two conditions:
   // 1. User must have admin role (checked via repository insert permission)
   // 2. Subscription tier must not be 'trial'
   const hasAdminPermission = hasPermission('repositories' as ResourceType, 'insert');
-  const isNotTrialTier = subscriptionTier !== 'trial';
+  const isNotTrialTier = effectiveSubscriptionTier !== 'trial';
   const canManageMembers = hasAdminPermission && isNotTrialTier;
 
   // Debug logging for permission checks
@@ -79,9 +82,9 @@ function MembersTabContent({
   console.log('TeamMembersTabClient - isNotTrialTier:', isNotTrialTier);
   console.log('TeamMembersTabClient - canManageMembers:', canManageMembers);
   console.log('TeamMembersTabClient - permissions check details:', {
-    hasRepositoriesInsertPermission: hasPermission('repositories' as ResourceType, 'insert'),
-    hasHostsInsertPermission: hasPermission('hosts' as ResourceType, 'insert'),
-    isNotTrialTier: subscriptionTier !== 'trial',
+    hasAdminPermission,
+    isNotTrialTier,
+    effectiveSubscriptionTier,
     subscriptionTier,
     teamId,
   });
@@ -90,13 +93,12 @@ function MembersTabContent({
   console.log('== PERMISSION DEBUG BUTTON DISPLAY ==');
   console.log('Button should display:', canManageMembers);
   console.log('Button conditions:', {
-    hasAdminPermission: hasPermission('repositories' as ResourceType, 'insert'),
-    subscriptionTier: subscriptionTier,
-    subscriptionTierType: typeof subscriptionTier,
-    isNotTrialTier: subscriptionTier !== 'trial',
-    defaultedSubscriptionTier: subscriptionTier || 'pro', // Default to 'pro' if undefined
-    bothConditionsMet: hasPermission('repositories' as ResourceType, 'insert') && subscriptionTier !== 'trial',
-    teamId: teamId,
+    hasAdminPermission,
+    subscriptionTier,
+    effectiveSubscriptionTier,
+    isNotTrialTier,
+    bothConditionsMet: hasAdminPermission && isNotTrialTier,
+    teamId,
   });
 
   // Filter members based on search
@@ -136,13 +138,6 @@ function MembersTabContent({
     return name.substring(0, 2).toUpperCase();
   };
 
-  // Use a defaulted subscription tier value if it's undefined
-  const effectiveSubscriptionTier = subscriptionTier || 'pro';
-  // Apply both conditions: admin permission AND non-trial tier
-  const canManageMembersWithDefault = 
-    hasPermission('repositories' as ResourceType, 'insert') && 
-    effectiveSubscriptionTier !== 'trial';
-
   if (isLoading) {
     return <TeamMembersTableSkeleton />;
   }
@@ -161,7 +156,7 @@ function MembersTabContent({
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          {canManageMembersWithDefault && (
+          {canManageMembers && (
             <>
               <Button onClick={openAddDialog}>
                 <PlusIcon className="mr-2 h-4 w-4" />
@@ -180,7 +175,7 @@ function MembersTabContent({
               <TableHead>{t('membersTab.team')}</TableHead>
               <TableHead>{t('membersTab.email')}</TableHead>
               <TableHead>{t('membersTab.role')}</TableHead>
-              {canManageMembersWithDefault && (
+              {canManageMembers && (
                 <TableHead className="text-right">{t('membersTab.actions')}</TableHead>
               )}
             </TableRow>
@@ -189,7 +184,7 @@ function MembersTabContent({
             {filteredMembers.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={canManageMembersWithDefault ? 6 : 5}
+                  colSpan={canManageMembers ? 6 : 5}
                   className="text-center py-8 text-muted-foreground"
                 >
                   {searchQuery
@@ -226,7 +221,7 @@ function MembersTabContent({
                       {member.role}
                     </Badge>
                   </TableCell>
-                  {canManageMembersWithDefault && (
+                  {canManageMembers && (
                     <TableCell className="py-2 text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -268,7 +263,7 @@ function MembersTabContent({
         </Table>
       </CardContent>
       {/* Render the AddMemberDialog */}
-      {canManageMembersWithDefault && (
+      {canManageMembers && (
         <AddMemberDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} teamId={teamId} />
       )}
     </Card>
