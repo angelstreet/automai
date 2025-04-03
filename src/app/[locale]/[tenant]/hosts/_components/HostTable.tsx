@@ -39,7 +39,7 @@ export function HostTable({
   onTestConnection,
 }: HostTableProps) {
   const router = useRouter();
-  const t = useTranslations('Common');
+  const t = useTranslations('common');
 
   const getStatusDot = (status: string, animationDelay?: number) => {
     const baseClasses = 'h-3 w-3 rounded-full';

@@ -24,7 +24,7 @@ export function ConnectHostDialog({
   onOpenChange,
   onSuccess: _onSuccess,
 }: ConnectHostDialogProps) {
-  const t = useTranslations('Common');
+  const t = useTranslations('common');
   const [testStatus, setTestStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [_testError, setTestError] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>({

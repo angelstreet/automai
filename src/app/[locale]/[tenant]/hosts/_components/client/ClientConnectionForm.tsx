@@ -51,7 +51,7 @@ export function ClientConnectionForm({
   onCancel,
   testStatus = 'idle',
 }: ConnectionFormProps) {
-  const t = useTranslations('Common');
+  const t = useTranslations('common');
   const [_connectionType, setConnectionType] = useState<'ssh' | 'docker' | 'portainer'>(
     formData.type as 'ssh' | 'docker' | 'portainer',
   );
@@ -371,12 +371,12 @@ export function ClientConnectionForm({
           {testing ? (
             <>
               <Loader2 className="h-3 w-3 animate-spin mr-2" />
-              {t('common.testing')}
+              {t('testing')}
             </>
           ) : (
             <>
               <CheckCircle className="h-3 w-3 mr-2" />
-              {t('common.testConnection')}
+              {t('testConnection')}
             </>
           )}
         </Button>

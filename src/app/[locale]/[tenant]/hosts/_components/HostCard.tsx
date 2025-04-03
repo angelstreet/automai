@@ -1,6 +1,6 @@
 'use client';
 
-import { Terminal, MoreHorizontal, RefreshCw, XCircle, ScrollText, Spinner4 } from 'lucide-react';
+import { Terminal, MoreHorizontal, RefreshCw, XCircle, ScrollText } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useState, useEffect, useCallback } from 'react';
@@ -33,8 +33,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/shadcn/tooltip';
-
-import { Host } from '../types';
+import { Host } from '@/types/context/hostContextType';
 
 interface HostCardProps {
   host: Host & { animationDelay?: number };
@@ -47,10 +46,9 @@ export { HostCard as default, HostCard };
 
 function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
   const router = useRouter();
-  const t = useTranslations('Common');
+  const t = useTranslations('common');
 
   // Group all state declarations together at the top
-  const [showError, setShowError] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleted, setIsDeleted] = useState(false);
@@ -128,8 +126,7 @@ function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
                 />
               </TooltipTrigger>
               <TooltipContent>
-                <Spinner4 className="animate-spin h-4 w-4 text-yellow-500 mr-1.5" />
-                <p>{t('common.testing')}</p>
+                <p>{t('testing')}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
