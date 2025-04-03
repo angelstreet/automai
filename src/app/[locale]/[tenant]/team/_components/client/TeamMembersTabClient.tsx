@@ -63,7 +63,7 @@ function MembersTabContent({
 }) {
   const t = useTranslations('team');
   const { hasPermission } = usePermission();
-  const { openAddDialog, openEditDialog } = useTeamMemberDialog();
+  const { openAddDialog, openEditDialog, addDialogOpen, setAddDialogOpen } = useTeamMemberDialog();
 
   // Check permissions for managing members - Use valid resource type
   const canManageMembers =
@@ -158,6 +158,14 @@ function MembersTabContent({
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+          {canManageMembersWithDefault && (
+            <>
+              <Button onClick={openAddDialog}>
+                <PlusIcon className="mr-2 h-4 w-4" />
+                {t('membersTab.addMember')}
+              </Button>
+            </>
+          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -256,6 +264,10 @@ function MembersTabContent({
           </TableBody>
         </Table>
       </CardContent>
+      {/* Render the AddMemberDialog */}
+      {canManageMembersWithDefault && (
+        <AddMemberDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} teamId={teamId} />
+      )}
     </Card>
   );
 }
@@ -345,3 +357,5 @@ export function MembersTab({ teamId, subscriptionTier }: MembersTabProps) {
     </TeamMemberDialogProvider>
   );
 }
+
+import AddMemberDialog from './TeamMemberAddDialogClient';
