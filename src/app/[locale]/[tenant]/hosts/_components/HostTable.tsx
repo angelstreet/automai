@@ -54,7 +54,7 @@ export function HostTable({
         return (
           <div
             className={`${baseClasses} host-testing-animation ring-2 ring-yellow-300 ring-opacity-60 ${delayClass}`}
-            title={t('Common.testing')}
+            title={t('common.testing')}
           />
         );
       case 'pending':

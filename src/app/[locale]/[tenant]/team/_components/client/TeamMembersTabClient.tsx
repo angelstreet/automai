@@ -2,10 +2,8 @@
 
 import { MoreHorizontal, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useContext } from 'react';
 
-import { useContext } from 'react';
-import { TeamMemberDialogContext } from '@/context/TeamMemberDialogContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
 import { Badge } from '@/components/shadcn/badge';
 import { Button } from '@/components/shadcn/button';
@@ -25,6 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/shadcn/table';
+import { TeamMemberDialogContext } from '@/context/TeamMemberDialogContext';
 import { usePermission } from '@/hooks';
 import { useRemoveTeamMember } from '@/hooks/useTeamMemberManagement';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
@@ -271,13 +270,13 @@ export function MembersTab({ teamId, subscriptionTier }: MembersTabProps) {
 
     fetchMembers();
   }, [teamId, teamMembersQuery.data]);
-  
+
   // Listen for refresh events from outside components (like TeamActionsClient)
   useEffect(() => {
     const handleRefresh = () => {
       teamMembersQuery.refetch();
     };
-    
+
     window.addEventListener('refresh-team-members', handleRefresh);
     return () => window.removeEventListener('refresh-team-members', handleRefresh);
   }, [teamMembersQuery]);

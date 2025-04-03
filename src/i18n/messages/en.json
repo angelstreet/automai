@@ -122,13 +122,6 @@
     "delete_own": "Delete Own",
     "execute": "Execute"
   },
-  "Resources": {
-    "hosts": "Hosts",
-    "repositories": "Repositories",
-    "deployments": "Deployments",
-    "cicd_providers": "CI/CD Providers",
-    "cicd_jobs": "CI/CD Jobs"
-  },
   "index": {
     "title": "Automate your infrastructure with AI",
     "description": "Automai is an AI-powered infrastructure automation platform that helps you manage your infrastructure with ease. Deploy, monitor, and scale your applications with confidence.",

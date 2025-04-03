@@ -1,11 +1,10 @@
 'use client';
 
-import { Check, Loader2, Plus, Search, User } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { Loader2, Plus, User } from 'lucide-react';
 import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import React, { useEffect, useState } from 'react';
 
-import { Badge } from '@/components/shadcn/badge';
 import { Button } from '@/components/shadcn/button';
 import { Checkbox } from '@/components/shadcn/checkbox';
 import {
@@ -24,7 +23,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/shadcn/dialog';
-import { Input } from '@/components/shadcn/input';
 import { Label } from '@/components/shadcn/label';
 import { ScrollArea } from '@/components/shadcn/scroll-area';
 import {
@@ -50,6 +48,7 @@ type TenantProfile = {
 
 const AddMemberDialog = ({ open, onOpenChange, teamId }: AddMemberDialogProps) => {
   const t = useTranslations('team');
+  const tc = useTranslations('common');
   const params = useParams();
   const tenantId = params.tenant as string;
 
@@ -173,8 +172,8 @@ const AddMemberDialog = ({ open, onOpenChange, teamId }: AddMemberDialogProps) =
                 disabled={filteredProfiles.length === 0}
               >
                 {selectedProfiles.length === filteredProfiles.length && filteredProfiles.length > 0
-                  ? t('Common.deselectAll')
-                  : t('Common.selectAll')}
+                  ? tc('deselectAll')
+                  : tc('selectAll')}
               </Button>
             </div>
 
@@ -188,9 +187,9 @@ const AddMemberDialog = ({ open, onOpenChange, teamId }: AddMemberDialogProps) =
                 <CommandList>
                   <CommandEmpty>
                     {isLoadingProfiles
-                      ? t('Common.loading')
+                      ? tc('loading')
                       : isError
-                        ? t('Common.error')
+                        ? tc('error')
                         : t('membersTab.addMember.noResults')}
                   </CommandEmpty>
                   <CommandGroup>
@@ -250,7 +249,7 @@ const AddMemberDialog = ({ open, onOpenChange, teamId }: AddMemberDialogProps) =
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {t('Common.cancel')}
+            {tc('cancel')}
           </Button>
           <Button onClick={handleSubmit} disabled={selectedProfiles.length === 0 || isLoading}>
             {isLoading ? (

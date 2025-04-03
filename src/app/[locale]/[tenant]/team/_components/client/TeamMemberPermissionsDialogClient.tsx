@@ -167,7 +167,7 @@ const EditPermissionsDialog = ({
           </DialogHeader>
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            <span className="ml-2 text-muted-foreground">{t('Common.loading')}</span>
+            <span className="ml-2 text-muted-foreground">{t('common.loading')}</span>
           </div>
         </DialogContent>
       </Dialog>
@@ -249,7 +249,7 @@ const EditPermissionsDialog = ({
 
         <DialogFooter className="mt-6">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {t('Common.cancel')}
+            {t('common.cancel')}
           </Button>
           <Button onClick={handleSubmit} disabled={isLoading}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

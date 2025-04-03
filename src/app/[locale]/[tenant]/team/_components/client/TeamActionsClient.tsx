@@ -14,7 +14,7 @@ import AddMemberDialog from './TeamMemberAddDialogClient';
 export default function TeamActions() {
   const t = useTranslations('team');
   const { activeTeam } = useTeam('TeamActionsClient');
-  
+
   // Local dialog state
   const [addDialogOpen, setAddDialogOpen] = useState(false);
 
@@ -44,7 +44,7 @@ export default function TeamActions() {
   const handleAddMemberClick = () => {
     setAddDialogOpen(true);
   };
-  
+
   // Handle member added callback
   const handleMemberAdded = () => {
     // Refresh data or take other actions when a member is added
@@ -67,9 +67,9 @@ export default function TeamActions() {
           {t('membersTab.add')}
         </Button>
       </div>
-      
+
       {/* Include the dialog directly in this component */}
-      <AddMemberDialog 
+      <AddMemberDialog
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
         teamId={team.id || null}

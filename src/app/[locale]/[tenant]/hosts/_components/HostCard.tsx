@@ -129,7 +129,7 @@ function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
               </TooltipTrigger>
               <TooltipContent>
                 <Spinner4 className="animate-spin h-4 w-4 text-yellow-500 mr-1.5" />
-                <p>{t('Common.testing')}</p>
+                <p>{t('common.testing')}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

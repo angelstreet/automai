@@ -371,12 +371,12 @@ export function ClientConnectionForm({
           {testing ? (
             <>
               <Loader2 className="h-3 w-3 animate-spin mr-2" />
-              {t('Common.testing')}
+              {t('common.testing')}
             </>
           ) : (
             <>
               <CheckCircle className="h-3 w-3 mr-2" />
-              {t('Common.testConnection')}
+              {t('common.testConnection')}
             </>
           )}
         </Button>
