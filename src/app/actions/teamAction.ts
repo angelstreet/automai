@@ -562,7 +562,7 @@ export const assignResourceToTeam = cache(
         result = await supabase.from('hosts').update({ team_id: teamId }).eq('id', resourceId);
       } else if (resourceType === 'deployment') {
         result = await supabase
-          .from('deployments')
+          .from('Deployments')
           .update({ team_id: teamId })
           .eq('id', resourceId);
       } else {
@@ -604,7 +604,7 @@ export const getTenantResourceCounts = cache(async (tenantId: string) => {
 
     // Get deployment count
     const { count: deployments } = await supabase
-      .from('deployments')
+      .from('Deployments')
       .select('id', { count: 'exact', head: true })
       .eq('tenant_id', tenantId);
 
@@ -656,7 +656,7 @@ export const getTeamResourceCounts = cache(async (teamId: string) => {
 
     // Get deployment count
     const { count: deployments } = await supabase
-      .from('deployments')
+      .from('Deployments')
       .select('id', { count: 'exact', head: true })
       .eq('team_id', teamId);
 

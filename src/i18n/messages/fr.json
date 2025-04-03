@@ -1,5 +1,19 @@
 {
-  "team": {
+  "Team": {
+    "title": "Gestion d'équipe",
+    "teamMembers": "Membres de l'équipe",
+    "description": "Gérez les membres de votre équipe et leurs permissions",
+    "inviteMembers": "Inviter des membres",
+    "memberName": "Nom",
+    "memberEmail": "Email",
+    "memberRole": "Rôle",
+    "memberStatus": "Statut",
+    "memberActions": "Actions",
+    "invitePending": "En attente",
+    "inviteAccepted": "Accepté",
+    "removeUser": "Supprimer",
+    "confirmRemove": "Êtes-vous sûr de vouloir supprimer cet utilisateur ?",
+    "noMembers": "Aucun membre d'équipe trouvé",
     "team": {
       "resources": {
         "hosts": "Hôtes",
@@ -7,16 +21,99 @@
         "deployments": "Déploiements",
         "cicd_providers": "Fournisseurs CI/CD",
         "cicd_jobs": "Tâches CI/CD"
-      },
-      "common": {
-        "loading": "Chargement...",
-        "error": "Erreur",
-        "selectAll": "Sélectionner tout",
-        "deselectAll": "Désélectionner tout"
       }
+    },
+    "addMember": "Ajouter un membre",
+    "overview": "Aperçu",
+    "members": "Membres de l'équipe",
+    "permissions": {
+      "view": "Voir",
+      "create": "Créer",
+      "edit": "Modifier",
+      "manage": "Gérer",
+      "select": "Voir",
+      "insert": "Créer",
+      "update": "Modifier (tous)",
+      "update_own": "Modifier (propriétaire)",
+      "delete_own": "Supprimer (propriétaire)",
+      "execute": "Exécuter"
+    },
+    "resources": {
+      "title": "Ressources d'équipe",
+      "overview": "Gérez et suivez les ressources attribuées à votre équipe",
+      "repositories": "Dépôts",
+      "hosts": "Hôtes",
+      "cicd": "Fournisseurs CI/CD",
+      "cicd_providers": "Fournisseurs CI/CD",
+      "cicd_jobs": "Tâches CI/CD",
+      "deployments": "Déploiements"
+    },
+    "membersTab": {
+      "title": "Membres de l'équipe",
+      "add": "Ajouter un membre",
+      "search": "Rechercher des membres...",
+      "name": "Nom",
+      "team": "Équipe",
+      "email": "Email",
+      "role": "Rôle",
+      "actions": "Actions",
+      "noMembers": "Aucun membre trouvé dans cette équipe",
+      "noTeam": "Créez une équipe pour ajouter des membres",
+      "noSearchResults": "Aucun membre ne correspond à votre recherche",
+      "unknownUser": "Utilisateur inconnu",
+      "noEmail": "Pas d'email",
+      "defaultTeam": "Équipe par défaut",
+      "memberActions": {
+        "changePermissions": "Modifier les permissions",
+        "remove": "Supprimer le membre"
+      },
+      "addMember": {
+        "title": "Ajouter un membre à l'équipe",
+        "description": "Ajoutez de nouveaux membres à votre équipe",
+        "emailLabel": "Adresse email",
+        "emailPlaceholder": "Entrez l'email du membre",
+        "roleLabel": "Rôle",
+        "rolePlaceholder": "Sélectionnez un rôle",
+        "submitButton": "Ajouter le membre",
+        "selectMembers": "Sélectionner des membres",
+        "searchMembers": "Rechercher des membres...",
+        "noResults": "Aucun membre correspondant trouvé",
+        "selectedCount": "{count} membre(s) sélectionné(s)"
+      },
+      "editPermissions": {
+        "title": "Modifier les permissions",
+        "description": "Modifier les rôles et permissions de ce membre",
+        "roleTemplate": "Modèle de rôle",
+        "selectRole": "Sélectionner un modèle de rôle",
+        "resource": "Ressource",
+        "roleApplied": "Rôle appliqué",
+        "roleAppliedDesc": "Le rôle {role} a été appliqué",
+        "roleApplyError": "Erreur lors de l'application du rôle",
+        "missingTeamOrMember": "L'ID de l'équipe ou les informations du membre sont manquants",
+        "success": "Permissions mises à jour",
+        "successDesc": "Les permissions de {name} ont été mises à jour",
+        "saveError": "Erreur lors de l'enregistrement des permissions",
+        "saveButton": "Enregistrer les permissions"
+      }
+    },
+    "settings": "Paramètres",
+    "createTeam": "Créer une équipe",
+    "noRole": "Aucun rôle",
+    "tabs": {
+      "resources": "Ressources"
+    },
+    "roles": {
+      "admin": "Administrateur",
+      "adminFull": "Administrateur (Accès complet)",
+      "developer": "Développeur",
+      "contributor": "Contributeur",
+      "viewer": "Visiteur",
+      "viewerReadOnly": "Visiteur (Lecture seule)",
+      "tester": "Testeur",
+      "custom": "Personnalisé"
     }
   },
-  "permissions": {
+  "Permissions": {
     "select": "Voir",
     "insert": "Créer",
     "update": "Modifier (tous)",
@@ -25,7 +122,7 @@
     "delete_own": "Supprimer (propriétaire)",
     "execute": "Exécuter"
   },
-  "resources": {
+  "Resources": {
     "hosts": "Hôtes",
     "repositories": "Dépôts",
     "deployments": "Déploiements",
@@ -111,7 +208,6 @@
     "noData": "Aucune donnée disponible",
     "devices": "Appareils",
     "hosts": "Hôtes",
-    "hosts_description": "Gérer vos hôtes et connexions",
     "managehosts": "Gérer vos hôtes et conteneurs",
     "refresh": "Actualiser",
     "table_view": "Vue tableau",
@@ -172,11 +268,8 @@
       "created": "Connexion créée",
       "connected": "Connecté avec succès à {name}"
     },
-    "actions": {
-      "cancel": "Annuler",
-      "testConnection": "Tester la connexion",
-      "save": "Enregistrer"
-    }
+    "error": "Erreur",
+    "testConnection": "Tester la connexion"
   },
   "Dashboard": {
     "title": "Tableau de bord",
@@ -212,7 +305,7 @@
     "enterName": "Entrez votre nom",
     "plan": "Forfait"
   },
-  "billing": {
+  "Billing": {
     "title": "Facturation & Plans",
     "description": "Gérez votre facturation et vos plans d'abonnement",
     "currentPlan": "Plan actuel",
@@ -232,7 +325,7 @@
     "pro": "Pro",
     "team": "Équipe"
   },
-  "repositories": {
+  "Repositories": {
     "repositories": "Dépôts",
     "repositories_description": "Gérez vos dépôts Git",
     "add_provider": "Ajouter un fournisseur Git",
@@ -374,142 +467,6 @@
     "english": "Anglais",
     "french": "Français"
   },
-  "team": {
-    "title": "Gestion d'équipe",
-    "teamMembers": "Membres de l'équipe",
-    "description": "Gérez les membres de votre équipe et leurs permissions",
-    "inviteMembers": "Inviter des membres",
-    "memberName": "Nom",
-    "memberEmail": "Email",
-    "memberRole": "Rôle",
-    "memberStatus": "Statut",
-    "memberActions": "Actions",
-    "invitePending": "En attente",
-    "inviteAccepted": "Accepté",
-    "removeUser": "Supprimer",
-    "confirmRemove": "Êtes-vous sûr de vouloir supprimer cet utilisateur ?",
-    "noMembers": "Aucun membre d'équipe trouvé",
-    "team": "Équipe",
-    "addMember": "Ajouter un membre",
-    "overview": "Aperçu",
-    "members": "Membres de l'équipe",
-    "common": {
-      "loading": "Chargement...",
-      "error": "Erreur",
-      "selectAll": "Sélectionner tout",
-      "deselectAll": "Désélectionner tout"
-    },
-    "permissions": {
-      "view": "Voir",
-      "create": "Créer",
-      "edit": "Modifier",
-      "delete": "Supprimer",
-      "manage": "Gérer",
-      "select": "Voir",
-      "insert": "Créer",
-      "update": "Modifier (tous)",
-      "delete": "Supprimer (tous)",
-      "update_own": "Modifier (propriétaire)",
-      "delete_own": "Supprimer (propriétaire)",
-      "execute": "Exécuter"
-    },
-    "resources": {
-      "repositories": "Dépôts",
-      "hosts": "Hôtes",
-      "cicd": "Fournisseurs CI/CD",
-      "cicd_providers": "Fournisseurs CI/CD",
-      "cicd_jobs": "Tâches CI/CD",
-      "deployments": "Déploiements",
-      "users": "Utilisateurs",
-      "teams": "Équipes",
-      "settings": "Paramètres"
-    },
-    "resources2": {
-      "repositories": "Dépôts",
-      "hosts": "Hôtes",
-      "cicd": "Fournisseurs CI/CD",
-      "cicd_providers": "Fournisseurs CI/CD",
-      "cicd_jobs": "Tâches CI/CD",
-      "deployments": "Déploiements"
-    },
-    "membersTab": {
-      "title": "Membres de l'équipe",
-      "add": "Ajouter un membre",
-      "search": "Rechercher des membres...",
-      "name": "Nom",
-      "team": "Équipe",
-      "email": "Email",
-      "role": "Rôle",
-      "actions": "Actions",
-      "noMembers": "Aucun membre trouvé dans cette équipe",
-      "noTeam": "Créez une équipe pour ajouter des membres",
-      "noSearchResults": "Aucun membre ne correspond à votre recherche",
-      "unknownUser": "Utilisateur inconnu",
-      "noEmail": "Pas d'email",
-      "defaultTeam": "Équipe par défaut",
-      "memberActions": {
-        "changePermissions": "Modifier les permissions",
-        "remove": "Supprimer le membre"
-      },
-      "addMember": {
-        "title": "Ajouter un membre à l'équipe",
-        "description": "Ajoutez de nouveaux membres à votre équipe",
-        "emailLabel": "Adresse email",
-        "emailPlaceholder": "Entrez l'email du membre",
-        "roleLabel": "Rôle",
-        "rolePlaceholder": "Sélectionnez un rôle",
-        "submitButton": "Ajouter le membre",
-        "selectMembers": "Sélectionner des membres",
-        "searchMembers": "Rechercher des membres...",
-        "noResults": "Aucun membre correspondant trouvé",
-        "selectedCount": "{count} membre(s) sélectionné(s)"
-      },
-      "editPermissions": {
-        "title": "Modifier les permissions",
-        "description": "Modifier les rôles et permissions de ce membre",
-        "roleTemplate": "Modèle de rôle",
-        "selectRole": "Sélectionner un modèle de rôle",
-        "resource": "Ressource",
-        "roleApplied": "Rôle appliqué",
-        "roleAppliedDesc": "Le rôle {role} a été appliqué",
-        "roleApplyError": "Erreur lors de l'application du rôle",
-        "missingTeamOrMember": "L'ID de l'équipe ou les informations du membre sont manquants",
-        "success": "Permissions mises à jour",
-        "successDesc": "Les permissions de {name} ont été mises à jour",
-        "saveError": "Erreur lors de l'enregistrement des permissions",
-        "saveButton": "Enregistrer les permissions"
-      }
-    },
-    "settings": "Paramètres",
-    "createTeam": "Créer une équipe",
-    "noRole": "Aucun rôle",
-    "tabs": {
-      "resources": "Ressources"
-    },
-    "resources": {
-      "title": "Ressources d'équipe",
-      "overview": "Gérez et suivez les ressources attribuées à votre équipe",
-      "repositories": "Dépôts",
-      "hosts": "Hôtes",
-      "cicd": "Fournisseurs CI/CD",
-      "cicd_providers": "Fournisseurs CI/CD",
-      "cicd_jobs": "Tâches CI/CD",
-      "deployments": "Déploiements"
-    },
-    "roles": {
-      "admin": "Administrateur",
-      "adminFull": "Administrateur (Accès complet)",
-      "developer": "Développeur",
-      "contributor": "Contributeur",
-      "viewer": "Visiteur",
-      "viewerReadOnly": "Visiteur (Lecture seule)",
-      "tester": "Testeur",
-      "custom": "Personnalisé"
-    },
-    "common": {
-      "cancel": "Annuler"
-    }
-  },
   "Projects": {
     "projects": "Projets",
     "title": "Projets",
@@ -534,7 +491,7 @@
     "profile": "Profil",
     "logout": "Déconnexion"
   },
-  "cicd": {
+  "CICD": {
     "title": "Intégration CI/CD",
     "description": "Configurez les fournisseurs CI/CD pour les déploiements automatisés",
     "providers": "Fournisseurs CI/CD",
@@ -579,7 +536,7 @@
     "provider_type_gitlab": "GitLab CI",
     "provider_type_azure": "Azure DevOps"
   },
-  "deployment": {
+  "Deployment": {
     "new_deployment": "Nouveau déploiement",
     "refresh": "Actualiser",
     "error": "Erreur",
@@ -629,7 +586,7 @@
       "failedFetchJobDetails": "Échec de récupération des détails du job"
     }
   },
-  "deployments": {
+  "Deployments": {
     "title": "Déploiements",
     "description": "Gérer et surveiller vos déploiements",
     "create": "Ajouter un déploiement",
@@ -666,7 +623,7 @@
       "cancel": "Annuler le déploiement"
     }
   },
-  "hosts": {
+  "Hosts": {
     "hosts": "Hôtes",
     "hosts_description": "Gérer vos hôtes et connexions",
     "refresh": "Actualiser",

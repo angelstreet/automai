@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+
 import {
   Card,
   CardContent,
@@ -11,7 +12,7 @@ import {
 import { Skeleton } from '@/components/shadcn/skeleton';
 
 export function ProfileSkeleton() {
-  const t = useTranslations('Profile');
+  const t = useTranslations('profile');
 
   return (
     <div className="container mx-auto py-4 px-4 space-y-6">

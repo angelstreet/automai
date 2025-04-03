@@ -1,6 +1,6 @@
 'use client';
 
-import { Terminal, MoreHorizontal, RefreshCw, XCircle, ScrollText } from 'lucide-react';
+import { Terminal, MoreHorizontal, RefreshCw, XCircle, ScrollText, Spinner4 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useState, useEffect, useCallback } from 'react';
@@ -128,7 +128,8 @@ function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
                 />
               </TooltipTrigger>
               <TooltipContent>
-                <p>{t('testing')}</p>
+                <Spinner4 className="animate-spin h-4 w-4 text-yellow-500 mr-1.5" />
+                <p>{t('Common.testing')}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

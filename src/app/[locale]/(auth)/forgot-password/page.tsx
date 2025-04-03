@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter, useParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as React from 'react';
 
@@ -10,9 +10,8 @@ import { Input } from '@/components/shadcn/input';
 import { useUser } from '@/hooks';
 
 export default function ForgotPasswordPage() {
-  const router = useRouter();
   const { locale } = useParams();
-  const t = useTranslations('Auth');
+  const t = useTranslations('auth');
   const [email, setEmail] = React.useState('');
   const [error, setError] = React.useState('');
   const [success, setSuccess] = React.useState(false);

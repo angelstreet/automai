@@ -12,7 +12,7 @@ import {
 } from '@/components/shadcn/card';
 
 export function SettingsContent() {
-  const t = useTranslations('Settings');
+  const t = useTranslations('settings');
 
   return (
     <div className="container mx-auto py-4 px-4 space-y-6">

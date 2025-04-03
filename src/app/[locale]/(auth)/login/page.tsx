@@ -12,7 +12,7 @@ import { Input } from '@/components/shadcn/input';
 export default function LoginPage() {
   const router = useRouter();
   const { locale } = useParams();
-  const t = useTranslations('Auth');
+  const t = useTranslations('auth');
 
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');

@@ -24,7 +24,7 @@ import { useUser } from '@/hooks';
 export default function SignUpPage() {
   const router = useRouter();
   const { locale } = useParams();
-  const t = useTranslations('Auth');
+  const t = useTranslations('auth');
   const [name, setName] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');

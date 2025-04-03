@@ -5,8 +5,8 @@ import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 import { SettingsContent, SettingsSkeleton } from './_components';
 
 export default async function SettingsPage() {
-  const t = await getTranslations('Settings');
-  
+  const t = await getTranslations('settings');
+
   // Using direct FeaturePageContainer approach
   return (
     <FeaturePageContainer

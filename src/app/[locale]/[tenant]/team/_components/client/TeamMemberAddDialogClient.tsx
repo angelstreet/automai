@@ -52,12 +52,12 @@ const AddMemberDialog = ({ open, onOpenChange, teamId }: AddMemberDialogProps) =
   const t = useTranslations('team');
   const params = useParams();
   const tenantId = params.tenant as string;
-  
+
   // State for selected profiles and role
   const [selectedProfiles, setSelectedProfiles] = useState<string[]>([]);
   const [role, setRole] = useState('contributor');
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Fetch available tenant profiles
   const {
     data: availableProfiles = [],
@@ -65,7 +65,7 @@ const AddMemberDialog = ({ open, onOpenChange, teamId }: AddMemberDialogProps) =
     isError,
     error,
   } = useAvailableTenantProfiles(tenantId, teamId);
-  
+
   // Use the shared dialog utilities
   const { isLoading, executeOperation, showValidationError } = useDialogState();
 
@@ -77,7 +77,7 @@ const AddMemberDialog = ({ open, onOpenChange, teamId }: AddMemberDialogProps) =
     ? (availableProfiles as TenantProfile[]).filter(
         (profile) =>
           profile.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          profile.user.email.toLowerCase().includes(searchQuery.toLowerCase())
+          profile.user.email.toLowerCase().includes(searchQuery.toLowerCase()),
       )
     : (availableProfiles as TenantProfile[]);
 
@@ -91,9 +91,7 @@ const AddMemberDialog = ({ open, onOpenChange, teamId }: AddMemberDialogProps) =
 
   const handleToggleProfile = (profileId: string) => {
     setSelectedProfiles((prev) =>
-      prev.includes(profileId)
-        ? prev.filter((id) => id !== profileId)
-        : [...prev, profileId]
+      prev.includes(profileId) ? prev.filter((id) => id !== profileId) : [...prev, profileId],
     );
   };
 
@@ -125,17 +123,17 @@ const AddMemberDialog = ({ open, onOpenChange, teamId }: AddMemberDialogProps) =
           profileIds: selectedProfiles,
           role,
         });
-        
+
         // Reset form and close dialog
         setSelectedProfiles([]);
         onOpenChange(false);
-        
+
         // Dispatch refresh event
         window.dispatchEvent(new Event('refresh-team-members'));
       },
       selectedProfiles.length === 1
         ? `1 member added to the team`
-        : `${selectedProfiles.length} members added to the team`
+        : `${selectedProfiles.length} members added to the team`,
     );
   };
 
@@ -146,7 +144,7 @@ const AddMemberDialog = ({ open, onOpenChange, teamId }: AddMemberDialogProps) =
           <DialogTitle>{t('membersTab.addMember.title')}</DialogTitle>
           <DialogDescription>{t('membersTab.addMember.description')}</DialogDescription>
         </DialogHeader>
-        
+
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
             <Label htmlFor="role">{t('membersTab.addMember.roleLabel')}</Label>
@@ -163,23 +161,23 @@ const AddMemberDialog = ({ open, onOpenChange, teamId }: AddMemberDialogProps) =
               </SelectContent>
             </Select>
           </div>
-          
+
           <div className="grid gap-2">
             <div className="flex items-center justify-between">
               <Label>{t('membersTab.addMember.selectMembers')}</Label>
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={handleSelectAll}
                 className="h-8 px-2 text-xs"
                 disabled={filteredProfiles.length === 0}
               >
                 {selectedProfiles.length === filteredProfiles.length && filteredProfiles.length > 0
-                  ? t('team.common.deselectAll')
-                  : t('team.common.selectAll')}
+                  ? t('Common.deselectAll')
+                  : t('Common.selectAll')}
               </Button>
             </div>
-            
+
             <div className="border rounded-md">
               <Command>
                 <CommandInput
@@ -189,10 +187,10 @@ const AddMemberDialog = ({ open, onOpenChange, teamId }: AddMemberDialogProps) =
                 />
                 <CommandList>
                   <CommandEmpty>
-                    {isLoadingProfiles 
-                      ? t('team.common.loading') 
-                      : isError 
-                        ? t('team.common.error') 
+                    {isLoadingProfiles
+                      ? t('Common.loading')
+                      : isError
+                        ? t('Common.error')
                         : t('membersTab.addMember.noResults')}
                   </CommandEmpty>
                   <CommandGroup>
@@ -239,7 +237,7 @@ const AddMemberDialog = ({ open, onOpenChange, teamId }: AddMemberDialogProps) =
                 </CommandList>
               </Command>
             </div>
-            
+
             {selectedProfiles.length > 0 && (
               <div className="mt-2">
                 <Label className="text-xs text-muted-foreground">
@@ -249,15 +247,12 @@ const AddMemberDialog = ({ open, onOpenChange, teamId }: AddMemberDialogProps) =
             )}
           </div>
         </div>
-        
+
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {t('common.cancel')}
+            {t('Common.cancel')}
           </Button>
-          <Button 
-            onClick={handleSubmit} 
-            disabled={selectedProfiles.length === 0 || isLoading}
-          >
+          <Button onClick={handleSubmit} disabled={selectedProfiles.length === 0 || isLoading}>
             {isLoading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (

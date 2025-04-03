@@ -12,7 +12,7 @@ import { useUser } from '@/hooks';
 export default function ResetPasswordPage() {
   const router = useRouter();
   const { locale } = useParams();
-  const t = useTranslations('Auth');
+  const t = useTranslations('auth');
 
   const [password, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');

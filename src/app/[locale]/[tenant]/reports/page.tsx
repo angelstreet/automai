@@ -1,4 +1,5 @@
 import { getTranslations } from 'next-intl/server';
+
 import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 
 // Simple component that doesn't need to handle pageMetadata internally
@@ -11,14 +12,11 @@ function ReportsContent() {
 }
 
 export default async function ReportsPage() {
-  const t = await getTranslations('Reports');
-  
+  const t = await getTranslations('reports');
+
   // Using direct FeaturePageContainer approach
   return (
-    <FeaturePageContainer
-      title={t('title')}
-      description={t('description')}
-    >
+    <FeaturePageContainer title={t('title')} description={t('description')}>
       <ReportsContent />
     </FeaturePageContainer>
   );

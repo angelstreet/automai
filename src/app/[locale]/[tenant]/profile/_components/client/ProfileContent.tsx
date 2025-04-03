@@ -30,7 +30,6 @@ export function ProfileContent({
 }: ProfileContentProps) {
   const {
     user: contextUser,
-    loading,
     refreshUser: contextRefreshUser,
     updateProfile: contextUpdateProfile,
   } = useUser(null, 'ProfileContent');
@@ -40,7 +39,7 @@ export function ProfileContent({
   const updateProfile = propUpdateProfile || contextUpdateProfile;
   const refreshUser = propRefreshUser || contextRefreshUser;
 
-  const t = useTranslations('Profile');
+  const t = useTranslations('profile');
   const params = useParams();
   const locale = params.locale as string;
   const tenant = (params.tenant as string) || user?.tenant_id || 'trial';

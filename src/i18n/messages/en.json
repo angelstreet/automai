@@ -1,5 +1,19 @@
 {
   "team": {
+    "title": "Team Management",
+    "description": "Manage teams, members, and resource limits",
+    "teamMembers": "Team Members",
+    "inviteMembers": "Invite Members",
+    "memberName": "Name",
+    "memberEmail": "Email",
+    "memberRole": "Role",
+    "memberStatus": "Status",
+    "memberActions": "Actions",
+    "invitePending": "Pending",
+    "inviteAccepted": "Accepted",
+    "removeUser": "Remove",
+    "confirmRemove": "Are you sure you want to remove this user?",
+    "noMembers": "No team members found",
     "team": {
       "resources": {
         "hosts": "Hosts",
@@ -7,13 +21,96 @@
         "deployments": "Deployments",
         "cicd_providers": "CI/CD Providers",
         "cicd_jobs": "CI/CD Jobs"
-      },
-      "common": {
-        "loading": "Loading...",
-        "error": "Error",
-        "selectAll": "Select All",
-        "deselectAll": "Deselect All"
       }
+    },
+    "addMember": "Add Member",
+    "overview": "Overview",
+    "members": "Team Members",
+    "permissions": {
+      "view": "View",
+      "create": "Create",
+      "edit": "Edit",
+      "manage": "Manage",
+      "select": "View",
+      "insert": "Create",
+      "update": "Edit All",
+      "update_own": "Edit Own",
+      "delete_own": "Delete Own",
+      "execute": "Execute"
+    },
+    "resources": {
+      "title": "Team Resources",
+      "overview": "Manage and track resources assigned to your team",
+      "repositories": "Repositories",
+      "hosts": "Hosts",
+      "cicd": "CI/CD",
+      "cicd_providers": "CI/CD Providers",
+      "cicd_jobs": "CI/CD Jobs",
+      "deployments": "Deployments"
+    },
+    "membersTab": {
+      "title": "Team Members",
+      "add": "Add Member",
+      "search": "Search members...",
+      "name": "Name",
+      "team": "Team",
+      "email": "Email",
+      "role": "Role",
+      "actions": "Actions",
+      "noMembers": "No members found in this team",
+      "noTeam": "Create a team to add members",
+      "noSearchResults": "No members match your search",
+      "unknownUser": "Unknown User",
+      "noEmail": "No email",
+      "defaultTeam": "Default Team",
+      "memberActions": {
+        "changePermissions": "Edit",
+        "remove": "Remove"
+      },
+      "addMember": {
+        "title": "Add Team Member",
+        "description": "Add new members to your team",
+        "emailLabel": "Email Address",
+        "emailPlaceholder": "Enter member's email",
+        "roleLabel": "Role",
+        "rolePlaceholder": "Select a role",
+        "submitButton": "Add Member",
+        "selectMembers": "Select Members",
+        "searchMembers": "Search members...",
+        "noResults": "No matching members found",
+        "selectedCount": "{count} member(s) selected"
+      },
+      "editPermissions": {
+        "title": "Edit Member Permissions",
+        "description": "Modify the roles and permissions for this team member",
+        "roleTemplate": "Role Template",
+        "selectRole": "Select a role template",
+        "resource": "Resource",
+        "roleApplied": "Role Applied",
+        "roleAppliedDesc": "The {role} role template has been applied",
+        "roleApplyError": "Error Applying Role",
+        "missingTeamOrMember": "Team ID or member information is missing",
+        "success": "Permissions Updated",
+        "successDesc": "Permissions for {name} have been updated",
+        "saveError": "Error Saving Permissions",
+        "saveButton": "Save Permissions"
+      }
+    },
+    "settings": "Settings",
+    "createTeam": "Create Team",
+    "noRole": "No role",
+    "tabs": {
+      "resources": "Resources"
+    },
+    "roles": {
+      "admin": "Admin",
+      "adminFull": "Administrator (Full Access)",
+      "developer": "Developer",
+      "contributor": "Contributor",
+      "viewer": "Viewer",
+      "viewerReadOnly": "Viewer (Read-Only)",
+      "tester": "Tester",
+      "custom": "Custom"
     }
   },
   "permissions": {
@@ -25,14 +122,14 @@
     "delete_own": "Delete Own",
     "execute": "Execute"
   },
-  "resources": {
+  "Resources": {
     "hosts": "Hosts",
     "repositories": "Repositories",
     "deployments": "Deployments",
     "cicd_providers": "CI/CD Providers",
     "cicd_jobs": "CI/CD Jobs"
   },
-  "Index": {
+  "index": {
     "title": "Automate your infrastructure with AI",
     "description": "Automai is an AI-powered infrastructure automation platform that helps you manage your infrastructure with ease. Deploy, monitor, and scale your applications with confidence.",
     "getStarted": "Get Started",
@@ -50,7 +147,7 @@
     "view_mode_grid": "Grid View",
     "view_mode_table": "Table View"
   },
-  "Auth": {
+  "auth": {
     "signIn": "Sign In",
     "signUp": "Sign Up",
     "signOut": "Sign Out",
@@ -100,7 +197,7 @@
       "passwordTooShort": "Password must be at least 8 characters"
     }
   },
-  "Common": {
+  "common": {
     "new": "New",
     "save": "Save",
     "cancel": "Cancel",
@@ -110,7 +207,6 @@
     "search": "Search",
     "filter": "Filter",
     "sort": "Sort",
-    "actions": "Actions",
     "name": "Name",
     "description": "Description",
     "type": "Type",
@@ -185,18 +281,20 @@
       "connected": "Connected successfully to {name}"
     },
     "actions": {
+      "actions": "Actions",
       "cancel": "Cancel",
       "testConnection": "Test Connection",
       "save": "Save"
-    }
+    },
+    "error": "Error"
   },
-  "Dashboard": {
+  "dashboard": {
     "title": "Dashboard",
     "overview": "Overview",
     "description": "Welcome to your dashboard",
     "welcome": "Welcome back!"
   },
-  "Profile": {
+  "profile": {
     "title": "Profile",
     "profile": "Profile",
     "description": "Manage your profile settings and preferences",
@@ -245,21 +343,12 @@
     "pro": "Pro",
     "team": "Team"
   },
-  "Projects": {
-    "projects": "Projects",
-    "title": "Projects",
-    "description": "Manage your projects",
-    "create": "Create Project",
-    "edit": "Edit Project",
-    "delete": "Delete Project",
-    "noProjects": "No projects found"
-  },
-  "Reports": {
+  "reports": {
     "title": "Reports",
     "reportsList": "Reports List",
     "description": "View and analyze test execution reports and metrics"
   },
-  "Menu": {
+  "menu": {
     "title": "Menu",
     "dashboard": "Dashboard",
     "projects": "Projects",
@@ -393,7 +482,7 @@
     "viewOnProvider": "View on Provider",
     "never": "Never"
   },
-  "Settings": {
+  "settings": {
     "title": "Settings",
     "description": "Manage your application settings",
     "generalSettings": "General Settings",
@@ -409,142 +498,6 @@
     "selectLanguage": "Select Language",
     "english": "English",
     "french": "French"
-  },
-  "team": {
-    "title": "Team Management",
-    "description": "Manage teams, members, and resource limits",
-    "teamMembers": "Team Members",
-    "inviteMembers": "Invite Members",
-    "memberName": "Name",
-    "memberEmail": "Email",
-    "memberRole": "Role",
-    "memberStatus": "Status",
-    "memberActions": "Actions",
-    "invitePending": "Pending",
-    "inviteAccepted": "Accepted",
-    "removeUser": "Remove",
-    "confirmRemove": "Are you sure you want to remove this user?",
-    "noMembers": "No team members found",
-    "team": "Team",
-    "addMember": "Add Member",
-    "overview": "Overview",
-    "members": "Team Members",
-    "common": {
-      "loading": "Loading...",
-      "error": "Error",
-      "selectAll": "Select All",
-      "deselectAll": "Deselect All"
-    },
-    "permissions": {
-      "view": "View",
-      "create": "Create",
-      "edit": "Edit",
-      "delete": "Delete",
-      "manage": "Manage",
-      "select": "View",
-      "insert": "Create",
-      "update": "Edit All",
-      "delete": "Delete All",
-      "update_own": "Edit Own",
-      "delete_own": "Delete Own",
-      "execute": "Execute"
-    },
-    "resources": {
-      "repositories": "Repositories",
-      "hosts": "Hosts",
-      "cicd": "CI/CD Providers",
-      "cicd_providers": "CI/CD Providers",
-      "cicd_jobs": "CI/CD Jobs",
-      "deployments": "Deployments",
-      "users": "Users",
-      "teams": "Teams",
-      "settings": "Settings"
-    },
-    "resources2": {
-      "repositories": "Repositories",
-      "hosts": "Hosts",
-      "cicd": "CI/CD Providers",
-      "cicd_providers": "CI/CD Providers",
-      "cicd_jobs": "CI/CD Jobs",
-      "deployments": "Deployments"
-    },
-    "membersTab": {
-      "title": "Team Members",
-      "add": "Add Member",
-      "search": "Search members...",
-      "name": "Name",
-      "team": "Team",
-      "email": "Email",
-      "role": "Role",
-      "actions": "Actions",
-      "noMembers": "No members found in this team",
-      "noTeam": "Create a team to add members",
-      "noSearchResults": "No members match your search",
-      "unknownUser": "Unknown User",
-      "noEmail": "No email",
-      "defaultTeam": "Default Team",
-      "memberActions": {
-        "changePermissions": "Edit",
-        "remove": "Remove"
-      },
-      "addMember": {
-        "title": "Add Team Member",
-        "description": "Add new members to your team",
-        "emailLabel": "Email Address",
-        "emailPlaceholder": "Enter member's email",
-        "roleLabel": "Role",
-        "rolePlaceholder": "Select a role",
-        "submitButton": "Add Member",
-        "selectMembers": "Select Members",
-        "searchMembers": "Search members...",
-        "noResults": "No matching members found",
-        "selectedCount": "{count} member(s) selected"
-      },
-      "editPermissions": {
-        "title": "Edit Member Permissions",
-        "description": "Modify the roles and permissions for this team member",
-        "roleTemplate": "Role Template",
-        "selectRole": "Select a role template",
-        "resource": "Resource",
-        "roleApplied": "Role Applied",
-        "roleAppliedDesc": "The {role} role template has been applied",
-        "roleApplyError": "Error Applying Role",
-        "missingTeamOrMember": "Team ID or member information is missing",
-        "success": "Permissions Updated",
-        "successDesc": "Permissions for {name} have been updated",
-        "saveError": "Error Saving Permissions",
-        "saveButton": "Save Permissions"
-      }
-    },
-    "settings": "Settings",
-    "createTeam": "Create Team",
-    "noRole": "No role",
-    "tabs": {
-      "resources": "Resources"
-    },
-    "resources": {
-      "title": "Team Resources",
-      "overview": "Manage and track resources assigned to your team",
-      "repositories": "Repositories",
-      "hosts": "Hosts",
-      "cicd": "CI/CD",
-      "cicd_providers": "CI/CD Providers",
-      "cicd_jobs": "CI/CD Jobs",
-      "deployments": "Deployments"
-    },
-    "roles": {
-      "admin": "Admin",
-      "adminFull": "Administrator (Full Access)",
-      "developer": "Developer",
-      "contributor": "Contributor",
-      "viewer": "Viewer",
-      "viewerReadOnly": "Viewer (Read-Only)",
-      "tester": "Tester",
-      "custom": "Custom"
-    },
-    "common": {
-      "cancel": "Cancel"
-    }
   },
   "cicd": {
     "title": "CI/CD",

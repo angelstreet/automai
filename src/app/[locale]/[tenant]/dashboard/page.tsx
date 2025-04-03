@@ -10,7 +10,7 @@ import { DashboardContent } from './_components/client/DashboardContent';
  */
 export default async function DashboardPage() {
   // Get translations for title and description
-  const t = await getTranslations('Dashboard');
+  const t = await getTranslations('dashboard');
 
   // Direct approach since we need to debug the issue
   return (

@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/shadcn/table';
-import {  Host  } from '@/types/component/hostComponentType';
+import { Host } from '@/types/component/hostComponentType';
 
 interface HostTableProps {
   hosts: (Host & { animationDelay?: number })[];
@@ -54,7 +54,7 @@ export function HostTable({
         return (
           <div
             className={`${baseClasses} host-testing-animation ring-2 ring-yellow-300 ring-opacity-60 ${delayClass}`}
-            title={t('testing')}
+            title={t('Common.testing')}
           />
         );
       case 'pending':

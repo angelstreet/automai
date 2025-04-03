@@ -9,7 +9,7 @@ export function Hero() {
   console.log('Rendering Hero component');
 
   try {
-    const t = useTranslations('Index');
+    const t = useTranslations('index');
     const locale = useLocale();
 
     return (
