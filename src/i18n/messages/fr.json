@@ -7,6 +7,12 @@
         "deployments": "Déploiements",
         "cicd_providers": "Fournisseurs CI/CD",
         "cicd_jobs": "Tâches CI/CD"
+      },
+      "common": {
+        "loading": "Chargement...",
+        "error": "Erreur",
+        "selectAll": "Sélectionner tout",
+        "deselectAll": "Désélectionner tout"
       }
     }
   },

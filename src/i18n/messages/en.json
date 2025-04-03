@@ -7,6 +7,12 @@
         "deployments": "Deployments",
         "cicd_providers": "CI/CD Providers",
         "cicd_jobs": "CI/CD Jobs"
+      },
+      "common": {
+        "loading": "Loading...",
+        "error": "Error",
+        "selectAll": "Select All",
+        "deselectAll": "Deselect All"
       }
     }
   },
