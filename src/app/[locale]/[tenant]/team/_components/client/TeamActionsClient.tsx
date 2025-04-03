@@ -9,6 +9,8 @@ import { Button } from '@/components/shadcn/button';
 // Import the hook from hooks directory
 import { usePermission } from '@/hooks/usePermission';
 import { useTeam } from '@/hooks/useTeam';
+import { useContext } from 'react';
+import { UserContext } from '@/context/UserContext';
 import type { ResourceType } from '@/types/context/permissionsContextType';
 import { TeamDetails } from '@/types/context/teamContextType';
 
@@ -38,31 +40,30 @@ export default function TeamActions() {
   // Default to 'pro' if subscription_tier is undefined
   const effectiveSubscriptionTier = team.subscription_tier || 'pro';
 
-  // Check if user has permission to add members with the effective tier
-  const canAddMembersWithDefault =
-    hasPermission('repositories' as ResourceType, 'insert') &&
-    effectiveSubscriptionTier !== 'trial';
+  // Get user directly from context
+  const { user } = useContext(UserContext);
+  
+  // Check if user has admin role
+  const isAdmin = user?.role === 'admin';
+  const canAddMembersWithDefault = isAdmin;
+  
+  // Debug the user context to see what we're getting
+  console.log('TeamActionsClient - user context data:', user);
 
-  console.log(
-    'TeamActionsClient - hasPermission:',
-    hasPermission('repositories' as ResourceType, 'insert'),
-  );
-  console.log('TeamActionsClient - canAddMembers with default:', canAddMembersWithDefault);
+  console.log('TeamActionsClient - user role:', user?.role);
+  console.log('TeamActionsClient - isAdmin:', isAdmin);
+  console.log('TeamActionsClient - canAddMembers:', canAddMembersWithDefault);
   console.log('TeamActionsClient - permission details:', {
-    hasRepositoriesInsertPermission: hasPermission('repositories' as ResourceType, 'insert'),
-    hasHostsInsertPermission: hasPermission('hosts' as ResourceType, 'insert'),
-    isNotTrialTier: effectiveSubscriptionTier !== 'trial',
-    subscription_tier: team.subscription_tier,
-    effectiveSubscriptionTier,
+    userRole: user?.role,
+    isAdmin,
     teamId: team.id,
   });
 
   console.log('== ACTION PERMISSION DEBUG BUTTON DISPLAY ==');
   console.log('Button should display:', canAddMembersWithDefault);
   console.log('Button details:', {
-    hasRepositoriesInsertPermission: hasPermission('repositories' as ResourceType, 'insert'),
-    subscriptionTier: team.subscription_tier,
-    notTrial: effectiveSubscriptionTier !== 'trial',
+    userRole: user?.role,
+    isAdmin,
     teamId: team.id,
   });
 

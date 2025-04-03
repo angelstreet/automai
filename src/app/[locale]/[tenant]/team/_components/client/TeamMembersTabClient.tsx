@@ -66,29 +66,19 @@ function MembersTabContent({
   const t = useTranslations('team');
   const { openAddDialog, openEditDialog, addDialogOpen, setAddDialogOpen } = useTeamMemberDialog();
 
-  // Set default for subscription tier if undefined
-  const effectiveSubscriptionTier = subscriptionTier || 'pro';
-  
-  // Check permissions for managing members - Two conditions:
-  // 1. User must have admin role (directly checking role)
-  // 2. Subscription tier must not be 'trial'
+  // Check permissions for managing members
+  // User must have admin role (directly checking role)
   const isAdmin = userRole === 'admin';
-  const isNotTrialTier = effectiveSubscriptionTier !== 'trial';
-  const canManageMembers = isAdmin && isNotTrialTier;
+  const canManageMembers = isAdmin;
 
   // Debug logging for permission checks
   console.log('== PERMISSION DEBUG ==');
   console.log('TeamMembersTabClient - userRole:', userRole);
   console.log('TeamMembersTabClient - isAdmin:', isAdmin);
-  console.log('TeamMembersTabClient - subscriptionTier:', subscriptionTier);
-  console.log('TeamMembersTabClient - isNotTrialTier:', isNotTrialTier);
   console.log('TeamMembersTabClient - canManageMembers:', canManageMembers);
   console.log('TeamMembersTabClient - permissions check details:', {
     userRole,
     isAdmin,
-    isNotTrialTier,
-    effectiveSubscriptionTier,
-    subscriptionTier,
     teamId,
   });
 
@@ -98,10 +88,6 @@ function MembersTabContent({
   console.log('Button conditions:', {
     userRole,
     isAdmin,
-    subscriptionTier,
-    effectiveSubscriptionTier,
-    isNotTrialTier,
-    bothConditionsMet: isAdmin && isNotTrialTier,
     teamId,
   });
 

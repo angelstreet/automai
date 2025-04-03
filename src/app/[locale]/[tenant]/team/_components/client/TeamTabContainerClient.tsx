@@ -48,10 +48,11 @@ export default function TeamTabContainerClient({ user, resourceCounts }: TeamTab
     ? {
         id: activeTeam.id || null,
         name: activeTeam.name || 'Team',
-        // Set a non-trial subscription tier by default
+        // Set subscription tier from either activeTeam or user's tenant_name
         subscription_tier: subscriptionTier,
         memberCount: 'memberCount' in activeTeam ? (activeTeam.memberCount as number) : 0,
-        role: 'role' in activeTeam ? (activeTeam.role as string) : null,
+        // Use user.role directly as the primary source of role information
+        role: user?.role || ('role' in activeTeam ? (activeTeam.role as string) : null),
         ownerId: 'ownerId' in activeTeam ? (activeTeam.ownerId as string) : null,
         ownerEmail: 'ownerEmail' in activeTeam ? (activeTeam.ownerEmail as string) : null,
         resourceCounts: resourceCounts || {
