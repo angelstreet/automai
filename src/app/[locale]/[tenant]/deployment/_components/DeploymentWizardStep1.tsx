@@ -6,7 +6,7 @@ import React from 'react';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { Textarea } from '@/components/shadcn/textarea';
-import { Repository } from '@/types/context/repositoryContextType';
+import { Repository } from '@/types/component/repositoryComponentType';
 
 interface DeploymentWizardStep1Props {
   name: string;
@@ -18,7 +18,7 @@ interface DeploymentWizardStep1Props {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
   ) => void;
   onNextStep: () => void;
-  isStepValid: () => boolean;
+  isStepValid: boolean | (() => boolean);
   onRefreshRepositories: () => void;
 }
 
@@ -38,6 +38,9 @@ const DeploymentWizardStep1: React.FC<DeploymentWizardStep1Props> = ({
     // Use direct SWR pattern for refreshing repositories
     onRefreshRepositories();
   };
+
+  // Check if step is valid - handle both function and boolean values
+  const isValid = typeof isStepValid === 'function' ? isStepValid() : isStepValid;
 
   return (
     <div className="p-4">
@@ -109,7 +112,7 @@ const DeploymentWizardStep1: React.FC<DeploymentWizardStep1Props> = ({
       </div>
 
       <div className="mt-8 flex justify-end">
-        <Button type="button" onClick={onNextStep} disabled={!isStepValid()}>
+        <Button type="button" onClick={onNextStep} disabled={!isValid}>
           Next
         </Button>
       </div>

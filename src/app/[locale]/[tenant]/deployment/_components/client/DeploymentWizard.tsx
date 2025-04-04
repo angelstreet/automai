@@ -522,7 +522,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
               repositoryError={null}
               onInputChange={handleInputChange}
               onNextStep={handleNextStep}
-              isStepValid={isStepValid}
+              isStepValid={!!deploymentData.name && !!deploymentData.repositoryId}
               onRefreshRepositories={() => {
                 // Just a placeholder refresh function
                 // Can be updated later with actual repository refresh logic
@@ -544,7 +544,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
               onScriptParameterChange={handleScriptParameterChange}
               onPrevStep={handlePrevStep}
               onNextStep={handleNextStep}
-              isStepValid={isStepValid}
+              isStepValid={deploymentData.scriptIds.length > 0}
             />
           )}
 
@@ -558,21 +558,24 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
               onHostToggle={handleHostsChange}
               onPrevStep={handlePrevStep}
               onNextStep={handleNextStep}
-              isStepValid={isStepValid}
+              isStepValid={deploymentData.hostIds.length > 0}
             />
           )}
 
           {/* Step 4: Schedule */}
           {step === 4 && (
             <DeploymentWizardStep4
-              schedule={deploymentData.schedule}
-              scheduledTime={deploymentData.scheduledTime}
-              cronExpression={deploymentData.cronExpression}
-              repeatCount={deploymentData.repeatCount}
+              schedule={deploymentData.schedule || 'now'}
+              scheduledTime={deploymentData.scheduledTime || ''}
+              cronExpression={deploymentData.cronExpression || ''}
+              repeatCount={deploymentData.repeatCount || 0}
               onInputChange={handleInputChange}
               onPrevStep={handlePrevStep}
               onNextStep={handleNextStep}
-              isStepValid={isStepValid}
+              isStepValid={
+                deploymentData.schedule === 'now' ||
+                (deploymentData.schedule === 'later' && !!deploymentData.scheduledTime)
+              }
             />
           )}
 

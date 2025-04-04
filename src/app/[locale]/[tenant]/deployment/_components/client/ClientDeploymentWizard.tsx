@@ -158,15 +158,75 @@ export default function ClientDeploymentWizard({
 
     switch (step) {
       case 1:
-        return <DeploymentWizardStep1 {...commonProps} repositories={initialRepositories || []} />;
+        return (
+          <DeploymentWizardStep1
+            {...commonProps}
+            repositories={initialRepositories || []}
+            isStepValid={!!deploymentData.name && !!deploymentData.repositoryId}
+            onNextStep={handleNext}
+            onInputChange={(e) => {
+              const { name, value } = e.target;
+              handleUpdateData({ [name]: value });
+            }}
+            onRefreshRepositories={() => {
+              console.log('Refreshing repositories...');
+            }}
+            name={deploymentData.name || ''}
+            description={deploymentData.description || ''}
+            repositoryId={deploymentData.repositoryId || ''}
+            repositoryError={null}
+          />
+        );
       case 2:
-        return <DeploymentWizardStep2 {...commonProps} hosts={adaptedHosts} />;
+        return (
+          <DeploymentWizardStep2
+            {...commonProps}
+            hosts={adaptedHosts}
+            selectedRepository={deploymentData.selectedRepository || null}
+            scriptIds={[]}
+            repositoryScripts={[]}
+            isLoadingScripts={false}
+            scriptsError={null}
+            scriptParameters={{}}
+            onScriptsChange={() => {}}
+            onScriptParameterChange={() => {}}
+            onPrevStep={handleBack}
+            onNextStep={handleNext}
+            isStepValid={true}
+          />
+        );
       case 3:
         return (
-          <DeploymentWizardStep3 {...commonProps} repositoryId={deploymentData.repositoryId} />
+          <DeploymentWizardStep3
+            {...commonProps}
+            repositoryId={deploymentData.repositoryId}
+            hostIds={[]}
+            availableHosts={adaptedHosts}
+            isLoadingHosts={false}
+            hostsError={null}
+            onHostToggle={() => {}}
+            onPrevStep={handleBack}
+            onNextStep={handleNext}
+            isStepValid={true}
+          />
         );
       case 4:
-        return <DeploymentWizardStep4 {...commonProps} />;
+        return (
+          <DeploymentWizardStep4
+            {...commonProps}
+            schedule="now"
+            scheduledTime=""
+            cronExpression=""
+            repeatCount={0}
+            onInputChange={(e) => {
+              const { name, value } = e.target;
+              handleUpdateData({ [name]: value });
+            }}
+            onPrevStep={handleBack}
+            onNextStep={handleNext}
+            isStepValid={true}
+          />
+        );
       case 5:
         return <DeploymentWizardStep5 {...commonProps} cicdProviders={initialCICDProviders} />;
       default:

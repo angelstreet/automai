@@ -13,7 +13,7 @@ interface DeploymentWizardStep4Props {
   ) => void;
   onPrevStep: () => void;
   onNextStep: () => void;
-  isStepValid: () => boolean;
+  isStepValid: boolean | (() => boolean);
 }
 
 const DeploymentWizardStep4: React.FC<DeploymentWizardStep4Props> = ({
@@ -27,6 +27,9 @@ const DeploymentWizardStep4: React.FC<DeploymentWizardStep4Props> = ({
   isStepValid,
 }) => {
   const t = useTranslations('deployment.wizard');
+
+  // Check if step is valid - handle both function and boolean values
+  const isValid = typeof isStepValid === 'function' ? isStepValid() : isStepValid;
 
   return (
     <div>
@@ -42,9 +45,9 @@ const DeploymentWizardStep4: React.FC<DeploymentWizardStep4Props> = ({
         <button
           type="button"
           onClick={onNextStep}
-          disabled={!isStepValid()}
+          disabled={!isValid}
           className={`px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-            isStepValid()
+            isValid
               ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600'
               : 'bg-blue-300 dark:bg-blue-800 cursor-not-allowed'
           }`}
