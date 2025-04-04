@@ -1,4 +1,7 @@
-export { default as ClientHostList } from './ClientHostList';
-export { ClientConnectionForm } from './ClientConnectionForm';
-export type { FormData } from './ClientConnectionForm';
-export { HostActions } from './HostActions';
+export { HostActionsClient } from './HostActionsClient';
+export { default as HostListClient } from './HostListClient';
+export { HostFormDialogClient } from './HostFormDialogClient';
+export { HostCardClient } from './HostCardClient';
+export { HostTableClient } from './HostTableClient';
+export { HostGridClient } from './HostGridClient';
+export type { FormData } from './HostFormDialogClient';

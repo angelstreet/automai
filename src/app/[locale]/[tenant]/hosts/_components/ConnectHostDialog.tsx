@@ -1,15 +1,13 @@
+import { useParams } from 'next/navigation';
+/* eslint-disable @typescript-eslint/no-unused-vars, unused-imports/no-unused-vars */
 import { useTranslations } from 'next-intl';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
+import { toast } from 'sonner';
 import * as React from 'react';
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/shadcn/dialog';
-import { Host } from '@/types/component/hostComponentType';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
+import { addHost } from '../actions';
+import { Host } from '../types';
 
 import { ClientConnectionForm, FormData } from './client/ClientConnectionForm';
 
@@ -19,14 +17,15 @@ interface ConnectHostDialogProps {
   onSuccess?: (host: Host) => void;
 }
 
-export function ConnectHostDialog({
-  open,
-  onOpenChange,
-  onSuccess: _onSuccess,
-}: ConnectHostDialogProps) {
-  const t = useTranslations('common');
+export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHostDialogProps) {
+  const t = useTranslations('Common');
+  const params = useParams();
+  const locale = params.locale as string;
+  const [isCreating, setIsCreating] = useState(false);
   const [testStatus, setTestStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [_testError, setTestError] = useState<string | null>(null);
+  const [testError, setTestError] = useState<string | null>(null);
+  const lastRequestTime = useRef<number>(0);
+  const REQUEST_THROTTLE_MS = 500;
   const [formData, setFormData] = useState<FormData>({
     name: '',
     description: '',
@@ -38,7 +37,6 @@ export function ConnectHostDialog({
   });
 
   const resetForm = useCallback(() => {
-    // Reset form with empty credentials
     setFormData({
       name: '',
       description: '',
@@ -50,17 +48,83 @@ export function ConnectHostDialog({
     });
     setTestStatus('idle');
     setTestError(null);
-    
-    // Reset any form autocomplete data
-    setTimeout(() => {
-      // Find and clear any username/password fields
-      const usernameField = document.getElementById('username') as HTMLInputElement;
-      const passwordField = document.getElementById('password') as HTMLInputElement;
-      
-      if (usernameField) usernameField.value = '';
-      if (passwordField) passwordField.value = '';
-    }, 0);
   }, []);
+
+  const validateFormData = (): boolean => {
+    if (!formData.name.trim()) {
+      toast.error(t('errors.nameRequired'));
+      return false;
+    }
+
+    if (!formData.ip.trim()) {
+      toast.error(t('errors.ipRequired'));
+      return false;
+    }
+
+    const port = parseInt(formData.port);
+    if (isNaN(port) || port < 1 || port > 65535) {
+      toast.error(t('errors.invalidPort'));
+      return false;
+    }
+
+    if (formData.type === 'ssh' && (!formData.username.trim() || !formData.password.trim())) {
+      toast.error(t('errors.sshCredentials'));
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleCreate = async () => {
+    if (!validateFormData()) {
+      return;
+    }
+
+    const now = Date.now();
+    if (now - lastRequestTime.current < REQUEST_THROTTLE_MS) {
+      return;
+    }
+    lastRequestTime.current = now;
+
+    setIsCreating(true);
+
+    try {
+      // Ensure formData structure matches what the addHost action expects
+      const hostData = {
+        name: formData.name,
+        description: formData.description || '',
+        type: formData.type as 'ssh' | 'docker' | 'portainer',
+        ip: formData.ip,
+        port: parseInt(formData.port),
+        user: formData.username, // Note: backend expects 'user' not 'username'
+        password: formData.password,
+        status: 'connected' as const, // Type assertion to make TypeScript happy
+        created_at: new Date(),
+        updated_at: new Date(),
+        is_windows: false,
+      };
+
+      const result = await addHost(hostData);
+
+      if (result.success && result.data) {
+        toast.success(t('success.connected', { name: formData.name }));
+        resetForm();
+        onOpenChange(false);
+
+        if (onSuccess) {
+          onSuccess(result.data);
+        }
+      } else {
+        console.error('Host creation failed with result:', result);
+        toast.error(result.error || t('errors.createFailed'));
+      }
+    } catch (error) {
+      console.error('Error creating connection:', error);
+      toast.error(error instanceof Error ? error.message : t('errors.createFailed'));
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   const handleFormChange = (newFormData: FormData) => {
     const previousFormData = formData;
@@ -94,9 +158,6 @@ export function ConnectHostDialog({
         <DialogHeader className="pb-2">
           <DialogTitle>{t('addNewHost')}</DialogTitle>
         </DialogHeader>
-        <DialogDescription className="text-sm text-muted-foreground mb-4">
-          {t('connectHostPrompt', { defaultValue: 'Enter the details to connect to a new host' })}
-        </DialogDescription>
 
         <ClientConnectionForm
           formData={formData}
@@ -104,7 +165,18 @@ export function ConnectHostDialog({
           onTestSuccess={() => {
             setTestStatus('success');
           }}
+          onSubmit={async () => {
+            try {
+              // Call the handleCreate function directly
+              await handleCreate();
+              return true; // Return a success value
+            } catch (error) {
+              console.error('Error in handleCreate:', error);
+              return false; // Return a failure value
+            }
+          }}
           onCancel={() => onOpenChange(false)}
+          isSaving={isCreating}
           testStatus={testStatus}
         />
       </DialogContent>

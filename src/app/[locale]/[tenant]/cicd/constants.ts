@@ -44,3 +44,12 @@ export const ERROR_MESSAGES = {
 
 // Log prefix for consistent logging
 export const LOG_PREFIX = '[CICDContext]';
+
+// CICD Module Constants
+// These are temporary during migration and will be removed after React Query implementation
+
+// Event constants (legacy - to be removed after full migration)
+export const REFRESH_CICD_PROVIDERS = 'refresh-cicd-providers';
+export const REFRESH_CICD_COMPLETE = 'refresh-cicd-complete';
+export const CICD_TESTING_CONNECTION = 'cicd-testing-connection';
+export const CICD_TESTING_CONNECTION_COMPLETE = 'cicd-testing-connection-complete';

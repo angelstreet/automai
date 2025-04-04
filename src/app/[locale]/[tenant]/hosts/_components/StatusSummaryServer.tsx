@@ -2,7 +2,7 @@ import { CheckCircle2, AlertCircle, Server } from 'lucide-react';
 
 import { Badge } from '@/components/shadcn/badge';
 
-interface StatusSummaryProps {
+interface StatusSummaryServerProps {
   vmStatusSummary: {
     running: number;
     warning: number;
@@ -13,11 +13,11 @@ interface StatusSummaryProps {
   selectedFilters?: Set<string>;
 }
 
-export function StatusSummary({
+export function StatusSummaryServer({
   vmStatusSummary,
   onStatusFilter = () => {},
   selectedFilters = new Set<string>(),
-}: StatusSummaryProps) {
+}: StatusSummaryServerProps) {
   return (
     <div className="flex items-center gap-4">
       <div className="flex items-center">

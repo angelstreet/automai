@@ -1,26 +1,28 @@
+'use client';
+
 import { Checkbox } from '@/components/shadcn/checkbox';
 import { cn } from '@/lib/utils';
-import { Host } from '../types';
+import { Host } from '@/types/component/hostComponentType';
 
-import { HostCard } from './HostCard';
+import { HostCardClient } from './HostCardClient';
 
-interface HostGridProps {
+interface HostGridClientProps {
   hosts: Host[];
   selectedHosts: Set<string>;
   selectMode: boolean;
   onSelect: (id: string) => void;
   onDelete?: (id: string) => void;
-  onTestConnection?: (host: Host) => void;
+  onTestConnection?: (host: Host) => Promise<boolean>;
 }
 
-export function HostGrid({
+export function HostGridClient({
   hosts,
   selectedHosts,
   selectMode,
   onSelect,
   onDelete,
   onTestConnection,
-}: HostGridProps) {
+}: HostGridClientProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {hosts.map((host) => (
@@ -40,7 +42,7 @@ export function HostGrid({
                 />
               </div>
             )}
-            <HostCard
+            <HostCardClient
               host={host}
               onDelete={onDelete}
               onTestConnection={onTestConnection}

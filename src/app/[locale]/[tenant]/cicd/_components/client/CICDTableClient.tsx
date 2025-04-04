@@ -1,11 +1,9 @@
 'use client';
 import { Edit, Trash, AlertCircle, RefreshCcw, MoreHorizontal, PlusCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 
-import { deleteCICDProvider } from '@/app/actions/cicdAction';
 import {
-  REFRESH_CICD_PROVIDERS,
   CICD_TESTING_CONNECTION,
   CICD_TESTING_CONNECTION_COMPLETE,
 } from '@/app/providers/CICDProvider';

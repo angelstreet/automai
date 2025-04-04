@@ -21,7 +21,7 @@ import {
 } from '@/components/shadcn/table';
 import { Host } from '@/types/component/hostComponentType';
 
-interface HostTableProps {
+interface HostTableClientProps {
   hosts: (Host & { animationDelay?: number })[];
   selectedHosts: Set<string>;
   selectMode: boolean;
@@ -30,14 +30,14 @@ interface HostTableProps {
   onTestConnection?: (host: Host) => Promise<boolean>;
 }
 
-export function HostTable({
+export function HostTableClient({
   hosts,
   selectedHosts,
   selectMode,
   onSelect,
   onDelete,
   onTestConnection,
-}: HostTableProps) {
+}: HostTableClientProps) {
   const router = useRouter();
   const t = useTranslations('common');
 
