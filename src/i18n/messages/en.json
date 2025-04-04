@@ -585,9 +585,7 @@
       "failedFetchProviders": "Failed to fetch CI/CD providers",
       "failedFetchJobs": "Failed to fetch CI/CD jobs",
       "failedFetchJobDetails": "Failed to fetch job details"
-    }
-  },
-
+    },
     "no_deployments": "No deployments found",
     "no_deployments_description": "Start by creating your first deployment",
     "filter": {
@@ -609,6 +607,21 @@
       "logs": "View Logs",
       "retry": "Retry Deployment",
       "cancel": "Cancel Deployment"
+    }
+  },
+  "deployments": {
+    "title": "Deployments",
+    "description": "Manage and monitor your deployments",
+    "create": "New Deployment",
+    "refresh": "Refresh",
+    "deployments": "Deployments",
+    "deployments_description": "Manage and monitor your deployments",
+    "status": {
+      "pending": "Pending",
+      "in_progress": "In Progress",
+      "completed": "Completed",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
     }
   }
 }
