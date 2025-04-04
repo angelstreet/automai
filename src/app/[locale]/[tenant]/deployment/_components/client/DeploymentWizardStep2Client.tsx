@@ -31,7 +31,7 @@ interface DeploymentWizardStep2Props {
   isStepValid: boolean | (() => boolean);
 }
 
-const DeploymentWizardStep2: React.FC<DeploymentWizardStep2Props> = ({
+const DeploymentWizardStep2Client: React.FC<DeploymentWizardStep2Props> = ({
   selectedRepository,
   scriptIds,
   repositoryScripts,
@@ -98,4 +98,4 @@ const DeploymentWizardStep2: React.FC<DeploymentWizardStep2Props> = ({
   );
 };
 
-export default DeploymentWizardStep2;
+export default DeploymentWizardStep2Client;

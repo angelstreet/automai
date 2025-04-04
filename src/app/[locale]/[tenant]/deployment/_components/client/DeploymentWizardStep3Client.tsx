@@ -18,7 +18,7 @@ interface DeploymentWizardStep3Props {
   isStepValid: boolean | (() => boolean);
 }
 
-const DeploymentWizardStep3: React.FC<DeploymentWizardStep3Props> = ({
+const DeploymentWizardStep3Client: React.FC<DeploymentWizardStep3Props> = ({
   hostIds,
   availableHosts,
   isLoadingHosts,
@@ -91,4 +91,4 @@ const DeploymentWizardStep3: React.FC<DeploymentWizardStep3Props> = ({
   );
 };
 
-export default DeploymentWizardStep3;
+export default DeploymentWizardStep3Client;

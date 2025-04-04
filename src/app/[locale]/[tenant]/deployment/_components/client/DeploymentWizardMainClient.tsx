@@ -63,7 +63,7 @@ const initialDeploymentData: DeploymentData = {
 };
 
 // Wrap DeploymentWizard in React.memo to prevent unnecessary re-renders
-const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
+const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
   ({ onCancel, onDeploymentCreated, repositories = [], hosts = [], cicdProviders = [] }) => {
     const [step, setStep] = useState(1);
     const [deploymentData, setDeploymentData] = useState<DeploymentData>(initialDeploymentData);
@@ -603,6 +603,6 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
   },
 );
 
-DeploymentWizard.displayName = 'DeploymentWizard';
+DeploymentWizardMainClient.displayName = 'DeploymentWizard';
 
-export default DeploymentWizard;
+export default DeploymentWizardMainClient;

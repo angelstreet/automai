@@ -16,7 +16,7 @@ interface DeploymentWizardStep4Props {
   isStepValid: boolean | (() => boolean);
 }
 
-const DeploymentWizardStep4: React.FC<DeploymentWizardStep4Props> = ({
+const DeploymentWizardStep4Client: React.FC<DeploymentWizardStep4Props> = ({
   schedule,
   scheduledTime,
   cronExpression,
@@ -160,4 +160,4 @@ const DeploymentWizardStep4: React.FC<DeploymentWizardStep4Props> = ({
   );
 };
 
-export default DeploymentWizardStep4;
+export default DeploymentWizardStep4Client;

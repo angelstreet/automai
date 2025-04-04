@@ -587,7 +587,6 @@
       "failedFetchJobDetails": "Failed to fetch job details"
     },
     "no_deployments": "No deployments found",
-    "no_deployments_description": "Start by creating your first deployment",
     "filter": {
       "all": "All Deployments",
       "active": "Active",
@@ -616,6 +615,7 @@
     "refresh": "Refresh",
     "deployments": "Deployments",
     "deployments_description": "Manage and monitor your deployments",
+    "createDeploymentDescription": "Create deployments",
     "status": {
       "pending": "Pending",
       "in_progress": "In Progress",

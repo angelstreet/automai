@@ -9,9 +9,9 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/shadcn/dialog';
-import { Deployment } from '@/types/component/deploymentComponentType';
 import { useHost, useCICD } from '@/hooks';
 import { useRepository } from '@/hooks/useRepository';
+import { Deployment } from '@/types/component/deploymentComponentType';
 
 import { DeploymentWizardMainClient } from './DeploymentWizardMainClient';
 
@@ -27,23 +27,24 @@ export function DeploymentWizardDialogClient({
   onSuccess,
 }: DeploymentWizardDialogClientProps) {
   const t = useTranslations('deployments');
+  const tc = useTranslations('deployment');
   const { hosts, isLoading: isLoadingHosts } = useHost();
   const { providers: cicdProviders, isLoading: isLoadingCICD } = useCICD();
   const { repositories, isLoading: isLoadingRepositories } = useRepository();
-  
+
   const isLoading = isLoadingHosts || isLoadingCICD || isLoadingRepositories;
 
   const handleDeploymentCreated = () => {
     // Close the dialog
     onOpenChange(false);
-    
+
     // Refresh deployments
     window.dispatchEvent(new CustomEvent('refresh-deployments'));
-    
+
     // Call success callback if provided
     if (onSuccess) {
       // Since we don't have the actual deployment data here,
-      // we'll pass a placeholder. The recipient can refresh 
+      // we'll pass a placeholder. The recipient can refresh
       // to get the actual data.
       onSuccess({} as Deployment);
     }
@@ -58,7 +59,7 @@ export function DeploymentWizardDialogClient({
     >
       <DialogContent className="sm:max-w-[900px] p-4">
         <DialogHeader className="pb-2">
-          <DialogTitle>{t('createDeployment')}</DialogTitle>
+          <DialogTitle>{tc('wizard.createDeployment')}</DialogTitle>
         </DialogHeader>
         <DialogDescription className="text-sm text-muted-foreground mb-4">
           {t('createDeploymentDescription', {
@@ -75,7 +76,7 @@ export function DeploymentWizardDialogClient({
             cicdProviders={cicdProviders || []}
           />
         )}
-        
+
         {open && isLoading && (
           <div className="p-8 flex items-center justify-center">
             <div className="text-center">
