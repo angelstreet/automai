@@ -10,30 +10,23 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
+import { THEME_CHANGED } from '@/components/theme/ThemeEventListener';
+
 export function ThemeToggleStatic() {
   // Use next-themes for theme management
   const nextThemes = useNextThemes();
   const [_mounted, _setMounted] = React.useState(true); // Start as true to prevent flashing
 
-  // Function to set theme
+  // Function to set theme using event pattern
   const setTheme = (newTheme: string) => {
     // Set theme in next-themes provider
     if (nextThemes.setTheme) {
       nextThemes.setTheme(newTheme);
     }
 
-    // Optionally, manually set the theme class on html element as a fallback
+    // Dispatch theme changed event instead of direct DOM manipulation
     if (typeof window !== 'undefined') {
-      const root = window.document.documentElement;
-      const isDark =
-        newTheme === 'dark' ||
-        (newTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-
-      if (isDark) {
-        root.classList.add('dark');
-      } else {
-        root.classList.remove('dark');
-      }
+      window.dispatchEvent(new CustomEvent(THEME_CHANGED, { detail: { theme: newTheme } }));
 
       // Save theme in localStorage for persistence
       localStorage.setItem('theme', newTheme);
