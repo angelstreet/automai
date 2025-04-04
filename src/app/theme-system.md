@@ -110,7 +110,7 @@ export function useTheme() {
 
 ```tsx
 'use client';
-import { Sun, Moon, Cloud } from 'lucide-react';
+import { Sun, Moon, Cloud, Settings } from 'lucide-react';
 import React from 'react';
 import { useTheme } from '@/hooks/useTheme';
 import { Button } from '@/components/shadcn/button';
@@ -152,7 +152,7 @@ export function ThemeToggleStatic() {
           <span>Blue</span>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => setTheme('system')}>
-          <span className="mr-2">🖥️</span>
+          <Settings className="mr-2 h-4 w-4" />
           <span>System</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -166,14 +166,16 @@ export function ThemeToggleStatic() {
 ```tsx
 // src/app/layout.tsx
 import { cookies } from 'next/headers';
-import { ThemeProvider } from '@/app/providers';
+import { ThemeProvider } from '@/app/providers/ThemeProvider';
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
   // Get theme from cookie for SSR
-  const theme = cookies().get('theme')?.value;
+  const cookieStore = await cookies();
+  const themeCookie = cookieStore.get('theme');
+  const theme = themeCookie?.value;
 
   return (
-    <html lang="en" className={theme || ''}>
+    <html lang="en" className={`${theme || ''}`}>
       <body>
         <ThemeProvider>{children}</ThemeProvider>
       </body>
