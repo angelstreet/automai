@@ -75,10 +75,6 @@ export function useHost() {
     mutationFn: (data: HostInput) => createHost(data),
     onSuccess: (response) => {
       if (response.success) {
-        toast({
-          title: 'Success',
-          description: 'Host created successfully',
-        });
         queryClient.invalidateQueries({ queryKey: ['hosts'] });
       } else {
         toast({
@@ -160,10 +156,7 @@ export function useHost() {
     mutationFn: (id: string) => testHostConnection(id),
     onSuccess: (response) => {
       if (response.success) {
-        toast({
-          title: 'Success',
-          description: 'Host connection successful',
-        });
+        // Success toast removed
       } else {
         toast({
           title: 'Connection Failed',
