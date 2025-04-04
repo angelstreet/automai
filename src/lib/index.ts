@@ -11,7 +11,6 @@ export * from './db/hostDb';
 export * from './db/cicdDb';
 
 // Service layer exports
-export * from './services/userService';
 export * from './services/teamService';
 export * from './services/hostService';
 export * from './services/sshService';
@@ -33,9 +32,5 @@ export * from './utils/chartUtils';
 export * from './config/featureConfig';
 
 // Supabase-specific exports
-export * from './supabase/auth';
 export * from './supabase/client';
 export * from './supabase/db';
-export * from './supabase/server';
-export * from './supabase/admin';
-export * from './supabase/middleware';

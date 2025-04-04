@@ -6,9 +6,6 @@
 // Auth services
 export * from './authService';
 
-// User services
-export * from './userService';
-
 // Team services
 export * from './teamService';
 
