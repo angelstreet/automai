@@ -38,6 +38,7 @@ export function ConnectHostDialog({
   });
 
   const resetForm = useCallback(() => {
+    // Reset form with empty credentials
     setFormData({
       name: '',
       description: '',
@@ -49,6 +50,16 @@ export function ConnectHostDialog({
     });
     setTestStatus('idle');
     setTestError(null);
+    
+    // Reset any form autocomplete data
+    setTimeout(() => {
+      // Find and clear any username/password fields
+      const usernameField = document.getElementById('username') as HTMLInputElement;
+      const passwordField = document.getElementById('password') as HTMLInputElement;
+      
+      if (usernameField) usernameField.value = '';
+      if (passwordField) passwordField.value = '';
+    }, 0);
   }, []);
 
   const handleFormChange = (newFormData: FormData) => {

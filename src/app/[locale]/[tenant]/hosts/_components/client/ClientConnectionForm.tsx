@@ -256,7 +256,7 @@ export function ClientConnectionForm({
   };
 
   return (
-    <div className="grid gap-2 py-1">
+    <div className="grid gap-2 py-1" data-form-type="do-not-autofill">
       <div className="grid grid-cols-4 items-center gap-2">
         <Label htmlFor="name" className="text-right">
           {t('name')}
@@ -321,10 +321,12 @@ export function ClientConnectionForm({
             </Label>
             <Input
               id="username"
+              name="new-username"
               placeholder={t('username')}
               value={formData.username}
               onChange={(e) => handleInputChange('username', e.target.value)}
               className="col-span-3 h-8"
+              autoComplete="off"
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-2">
@@ -333,11 +335,13 @@ export function ClientConnectionForm({
             </Label>
             <Input
               id="password"
+              name="new-password"
               type="password"
               placeholder={t('password')}
               value={formData.password}
               onChange={(e) => handleInputChange('password', e.target.value)}
               className="col-span-3 h-8"
+              autoComplete="new-password"
             />
           </div>
         </>
