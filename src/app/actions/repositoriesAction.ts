@@ -311,58 +311,32 @@ export async function testGitProvider(
       hasToken: data.token ? 'YES' : 'NO',
     });
 
-    // This should be moved to repositoryDb or a gitService
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
+    // Import the gitService
+    const { testGitProviderConnection } = await import('@/lib/services');
 
-    const baseUrl =
-      data.type === 'gitea'
-        ? data.serverUrl
-        : data.type === 'github'
-          ? 'https://api.github.com'
-          : 'https://gitlab.com/api/v4';
-
-    console.log('[@action:repositories:testGitProvider] Using baseUrl:', baseUrl);
-
-    console.log(
-      '[@action:repositories:testGitProvider] Making request to:',
-      `${baseUrl}/api/v1/user`,
-    );
-    const response = await fetch(`${baseUrl}/api/v1/user`, {
-      headers: {
-        Authorization: `token ${data.token}`,
-      },
-      signal: controller.signal,
+    // Call the service method instead of direct fetch
+    const result = await testGitProviderConnection({
+      type: data.type,
+      token: data.token,
+      serverUrl: data.serverUrl
     });
 
-    clearTimeout(timeout);
-    console.log('[@action:repositories:testGitProvider] Response status:', response.status);
-
-    // Handle response
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.log('[@action:repositories:testGitProvider] Error response:', errorText);
+    if (!result.success) {
+      console.log('[@action:repositories:testGitProvider] Connection test failed:', result.error);
       return {
         success: false,
-        error: 'Connection to git provider failed',
+        error: result.error || 'Connection to git provider failed',
       };
     }
 
+    console.log('[@action:repositories:testGitProvider] Connection test successful');
     return {
       success: true,
       message: 'Connection test successful',
+      ...result
     };
   } catch (error: any) {
     console.error('[@action:repositories:testGitProvider] Error details:', error);
-
-    // Handle specific errors
-    if (error instanceof Error) {
-      return {
-        success: false,
-        error: error.name === 'AbortError' ? 'Connection timeout after 5s' : error.message,
-      };
-    }
-
     return {
       success: false,
       error: error.message || 'Connection to git provider failed',
@@ -387,32 +361,26 @@ export async function testGitRepository(
     const validatedData = testRepositorySchema.parse(data);
     console.log('[@action:repositories:testGitRepository] Data validated successfully');
 
-    // Test connection with timeout
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-
-    // Prepare headers
-    const headers: Record<string, string> = {};
-    if (validatedData.token) {
-      headers.Authorization = `token ${validatedData.token}`;
-    }
-
-    console.log('[@action:repositories:testGitRepository] Making request to:', validatedData.url);
-    const response = await fetch(validatedData.url, {
-      method: 'HEAD', // Use HEAD to just check if the URL is accessible
-      headers,
-      signal: controller.signal,
-      redirect: 'follow',
+    // Import the gitService
+    const { testGitRepositoryAccess } = await import('@/lib/services');
+    
+    // Call the service instead of direct fetch
+    const result = await testGitRepositoryAccess({
+      url: validatedData.url,
+      token: validatedData.token
+    });
+    
+    console.log('[@action:repositories:testGitRepository] Repository test result:', {
+      success: result.success,
+      status: result.status
     });
 
-    clearTimeout(timeout);
-    console.log('[@action:repositories:testGitRepository] Response status:', response.status);
-
-    // Return status code for the calling component to handle
+    // Return result with appropriate message
     return {
-      success: response.ok,
-      status: response.status,
-      message: response.ok ? 'Repository is accessible' : 'Repository is not accessible',
+      success: result.success,
+      status: result.status,
+      error: result.error,
+      message: result.success ? 'Repository is accessible' : 'Repository is not accessible',
     };
   } catch (error: any) {
     console.error('[@action:repositories:testGitRepository] Error details:', error);
@@ -421,7 +389,7 @@ export async function testGitRepository(
     if (error instanceof Error) {
       return {
         success: false,
-        error: error.name === 'AbortError' ? 'Connection timeout after 5s' : error.message,
+        error: error.message,
       };
     }
 

@@ -18,6 +18,7 @@ export * from './sshService';
 
 // Repository services
 export * from './repositoryService';
+export * from './gitService';
 
 // Deployment services
 export * from './deploymentService';
