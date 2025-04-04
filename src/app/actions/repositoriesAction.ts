@@ -457,3 +457,73 @@ export async function clearRepositoriesCache(): Promise<{
     };
   }
 }
+
+/**
+ * Get repository files for a specific repository
+ * @param repositoryId Repository ID
+ * @param path Optional path within the repository 
+ * @param branch Branch to get files from
+ */
+export async function getRepositoryFiles(
+  repositoryId: string,
+  path: string = '',
+  branch: string = 'main'
+): Promise<{ 
+  success: boolean; 
+  data?: any[]; 
+  error?: string 
+}> {
+  try {
+    console.log(`[@action:repositories:getRepositoryFiles] Starting for repo: ${repositoryId}, path: ${path}, branch: ${branch}`);
+    
+    // Get authenticated user
+    const user = await getUser();
+    if (!user) {
+      console.log('[@action:repositories:getRepositoryFiles] No authenticated user found');
+      return { success: false, error: 'Unauthorized' };
+    }
+    
+    // Get repository details
+    const repositoryResult = await getRepository(repositoryId);
+    if (!repositoryResult.success || !repositoryResult.data) {
+      console.log(`[@action:repositories:getRepositoryFiles] Repository not found: ${repositoryId}`);
+      return { success: false, error: 'Repository not found' };
+    }
+    
+    const repository = repositoryResult.data;
+    
+    // In a real implementation, we would:
+    // 1. Determine repository provider (GitHub, GitLab, etc.)
+    // 2. Get the auth token for that provider
+    // 3. Call the appropriate API to get the files
+    
+    // For now, return a predefined set of script files as a simplified implementation
+    const files = [
+      {
+        name: 'deploy.sh',
+        path: 'deploy.sh',
+        type: 'file',
+        size: 1024
+      },
+      {
+        name: 'setup.py',
+        path: 'setup.py',
+        type: 'file',
+        size: 2048
+      },
+      {
+        name: 'build.sh',
+        path: 'build.sh',
+        type: 'file',
+        size: 768
+      }
+    ];
+    
+    console.log(`[@action:repositories:getRepositoryFiles] Returning ${files.length} files`);
+    return { success: true, data: files };
+    
+  } catch (error: any) {
+    console.error('[@action:repositories:getRepositoryFiles] Error:', error);
+    return { success: false, error: error.message || 'Failed to get repository files' };
+  }
+}

@@ -100,6 +100,9 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
 
       // Only fetch scripts when on step 2 and a repository is selected
       if (step === 2 && deploymentData.repositoryId && !isLoadingScripts) {
+        // Track if the effect was cleaned up
+        let isMounted = true;
+        
         const loadScripts = async () => {
           try {
             setIsLoadingScripts(true);
@@ -133,95 +136,118 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               url: selectedRepo.url,
             });
 
-            // Use the selected branch from deploymentData, or fall back to a list of defaults
+            // Use the selected branch from deploymentData
             const userSelectedBranch = deploymentData.branch || 'main';
             let scriptFiles = null;
             let lastError = null;
+
+            // For now, only try the user-selected branch
+            console.log(`[DeploymentWizard] Trying branch: ${userSelectedBranch}`);
             
-            // Create an array with the user-selected branch first, then fallbacks
-            const branchesToTry = [userSelectedBranch];
-            // Add fallbacks only if they're different from the user-selected branch
-            if (!branchesToTry.includes('main')) branchesToTry.push('main');
-            if (!branchesToTry.includes('master')) branchesToTry.push('master');
-            if (!branchesToTry.includes('develop')) branchesToTry.push('develop');
-            if (!branchesToTry.includes('dev')) branchesToTry.push('dev');
-            
-            console.log(`[DeploymentWizard] Trying branches in order: ${branchesToTry.join(', ')}`);
+            // Try only once to prevent API fetch loops
+            try {
+              // API endpoint to get repository files
+              const apiUrl = `/api/repositories/explore?repositoryId=${selectedRepo.id}&providerId=${providerId}&repositoryUrl=${encodeURIComponent(selectedRepo.url)}&path=&branch=${userSelectedBranch}&action=list&recursive=true`;
+              console.log(`[DeploymentWizard] Fetching scripts from: ${apiUrl}`);
 
-            for (const branch of branchesToTry) {
-              try {
-                // Get all files recursively with branch fallback, like RepositoryExplorer does
-                const apiUrl = `/api/repositories/explore?repositoryId=${selectedRepo.id}&providerId=${providerId}&repositoryUrl=${encodeURIComponent(selectedRepo.url)}&path=&branch=${branch}&action=list&recursive=true`;
-                console.log(`[DeploymentWizard] Trying to fetch scripts with branch: ${branch}`);
+              // Add timeout to prevent hanging requests
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+              
+              const response = await fetch(apiUrl, { 
+                signal: controller.signal,
+                headers: { 'Cache-Control': 'no-cache' } 
+              });
+              
+              clearTimeout(timeoutId);
+              
+              // Break out early on component unmount
+              if (!isMounted) return;
 
-                const response = await fetch(apiUrl);
+              if (!response.ok) {
+                const errorText = await response.text();
+                console.log(`[DeploymentWizard] API error: ${response.status} ${response.statusText} - ${errorText}`);
+                throw new Error(`Error ${response.status}: ${response.statusText}`);
+              }
 
-                if (!response.ok) {
-                  const errorText = await response.text();
-                  console.log(`[DeploymentWizard] Failed with branch ${branch}:`, errorText);
-                  lastError = new Error(
-                    `Error with branch ${branch}: ${response.status} ${response.statusText}`,
+              const data = await response.json();
+
+              if (data.success && data.data) {
+                // Filter for script files (.sh, .py)
+                const filteredFiles = data.data.filter(
+                  (file: any) =>
+                    file.type === 'file' &&
+                    (file.name.endsWith('.sh') || file.name.endsWith('.py')),
+                );
+
+                if (filteredFiles.length > 0) {
+                  // Transform to script format
+                  const scripts = filteredFiles.map((file: any, index: number) => ({
+                    id: `script-${index}`,
+                    name: file.name,
+                    path: file.path,
+                    description: `${file.path} (${file.size} bytes)`,
+                    parameters: [],
+                    type: file.name.endsWith('.py') ? 'python' : 'shell',
+                  }));
+
+                  console.log(
+                    `[DeploymentWizard] Successfully found ${scripts.length} script files`,
                   );
-                  continue;
-                }
-
-                const data = await response.json();
-
-                if (data.success && data.data) {
-                  // Filter for script files (.sh, .py)
-                  const filteredFiles = data.data.filter(
-                    (file: any) =>
-                      file.type === 'file' &&
-                      (file.name.endsWith('.sh') || file.name.endsWith('.py')),
-                  );
-
-                  if (filteredFiles.length > 0) {
-                    // Transform to script format
-                    const scripts = filteredFiles.map((file: any, index: number) => ({
-                      id: `script-${index}`,
-                      name: file.name,
-                      path: file.path,
-                      description: `${file.path} (${file.size} bytes)`,
-                      parameters: [],
-                      type: file.name.endsWith('.py') ? 'python' : 'shell',
-                    }));
-
-                    console.log(
-                      `[DeploymentWizard] Successfully found ${scripts.length} script files with branch: ${branch}`,
-                    );
+                  
+                  if (isMounted) {
                     setRepositoryScripts(scripts);
-                    scriptFiles = scripts;
-                    break;
-                  } else {
-                    console.log(`[DeploymentWizard] No script files found with branch: ${branch}`);
+                  }
+                  scriptFiles = scripts;
+                } else {
+                  console.log(`[DeploymentWizard] No script files found`);
+                  if (isMounted) {
+                    setRepositoryScripts([]);
                   }
                 }
-              } catch (branchError) {
-                console.error(`[DeploymentWizard] Error with branch ${branch}:`, branchError);
-                lastError = branchError;
-              }
-            }
-
-            if (!scriptFiles) {
-              if (lastError) {
-                throw lastError;
               } else {
+                throw new Error(data.error || 'Failed to retrieve repository files');
+              }
+            } catch (error) {
+              // Check if the error is due to AbortController (timeout)
+              if (error instanceof Error) {
+                if (error.name === 'AbortError') {
+                  lastError = new Error(`Request timed out after 5 seconds`);
+                } else {
+                  lastError = error;
+                }
+              } else {
+                lastError = new Error('Unknown error occurred');
+              }
+              
+              console.error('[DeploymentWizard] Error fetching scripts:', lastError);
+              
+              if (isMounted) {
+                setScriptsError(lastError.message);
                 setRepositoryScripts([]);
-                console.log('[DeploymentWizard] No script files found in any branch');
               }
             }
           } catch (error) {
-            console.error('[DeploymentWizard] Error fetching scripts:', error);
-            setScriptsError(error instanceof Error ? error.message : 'Failed to load scripts');
-            setRepositoryScripts([]);
+            console.error('[DeploymentWizard] Error in script loading process:', error);
+            if (isMounted) {
+              setScriptsError(error instanceof Error ? error.message : 'Failed to load scripts');
+              setRepositoryScripts([]);
+            }
           } finally {
-            setIsLoadingScripts(false);
+            if (isMounted) {
+              setIsLoadingScripts(false);
+            }
           }
         };
 
         loadScripts();
+        
+        // Cleanup function to prevent state updates after unmount
+        return () => {
+          isMounted = false;
+        };
       }
-    }, [step, deploymentData.repositoryId, deploymentData.selectedRepository, isLoadingScripts]);
+    }, [step, deploymentData.repositoryId, deploymentData.selectedRepository, deploymentData.branch]);
 
     const handleInputChange = (
       e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,

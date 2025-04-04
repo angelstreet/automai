@@ -1,8 +1,6 @@
-import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { testCICDProvider } from '@/app/actions/cicdAction';
-import { CICDProvider } from '@/types/component/cicdComponentType';
 
 export async function POST(req: NextRequest) {
   try {
