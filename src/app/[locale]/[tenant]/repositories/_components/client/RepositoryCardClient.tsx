@@ -1,3 +1,5 @@
+'use client';
+
 import { formatDistanceToNow } from 'date-fns';
 import { GitBranch, Clock, ExternalLink, Globe, Lock, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';

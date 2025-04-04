@@ -1,6 +1,5 @@
 // Server Components
 export { RepositoryContent } from './RepositoryContent';
-export { RepositoryExplorer } from './RepositoryExplorer';
 
 // Client Components
 export { RepositoryListClient } from './client/RepositoryListClient';
@@ -10,6 +9,7 @@ export { RepositoryCardClient } from './client/RepositoryCardClient';
 export { RepositoryActionsClient } from './client/RepositoryActionsClient';
 export { RepositoryHeaderClient } from './client/RepositoryHeaderClient';
 export { RepositorySkeletonClient } from './client/RepositorySkeletonClient';
+export { RepositoryExplorerClient } from './client/RepositoryExplorerClient';
 
 // Import constants from main constants file
 export {

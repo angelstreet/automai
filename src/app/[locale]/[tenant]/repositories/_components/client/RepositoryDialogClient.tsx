@@ -1,3 +1,5 @@
+'use client';
+
 import { Github, Globe, ArrowRight, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';

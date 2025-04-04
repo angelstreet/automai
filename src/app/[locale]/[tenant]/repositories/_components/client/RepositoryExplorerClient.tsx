@@ -1,3 +1,5 @@
+'use client';
+
 import {
   ArrowLeft,
   GitBranch,
@@ -38,16 +40,16 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/Breadcrumb';
 import { cn } from '@/lib/utils';
-import { 
+import {
   RepositoryExplorerProps,
   RepositoryFile,
   FilesAPIResponse,
   FileAPIResponse,
- } from '@/types/context/repositoryContextType';
+} from '@/types/context/repositoryContextType';
 
-import { FILE_EXTENSION_COLORS, EXPLORER_TABS } from '../constants';
+import { FILE_EXTENSION_COLORS, EXPLORER_TABS } from '../../constants';
 
-export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerProps) {
+export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplorerProps) {
   const t = useTranslations('repositories');
   const [currentPath, setCurrentPath] = useState<string[]>([]);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
