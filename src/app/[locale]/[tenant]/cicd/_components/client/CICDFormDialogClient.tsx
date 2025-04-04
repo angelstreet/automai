@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 
-import { createCICDProvider, testCICDProvider } from '@/app/actions/cicdAction';
+import { createCICDProvider } from '@/app/actions/cicdAction';
 import { Button } from '@/components/shadcn/button';
 import {
   Form,
@@ -150,8 +150,16 @@ const CICDFormDialogClient: React.FC<CICDFormDialogProps> = ({
         },
       };
 
-      // Test the connection
-      const result = await testCICDProvider(providerData);
+      // Call the API endpoint instead of direct server action
+      const response = await fetch('/api/cicd/test-connection', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ provider: providerData }),
+      });
+
+      const result = await response.json();
 
       if (result.success) {
         setTestMessage({
