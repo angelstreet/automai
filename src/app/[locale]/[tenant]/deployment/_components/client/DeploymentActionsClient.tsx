@@ -105,10 +105,7 @@ export function DeploymentActionsClient({
         </Button>
       </div>
 
-      <DeploymentWizardDialogClient
-        open={showWizard}
-        onOpenChange={setShowWizard}
-      />
+      <DeploymentWizardDialogClient open={showWizard} onOpenChange={setShowWizard} />
     </>
   );
 }

@@ -587,20 +587,7 @@
       "failedFetchJobDetails": "Failed to fetch job details"
     }
   },
-  "deployments": {
-    "title": "Deployments",
-    "description": "Manage and monitor your deployments",
-    "create": "New Deployment",
-    "refresh": "Refresh",
-    "deployments": "Deployments",
-    "deployments_description": "Manage and monitor your deployments",
-    "status": {
-      "pending": "Pending",
-      "in_progress": "In Progress",
-      "completed": "Completed",
-      "failed": "Failed",
-      "cancelled": "Cancelled"
-    },
+
     "no_deployments": "No deployments found",
     "no_deployments_description": "Start by creating your first deployment",
     "filter": {
