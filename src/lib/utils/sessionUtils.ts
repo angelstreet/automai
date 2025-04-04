@@ -20,9 +20,9 @@ const SESSION_TTL = 30 * 24 * 60 * 60; // 30 days in seconds
  */
 export function getSessionFromCookies(): string | null {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
-    
+
     return sessionCookie?.value || null;
   } catch (error) {
     logger.error('Failed to get session from cookies', { error });
@@ -33,10 +33,13 @@ export function getSessionFromCookies(): string | null {
 /**
  * Set session data in cookies
  */
-export function setSessionCookie(sessionId: string, options?: { maxAge?: number; path?: string }): void {
+export function setSessionCookie(
+  sessionId: string,
+  options?: { maxAge?: number; path?: string },
+): void {
   try {
-    const cookieStore = cookies();
-    
+    const cookieStore = await cookies();
+
     cookieStore.set(SESSION_COOKIE_NAME, sessionId, {
       maxAge: options?.maxAge || SESSION_TTL,
       path: options?.path || '/',
@@ -54,8 +57,8 @@ export function setSessionCookie(sessionId: string, options?: { maxAge?: number;
  */
 export function removeSessionCookie(): void {
   try {
-    const cookieStore = cookies();
-    
+    const cookieStore = await cookies();
+
     cookieStore.set(SESSION_COOKIE_NAME, '', {
       maxAge: 0,
       path: '/',
@@ -117,7 +120,7 @@ export function timeUntilExpiry(expiryTimestamp: number): {
 } {
   const now = Date.now();
   const expiryTime = expiryTimestamp;
-  
+
   if (now >= expiryTime) {
     return {
       expired: true,
@@ -126,12 +129,12 @@ export function timeUntilExpiry(expiryTimestamp: number): {
       minutes: 0,
     };
   }
-  
+
   const diff = expiryTime - now;
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  
+
   return {
     expired: false,
     days,

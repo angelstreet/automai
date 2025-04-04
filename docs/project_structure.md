@@ -1,6 +1,7 @@
 - **name:** automai
 - **version:** 3.2.0
 - **description:** automai is a multi-tenant saas platform designed for end-to-end test automation across web, desktop, and mobile environments.
+
 ```bash
 node scripts/generate-structure.js
 ```
@@ -23,30 +24,35 @@ this will create a new file at `docs/project_structure.md` containing the curren
 ## project statistics
 
 ### overall statistics
+
 - total files: 406
 - total lines: 0
 
 ### statistics by file type
+
 #### typescript
+
 - files: 396
 - lines: 0
 - average lines per file: 0.00
 
 #### documentation
+
 - files: 5
 - lines: 0
 - average lines per file: 0.00
 
 #### css
+
 - files: 2
 - lines: 0
 - average lines per file: 0.00
 
 #### json configuration
+
 - files: 3
 - lines: 0
 - average lines per file: 0.00
-
 
 ## directory structure
 
@@ -122,7 +128,7 @@ this will create a new file at `docs/project_structure.md` containing the curren
             📄 clientdeploymentdetails.tsx (typescript, 0 lines)
             📄 clientdeploymentrunaction.tsx (typescript, 0 lines)
             📄 clientdeploymentwizard.tsx (typescript, 0 lines)
-            📄 clientemptystate.tsx (typescript, 0 lines)
+            📄 DeploymentEmptyStateClient.tsx (typescript, 0 lines)
             📄 deploymentactions.tsx (typescript, 0 lines)
             📄 deploymentdetailsclient.tsx (typescript, 0 lines)
             📄 deploymentemptystateclient.tsx (typescript, 0 lines)
@@ -560,4 +566,3 @@ this will create a new file at `docs/project_structure.md` containing the curren
 📄 config.ts (typescript, 0 lines)
 📄 middleware.ts (typescript, 0 lines)
 ```
-

@@ -2,8 +2,8 @@ import { getDeployments } from '@/app/actions/deploymentsAction';
 import { getRepositories } from '@/app/actions/repositoriesAction';
 import { DeploymentProvider } from '@/app/providers/DeploymentProvider';
 
-import { ClientEmptyState } from './client/ClientEmptyState';
-import { DeploymentList } from './client/DeploymentList';
+import { DeploymentEmptyStateClient } from './client/DeploymentEmptyStateClient';
+import { DeploymentListClient } from './client/DeploymentListClient';
 
 export async function DeploymentContent() {
   // Fetch data at the server level
@@ -25,7 +25,7 @@ export async function DeploymentContent() {
         initialRepositories={repositories}
         initialLoading={false}
       >
-        <ClientEmptyState errorMessage={deploymentsResponse.error} />
+        <DeploymentEmptyStateClient errorMessage={deploymentsResponse.error} />
       </DeploymentProvider>
     );
   }
@@ -37,7 +37,7 @@ export async function DeploymentContent() {
       initialRepositories={repositories}
       initialLoading={false}
     >
-      <DeploymentList deployments={deployments} repositories={repositories} />
+      <DeploymentListClient deployments={deployments} repositories={repositories} />
     </DeploymentProvider>
   );
 }

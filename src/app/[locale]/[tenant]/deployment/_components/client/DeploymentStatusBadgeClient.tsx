@@ -16,7 +16,7 @@ type StatusType = 'success' | 'failed' | 'in_progress' | 'pending' | 'scheduled'
 /**
  * StatusBadge component for displaying deployment and script statuses
  */
-const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = '' }) => {
+const DeploymentStatusBadgeClient: React.FC<StatusBadgeProps> = ({ status, className = '' }) => {
   // Get the appropriate icon component based on status
   const getStatusIcon = (iconName: string) => {
     switch (iconName) {
@@ -55,4 +55,4 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = '' }) => 
   );
 };
 
-export default StatusBadge;
+export default DeploymentStatusBadgeClient;

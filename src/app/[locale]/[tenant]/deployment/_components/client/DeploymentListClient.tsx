@@ -20,7 +20,7 @@ import { useToast } from '@/components/shadcn/use-toast';
 import { Deployment, Repository } from '@/types/component/deploymentComponentType';
 import { getFormattedTime } from '@/lib/utils/deploymentUtils';
 
-import StatusBadge from './StatusBadge';
+import DeploymentStatusBadgeClient from './DeploymentStatusBadgeClient';
 
 interface DeploymentListProps {
   deployments: Deployment[];
@@ -413,7 +413,7 @@ export function DeploymentList({
                         </div>
                       </td>
                       <td className="px-2 py-1 whitespace-nowrap">
-                        <StatusBadge status={deployment.status} />
+                        <DeploymentStatusBadgeClient status={deployment.status} />
                       </td>
                       <td className="px-2 py-1 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         {getFormattedTime

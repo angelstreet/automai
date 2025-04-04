@@ -22,7 +22,7 @@ import {
   executeDeployment,
 } from '@/app/actions/deploymentsAction';
 
-export default function DeploymentList() {
+export default function DeploymentListClient() {
   const router = useRouter();
   const { toast } = useToast();
   const [deployments, setDeployments] = useState<Deployment[]>([]);
