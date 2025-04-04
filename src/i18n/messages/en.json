@@ -34,7 +34,7 @@
     "connect": "Connect",
     "disconnect": "Disconnect",
     "settings": "Settings",
-    "actions_label": "Actions",
+    "actions": "Actions",
     "error": "Error",
     "success": "Success",
     "saving": "Saving...",

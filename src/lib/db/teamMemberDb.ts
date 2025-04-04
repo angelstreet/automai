@@ -287,43 +287,30 @@ export async function getAvailableTenantProfilesForTeam(
     }
 
     // Extract profile IDs of current members
-    const currentMemberIds = currentMembers ? currentMembers.map((member) => member.profile_id) : [];
+    const currentMemberIds = currentMembers
+      ? currentMembers.map((member) => member.profile_id)
+      : [];
 
-    let profiles;
-    let profilesError;
+    // Step 1: Get profiles from the profiles table
+    let profilesQuery = supabase
+      .from('profiles')
+      .select(
+        `
+        id, 
+        avatar_url,
+        tenant_id,
+        role,
+        tenant_name
+      `,
+      )
+      .eq('tenant_id', tenantId);
 
+    // Filter out existing team members if any
     if (currentMemberIds.length > 0) {
-      // Get all profiles for the tenant except those already in the team
-      const result = await supabase
-        .from('profiles')
-        .select(`
-          id, 
-          email, 
-          avatar_url,
-          tenant_id,
-          role
-        `)
-        .eq('tenant_id', tenantId)
-        .filter('id', 'not.in', `(${currentMemberIds.join(',')})`);
-      
-      profiles = result.data;
-      profilesError = result.error;
-    } else {
-      // If no members yet, just get all profiles for the tenant
-      const result = await supabase
-        .from('profiles')
-        .select(`
-          id, 
-          email, 
-          avatar_url,
-          tenant_id,
-          role
-        `)
-        .eq('tenant_id', tenantId);
-      
-      profiles = result.data;
-      profilesError = result.error;
+      profilesQuery = profilesQuery.not('id', 'in', `(${currentMemberIds.join(',')})`);
     }
+
+    const { data: profiles, error: profilesError } = await profilesQuery;
 
     if (profilesError) {
       console.error(
@@ -333,13 +320,17 @@ export async function getAvailableTenantProfilesForTeam(
       return { success: false, error: profilesError.message };
     }
 
-    // Get full user profiles in a single query
-    const profileIds = profiles.map((profile) => profile.id);
-    
-    if (profileIds.length === 0) {
+    if (!profiles || profiles.length === 0) {
       return { success: true, data: [] };
     }
-    
+
+    // Step 2: Get emails for these profiles from auth.users using the admin API
+    // We can't directly access auth.users from RLS policies, so we need to use a server function
+    // or use the team_user_profiles view if it contains email data
+
+    // Get full user profiles in a single query
+    const profileIds = profiles.map((profile) => profile.id);
+
     const { data: userProfiles, error: userProfilesError } = await supabase
       .from('team_user_profiles')
       .select('*')
@@ -352,10 +343,10 @@ export async function getAvailableTenantProfilesForTeam(
       );
     }
 
-    // Enhance profiles with user information
-    profiles.forEach((profile) => {
-      const userProfile = userProfiles?.find((p) => p.id === profile.id);
-      
+    // Step 3: Combine the data from both sources
+    const enhancedProfiles = profiles.map((profile) => {
+      const userProfile = userProfiles?.find((p) => p.id === profile.id) || {};
+
       // Get avatar with fallbacks, checking metadata if it exists
       let avatarUrl = profile.avatar_url || userProfile?.avatar_url;
       if (!avatarUrl && userProfile?.raw_user_meta_data) {
@@ -366,23 +357,24 @@ export async function getAvailableTenantProfilesForTeam(
           null;
       }
 
-      profile.user = {
-        id: profile.id,
-        name: userProfile?.full_name || profile?.email || 'User',
-        email: profile.email || 'Email unavailable',
-        avatar_url: avatarUrl || null,
+      return {
+        ...profile,
+        email: userProfile?.email || null,
+        user: {
+          id: profile.id,
+          name: userProfile?.full_name || profile?.tenant_name || 'User',
+          email: userProfile?.email || 'Email unavailable',
+          avatar_url: avatarUrl || null,
+        },
       };
     });
 
     return {
       success: true,
-      data: profiles,
+      data: enhancedProfiles,
     };
   } catch (error: any) {
-    console.error(
-      '[@db:teamMemberDb:getAvailableTenantProfilesForTeam] Error:',
-      error,
-    );
+    console.error('[@db:teamMemberDb:getAvailableTenantProfilesForTeam] Error:', error);
     return {
       success: false,
       error: error.message || 'Failed to fetch available tenant profiles',

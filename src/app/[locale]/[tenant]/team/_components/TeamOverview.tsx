@@ -17,6 +17,7 @@ interface TeamOverviewProps {
 
 export default function TeamOverview({ team }: TeamOverviewProps) {
   const t = useTranslations('team');
+  const c = useTranslations('common');
   const hasTeam = Boolean(team?.id);
 
   // Log team data for debugging
@@ -64,7 +65,7 @@ export default function TeamOverview({ team }: TeamOverviewProps) {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle>{t('title')}</CardTitle>
-            <CardDescription>{t('overview')}</CardDescription>
+            <CardDescription>{c('overview')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -117,7 +118,7 @@ export default function TeamOverview({ team }: TeamOverviewProps) {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle>{t('title')}</CardTitle>
-          <CardDescription>{t('overview')}</CardDescription>
+          <CardDescription>{c('overview')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

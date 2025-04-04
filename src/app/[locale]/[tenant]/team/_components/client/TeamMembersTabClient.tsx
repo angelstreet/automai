@@ -132,9 +132,7 @@ function MembersTabContent({
               <TableHead>{c('team')}</TableHead>
               <TableHead>{c('email')}</TableHead>
               <TableHead>{t('members_role_label')}</TableHead>
-              {canManageMembers && (
-                <TableHead className="text-right">{t('members_actions_label')}</TableHead>
-              )}
+              {canManageMembers && <TableHead className="text-right">{c('actions')}</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -205,13 +203,13 @@ function MembersTabContent({
                               }
                             }}
                           >
-                            {t('edit')}
+                            {c('edit')}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-destructive"
                             onClick={() => onRemoveMember(member.profile_id)}
                           >
-                            {t('members_remove')}
+                            {c('remove')}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -294,18 +292,6 @@ export function MembersTab({ teamId, subscriptionTier }: MembersTabProps) {
       setMembers((current) => current.filter((member) => member.profile_id !== profileId));
     } catch (error) {
       console.error('Error removing team member:', error);
-    }
-  };
-
-  // Handle members list refresh when dialogs make changes
-  const handleMembersChanged = async () => {
-    if (teamId) {
-      try {
-        // Invalidate the cache and fetch fresh data
-        teamMembersQuery.refetch();
-      } catch (error) {
-        console.error('Failed to refresh team members:', error);
-      }
     }
   };
 

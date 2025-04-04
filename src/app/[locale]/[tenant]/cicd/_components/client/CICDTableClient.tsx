@@ -68,6 +68,7 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
   const [testingProviders, setTestingProviders] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
   const t = useTranslations('cicd');
+  const c = useTranslations('common');
 
   // Memoize dialog handlers
   const handleAddEditProvider = useCallback((provider?: CICDProvider) => {
@@ -267,7 +268,7 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleAddEditProvider(provider)}>
                         <Edit className="mr-2 h-4 w-4" />
-                        <span>{t('edit')}</span>
+                        <span>{c('edit')}</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="text-destructive focus:text-destructive"
