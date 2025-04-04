@@ -15,7 +15,7 @@ type Script = {
   type?: string;
 };
 
-import EnhancedScriptSelector from './EnhancedScriptSelector';
+import EnhancedScriptSelector from '../EnhancedScriptSelector';
 
 interface DeploymentWizardStep2Props {
   selectedRepository: Repository | null;

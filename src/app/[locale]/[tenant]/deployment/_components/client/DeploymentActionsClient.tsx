@@ -5,35 +5,25 @@ import { useTranslations } from 'next-intl';
 import React, { useState, useEffect } from 'react';
 
 import { Button } from '@/components/shadcn/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogHeader,
-  DialogDescription,
-} from '@/components/shadcn/dialog';
 import { useHost, useCICD } from '@/hooks';
 import { useRepository } from '@/hooks/useRepository';
 
-// Import required components
-import { DeploymentWizardClient } from './client/DeploymentWizardClient';
+import { DeploymentWizardDialogClient } from './DeploymentWizardDialogClient';
 
-interface DeploymentActionsProps {
+interface DeploymentActionsClientProps {
   deploymentCount?: number;
 }
 
-export function DeploymentActions({
+export function DeploymentActionsClient({
   deploymentCount: initialDeploymentCount = 0,
-}: DeploymentActionsProps) {
+}: DeploymentActionsClientProps) {
   const t = useTranslations('deployments');
-  const { hosts, isLoading: isLoadingHosts, refetchHosts } = useHost();
-  const { providers: cicdProviders, isLoading: isLoadingCICD, refetchProviders } = useCICD();
-  const { repositories, isLoading: isLoadingRepositories, refetchRepositories } = useRepository();
+  const { refetchHosts } = useHost();
+  const { refetchProviders } = useCICD();
+  const { refetchRepositories } = useRepository();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
   const [currentDeploymentCount, setCurrentDeploymentCount] = useState(initialDeploymentCount);
-
-  const isLoading = isLoadingHosts || isLoadingCICD || isLoadingRepositories;
 
   // Update deployment count when prop changes
   useEffect(() => {
@@ -89,21 +79,6 @@ export function DeploymentActions({
     }
   };
 
-  const handleAddDeployment = () => {
-    // Open the deployment wizard dialog instead of dispatching an event
-    setShowWizard(true);
-  };
-
-  const handleCloseWizard = () => {
-    setShowWizard(false);
-  };
-
-  const handleDeploymentCreated = () => {
-    setShowWizard(false);
-    // Refresh deployments after creation
-    window.dispatchEvent(new CustomEvent('refresh-deployments'));
-  };
-
   return (
     <>
       <div className="flex items-center gap-2">
@@ -120,7 +95,7 @@ export function DeploymentActions({
           </Button>
         )}
         <Button
-          onClick={handleAddDeployment}
+          onClick={() => setShowWizard(true)}
           id="add-deployment-button"
           size="sm"
           className="h-8 gap-1"
@@ -130,28 +105,10 @@ export function DeploymentActions({
         </Button>
       </div>
 
-      {/* Add the deployment wizard dialog */}
-      <Dialog open={showWizard} onOpenChange={setShowWizard}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>{t('createDeployment')}</DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground">
-              {t('createDeploymentDescription', {
-                defaultValue: 'Configure your new deployment settings',
-              })}
-            </DialogDescription>
-          </DialogHeader>
-          {showWizard && (
-            <DeploymentWizardClient
-              onCancel={handleCloseWizard}
-              onDeploymentCreated={handleDeploymentCreated}
-              repositories={repositories || []}
-              hosts={hosts || []}
-              cicdProviders={cicdProviders || []}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      <DeploymentWizardDialogClient
+        open={showWizard}
+        onOpenChange={setShowWizard}
+      />
     </>
   );
 }

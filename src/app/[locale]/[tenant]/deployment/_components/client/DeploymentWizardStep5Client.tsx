@@ -17,7 +17,7 @@ import { Switch } from '@/components/shadcn/switch';
 import { CICDProvider } from '@/types/component/cicdComponentType';
 import { DeploymentData } from '@/types/component/deploymentComponentType';
 
-interface DeploymentWizardStep5Props {
+interface DeploymentWizardStep5ClientProps {
   data: DeploymentData;
   onUpdateData: (data: Partial<DeploymentData>) => void;
   onNext: () => void;
@@ -28,7 +28,7 @@ interface DeploymentWizardStep5Props {
   cicdProviders: CICDProvider[];
 }
 
-export default function DeploymentWizardStep5({
+export function DeploymentWizardStep5Client({
   data,
   onUpdateData,
   onBack,
@@ -36,7 +36,7 @@ export default function DeploymentWizardStep5({
   onSubmit,
   isPending,
   cicdProviders,
-}: DeploymentWizardStep5Props) {
+}: DeploymentWizardStep5ClientProps) {
   const t = useTranslations('deployment');
   const [autoStart, setAutoStart] = useState(data.autoStart || false);
 
@@ -103,3 +103,5 @@ export default function DeploymentWizardStep5({
     </div>
   );
 }
+
+export default DeploymentWizardStep5Client;

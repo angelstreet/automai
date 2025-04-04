@@ -8,7 +8,7 @@ import { Input } from '@/components/shadcn/input';
 import { Textarea } from '@/components/shadcn/textarea';
 import { Repository } from '@/types/component/repositoryComponentType';
 
-interface DeploymentWizardStep1Props {
+interface DeploymentWizardStep1ClientProps {
   name: string;
   description: string;
   repositoryId: string;
@@ -22,7 +22,7 @@ interface DeploymentWizardStep1Props {
   onRefreshRepositories: () => void;
 }
 
-const DeploymentWizardStep1: React.FC<DeploymentWizardStep1Props> = ({
+const DeploymentWizardStep1Client: React.FC<DeploymentWizardStep1ClientProps> = ({
   name,
   description,
   repositoryId,
@@ -120,4 +120,5 @@ const DeploymentWizardStep1: React.FC<DeploymentWizardStep1Props> = ({
   );
 };
 
-export default DeploymentWizardStep1;
+export default DeploymentWizardStep1Client;
+export { DeploymentWizardStep1Client };

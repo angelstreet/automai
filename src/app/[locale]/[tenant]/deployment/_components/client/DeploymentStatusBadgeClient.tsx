@@ -3,7 +3,7 @@
 import { CheckCircle, XCircle, Play, Clock, AlertTriangle, Calendar } from 'lucide-react';
 import React from 'react';
 
-import { STATUS_CONFIG } from '../constants';
+import { STATUS_CONFIG } from '../../constants';
 
 interface StatusBadgeProps {
   status: string;

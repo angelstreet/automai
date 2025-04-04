@@ -5,7 +5,7 @@ import React, { useEffect } from 'react';
 
 import { Host } from '@/types/component/hostComponentType';
 
-import HostSelector from './HostSelector';
+import HostSelector from '../HostSelector';
 
 interface DeploymentWizardStep3Props {
   hostIds: string[];

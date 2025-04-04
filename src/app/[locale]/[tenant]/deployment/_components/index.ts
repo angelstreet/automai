@@ -2,30 +2,22 @@
 
 // Server components
 export { EnhancedScriptSelector } from './EnhancedScriptSelector';
-export { DeploymentScriptSelectorEnhanced } from './DeploymentScriptSelectorEnhanced';
-
 export { HostSelector } from './HostSelector';
-export { DeploymentHostSelector } from './DeploymentHostSelector';
 
-export { DeploymentWizardStep2 } from './DeploymentWizardStep2';
-export { DeploymentWizardStep3 } from './DeploymentWizardStep3';
-export { DeploymentList } from './DeploymentList';
+// Client components 
+export { DeploymentWizardStep1Client } from './client/DeploymentWizardStep1Client';
+export { DeploymentWizardStep2Client } from './client/DeploymentWizardStep2Client';
+export { DeploymentWizardStep3Client } from './client/DeploymentWizardStep3Client';
+export { DeploymentWizardStep4Client } from './client/DeploymentWizardStep4Client';
+export { DeploymentWizardStep5Client } from './client/DeploymentWizardStep5Client';
+export { DeploymentStatusBadgeClient } from './client/DeploymentStatusBadgeClient';
+export { DeploymentCustomSwitchClient } from './client/DeploymentCustomSwitchClient';
+export { DeploymentListClient } from './client/DeploymentListClient';
+export { DeploymentWizardMainClient } from './client/DeploymentWizardMainClient';
+export { DeploymentActionsClient } from './client/DeploymentActionsClient';
+export { DeploymentWizardDialogClient } from './client/DeploymentWizardDialogClient';
 
-// UI components (may be used by both server and client components)
-export { default as StatusBadge } from './StatusBadge';
-export { default as CustomSwitch } from './CustomSwitch';
-export { default as DeploymentWizardStep1 } from './DeploymentWizardStep1';
-export { default as DeploymentWizardStep4 } from './DeploymentWizardStep4';
-
-// Client components
+// Original client components
 export { ClientDeploymentDetails } from './client/ClientDeploymentDetails';
-export { DeploymentDetailsClient } from './client/DeploymentDetailsClient';
-
 export { ClientDeploymentRunAction } from './client/ClientDeploymentRunAction';
-export { DeploymentRunActionClient } from './client/DeploymentRunActionClient';
-
-export { ClientDeploymentWizard } from './client/ClientDeploymentWizard';
-export { DeploymentWizardClient } from './client/DeploymentWizardClient';
-
 export { ClientEmptyState } from './client/ClientEmptyState';
-export { DeploymentEmptyStateClient } from './client/DeploymentEmptyStateClient';

@@ -4,7 +4,7 @@ import { Suspense } from 'react';
 import { getDeployments } from '@/app/actions/deploymentsAction';
 import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 
-import { DeploymentActionsClient } from './_components/DeploymentActionsClient';
+import { DeploymentActionsClient } from './_components/client/DeploymentActionsClient';
 import { DeploymentContent } from './_components/DeploymentContent';
 import { DeploymentSkeleton } from './_components/DeploymentSkeleton';
 

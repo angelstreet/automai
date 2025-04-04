@@ -9,12 +9,11 @@ import { DeploymentData } from '@/types/component/deploymentComponentType';
 import { Host as HostType, Host as SystemHost } from '@/types/component/hostComponentType';
 import { Repository } from '@/types/component/repositoryComponentType';
 
-import DeploymentWizardStep1 from '../DeploymentWizardStep1';
-import DeploymentWizardStep2 from '../DeploymentWizardStep2';
-import DeploymentWizardStep3 from '../DeploymentWizardStep3';
-import DeploymentWizardStep4 from '../DeploymentWizardStep4';
-
-import DeploymentWizardStep5 from './DeploymentWizardStep5';
+import { DeploymentWizardStep1Client } from './DeploymentWizardStep1Client';
+import { DeploymentWizardStep2Client } from './DeploymentWizardStep2Client';
+import { DeploymentWizardStep3Client } from './DeploymentWizardStep3Client';
+import { DeploymentWizardStep4Client } from './DeploymentWizardStep4Client';
+import { DeploymentWizardStep5Client } from './DeploymentWizardStep5Client';
 
 // Helper function to adapt system hosts to the format expected by the deployment module
 const adaptHostsForDeployment = (systemHosts: SystemHost[]): HostType[] => {
@@ -518,7 +517,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
         <form onSubmit={handleSubmit}>
           {/* Step 1: Basic Deployment Information */}
           {step === 1 && (
-            <DeploymentWizardStep1
+            <DeploymentWizardStep1Client
               name={deploymentData.name}
               description={deploymentData.description}
               repositoryId={deploymentData.repositoryId}
@@ -537,7 +536,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
 
           {/* Step 2: Select Scripts with Parameters */}
           {step === 2 && (
-            <DeploymentWizardStep2
+            <DeploymentWizardStep2Client
               selectedRepository={deploymentData.selectedRepository || null}
               scriptIds={deploymentData.scriptIds}
               repositoryScripts={repositoryScripts}
@@ -554,7 +553,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
 
           {/* Step 3: Select Target Hosts */}
           {step === 3 && (
-            <DeploymentWizardStep3
+            <DeploymentWizardStep3Client
               hostIds={deploymentData.hostIds}
               availableHosts={availableHosts}
               isLoadingHosts={false}
@@ -568,7 +567,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
 
           {/* Step 4: Schedule */}
           {step === 4 && (
-            <DeploymentWizardStep4
+            <DeploymentWizardStep4Client
               schedule={deploymentData.schedule || 'now'}
               scheduledTime={deploymentData.scheduledTime || ''}
               cronExpression={deploymentData.cronExpression || ''}
@@ -585,7 +584,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
 
           {/* Step 5: Review */}
           {step === 5 && (
-            <DeploymentWizardStep5
+            <DeploymentWizardStep5Client
               data={deploymentData}
               onUpdateData={(partialData) => {
                 setDeploymentData((prev) => ({ ...prev, ...partialData }));
