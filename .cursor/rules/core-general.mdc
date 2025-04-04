@@ -16,6 +16,15 @@ alwaysApply: true
   - Logic Hooks: Contain business logic, data fetching, and data manipulation
   - UI Components: Render UI and handle user interactions
 
+## React Best Practices
+
+- ✅ **Use React's Component Model**: Components should communicate through props and events
+- ✅ **Avoid Direct DOM Manipulation**: Never use `document.getElementById()`, `document.querySelector()`, etc.
+- ✅ **Don't Call DOM Methods**: Never use `.click()`, `.focus()`, or other direct DOM manipulation methods
+- ✅ **Use Events for Cross-Component Communication**: Custom events provide loose coupling between components
+- ❌ **Avoid Imperative DOM Code**: Code like `document.getElementById('some-id')?.click()` is forbidden
+- ✅ **Prefer Declarative Patterns**: Use state management, context, or events for component communication
+
 ## Planning and Communication
 - NEVER modify a file if mentionned at top #NEVER MODIFY
 - ALWAYS provide a clear plan before implementing code changes
@@ -145,3 +154,4 @@ export async function someServerAction() {
 - ✅ Always dispatch events after successful server actions: `window.dispatchEvent(new Event(REFRESH_DOMAIN_COMPLETE))`
 - ✅ Use `router.refresh()` in event listeners to trigger server component refreshes
 - ❌ NEVER rely on event-based communication for security-critical operations
+- ❌ NEVER use direct DOM manipulation like `document.getElementById('some-id')?.click()` for component communication
