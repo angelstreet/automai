@@ -65,9 +65,9 @@ export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActio
     console.log(
       `[@component:HostActionsClient] Toggling view mode from ${viewMode} to ${viewMode === 'grid' ? 'table' : 'grid'}`,
     );
-    // First toggle the view mode directly in the hook
+    // Simply toggle the view mode in the hook - this will update state and localStorage
     toggleViewMode();
-    // Then dispatch the event for any listeners
+    // Still dispatch the event for any listeners that might be interested
     window.dispatchEvent(new Event(TOGGLE_HOST_VIEW_MODE));
   };
 

@@ -145,7 +145,7 @@ export default function HostListClient({ initialHosts }: HostListClientProps) {
     setIsClient(true);
   }, []);
 
-  // Render the appropriate view based on viewMode, but only on client
+  // Render the appropriate view based on viewMode
   return (
     <div className="space-y-4 p-4">
       {!isClient ? (

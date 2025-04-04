@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import {
   REFRESH_HOSTS,
   REFRESH_HOSTS_COMPLETE,
+  OPEN_HOST_DIALOG,
   TOGGLE_HOST_VIEW_MODE,
 } from '@/app/[locale]/[tenant]/hosts/constants';
 
@@ -26,8 +27,8 @@ export default function HostsEventListener() {
 
     const handleToggleViewMode = () => {
       console.log('[@component:HostsEventListener] Handling toggle view mode event');
-      // Force refresh to ensure view mode change is applied
-      router.refresh();
+      // Do NOT refresh - this should be client-side only
+      // View mode toggle is handled by React state and localStorage
     };
 
     window.addEventListener(REFRESH_HOSTS_COMPLETE, handleRefreshComplete);
