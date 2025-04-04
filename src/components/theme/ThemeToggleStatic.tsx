@@ -1,7 +1,7 @@
 'use client';
 
 import { Sun, Moon, Cloud, Settings } from 'lucide-react';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import {
@@ -14,12 +14,21 @@ import { useTheme } from '@/hooks/useTheme';
 
 export function ThemeToggleStatic() {
   const { resolvedTheme, setTheme } = useTheme();
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Only show theme-specific UI after hydration to avoid mismatch
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="icon" className="rounded-full">
-          {resolvedTheme === 'light' ? (
+          {!isMounted ? (
+            // Default icon during server render and before hydration
+            <div className="h-5 w-5 rounded-full bg-primary/20 animate-pulse" />
+          ) : resolvedTheme === 'light' ? (
             <Sun className="h-5 w-5" />
           ) : resolvedTheme === 'dark' ? (
             <Moon className="h-5 w-5" />
