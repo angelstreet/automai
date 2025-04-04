@@ -3,7 +3,7 @@
 import { Terminal, MoreHorizontal, RefreshCw, XCircle, ScrollText } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import {
@@ -41,7 +41,10 @@ interface HostCardClientProps {
   onTestConnection?: (host: Host) => Promise<boolean>;
 }
 
-export function HostCardClient({ host, onDelete, onTestConnection }: HostCardClientProps) {
+// Export both as default and named export for backward compatibility
+export { HostCardClient as default, HostCardClient };
+
+function HostCardClient({ host, onDelete, onTestConnection }: HostCardClientProps) {
   const router = useRouter();
   const t = useTranslations('common');
 
@@ -163,73 +166,155 @@ export function HostCardClient({ host, onDelete, onTestConnection }: HostCardCli
     const locale = pathSegments[1] || 'en';
     const tenant = pathSegments[2] || 'default';
 
+    // Set current host for terminal to use
+    try {
+      // Data should already be in sessionStorage, so just logging and confirming
+      // that we're accessing this host
+      console.log('Accessing terminal for host:', {
+        name: host.name,
+        id: host.id,
+        is_windows: host.is_windows === true,
+        os_type: host.os_type || 'unknown',
+      });
+
+      // Still store current host reference for direct access
+      sessionStorage.setItem('currentHost', `host_${host.id}`);
+      sessionStorage.setItem('currentHostLastAccessed', Date.now().toString());
+
+      // For debugging - check if the host was properly stored earlier
+      const storedHost = sessionStorage.getItem(`host_${host.id}`);
+      const storedHostByName = sessionStorage.getItem(`host_name_${host.name.toLowerCase()}`);
+
+      if (!storedHost && !storedHostByName) {
+        console.warn('Warning: Host not found in sessionStorage, storing it now');
+
+        // Ensure is_windows is explicitly included and is a boolean
+        const hostWithExplicitWindows = {
+          ...host,
+          is_windows: host.is_windows === true,
+        };
+
+        // Store it now as a fallback
+        sessionStorage.setItem(`host_${host.id}`, JSON.stringify(hostWithExplicitWindows));
+        sessionStorage.setItem(
+          `host_name_${host.name.toLowerCase()}`,
+          JSON.stringify(hostWithExplicitWindows),
+        );
+        sessionStorage.setItem('currentHost_full', JSON.stringify(hostWithExplicitWindows));
+      } else {
+        console.log('Host found in sessionStorage:', {
+          byId: !!storedHost,
+          byName: !!storedHostByName,
+        });
+
+        // For debugging - also store the full object directly
+        sessionStorage.setItem(
+          'currentHost_full',
+          JSON.stringify({
+            ...host,
+            is_windows: host.is_windows === true,
+          }),
+        );
+      }
+    } catch (e) {
+      console.error('Error processing host for terminal:', e);
+    }
+
     // Build the correct path with locale and tenant
     const terminalPath = `/${locale}/${tenant}/terminals/${host.name.toLowerCase()}`;
     console.log(`Redirecting to terminal: ${terminalPath}`);
     router.push(terminalPath);
   };
 
-  const handleRefreshClick = async () => {
-    if (!onTestConnection || isRefreshing) return;
+  const handleRefreshClick = useCallback(async () => {
+    // Don't execute if already refreshing or deleting
+    if (isRefreshing || isDeleting) {
+      console.log('[HostCardClient] Skipping refresh - already in progress or deleting');
+      return;
+    }
+
+    console.log('[HostCardClient] Starting refresh for host:', host.id);
+    setIsRefreshing(true);
+    setLocalStatus('testing'); // Set local status to testing immediately
 
     try {
-      setIsRefreshing(true);
-      setLocalStatus('testing');
-
-      console.log('[HostCardClient] Testing connection for:', host.name);
-      const success = await onTestConnection(host);
-
-      if (success) {
-        console.log('[HostCardClient] Connection successful');
-        setLocalStatus('connected');
-      } else {
-        console.error('[HostCardClient] Connection failed');
-        setLocalStatus('failed');
+      if (!onTestConnection) {
+        throw new Error('Test connection callback not provided');
       }
-    } catch (error: any) {
-      console.error('[HostCardClient] Error testing connection:', error);
-      setErrorMessage(error.message || 'Connection test failed');
+
+      const result = await onTestConnection(host);
+      console.log('[HostCardClient] Refresh result:', { hostId: host.id, success: result });
+
+      // Update localStatus based on the test result
+      setLocalStatus(result ? 'connected' : 'failed');
+
+      if (result === false) {
+        setErrorMessage('Failed to connect to host. Please check your connection settings.');
+        setShowErrorDialog(true);
+      }
+    } catch (error) {
+      console.error('[HostCardClient] Refresh error:', error);
+      setErrorMessage(error instanceof Error ? error.message : 'An unexpected error occurred');
       setShowErrorDialog(true);
-      setLocalStatus('failed');
+      setLocalStatus('failed'); // Set status to failed on error
     } finally {
       setIsRefreshing(false);
     }
-  };
+  }, [host, onTestConnection, isRefreshing, isDeleting]);
 
-  const handleDeleteClick = async () => {
-    if (!onDelete || isDeleting) return;
+  const handleDeleteClick = useCallback(async () => {
+    if (isDeleting || isRefreshing) {
+      console.log('[HostCardClient] Skipping delete - already in progress or refreshing');
+      return;
+    }
+
+    if (!onDelete) {
+      console.error('[HostCardClient] Delete callback not provided');
+      return;
+    }
+
+    console.log('[HostCardClient] Starting delete for host:', host.id);
+    setIsDeleting(true);
 
     try {
-      setIsDeleting(true);
-      console.log('[HostCardClient] Deleting host:', host.name);
       await onDelete(host.id);
+      console.log('[HostCardClient] Host deleted successfully:', host.id);
       setIsDeleted(true);
-    } catch (error: any) {
-      console.error('[HostCardClient] Error deleting host:', error);
-      setErrorMessage(error.message || 'Delete operation failed');
+    } catch (error) {
+      console.error('[HostCardClient] Delete error:', error);
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to delete host');
       setShowErrorDialog(true);
-    } finally {
       setIsDeleting(false);
     }
-  };
+  }, [host, onDelete, isDeleting, isRefreshing]);
 
-  // If the host has been deleted, don't render the card
+  // If the host is deleted, don't render anything
   if (isDeleted) {
     return null;
   }
 
   return (
     <>
-      <Card className="h-full overflow-hidden transition-all hover:shadow-md">
-        <CardHeader className="relative p-4 pb-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              {getStatusDot(localStatus)}
-              <CardTitle className="text-lg font-semibold">{host.name}</CardTitle>
+      <Card className="relative w-[300px]">
+        <CardHeader className="p-4 pb-2 flex flex-row items-start justify-between space-y-0">
+          <div className="flex flex-col space-y-1.5">
+            <div className="flex items-center">
+              <div className="w-[200px] flex items-center">
+                <div className="mr-2">{getStatusDot(localStatus)}</div>
+                <CardTitle className="text-base font-semibold truncate flex-1">
+                  {host.name}
+                </CardTitle>
+              </div>
             </div>
+            <CardDescription className="text-xs">
+              {host.ip}
+              {host.port ? `:${host.port}` : ''}
+            </CardDescription>
+          </div>
+          <div className="flex items-center space-x-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <Button variant="ghost" size="icon" className="h-8 w-8">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -241,55 +326,54 @@ export function HostCardClient({ host, onDelete, onTestConnection }: HostCardCli
                     const tenant = pathSegments[2] || 'default';
                     router.push(`/${locale}/${tenant}/logs/${host.name}`);
                   }}
-                  className="py-2"
                 >
                   <ScrollText className="mr-2 h-4 w-4" />
                   <span>{t('logs')}</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleRefreshClick} className="py-2">
+                <DropdownMenuItem
+                  onClick={handleRefreshClick}
+                  disabled={isRefreshing || isDeleting}
+                >
                   <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                  <span>{t('refresh')}</span>
+                  <span>{isRefreshing ? t('refreshing') : t('refresh')}</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleDeleteClick} className="text-destructive py-2">
+                <DropdownMenuItem
+                  onClick={handleDeleteClick}
+                  disabled={isDeleting}
+                  className="text-destructive"
+                >
                   <XCircle className="mr-2 h-4 w-4" />
                   <span>{t('delete')}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          <CardDescription className="mt-1 text-sm truncate">
-            {host.description || `${host.ip}${host.port ? `:${host.port}` : ''}`}
-          </CardDescription>
         </CardHeader>
         <CardContent className="p-4 pt-2">
-          <div className="mt-2 space-y-3">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">{t('ip_address')}</span>
-              <span className="font-medium">
-                {host.ip}
-                {host.port ? `:${host.port}` : ''}
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">{t('type_label')}</span>
-              <span className="font-medium capitalize">{host.type || 'Unknown'}</span>
-            </div>
-            {localStatus === 'connected' && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full mt-2 gap-1"
-                onClick={handleTerminalClick}
-              >
-                <Terminal className="h-4 w-4" />
-                <span>{t('open')}</span>
-              </Button>
-            )}
+          <div className="flex flex-col space-y-2">
+            <Button
+              variant="default"
+              size="sm"
+              className="w-full mt-2"
+              onClick={handleTerminalClick}
+              disabled={localStatus !== 'connected'}
+            >
+              <Terminal className="h-4 w-4 mr-2" />
+              {t('open')}
+            </Button>
+            <p className="text-xs mt-1 text-muted-foreground">
+              {host.updated_at
+                ? `${t('updated_at')}: ${new Date(host.updated_at).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                  })}`
+                : `${t('updated_at')}: ${t('never')}`}
+            </p>
           </div>
         </CardContent>
       </Card>
 
-      {/* Error Dialog */}
       <Dialog open={showErrorDialog} onOpenChange={setShowErrorDialog}>
         <DialogContent>
           <DialogHeader>
@@ -297,7 +381,9 @@ export function HostCardClient({ host, onDelete, onTestConnection }: HostCardCli
             <DialogDescription>{errorMessage}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button onClick={() => setShowErrorDialog(false)}>{t('close')}</Button>
+            <Button variant="secondary" onClick={() => setShowErrorDialog(false)}>
+              {t('close')}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
