@@ -37,6 +37,8 @@
     "actions": "Actions",
     "error": "Error",
     "success": "Success",
+    "connection_success": "Connection successful",
+    "connection_failed": "Connection failed",
     "saving": "Saving...",
     "team": "Team",
     "email": "Email",

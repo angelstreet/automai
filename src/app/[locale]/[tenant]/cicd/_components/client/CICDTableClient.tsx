@@ -53,7 +53,6 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
     providers: hookProviders,
     isLoading: isLoadingProviders,
     deleteProvider,
-    testProvider,
     isDeleting,
     isTesting,
   } = useCICD();
@@ -105,12 +104,31 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
           }),
         );
 
-        // Use the hook's testProvider function
-        await testProvider(provider.id);
+        // Call the API endpoint instead of using the hook's testProvider function
+        const response = await fetch('/api/cicd/test-connection', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ provider }),
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to test connection');
+        }
+
+        // Show success toast
+        toast({
+          title: c('connection_test_results'),
+          description: `${provider.name}: ${c('successful')}`,
+          variant: 'default',
+        });
       } catch (error: any) {
         toast({
-          title: 'Error',
-          description: error.message || 'An unexpected error occurred',
+          title: c('connection_test_results'),
+          description: `${provider.name}: ${c('failed')} - ${error.message || 'An unexpected error occurred'}`,
           variant: 'destructive',
         });
       } finally {
@@ -130,7 +148,7 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
         );
       }
     },
-    [toast, testProvider],
+    [toast, c],
   );
 
   // Memoize dialog completion handler
