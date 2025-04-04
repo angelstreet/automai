@@ -48,7 +48,7 @@ type TenantProfile = {
 
 const AddMemberDialog = ({ open, onOpenChange, teamId }: AddMemberDialogProps) => {
   const t = useTranslations('team');
-  const tc = useTranslations('common');
+  const c = useTranslations('common');
   const params = useParams();
   const tenantId = params.tenant as string;
 
@@ -140,30 +140,30 @@ const AddMemberDialog = ({ open, onOpenChange, teamId }: AddMemberDialogProps) =
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>{t('membersTab.addMember.title')}</DialogTitle>
-          <DialogDescription>{t('membersTab.addMember.description')}</DialogDescription>
+          <DialogTitle>{t('members_add_title')}</DialogTitle>
+          <DialogDescription>{t('members_add_desc')}</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
-            <Label htmlFor="role">{t('membersTab.addMember.roleLabel')}</Label>
+            <Label htmlFor="role">{t('members_role_label')}</Label>
             <Select value={role} onValueChange={setRole}>
               <SelectTrigger id="role">
-                <SelectValue placeholder={t('membersTab.addMember.rolePlaceholder')} />
+                <SelectValue placeholder={t('members_add_role_placeholder')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="admin">{t('roles.admin')}</SelectItem>
-                <SelectItem value="developer">{t('roles.developer')}</SelectItem>
-                <SelectItem value="contributor">{t('roles.contributor')}</SelectItem>
-                <SelectItem value="viewer">{t('roles.viewer')}</SelectItem>
-                <SelectItem value="tester">{t('roles.tester')}</SelectItem>
+                <SelectItem value="admin">{t('roles_admin')}</SelectItem>
+                <SelectItem value="developer">{t('roles_developer')}</SelectItem>
+                <SelectItem value="contributor">{t('roles_contributor')}</SelectItem>
+                <SelectItem value="viewer">{t('roles_viewer')}</SelectItem>
+                <SelectItem value="tester">{t('roles_tester')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="grid gap-2">
             <div className="flex items-center justify-between">
-              <Label>{t('membersTab.addMember.selectMembers')}</Label>
+              <Label>{c('select')}</Label>
               <Button
                 variant="outline"
                 size="sm"
@@ -172,25 +172,25 @@ const AddMemberDialog = ({ open, onOpenChange, teamId }: AddMemberDialogProps) =
                 disabled={filteredProfiles.length === 0}
               >
                 {selectedProfiles.length === filteredProfiles.length && filteredProfiles.length > 0
-                  ? tc('deselectAll')
-                  : tc('selectAll')}
+                  ? c('deselect_all')
+                  : c('select_all')}
               </Button>
             </div>
 
             <div className="border rounded-md">
               <Command>
                 <CommandInput
-                  placeholder={t('membersTab.addMember.searchMembers')}
+                  placeholder={c('search_placeholder')}
                   value={searchQuery}
                   onValueChange={setSearchQuery}
                 />
                 <CommandList>
                   <CommandEmpty>
                     {isLoadingProfiles
-                      ? tc('loading')
+                      ? c('loading')
                       : isError
-                        ? tc('error')
-                        : t('membersTab.addMember.noResults')}
+                        ? c('error')
+                        : t('members_add_no_results')}
                   </CommandEmpty>
                   <CommandGroup>
                     {isLoadingProfiles ? (
@@ -240,7 +240,7 @@ const AddMemberDialog = ({ open, onOpenChange, teamId }: AddMemberDialogProps) =
             {selectedProfiles.length > 0 && (
               <div className="mt-2">
                 <Label className="text-xs text-muted-foreground">
-                  {t('membersTab.addMember.selectedCount', { count: selectedProfiles.length })}
+                  {t('members_add_selected_count', { count: selectedProfiles.length })}
                 </Label>
               </div>
             )}
@@ -249,7 +249,7 @@ const AddMemberDialog = ({ open, onOpenChange, teamId }: AddMemberDialogProps) =
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {tc('cancel')}
+            {c('cancel')}
           </Button>
           <Button onClick={handleSubmit} disabled={selectedProfiles.length === 0 || isLoading}>
             {isLoading ? (
@@ -257,7 +257,7 @@ const AddMemberDialog = ({ open, onOpenChange, teamId }: AddMemberDialogProps) =
             ) : (
               <Plus className="mr-2 h-4 w-4" />
             )}
-            {t('membersTab.addMember.submitButton')}
+            {t('members_add_button')}
           </Button>
         </DialogFooter>
       </DialogContent>

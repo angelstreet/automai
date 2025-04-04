@@ -21,8 +21,8 @@ export function SettingsContent() {
           {/* General Settings */}
           <Card>
             <CardHeader>
-              <CardTitle>{t('generalSettings')}</CardTitle>
-              <CardDescription>{t('description')}</CardDescription>
+              <CardTitle>{t('general_title')}</CardTitle>
+              <CardDescription>{t('desc')}</CardDescription>
             </CardHeader>
             <CardContent>{/* General settings content will go here */}</CardContent>
           </Card>

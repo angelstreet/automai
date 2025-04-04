@@ -21,8 +21,8 @@ export function ProfileSkeleton() {
           {/* Personal Information */}
           <Card>
             <CardHeader>
-              <CardTitle>{t('personalInfo')}</CardTitle>
-              <CardDescription>{t('edit')}</CardDescription>
+              <CardTitle>{t('personal_info_title')}</CardTitle>
+              <CardDescription>{t('edit_button')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -43,8 +43,8 @@ export function ProfileSkeleton() {
           {/* Account Settings */}
           <Card>
             <CardHeader>
-              <CardTitle>{t('accountSettings')}</CardTitle>
-              <CardDescription>{t('description')}</CardDescription>
+              <CardTitle>{t('account_settings_title')}</CardTitle>
+              <CardDescription>{t('desc')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <Skeleton className="h-10 w-48" />
@@ -55,8 +55,8 @@ export function ProfileSkeleton() {
           {/* Workspace Information */}
           <Card>
             <CardHeader>
-              <CardTitle>{t('workspaceInfo')}</CardTitle>
-              <CardDescription>{t('manageTeam')}</CardDescription>
+              <CardTitle>{t('workspace_info_title')}</CardTitle>
+              <CardDescription>{t('manage_team')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">

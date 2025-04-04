@@ -63,13 +63,16 @@ export default function TeamTabContainerClient({ user, resourceCounts }: TeamTab
   }
 
   return (
-    <TeamMemberDialogProvider teamId={teamDetails?.id || null} onMembersChanged={() => {
-      // When members change, we can add a refetch or invalidation here if needed
-      if (activeTab === 'members') {
-        // This will trigger refetch in MembersTab internal state
-        // No action needed as members tab has its own refresh logic
-      }
-    }}>
+    <TeamMemberDialogProvider
+      teamId={teamDetails?.id || null}
+      onMembersChanged={() => {
+        // When members change, we can add a refetch or invalidation here if needed
+        if (activeTab === 'members') {
+          // This will trigger refetch in MembersTab internal state
+          // No action needed as members tab has its own refresh logic
+        }
+      }}
+    >
       <div className="space-y-6">
         {activeTab === 'overview' && <TeamOverview team={teamDetails} />}
 

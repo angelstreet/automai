@@ -38,22 +38,22 @@ export default function TeamOverview({ team }: TeamOverviewProps) {
   const resourceCards = [
     {
       type: 'repository',
-      name: t('resources.repositories'),
+      name: t('resources_repositories'),
       count: resourceCounts.repositories,
     },
     {
       type: 'host',
-      name: t('resources.hosts'),
+      name: t('resources_hosts'),
       count: resourceCounts.hosts,
     },
     {
       type: 'cicd',
-      name: t('resources.cicd'),
+      name: t('title'),
       count: cicdCount, // Use the cicdCount variable
     },
     {
       type: 'deployment',
-      name: t('resources.deployments'),
+      name: t('resources_deployments'),
       count: resourceCounts.deployments,
     },
   ];
@@ -63,8 +63,8 @@ export default function TeamOverview({ team }: TeamOverviewProps) {
       <div className="space-y-6">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle>{t('resources.title')}</CardTitle>
-            <CardDescription>{t('resources.overview')}</CardDescription>
+            <CardTitle>{t('title')}</CardTitle>
+            <CardDescription>{t('overview')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -116,8 +116,8 @@ export default function TeamOverview({ team }: TeamOverviewProps) {
       {/* Resources Card */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle>{t('resources.title')}</CardTitle>
-          <CardDescription>{t('resources.overview')}</CardDescription>
+          <CardTitle>{t('title')}</CardTitle>
+          <CardDescription>{t('overview')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

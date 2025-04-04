@@ -11,7 +11,7 @@ export default async function SettingsPage() {
   return (
     <FeaturePageContainer
       title={t('title') || 'Settings'}
-      description={t('description') || 'Manage your account settings'}
+      description={t('desc') || 'Manage your account settings'}
     >
       <Suspense fallback={<SettingsSkeleton />}>
         <SettingsContent />

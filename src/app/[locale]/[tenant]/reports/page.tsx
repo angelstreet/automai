@@ -16,7 +16,7 @@ export default async function ReportsPage() {
 
   // Using direct FeaturePageContainer approach
   return (
-    <FeaturePageContainer title={t('title')} description={t('description')}>
+    <FeaturePageContainer title={t('title')} description={t('desc')}>
       <ReportsContent />
     </FeaturePageContainer>
   );

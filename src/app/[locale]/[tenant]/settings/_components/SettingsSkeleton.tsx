@@ -20,8 +20,8 @@ export function SettingsSkeleton() {
           {/* General Settings */}
           <Card>
             <CardHeader>
-              <CardTitle>{t('generalSettings')}</CardTitle>
-              <CardDescription>{t('description')}</CardDescription>
+              <CardTitle>{t('general_title')}</CardTitle>
+              <CardDescription>{t('desc')}</CardDescription>
             </CardHeader>
             <CardContent>
               <Skeleton className="h-32 w-full" />
@@ -31,8 +31,8 @@ export function SettingsSkeleton() {
           {/* Language Settings */}
           <Card>
             <CardHeader>
-              <CardTitle>{t('languageSettings')}</CardTitle>
-              <CardDescription>{t('languageDescription')}</CardDescription>
+              <CardTitle>{t('language_title')}</CardTitle>
+              <CardDescription>{t('language_desc')}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">

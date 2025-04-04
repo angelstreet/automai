@@ -40,12 +40,12 @@ export function RepositoryCardClient({
 
     // Use a safer method that's less likely to cause hydration errors
     try {
-      return t('lastSynced', {
+      return t('last_synced', {
         date: formatDistanceToNow(new Date(repository.lastSyncedAt), { addSuffix: true }),
       });
     } catch (e) {
       // Fall back to a simple format if there's an issue
-      return t('lastSynced', { date: t('recently') });
+      return t('last_synced', { date: t('recently') });
     }
   };
 
@@ -96,12 +96,12 @@ export function RepositoryCardClient({
           {repository?.isPrivate ? (
             <Badge variant="outline" className="flex items-center">
               <Lock className="h-3 w-3 mr-1" />
-              {t('private')}
+              {t('sort_private')}
             </Badge>
           ) : (
             <Badge variant="secondary" className="flex items-center">
               <Globe className="h-3 w-3 mr-1" />
-              {t('public')}
+              {t('sort_public')}
             </Badge>
           )}
         </div>
@@ -144,7 +144,7 @@ export function RepositoryCardClient({
             className="hover:underline"
             onClick={(e) => e.stopPropagation()}
           >
-            {t('viewOnProvider')}
+            {t('view_on_provider')}
           </a>
         </div>
 

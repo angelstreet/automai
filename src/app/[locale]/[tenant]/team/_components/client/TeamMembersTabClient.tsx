@@ -56,6 +56,7 @@ function MembersTabContent({
   setSearchQuery: (query: string) => void;
 }) {
   const t = useTranslations('team');
+  const c = useTranslations('common');
   // Safely try to access the dialog context - may not be available
   const dialogContext = useContext(TeamMemberDialogContext);
   // Use the dialog functions if context is available
@@ -114,7 +115,7 @@ function MembersTabContent({
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
-              placeholder={t('membersTab.search')}
+              placeholder={c('search')}
               className="pl-8"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -127,12 +128,12 @@ function MembersTabContent({
           <TableHeader>
             <TableRow>
               <TableHead className="w-[50px]"></TableHead>
-              <TableHead>{t('membersTab.name')}</TableHead>
-              <TableHead>{t('membersTab.team')}</TableHead>
-              <TableHead>{t('membersTab.email')}</TableHead>
-              <TableHead>{t('membersTab.role')}</TableHead>
+              <TableHead>{c('name')}</TableHead>
+              <TableHead>{c('team')}</TableHead>
+              <TableHead>{c('email')}</TableHead>
+              <TableHead>{t('members_role_label')}</TableHead>
               {canManageMembers && (
-                <TableHead className="text-right">{t('membersTab.actions')}</TableHead>
+                <TableHead className="text-right">{t('members_actions_label')}</TableHead>
               )}
             </TableRow>
           </TableHeader>
@@ -144,10 +145,10 @@ function MembersTabContent({
                   className="text-center py-8 text-muted-foreground"
                 >
                   {searchQuery
-                    ? t('membersTab.noSearchResults')
+                    ? t('members_add_no_results')
                     : teamId
-                      ? t('membersTab.noMembers')
-                      : t('membersTab.noTeam')}
+                      ? t('members_none')
+                      : t('create_team')}
                 </TableCell>
               </TableRow>
             ) : (
@@ -163,14 +164,14 @@ function MembersTabContent({
                     </Avatar>
                   </TableCell>
                   <TableCell className="py-2 font-medium">
-                    {member.user?.name || t('membersTab.unknownUser')}
+                    {member.user?.name || t('unknown')}
                   </TableCell>
-                  <TableCell className="py-2">{t('membersTab.defaultTeam')}</TableCell>
+                  <TableCell className="py-2">{c('select')}</TableCell>
                   <TableCell className="py-2">
                     {member.user?.email &&
                     member.user.email !== 'Email unavailable in profiles table'
                       ? member.user.email
-                      : t('membersTab.noEmail')}
+                      : t('error_email_required')}
                   </TableCell>
                   <TableCell className="py-2">
                     <Badge className={getRoleBadgeColor(member.role)} variant="outline">
@@ -192,8 +193,8 @@ function MembersTabContent({
                               const memberResource: TeamMemberResource = {
                                 id: member.profile_id,
                                 profile_id: member.profile_id,
-                                name: member.user?.name || t('membersTab.unknownUser'),
-                                email: member.user?.email || t('membersTab.noEmail'),
+                                name: member.user?.name || t('unknown'),
+                                email: member.user?.email || t('error_email_required'),
                                 avatar_url: member.user?.avatar_url,
                                 role: member.role,
                               };
@@ -204,13 +205,13 @@ function MembersTabContent({
                               }
                             }}
                           >
-                            {t('membersTab.memberActions.changePermissions')}
+                            {t('edit')}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-destructive"
                             onClick={() => onRemoveMember(member.profile_id)}
                           >
-                            {t('membersTab.memberActions.remove')}
+                            {t('members_remove')}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

@@ -346,7 +346,7 @@ export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplo
         <div className="flex justify-center items-center h-64">
           <div className="text-center">
             <FolderTree className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">{t('emptyDirectory')}</p>
+            <p className="text-muted-foreground">{t('empty_directory')}</p>
           </div>
         </div>
       );
@@ -466,7 +466,7 @@ export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplo
               </span>
               {isValidRepository && repository.isPrivate && (
                 <Badge variant="outline" className="ml-2 text-xs">
-                  {t('private')}
+                  {t('sort_private')}
                 </Badge>
               )}
             </div>
@@ -617,7 +617,7 @@ export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplo
                             </span>
                           </div>
                         ) : (
-                          <div className="text-xs text-muted-foreground">{t('selectFile')}</div>
+                          <div className="text-xs text-muted-foreground">{t('select_file')}</div>
                         )}
                       </div>
 
@@ -630,7 +630,7 @@ export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplo
                           <div className="flex justify-center items-center h-64">
                             <div className="text-center">
                               <FileCode className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                              <p className="text-xs text-muted-foreground">{t('selectFile')}</p>
+                              <p className="text-xs text-muted-foreground">{t('select_file')}</p>
                             </div>
                           </div>
                         )}

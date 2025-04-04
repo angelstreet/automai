@@ -109,9 +109,9 @@ export function RepositoryListClient() {
             className="pointer-events-auto"
           >
             <TabsList className="grid grid-cols-3 min-w-[400px]">
-              <TabsTrigger value="all">{t('all')}</TabsTrigger>
-              <TabsTrigger value="public">{t('public')}</TabsTrigger>
-              <TabsTrigger value="private">{t('private')}</TabsTrigger>
+              <TabsTrigger value="all">{t('sort_all')}</TabsTrigger>
+              <TabsTrigger value="public">{t('sort_public')}</TabsTrigger>
+              <TabsTrigger value="private">{t('sort_private')}</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -131,8 +131,8 @@ export function RepositoryListClient() {
           <div className="col-span-full">
             <EmptyState
               icon={<GitBranch className="h-10 w-10" />}
-              title={t('noRepositories')}
-              description={searchQuery ? t('noRepositoriesMatchingSearch') : t('noRepositoriesYet')}
+              title={t('none')}
+              description={searchQuery ? t('none_matching_search') : t('none_yet')}
               action={
                 <Button
                   onClick={() => document.getElementById('add-repository-button')?.click()}
@@ -140,7 +140,7 @@ export function RepositoryListClient() {
                   className="gap-1"
                 >
                   <PlusCircle className="h-4 w-4" />
-                  <span>{t('addRepository')}</span>
+                  <span>{t('add_button')}</span>
                 </Button>
               }
             />

@@ -11,14 +11,6 @@ import {
 } from '@/app/actions/authAction';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/shadcn/select';
-import { useToast } from '@/components/shadcn/use-toast';
 import { useUser } from '@/hooks';
 
 export default function SignUpPage() {
@@ -66,7 +58,7 @@ export default function SignUpPage() {
 
     // Validate that passwords match
     if (password !== confirmPassword) {
-      setError(t('passwordsDoNotMatch') || 'Passwords do not match');
+      setError(t('error_passwords_do_not_match') || 'Passwords do not match');
       setIsSubmitting(false);
       return;
     }
@@ -136,23 +128,23 @@ export default function SignUpPage() {
 
       <div className="w-full max-w-md p-6 space-y-4 bg-white dark:bg-gray-800 rounded-lg shadow-md">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">{t('signupTitle') || 'Create account'}</h1>
+          <h1 className="text-2xl font-bold">{t('signup_title') || 'Create account'}</h1>
           <p className="mt-1 text-gray-600 dark:text-gray-400">
-            {t('signupDescription') || 'Enter your details to create your account'}
+            {t('signup_desc') || 'Enter your details to create your account'}
           </p>
         </div>
 
         {success ? (
           <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-md text-center">
             <p className="text-green-700 dark:text-green-300">
-              {t('signupSuccess') || 'Account created successfully!'}
+              {t('signup_success') || 'Account created successfully!'}
             </p>
             <div className="mt-3">
               <Link
                 href={`/${locale}/login`}
                 className="inline-flex items-center justify-center text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
               >
-                {t('backToLogin')}
+                {t('back_to_login')}
               </Link>
             </div>
           </div>
@@ -160,7 +152,7 @@ export default function SignUpPage() {
           <form onSubmit={handleSubmit} className="mt-4 space-y-3">
             <div>
               <label htmlFor="name" className="block text-sm font-medium">
-                {t('name') || 'Name'}
+                {c('name')}
               </label>
               <Input
                 id="name"
@@ -169,7 +161,7 @@ export default function SignUpPage() {
                 onChange={(e) => setName(e.target.value)}
                 required
                 className="mt-1 border border-gray-200 dark:border-gray-700"
-                placeholder={t('namePlaceholder') || 'Your name'}
+                placeholder={t('signup_name_placeholder') || 'Your name'}
                 autoComplete="name"
                 disabled={isSubmitting}
               />
@@ -177,7 +169,7 @@ export default function SignUpPage() {
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium">
-                {t('email') || 'Email'}
+                {t('signin_email_label') || 'Email'}
               </label>
               <Input
                 id="email"
@@ -186,7 +178,7 @@ export default function SignUpPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 className="mt-1 border border-gray-200 dark:border-gray-700"
-                placeholder={t('emailPlaceholder') || 'name@example.com'}
+                placeholder={t('signin_email_placeholder') || 'name@example.com'}
                 autoComplete="email"
                 disabled={isSubmitting}
               />
@@ -194,7 +186,7 @@ export default function SignUpPage() {
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium">
-                {t('password') || 'Password'}
+                {t('signin_password_label') || 'Password'}
               </label>
               <Input
                 id="password"
@@ -203,7 +195,7 @@ export default function SignUpPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="mt-1 border border-gray-200 dark:border-gray-700"
-                placeholder={t('passwordPlaceholder') || 'Enter your password'}
+                placeholder={t('signin_password_placeholder') || 'Enter your password'}
                 autoComplete="new-password"
                 disabled={isSubmitting}
               />
@@ -211,7 +203,7 @@ export default function SignUpPage() {
 
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium">
-                {t('confirmPassword') || 'Confirm Password'}
+                {t('signup_confirm_password_label') || 'Confirm Password'}
               </label>
               <Input
                 id="confirmPassword"
@@ -220,7 +212,7 @@ export default function SignUpPage() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 className="mt-1 border border-gray-200 dark:border-gray-700"
-                placeholder={t('confirmPasswordPlaceholder') || 'Confirm your password'}
+                placeholder={t('signup_confirm_password_placeholder') || 'Confirm your password'}
                 autoComplete="new-password"
                 disabled={isSubmitting}
               />
@@ -234,8 +226,8 @@ export default function SignUpPage() {
 
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting
-                ? t('signingUp') || 'Creating account...'
-                : t('signupButton') || 'Create account'}
+                ? t('signup_signing') || 'Creating account...'
+                : t('signup_button') || 'Create account'}
             </Button>
 
             <div className="relative my-2">
@@ -244,7 +236,7 @@ export default function SignUpPage() {
               </div>
               <div className="relative flex justify-center text-sm">
                 <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
-                  {t('orContinueWith') || 'Or continue with'}
+                  {t('signin_button') || 'Or continue with'}
                 </span>
               </div>
             </div>
@@ -298,12 +290,12 @@ export default function SignUpPage() {
         )}
 
         <div className="text-center text-sm text-gray-600 dark:text-gray-400">
-          {t('alreadyHaveAccount') || 'Already have an account?'}{' '}
+          {t('have_account') || 'Already have an account?'}{' '}
           <Link
             href={`/${locale}/login`}
             className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
           >
-            {t('loginLink') || 'Sign in'}
+            {t('signin_link') || 'Sign in'}
           </Link>
         </div>
       </div>

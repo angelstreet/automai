@@ -26,7 +26,7 @@ export default function TeamActions() {
     return (
       <Button variant="default" size="sm">
         <PlusIcon className="h-4 w-4 mr-1" />
-        {t('createTeam')}
+        {t('create_team')}
       </Button>
     );
   }
@@ -64,7 +64,7 @@ export default function TeamActions() {
       <div className="flex gap-2 items-center">
         <Button variant="outline" size="sm" onClick={handleAddMemberClick}>
           <PlusIcon className="h-4 w-4 mr-1" />
-          {t('membersTab.add')}
+          {t('members_add_button')}
         </Button>
       </div>
 

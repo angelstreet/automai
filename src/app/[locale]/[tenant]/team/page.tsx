@@ -51,7 +51,7 @@ export default async function TeamPage() {
   return (
     <FeaturePageContainer
       title={t('title')}
-      description={t('description')}
+      description={t('desc')}
       actions={<TeamActionsClient />}
     >
       <Suspense fallback={<TeamSkeleton />}>

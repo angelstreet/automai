@@ -26,7 +26,7 @@ export function DeploymentWizardDialogClient({
   onOpenChange,
   onSuccess,
 }: DeploymentWizardDialogClientProps) {
-  const t = useTranslations('deployments');
+  const t = useTranslations('team');
   const tc = useTranslations('deployment');
   const { hosts, isLoading: isLoadingHosts } = useHost();
   const { providers: cicdProviders, isLoading: isLoadingCICD } = useCICD();
@@ -62,7 +62,7 @@ export function DeploymentWizardDialogClient({
           <DialogTitle>{tc('wizard.createDeployment')}</DialogTitle>
         </DialogHeader>
         <DialogDescription className="text-sm text-muted-foreground mb-4">
-          {t('createDeploymentDescription', {
+          {t('wizard_desc_placeholder', {
             defaultValue: 'Configure your new deployment settings',
           })}
         </DialogDescription>

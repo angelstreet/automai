@@ -273,7 +273,7 @@ export function HostCardClient({ host, onDelete, onTestConnection }: HostCardCli
               </span>
             </div>
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">{t('type', { fallback: 'Type' })}</span>
+              <span className="text-muted-foreground">{t('type_label', { fallback: 'Type' })}</span>
               <span className="font-medium capitalize">{host.type || 'Unknown'}</span>
             </div>
             {localStatus === 'connected' && (

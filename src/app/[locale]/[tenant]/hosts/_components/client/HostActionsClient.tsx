@@ -86,14 +86,14 @@ export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActio
 
         <Button size="sm" className="h-8 gap-1" onClick={handleAddHost} id="add-host-button">
           <PlusCircle className="h-4 w-4" />
-          <span>{t('add_host', { fallback: 'Add Host' })}</span>
+          <span>{t('add_button', { fallback: 'Add Host' })}</span>
         </Button>
       </div>
 
       <Dialog open={showAddHost} onOpenChange={handleDialogClose}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t('add_host_dialog_title', { fallback: 'Add New Host' })}</DialogTitle>
+            <DialogTitle>{t('add_title', { fallback: 'Add New Host' })}</DialogTitle>
           </DialogHeader>
           <HostFormDialogClient
             formData={formData}

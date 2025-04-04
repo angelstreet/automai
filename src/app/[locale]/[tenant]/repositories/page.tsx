@@ -14,8 +14,8 @@ export default async function RepositoriesPage() {
   // Using direct approach for clarity
   return (
     <FeaturePageContainer
-      title={t('repositories')}
-      description={t('repositories_description')}
+      title={t('title')}
+      description={t('desc')}
       actions={<RepositoryActionsClient repositoryCount={repositories.length} />}
     >
       <Suspense fallback={<RepositorySkeletonClient />}>

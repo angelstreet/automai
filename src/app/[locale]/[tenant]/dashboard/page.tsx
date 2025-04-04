@@ -14,7 +14,7 @@ export default async function DashboardPage() {
 
   // Direct approach since we need to debug the issue
   return (
-    <FeaturePageContainer title={t('title')} description={t('description')} actions={null}>
+    <FeaturePageContainer title={t('title')} description={t('desc')} actions={null}>
       <DashboardContent />
     </FeaturePageContainer>
   );

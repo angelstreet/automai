@@ -11,7 +11,7 @@ export default function OverviewTabSkeleton() {
   return (
     <Card>
       <CardHeader className="py-3">
-        <CardTitle>{t('resources.title')}</CardTitle>
+        <CardTitle>{t('title')}</CardTitle>
         <Skeleton className="h-4 w-72 mt-1" />
       </CardHeader>
       <CardContent className="pt-1">

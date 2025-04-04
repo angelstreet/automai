@@ -12,7 +12,7 @@ export default async function ProfilePage() {
 
   // Using direct FeaturePageContainer approach
   return (
-    <FeaturePageContainer title={t('title')} description={t('description')}>
+    <FeaturePageContainer title={t('title')} description={t('desc')}>
       <Suspense fallback={<ProfileSkeleton />}>
         <ProfileContent user={userData} />
       </Suspense>

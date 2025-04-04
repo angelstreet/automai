@@ -28,7 +28,7 @@ export function BillingActions() {
       </Button>
       <Button size="sm" className="h-8 gap-1" onClick={handleManagePayment}>
         <CreditCard className="h-4 w-4" />
-        <span>{t('addPaymentMethod')}</span>
+        <span>{t('add_payment_method')}</span>
       </Button>
     </div>
   );

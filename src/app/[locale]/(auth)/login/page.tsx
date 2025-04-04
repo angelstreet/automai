@@ -24,8 +24,8 @@ export default function LoginPage() {
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
-      const emailParam = urlParams.get('email');
-      const passwordParam = urlParams.get('password');
+      const emailParam = urlParams.get('signin_email_label');
+      const passwordParam = urlParams.get('signin_password_label');
       const errorParam = urlParams.get('error');
 
       if (emailParam) setEmail(emailParam);
@@ -139,14 +139,14 @@ export default function LoginPage() {
       </div>
       <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-gray-800 rounded-lg shadow-md">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">{t('signIn')}</h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">{t('signInToYourAccount')}</p>
+          <h1 className="text-2xl font-bold">{t('signin_title')}</h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">{t('signin_title')}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
           <div>
             <label htmlFor="email" className="block text-sm font-medium">
-              {t('email')}
+              {t('signin_email_label')}
             </label>
             <Input
               id="email"
@@ -164,13 +164,13 @@ export default function LoginPage() {
           <div>
             <div className="flex items-center justify-between">
               <label htmlFor="password" className="block text-sm font-medium">
-                {t('password')}
+                {t('signin_password_label')}
               </label>
               <a
                 href={`/${locale}/forgot-password`}
                 className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
               >
-                {t('forgotPassword')}
+                {t('signin_forgot_password')}
               </a>
             </div>
             <Input
@@ -192,7 +192,7 @@ export default function LoginPage() {
           )}
 
           <Button type="submit" className="w-full" disabled={isButtonDisabled}>
-            {isSubmitting ? t('signingIn') : t('signIn')}
+            {isSubmitting ? t('signin_logging') : t('signin_title')}
           </Button>
 
           <div className="relative my-4">
@@ -201,7 +201,7 @@ export default function LoginPage() {
             </div>
             <div className="relative flex justify-center text-sm">
               <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
-                {t('orContinueWith')}
+                {t('signin_button')}
               </span>
             </div>
           </div>
@@ -254,12 +254,12 @@ export default function LoginPage() {
 
           <div className="text-center mt-4">
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              {t('dontHaveAccount')}{' '}
+              {t('no_account')}{' '}
               <a
                 href={`/${locale}/signup`}
                 className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
               >
-                {t('signUp')}
+                {t('signup_title')}
               </a>
             </p>
           </div>

@@ -11,6 +11,7 @@ import { User } from '@/types/service/userServiceType';
 
 export default function TeamHeader({ user }: { user?: User | null }) {
   const t = useTranslations('team');
+  const c = useTranslations('common');
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -49,8 +50,8 @@ export default function TeamHeader({ user }: { user?: User | null }) {
       {/* Navigation Tabs */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid grid-cols-2 mb-8">
-          <TabsTrigger value="overview">{t('overview')}</TabsTrigger>
-          <TabsTrigger value="members">{t('membersTab.title')}</TabsTrigger>
+          <TabsTrigger value="overview">{c('overview')}</TabsTrigger>
+          <TabsTrigger value="members">{t('members_title')}</TabsTrigger>
         </TabsList>
       </Tabs>
     </div>

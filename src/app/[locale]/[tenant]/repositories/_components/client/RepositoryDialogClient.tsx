@@ -183,7 +183,7 @@ export function RepositoryDialogClient({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto" data-form-type="do-not-autofill">
         <DialogHeader>
-          <DialogTitle className="text-xl">{t('connectRepository')}</DialogTitle>
+          <DialogTitle className="text-xl">{t('connect_repo')}</DialogTitle>
           <DialogDescription>{t('connect_to_git_provider')}</DialogDescription>
         </DialogHeader>
 
@@ -194,14 +194,14 @@ export function RepositoryDialogClient({
               className="flex items-center justify-center"
             >
               <Github className="w-4 h-4 mr-2" />
-              {t('gitProvider')}
+              {t('git_provider_label')}
             </TabsTrigger>
             <TabsTrigger
               value={CONNECT_REPOSITORY_TABS.QUICK_CLONE}
               className="flex items-center justify-center"
             >
               <Globe className="w-4 h-4 mr-2" />
-              {t('publicRepository')}
+              {t('public_repo')}
             </TabsTrigger>
           </TabsList>
 
@@ -217,7 +217,7 @@ export function RepositoryDialogClient({
                   <GitHubIcon className="h-10 w-10 mb-2" />
                   <h3 className="font-medium text-center">GitHub</h3>
                   <p className="text-xs text-center text-muted-foreground mt-1">
-                    {t('connectViaOAuthOrToken')}
+                    {t('connect_via_oauth_or_token')}
                   </p>
                 </div>
 
@@ -229,7 +229,7 @@ export function RepositoryDialogClient({
                   <GitLabIcon className="h-10 w-10 mb-2" />
                   <h3 className="font-medium text-center">GitLab</h3>
                   <p className="text-xs text-center text-muted-foreground mt-1">
-                    {t('connectViaOAuthOrToken')}
+                    {t('connect_via_oauth_or_token')}
                   </p>
                 </div>
 
@@ -241,10 +241,10 @@ export function RepositoryDialogClient({
                   <GiteaIcon className="h-10 w-10 mb-2" />
                   <h3 className="font-medium text-center">Gitea</h3>
                   <p className="text-xs text-center text-muted-foreground mt-1">
-                    {t('connectViaToken')}
+                    {t('connect_via_token')}
                   </p>
                   <Badge variant="secondary" className="mt-2">
-                    {t('selfHosted')}
+                    {t('sort_self_hosted')}
                   </Badge>
                 </div>
               </div>
@@ -268,7 +268,7 @@ export function RepositoryDialogClient({
                       {currentProvider !== 'gitea' && (
                         <TabsTrigger value={AUTH_METHODS.OAUTH}>OAuth</TabsTrigger>
                       )}
-                      <TabsTrigger value={AUTH_METHODS.TOKEN}>{t('accessToken')}</TabsTrigger>
+                      <TabsTrigger value={AUTH_METHODS.TOKEN}>{t('access_token_label')}</TabsTrigger>
                     </TabsList>
 
                     {currentProvider !== 'gitea' && (
@@ -312,7 +312,7 @@ export function RepositoryDialogClient({
                       <div className="space-y-4">
                         {currentProvider === 'gitea' && (
                           <div className="space-y-2">
-                            <Label htmlFor="serverUrl">{t('serverUrl')}</Label>
+                            <Label htmlFor="serverUrl">{t('server_url_label')}</Label>
                             <Input
                               id="serverUrl"
                               placeholder="https://gitea.example.com"
@@ -329,12 +329,12 @@ export function RepositoryDialogClient({
                               : currentProvider === 'gitlab'
                                 ? 'GitLab'
                                 : 'Gitea'}{' '}
-                            {t('accessToken')}
+                            {t('access_token_label')}
                           </Label>
                           <Input
                             id="accessToken"
                             name="new-token"
-                            placeholder={t('enterAccessToken')}
+                            placeholder={t('enter_access_token')}
                             value={accessToken}
                             onChange={(e) => setAccessToken(e.target.value)}
                             type="password"
@@ -343,7 +343,7 @@ export function RepositoryDialogClient({
                         </div>
 
                         <p className="text-xs text-muted-foreground">
-                          {t('tokenGenerationInfo', {
+                          {t('token_generation_info', {
                             provider:
                               currentProvider === 'github'
                                 ? 'GitHub'
@@ -354,7 +354,7 @@ export function RepositoryDialogClient({
                         </p>
 
                         <Alert>
-                          <AlertDescription>{t('tokenSecurityInfo')}</AlertDescription>
+                          <AlertDescription>{t('token_security_info')}</AlertDescription>
                         </Alert>
 
                         <Button
@@ -372,7 +372,7 @@ export function RepositoryDialogClient({
                               {t('connecting')}
                             </>
                           ) : (
-                            <>{t('connectRepository')}</>
+                            <>{t('connect_repo')}</>
                           )}
                         </Button>
                       </div>
@@ -386,23 +386,23 @@ export function RepositoryDialogClient({
           {/* Quick Clone Tab */}
           <TabsContent value={CONNECT_REPOSITORY_TABS.QUICK_CLONE}>
             <div className="space-y-6">
-              <p className="text-sm">{t('quickCloneDescription')}</p>
+              <p className="text-sm">{t('quick_clone_desc')}</p>
 
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="repoUrl">{t('repositoryUrl')}</Label>
+                  <Label htmlFor="repoUrl">{t('repo_url_label')}</Label>
                   <Input
                     id="repoUrl"
                     placeholder="https://github.com/username/repository.git"
                     value={quickCloneUrl}
                     onChange={(e) => setQuickCloneUrl(e.target.value)}
                   />
-                  <p className="text-xs text-muted-foreground">{t('repositoryUrlDescription')}</p>
+                  <p className="text-xs text-muted-foreground">{t('repo_url_desc')}</p>
                 </div>
               </div>
 
               <Alert>
-                <AlertDescription>{t('quickCloneInfo')}</AlertDescription>
+                <AlertDescription>{t('quick_clone_info')}</AlertDescription>
               </Alert>
 
               <Button
@@ -418,7 +418,7 @@ export function RepositoryDialogClient({
                 ) : (
                   <>
                     <Globe className="w-4 h-4 mr-2" />
-                    {t('cloneRepository')}
+                    {t('clone_repo')}
                   </>
                 )}
               </Button>

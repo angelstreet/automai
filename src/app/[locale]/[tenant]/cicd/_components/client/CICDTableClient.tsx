@@ -178,8 +178,8 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
         <CardContent className="p-0">
           <EmptyState
             icon={<AlertCircle className="h-10 w-10" />}
-            title={t('no_providers_title', { fallback: 'No CI/CD Providers' })}
-            description={t('no_providers_description', {
+            title={t('none_title', { fallback: 'No CI/CD Providers' })}
+            description={t('none_desc', {
               fallback: 'Add a CI/CD provider to start creating deployments',
             })}
             action={
@@ -190,7 +190,7 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
                 }}
               >
                 <PlusCircle className="h-4 w-4 mr-2" />
-                {t('add_provider', { fallback: 'Add Provider' })}
+                {t('add_button', { fallback: 'Add Provider' })}
               </Button>
             }
           />
@@ -220,11 +220,11 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[250px]">{t('provider_name')}</TableHead>
-              <TableHead>{t('provider_type')}</TableHead>
-              <TableHead>{t('provider_url')}</TableHead>
-              <TableHead>{t('provider_auth_type')}</TableHead>
-              <TableHead className="text-right">{t('actions')}</TableHead>
+              <TableHead className="w-[250px]">{t('provider_name_label')}</TableHead>
+              <TableHead>{t('provider_type_label')}</TableHead>
+              <TableHead>{t('provider_url_label')}</TableHead>
+              <TableHead>{t('provider_auth_type_label')}</TableHead>
+              <TableHead className="text-right">{t('actions_label')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -290,10 +290,10 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t('delete_provider_dialog_title')}</AlertDialogTitle>
+            <AlertDialogTitle>{t('delete_provider_title')}</AlertDialogTitle>
             <AlertDialogDescription>
               {selectedProvider &&
-                t('delete_provider_confirmation', {
+                t('delete_provider_confirm', {
                   name: selectedProvider.name,
                 })}
               <br />
@@ -322,8 +322,8 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
           <DialogHeader>
             <DialogTitle>
               {isEditing
-                ? t('edit_provider_dialog_title', { fallback: 'Edit CI/CD Provider' })
-                : t('add_provider_dialog_title', { fallback: 'Add CI/CD Provider' })}
+                ? t('edit_title', { fallback: 'Edit CI/CD Provider' })
+                : t('add_title', { fallback: 'Add CI/CD Provider' })}
             </DialogTitle>
           </DialogHeader>
           <CICDFormDialogClient

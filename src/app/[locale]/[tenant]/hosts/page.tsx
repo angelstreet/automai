@@ -19,8 +19,8 @@ export default async function HostsPage() {
   // Using direct FeaturePageContainer approach
   return (
     <FeaturePageContainer
-      title={t('hosts')}
-      description={t('hosts_description')}
+      title={t('title')}
+      description={t('desc')}
       actions={<HostActionsClient hostCount={hostCount} />}
     >
       <Suspense fallback={<HostSkeleton />}>

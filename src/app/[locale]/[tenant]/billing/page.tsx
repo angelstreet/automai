@@ -10,7 +10,7 @@ export default async function BillingPage() {
   return (
     <FeaturePageContainer
       title={t('title')}
-      description={t('description')}
+      description={t('desc')}
     >
       <Suspense fallback={<BillingSkeleton />}>
         <BillingContent />

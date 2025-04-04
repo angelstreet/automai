@@ -118,7 +118,7 @@ const EditPermissionsDialog = ({
               role,
             });
           },
-          t('membersTab.editPermissions.roleAppliedDesc', { role }),
+          t('members_edit_role_applied', { role }),
         );
       }
     }
@@ -126,7 +126,7 @@ const EditPermissionsDialog = ({
 
   const handleSubmit = async () => {
     if (!teamId || !member) {
-      showValidationError(t('membersTab.editPermissions.missingTeamOrMember'));
+      showValidationError(t('members_edit_missing_team_or_member'));
       return;
     }
 
@@ -146,7 +146,7 @@ const EditPermissionsDialog = ({
 
         onOpenChange(false);
       },
-      t('membersTab.editPermissions.successDesc', { name: member.name }),
+      t('members_edit_success_desc', { name: member.name }),
     );
   };
 
@@ -164,7 +164,7 @@ const EditPermissionsDialog = ({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="w-full max-w-3xl mx-auto p-4">
           <DialogHeader className="pb-2">
-            <DialogTitle>{t('membersTab.editPermissions.title')}</DialogTitle>
+            <DialogTitle>{t('members_edit_title')}</DialogTitle>
           </DialogHeader>
           <div className="flex items-center justify-center py-6">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -179,9 +179,9 @@ const EditPermissionsDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-full max-w-3xl mx-auto p-4">
         <DialogHeader className="pb-2 space-y-1">
-          <DialogTitle>{t('membersTab.editPermissions.title')}</DialogTitle>
+          <DialogTitle>{t('members_edit_title')}</DialogTitle>
           <DialogDescription className="text-xs">
-            {t('membersTab.editPermissions.description')}
+            {t('members_edit_desc')}
           </DialogDescription>
         </DialogHeader>
 
@@ -199,19 +199,19 @@ const EditPermissionsDialog = ({
         <div className="grid gap-3">
           <div className="grid gap-1">
             <Label htmlFor="role-template" className="text-sm">
-              {t('membersTab.editPermissions.roleTemplate')}
+              {t('members_edit_role_template')}
             </Label>
             <Select value={roleTemplate} onValueChange={applyRoleTemplate}>
               <SelectTrigger id="role-template" className="h-8">
-                <SelectValue placeholder={t('membersTab.editPermissions.selectRole')} />
+                <SelectValue placeholder={t('members_edit_role_placeholder')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="admin">{t('roles.adminFull')}</SelectItem>
-                <SelectItem value="developer">{t('roles.developer')}</SelectItem>
-                <SelectItem value="contributor">{t('roles.contributor')}</SelectItem>
-                <SelectItem value="viewer">{t('roles.viewerReadOnly')}</SelectItem>
-                <SelectItem value="tester">{t('roles.tester')}</SelectItem>
-                <SelectItem value="custom">{t('roles.custom')}</SelectItem>
+                <SelectItem value="admin">{t('roles_admin_full')}</SelectItem>
+                <SelectItem value="developer">{t('roles_developer')}</SelectItem>
+                <SelectItem value="contributor">{t('roles_contributor')}</SelectItem>
+                <SelectItem value="viewer">{t('roles_viewer_read_only')}</SelectItem>
+                <SelectItem value="tester">{t('roles_tester')}</SelectItem>
+                <SelectItem value="custom">{t('roles_custom')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -221,7 +221,7 @@ const EditPermissionsDialog = ({
               <TableHeader className="bg-background sticky top-0 z-10">
                 <TableRow>
                   <TableHead className="py-2 w-[150px]">
-                    {t('membersTab.editPermissions.resource')}
+                    {t('members_edit_resource_label')}
                   </TableHead>
                   {Object.keys(PERMISSION_LABELS).map((perm) => (
                     <TableHead key={perm} className="text-center py-2 px-1 w-[64px]">
@@ -262,7 +262,7 @@ const EditPermissionsDialog = ({
           </Button>
           <Button onClick={handleSubmit} disabled={isLoading} size="sm">
             {isLoading && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
-            {t('membersTab.editPermissions.saveButton')}
+            {t('save')}
           </Button>
         </DialogFooter>
       </DialogContent>

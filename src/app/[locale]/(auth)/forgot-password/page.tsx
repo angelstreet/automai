@@ -71,7 +71,7 @@ export default function ForgotPasswordPage() {
       </div>
       <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-gray-800 rounded-lg shadow-md">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">{t('forgotPassword')}</h1>
+          <h1 className="text-2xl font-bold">{t('signin_forgot_password')}</h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">{t('enterEmailToReset')}</p>
         </div>
 
@@ -83,7 +83,7 @@ export default function ForgotPasswordPage() {
           <form onSubmit={handleSubmit} className="mt-8 space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium">
-                {t('email')}
+                {t('signin_email_label')}
               </label>
               <Input
                 id="email"
@@ -111,7 +111,7 @@ export default function ForgotPasswordPage() {
                 href={`/${locale}/login`}
                 className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
               >
-                {t('backToLogin')}
+                {t('back_to_login')}
               </a>
             </div>
           </form>

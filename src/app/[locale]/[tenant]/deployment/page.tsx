@@ -4,12 +4,12 @@ import { Suspense } from 'react';
 import { getDeployments } from '@/app/actions/deploymentsAction';
 import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 
-import { DeploymentActionsClient } from './_components/client/DeploymentActionsClient';
 import { DeploymentContent } from './_components/DeploymentContent';
 import { DeploymentSkeleton } from './_components/DeploymentSkeleton';
+import { DeploymentActionsClient } from './_components/client/DeploymentActionsClient';
 
 export default async function DeploymentPage() {
-  const t = await getTranslations('deployments');
+  const t = await getTranslations('team');
 
   // Fetch initial deployments to get count
   const deploymentsResponse = await getDeployments();
@@ -18,8 +18,8 @@ export default async function DeploymentPage() {
 
   return (
     <FeaturePageContainer
-      title={t('deployments')}
-      description={t('deployments_description')}
+      title={t('resources_deployments')}
+      description={t('desc')}
       actions={<DeploymentActionsClient deploymentCount={deploymentCount} />}
     >
       <Suspense fallback={<DeploymentSkeleton />}>

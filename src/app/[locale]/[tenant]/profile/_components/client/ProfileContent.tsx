@@ -74,8 +74,8 @@ export function ProfileContent({
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <h2 className="text-xl font-semibold mb-4">{t('sessionExpired')}</h2>
-          <p className="text-muted-foreground mb-4">{t('pleaseLogin')}</p>
+          <h2 className="text-xl font-semibold mb-4">{t('session_expired')}</h2>
+          <p className="text-muted-foreground mb-4">{t('please_login')}</p>
           <Button
             onClick={() => {
               document.cookie.split(';').forEach((c) => {
@@ -86,7 +86,7 @@ export function ProfileContent({
               window.location.href = `/${locale}/login`;
             }}
           >
-            {t('logIn')}
+            {t('login_button')}
           </Button>
         </div>
       </div>
@@ -100,30 +100,30 @@ export function ProfileContent({
           {/* Personal Information */}
           <Card>
             <CardHeader>
-              <CardTitle>{t('personalInfo')}</CardTitle>
-              <CardDescription>{t('edit')}</CardDescription>
+              <CardTitle>{t('personal_info_title')}</CardTitle>
+              <CardDescription>{t('edit_button')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="text-sm font-medium">{t('name')}</label>
+                <label className="text-sm font-medium">{c('name')}</label>
                 <div className="flex gap-2 mt-1">
                   <Input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder={t('enterName')}
+                    placeholder={t('enter_name_placeholder')}
                     className="max-w-md"
                   />
                   <Button onClick={handleUpdateName} disabled={isUpdating || name === user.name}>
-                    {isUpdating ? t('updating') : t('update')}
+                    {isUpdating ? t('updating') : t('update_button')}
                   </Button>
                 </div>
               </div>
               <div>
-                <label className="text-sm font-medium">{t('email')}</label>
+                <label className="text-sm font-medium">{t('signin_email_label')}</label>
                 <p className="text-muted-foreground">{user.email}</p>
               </div>
               <div>
-                <label className="text-sm font-medium">{t('plan')}</label>
+                <label className="text-sm font-medium">{t('plan_label')}</label>
                 <p className="text-muted-foreground">{'TRIAL'}</p>
               </div>
             </CardContent>
@@ -132,18 +132,18 @@ export function ProfileContent({
           {/* Account Settings */}
           <Card>
             <CardHeader>
-              <CardTitle>{t('accountSettings')}</CardTitle>
-              <CardDescription>{t('description')}</CardDescription>
+              <CardTitle>{t('account_settings_title')}</CardTitle>
+              <CardDescription>{t('desc')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <Button
                 variant="outline"
                 onClick={() => router.push(`/${locale}/${tenant}/settings`)}
               >
-                {t('manageSettings')}
+                {t('manage_settings')}
               </Button>
               <Button variant="outline" onClick={() => router.push(`/${locale}/${tenant}/billing`)}>
-                {t('upgradePlan')}
+                {t('upgrade_plan')}
               </Button>
             </CardContent>
           </Card>
@@ -152,8 +152,8 @@ export function ProfileContent({
           {tenant && (
             <Card>
               <CardHeader>
-                <CardTitle>{t('workspaceInfo')}</CardTitle>
-                <CardDescription>{t('manageTeam')}</CardDescription>
+                <CardTitle>{t('workspace_info_title')}</CardTitle>
+                <CardDescription>{t('manage_team')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
@@ -161,7 +161,7 @@ export function ProfileContent({
                   <p className="text-muted-foreground">{tenant}</p>
                 </div>
                 <Button variant="outline" onClick={() => router.push(`/${locale}/${tenant}/team`)}>
-                  {t('manageTeam')}
+                  {t('manage_team')}
                 </Button>
               </CardContent>
             </Card>

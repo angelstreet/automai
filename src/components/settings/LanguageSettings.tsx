@@ -38,16 +38,16 @@ export function LanguageSettings() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t('languageSettings')}</CardTitle>
-        <CardDescription>{t('languageDescription')}</CardDescription>
+        <CardTitle>{t('language_title')}</CardTitle>
+        <CardDescription>{t('language_desc')}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium">{t('currentLanguage')}</label>
+            <label className="text-sm font-medium">{t('current_language_label')}</label>
             <Select value={currentLocale} onValueChange={handleLanguageChange}>
               <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder={t('selectLanguage')} />
+                <SelectValue placeholder={t('select_language')} />
               </SelectTrigger>
               <SelectContent>
                 {languages.map((lang) => (

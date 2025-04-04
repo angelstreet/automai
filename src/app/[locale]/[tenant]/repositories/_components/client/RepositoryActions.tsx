@@ -137,7 +137,7 @@ export function RepositoryActions({
           className="h-8 gap-1"
         >
           <PlusCircle className="h-4 w-4" />
-          <span>{t('addRepository')}</span>
+          <span>{t('add_button')}</span>
         </Button>
       </div>
 

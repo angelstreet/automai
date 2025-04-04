@@ -59,14 +59,14 @@ export default function CICDActionsClient({
           onClick={handleAddProvider}
         >
           <PlusCircle className="h-4 w-4" />
-          <span>{t('add_provider')}</span>
+          <span>{t('add_button')}</span>
         </Button>
       </div>
 
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>{t('add_provider_dialog_title')}</DialogTitle>
+            <DialogTitle>{t('add_title')}</DialogTitle>
           </DialogHeader>
           <CICDFormDialogClient onComplete={handleDialogComplete} isInDialog={true} />
         </DialogContent>

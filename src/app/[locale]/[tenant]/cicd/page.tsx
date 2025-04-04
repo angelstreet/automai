@@ -19,7 +19,7 @@ export default async function CICDPage() {
   return (
     <FeaturePageContainer
       title={t('title')}
-      description={t('description')}
+      description={t('desc')}
       actions={<CICDActionsClient providerCount={providerCount} />}
     >
       <Suspense fallback={<CICDSkeleton />}>

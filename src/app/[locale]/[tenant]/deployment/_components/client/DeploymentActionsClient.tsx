@@ -17,7 +17,7 @@ interface DeploymentActionsClientProps {
 export function DeploymentActionsClient({
   deploymentCount: initialDeploymentCount = 0,
 }: DeploymentActionsClientProps) {
-  const t = useTranslations('deployments');
+  const t = useTranslations('team');
   const { refetchHosts } = useHost();
   const { refetchProviders } = useCICD();
   const { refetchRepositories } = useRepository();
@@ -101,7 +101,7 @@ export function DeploymentActionsClient({
           className="h-8 gap-1"
         >
           <PlusCircle className="h-4 w-4" />
-          <span>{t('create')}</span>
+          <span>{t('new_button')}</span>
         </Button>
       </div>
 

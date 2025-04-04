@@ -38,7 +38,7 @@ export default function ResetPasswordPage() {
 
     // Validate that passwords match
     if (password !== confirmPassword) {
-      setError(t('passwordsDoNotMatch') || 'Passwords do not match');
+      setError(t('error_passwords_do_not_match') || 'Passwords do not match');
       setIsSubmitting(false);
       return;
     }
@@ -85,7 +85,7 @@ export default function ResetPasswordPage() {
       </div>
       <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-gray-800 rounded-lg shadow-md">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">{t('resetPassword')}</h1>
+          <h1 className="text-2xl font-bold">{t('reset_password')}</h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">{t('enterNewPassword')}</p>
         </div>
 
@@ -111,7 +111,7 @@ export default function ResetPasswordPage() {
 
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium">
-                {t('confirmPassword')}
+                {t('signup_confirm_password_label')}
               </label>
               <Input
                 id="confirmPassword"
@@ -130,7 +130,7 @@ export default function ResetPasswordPage() {
             )}
 
             <Button type="submit" className="w-full" disabled={isSubmitting || loading}>
-              {isSubmitting || loading ? t('resetting') : t('resetPassword')}
+              {isSubmitting || loading ? t('resetting') : t('reset_password')}
             </Button>
 
             <div className="text-center mt-4">
@@ -138,7 +138,7 @@ export default function ResetPasswordPage() {
                 href={`/${locale}/login`}
                 className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
               >
-                {t('backToLogin')}
+                {t('back_to_login')}
               </a>
             </div>
           </form>

@@ -38,20 +38,20 @@ export function DeploymentEmptyStateClient({ errorMessage }: DeploymentEmptyStat
 
       <EmptyState
         icon={<Rocket className="h-10 w-10" />}
-        title={t('no_deployments_title', { fallback: 'No deployments found' })}
+        title={t('none_title', { fallback: 'No deployments found' })}
         description={
           errorMessage
             ? t('deployments_error_description', {
                 fallback: 'There was an error loading deployments',
               })
-            : t('no_deployments_description', {
+            : t('none_desc', {
                 fallback: 'Create your first deployment to get started',
               })
         }
         action={
           <Button onClick={handleNewDeployment} size="sm" className="gap-1">
             <PlusCircle className="h-4 w-4" />
-            <span>{t('new_deployment', { fallback: 'New Deployment' })}</span>
+            <span>{t('new_button', { fallback: 'New Deployment' })}</span>
           </Button>
         }
       />

@@ -22,7 +22,7 @@ export function RepositoryHeaderClient({ repositoryCount }: RepositoryHeaderProp
     <div className="relative w-[300px]">
       <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
       <Input
-        placeholder={t('searchRepositories')}
+        placeholder={t('search_placeholder')}
         className="pl-8"
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
