@@ -1,5 +1,3 @@
-'use client';
-
 import { Skeleton } from '@/components/shadcn/skeleton';
 
 export default function HostSkeleton() {

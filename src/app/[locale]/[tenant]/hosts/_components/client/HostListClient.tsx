@@ -3,10 +3,10 @@
 import { Server, PlusCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
-import { useHost } from '@/hooks/useHost';
-import { useHostViewMode } from '@/hooks/useHostViewMode';
 import { Button } from '@/components/shadcn/button';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { useHost } from '@/hooks/useHost';
+import { useHostViewMode } from '@/hooks/useHostViewMode';
 import { Host } from '@/types/component/hostComponentType';
 
 import { HostGridClient } from './HostGridClient';
@@ -24,10 +24,8 @@ export default function HostListClient({ initialHosts }: HostListClientProps) {
   // Initialize React Query with initial data from server
   const {
     hosts: queryHosts,
-    isLoading,
     deleteHost: deleteHostMutation,
     testConnection: testConnectionMutation,
-    refetchHosts,
   } = useHost();
 
   // Get view mode preference from hook

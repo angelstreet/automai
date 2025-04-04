@@ -41,6 +41,15 @@ export function HostTableClient({
   const router = useRouter();
   const t = useTranslations('common');
 
+  // Get locale and tenant from the current path
+  const getPathSegments = () => {
+    const pathSegments = window.location.pathname.split('/');
+    return {
+      locale: pathSegments[1] || 'en',
+      tenant: pathSegments[2] || 'trial',
+    };
+  };
+
   const getStatusDot = (status: string, animationDelay?: number) => {
     const baseClasses = 'h-3 w-3 rounded-full';
     const delayClass = animationDelay !== undefined ? `delay-${Math.min(animationDelay, 5)}` : '';
@@ -65,10 +74,7 @@ export function HostTableClient({
   };
 
   const handleTerminalClick = (host: Host) => {
-    // Get the current URL path segments to extract locale and tenant
-    const pathSegments = window.location.pathname.split('/');
-    const locale = pathSegments[1] || 'en';
-    const tenant = pathSegments[2] || 'default';
+    const { locale, tenant } = getPathSegments();
 
     // Build the correct path with locale and tenant
     const terminalPath = `/${locale}/${tenant}/terminals/${host.name.toLowerCase()}`;
@@ -106,11 +112,7 @@ export function HostTableClient({
                 {host.port ? `:${host.port}` : ''}
               </TableCell>
               <TableCell className="py-2">
-                {host.lastConnected
-                  ? new Date(host.lastConnected).toLocaleString()
-                  : host.status === 'connected'
-                    ? new Date().toLocaleString()
-                    : t('never')}
+                {host.status === 'connected' ? new Date().toLocaleString() : t('never')}
               </TableCell>
               <TableCell className="py-2">
                 <div className="flex items-center space-x-1">
@@ -132,7 +134,10 @@ export function HostTableClient({
                     <DropdownMenuContent align="end" className="w-[140px]">
                       <DropdownMenuItem
                         key={`logs-${host.id}`}
-                        onClick={() => router.push(`/${locale}/${tenant}/logs/${host.name}`)}
+                        onClick={() => {
+                          const { locale, tenant } = getPathSegments();
+                          router.push(`/${locale}/${tenant}/logs/${host.name}`);
+                        }}
                         className="py-1.5"
                       >
                         <ScrollText className="mr-2 h-3.5 w-3.5" />

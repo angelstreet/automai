@@ -4,9 +4,9 @@ import { Suspense } from 'react';
 import { getHosts } from '@/app/actions/hostsAction';
 import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 
-import { HostActions } from './_components/client/HostActions';
 import HostContent from './_components/HostContent';
 import HostSkeleton from './_components/HostSkeleton';
+import { HostActionsClient } from './_components/client/HostActionsClient';
 
 export default async function HostsPage() {
   const t = await getTranslations('hosts');
@@ -21,7 +21,7 @@ export default async function HostsPage() {
     <FeaturePageContainer
       title={t('hosts')}
       description={t('hosts_description')}
-      actions={<HostActions hostCount={hostCount} />}
+      actions={<HostActionsClient hostCount={hostCount} />}
     >
       <Suspense fallback={<HostSkeleton />}>
         <HostContent />

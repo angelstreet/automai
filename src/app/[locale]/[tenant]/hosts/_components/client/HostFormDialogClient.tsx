@@ -3,14 +3,13 @@
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 
-import { useHost } from '@/hooks/useHost';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { Label } from '@/components/shadcn/label';
 import { RadioGroup, RadioGroupItem } from '@/components/shadcn/radio-group';
 import { Switch } from '@/components/shadcn/switch';
 import { Textarea } from '@/components/shadcn/textarea';
-import { UserAuthForm } from '@/components/shadcn/user-auth-form';
+import { useHost } from '@/hooks/useHost';
 
 export interface FormData {
   name: string;
@@ -30,13 +29,12 @@ interface HostFormDialogClientProps {
 }
 
 export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormDialogClientProps) {
-  const { createHost, isCreating } = useHost();
+  const { createHost } = useHost();
   const t = useTranslations('hosts');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
-  const [isTestingConnection, setIsTestingConnection] = useState(false);
-  const [testConnectionResult, setTestConnectionResult] = useState<{
+  const [testConnectionResult, _setTestConnectionResult] = useState<{
     success: boolean;
     message: string;
   } | null>(null);

@@ -1,7 +1,7 @@
 // Generated index file - component exports
 
 // Server Components
-export { StatusSummaryServer } from './StatusSummaryServer';
+export { StatusSummaryServer } from './HostStatus';
 export { default as HostContent } from './HostContent';
 export { default as HostSkeleton } from './HostSkeleton';
 

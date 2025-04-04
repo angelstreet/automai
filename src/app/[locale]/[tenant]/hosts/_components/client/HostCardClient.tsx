@@ -264,14 +264,16 @@ export function HostCardClient({ host, onDelete, onTestConnection }: HostCardCli
         <CardContent className="p-4 pt-2">
           <div className="mt-2 space-y-3">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">{t('ip_address')}</span>
+              <span className="text-muted-foreground">
+                {t('ip_address', { fallback: 'IP Address' })}
+              </span>
               <span className="font-medium">
                 {host.ip}
                 {host.port ? `:${host.port}` : ''}
               </span>
             </div>
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">{t('type')}</span>
+              <span className="text-muted-foreground">{t('type', { fallback: 'Type' })}</span>
               <span className="font-medium capitalize">{host.type || 'Unknown'}</span>
             </div>
             {localStatus === 'connected' && (
@@ -282,7 +284,7 @@ export function HostCardClient({ host, onDelete, onTestConnection }: HostCardCli
                 onClick={handleTerminalClick}
               >
                 <Terminal className="h-4 w-4" />
-                <span>{t('open_terminal')}</span>
+                <span>{t('open_terminal', { fallback: 'Open Terminal' })}</span>
               </Button>
             )}
           </div>
@@ -297,7 +299,9 @@ export function HostCardClient({ host, onDelete, onTestConnection }: HostCardCli
             <DialogDescription>{errorMessage}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button onClick={() => setShowErrorDialog(false)}>{t('close')}</Button>
+            <Button onClick={() => setShowErrorDialog(false)}>
+              {t('close', { fallback: 'Close' })}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
