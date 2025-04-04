@@ -6,7 +6,7 @@ import { useLocale } from 'next-intl';
 
 import { Button } from '@/components/shadcn/button';
 import { LanguageSwitcher } from '@/components/shadcn/language-switcher';
-import { ThemeToggleStatic } from '@/components/theme/ThemeToggleStatic';
+import { ThemeToggleStatic } from '@/components/theme';
 
 interface HeaderProps {
   showAuth?: boolean;

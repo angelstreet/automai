@@ -5,40 +5,41 @@ import { type ThemeProviderProps } from 'next-themes';
 import { useEffect } from 'react';
 
 /**
- * ThemeProvider wrapper around next-themes ThemeProvider
- * This component handles theme state and persistence
- * To access theme functionality, use the useTheme hook from @/hooks/theme
+ * Simple ThemeProvider wrapper for next-themes
  */
 export function ThemeProvider({
   children,
   defaultTheme = 'system',
   ...props
 }: ThemeProviderProps & { defaultTheme?: string }) {
-  // Effect to set cookie when theme changes (handled by next-themes already in localStorage)
+  // Add cookie syncing for SSR
   useEffect(() => {
-    // Add a script to the document to handle cookie syncing
     const script = document.createElement('script');
-    script.id = 'theme-cookie-script';
+    script.id = 'theme-script';
     script.innerHTML = `
-      (function() {
-        const observer = new MutationObserver((mutations) => {
-          mutations.forEach((mutation) => {
-            if (mutation.attributeName === 'class' && mutation.target === document.documentElement) {
-              const theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
-              document.cookie = 'theme=' + theme + '; path=/; max-age=31536000';
-            }
-          });
-        });
-        observer.observe(document.documentElement, { attributes: true });
-      })();
+      new MutationObserver(mutations => {
+        for (const m of mutations) {
+          if (m.attributeName === 'class') {
+            // Detect theme from classes
+            const isDark = document.documentElement.classList.contains('dark');
+            const isBlue = document.documentElement.classList.contains('blue');
+            
+            // Set appropriate theme
+            let theme = 'light';
+            if (isDark) theme = 'dark';
+            if (isBlue) theme = 'blue';
+            
+            // Update cookie for SSR
+            document.cookie = 'theme=' + theme + '; path=/; max-age=31536000';
+          }
+        }
+      }).observe(document.documentElement, {attributes: true});
     `;
     document.head.appendChild(script);
 
+    // Clean up
     return () => {
-      const existingScript = document.getElementById('theme-cookie-script');
-      if (existingScript) {
-        existingScript.remove();
-      }
+      document.getElementById('theme-script')?.remove();
     };
   }, []);
 
@@ -47,7 +48,7 @@ export function ThemeProvider({
       attribute="class"
       defaultTheme={defaultTheme}
       enableSystem
-      disableTransitionOnChange
+      themes={['light', 'dark', 'blue', 'system']}
       {...props}
     >
       {children}

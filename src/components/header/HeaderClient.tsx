@@ -8,7 +8,7 @@ import { ProfileDropDown } from '@/components/profile/ProfileDropDown';
 import { Button } from '@/components/shadcn/button';
 import { Separator } from '@/components/shadcn/separator';
 import { SidebarTrigger } from '@/components/sidebar';
-import { ThemeToggleStatic } from '@/components/theme/ThemeToggleStatic';
+import { ThemeToggleStatic } from '@/components/theme';
 import { Search } from '@/components/ui/Search';
 import { useSidebar } from '@/hooks';
 import { cn } from '@/lib/utils';

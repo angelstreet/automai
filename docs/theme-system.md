@@ -1,265 +1,132 @@
-# Theme System Documentation
+# Theme System Architecture
 
-This document explains how our theme system works and how to add new custom themes to the application.
+This document explains how our theme system works, including how to add or modify themes.
 
-## Architecture Overview
+## Overview
 
-Our theme system uses a combination of:
+Our theme system is built on top of [next-themes](https://github.com/pacocoursey/next-themes) with additional customizations:
 
-1. **CSS Variables** - Defined in `globals.css` with themed color palettes
-2. **Next-Themes** - For theme state management via React context
-3. **Event-Based Communication** - For DOM updates without direct manipulation
-4. **Class-Based Theming** - Using HTML classes to apply different themes
+1. **Server-side cookie persistence** for consistent SSR rendering
+2. **Custom theme hook** providing simplified theme utilities
+3. **Theme toggle component** for user interaction
 
-## How to Add a New Theme
+## Architecture Workflow
 
-Adding a new theme requires updates to four key components:
+1. **Server Component Initialization**:
 
-### 1. Add Theme Class in globals.css
+   - `ThemeProviderWithCookies` reads the theme cookie server-side
+   - Passes initial theme to client-side ThemeProvider for hydration
 
-First, define your theme colors in `globals.css` by adding a new class:
+2. **Client Component Handling**:
 
-```css
-@layer base {
-  /* Existing root and dark themes... */
+   - `ThemeProvider` manages theme state via next-themes
+   - `useTheme` hook provides utilities and persistence
+   - `ThemeToggleStatic` offers UI for theme selection
 
-  .mytheme {
-    --background: 45 70% 95%; /* HSL format: hue saturation% lightness% */
-    --foreground: 45 80% 10%;
+3. **Cookie Persistence Flow**:
+   - When theme changes in the client, server actions are called
+   - Server actions securely set cookies for server-side rendering
+   - On refresh/reload, cookies are read to maintain consistency
 
-    --card: 45 70% 95%;
-    --card-foreground: 45 80% 10%;
+## Components
 
-    --popover: 45 70% 95%;
-    --popover-foreground: 45 80% 10%;
+### 1. ThemeProvider
 
-    --primary: 45 90% 40%;
-    --primary-foreground: 45 10% 98%;
+Located in `src/app/providers/ThemeProvider.tsx`, this wraps the application to provide theme context:
 
-    --secondary: 45 30% 88%;
-    --secondary-foreground: 45 80% 15%;
+- Manages theme state via next-themes
+- Handles cookie synchronization for server-side rendering
 
-    --muted: 45 30% 88%;
-    --muted-foreground: 45 40% 35%;
+### 2. useTheme Hook
 
-    --accent: 45 70% 50%;
-    --accent-foreground: 45 10% 98%;
+Located in `src/hooks/useTheme.ts`, this custom hook:
 
-    --destructive: 0 65% 60%;
-    --destructive-foreground: 45 10% 98%;
+- Wraps `next-themes` functionality with additional utilities
+- Handles server-side cookie persistence through server actions
+- Provides convenient helper methods (`isDark`, `isLight`, etc.)
 
-    --border: 45 40% 85%;
-    --input: 45 40% 85%;
-    --ring: 45 80% 40%;
+### 3. Theme Toggle
 
-    --radius: 0.5rem;
+Located in `src/components/theme/ThemeToggleStatic.tsx`, this provides the UI for users to change themes.
 
-    /* Chart colors, sidebar variables, etc. */
-    /* ... */
+### 4. Server Action
 
-    /* Sidebar theme variables */
-    --sidebar: 45 65% 90%;
-    --sidebar-foreground: var(--foreground);
-    --sidebar-muted-foreground: var(--muted-foreground);
-    --sidebar-accent: var(--accent);
-    --sidebar-accent-foreground: var(--accent-foreground);
-    --sidebar-border: var(--border);
-    --sidebar-separator: var(--border);
-    --sidebar-ring: var(--ring);
-  }
-}
-```
+Located in `src/app/actions/themeAction.ts`, this handles cookie operations:
 
-### 2. Update ThemeEventListener.tsx
+- Provides a server action for secure cookie management
+- Ensures cookies work properly across environments
 
-Modify the `ThemeEventListener.tsx` to handle your new theme:
+## CSS Structure
 
-```typescript
-export default function ThemeEventListener() {
-  useEffect(() => {
-    const handleThemeChanged = (event: CustomEvent<{ theme: string }>) => {
-      const { theme } = event.detail;
-
-      // Apply theme class to document
-      const root = document.documentElement;
-
-      // Remove all theme classes first - ADD YOUR THEME HERE
-      root.classList.remove('dark', 'blue', 'mytheme');
-
-      // Apply the appropriate theme class - ADD YOUR THEME HERE
-      if (theme === 'dark') {
-        root.classList.add('dark');
-      } else if (theme === 'blue') {
-        root.classList.add('blue');
-      } else if (theme === 'mytheme') {
-        root.classList.add('mytheme');
-      }
-      // 'light' theme is the default (no class needed)
-
-      // Set cookie for SSR consistency
-      document.cookie = `theme=${theme}; path=/; max-age=31536000`; // 1 year
-    };
-
-    // Add event listener with type assertion
-    window.addEventListener(THEME_CHANGED, handleThemeChanged as EventListener);
-
-    return () => {
-      window.removeEventListener(THEME_CHANGED, handleThemeChanged as EventListener);
-    };
-  }, []);
-
-  // This component renders nothing
-  return null;
-}
-```
-
-### 3. Update ThemeToggleStatic.tsx
-
-Add your theme to the toggle component:
-
-```typescript
-export function ThemeToggleStatic() {
-  // ...existing code...
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8">
-          <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0 blue:scale-0 blue:-rotate-90 mytheme:scale-0 mytheme:-rotate-90" />
-          <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100 blue:scale-0 mytheme:scale-0" />
-          <PaintBrush className="absolute h-4 w-4 rotate-90 scale-0 transition-all blue:rotate-0 blue:scale-100 mytheme:scale-0" />
-          {/* Add an icon for your theme */}
-          <YourIcon className="absolute h-4 w-4 rotate-90 scale-0 transition-all mytheme:rotate-0 mytheme:scale-100" />
-          <span className="sr-only">Toggle theme</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        {/* Existing menu items... */}
-
-        {/* Add your theme */}
-        <DropdownMenuItem onClick={() => setTheme('mytheme')} className="flex items-center gap-2">
-          <YourIcon className="h-4 w-4" />
-          <span>My Theme</span>
-        </DropdownMenuItem>
-
-        <DropdownMenuItem onClick={() => setTheme('system')} className="flex items-center gap-2">
-          <Laptop className="h-4 w-4" />
-          <span>System</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-```
-
-### 4. Update ThemeProvider.tsx
-
-Add your theme to the list of available themes:
-
-```typescript
-export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
-  return (
-    <NextThemesProvider
-      attribute="class"
-      defaultTheme="system"
-      enableSystem
-      disableTransitionOnChange
-      themes={['light', 'dark', 'blue', 'mytheme', 'system']}
-      {...props}
-    >
-      {/* Include the theme event listener component */}
-      <ThemeEventListener />
-
-      {children}
-    </NextThemesProvider>
-  );
-}
-```
-
-## Design Guidelines for Creating New Themes
-
-When designing a new theme, follow these guidelines:
-
-1. **Maintain Contrast Ratios** - Ensure text has sufficient contrast against backgrounds (WCAG 2.1 AA requires 4.5:1 for normal text)
-
-2. **Consistent Color Relationships** - Keep relationships between colors consistent (e.g., if primary is darker than secondary in light theme, maintain that pattern)
-
-3. **Test Across Components** - Verify your theme works well with all UI components, especially:
-
-   - Buttons and interactive elements
-   - Forms and inputs
-   - Modals and dialogs
-   - Tables and data displays
-
-4. **Harmony in Color Selection** - Choose a cohesive palette. Use tools like Adobe Color or Coolors to generate harmonious color schemes
-
-5. **Icon Selection** - Choose an appropriate icon that visually represents your theme
-
-## Color Variable Naming Convention
-
-Our CSS variables follow this naming pattern:
-
-- `--background`: Main background color
-- `--foreground`: Main text color
-- `--card`: Card/surface background color
-- `--card-foreground`: Text color on cards
-- `--primary`: Primary action color (buttons, active states)
-- `--secondary`: Secondary UI elements
-- `--muted`: Subdued UI elements
-- `--accent`: Accent/highlight color
-- `--destructive`: Error/warning color
-- `--border`: Border color
-- `--input`: Input field borders
-- `--ring`: Focus ring color
-
-## Example: Creating a "Forest" Theme
-
-Here's a complete example of adding a "Forest" theme:
+Themes are defined in `src/app/globals.css` using CSS variables:
 
 ```css
-/* In globals.css */
-.forest {
-  --background: 120 15% 95%; /* Light green-tinted background */
-  --foreground: 120 30% 15%; /* Dark green text */
+:root {
+  /* Light theme variables (default) */
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  /* ... more variables ... */
+}
 
-  --card: 120 15% 97%;
-  --card-foreground: 120 30% 15%;
+.dark {
+  /* Dark theme variables */
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  /* ... more variables ... */
+}
 
-  --primary: 150 60% 30%; /* Deep green for primary elements */
-  --primary-foreground: 120 10% 98%;
-
-  --secondary: 140 20% 85%; /* Soft green for secondary elements */
-  --secondary-foreground: 150 60% 25%;
-
-  /* ...and so on for all variables */
+.blue {
+  /* Blue theme variables */
+  --background: 217 33% 17%;
+  --foreground: 210 40% 98%;
+  /* ... more variables ... */
 }
 ```
 
-Then update the components as described above to include the "forest" theme.
+## Adding a New Theme
 
-## Tailwind Integration
+1. Define your theme in `globals.css` with a new class name:
 
-Our theme system automatically works with Tailwind's `dark:` variant. For custom themes, you can extend Tailwind's config to add variants for your theme:
-
-```js
-// tailwind.config.js
-module.exports = {
-  content: [
-    /* ... */
-  ],
-  darkMode: 'class',
-  theme: {
-    extend: {
-      /* ... */
-    },
-  },
-  plugins: [
-    // Add a plugin for your custom theme variants
-    function ({ addVariant }) {
-      addVariant('mytheme', '.mytheme &');
-    },
-  ],
-};
+```css
+.my-theme-name {
+  --background: /* your value */;
+  --foreground: /* your value */;
+  /* Define all required theme variables */
+}
 ```
 
-This allows using Tailwind classes like `mytheme:bg-green-500` in your components.
+2. Update `src/app/providers/ThemeProvider.tsx` to include your theme:
+
+```tsx
+<NextThemesProvider
+  attribute="class"
+  defaultTheme="system"
+  enableSystem
+  themes={['light', 'dark', 'blue', 'my-theme-name']}
+  {...props}
+>
+  {children}
+</NextThemesProvider>
+```
+
+3. Update the `ThemeToggleStatic.tsx` to include your new theme option:
+
+```tsx
+<DropdownMenuItem onClick={() => setTheme('my-theme-name')}>
+  {/* Icon for your theme */}
+  <span>My Theme Name</span>
+</DropdownMenuItem>
+```
+
+4. Update the `useTheme.ts` hook to add any needed helpers:
+
+```tsx
+isMyTheme: resolvedTheme === 'my-theme-name',
+```
+
+## Best Practices
+
+1. Always use the `useTheme` hook rather than direct DOM manipulation
+2. Let next-themes handle the class swapping and initial loading
+3. For implementing theme-aware components, use CSS variables
+4. For server components that need theme awareness, read from cookies
