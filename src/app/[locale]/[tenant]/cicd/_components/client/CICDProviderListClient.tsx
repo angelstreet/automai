@@ -4,6 +4,12 @@ import { PlusCircle, Edit, Trash, AlertCircle, RefreshCcw, MoreHorizontal } from
 import React, { useState, useEffect } from 'react';
 
 import {
+  getCICDProvidersAction,
+  deleteCICDProviderAction,
+  testCICDProviderAction,
+} from '@/app/actions/cicdAction';
+import { CICDProvider as CICDProviderModel } from '@/app/providers/CICDProvider';
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -33,20 +39,13 @@ import {
 } from '@/components/shadcn/table';
 import { toast } from '@/components/shadcn/use-toast';
 
-import {
-  getCICDProvidersAction,
-  deleteCICDProviderAction,
-  testCICDProviderAction,
-} from '../actions';
-import { CICDProvider as CICDProviderModel } from '../types';
-
-import { CICDProviderForm } from '.';
+import { CICDProviderFormClient } from './CICDProviderFormClient';
 
 interface CICDProviderProps {
   removeTitle?: boolean;
 }
 
-export default function CICDProvider({ removeTitle = false }: CICDProviderProps) {
+export default function CICDProviderListClient({ removeTitle = false }: CICDProviderProps) {
   const [providers, setProviders] = useState<CICDProviderModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProvider, setSelectedProvider] = useState<CICDProviderModel | null>(null);
@@ -77,19 +76,19 @@ export default function CICDProvider({ removeTitle = false }: CICDProviderProps)
     setLoading(true);
 
     try {
-      console.log('CICDProvider component: Calling getCICDProvidersAction');
+      console.log('cicdProviderListClient: Calling getCICDProvidersAction');
       const result = await getCICDProvidersAction();
 
-      console.log('CICDProvider component: Received result:', JSON.stringify(result, null, 2));
+      console.log('cicdProviderListClient: Received result:', JSON.stringify(result, null, 2));
 
       if (result.success) {
         console.log(
-          'CICDProvider component: Setting providers with data:',
+          'cicdProviderListClient: Setting providers with data:',
           JSON.stringify(result.data, null, 2),
         );
         setProviders(result.data || []);
       } else {
-        console.error('CICDProvider component: Error fetching providers:', result.error);
+        console.error('cicdProviderListClient: Error fetching providers:', result.error);
         toast({
           title: 'Error loading providers',
           description: result.error || 'Failed to fetch CI/CD providers',
@@ -97,7 +96,7 @@ export default function CICDProvider({ removeTitle = false }: CICDProviderProps)
         });
       }
     } catch (error: any) {
-      console.error('CICDProvider component: Exception occurred:', error);
+      console.error('cicdProviderListClient: Exception occurred:', error);
       toast({
         title: 'Error',
         description: error.message || 'An unexpected error occurred',
@@ -333,7 +332,7 @@ export default function CICDProvider({ removeTitle = false }: CICDProviderProps)
             <DialogHeader>
               <DialogTitle>{isEditing ? 'Edit CI/CD Provider' : 'Add CI/CD Provider'}</DialogTitle>
             </DialogHeader>
-            <CICDProviderForm
+            <CICDProviderFormClient
               providerId={isEditing ? selectedProvider?.id : undefined}
               provider={isEditing ? selectedProvider : undefined}
               onComplete={handleDialogComplete}

@@ -4,23 +4,22 @@ import { PlusCircle, RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState, useCallback, useEffect } from 'react';
 
-import { Button } from '@/components/shadcn/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
-
-import { CICDProviderForm } from '..';
-
 import {
   REFRESH_CICD_PROVIDERS,
   REFRESH_CICD_COMPLETE,
   CICD_TESTING_CONNECTION,
   CICD_TESTING_CONNECTION_COMPLETE,
-} from './CICDProvider';
+} from '@/app/providers/CICDProvider';
+import { Button } from '@/components/shadcn/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
+
+import { CICDProviderFormClient } from '..';
 
 interface CICDActionsClientProps {
   providerCount: number;
 }
 
-export function CICDActionsClient({
+export default function CICDActionsClient({
   providerCount: initialProviderCount = 0,
 }: CICDActionsClientProps) {
   const t = useTranslations('cicd');
@@ -37,7 +36,7 @@ export function CICDActionsClient({
   useEffect(() => {
     const handleProviderCountUpdate = (event: CustomEvent) => {
       if (event.detail && typeof event.detail.count === 'number') {
-        console.log('[CICDActionsClient] Provider count updated:', event.detail.count);
+        console.log('[cicdActionsClient] Provider count updated:', event.detail.count);
         setCurrentProviderCount(event.detail.count);
       }
     };
@@ -58,7 +57,7 @@ export function CICDActionsClient({
   const handleRefresh = useCallback(() => {
     if (isRefreshing) return;
 
-    console.log('[CICDActionsClient] Triggering refresh');
+    console.log('[cicdActionsClient] Triggering refresh');
     setIsRefreshing(true);
     // Dispatch custom event, similar to Hosts implementation
     window.dispatchEvent(new CustomEvent(REFRESH_CICD_PROVIDERS));
@@ -67,7 +66,7 @@ export function CICDActionsClient({
   // Listen for refresh complete events
   useEffect(() => {
     const handleRefreshComplete = () => {
-      console.log('[CICDActionsClient] Refresh complete');
+      console.log('[cicdActionsClient] Refresh complete');
       setIsRefreshing(false);
     };
 
@@ -78,12 +77,12 @@ export function CICDActionsClient({
   // Listen for connection testing events
   useEffect(() => {
     const handleTestingStart = () => {
-      console.log('[CICDActionsClient] Connection testing started');
+      console.log('[cicdActionsClient] Connection testing started');
       setIsRefreshing(true);
     };
 
     const handleTestingComplete = () => {
-      console.log('[CICDActionsClient] Connection testing complete');
+      console.log('[cicdActionsClient] Connection testing complete');
       setIsRefreshing(false);
     };
 
@@ -133,7 +132,7 @@ export function CICDActionsClient({
           <DialogHeader>
             <DialogTitle>{t('add_provider_dialog_title')}</DialogTitle>
           </DialogHeader>
-          <CICDProviderForm onComplete={handleDialogComplete} isInDialog={true} />
+          <CICDProviderFormClient onComplete={handleDialogComplete} isInDialog={true} />
         </DialogContent>
       </Dialog>
     </>

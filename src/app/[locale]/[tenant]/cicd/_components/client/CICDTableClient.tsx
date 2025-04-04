@@ -36,23 +36,23 @@ import { useToast } from '@/components/shadcn/use-toast';
 import { EmptyState } from '@/components/ui/EmptyState';
 import type { CICDProvider } from '@/types/component/cicdComponentType';
 
-import { CICDProviderForm } from '..';
+import { CICDProviderFormClient } from '..';
 
 import {
   REFRESH_CICD_PROVIDERS,
   CICD_TESTING_CONNECTION,
   CICD_TESTING_CONNECTION_COMPLETE,
-} from './CICDProvider';
+} from '@/app/providers/CICDProvider';
 
-interface CICDDetailsClientProps {
+interface CICDTableClientProps {
   initialProviders: CICDProvider[];
   isLoading?: boolean;
 }
 
-export default function CICDDetailsClient({
+export default function CICDTableClient({
   initialProviders,
   isLoading = false,
-}: CICDDetailsClientProps) {
+}: CICDTableClientProps) {
   const [selectedProvider, setSelectedProvider] = useState<CICDProvider | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
@@ -371,7 +371,7 @@ export default function CICDDetailsClient({
                 : t('add_provider_dialog_title', { fallback: 'Add CI/CD Provider' })}
             </DialogTitle>
           </DialogHeader>
-          <CICDProviderForm
+          <CICDProviderFormClient
             providerId={isEditing && selectedProvider ? selectedProvider.id : undefined}
             provider={isEditing && selectedProvider ? selectedProvider : undefined}
             onComplete={handleDialogComplete}

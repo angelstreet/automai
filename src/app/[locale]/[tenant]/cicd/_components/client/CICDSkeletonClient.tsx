@@ -11,7 +11,7 @@ import {
   TableRow,
 } from '@/components/shadcn/table';
 
-export default function CICDSkeleton() {
+export default function CICDSkeletonClient() {
   return (
     <Card className="w-full border-0 shadow-none">
       <CardContent>

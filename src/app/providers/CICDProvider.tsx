@@ -1,7 +1,10 @@
 'use client';
 
-import { createContext, useContext, ReactNode, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+
 import { getCICDProviders } from '@/app/actions/cicdAction';
+import { CICDContext } from '@/context/CICDContext';
+import type { CICDProvider as CICDProviderType } from '@/types/component/cicdComponentType';
 
 // Event constants
 export const REFRESH_CICD_PROVIDERS = 'refresh-cicd-providers';
@@ -9,40 +12,31 @@ export const REFRESH_CICD_COMPLETE = 'refresh-cicd-complete';
 export const CICD_TESTING_CONNECTION = 'cicd-testing-connection';
 export const CICD_TESTING_CONNECTION_COMPLETE = 'cicd-testing-connection-complete';
 
-interface CICDProviderProps {
-  children: ReactNode;
-  initialProviders: any[];
-  initialLoading?: boolean;
-}
-
-interface CICDContextType {
-  providers: any[];
-  isLoading: boolean;
-}
-
-const CICDContext = createContext<CICDContextType | null>(null);
-
-export function CICDProvider({
+/**
+ * CICDProvider manages the CI/CD providers state for the application
+ * This component only handles state, no business logic included
+ * To access CICD functionality, use the useCICD hook from @/hooks/useCICD
+ */
+function CICDProviderComponent({
   children,
-  initialProviders,
+  initialProviders = [],
   initialLoading = false,
-}: CICDProviderProps) {
-  const [providers, setProviders] = useState(initialProviders);
-  const [isLoading, setIsLoading] = useState(initialLoading);
+}: {
+  children: React.ReactNode;
+  initialProviders?: CICDProviderType[];
+  initialLoading?: boolean;
+}) {
+  const [providers, setProviders] = useState<CICDProviderType[]>(initialProviders);
+  const [isLoading, setIsLoading] = useState<boolean>(initialLoading);
 
   // Listen for refresh events
   useEffect(() => {
-    const handleRefresh = async (event: Event) => {
-      console.log('[CICDProvider] Refresh event received');
-
+    const handleRefresh = async () => {
       setIsLoading(true);
 
       try {
-        // Similar to getHosts in HostContent
         const providersResponse = await getCICDProviders();
         const newProviders = providersResponse.success ? providersResponse.data || [] : [];
-
-        console.log(`[CICDProvider] Fetched ${newProviders.length} providers`);
         setProviders(newProviders);
 
         // Dispatch event with the provider count
@@ -64,7 +58,7 @@ export function CICDProvider({
     return () => window.removeEventListener(REFRESH_CICD_PROVIDERS, handleRefresh);
   }, []);
 
-  // Also dispatch event on initial mount with the provider count
+  // Notify about provider count on initial mount
   useEffect(() => {
     window.dispatchEvent(
       new CustomEvent('provider-count-updated', {
@@ -73,7 +67,7 @@ export function CICDProvider({
     );
   }, [initialProviders.length]);
 
-  // Context value
+  // Provide state container only, business logic in hooks/useCICD
   const value = {
     providers,
     isLoading,
@@ -82,13 +76,6 @@ export function CICDProvider({
   return <CICDContext.Provider value={value}>{children}</CICDContext.Provider>;
 }
 
-export function useCICD(componentName = 'unknown') {
-  const context = useContext(CICDContext);
-
-  if (!context) {
-    console.error(`[useCICD] Hook used outside of CICDProvider in ${componentName}`);
-    throw new Error('useCICD must be used within a CICDProvider');
-  }
-
-  return context;
-}
+// No hooks exported from this provider - use @/hooks/useCICD instead
+const CICDProvider = CICDProviderComponent;
+export default CICDProvider;

@@ -48,7 +48,7 @@ interface FormValues {
   token: string;
 }
 
-const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
+const CICDProviderFormClient: React.FC<CICDProviderFormProps> = ({
   providerId,
   provider,
   onComplete,
@@ -93,14 +93,18 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
         password: '', // Don't populate password for security
         token: '', // Don't populate token for security
       });
-      
+
       // Reset any form autocomplete data with a slight delay
       setTimeout(() => {
         // Find and clear any credential fields
-        const usernameFields = document.querySelectorAll('input[name="new-username"], input[name="basic-username"]');
-        const passwordField = document.querySelector('input[name="new-password"]') as HTMLInputElement;
+        const usernameFields = document.querySelectorAll(
+          'input[name="new-username"], input[name="basic-username"]',
+        );
+        const passwordField = document.querySelector(
+          'input[name="new-password"]',
+        ) as HTMLInputElement;
         const tokenField = document.querySelector('input[name="new-token"]') as HTMLInputElement;
-        
+
         usernameFields.forEach((field: any) => {
           if (field) field.value = '';
         });
@@ -373,7 +377,11 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-1" data-form-type="do-not-autofill">
+      <form
+        onSubmit={form.handleSubmit(handleSubmit)}
+        className="space-y-1"
+        data-form-type="do-not-autofill"
+      >
         {/* Provider Type */}
         <FormField
           control={form.control}
@@ -647,4 +655,4 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
   );
 };
 
-export default CICDProviderForm;
+export default CICDProviderFormClient;

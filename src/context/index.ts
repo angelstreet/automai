@@ -100,6 +100,7 @@ export const userSelectors = {
  */
 
 // Export from context files
+export { CICDContext, type CICDContextType } from './CICDContext';
 export { TeamContext, type TeamContextState } from './TeamContext';
 export { PermissionContext } from './PermissionContext';
 export { UserContext, type UserContextState } from './UserContext';

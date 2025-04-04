@@ -5,6 +5,7 @@
  * not hooks. All hooks should be imported from '@/hooks'
  */
 
+export { default as CICDProvider } from './CICDProvider';
 export { PermissionProvider } from './PermissionProvider';
 export { SidebarProvider } from './SidebarProvider';
 export { TeamProvider } from './TeamProvider';
