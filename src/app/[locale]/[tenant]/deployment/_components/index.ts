@@ -17,7 +17,5 @@ export { DeploymentWizardMainClient } from './client/DeploymentWizardMainClient'
 export { DeploymentActionsClient } from './client/DeploymentActionsClient';
 export { DeploymentWizardDialogClient } from './client/DeploymentWizardDialogClient';
 
-// Original client components
-export { ClientDeploymentDetails } from './client/ClientDeploymentDetails';
-export { ClientDeploymentRunAction } from './client/ClientDeploymentRunAction';
+// Other client components
 export { DeploymentEmptyStateClient } from './client/DeploymentEmptyStateClient';
