@@ -265,7 +265,7 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
                           className={`mr-2 h-4 w-4 ${testingProviders[provider.id] ? 'animate-spin' : ''}`}
                         />
                         <span>
-                          {testingProviders[provider.id] ? t('testing') : c('test_connection')}
+                          {testingProviders[provider.id] ? c('testing') : c('test_connection')}
                         </span>
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleAddEditProvider(provider)}>
