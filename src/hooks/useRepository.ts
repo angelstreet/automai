@@ -100,9 +100,24 @@ export function useRepository() {
     return await disconnectRepositoryMutation.mutateAsync(id);
   };
 
-  // Internal mutation for URL validation
+  // Internal mutation for URL validation that calls the API endpoint
   const _validateUrlMutation = useMutation({
-    mutationFn: (data: TestRepositoryInput) => testGitRepository(data),
+    mutationFn: async (data: TestRepositoryInput) => {
+      const response = await fetch('/api/repositories/test-repository', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to validate repository URL');
+      }
+      
+      return response.json();
+    }
   });
 
   // Simplified URL validation function

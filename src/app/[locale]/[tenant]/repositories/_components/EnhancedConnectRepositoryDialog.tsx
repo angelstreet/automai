@@ -80,13 +80,42 @@ export function EnhancedConnectRepositoryDialog({
     setIsConnecting(true);
 
     try {
-      // Since the createGitProvider was removed in the simplified hook,
-      // we'll just show a toast message about the feature being unavailable
-      toast({
-        title: 'Feature Unavailable',
-        description: 'Git provider token connection has been simplified in this version.',
-        variant: 'destructive',
+      // Test the connection using the API endpoint
+      const response = await fetch('/api/repositories/test-connection', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          provider: {
+            type: currentProvider,
+            token: accessToken,
+            serverUrl: currentProvider === 'gitea' ? serverUrl : undefined
+          }
+        }),
       });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast({
+          title: 'Connection Successful',
+          description: `Successfully connected to ${currentProvider}!`,
+        });
+        
+        // Since the createGitProvider was removed in the simplified hook,
+        // we'll show a toast about completing the connection form
+        toast({
+          title: 'Next Steps',
+          description: 'Connection verified. To complete the process, please add a specific repository.',
+        });
+      } else {
+        toast({
+          title: 'Connection Failed',
+          description: result.error || `Failed to connect to ${currentProvider}`,
+          variant: 'destructive',
+        });
+      }
     } catch (error: any) {
       console.error('Error during token connection:', error);
       toast({
