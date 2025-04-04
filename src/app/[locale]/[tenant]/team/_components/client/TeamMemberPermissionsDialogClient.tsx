@@ -49,7 +49,7 @@ const EditPermissionsDialog = ({
   onSavePermissions,
 }: EditPermissionsDialogProps) => {
   const t = useTranslations('team');
-  const tc = useTranslations('common');
+  const c = useTranslations('common');
   const [roleTemplate, setRoleTemplate] = useState('custom');
   const [isLoadingPermissions, setIsLoadingPermissions] = useState(false);
   const [permissions, setPermissions] = useState<ResourcePermissions>(
@@ -180,9 +180,7 @@ const EditPermissionsDialog = ({
       <DialogContent className="w-full max-w-3xl mx-auto p-4">
         <DialogHeader className="pb-2 space-y-1">
           <DialogTitle>{t('members_edit_title')}</DialogTitle>
-          <DialogDescription className="text-xs">
-            {t('members_edit_desc')}
-          </DialogDescription>
+          <DialogDescription className="text-xs">{t('members_edit_desc')}</DialogDescription>
         </DialogHeader>
 
         <div className="flex items-center space-x-3 py-2">
@@ -211,7 +209,7 @@ const EditPermissionsDialog = ({
                 <SelectItem value="contributor">{t('roles_contributor')}</SelectItem>
                 <SelectItem value="viewer">{t('roles_viewer_read_only')}</SelectItem>
                 <SelectItem value="tester">{t('roles_tester')}</SelectItem>
-                <SelectItem value="custom">{t('roles_custom')}</SelectItem>
+                <SelectItem value="custom">{c('custom')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -258,7 +256,7 @@ const EditPermissionsDialog = ({
 
         <DialogFooter className="mt-3 space-x-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} size="sm">
-            {tc('cancel')}
+            {c('cancel')}
           </Button>
           <Button onClick={handleSubmit} disabled={isLoading} size="sm">
             {isLoading && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
