@@ -20,6 +20,9 @@ import { Repository as RepositoryInterface } from '@types/context/repository';
 
 // Helper function to adapt system hosts to the format expected by the deployment module
 const adaptHostsForDeployment = (systemHosts: SystemHost[]): HostType[] => {
+  if (!systemHosts || !Array.isArray(systemHosts)) {
+    return [];
+  }
   return systemHosts.map((host) => ({
     id: host.id,
     name: host.name,

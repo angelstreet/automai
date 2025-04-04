@@ -3,13 +3,12 @@
 import { ArrowLeft } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 
-import { Repository as RepositoryInterface } from '@/app/[locale]/[tenant]/repositories/types';
 import { saveDeploymentConfiguration, startDeployment } from '@/app/actions/deploymentWizardAction';
 import { toast } from '@/components/shadcn/use-toast';
-import {  DeploymentData, Repository  } from '@/types/component/deploymentComponentType';
-import {  Host as HostType  } from '@/types/component/hostComponentType';
+import { DeploymentData } from '@/types/component/deploymentComponentType';
+import { Host as HostType, Host as SystemHost } from '@/types/component/hostComponentType';
+import { Repository } from '@/types/component/repositoryComponentType';
 
-import {  Host as SystemHost  } from '@/types/component/hostComponentType';
 import DeploymentWizardStep1 from '../DeploymentWizardStep1';
 import DeploymentWizardStep2 from '../DeploymentWizardStep2';
 import DeploymentWizardStep3 from '../DeploymentWizardStep3';
@@ -19,6 +18,9 @@ import DeploymentWizardStep5 from './DeploymentWizardStep5';
 
 // Helper function to adapt system hosts to the format expected by the deployment module
 const adaptHostsForDeployment = (systemHosts: SystemHost[]): HostType[] => {
+  if (!systemHosts || !Array.isArray(systemHosts)) {
+    return [];
+  }
   return systemHosts.map((host) => ({
     id: host.id,
     name: host.name,
@@ -31,7 +33,7 @@ const adaptHostsForDeployment = (systemHosts: SystemHost[]): HostType[] => {
 interface DeploymentWizardProps {
   onCancel: () => void;
   onDeploymentCreated?: () => void;
-  repositories: RepositoryInterface[];
+  repositories: Repository[];
   hosts: SystemHost[];
   cicdProviders: any[];
 }
@@ -57,20 +59,13 @@ const initialDeploymentData: DeploymentData = {
   cicdProviderId: '',
 };
 
-// Declare a type for selected repository that includes providerId and url
-interface EnhancedRepository extends Repository {
-  providerId?: string;
-  url?: string;
-}
-
 // Wrap DeploymentWizard in React.memo to prevent unnecessary re-renders
 const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
   ({ onCancel, onDeploymentCreated, repositories = [], hosts = [], cicdProviders = [] }) => {
     const [step, setStep] = useState(1);
     const [deploymentData, setDeploymentData] = useState<DeploymentData>(initialDeploymentData);
-    const [showJenkinsView, setShowJenkinsView] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
-    const [submissionError, setSubmissionError] = useState<string | null>(null);
+    const [_submissionError, setSubmissionError] = useState<string | null>(null);
 
     // Use ref for mounting tracking without state updates
     const isMountedRef = useRef(true);
@@ -212,7 +207,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
 
         loadScripts();
       }
-    }, [step, deploymentData.repositoryId, deploymentData.selectedRepository]);
+    }, [step, deploymentData.repositoryId, deploymentData.selectedRepository, isLoadingScripts]);
 
     const handleInputChange = (
       e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
@@ -223,7 +218,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
       if (name === 'repositoryId') {
         // Avoid unnecessary log noise
         if (value) {
-          const selectedRepo = repositories.find((r) => r.id === value) as RepositoryInterface;
+          const selectedRepo = repositories.find((r) => r.id === value) as Repository;
 
           if (selectedRepo) {
             // Store the full repository object
@@ -292,44 +287,6 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
           ? prev.hostIds.filter((id) => id !== hostId)
           : [...prev.hostIds, hostId],
       }));
-    };
-
-    const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const { name, checked } = e.target;
-
-      if (name.startsWith('notifications.')) {
-        const notificationType = name.split('.')[1];
-        setDeploymentData((prev) => ({
-          ...prev,
-          notifications: {
-            ...prev.notifications,
-            [notificationType]: checked,
-          },
-        }));
-      }
-    };
-
-    const handleAddEnvVar = () => {
-      setDeploymentData((prev) => ({
-        ...prev,
-        environmentVars: [...prev.environmentVars, { key: '', value: '' }],
-      }));
-    };
-
-    const handleEnvVarChange = (index: number, field: 'key' | 'value', value: string) => {
-      setDeploymentData((prev) => {
-        const newEnvVars = [...prev.environmentVars];
-        newEnvVars[index] = { ...newEnvVars[index], [field]: value };
-        return { ...prev, environmentVars: newEnvVars };
-      });
-    };
-
-    const handleRemoveEnvVar = (index: number) => {
-      setDeploymentData((prev) => {
-        const newEnvVars = [...prev.environmentVars];
-        newEnvVars.splice(index, 1);
-        return { ...prev, environmentVars: newEnvVars };
-      });
     };
 
     const handleNextStep = () => {

@@ -63,9 +63,9 @@ export default async function DeploymentWizardContainer({
 
     return (
       <DeploymentWizard
-        repositories={data.repositories}
-        hosts={data.hosts}
-        cicdProviders={data.cicdProviders}
+        repositories={data.repositories || []}
+        hosts={data.hosts || []}
+        cicdProviders={data.cicdProviders || []}
         onCancel={onCancel}
         onDeploymentCreated={onDeploymentCreated}
       />

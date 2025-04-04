@@ -299,7 +299,7 @@ export async function getCICDProvider(
   cookieStore?: any,
 ): Promise<DbResponse<CICDProvider>> {
   try {
-    const supabase = createClient(cookieStore);
+    const supabase = await createClient(cookieStore);
 
     let query = supabase.from('cicd_providers').select('*');
 
@@ -332,7 +332,7 @@ export async function createCICDJob(
   cookieStore?: any,
 ): Promise<DbResponse<any>> {
   try {
-    const supabase = createClient(cookieStore);
+    const supabase = await createClient(cookieStore);
 
     const { data, error } = await supabase
       .from('cicd_jobs')
@@ -350,7 +350,7 @@ export async function createCICDJob(
       return { success: false, error: error.message };
     }
 
-    return { success: true, data, id: data.id };
+    return { success: true, data };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to create CICD job' };
   }
@@ -364,7 +364,7 @@ export async function createDeploymentCICDMapping(
   cookieStore?: any,
 ): Promise<DbResponse<any>> {
   try {
-    const supabase = createClient(cookieStore);
+    const supabase = await createClient(cookieStore);
 
     const { data: mappingData, error } = await supabase
       .from('deployment_cicd_mappings')
@@ -395,7 +395,7 @@ export async function getDeploymentCICDMappings(
   cookieStore?: any,
 ): Promise<DbResponse<any[]>> {
   try {
-    const supabase = createClient(cookieStore);
+    const supabase = await createClient(cookieStore);
 
     let query = supabase.from('deployment_cicd_mappings').select('*');
 
@@ -428,7 +428,7 @@ export async function getCICDJob(
   cookieStore?: any,
 ): Promise<DbResponse<any>> {
   try {
-    const supabase = createClient(cookieStore);
+    const supabase = await createClient(cookieStore);
 
     let query = supabase.from('cicd_jobs').select('*');
 
@@ -461,7 +461,7 @@ export async function deleteCICDJob(
   cookieStore?: any,
 ): Promise<DbResponse<null>> {
   try {
-    const supabase = createClient(cookieStore);
+    const supabase = await createClient(cookieStore);
 
     let query = supabase.from('cicd_jobs').delete();
 
@@ -494,7 +494,7 @@ export async function deleteDeploymentCICDMapping(
   cookieStore?: any,
 ): Promise<DbResponse<null>> {
   try {
-    const supabase = createClient(cookieStore);
+    const supabase = await createClient(cookieStore);
 
     const { error } = await supabase.from('deployment_cicd_mappings').delete().eq('id', id);
 
@@ -516,7 +516,7 @@ export async function getCICDDeploymentMapping(
   cookieStore?: any,
 ): Promise<DbResponse<any>> {
   try {
-    const supabase = createClient(cookieStore);
+    const supabase = await createClient(cookieStore);
 
     let query = supabase.from('deployment_cicd_mappings').select('*');
 
