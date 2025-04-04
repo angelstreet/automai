@@ -14,10 +14,16 @@ export const CICD_TESTING_CONNECTION_COMPLETE = 'cicd-testing-connection-complet
 
 /**
  * CICDProvider manages the CI/CD providers state for the application
- * This component only handles state, no business logic included
- * To access CICD functionality, use the useCICD hook from @/hooks/useCICD
+ * 
+ * This component follows the architecture pattern:
+ * - Only handles state, no business logic
+ * - Pure data container
+ * - Event-based refresh mechanism
+ * 
+ * Components should NOT use this provider directly but should
+ * use the hook instead: import { useCICD } from '@/hooks/useCICD';
  */
-function CICDProviderComponent({
+export default function CICDProvider({
   children,
   initialProviders = [],
   initialLoading = false,
@@ -75,7 +81,3 @@ function CICDProviderComponent({
 
   return <CICDContext.Provider value={value}>{children}</CICDContext.Provider>;
 }
-
-// No hooks exported from this provider - use @/hooks/useCICD instead
-const CICDProvider = CICDProviderComponent;
-export default CICDProvider;

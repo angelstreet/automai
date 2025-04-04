@@ -1,7 +1,14 @@
-// Server Components
-export { default as CICDContent } from './CICDContent';
+/**
+ * CICD Components
+ * 
+ * Following architectural pattern:
+ * - Components use hooks from @/hooks directly
+ * - No direct context access in components
+ * - Server/client components properly separated
+ */
 
 // Client Components
+export { default as CICDContentClient } from './client/CICDContentClient';
 export { default as CICDProviderFormClient } from './client/CICDProviderFormClient';
 export { default as CICDProviderListClient } from './client/CICDProviderListClient';
 export { default as CICDTableClient } from './client/CICDTableClient';

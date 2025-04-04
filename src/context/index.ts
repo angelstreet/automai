@@ -100,6 +100,10 @@ export const userSelectors = {
  */
 
 // Export from context files
+/**
+ * Export context definition only. Components should NEVER use this directly.
+ * Use the hook instead: import { useCICD } from '@/hooks/useCICD';
+ */
 export { CICDContext, type CICDContextType } from './CICDContext';
 export { TeamContext, type TeamContextState } from './TeamContext';
 export { PermissionContext } from './PermissionContext';

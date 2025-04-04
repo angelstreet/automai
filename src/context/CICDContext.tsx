@@ -8,6 +8,9 @@ import type { CICDProvider } from '@/types/component/cicdComponentType';
  * CICD context type definition
  * This is a minimal type definition for the context
  * No business logic belongs here, that goes in hooks/useCICD.ts
+ * 
+ * IMPORTANT: Components should NOT use this context directly.
+ * Instead, they should import the hook: import { useCICD } from '@/hooks/useCICD';
  */
 export interface CICDContextType {
   providers: CICDProvider[];

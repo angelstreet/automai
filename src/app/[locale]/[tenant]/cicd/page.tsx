@@ -4,9 +4,7 @@ import { Suspense } from 'react';
 import { getCICDProviders } from '@/app/actions/cicdAction';
 import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 
-import CICDContent from './_components/CICDContent';
-import CICDSkeletonClient from './_components/client/CICDSkeletonClient';
-import CICDActionsClient from './_components/client/CICDActionsClient';
+import { CICDContentClient, CICDSkeletonClient, CICDActionsClient } from './_components';
 
 export default async function CICDPage() {
   const t = await getTranslations('cicd');
@@ -22,7 +20,7 @@ export default async function CICDPage() {
       actions={<CICDActionsClient providerCount={providers.length} />}
     >
       <Suspense fallback={<CICDSkeletonClient />}>
-        <CICDContent />
+        <CICDContentClient />
       </Suspense>
     </FeaturePageContainer>
   );
