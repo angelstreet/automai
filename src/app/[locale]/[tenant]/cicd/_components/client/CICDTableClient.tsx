@@ -3,10 +3,10 @@ import { Edit, Trash, AlertCircle, RefreshCcw, MoreHorizontal, PlusCircle } from
 import { useTranslations } from 'next-intl';
 import React, { useState, useCallback } from 'react';
 
-import {
-  CICD_TESTING_CONNECTION,
-  CICD_TESTING_CONNECTION_COMPLETE,
-} from '@/app/providers/CICDProvider';
+// Define event constants locally instead of importing from provider
+const CICD_TESTING_CONNECTION = 'cicd-testing-connection';
+const CICD_TESTING_CONNECTION_COMPLETE = 'cicd-testing-connection-complete';
+
 import {
   AlertDialog,
   AlertDialogAction,

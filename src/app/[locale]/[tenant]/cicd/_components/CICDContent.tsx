@@ -1,4 +1,5 @@
 import { getCICDProviders } from '@/app/actions/cicdAction';
+
 import CICDTableClient from './client/CICDTableClient';
 
 export default async function CICDContent() {
