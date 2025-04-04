@@ -51,6 +51,10 @@ export function ThemeToggleStatic() {
           <Moon className="h-4 w-4" />
           <span>Dark</span>
         </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setTheme('blue')} className="flex items-center gap-2">
+          <Mountain className="h-4 w-4" />
+          <span>Blue</span>
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={() => setTheme('system')} className="flex items-center gap-2">
           <Laptop className="h-4 w-4" />
           <span>System</span>

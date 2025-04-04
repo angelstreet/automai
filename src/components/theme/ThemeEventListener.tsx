@@ -12,16 +12,17 @@ export default function ThemeEventListener() {
 
       // Apply theme class to document
       const root = document.documentElement;
-      const isDark =
-        theme === 'dark' ||
-        (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
-      // Apply theme class
-      if (isDark) {
+      // Remove all theme classes first
+      root.classList.remove('dark', 'blue');
+
+      // Apply the appropriate theme class
+      if (theme === 'dark') {
         root.classList.add('dark');
-      } else {
-        root.classList.remove('dark');
+      } else if (theme === 'blue') {
+        root.classList.add('blue');
       }
+      // 'light' theme is the default (no class needed)
 
       // Set cookie for SSR consistency
       document.cookie = `theme=${theme}; path=/; max-age=31536000`; // 1 year
