@@ -138,10 +138,20 @@ export default function HostListClient({ initialHosts }: HostListClientProps) {
     );
   }
 
-  // Render the appropriate view based on viewMode
+  // Client-side only view component rendering to prevent hydration issues
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Render the appropriate view based on viewMode, but only on client
   return (
     <div className="space-y-4 p-4">
-      {viewMode === 'grid' ? (
+      {!isClient ? (
+        // Server-side placeholder with minimal content to avoid hydration mismatch
+        <div className="min-h-[200px] rounded-md border p-4 animate-pulse bg-muted/10"></div>
+      ) : viewMode === 'grid' ? (
         <HostGridClient
           hosts={hosts}
           selectedHosts={selectedHosts}

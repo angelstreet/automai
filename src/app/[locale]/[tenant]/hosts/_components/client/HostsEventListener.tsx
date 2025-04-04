@@ -26,7 +26,8 @@ export default function HostsEventListener() {
 
     const handleToggleViewMode = () => {
       console.log('[@component:HostsEventListener] Handling toggle view mode event');
-      // Router refresh not needed for view mode toggle as it's client-side state
+      // Force refresh to ensure view mode change is applied
+      router.refresh();
     };
 
     window.addEventListener(REFRESH_HOSTS_COMPLETE, handleRefreshComplete);

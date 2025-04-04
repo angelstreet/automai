@@ -37,16 +37,23 @@ export function useHost() {
   });
 
   // View mode state management
-  const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    if (typeof window === 'undefined') return DEFAULT_VIEW_MODE;
-    const savedMode = localStorage.getItem(STORAGE_KEYS.HOST_VIEW_MODE);
-    console.log(
-      `[@hook:useHost] Initial view mode from localStorage: ${savedMode || 'none, defaulting to grid'}`,
-    );
-    return (savedMode as ViewMode) || DEFAULT_VIEW_MODE;
-  });
+  const [viewMode, setViewMode] = useState<ViewMode>(DEFAULT_VIEW_MODE); // Always start with default
 
-  // Update localStorage when viewMode changes
+  // Initialize view mode from localStorage, but only on client side
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedMode = localStorage.getItem(STORAGE_KEYS.HOST_VIEW_MODE);
+      console.log(
+        `[@hook:useHost] Loading view mode from localStorage: ${savedMode || 'none, using default'}`,
+      );
+
+      if (savedMode === 'grid' || savedMode === 'table') {
+        setViewMode(savedMode as ViewMode);
+      }
+    }
+  }, []);
+
+  // Update localStorage when viewMode changes, skip initial render
   useEffect(() => {
     if (typeof window !== 'undefined') {
       console.log(`[@hook:useHost] Saving view mode to localStorage: ${viewMode}`);
