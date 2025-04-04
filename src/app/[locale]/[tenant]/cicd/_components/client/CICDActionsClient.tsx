@@ -137,7 +137,7 @@ export default function CICDActionsClient({
       if (successCount > 0 || failCount > 0) {
         toast({
           title: c('connection_success'),
-          description: `${successCount} ${c('successful')}, ${failCount} ${c('failed')}`,
+          description: `${successCount} ${c('success')}, ${failCount} ${c('failed')}`,
           variant: failCount > 0 ? 'destructive' : 'default',
         });
       }

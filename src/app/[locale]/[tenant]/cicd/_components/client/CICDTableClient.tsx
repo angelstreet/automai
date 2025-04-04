@@ -122,7 +122,7 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
         // Show success toast
         toast({
           title: c('connection_success'),
-          description: `${provider.name}: ${c('successful')}`,
+          description: `${provider.name}: ${c('success')}`,
           variant: 'default',
         });
       } catch (error: any) {
