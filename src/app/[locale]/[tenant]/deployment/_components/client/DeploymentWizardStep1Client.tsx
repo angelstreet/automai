@@ -1,6 +1,5 @@
 'use client';
 
-import { RefreshCw } from 'lucide-react';
 import React from 'react';
 
 import { Button } from '@/components/shadcn/button';
@@ -19,7 +18,7 @@ interface DeploymentWizardStep1ClientProps {
   ) => void;
   onNextStep: () => void;
   isStepValid: boolean | (() => boolean);
-  onRefreshRepositories: () => void;
+  onRefreshRepositories?: () => void;
 }
 
 const DeploymentWizardStep1Client: React.FC<DeploymentWizardStep1ClientProps> = ({
@@ -33,17 +32,11 @@ const DeploymentWizardStep1Client: React.FC<DeploymentWizardStep1ClientProps> = 
   isStepValid,
   onRefreshRepositories,
 }) => {
-  // Handle refreshing repositories
-  const handleRefreshClick = () => {
-    // Use direct SWR pattern for refreshing repositories
-    onRefreshRepositories();
-  };
-
   // Check if step is valid - handle both function and boolean values
   const isValid = typeof isStepValid === 'function' ? isStepValid() : isStepValid;
 
   return (
-    <div className="p-4">
+    <div className="p-4 bg-black/5 dark:bg-black/20 rounded-md border border-gray-200 dark:border-gray-800">
       <h2 className="text-lg font-medium mb-4">Deployment Details</h2>
       <div className="space-y-4">
         <div>
@@ -75,20 +68,10 @@ const DeploymentWizardStep1Client: React.FC<DeploymentWizardStep1ClientProps> = 
         </div>
 
         <div>
-          <div className="flex justify-between items-center mb-1">
+          <div className="mb-1">
             <label htmlFor="repositoryId" className="block text-sm font-medium">
               Repository
             </label>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={handleRefreshClick}
-              className="h-7 px-2 text-xs flex items-center gap-1"
-            >
-              <RefreshCw className="h-3 w-3" />
-              <span>Refresh</span>
-            </Button>
           </div>
           <select
             id="repositoryId"
