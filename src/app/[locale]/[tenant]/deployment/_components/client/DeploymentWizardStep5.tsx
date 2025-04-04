@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from '@/components/shadcn/select';
 import { Switch } from '@/components/shadcn/switch';
-import { CICDProviderType } from '@/types/context/cicdContextType';
+import { CICDProvider } from '@/types/component/cicdComponentType';
 import { DeploymentData } from '@/types/component/deploymentComponentType';
 
 interface DeploymentWizardStep5Props {
@@ -23,9 +23,9 @@ interface DeploymentWizardStep5Props {
   onNext: () => void;
   onBack: () => void;
   onCancel: () => void;
-  onSubmit: () => void;
+  onSubmit: React.FormEventHandler<HTMLFormElement> | (() => void);
   isPending: boolean;
-  cicdProviders: CICDProviderType[];
+  cicdProviders: CICDProvider[];
 }
 
 export default function DeploymentWizardStep5({

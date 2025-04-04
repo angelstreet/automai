@@ -3,8 +3,17 @@
 import { useTranslations } from 'next-intl';
 import React from 'react';
 
-import type { Script } from '@/types/component/deploymentComponentType';
 import { Repository } from '@/types/component/repositoryComponentType';
+
+// Define a local Script type if it's not properly exported
+type Script = {
+  id: string;
+  name: string;
+  path: string;
+  description?: string;
+  parameters?: Array<{ id: string; name: string; type: string; default?: string }>;
+  type?: string;
+};
 
 import EnhancedScriptSelector from './EnhancedScriptSelector';
 

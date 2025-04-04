@@ -25,8 +25,12 @@ const adaptHostsForDeployment = (systemHosts: SystemHost[]): HostType[] => {
     id: host.id,
     name: host.name,
     environment: host.is_windows ? 'Windows' : 'Linux', // Use OS type as environment
-    status: host.status === 'connected' ? 'online' : 'offline',
+    status: (host.status === 'connected' ? 'online' : 'offline') as any, // Type assertion
     ip: host.ip,
+    type: host.type || 'ssh',
+    created_at: host.created_at || new Date().toISOString(),
+    updated_at: host.updated_at || new Date().toISOString(),
+    is_windows: host.is_windows || false,
   }));
 };
 
@@ -392,7 +396,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
       }
     };
 
-    const isStepValid = () => {
+    const _isStepValid = () => {
       switch (step) {
         case 1:
           return deploymentData.name !== '' && deploymentData.repositoryId !== '';
@@ -534,7 +538,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
           {/* Step 2: Select Scripts with Parameters */}
           {step === 2 && (
             <DeploymentWizardStep2
-              selectedRepository={deploymentData.selectedRepository}
+              selectedRepository={deploymentData.selectedRepository || null}
               scriptIds={deploymentData.scriptIds}
               repositoryScripts={repositoryScripts}
               isLoadingScripts={isLoadingScripts}
