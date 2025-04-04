@@ -5,6 +5,11 @@ import React, { useState, useCallback } from 'react';
 
 import { deleteCICDProvider } from '@/app/actions/cicdAction';
 import {
+  REFRESH_CICD_PROVIDERS,
+  CICD_TESTING_CONNECTION,
+  CICD_TESTING_CONNECTION_COMPLETE,
+} from '@/app/providers/CICDProvider';
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -37,12 +42,6 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import type { CICDProvider } from '@/types/component/cicdComponentType';
 
 import { CICDProviderFormClient } from '..';
-
-import {
-  REFRESH_CICD_PROVIDERS,
-  CICD_TESTING_CONNECTION,
-  CICD_TESTING_CONNECTION_COMPLETE,
-} from '@/app/providers/CICDProvider';
 
 interface CICDTableClientProps {
   initialProviders: CICDProvider[];
