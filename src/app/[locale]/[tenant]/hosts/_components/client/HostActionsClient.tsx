@@ -10,7 +10,7 @@ import { useHost } from '@/hooks/useHost';
 import { useHostViewMode } from '@/hooks/useHostViewMode';
 
 import { HostFormDialogClient, FormData as ConnectionFormData } from './HostFormDialogClient';
-import { OPEN_HOST_DIALOG } from './HostsEventListener';
+import { OPEN_HOST_DIALOG, REFRESH_HOSTS, TOGGLE_HOST_VIEW_MODE } from './HostsEventListener';
 
 interface HostActionsClientProps {
   hostCount?: number;
@@ -50,11 +50,19 @@ export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActio
 
   const handleRefresh = async () => {
     if (isRefetching) return;
+    console.log('[@component:HostActionsClient] Dispatching refresh hosts event');
+    window.dispatchEvent(new Event(REFRESH_HOSTS));
     await refetchHosts();
   };
 
   const handleAddHost = () => {
     setShowAddHost(true);
+  };
+
+  const handleViewModeToggle = () => {
+    console.log('[@component:HostActionsClient] Dispatching toggle view mode event');
+    window.dispatchEvent(new Event(TOGGLE_HOST_VIEW_MODE));
+    toggleViewMode();
   };
 
   const handleFormChange = (newFormData: ConnectionFormData) => {
@@ -82,7 +90,7 @@ export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActio
       <div className="flex items-center gap-2">
         {currentHostCount > 0 && (
           <>
-            <Button variant="outline" size="sm" className="h-8" onClick={toggleViewMode}>
+            <Button variant="outline" size="sm" className="h-8" onClick={handleViewModeToggle}>
               {viewMode === 'grid' ? <List className="h-4 w-4" /> : <Grid className="h-4 w-4" />}
             </Button>
             <Button
