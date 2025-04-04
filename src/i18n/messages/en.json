@@ -65,13 +65,13 @@
     "password": "Password",
     "ip_address": "IP Address",
     "port": "Port",
-    "close": "Close"
+    "close": "Close",
+    "connection": "Connection"
   },
   "auth": {
     "signin_title": "Sign In",
     "signin_desc": "Enter your email and password to sign in",
     "signin_email_placeholder": "name@example.com",
-
     "signin_password_placeholder": "Enter your password",
     "signin_remember_me": "Remember Me",
     "signin_forgot_password": "Forgot Password?",
@@ -172,7 +172,8 @@
     "error_details": "Error Details",
     "no_error_details": "No error details available",
     "metrics": "Metrics",
-    "connection_type_label": "Connection",
+    "is_windows": "Windows",
+
     "form_name_placeholder": "Host name",
     "form_name_hint": "Only lowercase letters, numbers, and hyphens are allowed",
     "form_desc_placeholder": "Description (optional)",

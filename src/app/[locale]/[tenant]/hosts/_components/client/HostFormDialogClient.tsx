@@ -33,7 +33,7 @@ interface HostFormDialogClientProps {
 export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormDialogClientProps) {
   const { createHost } = useHost();
   const t = useTranslations('hosts');
-
+  const c = useTranslations('common');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
   const [testConnectionResult, _setTestConnectionResult] = useState<{
@@ -121,7 +121,7 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
       {/* Basic Information */}
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="name">{t('host_name')}</Label>
+          <Label htmlFor="name">{t('title')}</Label>
           <Input
             id="name"
             value={formData.name}
@@ -132,7 +132,7 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="description">{t('host_description')}</Label>
+          <Label htmlFor="description">{t('desc')}</Label>
           <Textarea
             id="description"
             value={formData.description}
@@ -145,7 +145,7 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
 
       {/* Connection Type */}
       <div className="space-y-2">
-        <Label>{t('connection_type')}</Label>
+        <Label>{c('connection')}</Label>
         <RadioGroup
           value={formData.type}
           onValueChange={(value) => handleTypeChange(value as 'ssh' | 'docker' | 'custom')}
@@ -154,19 +154,19 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
           <div className="flex items-center space-x-2">
             <RadioGroupItem value="ssh" id="ssh" />
             <Label htmlFor="ssh" className="cursor-pointer">
-              {t('ssh_connection')}
+              {t('ssh')}
             </Label>
           </div>
           <div className="flex items-center space-x-2">
             <RadioGroupItem value="docker" id="docker" />
             <Label htmlFor="docker" className="cursor-pointer">
-              {t('docker_connection')}
+              {t('docker')}
             </Label>
           </div>
           <div className="flex items-center space-x-2">
             <RadioGroupItem value="custom" id="custom" />
             <Label htmlFor="custom" className="cursor-pointer">
-              {t('custom_connection')}
+              {t('custom')}
             </Label>
           </div>
         </RadioGroup>
@@ -175,7 +175,7 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
       {/* Connection Details */}
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="ip">{t('host_address')}</Label>
+          <Label htmlFor="ip">{c('ip')}</Label>
           <Input
             id="ip"
             value={formData.ip}
@@ -186,7 +186,7 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="port">{t('port')}</Label>
+          <Label htmlFor="port">{c('port')}</Label>
           <Input
             id="port"
             type="text"
@@ -201,7 +201,7 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
         {formData.type === 'ssh' && (
           <>
             <div className="space-y-2">
-              <Label htmlFor="username">{t('username')}</Label>
+              <Label htmlFor="username">{c('username')}</Label>
               <Input
                 id="username"
                 value={formData.username}
@@ -212,7 +212,7 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">{t('password')}</Label>
+              <Label htmlFor="password">{c('password')}</Label>
               <Input
                 id="password"
                 type="password"

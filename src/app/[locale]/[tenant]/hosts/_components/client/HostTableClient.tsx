@@ -149,7 +149,7 @@ export function HostTableClient({
                         className="py-1.5"
                       >
                         <RefreshCw className="mr-2 h-3.5 w-3.5" />
-                        <span className="text-sm">{c('refresh')}</span>
+                        <span className="text-sm">{t('refresh')}</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         key={`delete-${host.id}`}
