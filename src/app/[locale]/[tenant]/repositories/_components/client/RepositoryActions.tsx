@@ -8,7 +8,7 @@ import { Button } from '@/components/shadcn/button';
 import { useToast } from '@/components/shadcn/use-toast';
 import { ConnectRepositoryValues } from '@/types/context/repositoryContextType';
 
-import { EnhancedConnectRepositoryDialog } from '../EnhancedConnectRepositoryDialog';
+import { RepositoryDialogClient } from './RepositoryDialogClient';
 
 interface RepositoryActionsProps {
   repositoryCount?: number;
@@ -141,7 +141,7 @@ export function RepositoryActions({
         </Button>
       </div>
 
-      <EnhancedConnectRepositoryDialog
+      <RepositoryDialogClient
         open={connectDialogOpen}
         onOpenChange={setConnectDialogOpen}
         onSubmit={handleConnectRepository}

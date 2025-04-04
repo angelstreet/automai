@@ -10,7 +10,7 @@ interface RepositoryHeaderProps {
   repositoryCount: number;
 }
 
-export function RepositoryHeader({ repositoryCount }: RepositoryHeaderProps) {
+export function RepositoryHeaderClient({ repositoryCount }: RepositoryHeaderProps) {
   const t = useTranslations('repositories');
   const [searchQuery, setSearchQuery] = useState('');
 

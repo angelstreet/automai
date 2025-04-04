@@ -1,16 +1,15 @@
 // Server Components
-export { EnhancedRepositoryCard } from './EnhancedRepositoryCard';
-export { EnhancedConnectRepositoryDialog } from './EnhancedConnectRepositoryDialog';
-export { RepositoryDetailView } from './RepositoryDetailView';
-export { RepositoryExplorer } from './RepositoryExplorer';
-export { RepositoryDialogs } from './RepositoryDialogs';
 export { RepositoryContent } from './RepositoryContent';
-export { RepositorySkeleton } from './RepositorySkeleton';
-export { RepositoryHeader } from './RepositoryHeader';
+export { RepositoryExplorer } from './RepositoryExplorer';
 
 // Client Components
-export { ClientRepositoryList } from './client/ClientRepositoryList';
-export { RepositoryActions as RepositoryActionsClient } from './client/RepositoryActions';
+export { RepositoryListClient } from './client/RepositoryListClient';
+export { RepositoryActions } from './client/RepositoryActions';
+export { RepositoryDialogClient } from './client/RepositoryDialogClient';
+export { RepositoryCardClient } from './client/RepositoryCardClient';
+export { RepositoryActionsClient } from './client/RepositoryActionsClient';
+export { RepositoryHeaderClient } from './client/RepositoryHeaderClient';
+export { RepositorySkeletonClient } from './client/RepositorySkeletonClient';
 
 // Import constants from main constants file
 export {

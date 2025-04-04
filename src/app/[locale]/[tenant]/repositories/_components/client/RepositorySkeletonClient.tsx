@@ -3,7 +3,7 @@
 import { Card, CardContent } from '@/components/shadcn/card';
 import { Skeleton } from '@/components/shadcn/skeleton';
 
-export function RepositorySkeleton() {
+export function RepositorySkeletonClient() {
   return (
     <Card className="w-full border-0 shadow-none">
       <CardContent>

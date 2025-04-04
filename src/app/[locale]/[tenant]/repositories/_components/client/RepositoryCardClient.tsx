@@ -14,11 +14,11 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/shadcn/card';
-import {  EnhancedRepositoryCardProps  } from '@/types/context/repositoryContextType';
+import { EnhancedRepositoryCardProps } from '@/types/context/repositoryContextType';
 
-import { LANGUAGE_COLORS } from '../constants';
+import { LANGUAGE_COLORS } from '../../constants';
 
-export function EnhancedRepositoryCard({
+export function RepositoryCardClient({
   repository,
   onDelete,
   isDeleting,

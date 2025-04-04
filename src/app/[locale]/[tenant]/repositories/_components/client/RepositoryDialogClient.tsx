@@ -21,9 +21,9 @@ import { useToast } from '@/components/shadcn/use-toast';
 import { useRepository } from '@/hooks/useRepository';
 import { EnhancedConnectRepositoryDialogProps } from '@/types/context/repositoryContextType';
 
-import { CONNECT_REPOSITORY_TABS, AUTH_METHODS } from '../constants';
+import { CONNECT_REPOSITORY_TABS, AUTH_METHODS } from '../../constants';
 
-export function EnhancedConnectRepositoryDialog({
+export function RepositoryDialogClient({
   open,
   onOpenChange,
   onSubmit,

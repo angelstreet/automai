@@ -1,7 +1,7 @@
 'use client';
 
-import { RepositoryHeader } from './RepositoryHeader';
-import { RepositoryActions } from './client/RepositoryActions';
+import { RepositoryActions } from './RepositoryActions';
+import { RepositoryHeaderClient } from './RepositoryHeaderClient';
 
 interface RepositoryActionsClientProps {
   repositoryCount?: number;
@@ -10,7 +10,7 @@ interface RepositoryActionsClientProps {
 export function RepositoryActionsClient({ repositoryCount = 0 }: RepositoryActionsClientProps) {
   return (
     <div className="flex items-center gap-4">
-      <RepositoryHeader repositoryCount={repositoryCount} />
+      <RepositoryHeaderClient repositoryCount={repositoryCount} />
       <RepositoryActions repositoryCount={repositoryCount} />
     </div>
   );

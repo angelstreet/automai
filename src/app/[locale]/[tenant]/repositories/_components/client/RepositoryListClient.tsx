@@ -10,9 +10,9 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { useRepository } from '@/hooks/useRepository';
 import { Repository } from '@/types/component/repositoryComponentType';
 
-import { EnhancedRepositoryCard } from '../EnhancedRepositoryCard';
+import { RepositoryCardClient } from './RepositoryCardClient';
 
-export function ClientRepositoryList() {
+export function RepositoryListClient() {
   const t = useTranslations('repositories');
 
   // Use the repository hook to get data
@@ -20,7 +20,7 @@ export function ClientRepositoryList() {
 
   // Dispatch event when repository count changes
   useEffect(() => {
-    console.log('[ClientRepositoryList] Repository count changed:', repositories.length);
+    console.log('[RepositoryListClient] Repository count changed:', repositories.length);
     window.dispatchEvent(
       new CustomEvent('repository-count-updated', {
         detail: { count: repositories.length },
@@ -31,13 +31,13 @@ export function ClientRepositoryList() {
   // Handle refresh events
   useEffect(() => {
     const handleRefresh = async () => {
-      console.log('[ClientRepositoryList] Handling refresh repositories request');
+      console.log('[RepositoryListClient] Handling refresh repositories request');
       try {
         // Use the refetchRepositories function from the hook
         await refetchRepositories();
-        console.log('[ClientRepositoryList] Repositories refresh complete');
+        console.log('[RepositoryListClient] Repositories refresh complete');
       } catch (error) {
-        console.error('[ClientRepositoryList] Error refreshing repositories:', error);
+        console.error('[RepositoryListClient] Error refreshing repositories:', error);
       } finally {
         // Signal that the refresh is complete
         window.dispatchEvent(new CustomEvent('refresh-repositories-complete'));
@@ -152,7 +152,7 @@ export function ClientRepositoryList() {
               onClick={() => handleViewRepository(repo)}
               className="cursor-pointer"
             >
-              <EnhancedRepositoryCard repository={repo} isDeleting={isDeleting === repo.id} />
+              <RepositoryCardClient repository={repo} isDeleting={isDeleting === repo.id} />
             </div>
           ))
         )}
