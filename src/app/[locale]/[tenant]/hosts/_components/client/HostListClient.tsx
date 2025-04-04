@@ -6,7 +6,6 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/shadcn/button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useHost } from '@/hooks/useHost';
-import { useHostViewMode } from '@/hooks/useHostViewMode';
 import { Host } from '@/types/component/hostComponentType';
 
 import { HostGridClient } from './HostGridClient';
@@ -26,15 +25,18 @@ export default function HostListClient({ initialHosts }: HostListClientProps) {
     hosts: queryHosts,
     deleteHost: deleteHostMutation,
     testConnection: testConnectionMutation,
+    viewMode,
   } = useHost();
-
-  // Get view mode preference from hook
-  const { viewMode } = useHostViewMode();
 
   // Use state for hosts with initialHosts as initial value
   // This will be updated by React Query when data is fetched
   const [hosts, setHosts] = useState<Host[]>(initialHosts);
   const [selectedHosts, setSelectedHosts] = useState<Set<string>>(new Set());
+
+  // Log when viewMode changes
+  useEffect(() => {
+    console.log(`[@component:HostListClient] View mode changed to: ${viewMode}`);
+  }, [viewMode]);
 
   // Update hosts when query data changes
   useEffect(() => {

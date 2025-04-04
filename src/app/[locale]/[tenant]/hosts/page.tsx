@@ -24,7 +24,7 @@ export default async function HostsPage() {
       description={t('desc')}
       actions={<HostActionsClient hostCount={hostCount} />}
     >
-      {/* Hidden component that listens for refresh events */}
+      {/* Event listener component for handling refresh and view toggling events */}
       <HostsEventListener />
 
       <Suspense fallback={<HostSkeleton />}>

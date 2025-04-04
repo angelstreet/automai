@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
-// Define event constants here instead of importing from server action
-export const REFRESH_HOSTS = 'REFRESH_HOSTS';
-export const REFRESH_HOSTS_COMPLETE = 'REFRESH_HOSTS_COMPLETE';
-export const OPEN_HOST_DIALOG = 'OPEN_HOST_DIALOG';
-export const TOGGLE_HOST_VIEW_MODE = 'TOGGLE_HOST_VIEW_MODE';
+import {
+  REFRESH_HOSTS,
+  REFRESH_HOSTS_COMPLETE,
+  TOGGLE_HOST_VIEW_MODE,
+} from '@/app/[locale]/[tenant]/hosts/constants';
 
 export default function HostsEventListener() {
   const router = useRouter();

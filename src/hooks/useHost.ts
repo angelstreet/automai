@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
 
 import {
   getHosts,
@@ -10,12 +11,14 @@ import {
   testHostConnection,
   getHostById,
 } from '@/app/actions/hostsAction';
+import { STORAGE_KEYS, ViewMode, DEFAULT_VIEW_MODE } from '@/app/[locale]/[tenant]/hosts/constants';
 import { useToast } from '@/components/shadcn/use-toast';
 
 /**
- * Hook for managing hosts
+ * Hook for managing hosts and view preferences
  *
  * Provides functions for fetching, creating, updating, deleting, and testing hosts
+ * Also manages view mode preference (grid/table)
  * Uses React Query for data fetching and caching
  */
 export function useHost() {
@@ -32,6 +35,31 @@ export function useHost() {
     queryKey: ['hosts'],
     queryFn: () => getHosts(),
   });
+
+  // View mode state management
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (typeof window === 'undefined') return DEFAULT_VIEW_MODE;
+    const savedMode = localStorage.getItem(STORAGE_KEYS.HOST_VIEW_MODE);
+    console.log(
+      `[@hook:useHost] Initial view mode from localStorage: ${savedMode || 'none, defaulting to grid'}`,
+    );
+    return (savedMode as ViewMode) || DEFAULT_VIEW_MODE;
+  });
+
+  // Update localStorage when viewMode changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      console.log(`[@hook:useHost] Saving view mode to localStorage: ${viewMode}`);
+      localStorage.setItem(STORAGE_KEYS.HOST_VIEW_MODE, viewMode);
+    }
+  }, [viewMode]);
+
+  // Toggle view mode function
+  const toggleViewMode = () => {
+    const newMode = viewMode === 'grid' ? 'table' : 'grid';
+    console.log(`[@hook:useHost] Toggling view mode from ${viewMode} to ${newMode}`);
+    setViewMode(newMode);
+  };
 
   // Get host by ID query factory
   const getHostQuery = (id: string) => {
@@ -160,6 +188,11 @@ export function useHost() {
   return {
     // Data
     hosts: hostsResponse?.data || [],
+
+    // View mode
+    viewMode,
+    setViewMode,
+    toggleViewMode,
 
     // Status
     isLoading: isLoadingHosts,
