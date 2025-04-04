@@ -42,6 +42,8 @@ import type { CICDProvider } from '@/types/component/cicdComponentType';
 
 import { CICDFormDialogClient } from '..';
 
+import { OPEN_CICD_DIALOG } from './CICDEventListener';
+
 interface CICDTableClientProps {
   initialProviders: CICDProvider[];
 }
@@ -186,8 +188,8 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
             action={
               <Button
                 onClick={() => {
-                  // Instead of setting state directly, click the global add button
-                  document.getElementById('add-provider-button')?.click();
+                  // Use event-based communication instead of direct DOM manipulation
+                  window.dispatchEvent(new Event(OPEN_CICD_DIALOG));
                 }}
               >
                 <PlusCircle className="h-4 w-4 mr-2" />
@@ -221,7 +223,7 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[250px]">{t('provider_name_label')}</TableHead>
+              <TableHead className="w-[250px]">{c('name')}</TableHead>
               <TableHead>{t('provider_type_label')}</TableHead>
               <TableHead>{t('provider_url_label')}</TableHead>
               <TableHead>{t('provider_auth_type_label')}</TableHead>

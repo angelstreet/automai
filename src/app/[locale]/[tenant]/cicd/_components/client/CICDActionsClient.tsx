@@ -2,13 +2,15 @@
 
 import { PlusCircle, RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
 import { useCICD } from '@/hooks/useCICD';
 
 import { CICDFormDialogClient } from '..';
+
+import { OPEN_CICD_DIALOG } from './CICDEventListener';
 
 interface CICDActionsClientProps {
   providerCount: number;
@@ -22,6 +24,19 @@ export default function CICDActionsClient({
 
   // Use the CICD hook
   const { refetchProviders, isLoading } = useCICD();
+
+  // Listen for open dialog events
+  useEffect(() => {
+    const handleOpenDialog = () => {
+      console.log('[@component:CICDActionsClient] Opening dialog via event');
+      setIsAddDialogOpen(true);
+    };
+
+    window.addEventListener(OPEN_CICD_DIALOG, handleOpenDialog);
+    return () => {
+      window.removeEventListener(OPEN_CICD_DIALOG, handleOpenDialog);
+    };
+  }, []);
 
   const handleAddProvider = useCallback(() => {
     setIsAddDialogOpen(true);

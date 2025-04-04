@@ -254,6 +254,97 @@ export default function CICDTableClient({ initialProviders }) {
 }
 ```
 
+### 5. Event-Based Refresh Architecture
+
+To address server/client refresh orchestration and avoid cookie handling issues in client components, we use a specialized event-based architecture:
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│ Server Actions  │ --> │ Event Listeners │ --> │ Route Refresh   │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+        ↑                       │                       │
+        │                       │                       │
+        └───────────────────────┴───────────────────────┘
+                         Feedback Loop
+```
+
+- **Server Actions**: Handle data operations with proper cookie access
+- **Client Components**: Dispatch events after successful operations
+- **Event Listeners**: Dedicated components that listen for events and trigger route refreshes
+
+This architecture solves the "Cookies can only be modified in a Server Action or Route Handler" error and provides a clean separation of concerns.
+
+**Example Event Listener Component**:
+```typescript
+// _components/client/CICDEventListener.tsx
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+
+// Define event constants
+export const REFRESH_CICD_COMPLETE = 'REFRESH_CICD_COMPLETE';
+
+export default function CICDEventListener() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const handleRefreshComplete = () => {
+      console.log('[@component:CICDEventListener] Refreshing route');
+      router.refresh();
+    };
+
+    window.addEventListener(REFRESH_CICD_COMPLETE, handleRefreshComplete);
+    return () => {
+      window.removeEventListener(REFRESH_CICD_COMPLETE, handleRefreshComplete);
+    };
+  }, [router]);
+
+  return null;
+}
+```
+
+**Example Event Dispatch in Client Component**:
+```typescript
+// In _components/client/CICDFormDialogClient.tsx
+import { REFRESH_CICD_COMPLETE } from './CICDEventListener';
+
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  try {
+    const result = await createCICDProvider(formData);
+    if (result.success) {
+      // Dispatch event to notify listeners
+      window.dispatchEvent(new Event(REFRESH_CICD_COMPLETE));
+      
+      // Close dialog
+      setOpen(false);
+    }
+  } catch (error) {
+    // Error handling
+  }
+};
+```
+
+**Example Page Component Including Event Listener**:
+```typescript
+// page.tsx
+export default async function CICDPage() {
+  // ...server-side data fetching...
+  
+  return (
+    <FeaturePageContainer>
+      {/* Hidden component that listens for refresh events */}
+      <CICDEventListener />
+      
+      <Suspense fallback={<CICDSkeleton />}>
+        <CICDContent />
+      </Suspense>
+    </FeaturePageContainer>
+  );
+}
+```
+
 ## Common Patterns and Best Practices
 
 ### Component Naming Patterns
@@ -282,6 +373,7 @@ For other component types, continue to follow our established patterns:
 - `[Domain]TableClient.tsx` - For table components
 - `[Domain]ActionsClient.tsx` - For action button components
 - `[Domain][Entity]ListClient.tsx` - For list components
+- `[Domain]EventListener.tsx` - For event listener components
 
 ### Data Flow Pattern
 
@@ -289,6 +381,7 @@ For other component types, continue to follow our established patterns:
 2. Data is passed to client components as props
 3. Client components use React Query hooks to handle subsequent data fetching
 4. Use the initial server data to avoid loading states on first render
+5. Use event listeners to handle route refreshes after mutations
 
 ### Error Handling Pattern
 
@@ -384,6 +477,8 @@ Where layer is one of:
 7. **Never Cache WRITE Operations**
 8. **Always Use Logging Pattern**: `[@layer:file:function]`
 9. **Client Components Must Be Named with "Client" Suffix**: `ComponentNameClient.tsx`
+10. **Only Export Async Functions from Server Action Files**
+11. **Use Event Listeners for Route Refreshes**: Create dedicated EventListener components
 
 ## Implementation Templates
 
@@ -612,6 +707,37 @@ export default function EntityTableClient({ initialEntities }: EntityTableClient
 }
 ```
 
+### Event Listener Component Template
+
+```typescript
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+
+// Define event constants
+export const REFRESH_ENTITY_COMPLETE = 'REFRESH_ENTITY_COMPLETE';
+
+export default function EntityEventListener() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const handleRefreshComplete = () => {
+      console.log('[@component:EntityEventListener] Refreshing route after entity operation');
+      router.refresh();
+    };
+
+    window.addEventListener(REFRESH_ENTITY_COMPLETE, handleRefreshComplete);
+    return () => {
+      window.removeEventListener(REFRESH_ENTITY_COMPLETE, handleRefreshComplete);
+    };
+  }, [router]);
+
+  // This component renders nothing
+  return null;
+}
+```
+
 ## Troubleshooting Common Issues
 
 1. **Hydration Errors**: Server and client render different content
@@ -627,4 +753,10 @@ export default function EntityTableClient({ initialEntities }: EntityTableClient
    - Solution: Minimize dependencies in useEffect
 
 5. **Stale Data After Updates**: Forgetting to invalidate cache
-   - Solution: Call revalidatePath() after WRITE operations 
+   - Solution: Call revalidatePath() after WRITE operations
+
+6. **"Only async functions are allowed"**: Exporting constants from server action files
+   - Solution: Define constants in client components, not server action files
+
+7. **Cookie Access Errors in Client Components**: Trying to modify cookies in client code
+   - Solution: Use event listeners and router.refresh() to trigger server component refreshes 

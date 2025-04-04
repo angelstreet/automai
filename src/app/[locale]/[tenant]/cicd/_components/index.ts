@@ -15,3 +15,4 @@ export { default as CICDSkeleton } from './CICDSkeleton';
 export { default as CICDTableClient } from './client/CICDTableClient';
 export { default as CICDFormDialogClient } from './client/CICDFormDialogClient';
 export { default as CICDActionsClient } from './client/CICDActionsClient';
+export { default as CICDEventListener } from './client/CICDEventListener';

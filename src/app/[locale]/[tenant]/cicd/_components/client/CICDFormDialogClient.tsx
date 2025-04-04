@@ -2,8 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 
 import { createCICDProvider, updateCICDProvider, testCICDProvider } from '@/app/actions/cicdAction';
+import { REFRESH_CICD_COMPLETE } from './CICDEventListener';
 import { Button } from '@/components/shadcn/button';
 import {
   Form,
@@ -278,6 +280,9 @@ const CICDFormDialogClient: React.FC<CICDFormDialogProps> = ({
         // Remove success toast
         // Close the dialog and refresh the list
         onComplete();
+
+        // Dispatch event to notify listeners of successful operation
+        window.dispatchEvent(new Event(REFRESH_CICD_COMPLETE));
       } else {
         toast({
           title: 'Error',
