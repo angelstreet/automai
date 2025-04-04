@@ -2,7 +2,7 @@
 
 import { PlusCircle, RefreshCw, Grid, List } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
@@ -10,6 +10,7 @@ import { useHost } from '@/hooks/useHost';
 import { useHostViewMode } from '@/hooks/useHostViewMode';
 
 import { HostFormDialogClient, FormData as ConnectionFormData } from './HostFormDialogClient';
+import { OPEN_HOST_DIALOG } from './HostsEventListener';
 
 interface HostActionsClientProps {
   hostCount?: number;
@@ -17,6 +18,7 @@ interface HostActionsClientProps {
 
 export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActionsClientProps) {
   const t = useTranslations('hosts');
+  const c = useTranslations('common');
   const { hosts, isLoading: isRefetching, refetchHosts } = useHost();
   const { viewMode, toggleViewMode } = useHostViewMode();
 
@@ -33,6 +35,18 @@ export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActio
 
   // Derive host count from React Query's hosts data, falling back to the prop
   const currentHostCount = hosts?.length ?? initialHostCount;
+
+  // Listen for external open dialog events
+  useEffect(() => {
+    const handleOpenDialog = () => {
+      setShowAddHost(true);
+    };
+
+    window.addEventListener(OPEN_HOST_DIALOG, handleOpenDialog);
+    return () => {
+      window.removeEventListener(OPEN_HOST_DIALOG, handleOpenDialog);
+    };
+  }, []);
 
   const handleRefresh = async () => {
     if (isRefetching) return;
@@ -79,21 +93,21 @@ export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActio
               disabled={isRefetching}
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${isRefetching ? 'animate-spin' : ''}`} />
-              {t('refresh', { fallback: 'Refresh' })}
+              {c('refresh')}
             </Button>
           </>
         )}
 
         <Button size="sm" className="h-8 gap-1" onClick={handleAddHost} id="add-host-button">
           <PlusCircle className="h-4 w-4" />
-          <span>{t('add_button', { fallback: 'Add Host' })}</span>
+          <span>{t('add_button')}</span>
         </Button>
       </div>
 
       <Dialog open={showAddHost} onOpenChange={handleDialogClose}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t('add_title', { fallback: 'Add New Host' })}</DialogTitle>
+            <DialogTitle>{t('add_title')}</DialogTitle>
           </DialogHeader>
           <HostFormDialogClient
             formData={formData}

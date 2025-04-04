@@ -12,3 +12,4 @@ export { HostFormDialogClient } from './client/HostFormDialogClient';
 export { HostCardClient } from './client/HostCardClient';
 export { HostTableClient } from './client/HostTableClient';
 export { HostGridClient } from './client/HostGridClient';
+export { default as HostsEventListener } from './client/HostsEventListener';

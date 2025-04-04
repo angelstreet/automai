@@ -11,6 +11,8 @@ import { Switch } from '@/components/shadcn/switch';
 import { Textarea } from '@/components/shadcn/textarea';
 import { useHost } from '@/hooks/useHost';
 
+import { REFRESH_HOSTS_COMPLETE } from './HostsEventListener';
+
 export interface FormData {
   name: string;
   description: string;
@@ -99,6 +101,8 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
       const result = await createHost(hostData);
 
       if (result.success) {
+        // Dispatch event to notify listeners of successful operation
+        window.dispatchEvent(new Event(REFRESH_HOSTS_COMPLETE));
         // Close the form
         onCancel();
       } else {
@@ -117,7 +121,7 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
       {/* Basic Information */}
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="name">{t('host_name', { fallback: 'Name' })}</Label>
+          <Label htmlFor="name">{t('host_name')}</Label>
           <Input
             id="name"
             value={formData.name}
@@ -128,7 +132,7 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="description">{t('host_description', { fallback: 'Description' })}</Label>
+          <Label htmlFor="description">{t('host_description')}</Label>
           <Textarea
             id="description"
             value={formData.description}
@@ -141,7 +145,7 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
 
       {/* Connection Type */}
       <div className="space-y-2">
-        <Label>{t('connection_type', { fallback: 'Connection Type' })}</Label>
+        <Label>{t('connection_type')}</Label>
         <RadioGroup
           value={formData.type}
           onValueChange={(value) => handleTypeChange(value as 'ssh' | 'docker' | 'custom')}
@@ -150,19 +154,19 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
           <div className="flex items-center space-x-2">
             <RadioGroupItem value="ssh" id="ssh" />
             <Label htmlFor="ssh" className="cursor-pointer">
-              {t('ssh_connection', { fallback: 'SSH' })}
+              {t('ssh_connection')}
             </Label>
           </div>
           <div className="flex items-center space-x-2">
             <RadioGroupItem value="docker" id="docker" />
             <Label htmlFor="docker" className="cursor-pointer">
-              {t('docker_connection', { fallback: 'Docker' })}
+              {t('docker_connection')}
             </Label>
           </div>
           <div className="flex items-center space-x-2">
             <RadioGroupItem value="custom" id="custom" />
             <Label htmlFor="custom" className="cursor-pointer">
-              {t('custom_connection', { fallback: 'Custom' })}
+              {t('custom_connection')}
             </Label>
           </div>
         </RadioGroup>
@@ -171,7 +175,7 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
       {/* Connection Details */}
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="ip">{t('host_address', { fallback: 'IP Address/Hostname' })}</Label>
+          <Label htmlFor="ip">{t('host_address')}</Label>
           <Input
             id="ip"
             value={formData.ip}
@@ -182,7 +186,7 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="port">{t('port', { fallback: 'Port' })}</Label>
+          <Label htmlFor="port">{t('port')}</Label>
           <Input
             id="port"
             type="text"
@@ -197,7 +201,7 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
         {formData.type === 'ssh' && (
           <>
             <div className="space-y-2">
-              <Label htmlFor="username">{t('username', { fallback: 'Username' })}</Label>
+              <Label htmlFor="username">{t('username')}</Label>
               <Input
                 id="username"
                 value={formData.username}
@@ -208,7 +212,7 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">{t('password', { fallback: 'Password' })}</Label>
+              <Label htmlFor="password">{t('password')}</Label>
               <Input
                 id="password"
                 type="password"
@@ -226,7 +230,7 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
                 onCheckedChange={(checked) => updateFormData({ is_windows: checked })}
               />
               <Label htmlFor="is_windows" className="cursor-pointer">
-                {t('is_windows', { fallback: 'Windows Server' })}
+                {t('is_windows')}
               </Label>
             </div>
           </>
@@ -250,12 +254,10 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
       {/* Actions */}
       <div className="flex justify-end space-x-2">
         <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
-          {t('cancel', { fallback: 'Cancel' })}
+          {t('cancel')}
         </Button>
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting
-            ? t('creating_host', { fallback: 'Creating...' })
-            : t('create_host', { fallback: 'Create Host' })}
+          {isSubmitting ? t('creating_host') : t('create_host')}
         </Button>
       </div>
     </form>

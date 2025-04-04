@@ -7,6 +7,7 @@ import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 import HostContent from './_components/HostContent';
 import HostSkeleton from './_components/HostSkeleton';
 import { HostActionsClient } from './_components/client/HostActionsClient';
+import HostsEventListener from './_components/client/HostsEventListener';
 
 export default async function HostsPage() {
   const t = await getTranslations('hosts');
@@ -23,6 +24,9 @@ export default async function HostsPage() {
       description={t('desc')}
       actions={<HostActionsClient hostCount={hostCount} />}
     >
+      {/* Hidden component that listens for refresh events */}
+      <HostsEventListener />
+
       <Suspense fallback={<HostSkeleton />}>
         <HostContent />
       </Suspense>

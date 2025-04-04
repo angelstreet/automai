@@ -199,7 +199,7 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
         <CardContent className="p-0">
           <EmptyState
             icon={<AlertCircle className="h-10 w-10" />}
-            title={t('none_title', { fallback: 'No CI/CD Providers' })}
+            title={t('none_title')}
             description={t('none_desc', {
               fallback: 'Add a CI/CD provider to start creating deployments',
             })}
@@ -211,7 +211,7 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
                 }}
               >
                 <PlusCircle className="h-4 w-4 mr-2" />
-                {t('add_button', { fallback: 'Add Provider' })}
+                {t('add_button')}
               </Button>
             }
           />
@@ -257,7 +257,7 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
                 <TableCell className="font-medium">{provider.name}</TableCell>
                 <TableCell>
                   <Badge className={getProviderBadgeColor(provider.type)} variant="outline">
-                    {t(`provider_type_${provider.type}`, { fallback: provider.type })}
+                    {t(`provider_type_${provider.type}`)}
                   </Badge>
                 </TableCell>
                 <TableCell>{provider.url}</TableCell>
@@ -341,11 +341,7 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
       <Dialog open={isAddEditDialogOpen} onOpenChange={setIsAddEditDialogOpen}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>
-              {isEditing
-                ? t('edit_title', { fallback: 'Edit CI/CD Provider' })
-                : t('add_title', { fallback: 'Add CI/CD Provider' })}
-            </DialogTitle>
+            <DialogTitle>{isEditing ? t('edit_title') : t('add_title')}</DialogTitle>
           </DialogHeader>
           <CICDFormDialogClient
             providerId={isEditing && selectedProvider ? selectedProvider.id : undefined}
