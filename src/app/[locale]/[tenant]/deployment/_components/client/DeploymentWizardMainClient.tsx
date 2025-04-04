@@ -605,4 +605,4 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
 
 DeploymentWizardMainClient.displayName = 'DeploymentWizard';
 
-export default DeploymentWizardMainClient;
+export { DeploymentWizardMainClient };
