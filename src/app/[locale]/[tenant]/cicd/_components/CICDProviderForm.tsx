@@ -89,10 +89,24 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
         url: url || '',
         port: port ? port.toString() : '',
         auth_type: provider.config?.auth_type || 'token',
-        username: provider.config?.credentials?.username || '',
+        username: '', // Don't populate username for security
         password: '', // Don't populate password for security
         token: '', // Don't populate token for security
       });
+      
+      // Reset any form autocomplete data with a slight delay
+      setTimeout(() => {
+        // Find and clear any credential fields
+        const usernameFields = document.querySelectorAll('input[name="new-username"], input[name="basic-username"]');
+        const passwordField = document.querySelector('input[name="new-password"]') as HTMLInputElement;
+        const tokenField = document.querySelector('input[name="new-token"]') as HTMLInputElement;
+        
+        usernameFields.forEach((field: any) => {
+          if (field) field.value = '';
+        });
+        if (passwordField) passwordField.value = '';
+        if (tokenField) tokenField.value = '';
+      }, 0);
     }
   }, [isEditMode, provider, form]);
 
@@ -359,7 +373,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-1">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-1" data-form-type="do-not-autofill">
         {/* Provider Type */}
         <FormField
           control={form.control}
@@ -511,6 +525,8 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
                       placeholder="Enter username"
                       onChange={(e) => handleCredentialChange('username', e.target.value)}
                       value={field.value}
+                      name="new-username"
+                      autoComplete="off"
                     />
                   </FormControl>
                   <FormMessage className="text-xs" />
@@ -532,6 +548,8 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
                       placeholder="Enter your API token"
                       onChange={(e) => handleCredentialChange('token', e.target.value)}
                       value={field.value}
+                      name="new-token"
+                      autoComplete="new-password"
                     />
                   </FormControl>
                   <FormMessage className="text-xs" />
@@ -556,6 +574,8 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
                       placeholder="Enter username"
                       onChange={(e) => handleCredentialChange('username', e.target.value)}
                       value={field.value}
+                      name="basic-username"
+                      autoComplete="off"
                     />
                   </FormControl>
                   <FormMessage className="text-xs" />
@@ -577,6 +597,8 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
                       placeholder="Enter password"
                       onChange={(e) => handleCredentialChange('password', e.target.value)}
                       value={field.value}
+                      name="new-password"
+                      autoComplete="new-password"
                     />
                   </FormControl>
                   <FormMessage className="text-xs" />
