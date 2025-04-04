@@ -11,6 +11,7 @@ interface DeploymentWizardStep1ClientProps {
   name: string;
   description: string;
   repositoryId: string;
+  branch: string;
   repositories: Repository[];
   repositoryError: string | null;
   onInputChange: (
@@ -25,6 +26,7 @@ const DeploymentWizardStep1Client: React.FC<DeploymentWizardStep1ClientProps> = 
   name,
   description,
   repositoryId,
+  branch,
   repositories,
   repositoryError,
   onInputChange,
@@ -91,6 +93,23 @@ const DeploymentWizardStep1Client: React.FC<DeploymentWizardStep1ClientProps> = 
               : null}
           </select>
           {repositoryError && <p className="text-sm text-red-500 mt-1">Error: {repositoryError}</p>}
+        </div>
+
+        <div>
+          <label htmlFor="branch" className="block text-sm font-medium mb-1">
+            Branch
+          </label>
+          <Input
+            id="branch"
+            name="branch"
+            value={branch}
+            onChange={onInputChange}
+            placeholder="main"
+            className="w-full"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Default branch to use for deployment. Common values: main, master, develop
+          </p>
         </div>
       </div>
 

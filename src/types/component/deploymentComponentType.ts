@@ -108,6 +108,7 @@ export interface DeploymentData {
   description: string;
   repositoryId: string;
   selectedRepository?: Repository | null;
+  branch: string;
   schedule: 'now' | 'later';
   scheduledTime: string;
   scriptIds: string[];

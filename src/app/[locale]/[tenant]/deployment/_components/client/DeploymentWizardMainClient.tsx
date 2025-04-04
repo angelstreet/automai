@@ -46,6 +46,7 @@ const initialDeploymentData: DeploymentData = {
   description: '',
   repositoryId: '',
   selectedRepository: null,
+  branch: 'main', // Default branch
   schedule: 'now',
   scheduledTime: '',
   scriptIds: [],
@@ -132,10 +133,20 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               url: selectedRepo.url,
             });
 
-            // Try multiple branch names since we don't know the default branch
-            const branchesToTry = ['master', 'main', 'develop', 'dev'];
+            // Use the selected branch from deploymentData, or fall back to a list of defaults
+            const userSelectedBranch = deploymentData.branch || 'main';
             let scriptFiles = null;
             let lastError = null;
+            
+            // Create an array with the user-selected branch first, then fallbacks
+            const branchesToTry = [userSelectedBranch];
+            // Add fallbacks only if they're different from the user-selected branch
+            if (!branchesToTry.includes('main')) branchesToTry.push('main');
+            if (!branchesToTry.includes('master')) branchesToTry.push('master');
+            if (!branchesToTry.includes('develop')) branchesToTry.push('develop');
+            if (!branchesToTry.includes('dev')) branchesToTry.push('dev');
+            
+            console.log(`[DeploymentWizard] Trying branches in order: ${branchesToTry.join(', ')}`);
 
             for (const branch of branchesToTry) {
               try {
@@ -331,7 +342,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           name: deploymentData.name,
           description: deploymentData.description,
           repositoryId: deploymentData.repositoryId,
-          branch: 'main', // Default branch
+          branch: deploymentData.branch || 'main', // Use selected branch
           targetHostId: deploymentData.hostIds[0], // First host ID
           cicdProviderId: cicdProviders.length > 0 ? cicdProviders[0].id : '',
           configuration: {
@@ -521,6 +532,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               name={deploymentData.name}
               description={deploymentData.description}
               repositoryId={deploymentData.repositoryId}
+              branch={deploymentData.branch}
               repositories={repositories || []}
               repositoryError={null}
               onInputChange={handleInputChange}
