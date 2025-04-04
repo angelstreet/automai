@@ -150,7 +150,7 @@ export function EnhancedConnectRepositoryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto" data-form-type="do-not-autofill">
         <DialogHeader>
           <DialogTitle className="text-xl">{t('connectRepository')}</DialogTitle>
           <DialogDescription>{t('connect_to_git_provider')}</DialogDescription>
@@ -302,10 +302,12 @@ export function EnhancedConnectRepositoryDialog({
                           </Label>
                           <Input
                             id="accessToken"
+                            name="new-token"
                             placeholder={t('enterAccessToken')}
                             value={accessToken}
                             onChange={(e) => setAccessToken(e.target.value)}
                             type="password"
+                            autoComplete="new-password"
                           />
                         </div>
 
