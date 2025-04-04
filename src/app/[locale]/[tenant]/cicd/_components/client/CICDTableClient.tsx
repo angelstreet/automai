@@ -121,13 +121,13 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
 
         // Show success toast
         toast({
-          title: c('connection_test_results'),
+          title: c('connection_success'),
           description: `${provider.name}: ${c('successful')}`,
           variant: 'default',
         });
       } catch (error: any) {
         toast({
-          title: c('connection_test_results'),
+          title: c('connection_failed'),
           description: `${provider.name}: ${c('failed')} - ${error.message || 'An unexpected error occurred'}`,
           variant: 'destructive',
         });
