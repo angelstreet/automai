@@ -1,10 +1,10 @@
 // src/app/[locale]/[tenant]/deployment/_components/index.ts
 
 // Server components
-export { EnhancedScriptSelector } from './EnhancedScriptSelector';
-export { HostSelector } from './HostSelector';
+export { default as EnhancedScriptSelector } from './client/DeploymentScriptSelectorClient';
+export { default as HostSelector } from './client/DeploymentHostSelectorClient';
 
-// Client components 
+// Client components
 export { DeploymentWizardStep1Client } from './client/DeploymentWizardStep1Client';
 export { DeploymentWizardStep2Client } from './client/DeploymentWizardStep2Client';
 export { DeploymentWizardStep3Client } from './client/DeploymentWizardStep3Client';

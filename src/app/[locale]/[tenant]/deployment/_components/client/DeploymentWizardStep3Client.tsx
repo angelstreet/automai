@@ -5,7 +5,7 @@ import React, { useEffect } from 'react';
 
 import { Host } from '@/types/component/hostComponentType';
 
-import HostSelector from '../HostSelector';
+import DeploymentHostSelectorClient from './DeploymentHostSelectorClient';
 
 interface DeploymentWizardStep3Props {
   hostIds: string[];
@@ -81,7 +81,7 @@ const DeploymentWizardStep3: React.FC<DeploymentWizardStep3Props> = ({
           <p className="text-xs text-red-500 dark:text-red-400 mt-1">{t('tryRefreshing')}</p>
         </div>
       ) : (
-        <HostSelector
+        <DeploymentHostSelectorClient
           availableHosts={availableHosts}
           selectedHosts={hostIds}
           onHostToggle={onHostToggle}

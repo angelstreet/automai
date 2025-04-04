@@ -15,7 +15,7 @@ type Script = {
   type?: string;
 };
 
-import EnhancedScriptSelector from '../EnhancedScriptSelector';
+import DeploymentScriptSelectorClient from './DeploymentScriptSelectorClient';
 
 interface DeploymentWizardStep2Props {
   selectedRepository: Repository | null;
@@ -84,7 +84,7 @@ const DeploymentWizardStep2: React.FC<DeploymentWizardStep2Props> = ({
         </div>
       )}
 
-      <EnhancedScriptSelector
+      <DeploymentScriptSelectorClient
         selectedRepository={selectedRepository || undefined}
         availableScripts={repositoryScripts}
         selectedScriptIds={scriptIds}
