@@ -26,7 +26,8 @@ Where:
 
 | Component Type | Naming Pattern                   | Example                           |
 |----|----|-----|
-| Dialog         | [Domain][Entity][Action]DialogClient.tsx | TeamMemberAddDialogClient.tsx     |
+| Dialog         | [Domain][Entity]DialogClient.tsx | TeamMemberDialogClient.tsx     |
+| Form Dialog    | [Domain]FormDialogClient.tsx    | CICDFormDialogClient.tsx     |
 | Tab            | [Domain][Entity]TabClient.tsx    | TeamMembersTabClient.tsx          |
 | List           | [Domain][Entity][Type]Client.tsx | TeamResourcesUnassignedClient.tsx |
 | Actions        | [Domain]ActionsClient.tsx        | TeamActionsClient.tsx             |
@@ -208,44 +209,4 @@ Examples:
 
 Examples:
 - `TeamProvider`
-- `UserProvider`
-- `SidebarProvider`
-
-## Logging Conventions
-
-All logs should follow the format:
-```
-[@layer:file:function] Message
-```
-
-Where layer is one of:
-- `@db`: Database operations
-- `@action`: Server actions
-- `@component`: React components
-- `@hook`: React hooks
-- `@api`: API routes
-- `@middleware`: Middleware
-- `@supabase`: Supabase operations
-
-Examples:
-- `[@db:teamDb:getTeamById] Getting team: ${id}`
-- `[@action:team:getTeam] Found team: ${id}`
-- `[@component:TeamMembersTable:render] Rendering members: ${members.length}`
-
-## General Rules
-
-1. Use PascalCase for React components and type interfaces
-2. Use camelCase for functions, variables, and file names
-3. Add suffix "Client" to client components (e.g., TeamActionsClient.tsx)
-4. Group related components in appropriate folders
-5. Place client components in client/ subfolders
-6. Use explicit and descriptive names over abbreviations
-7. Maintain consistent naming across the entire codebase
-8. Define component types in `/types/component/` with suffix `ComponentType`
-9. Define context types in `/types/context/` with suffix `ContextType`
-10. Define service types in `/types/service/` with suffix `ServiceType` 
-11. Define API types in `/types/api/` with suffix `ApiType`
-12. Define database types in `/types/db/` with suffix `DbType`
-13. Always suffix action files with "Action" (e.g., teamAction.ts)
-14. Create skeleton components with "Skeleton" suffix (e.g., TeamSkeleton.tsx)
-15. Place page-specific components in _components folder under the page directory 
+- `

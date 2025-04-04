@@ -1,0 +1,4363 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Codebase Structure for automai
+
+## Project Overview
+
+- **Name:** automai
+- **Version:** 3.2.0
+- **Description:** Automai is a multi-tenant SaaS platform designed for end-to-end test automation across web, desktop, and mobile environments.
+
+## Core Dependencies
+
+```json
+{
+  "@alloc/quick-lru": "5.2.0",
+  "@hookform/resolvers": "4.1.3",
+  "@monaco-editor/react": "^4.7.0",
+  "@octokit/rest": "21.1.1",
+  "@radix-ui/react-accordion": "^1.2.3",
+  "@radix-ui/react-alert-dialog": "^1.1.6",
+  "@radix-ui/react-avatar": "^1.1.3",
+  "@radix-ui/react-checkbox": "^1.1.4",
+  "@radix-ui/react-collapsible": "^1.1.3",
+  "@radix-ui/react-dialog": "^1.1.6",
+  "@radix-ui/react-dropdown-menu": "^2.1.6",
+  "@radix-ui/react-label": "^2.1.2",
+  "@radix-ui/react-popover": "^1.1.6",
+  "@radix-ui/react-progress": "^1.1.2",
+  "@radix-ui/react-radio-group": "^1.2.3",
+  "@radix-ui/react-scroll-area": "^1.2.3",
+  "@radix-ui/react-select": "^2.1.6",
+  "@radix-ui/react-separator": "^1.1.2",
+  "@radix-ui/react-slot": "^1.1.2",
+  "@radix-ui/react-switch": "^1.1.3",
+  "@radix-ui/react-tabs": "^1.1.3",
+  "@radix-ui/react-toast": "^1.2.6",
+  "@radix-ui/react-tooltip": "^1.1.8",
+  "@radix-ui/react-visually-hidden": "^1.1.2",
+  "@supabase/ssr": "0.6.1",
+  "@supabase/supabase-js": "2.49.1",
+  "@t3-oss/env-nextjs": "0.12.0",
+  "@tabler/icons-react": "^3.30.0",
+  "@tanstack/react-query": "5.67.1",
+  "@tanstack/react-table": "8.21.2",
+  "@types/bcrypt": "^5.0.2",
+  "@types/js-cookie": "^3.0.6",
+  "@types/jsonwebtoken": "^9.0.9",
+  "@types/uuid": "10.0.0",
+  "@xterm/addon-attach": "^0.12.0-beta.98",
+  "@xterm/addon-fit": "^0.11.0-beta.98",
+  "@xterm/addon-search": "^0.16.0-beta.98",
+  "@xterm/addon-web-links": "^0.12.0-beta.98",
+  "@xterm/xterm": "^5.6.0-beta.98",
+  "asn1": "0.2.6",
+  "bcrypt": "^5.1.1",
+  "braces": "3.0.3",
+  "chart.js": "4.4.8",
+  "clsx": "2.1.1",
+  "cmdk": "^1.0.4",
+  "crypto-browserify": "^3.12.1",
+  "date-fns": "4.1.0",
+  "detect-node-es": "1.1.0",
+  "electron-store": "^10.0.1",
+  "get-nonce": "1.0.1",
+  "is-electron": "^2.2.2",
+  "jose": "6.0.10",
+  "js-cookie": "^3.0.5",
+  "jsonwebtoken": "^9.0.2",
+  "next-intl": "3.26.5",
+  "nopt": "8.1.0",
+  "punycode": "2.3.1",
+  "react": "latest",
+  "react-chartjs-2": "5.3.0",
+  "react-dom": "latest",
+  "react-hotkeys-hook": "4.6.1",
+  "simple-git": "^3.27.0",
+  "sonner": "2.0.1",
+  "ssh2": "^1.16.0",
+  "stream-browserify": "^3.0.0",
+  "supabase": "^2.15.8",
+  "tailwind-merge": "3.0.2",
+  "tailwindcss": "3.4.1",
+  "ts-node": "^10.9.2",
+  "use-callback-ref": "1.3.3",
+  "uuid": "11.1.0",
+  "ws": "^8.18.1",
+  "zod": "3.24.2"
+}
+```
+
+## Architectural Patterns
+
+### Server Components (62)
+
+- `src/app/[locale]/(auth)/layout.tsx`
+- `src/app/[locale]/(marketing)/layout.tsx`
+- `src/app/[locale]/[tenant]/billing/_components/BillingContent.tsx`
+- `src/app/[locale]/[tenant]/billing/_components/BillingSkeleton.tsx`
+- `src/app/[locale]/[tenant]/billing/page.tsx`
+- `src/app/[locale]/[tenant]/cicd/_components/CICDContent.tsx`
+- `src/app/[locale]/[tenant]/cicd/_components/CICDSkeleton.tsx`
+- `src/app/[locale]/[tenant]/cicd/page.tsx`
+- `src/app/[locale]/[tenant]/dashboard/page.tsx`
+- `src/app/[locale]/[tenant]/deployment/DeploymentList.tsx`
+- ... and 52 more
+
+### Client Components (97)
+
+- `src/app/[locale]/(auth)/auth-redirect/page.tsx`
+- `src/app/[locale]/(auth)/forgot-password/page.tsx`
+- `src/app/[locale]/(auth)/login/page.tsx`
+- `src/app/[locale]/(auth)/reset-password/page.tsx`
+- `src/app/[locale]/(auth)/signup/page.tsx`
+- `src/app/[locale]/(marketing)/_components/client/Features.tsx`
+- `src/app/[locale]/(marketing)/_components/client/Footer.tsx`
+- `src/app/[locale]/(marketing)/_components/client/Hero.tsx`
+- `src/app/[locale]/(marketing)/_components/client/SiteHeader.tsx`
+- `src/app/[locale]/[tenant]/_components/client/TenantLayoutClient.tsx`
+- ... and 87 more
+
+### Context Providers (1)
+
+- `src/components/shadcn/form.tsx`
+
+### Server Actions (14)
+
+- `src/app/[locale]/[tenant]/team/actions.ts`
+- `src/app/actions/authAction.ts`
+- `src/app/actions/cicdAction.ts`
+- `src/app/actions/dashboardAction.ts`
+- `src/app/actions/deploymentWizardAction.ts`
+- `src/app/actions/deploymentsAction.ts`
+- `src/app/actions/hostsAction.ts`
+- `src/app/actions/permissionAction.ts`
+- `src/app/actions/repositoriesAction.ts`
+- `src/app/actions/sidebarAction.ts`
+- ... and 4 more
+
+### API Endpoints (4)
+
+- `src/app/api/cicd/test-connection/route.ts`
+- `src/app/api/repositories/explore/route.ts`
+- `src/app/api/repositories/test-connection/route.ts`
+- `src/app/api/repositories/test-repository/route.ts`
+
+## Directory Structure
+
+```json
+{
+  "path": "/",
+  "type": "directory",
+  "children": [
+    {
+      "path": "src",
+      "type": "directory",
+      "description": "",
+      "children": [
+        {
+          "path": "src/app",
+          "type": "directory",
+          "description": "",
+          "children": [
+            {
+              "path": "src/app/[locale]",
+              "type": "directory",
+              "description": "",
+              "children": [
+                {
+                  "path": "src/app/[locale]/(auth)",
+                  "type": "directory",
+                  "description": "",
+                  "children": [
+                    {
+                      "path": "src/app/[locale]/(auth)/auth-redirect",
+                      "type": "directory",
+                      "description": "",
+                      "children": [
+                        {
+                          "path": "src/app/[locale]/(auth)/auth-redirect/page.tsx",
+                          "type": "file",
+                          "fileType": "typescript",
+                          "pattern": "clientComponent",
+                          "exports": [
+                            "default"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "path": "src/app/[locale]/(auth)/forgot-password",
+                      "type": "directory",
+                      "description": "",
+                      "children": [
+                        {
+                          "path": "src/app/[locale]/(auth)/forgot-password/page.tsx",
+                          "type": "file",
+                          "fileType": "typescript",
+                          "pattern": "clientComponent",
+                          "exports": [
+                            "default"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "path": "src/app/[locale]/(auth)/layout.tsx",
+                      "type": "file",
+                      "fileType": "typescript",
+                      "pattern": "serverComponent",
+                      "exports": [
+                        "default"
+                      ]
+                    },
+                    {
+                      "path": "src/app/[locale]/(auth)/login",
+                      "type": "directory",
+                      "description": "",
+                      "children": [
+                        {
+                          "path": "src/app/[locale]/(auth)/login/page.tsx",
+                          "type": "file",
+                          "fileType": "typescript",
+                          "pattern": "clientComponent",
+                          "exports": [
+                            "default"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "path": "src/app/[locale]/(auth)/reset-password",
+                      "type": "directory",
+                      "description": "",
+                      "children": [
+                        {
+                          "path": "src/app/[locale]/(auth)/reset-password/page.tsx",
+                          "type": "file",
+                          "fileType": "typescript",
+                          "pattern": "clientComponent",
+                          "exports": [
+                            "default"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "path": "src/app/[locale]/(auth)/signup",
+                      "type": "directory",
+                      "description": "",
+                      "children": [
+                        {
+                          "path": "src/app/[locale]/(auth)/signup/page.tsx",
+                          "type": "file",
+                          "fileType": "typescript",
+                          "pattern": "clientComponent",
+                          "exports": [
+                            "default"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "path": "src/app/[locale]/(marketing)",
+                  "type": "directory",
+                  "description": "",
+                  "children": [
+                    {
+                      "path": "src/app/[locale]/(marketing)/_components",
+                      "type": "directory",
+                      "description": "UI components specific to the parent feature",
+                      "children": [
+                        {
+                          "path": "src/app/[locale]/(marketing)/_components/client",
+                          "type": "directory",
+                          "description": "Client-side components",
+                          "children": [
+                            {
+                              "path": "src/app/[locale]/(marketing)/_components/client/Features.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "clientComponent",
+                              "exports": [
+                                "Features"
+                              ]
+                            },
+                            {
+                              "path": "src/app/[locale]/(marketing)/_components/client/Footer.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "clientComponent",
+                              "exports": [
+                                "Footer"
+                              ]
+                            },
+                            {
+                              "path": "src/app/[locale]/(marketing)/_components/client/Hero.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "clientComponent",
+                              "exports": [
+                                "Hero"
+                              ]
+                            },
+                            {
+                              "path": "src/app/[locale]/(marketing)/_components/client/SiteHeader.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "clientComponent",
+                              "exports": [
+                                "SiteHeader"
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "path": "src/app/[locale]/(marketing)/_components/index.ts",
+                          "type": "file",
+                          "fileType": "typescript",
+                          "pattern": ""
+                        }
+                      ]
+                    },
+                    {
+                      "path": "src/app/[locale]/(marketing)/layout.tsx",
+                      "type": "file",
+                      "fileType": "typescript",
+                      "pattern": "serverComponent",
+                      "exports": [
+                        "default"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "path": "src/app/[locale]/[tenant]",
+                  "type": "directory",
+                  "description": "",
+                  "children": [
+                    {
+                      "path": "src/app/[locale]/[tenant]/_components",
+                      "type": "directory",
+                      "description": "UI components specific to the parent feature",
+                      "children": [
+                        {
+                          "path": "src/app/[locale]/[tenant]/_components/client",
+                          "type": "directory",
+                          "description": "Client-side components",
+                          "children": [
+                            {
+                              "path": "src/app/[locale]/[tenant]/_components/client/TenantLayoutClient.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "clientComponent",
+                              "exports": [
+                                "default"
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "path": "src/app/[locale]/[tenant]/billing",
+                      "type": "directory",
+                      "description": "",
+                      "children": [
+                        {
+                          "path": "src/app/[locale]/[tenant]/billing/_components",
+                          "type": "directory",
+                          "description": "UI components specific to the parent feature",
+                          "children": [
+                            {
+                              "path": "src/app/[locale]/[tenant]/billing/_components/BillingContent.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "serverComponent",
+                              "exports": [
+                                "default"
+                              ]
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/billing/_components/BillingSkeleton.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "serverComponent",
+                              "exports": [
+                                "default"
+                              ]
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/billing/_components/client",
+                              "type": "directory",
+                              "description": "Directory (depth limit reached)"
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/billing/_components/index.ts",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": ""
+                            }
+                          ]
+                        },
+                        {
+                          "path": "src/app/[locale]/[tenant]/billing/metadata.ts",
+                          "type": "file",
+                          "fileType": "typescript",
+                          "pattern": ""
+                        },
+                        {
+                          "path": "src/app/[locale]/[tenant]/billing/page.tsx",
+                          "type": "file",
+                          "fileType": "typescript",
+                          "pattern": "serverComponent",
+                          "exports": [
+                            "default"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "path": "src/app/[locale]/[tenant]/cicd",
+                      "type": "directory",
+                      "description": "",
+                      "children": [
+                        {
+                          "path": "src/app/[locale]/[tenant]/cicd/_components",
+                          "type": "directory",
+                          "description": "UI components specific to the parent feature",
+                          "children": [
+                            {
+                              "path": "src/app/[locale]/[tenant]/cicd/_components/CICDContent.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "serverComponent",
+                              "exports": [
+                                "default"
+                              ]
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/cicd/_components/CICDSkeleton.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "serverComponent",
+                              "exports": [
+                                "default"
+                              ]
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/cicd/_components/client",
+                              "type": "directory",
+                              "description": "Directory (depth limit reached)"
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/cicd/_components/index.ts",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "",
+                              "summary": "CICD Components  Following optimal server/client architecture: - Server components fetch data and pass to client - Client components handle interactivity only - Clear separation of responsibilities"
+                            }
+                          ]
+                        },
+                        {
+                          "path": "src/app/[locale]/[tenant]/cicd/constants.ts",
+                          "type": "file",
+                          "fileType": "typescript",
+                          "pattern": ""
+                        },
+                        {
+                          "path": "src/app/[locale]/[tenant]/cicd/metadata.ts",
+                          "type": "file",
+                          "fileType": "typescript",
+                          "pattern": ""
+                        },
+                        {
+                          "path": "src/app/[locale]/[tenant]/cicd/migration-plan.md",
+                          "type": "file",
+                          "fileType": "md"
+                        },
+                        {
+                          "path": "src/app/[locale]/[tenant]/cicd/page.tsx",
+                          "type": "file",
+                          "fileType": "typescript",
+                          "pattern": "serverComponent",
+                          "exports": [
+                            "default"
+                          ]
+                        },
+                        {
+                          "path": "src/app/[locale]/[tenant]/cicd/types.ts",
+                          "type": "file",
+                          "fileType": "typescript",
+                          "pattern": "typeDefinition",
+                          "exports": [
+                            "CICDProviderType",
+                            "CICDProvider",
+                            "CICDProviderPayload",
+                            "CICDJob",
+                            "CICDBuild",
+                            "ActionResult",
+                            "CICDProviderListResult",
+                            "CICDProviderActionResult",
+                            "CICDData",
+                            "CICDActions",
+                            "CICDContextType"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "path": "src/app/[locale]/[tenant]/dashboard",
+                      "type": "directory",
+                      "description": "",
+                      "children": [
+                        {
+                          "path": "src/app/[locale]/[tenant]/dashboard/_components",
+                          "type": "directory",
+                          "description": "UI components specific to the parent feature",
+                          "children": [
+                            {
+                              "path": "src/app/[locale]/[tenant]/dashboard/_components/DashboardMainContent.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "",
+                              "exports": [
+                                "DashboardMainContent"
+                              ]
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/dashboard/_components/DashboardRecentSales.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "",
+                              "exports": [
+                                "DashboardRecentSales"
+                              ]
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/dashboard/_components/DashboardStatsCards.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "",
+                              "exports": [
+                                "DashboardStatsCards"
+                              ]
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/dashboard/_components/DashboardTabContentCard.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "typeDefinition",
+                              "exports": [
+                                "DashboardTabContentCard"
+                              ]
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/dashboard/_components/client",
+                              "type": "directory",
+                              "description": "Directory (depth limit reached)"
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/dashboard/_components/index.ts",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": ""
+                            }
+                          ]
+                        },
+                        {
+                          "path": "src/app/[locale]/[tenant]/dashboard/metadata.ts",
+                          "type": "file",
+                          "fileType": "typescript",
+                          "pattern": ""
+                        },
+                        {
+                          "path": "src/app/[locale]/[tenant]/dashboard/page.tsx",
+                          "type": "file",
+                          "fileType": "typescript",
+                          "pattern": "serverComponent",
+                          "exports": [
+                            "default"
+                          ],
+                          "summary": "Dashboard page using the simplified approach Enhanced FeaturePageContainer automatically extracts metadata"
+                        }
+                      ]
+                    },
+                    {
+                      "path": "src/app/[locale]/[tenant]/deployment",
+                      "type": "directory",
+                      "description": "",
+                      "children": [
+                        {
+                          "path": "src/app/[locale]/[tenant]/deployment/DeploymentList.tsx",
+                          "type": "file",
+                          "fileType": "typescript",
+                          "pattern": "serverComponent",
+                          "exports": [
+                            "default"
+                          ]
+                        },
+                        {
+                          "path": "src/app/[locale]/[tenant]/deployment/_components",
+                          "type": "directory",
+                          "description": "UI components specific to the parent feature",
+                          "children": [
+                            {
+                              "path": "src/app/[locale]/[tenant]/deployment/_components/DeploymentContent.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "",
+                              "exports": [
+                                "DeploymentContent"
+                              ]
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/deployment/_components/DeploymentNavbar.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": ""
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/deployment/_components/DeploymentSkeleton.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "",
+                              "exports": [
+                                "DeploymentSkeleton"
+                              ]
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/deployment/_components/DeploymentWizardContainer.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "serverComponent",
+                              "exports": [
+                                "default"
+                              ]
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/deployment/_components/client",
+                              "type": "directory",
+                              "description": "Directory (depth limit reached)"
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/deployment/_components/index.ts",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": ""
+                            }
+                          ]
+                        },
+                        {
+                          "path": "src/app/[locale]/[tenant]/deployment/constants.ts",
+                          "type": "file",
+                          "fileType": "typescript",
+                          "pattern": ""
+                        },
+                        {
+                          "path": "src/app/[locale]/[tenant]/deployment/metadata.ts",
+                          "type": "file",
+                          "fileType": "typescript",
+                          "pattern": ""
+                        },
+                        {
+                          "path": "src/app/[locale]/[tenant]/deployment/page.tsx",
+                          "type": "file",
+                          "fileType": "typescript",
+                          "pattern": "serverComponent",
+                          "exports": [
+                            "default"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "path": "src/app/[locale]/[tenant]/devices",
+                      "type": "directory",
+                      "description": "",
+                      "children": [
+                        {
+                          "path": "src/app/[locale]/[tenant]/devices/metadata.ts",
+                          "type": "file",
+                          "fileType": "typescript",
+                          "pattern": ""
+                        },
+                        {
+                          "path": "src/app/[locale]/[tenant]/devices/page.tsx",
+                          "type": "file",
+                          "fileType": "typescript",
+                          "pattern": "clientComponent",
+                          "exports": [
+                            "default"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "path": "src/app/[locale]/[tenant]/hosts",
+                      "type": "directory",
+                      "description": "",
+                      "children": [
+                        {
+                          "path": "src/app/[locale]/[tenant]/hosts/_components",
+                          "type": "directory",
+                          "description": "UI components specific to the parent feature",
+                          "children": [
+                            {
+                              "path": "src/app/[locale]/[tenant]/hosts/_components/ConnectHostDialog.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "typeDefinition",
+                              "exports": [
+                                "ConnectHostDialog"
+                              ]
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/hosts/_components/HostCard.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "clientComponent"
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/hosts/_components/HostContent.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "serverComponent",
+                              "exports": [
+                                "default"
+                              ]
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/hosts/_components/HostGrid.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "typeDefinition",
+                              "exports": [
+                                "HostGrid"
+                              ]
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/hosts/_components/HostOverview.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "typeDefinition",
+                              "exports": [
+                                "HostOverview"
+                              ]
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/hosts/_components/HostSettings.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "typeDefinition",
+                              "exports": [
+                                "VMSettings"
+                              ]
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/hosts/_components/HostSkeleton.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "clientComponent",
+                              "exports": [
+                                "default"
+                              ]
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/hosts/_components/HostTable.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "clientComponent",
+                              "exports": [
+                                "HostTable"
+                              ]
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/hosts/_components/StatusSummary.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "typeDefinition",
+                              "exports": [
+                                "StatusSummary"
+                              ]
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/hosts/_components/client",
+                              "type": "directory",
+                              "description": "Directory (depth limit reached)"
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/hosts/_components/index.ts",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": ""
+                            }
+                          ]
+                        },
+                        {
+                          "path": "src/app/[locale]/[tenant]/hosts/analytics",
+                          "type": "directory",
+                          "description": "",
+                          "children": []
+                        },
+                        {
+                          "path": "src/app/[locale]/[tenant]/hosts/metadata.ts",
+                          "type": "file",
+                          "fileType": "typescript",
+                          "pattern": ""
+                        },
+                        {
+                          "path": "src/app/[locale]/[tenant]/hosts/page.tsx",
+                          "type": "file",
+                          "fileType": "typescript",
+                          "pattern": "serverComponent",
+                          "exports": [
+                            "default"
+                          ]
+                        },
+                        {
+                          "path": "src/app/[locale]/[tenant]/hosts/settings",
+                          "type": "directory",
+                          "description": "",
+                          "children": []
+                        },
+                        {
+                          "path": "src/app/[locale]/[tenant]/hosts/terminals",
+                          "type": "directory",
+                          "description": "",
+                          "children": [
+                            {
+                              "path": "src/app/[locale]/[tenant]/hosts/terminals/_components",
+                              "type": "directory",
+                              "description": "Directory (depth limit reached)"
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/hosts/terminals/page.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "serverComponent",
+                              "exports": [
+                                "default"
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "path": "src/app/[locale]/[tenant]/layout.tsx",
+                      "type": "file",
+                      "fileType": "typescript",
+                      "pattern": "serverComponent",
+                      "exports": [
+                        "default"
+                      ]
+                    },
+                    {
+                      "path": "src/app/[locale]/[tenant]/metadata.ts",
+                      "type": "file",
+                      "fileType": "typescript",
+                      "pattern": ""
+                    },
+                    {
+                      "path": "src/app/[locale]/[tenant]/page.tsx",
+                      "type": "file",
+                      "fileType": "typescript",
+                      "pattern": "serverComponent",
+                      "exports": [
+                        "default"
+                      ]
+                    },
+                    {
+                      "path": "src/app/[locale]/[tenant]/profile",
+                      "type": "directory",
+                      "description": "",
+                      "children": [
+                        {
+                          "path": "src/app/[locale]/[tenant]/profile/_components",
+                          "type": "directory",
+                          "description": "UI components specific to the parent feature",
+                          "children": [
+                            {
+                              "path": "src/app/[locale]/[tenant]/profile/_components/ProfileContent.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "typeDefinition",
+                              "exports": [
+                                "ProfileContent"
+                              ],
+                              "summary": "Server component wrapper for ProfileContent Allows passing server-fetched data to client component"
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/profile/_components/ProfileSkeleton.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "clientComponent",
+                              "exports": [
+                                "ProfileSkeleton"
+                              ]
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/profile/_components/client",
+                              "type": "directory",
+                              "description": "Directory (depth limit reached)"
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/profile/_components/index.ts",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": ""
+                            }
+                          ]
+                        },
+                        {
+                          "path": "src/app/[locale]/[tenant]/profile/metadata.ts",
+                          "type": "file",
+                          "fileType": "typescript",
+                          "pattern": ""
+                        },
+                        {
+                          "path": "src/app/[locale]/[tenant]/profile/page.tsx",
+                          "type": "file",
+                          "fileType": "typescript",
+                          "pattern": "serverComponent",
+                          "exports": [
+                            "default"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "path": "src/app/[locale]/[tenant]/reports",
+                      "type": "directory",
+                      "description": "",
+                      "children": [
+                        {
+                          "path": "src/app/[locale]/[tenant]/reports/_components",
+                          "type": "directory",
+                          "description": "UI components specific to the parent feature",
+                          "children": [
+                            {
+                              "path": "src/app/[locale]/[tenant]/reports/_components/ReportsContent.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "",
+                              "exports": [
+                                "ReportsContent"
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "path": "src/app/[locale]/[tenant]/reports/metadata.ts",
+                          "type": "file",
+                          "fileType": "typescript",
+                          "pattern": ""
+                        },
+                        {
+                          "path": "src/app/[locale]/[tenant]/reports/page.tsx",
+                          "type": "file",
+                          "fileType": "typescript",
+                          "pattern": "serverComponent",
+                          "exports": [
+                            "default"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "path": "src/app/[locale]/[tenant]/repositories",
+                      "type": "directory",
+                      "description": "",
+                      "children": [
+                        {
+                          "path": "src/app/[locale]/[tenant]/repositories/REFACTOR.md",
+                          "type": "file",
+                          "fileType": "md"
+                        },
+                        {
+                          "path": "src/app/[locale]/[tenant]/repositories/_components",
+                          "type": "directory",
+                          "description": "UI components specific to the parent feature",
+                          "children": [
+                            {
+                              "path": "src/app/[locale]/[tenant]/repositories/_components/RepositoryActions.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "typeDefinition",
+                              "exports": [
+                                "RepositoryActions"
+                              ]
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/repositories/_components/RepositoryContent.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "",
+                              "exports": [
+                                "RepositoryContent"
+                              ]
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/repositories/_components/client",
+                              "type": "directory",
+                              "description": "Directory (depth limit reached)"
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/repositories/_components/index.ts",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": ""
+                            }
+                          ]
+                        },
+                        {
+                          "path": "src/app/[locale]/[tenant]/repositories/constants.ts",
+                          "type": "file",
+                          "fileType": "typescript",
+                          "pattern": "",
+                          "summary": "Constants related to repositories"
+                        },
+                        {
+                          "path": "src/app/[locale]/[tenant]/repositories/metadata.ts",
+                          "type": "file",
+                          "fileType": "typescript",
+                          "pattern": ""
+                        },
+                        {
+                          "path": "src/app/[locale]/[tenant]/repositories/page.tsx",
+                          "type": "file",
+                          "fileType": "typescript",
+                          "pattern": "serverComponent",
+                          "exports": [
+                            "default"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "path": "src/app/[locale]/[tenant]/settings",
+                      "type": "directory",
+                      "description": "",
+                      "children": [
+                        {
+                          "path": "src/app/[locale]/[tenant]/settings/_components",
+                          "type": "directory",
+                          "description": "UI components specific to the parent feature",
+                          "children": [
+                            {
+                              "path": "src/app/[locale]/[tenant]/settings/_components/SettingsContent.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "",
+                              "exports": [
+                                "SettingsContent"
+                              ],
+                              "summary": "Server component wrapper for SettingsContent Follows React Server Component pattern"
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/settings/_components/SettingsSkeleton.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "clientComponent",
+                              "exports": [
+                                "SettingsSkeleton"
+                              ]
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/settings/_components/client",
+                              "type": "directory",
+                              "description": "Directory (depth limit reached)"
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/settings/_components/index.ts",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": ""
+                            }
+                          ]
+                        },
+                        {
+                          "path": "src/app/[locale]/[tenant]/settings/metadata.ts",
+                          "type": "file",
+                          "fileType": "typescript",
+                          "pattern": ""
+                        },
+                        {
+                          "path": "src/app/[locale]/[tenant]/settings/page.tsx",
+                          "type": "file",
+                          "fileType": "typescript",
+                          "pattern": "serverComponent",
+                          "exports": [
+                            "default"
+                          ]
+                        },
+                        {
+                          "path": "src/app/[locale]/[tenant]/settings/profile",
+                          "type": "directory",
+                          "description": "",
+                          "children": [
+                            {
+                              "path": "src/app/[locale]/[tenant]/settings/profile/page.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "clientComponent",
+                              "exports": [
+                                "default"
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "path": "src/app/[locale]/[tenant]/team",
+                      "type": "directory",
+                      "description": "",
+                      "children": [
+                        {
+                          "path": "src/app/[locale]/[tenant]/team/_components",
+                          "type": "directory",
+                          "description": "UI components specific to the parent feature",
+                          "children": [
+                            {
+                              "path": "src/app/[locale]/[tenant]/team/_components/TeamHeader.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "clientComponent",
+                              "exports": [
+                                "default"
+                              ]
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/team/_components/TeamMembersTableSkeleton.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "clientComponent",
+                              "exports": [
+                                "default"
+                              ]
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/team/_components/TeamOverview.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "serverComponent",
+                              "exports": [
+                                "default"
+                              ]
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/team/_components/TeamOverviewSkeleton.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "clientComponent",
+                              "exports": [
+                                "default"
+                              ]
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/team/_components/TeamSkeleton.tsx",
+                              "type": "file",
+                              "fileType": "typescript",
+                              "pattern": "clientComponent",
+                              "exports": [
+                                "default"
+                              ]
+                            },
+                            {
+                              "path": "src/app/[locale]/[tenant]/team/_components/client",
+                              "type": "directory",
+                              "description": "Directory (depth limit reached)"
+                            }
+                          ]
+                        },
+                        {
+                          "path": "src/app/[locale]/[tenant]/team/actions.ts",
+                          "type": "file",
+                          "fileType": "typescript",
+                          "pattern": "serverAction",
+                          "exports": [
+                            "createTeam",
+                            "updateTeam",
+                            "deleteTeam",
+                            "addTeamMember",
+                            "updateTeamMemberRole",
+                            "removeTeamMember"
+                          ],
+                          "summary": "Get all teams for the current user's tenant @param providedUser Optional user object to avoid redundant getUser calls @returns Action result containing teams or error"
+                        },
+                        {
+                          "path": "src/app/[locale]/[tenant]/team/metadata.ts",
+                          "type": "file",
+                          "fileType": "typescript",
+                          "pattern": "typeDefinition"
+                        },
+                        {
+                          "path": "src/app/[locale]/[tenant]/team/page.tsx",
+                          "type": "file",
+                          "fileType": "typescript",
+                          "pattern": "serverComponent",
+                          "exports": [
+                            "default"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "path": "src/app/[locale]/layout.tsx",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "serverComponent",
+                  "exports": [
+                    "default"
+                  ]
+                },
+                {
+                  "path": "src/app/[locale]/page.tsx",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "serverComponent",
+                  "exports": [
+                    "default"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "src/app/actions",
+              "type": "directory",
+              "description": "Server actions",
+              "children": [
+                {
+                  "path": "src/app/actions/README.md",
+                  "type": "file",
+                  "fileType": "md"
+                },
+                {
+                  "path": "src/app/actions/authAction.ts",
+                  "type": "file",
+                  "fileType": "server action",
+                  "pattern": "serverAction",
+                  "exports": [
+                    "signInWithOAuth",
+                    "handleAuthCallback",
+                    "signUp",
+                    "signInWithPassword",
+                    "updatePassword",
+                    "resetPasswordForEmail",
+                    "signOut",
+                    "exchangeCodeForSession",
+                    "handleAuthWithEmail"
+                  ],
+                  "summary": "Sign in with OAuth provider"
+                },
+                {
+                  "path": "src/app/actions/cicdAction.ts",
+                  "type": "file",
+                  "fileType": "server action",
+                  "pattern": "serverAction",
+                  "exports": [
+                    "createCICDProvider",
+                    "updateCICDProvider",
+                    "deleteCICDProvider",
+                    "testCICDProvider",
+                    "clearCICDCache",
+                    "runCICDJob",
+                    "testJenkinsAPI"
+                  ],
+                  "summary": "Get all CICD providers for the current tenant"
+                },
+                {
+                  "path": "src/app/actions/dashboardAction.ts",
+                  "type": "file",
+                  "fileType": "server action",
+                  "pattern": "serverAction",
+                  "exports": [
+                    "addChatMessage",
+                    "clearDashboardCache"
+                  ],
+                  "summary": "Get dashboard statistics @returns Dashboard statistics"
+                },
+                {
+                  "path": "src/app/actions/deploymentWizardAction.ts",
+                  "type": "file",
+                  "fileType": "server action",
+                  "pattern": "serverAction",
+                  "exports": [
+                    "saveDeploymentConfiguration",
+                    "startDeployment"
+                  ],
+                  "summary": "Fetches all data needed for the deployment wizard"
+                },
+                {
+                  "path": "src/app/actions/deploymentsAction.ts",
+                  "type": "file",
+                  "fileType": "server action",
+                  "pattern": "serverAction",
+                  "exports": [
+                    "createDeployment",
+                    "updateDeployment",
+                    "deleteDeployment",
+                    "abortDeployment",
+                    "refreshDeployment",
+                    "runDeployment",
+                    "clearDeploymentCache"
+                  ],
+                  "summary": "Get all deployments for the current user"
+                },
+                {
+                  "path": "src/app/actions/hostsAction.ts",
+                  "type": "file",
+                  "fileType": "server action",
+                  "pattern": "serverAction",
+                  "exports": [
+                    "HostFilter",
+                    "createHost",
+                    "updateHost",
+                    "getHostById",
+                    "deleteHost",
+                    "testConnection",
+                    "testHostConnection"
+                  ],
+                  "summary": "Get all hosts with optional filtering"
+                },
+                {
+                  "path": "src/app/actions/index.ts",
+                  "type": "file",
+                  "fileType": "server action",
+                  "pattern": ""
+                },
+                {
+                  "path": "src/app/actions/permissionAction.ts",
+                  "type": "file",
+                  "fileType": "server action",
+                  "pattern": "serverAction",
+                  "summary": "Get all permissions for a user in a specific team Cached for better performance Use this in layout and client components"
+                },
+                {
+                  "path": "src/app/actions/repositoriesAction.ts",
+                  "type": "file",
+                  "fileType": "server action",
+                  "pattern": "serverAction",
+                  "exports": [
+                    "connectRepository",
+                    "disconnectRepository",
+                    "testGitProvider",
+                    "testGitRepository",
+                    "clearRepositoriesCache",
+                    "getRepositoryFiles"
+                  ],
+                  "summary": "Get all repositories with optional filtering @param filter Optional filter criteria for repositories"
+                },
+                {
+                  "path": "src/app/actions/sidebarAction.ts",
+                  "type": "file",
+                  "fileType": "server action",
+                  "pattern": "serverAction",
+                  "exports": [
+                    "setSidebarState"
+                  ],
+                  "summary": "Server action to get the sidebar state from cookies Cached for better performance @returns {Promise<boolean>} True if sidebar is expanded, false if collapsed"
+                },
+                {
+                  "path": "src/app/actions/teamAction.ts",
+                  "type": "file",
+                  "fileType": "server action",
+                  "pattern": "serverAction",
+                  "summary": "Get teams that a user belongs to"
+                },
+                {
+                  "path": "src/app/actions/teamMemberAction.ts",
+                  "type": "file",
+                  "fileType": "server action",
+                  "pattern": "serverAction",
+                  "summary": "Get team members for a specific team"
+                },
+                {
+                  "path": "src/app/actions/terminalsAction.ts",
+                  "type": "file",
+                  "fileType": "server action",
+                  "pattern": "serverAction",
+                  "exports": [
+                    "initTerminal",
+                    "closeTerminal",
+                    "sendTerminalData"
+                  ],
+                  "summary": "Initialize a terminal session"
+                },
+                {
+                  "path": "src/app/actions/userAction.ts",
+                  "type": "file",
+                  "fileType": "server action",
+                  "pattern": "serverAction",
+                  "exports": [
+                    "invalidateUserCache",
+                    "updateProfile"
+                  ],
+                  "summary": "Invalidate user-related cache Clears both client-side storage and server-side cache"
+                }
+              ]
+            },
+            {
+              "path": "src/app/api",
+              "type": "directory",
+              "description": "API endpoints",
+              "children": [
+                {
+                  "path": "src/app/api/README.md",
+                  "type": "file",
+                  "fileType": "md"
+                },
+                {
+                  "path": "src/app/api/cicd",
+                  "type": "directory",
+                  "description": "",
+                  "children": [
+                    {
+                      "path": "src/app/api/cicd/test-connection",
+                      "type": "directory",
+                      "description": "",
+                      "children": [
+                        {
+                          "path": "src/app/api/cicd/test-connection/route.ts",
+                          "type": "file",
+                          "fileType": "api",
+                          "pattern": "",
+                          "exports": [
+                            "POST"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "path": "src/app/api/fetch-all-repositories",
+                  "type": "directory",
+                  "description": "",
+                  "children": []
+                },
+                {
+                  "path": "src/app/api/repositories",
+                  "type": "directory",
+                  "description": "",
+                  "children": [
+                    {
+                      "path": "src/app/api/repositories/explore",
+                      "type": "directory",
+                      "description": "",
+                      "children": [
+                        {
+                          "path": "src/app/api/repositories/explore/route.ts",
+                          "type": "file",
+                          "fileType": "api",
+                          "pattern": "",
+                          "exports": [
+                            "GET"
+                          ],
+                          "summary": "GET /api/repositories/explore Endpoint to explore repository files Uses the server action getRepositoryFiles to handle the business logic"
+                        }
+                      ]
+                    },
+                    {
+                      "path": "src/app/api/repositories/test-connection",
+                      "type": "directory",
+                      "description": "",
+                      "children": [
+                        {
+                          "path": "src/app/api/repositories/test-connection/route.ts",
+                          "type": "file",
+                          "fileType": "api",
+                          "pattern": "",
+                          "exports": [
+                            "POST"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "path": "src/app/api/repositories/test-repository",
+                      "type": "directory",
+                      "description": "",
+                      "children": [
+                        {
+                          "path": "src/app/api/repositories/test-repository/route.ts",
+                          "type": "file",
+                          "fileType": "api",
+                          "pattern": "",
+                          "exports": [
+                            "POST"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "path": "src/app/api/user",
+                  "type": "directory",
+                  "description": "",
+                  "children": [
+                    {
+                      "path": "src/app/api/user/active-team",
+                      "type": "directory",
+                      "description": "",
+                      "children": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "src/app/globals.css",
+              "type": "file",
+              "fileType": "css"
+            },
+            {
+              "path": "src/app/layout.tsx",
+              "type": "file",
+              "fileType": "typescript",
+              "pattern": "serverComponent",
+              "exports": [
+                "default"
+              ]
+            },
+            {
+              "path": "src/app/metadata.ts",
+              "type": "file",
+              "fileType": "typescript",
+              "pattern": ""
+            },
+            {
+              "path": "src/app/page.tsx",
+              "type": "file",
+              "fileType": "typescript",
+              "pattern": "serverComponent",
+              "exports": [
+                "default"
+              ]
+            },
+            {
+              "path": "src/app/providers",
+              "type": "directory",
+              "description": "Service providers",
+              "children": [
+                {
+                  "path": "src/app/providers/CICDProvider.tsx",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "clientComponent",
+                  "exports": [
+                    "default"
+                  ],
+                  "summary": "CICDProvider manages the CI/CD providers state for the application  This component follows the architecture pattern: - Only handles state, no business logic - Pure data container - Event-based refresh mechanism  Components should NOT use this provider directly but should use the hook instead: import { useCICD } from '@/hooks/useCICD';"
+                },
+                {
+                  "path": "src/app/providers/DeploymentProvider.tsx",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "clientComponent",
+                  "exports": [
+                    "DeploymentProvider",
+                    "useDeployment"
+                  ]
+                },
+                {
+                  "path": "src/app/providers/FontProvider.tsx",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "clientComponent",
+                  "exports": [
+                    "FontProvider"
+                  ],
+                  "summary": "FontProvider component for managing font size preferences Use the useFont hook from @/hooks to access this context"
+                },
+                {
+                  "path": "src/app/providers/PermissionProvider.tsx",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "clientComponent",
+                  "exports": [
+                    "PermissionProvider"
+                  ],
+                  "summary": "PermissionProvider manages the permissions state for the application This component only handles permissions state, no business logic included To access permissions functionality, use the usePermission hook from @/hooks/permission"
+                },
+                {
+                  "path": "src/app/providers/QueryProvider.tsx",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "clientComponent",
+                  "exports": [
+                    "QueryProvider"
+                  ]
+                },
+                {
+                  "path": "src/app/providers/README.md",
+                  "type": "file",
+                  "fileType": "md"
+                },
+                {
+                  "path": "src/app/providers/SearchProvider.tsx",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "clientComponent",
+                  "exports": [
+                    "SearchProvider"
+                  ],
+                  "summary": "SearchProvider component for managing search state Use the useSearch hook from @/hooks to access this context"
+                },
+                {
+                  "path": "src/app/providers/SidebarProvider.tsx",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "clientComponent",
+                  "exports": [
+                    "SidebarProvider"
+                  ],
+                  "summary": "SidebarProvider manages the sidebar state for the application This component only handles sidebar state, no business logic included To access sidebar functionality, use the useSidebar hook from @/hooks/sidebar"
+                },
+                {
+                  "path": "src/app/providers/TeamMemberDialogProvider.tsx",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "clientComponent",
+                  "exports": [
+                    "TeamMemberDialogProvider",
+                    "useTeamMemberDialog"
+                  ],
+                  "summary": "TeamMemberDialogProvider - Pure data container for team member dialog state No business logic, no data fetching, no side effects  This provider manages the state for add/edit member dialogs"
+                },
+                {
+                  "path": "src/app/providers/TeamProvider.tsx",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "clientComponent",
+                  "exports": [
+                    "TeamProvider"
+                  ],
+                  "summary": "TeamProvider - Pure data container for team state No business logic, no data fetching, no side effects"
+                },
+                {
+                  "path": "src/app/providers/ThemeProvider.tsx",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "clientComponent",
+                  "exports": [
+                    "ThemeProvider"
+                  ],
+                  "summary": "ThemeProvider wrapper around next-themes ThemeProvider This component handles theme state and persistence To access theme functionality, use the useTheme hook from @/hooks/theme"
+                },
+                {
+                  "path": "src/app/providers/ToastProvider.tsx",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "clientComponent",
+                  "exports": [
+                    "ToastProvider"
+                  ]
+                },
+                {
+                  "path": "src/app/providers/UserProvider.tsx",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "clientComponent",
+                  "exports": [
+                    "UserProvider"
+                  ],
+                  "summary": "UserProvider manages the user state for the application This component only handles user state, no business logic included To access user functionality, use the useUser hook from @/hooks/user"
+                },
+                {
+                  "path": "src/app/providers/index.ts",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "",
+                  "summary": "Export all providers for app usage  IMPORTANT: This file only exports providers (components), not hooks. All hooks should be imported from '@/hooks'"
+                },
+                {
+                  "path": "src/app/providers/index.tsx",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "clientComponent"
+                }
+              ]
+            },
+            {
+              "path": "src/app/themes",
+              "type": "directory",
+              "description": "",
+              "children": [
+                {
+                  "path": "src/app/themes/matsu-theme.css",
+                  "type": "file",
+                  "fileType": "css"
+                },
+                {
+                  "path": "src/app/themes/matsu-theme.json",
+                  "type": "file",
+                  "fileType": "json"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "path": "src/components",
+          "type": "directory",
+          "description": "UI components",
+          "children": [
+            {
+              "path": "src/components/dialog",
+              "type": "directory",
+              "description": "",
+              "children": [
+                {
+                  "path": "src/components/dialog/CommandMenu.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent",
+                  "exports": [
+                    "CommandMenu"
+                  ]
+                },
+                {
+                  "path": "src/components/dialog/ConfirmDialog.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent",
+                  "exports": [
+                    "ConfirmDialog"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "src/components/header",
+              "type": "directory",
+              "description": "",
+              "children": [
+                {
+                  "path": "src/components/header/HeaderClient.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent",
+                  "exports": [
+                    "HeaderClient"
+                  ]
+                },
+                {
+                  "path": "src/components/header/HeaderSkeleton.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "HeaderSkeleton"
+                  ]
+                },
+                {
+                  "path": "src/components/header/index.ts",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": ""
+                }
+              ]
+            },
+            {
+              "path": "src/components/icons",
+              "type": "directory",
+              "description": "",
+              "children": [
+                {
+                  "path": "src/components/icons/ActivityLogIcon.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "",
+                  "exports": [
+                    "ActivityLogIcon"
+                  ]
+                },
+                {
+                  "path": "src/components/icons/index.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "GitHubIcon",
+                    "GitLabIcon",
+                    "GiteaIcon"
+                  ]
+                }
+              ],
+              "exports": [
+                "GitHubIcon",
+                "GitLabIcon",
+                "GiteaIcon"
+              ]
+            },
+            {
+              "path": "src/components/layout",
+              "type": "directory",
+              "description": "",
+              "children": [
+                {
+                  "path": "src/components/layout/FeaturePageContainer.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent",
+                  "exports": [
+                    "FeaturePageContainer"
+                  ],
+                  "summary": "FeaturePageContainer provides consistent layout for feature pages"
+                },
+                {
+                  "path": "src/components/layout/PageHeader.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "PageHeader"
+                  ]
+                },
+                {
+                  "path": "src/components/layout/RoleSwitcher.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "typeDefinition"
+                }
+              ]
+            },
+            {
+              "path": "src/components/profile",
+              "type": "directory",
+              "description": "",
+              "children": [
+                {
+                  "path": "src/components/profile/ProfileDropDown.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent",
+                  "exports": [
+                    "ProfileDropDown"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "src/components/settings",
+              "type": "directory",
+              "description": "",
+              "children": [
+                {
+                  "path": "src/components/settings/LanguageSettings.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent",
+                  "exports": [
+                    "LanguageSettings"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "src/components/shadcn",
+              "type": "directory",
+              "description": "",
+              "children": [
+                {
+                  "path": "src/components/shadcn/accordion.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent"
+                },
+                {
+                  "path": "src/components/shadcn/alert-dialog.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": ""
+                },
+                {
+                  "path": "src/components/shadcn/alert.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "typeDefinition"
+                },
+                {
+                  "path": "src/components/shadcn/avatar.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent"
+                },
+                {
+                  "path": "src/components/shadcn/badge.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "BadgeProps"
+                  ]
+                },
+                {
+                  "path": "src/components/shadcn/breadcrumb.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": ""
+                },
+                {
+                  "path": "src/components/shadcn/button.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "ButtonProps"
+                  ]
+                },
+                {
+                  "path": "src/components/shadcn/card.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": ""
+                },
+                {
+                  "path": "src/components/shadcn/checkbox.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent"
+                },
+                {
+                  "path": "src/components/shadcn/collapsible.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent"
+                },
+                {
+                  "path": "src/components/shadcn/command.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent",
+                  "exports": [
+                    "CommandDialogProps"
+                  ]
+                },
+                {
+                  "path": "src/components/shadcn/dialog.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent"
+                },
+                {
+                  "path": "src/components/shadcn/dropdown-menu.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent"
+                },
+                {
+                  "path": "src/components/shadcn/form.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "contextProvider"
+                },
+                {
+                  "path": "src/components/shadcn/input.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "InputProps"
+                  ]
+                },
+                {
+                  "path": "src/components/shadcn/label.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "typeDefinition"
+                },
+                {
+                  "path": "src/components/shadcn/language-switcher.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent",
+                  "exports": [
+                    "LanguageSwitcher"
+                  ]
+                },
+                {
+                  "path": "src/components/shadcn/pagination.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "typeDefinition"
+                },
+                {
+                  "path": "src/components/shadcn/popover.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent"
+                },
+                {
+                  "path": "src/components/shadcn/radio-group.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": ""
+                },
+                {
+                  "path": "src/components/shadcn/scroll-area.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "typeDefinition"
+                },
+                {
+                  "path": "src/components/shadcn/search.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "Search"
+                  ]
+                },
+                {
+                  "path": "src/components/shadcn/select.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent"
+                },
+                {
+                  "path": "src/components/shadcn/separator.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": ""
+                },
+                {
+                  "path": "src/components/shadcn/sheet.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent"
+                },
+                {
+                  "path": "src/components/shadcn/sidebar.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent"
+                },
+                {
+                  "path": "src/components/shadcn/skeleton.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": ""
+                },
+                {
+                  "path": "src/components/shadcn/switch.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": ""
+                },
+                {
+                  "path": "src/components/shadcn/table.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent"
+                },
+                {
+                  "path": "src/components/shadcn/tabs.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent"
+                },
+                {
+                  "path": "src/components/shadcn/textarea.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "TextareaProps"
+                  ]
+                },
+                {
+                  "path": "src/components/shadcn/theme-toggle.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent",
+                  "exports": [
+                    "ThemeToggle"
+                  ]
+                },
+                {
+                  "path": "src/components/shadcn/tooltip.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent"
+                },
+                {
+                  "path": "src/components/shadcn/use-toast.ts",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent"
+                }
+              ]
+            },
+            {
+              "path": "src/components/sidebar",
+              "type": "directory",
+              "description": "",
+              "children": [
+                {
+                  "path": "src/components/sidebar/Sidebar.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "serverComponent",
+                  "exports": [
+                    "default"
+                  ]
+                },
+                {
+                  "path": "src/components/sidebar/SidebarClient.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent"
+                },
+                {
+                  "path": "src/components/sidebar/SidebarLayout.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "",
+                  "exports": [
+                    "SidebarContent",
+                    "SidebarFooter",
+                    "SidebarHeader",
+                    "SidebarSeparator"
+                  ]
+                },
+                {
+                  "path": "src/components/sidebar/SidebarMenuButton.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "typeDefinition"
+                },
+                {
+                  "path": "src/components/sidebar/SidebarMenuItems.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "",
+                  "exports": [
+                    "SidebarMenu"
+                  ]
+                },
+                {
+                  "path": "src/components/sidebar/SidebarMenuSubButton.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "typeDefinition"
+                },
+                {
+                  "path": "src/components/sidebar/SidebarNavigation.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent",
+                  "exports": [
+                    "SidebarNavigation"
+                  ]
+                },
+                {
+                  "path": "src/components/sidebar/SidebarRail.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": ""
+                },
+                {
+                  "path": "src/components/sidebar/SidebarSkeleton.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent",
+                  "exports": [
+                    "SidebarSkeleton"
+                  ]
+                },
+                {
+                  "path": "src/components/sidebar/SidebarTrigger.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": ""
+                },
+                {
+                  "path": "src/components/sidebar/constants.ts",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "SidebarItemType",
+                    "SidebarNavigationData"
+                  ],
+                  "summary": "Sidebar constants Contains all constants related to the sidebar component"
+                },
+                {
+                  "path": "src/components/sidebar/index.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": ""
+                },
+                {
+                  "path": "src/components/sidebar/sidebarData.ts",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "SidebarData"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "src/components/team",
+              "type": "directory",
+              "description": "",
+              "children": [
+                {
+                  "path": "src/components/team/CreatorBadge.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "CreatorBadge"
+                  ]
+                },
+                {
+                  "path": "src/components/team/PermissionAwareActions.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "PermissionAwareActions"
+                  ]
+                },
+                {
+                  "path": "src/components/team/PermissionAwareActionsWrapper.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "PermissionAwareActionsWrapper"
+                  ],
+                  "summary": "Wrapper component that combines PermissionAwareActions with CreatorBadge and allows for custom children to be rendered alongside actions"
+                },
+                {
+                  "path": "src/components/team/TeamSelector.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "serverComponent",
+                  "exports": [
+                    "default"
+                  ]
+                },
+                {
+                  "path": "src/components/team/TeamSelectorClient.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent",
+                  "exports": [
+                    "TeamSelectorClient"
+                  ]
+                },
+                {
+                  "path": "src/components/team/TeamSwitcher.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "TeamSwitcher"
+                  ]
+                },
+                {
+                  "path": "src/components/team/TeamSwitcherClient.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent",
+                  "exports": [
+                    "default"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "src/components/theme",
+              "type": "directory",
+              "description": "",
+              "children": [
+                {
+                  "path": "src/components/theme/ThemeProvider.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent",
+                  "exports": [
+                    "ThemeProvider"
+                  ]
+                },
+                {
+                  "path": "src/components/theme/ThemeSwitch.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent",
+                  "exports": [
+                    "ThemeSwitch"
+                  ]
+                },
+                {
+                  "path": "src/components/theme/ThemeToggleStatic.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent",
+                  "exports": [
+                    "ThemeToggleStatic"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "src/components/ui",
+              "type": "directory",
+              "description": "",
+              "children": [
+                {
+                  "path": "src/components/ui/Breadcrumb.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": ""
+                },
+                {
+                  "path": "src/components/ui/EmptyState.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "EmptyState"
+                  ]
+                },
+                {
+                  "path": "src/components/ui/LoadingSpinner.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent",
+                  "exports": [
+                    "LoadingSpinner"
+                  ]
+                },
+                {
+                  "path": "src/components/ui/LongText.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent",
+                  "exports": [
+                    "default"
+                  ]
+                },
+                {
+                  "path": "src/components/ui/PermissionGuard.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent",
+                  "exports": [
+                    "PermissionGuard",
+                    "PermissionAware"
+                  ],
+                  "summary": "A component that conditionally renders its children based on user permissions  @example ```tsx // Only show the create host button if the user has insert permission for hosts <PermissionGuard resourceType=\"hosts\" operation=\"insert\"> <CreateHostButton /> </PermissionGuard>  // For a resource that has a specific creator, check if user can update their own resource <PermissionGuard resourceType=\"repositories\" operation=\"update\" creatorId={repository.creator_id} > <EditButton /> </PermissionGuard> ```"
+                },
+                {
+                  "path": "src/components/ui/Progress.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent"
+                },
+                {
+                  "path": "src/components/ui/Search.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "clientComponent",
+                  "exports": [
+                    "Search"
+                  ]
+                },
+                {
+                  "path": "src/components/ui/resource-card.tsx",
+                  "type": "file",
+                  "fileType": "component",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "ResourceCard"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "path": "src/config",
+          "type": "directory",
+          "description": "",
+          "children": [
+            {
+              "path": "src/config/fonts.ts",
+              "type": "file",
+              "fileType": "typescript",
+              "pattern": "",
+              "summary": "List of available font names (visit the url`/settings/appearance`). This array is used to generate Tailwind's `safelist` inside 'tailwind.config.js' and 'appearance-form.tsx' to prevent dynamic font classes (e.g., `font-inter`, `font-manrope`) from being removed during purging.  📝 How to Add a New Font: 1. Add the font name here. 2. Update the `<link>` tag in 'index.html' to include the new font from Google Fonts (_or any other source). 3. Add new fontFamily 'tailwind.config.js'  Example: fonts.ts           → Add 'roboto' to this array. index.html         → Add Google Fonts link for Roboto. tailwind.config.js  → Add the new font inside `theme.extend.fontFamily`. ```ts theme: { // other configs extend: { fontFamily: { inter: ['Inter', ...fontFamily.sans], manrope: ['Manrope', ...fontFamily.sans], roboto: ['Roboto', ...fontFamily.sans], // Add new font here } } } ```"
+            }
+          ]
+        },
+        {
+          "path": "src/config.ts",
+          "type": "file",
+          "fileType": "typescript",
+          "pattern": ""
+        },
+        {
+          "path": "src/context",
+          "type": "directory",
+          "description": "React context providers",
+          "children": [
+            {
+              "path": "src/context/CICDContext.tsx",
+              "type": "file",
+              "fileType": "context",
+              "pattern": "clientComponent",
+              "exports": [
+                "CICDContextType"
+              ],
+              "summary": "CICD context type definition This is a minimal type definition for the context No business logic belongs here, that goes in hooks/useCICD.ts  IMPORTANT: Components should NOT use this context directly. Instead, they should import the hook: import { useCICD } from '@/hooks/useCICD';"
+            },
+            {
+              "path": "src/context/FontContext.tsx",
+              "type": "file",
+              "fileType": "context",
+              "pattern": "clientComponent"
+            },
+            {
+              "path": "src/context/PermissionContext.tsx",
+              "type": "file",
+              "fileType": "context",
+              "pattern": "clientComponent",
+              "exports": [
+                "PermissionContextType"
+              ],
+              "summary": "Permission context type This is a minimal type definition for the context No business logic belongs here, that goes in hooks/permission/usePermission.ts"
+            },
+            {
+              "path": "src/context/README.md",
+              "type": "file",
+              "fileType": "md"
+            },
+            {
+              "path": "src/context/SearchContext.tsx",
+              "type": "file",
+              "fileType": "context",
+              "pattern": "clientComponent"
+            },
+            {
+              "path": "src/context/SidebarContext.tsx",
+              "type": "file",
+              "fileType": "context",
+              "pattern": "clientComponent",
+              "summary": "Sidebar context definition This is a minimal type definition for the context No business logic belongs here, that goes in hooks/sidebar/useSidebar.ts  The provider implementation is in app/providers/SidebarProvider.tsx The hook implementation is exported from app/providers/index.ts"
+            },
+            {
+              "path": "src/context/TeamContext.tsx",
+              "type": "file",
+              "fileType": "context",
+              "pattern": "clientComponent",
+              "exports": [
+                "TeamContextState"
+              ],
+              "summary": "Team context state interface This is a minimal type definition for the context No business logic belongs here, that goes in hooks/team/useTeam.ts"
+            },
+            {
+              "path": "src/context/TeamMemberDialogContext.tsx",
+              "type": "file",
+              "fileType": "context",
+              "pattern": "clientComponent",
+              "exports": [
+                "TeamMemberDialogContextState"
+              ],
+              "summary": "Team Member Dialog context state interface This is a minimal type definition for the context No business logic belongs here, that goes in hooks"
+            },
+            {
+              "path": "src/context/ThemeContext.tsx",
+              "type": "file",
+              "fileType": "context",
+              "pattern": "clientComponent"
+            },
+            {
+              "path": "src/context/UserContext.tsx",
+              "type": "file",
+              "fileType": "context",
+              "pattern": "clientComponent",
+              "exports": [
+                "UserContextType"
+              ],
+              "summary": "User context type definition This is a minimal type definition for the context No business logic belongs here, that goes in hooks/user/useUser.ts"
+            },
+            {
+              "path": "src/context/index.ts",
+              "type": "file",
+              "fileType": "context",
+              "pattern": "typeDefinition",
+              "summary": "DEPRECATED: This module is deprecated and will be removed in the future. Please migrate to the new pattern:  OLD: import { useTeam, useUser } from '@/context'; NEW: import { useTeam, useUser } from '@/hooks';"
+            }
+          ]
+        },
+        {
+          "path": "src/hooks",
+          "type": "directory",
+          "description": "React hooks for state management and logic",
+          "children": [
+            {
+              "path": "src/hooks/README.md",
+              "type": "file",
+              "fileType": "md"
+            },
+            {
+              "path": "src/hooks/index.ts",
+              "type": "file",
+              "fileType": "hook",
+              "pattern": ""
+            },
+            {
+              "path": "src/hooks/useAuth.ts",
+              "type": "file",
+              "fileType": "hook",
+              "pattern": "clientComponent",
+              "exports": [
+                "useAuth"
+              ],
+              "summary": "Hook for handling authentication operations  @param componentName Optional component name for debugging"
+            },
+            {
+              "path": "src/hooks/useCICD.ts",
+              "type": "file",
+              "fileType": "hook",
+              "pattern": "clientComponent",
+              "exports": [
+                "useCICD"
+              ],
+              "summary": "Hook for managing CICD functionality  Provides functions for fetching, creating, updating, deleting, and testing CICD providers Uses React Query for data fetching and caching"
+            },
+            {
+              "path": "src/hooks/useDeployment.ts",
+              "type": "file",
+              "fileType": "hook",
+              "pattern": "clientComponent",
+              "exports": [
+                "useDeployment"
+              ],
+              "summary": "Hook for managing deployments  Provides functions for fetching, creating, updating, deleting, and running deployments Uses React Query for data fetching and caching"
+            },
+            {
+              "path": "src/hooks/useDeploymentWizard.ts",
+              "type": "file",
+              "fileType": "hook",
+              "pattern": "clientComponent",
+              "exports": [
+                "useDeploymentWizard"
+              ],
+              "summary": "Hook for managing the deployment wizard  Provides functions for getting wizard data and managing deployment configurations Uses React Query for data fetching and caching"
+            },
+            {
+              "path": "src/hooks/useFont.ts",
+              "type": "file",
+              "fileType": "hook",
+              "pattern": "clientComponent",
+              "exports": [
+                "useFont"
+              ],
+              "summary": "Hook for accessing and using font size functionality @returns Font context with fontSize state and setter"
+            },
+            {
+              "path": "src/hooks/useHost.ts",
+              "type": "file",
+              "fileType": "hook",
+              "pattern": "clientComponent",
+              "exports": [
+                "useHost"
+              ],
+              "summary": "Hook for managing hosts  Provides functions for fetching, creating, updating, deleting, and testing hosts Uses React Query for data fetching and caching"
+            },
+            {
+              "path": "src/hooks/useMobile.tsx",
+              "type": "file",
+              "fileType": "hook",
+              "pattern": "clientComponent",
+              "exports": [
+                "useIsMobile"
+              ]
+            },
+            {
+              "path": "src/hooks/usePermission.ts",
+              "type": "file",
+              "fileType": "hook",
+              "pattern": "clientComponent",
+              "exports": [
+                "usePermissionContext",
+                "usePermission",
+                "usePermissionWithContext"
+              ],
+              "summary": "Access the permission context This is a simple hook that just provides access to the context"
+            },
+            {
+              "path": "src/hooks/useQueryHelpers.ts",
+              "type": "file",
+              "fileType": "hook",
+              "pattern": "typeDefinition",
+              "exports": [
+                "useFetchQuery",
+                "useDataMutation"
+              ]
+            },
+            {
+              "path": "src/hooks/useRepository.ts",
+              "type": "file",
+              "fileType": "hook",
+              "pattern": "clientComponent",
+              "exports": [
+                "useRepository"
+              ],
+              "summary": "Hook for managing repositories Simplified to include only essential functionality"
+            },
+            {
+              "path": "src/hooks/useSearch.ts",
+              "type": "file",
+              "fileType": "hook",
+              "pattern": "clientComponent",
+              "exports": [
+                "useSearch"
+              ],
+              "summary": "Hook for accessing and using search functionality @returns Search context with searchTerm, isSearchOpen, and open states and setters"
+            },
+            {
+              "path": "src/hooks/useSidebar.ts",
+              "type": "file",
+              "fileType": "hook",
+              "pattern": "clientComponent",
+              "exports": [
+                "useSidebarContext",
+                "useSidebar"
+              ],
+              "summary": "Access the sidebar context This is a simple hook that just provides access to the context"
+            },
+            {
+              "path": "src/hooks/useTeam.ts",
+              "type": "file",
+              "fileType": "hook",
+              "pattern": "clientComponent",
+              "exports": [
+                "useTeam",
+                "useTeamData"
+              ],
+              "summary": "Hook to access team data from context Pure data accessor with no business logic  @param componentName Optional component name for debugging"
+            },
+            {
+              "path": "src/hooks/useTeamDialogUtils.ts",
+              "type": "file",
+              "fileType": "hook",
+              "pattern": "clientComponent",
+              "exports": [
+                "useDialogState"
+              ],
+              "summary": "Common hook for dialog loading and error handling Provides standardized methods for dialog operations"
+            },
+            {
+              "path": "src/hooks/useTeamMemberManagement.ts",
+              "type": "file",
+              "fileType": "hook",
+              "pattern": "clientComponent",
+              "exports": [
+                "useAvailableTenantProfiles",
+                "useAddTeamMember",
+                "useAddMultipleTeamMembers",
+                "useRemoveTeamMember",
+                "useUpdateMemberRole"
+              ],
+              "summary": "Hook for getting available tenant profiles that can be added to a team"
+            },
+            {
+              "path": "src/hooks/useTeamMembers.ts",
+              "type": "file",
+              "fileType": "hook",
+              "pattern": "clientComponent",
+              "exports": [
+                "useTeamMembers",
+                "getTeamMembersData"
+              ],
+              "summary": "Hook for accessing team members @param teamId The team ID to fetch members for"
+            },
+            {
+              "path": "src/hooks/useTeamResources.ts",
+              "type": "file",
+              "fileType": "hook",
+              "pattern": "clientComponent",
+              "exports": [
+                "useUnassignedResources",
+                "useResourceAssignment",
+                "useResourceLimit"
+              ],
+              "summary": "Hook for accessing unassigned resources"
+            },
+            {
+              "path": "src/hooks/useTheme.ts",
+              "type": "file",
+              "fileType": "hook",
+              "pattern": "clientComponent",
+              "exports": [
+                "useThemeContext",
+                "useTheme"
+              ],
+              "summary": "Access the theme context This is a simple hook that just provides access to the context"
+            },
+            {
+              "path": "src/hooks/useUser.ts",
+              "type": "file",
+              "fileType": "hook",
+              "pattern": "clientComponent",
+              "exports": [
+                "useUser"
+              ],
+              "summary": "Main hook for accessing and managing user data Uses React Query for client-side caching  @param initialUser Optional initial user data @param componentName Optional component name for debugging"
+            }
+          ]
+        },
+        {
+          "path": "src/i18n",
+          "type": "directory",
+          "description": "",
+          "children": [
+            {
+              "path": "src/i18n/index.ts",
+              "type": "file",
+              "fileType": "typescript",
+              "pattern": "",
+              "exports": [
+                "getMessages"
+              ]
+            },
+            {
+              "path": "src/i18n/messages",
+              "type": "directory",
+              "description": "",
+              "children": [
+                {
+                  "path": "src/i18n/messages/en.json",
+                  "type": "file",
+                  "fileType": "json"
+                },
+                {
+                  "path": "src/i18n/messages/fr.json",
+                  "type": "file",
+                  "fileType": "json"
+                }
+              ]
+            },
+            {
+              "path": "src/i18n/request.ts",
+              "type": "file",
+              "fileType": "typescript",
+              "pattern": "serverComponent",
+              "exports": [
+                "default"
+              ]
+            }
+          ],
+          "exports": [
+            "getMessages"
+          ]
+        },
+        {
+          "path": "src/lib",
+          "type": "directory",
+          "description": "Library code and services",
+          "children": [
+            {
+              "path": "src/lib/README.md",
+              "type": "file",
+              "fileType": "md"
+            },
+            {
+              "path": "src/lib/config",
+              "type": "directory",
+              "description": "",
+              "children": [
+                {
+                  "path": "src/lib/config/appConfig.ts",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "serverComponent",
+                  "exports": [
+                    "default"
+                  ],
+                  "summary": "Application Configuration General application configuration settings"
+                },
+                {
+                  "path": "src/lib/config/authConfig.ts",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "serverComponent",
+                  "exports": [
+                    "AuthProviderType",
+                    "AuthProviderConfig",
+                    "getEnabledProviders",
+                    "validatePassword",
+                    "default"
+                  ],
+                  "summary": "Authentication Configuration Configuration for authentication and authorization"
+                },
+                {
+                  "path": "src/lib/config/envConfig.ts",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "serverComponent",
+                  "exports": [
+                    "EnvConfig",
+                    "isDevelopment",
+                    "isProduction",
+                    "isTest",
+                    "default"
+                  ],
+                  "summary": "Environment Configuration Configuration based on environment variables"
+                },
+                {
+                  "path": "src/lib/config/featureConfig.ts",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "serverComponent",
+                  "exports": [
+                    "FeatureFlags",
+                    "PlanFeatures",
+                    "getFeatureFlags",
+                    "isFeatureEnabled",
+                    "getPlanFeatures",
+                    "default"
+                  ],
+                  "summary": "Feature Configuration Configuration for feature flags and feature options"
+                }
+              ]
+            },
+            {
+              "path": "src/lib/db",
+              "type": "directory",
+              "description": "",
+              "children": [
+                {
+                  "path": "src/lib/db/cicdDb.ts",
+                  "type": "file",
+                  "fileType": "database",
+                  "pattern": "serverComponent",
+                  "exports": [
+                    "getCICDProviders",
+                    "getCICDProviderById",
+                    "createCICDProvider",
+                    "updateCICDProvider",
+                    "deleteCICDProvider",
+                    "getCICDJobs",
+                    "getCICDJobById",
+                    "getCICDBuilds",
+                    "createCICDBuild",
+                    "updateCICDBuild",
+                    "getCICDProvider",
+                    "createCICDJob",
+                    "createDeploymentCICDMapping",
+                    "getDeploymentCICDMappings",
+                    "getCICDJob",
+                    "deleteCICDJob",
+                    "deleteDeploymentCICDMapping",
+                    "getCICDDeploymentMapping",
+                    "default"
+                  ],
+                  "summary": "CICD Database Layer Handles database operations for CI/CD providers and jobs"
+                },
+                {
+                  "path": "src/lib/db/createRepository.ts",
+                  "type": "file",
+                  "fileType": "database",
+                  "pattern": ""
+                },
+                {
+                  "path": "src/lib/db/deploymentDb.ts",
+                  "type": "file",
+                  "fileType": "database",
+                  "pattern": "serverComponent",
+                  "exports": [
+                    "getDeployments",
+                    "getDeploymentById",
+                    "createDeployment",
+                    "updateDeployment",
+                    "updateDeploymentStatus",
+                    "deleteDeployment",
+                    "findMany",
+                    "findUnique",
+                    "create",
+                    "update",
+                    "delete_",
+                    "runDeployment",
+                    "default"
+                  ],
+                  "summary": "Deployment Database Layer Handles database operations for deployments"
+                },
+                {
+                  "path": "src/lib/db/hostDb.ts",
+                  "type": "file",
+                  "fileType": "database",
+                  "pattern": "serverComponent",
+                  "exports": [
+                    "getHosts",
+                    "getHostById",
+                    "createHost",
+                    "updateHost",
+                    "updateHostStatus",
+                    "deleteHost",
+                    "default"
+                  ],
+                  "summary": "Host Database Layer Handles database operations for hosts"
+                },
+                {
+                  "path": "src/lib/db/permissionDb.ts",
+                  "type": "file",
+                  "fileType": "database",
+                  "pattern": "serverComponent",
+                  "exports": [
+                    "default",
+                    "formatPermissionsLog",
+                    "getUserPermissions",
+                    "getRoleTemplates",
+                    "getRoleTemplate",
+                    "applyRoleTemplate",
+                    "setUserPermission",
+                    "checkPermission"
+                  ],
+                  "summary": "Format permissions into a readable log output @param permissions Array of permission matrices @param profileId User profile ID @param teamId Team ID @returns Formatted log message"
+                },
+                {
+                  "path": "src/lib/db/repositoryDb.ts",
+                  "type": "file",
+                  "fileType": "database",
+                  "pattern": "serverComponent",
+                  "exports": [
+                    "Repository",
+                    "GitProvider",
+                    "default",
+                    "getById",
+                    "getRepositories",
+                    "getRepository",
+                    "createRepository",
+                    "updateRepository",
+                    "deleteRepository",
+                    "createRepositoryFromUrl",
+                    "getAllGitProviders"
+                  ],
+                  "summary": "Get a repository by ID"
+                },
+                {
+                  "path": "src/lib/db/teamDb.ts",
+                  "type": "file",
+                  "fileType": "database",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "Team",
+                    "CreateTeamPayload",
+                    "UpdateTeamPayload",
+                    "createTeam",
+                    "getTeams",
+                    "getUserTeams",
+                    "getTeamById",
+                    "updateTeam",
+                    "deleteTeam",
+                    "getUserActiveTeam",
+                    "setUserActiveTeam"
+                  ],
+                  "summary": "Helper function to create a plain serializable team object"
+                },
+                {
+                  "path": "src/lib/db/teamMemberDb.ts",
+                  "type": "file",
+                  "fileType": "database",
+                  "pattern": "serverComponent",
+                  "exports": [
+                    "getTeamMembers",
+                    "addTeamMember",
+                    "updateTeamMemberRole",
+                    "removeTeamMember",
+                    "getAvailableTenantProfilesForTeam",
+                    "addMultipleTeamMembers",
+                    "default"
+                  ],
+                  "summary": "Get team members for a specific team @param teamId Team ID @param cookieStore Cookie store from server action @returns Team members with their profile data"
+                },
+                {
+                  "path": "src/lib/db/userDb.ts",
+                  "type": "file",
+                  "fileType": "database",
+                  "pattern": "serverComponent",
+                  "exports": [
+                    "default",
+                    "findMany",
+                    "findUnique",
+                    "getUser",
+                    "getCurrentUser",
+                    "updateProfile",
+                    "setSelectedTeam",
+                    "create",
+                    "update",
+                    "deleteUser"
+                  ],
+                  "summary": "Find multiple users based on options @param options Query options @param cookieStore Cookie store @returns Array of user profiles"
+                }
+              ]
+            },
+            {
+              "path": "src/lib/git",
+              "type": "directory",
+              "description": "",
+              "children": [
+                {
+                  "path": "src/lib/git/giteaApi.ts",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "serverComponent",
+                  "exports": [
+                    "GiteaApiClientOptions",
+                    "GiteaRepository",
+                    "GiteaBranch",
+                    "GiteaFile",
+                    "GiteaApiClient",
+                    "createGiteaApiClient",
+                    "default"
+                  ],
+                  "summary": "Gitea API Integration Provides interfaces to interact with the Gitea API"
+                },
+                {
+                  "path": "src/lib/git/githubApi.ts",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "serverComponent",
+                  "exports": [
+                    "GitHubApiClientOptions",
+                    "GitHubRepository",
+                    "GitHubBranch",
+                    "GitHubFile",
+                    "GitHubApiClient",
+                    "createGitHubApiClient",
+                    "default"
+                  ],
+                  "summary": "GitHub API Integration Provides interfaces to interact with the GitHub API"
+                },
+                {
+                  "path": "src/lib/git/gitlabApi.ts",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "serverComponent",
+                  "exports": [
+                    "ApiResponse",
+                    "GitLabApiClientOptions",
+                    "GitLabRepository",
+                    "GitLabBranch",
+                    "GitLabFile",
+                    "GitLabApiClient",
+                    "createGitLabApiClient",
+                    "default"
+                  ],
+                  "summary": "GitLab API Integration Provides interfaces to interact with the GitLab API"
+                }
+              ]
+            },
+            {
+              "path": "src/lib/index.ts",
+              "type": "file",
+              "fileType": "typescript",
+              "pattern": ""
+            },
+            {
+              "path": "src/lib/services",
+              "type": "directory",
+              "description": "",
+              "children": [
+                {
+                  "path": "src/lib/services/authService.ts",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "serverComponent",
+                  "exports": [
+                    "signInWithEmail",
+                    "signInWithOAuth",
+                    "signUpWithEmail",
+                    "signOut",
+                    "resetPasswordWithEmail",
+                    "updatePassword",
+                    "getSession",
+                    "getCurrentUser",
+                    "default"
+                  ],
+                  "summary": "Authentication Service Handles authentication and user sessions"
+                },
+                {
+                  "path": "src/lib/services/cicdService.ts",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "serverComponent",
+                  "exports": [
+                    "GitHubProvider",
+                    "JenkinsProvider",
+                    "CICDProviderFactory",
+                    "getCICDProvider",
+                    "default"
+                  ],
+                  "summary": "GitHub Actions CI/CD Provider Implementation"
+                },
+                {
+                  "path": "src/lib/services/deploymentService.ts",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "serverComponent",
+                  "exports": [
+                    "ServiceResponse",
+                    "createDeployment",
+                    "startDeployment",
+                    "stopDeployment",
+                    "deleteDeployment",
+                    "default"
+                  ],
+                  "summary": "Deployment Service Business logic for deployment operations"
+                },
+                {
+                  "path": "src/lib/services/gitService.ts",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "ApiResponse",
+                    "GitConnectionParams",
+                    "GitRepositoryParams",
+                    "testGitProviderConnection",
+                    "testGitRepositoryAccess"
+                  ],
+                  "summary": "Git API Service Handles all external Git provider API calls"
+                },
+                {
+                  "path": "src/lib/services/hostService.ts",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "serverComponent",
+                  "exports": [
+                    "testHostConnection",
+                    "default"
+                  ],
+                  "summary": "Test connection to a host"
+                },
+                {
+                  "path": "src/lib/services/httpService.ts",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "",
+                  "exports": [
+                    "initializeNextApp",
+                    "createServer",
+                    "startServer",
+                    "stopServer",
+                    "getServer",
+                    "initializeWebSockets"
+                  ],
+                  "summary": "Initialize the Next.js application"
+                },
+                {
+                  "path": "src/lib/services/index.ts",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "",
+                  "summary": "Service layer index This file re-exports all service modules for easy import"
+                },
+                {
+                  "path": "src/lib/services/oauthService.ts",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "",
+                  "exports": [
+                    "createGithubOauthUrl",
+                    "createGitlabOauthUrl"
+                  ],
+                  "summary": "OAuth helper functions for Git providers"
+                },
+                {
+                  "path": "src/lib/services/repositoryService.ts",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "serverComponent",
+                  "exports": [
+                    "testRepositoryConnection",
+                    "listRepositoryBranches",
+                    "listRepositoryFiles",
+                    "getRepositoryFileContent",
+                    "default"
+                  ],
+                  "summary": "Repository Service Business logic for repository operations"
+                },
+                {
+                  "path": "src/lib/services/sshService.ts",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "serverComponent",
+                  "exports": [
+                    "SSHExecutionResult",
+                    "SSHConnectionOptions",
+                    "SSHCommandOptions",
+                    "testConnection",
+                    "executeCommand",
+                    "default"
+                  ],
+                  "summary": "SSH Service Handles SSH connections and operations"
+                },
+                {
+                  "path": "src/lib/services/teamService.ts",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "serverComponent",
+                  "exports": [
+                    "default"
+                  ],
+                  "summary": "Team Service"
+                },
+                {
+                  "path": "src/lib/services/terminalService.ts",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "serverComponent",
+                  "exports": [
+                    "default",
+                    "initTerminalSession",
+                    "closeTerminalSession",
+                    "sendDataToTerminal",
+                    "getCompatibleConnection"
+                  ],
+                  "summary": "Initialize a terminal session with the given parameters"
+                },
+                {
+                  "path": "src/lib/services/userService.ts",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "serverComponent",
+                  "exports": [
+                    "default"
+                  ],
+                  "summary": "User Service"
+                },
+                {
+                  "path": "src/lib/services/websocketService.ts",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "initializeWebSocketServer",
+                    "getWebSocketServer",
+                    "handleUpgrade",
+                    "handleMessage",
+                    "closeWebSocketServer"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "src/lib/supabase",
+              "type": "directory",
+              "description": "",
+              "children": [
+                {
+                  "path": "src/lib/supabase/admin.ts",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "",
+                  "summary": "Creates a Supabase admin client with service role permissions - Uses service role key for privileged operations - Falls back to anon key if service role not available (in development) - Caches the client for efficiency"
+                },
+                {
+                  "path": "src/lib/supabase/auth.ts",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": ""
+                },
+                {
+                  "path": "src/lib/supabase/client.ts",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": ""
+                },
+                {
+                  "path": "src/lib/supabase/db.ts",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "serverComponent",
+                  "exports": [
+                    "default"
+                  ]
+                },
+                {
+                  "path": "src/lib/supabase/index.ts",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": ""
+                },
+                {
+                  "path": "src/lib/supabase/middleware.ts",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "updateSession"
+                  ],
+                  "summary": "Creates a Supabase client for middleware - Handles cookie management for authentication in middleware - Allows updating cookies in the response"
+                },
+                {
+                  "path": "src/lib/supabase/server.ts",
+                  "type": "file",
+                  "fileType": "typescript",
+                  "pattern": ""
+                }
+              ]
+            },
+            {
+              "path": "src/lib/utils",
+              "type": "directory",
+              "description": "Utility functions",
+              "children": [
+                {
+                  "path": "src/lib/utils/apiUtils.ts",
+                  "type": "file",
+                  "fileType": "utility",
+                  "pattern": "serverComponent",
+                  "exports": [
+                    "ApiRequestOptions",
+                    "fetchWithTimeout",
+                    "fetchWithRetry",
+                    "apiRequest",
+                    "get",
+                    "post",
+                    "put",
+                    "patch",
+                    "del",
+                    "default"
+                  ],
+                  "summary": "API Utilities Utilities for API integration and requests"
+                },
+                {
+                  "path": "src/lib/utils/cacheUtils.ts",
+                  "type": "file",
+                  "fileType": "utility",
+                  "pattern": "serverComponent",
+                  "exports": [
+                    "cacheItem",
+                    "getCachedItem",
+                    "removeCachedItem",
+                    "clearCache",
+                    "getOrFetch",
+                    "cleanExpiredCache",
+                    "default"
+                  ],
+                  "summary": "Cache Utilities Utilities for caching data"
+                },
+                {
+                  "path": "src/lib/utils/chartUtils.ts",
+                  "type": "file",
+                  "fileType": "utility",
+                  "pattern": "serverComponent",
+                  "exports": [
+                    "ChartDataPoint",
+                    "ChartDataset",
+                    "getRandomColor",
+                    "formatNumber",
+                    "generateTimeSeriesData",
+                    "formatChartDate",
+                    "generateRandomChartData",
+                    "generatePieChartData",
+                    "groupTimeSeriesByPeriod",
+                    "default"
+                  ],
+                  "summary": "Chart Utilities Utilities for creating and formatting chart data"
+                },
+                {
+                  "path": "src/lib/utils/commonUtils.ts",
+                  "type": "file",
+                  "fileType": "utility",
+                  "pattern": "serverComponent",
+                  "exports": [
+                    "StandardResponse",
+                    "DbResponse",
+                    "cn",
+                    "formatDate",
+                    "formatDateTime",
+                    "generateRandomString",
+                    "truncateString",
+                    "deepClone",
+                    "deepMerge",
+                    "isObject",
+                    "getNestedValue",
+                    "debounce",
+                    "throttle",
+                    "default"
+                  ],
+                  "summary": "Common Utilities General utility functions used throughout the application"
+                },
+                {
+                  "path": "src/lib/utils/dbUtils.ts",
+                  "type": "file",
+                  "fileType": "utility",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "createSuccessResponse",
+                    "createErrorResponse",
+                    "handleDbError",
+                    "validateRequiredParams"
+                  ],
+                  "summary": "Standard response type for database operations This ensures consistent error handling and type safety"
+                },
+                {
+                  "path": "src/lib/utils/deploymentUtils.ts",
+                  "type": "file",
+                  "fileType": "utility",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "getFormattedTime",
+                    "getFormattedTime",
+                    "getFormattedTime",
+                    "mapDeploymentToParameters"
+                  ],
+                  "summary": "Format a date string for display"
+                },
+                {
+                  "path": "src/lib/utils/logUtils.ts",
+                  "type": "file",
+                  "fileType": "utility",
+                  "pattern": "",
+                  "summary": "Logging utilities for the application"
+                },
+                {
+                  "path": "src/lib/utils/sessionUtils.ts",
+                  "type": "file",
+                  "fileType": "utility",
+                  "pattern": "serverComponent",
+                  "exports": [
+                    "getSessionFromCookies",
+                    "setSessionCookie",
+                    "removeSessionCookie",
+                    "getCachedSession",
+                    "cacheSession",
+                    "removeCachedSession",
+                    "formatExpiryDate",
+                    "isSessionExpired",
+                    "timeUntilExpiry",
+                    "sessionUtils"
+                  ],
+                  "summary": "Session Utilities Utilities for managing user sessions"
+                },
+                {
+                  "path": "src/lib/utils/stateHelpers.ts",
+                  "type": "file",
+                  "fileType": "utility",
+                  "pattern": "",
+                  "summary": "Utilities for preventing infinite loops and redundant fetches"
+                }
+              ]
+            },
+            {
+              "path": "src/lib/utils.ts",
+              "type": "file",
+              "fileType": "typescript",
+              "pattern": "",
+              "exports": [
+                "cn"
+              ],
+              "summary": "Combines class names with Tailwind CSS classes"
+            }
+          ]
+        },
+        {
+          "path": "src/middleware.ts",
+          "type": "file",
+          "fileType": "typescript",
+          "pattern": "serverComponent",
+          "exports": [
+            "default"
+          ]
+        },
+        {
+          "path": "src/pages",
+          "type": "directory",
+          "description": "",
+          "children": [
+            {
+              "path": "src/pages/_document.tsx",
+              "type": "file",
+              "fileType": "typescript",
+              "pattern": "serverComponent",
+              "exports": [
+                "default"
+              ]
+            }
+          ]
+        },
+        {
+          "path": "src/types",
+          "type": "directory",
+          "description": "TypeScript type definitions",
+          "children": [
+            {
+              "path": "src/types/README.md",
+              "type": "file",
+              "fileType": "md"
+            },
+            {
+              "path": "src/types/api",
+              "type": "directory",
+              "description": "API endpoints",
+              "children": [
+                {
+                  "path": "src/types/api/gitCommonApiType.ts",
+                  "type": "file",
+                  "fileType": "type definition",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "GitRepository",
+                    "GitFile",
+                    "GitBranch",
+                    "GitProviderType",
+                    "GitProvider"
+                  ],
+                  "summary": "Common type definitions for Git provider APIs"
+                },
+                {
+                  "path": "src/types/api/githubApiType.ts",
+                  "type": "file",
+                  "fileType": "type definition",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "GitHubRepository",
+                    "GitHubFile",
+                    "GitHubBranch",
+                    "GitHubRepositoriesResponse",
+                    "GitHubAuth"
+                  ],
+                  "summary": "GitHub-specific type definitions"
+                },
+                {
+                  "path": "src/types/api/gitlabApiType.ts",
+                  "type": "file",
+                  "fileType": "type definition",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "GitLabRepository",
+                    "GitLabFile",
+                    "GitLabFileContent",
+                    "GitLabBranch",
+                    "GitLabAuth"
+                  ],
+                  "summary": "GitLab-specific type definitions"
+                }
+              ]
+            },
+            {
+              "path": "src/types/component",
+              "type": "directory",
+              "description": "",
+              "children": [
+                {
+                  "path": "src/types/component/cicdComponentType.ts",
+                  "type": "file",
+                  "fileType": "type definition",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "CICDProviderType",
+                    "CICDAuthType",
+                    "CICDCredentials",
+                    "CICDProviderConfig",
+                    "CICDProvider",
+                    "CICDProviderPayload",
+                    "getFullProviderUrl",
+                    "parseProviderUrl",
+                    "CICDJob",
+                    "CICDBuild"
+                  ],
+                  "summary": "Core CI/CD type definitions"
+                },
+                {
+                  "path": "src/types/component/deploymentComponentType.ts",
+                  "type": "file",
+                  "fileType": "type definition",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "DeploymentStatus",
+                    "LogEntry",
+                    "DeploymentScript",
+                    "DeploymentHost",
+                    "Deployment",
+                    "DeploymentFormData",
+                    "DeploymentConfig",
+                    "DeploymentData"
+                  ],
+                  "summary": "Core Deployment type definitions"
+                },
+                {
+                  "path": "src/types/component/featuresComponentType.ts",
+                  "type": "file",
+                  "fileType": "type definition",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "PlanType",
+                    "PlanFeatures"
+                  ],
+                  "summary": "Core feature and subscription plan types"
+                },
+                {
+                  "path": "src/types/component/hostComponentType.ts",
+                  "type": "file",
+                  "fileType": "type definition",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "HostStatus",
+                    "HostConnectionType",
+                    "Host",
+                    "HostFormData",
+                    "HostConnectionStatus",
+                    "HostAnalytics",
+                    "VMType",
+                    "VMConfig"
+                  ],
+                  "summary": "Core Host type definitions Consolidated from previous host.ts and deployment.ts"
+                },
+                {
+                  "path": "src/types/component/repositoryComponentType.ts",
+                  "type": "file",
+                  "fileType": "type definition",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "GitProviderType",
+                    "GitProviderStatus",
+                    "RepositorySyncStatus",
+                    "GitProvider",
+                    "Repository",
+                    "RepositoryFile",
+                    "CreateGitProviderParams",
+                    "CreateRepositoryParams"
+                  ],
+                  "summary": "Core Repository type definitions Contains the essential repository and git provider data structures"
+                },
+                {
+                  "path": "src/types/component/scriptsComponentType.ts",
+                  "type": "file",
+                  "fileType": "type definition",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "ScriptLanguage",
+                    "ScriptStatus",
+                    "ScriptRunStatus",
+                    "Script",
+                    "ScriptRun",
+                    "ScriptFilter"
+                  ],
+                  "summary": "Core Script type definitions"
+                },
+                {
+                  "path": "src/types/component/sshComponentType.ts",
+                  "type": "file",
+                  "fileType": "type definition",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "WebSocketConnection",
+                    "SSHAuthData",
+                    "SSHError",
+                    "SSHConfig",
+                    "SSHExecutionResult"
+                  ],
+                  "summary": "SSH connection and authentication types"
+                },
+                {
+                  "path": "src/types/component/userComponentType.ts",
+                  "type": "file",
+                  "fileType": "type definition",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "Role",
+                    "UIRole",
+                    "User",
+                    "AuthUser",
+                    "UserTeam",
+                    "TeamMember",
+                    "ResourceLimit",
+                    "UserSession",
+                    "Tenant",
+                    "AuthSession",
+                    "SessionData",
+                    "AuthResult",
+                    "OAuthProvider"
+                  ],
+                  "summary": "Core User type definitions"
+                }
+              ]
+            },
+            {
+              "path": "src/types/context",
+              "type": "directory",
+              "description": "React context providers",
+              "children": [
+                {
+                  "path": "src/types/context/appContextType.ts",
+                  "type": "file",
+                  "fileType": "context",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "AppContextType"
+                  ],
+                  "summary": "Root AppContext type that combines all other contexts Each context can be null if not yet initialized"
+                },
+                {
+                  "path": "src/types/context/cicdContextType.ts",
+                  "type": "file",
+                  "fileType": "context",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "CICDProviderType",
+                    "ActionResult",
+                    "CICDProviderListResult",
+                    "CICDProviderActionResult",
+                    "CICDData",
+                    "CICDActions",
+                    "CICDContextType"
+                  ],
+                  "summary": "CI/CD Context types"
+                },
+                {
+                  "path": "src/types/context/constantsContextType.ts",
+                  "type": "file",
+                  "fileType": "context",
+                  "pattern": "",
+                  "exports": [
+                    "generateErrorCode"
+                  ],
+                  "summary": "Common operation names for context actions"
+                },
+                {
+                  "path": "src/types/context/dashboardContextType.ts",
+                  "type": "file",
+                  "fileType": "context",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "ActivityItem",
+                    "Task",
+                    "Stats",
+                    "ChatMessage",
+                    "Team"
+                  ]
+                },
+                {
+                  "path": "src/types/context/deploymentContextType.ts",
+                  "type": "file",
+                  "fileType": "context",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "DeploymentContextData",
+                    "DeploymentContextActions",
+                    "DeploymentContextType"
+                  ],
+                  "summary": "Deployment context types"
+                },
+                {
+                  "path": "src/types/context/fontContextType.ts",
+                  "type": "file",
+                  "fileType": "context",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "FontSize",
+                    "FontContextType"
+                  ],
+                  "summary": "Font context type definitions"
+                },
+                {
+                  "path": "src/types/context/hostContextType.ts",
+                  "type": "file",
+                  "fileType": "context",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "HostData",
+                    "HostActions",
+                    "HostContextType"
+                  ],
+                  "summary": "Host context types"
+                },
+                {
+                  "path": "src/types/context/permissionsContextType.ts",
+                  "type": "file",
+                  "fileType": "context",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "ResourceType",
+                    "Operation",
+                    "PermissionMatrix",
+                    "RoleTemplate",
+                    "PermissionsResult",
+                    "RoleTemplatesResult",
+                    "RoleTemplateResult"
+                  ]
+                },
+                {
+                  "path": "src/types/context/repositoryContextType.ts",
+                  "type": "file",
+                  "fileType": "context",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "RepositoryData",
+                    "RepositoryActions",
+                    "RepositoryContextType",
+                    "FileAPIResponse",
+                    "FilesAPIResponse",
+                    "ConnectRepositoryValues",
+                    "CreateGitProviderResult",
+                    "CreateRepositoryResult",
+                    "VerifyRepositoryUrlResult",
+                    "EnhancedConnectRepositoryDialogProps",
+                    "EnhancedRepositoryCardProps",
+                    "RepositoryExplorerProps",
+                    "TestConnectionInput",
+                    "GitProviderCreateInput",
+                    "TestRepositoryInput",
+                    "RepositoryFilter"
+                  ],
+                  "summary": "Repository data interface - contains all state"
+                },
+                {
+                  "path": "src/types/context/searchContextType.ts",
+                  "type": "file",
+                  "fileType": "context",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "SearchContextType"
+                  ],
+                  "summary": "Search context type definitions"
+                },
+                {
+                  "path": "src/types/context/sidebarContextType.ts",
+                  "type": "file",
+                  "fileType": "context",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "SidebarContext",
+                    "SidebarProviderProps",
+                    "SidebarProps"
+                  ],
+                  "summary": "Sidebar context types"
+                },
+                {
+                  "path": "src/types/context/teamContextType.ts",
+                  "type": "file",
+                  "fileType": "context",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "Team",
+                    "TeamCreateInput",
+                    "TeamUpdateInput",
+                    "TeamMember",
+                    "TeamMemberCreateInput",
+                    "ResourceLimit",
+                    "TeamContextValue",
+                    "TeamDetails",
+                    "TeamMemberDetails",
+                    "UnassignedResources",
+                    "TeamMemberResource",
+                    "MemberPermission",
+                    "PermissionMatrix",
+                    "ResourcePermissions",
+                    "RoleTemplate",
+                    "AddMemberDialogProps",
+                    "EditPermissionsDialogProps"
+                  ]
+                },
+                {
+                  "path": "src/types/context/themeContextType.ts",
+                  "type": "file",
+                  "fileType": "context",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "Theme",
+                    "ThemeContextType"
+                  ],
+                  "summary": "Theme context type definitions"
+                },
+                {
+                  "path": "src/types/context/userContextType.ts",
+                  "type": "file",
+                  "fileType": "context",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "UserContextType"
+                  ],
+                  "summary": "User context type definitions"
+                }
+              ]
+            },
+            {
+              "path": "src/types/db",
+              "type": "directory",
+              "description": "",
+              "children": [
+                {
+                  "path": "src/types/db/supabaseDbType.ts",
+                  "type": "file",
+                  "fileType": "type definition",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "Json",
+                    "Database"
+                  ],
+                  "summary": "Supabase database types NOTE: This file typically contains auto-generated types from the database schema Only showing a simplified version here for reference"
+                }
+              ]
+            },
+            {
+              "path": "src/types/environment.d.ts",
+              "type": "file",
+              "fileType": "type definition",
+              "pattern": "typeDefinition"
+            },
+            {
+              "path": "src/types/index.ts",
+              "type": "file",
+              "fileType": "type definition",
+              "pattern": "typeDefinition",
+              "summary": "Main types export file Re-exports commonly used types from their component locations IMPORTANT: For most cases, prefer importing directly from the specific type file This file is primarily for convenience in cases where you need many component entity types"
+            },
+            {
+              "path": "src/types/service",
+              "type": "directory",
+              "description": "",
+              "children": [
+                {
+                  "path": "src/types/service/cicdServiceTypes.ts",
+                  "type": "file",
+                  "fileType": "type definition",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "CICDResponse",
+                    "CICDJob",
+                    "CICDJobParameter",
+                    "CICDBuild",
+                    "CICDProviderConfig",
+                    "CICDProvider",
+                    "CICDPipelineConfig",
+                    "CICDStage",
+                    "CICDStep",
+                    "CICDParameter",
+                    "CICDTrigger"
+                  ],
+                  "summary": "Common interfaces for CI/CD providers"
+                },
+                {
+                  "path": "src/types/service/sessionServiceType.ts",
+                  "type": "file",
+                  "fileType": "type definition",
+                  "pattern": "typeDefinition",
+                  "exports": [
+                    "AuthSession",
+                    "SessionData",
+                    "AuthResult",
+                    "OAuthProvider",
+                    "Tenant"
+                  ],
+                  "summary": "Authentication and session type definitions"
+                },
+                {
+                  "path": "src/types/service/userServiceType.ts",
+                  "type": "file",
+                  "fileType": "type definition",
+                  "pattern": "typeDefinition",
+                  "summary": "Auth-specific user types"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "path": "src/utils",
+          "type": "directory",
+          "description": "Utility functions",
+          "children": [
+            {
+              "path": "src/utils/electronApi.ts",
+              "type": "file",
+              "fileType": "utility",
+              "pattern": "typeDefinition"
+            },
+            {
+              "path": "src/utils/isElectron.ts",
+              "type": "file",
+              "fileType": "utility",
+              "pattern": "serverComponent",
+              "exports": [
+                "default"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+## Data Flow Patterns
+
+```json
+[
+  {
+    "from": "@/hooks",
+    "to": "src/app/[locale]/(auth)/forgot-password/page.tsx",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/hooks",
+    "to": "src/app/[locale]/(auth)/reset-password/page.tsx",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/hooks",
+    "to": "src/app/[locale]/(auth)/signup/page.tsx",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/hooks",
+    "to": "src/app/[locale]/[tenant]/deployment/DeploymentList.tsx",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/hooks",
+    "to": "src/app/[locale]/[tenant]/settings/profile/page.tsx",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/hooks/useTeam",
+    "to": "src/app/[locale]/[tenant]/team/_components/TeamHeader.tsx",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/context/CICDContext",
+    "to": "src/app/providers/CICDProvider.tsx",
+    "type": "context usage"
+  },
+  {
+    "from": "@/hooks/useCICD",
+    "to": "src/app/providers/CICDProvider.tsx",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/context/FontContext",
+    "to": "src/app/providers/FontProvider.tsx",
+    "type": "context usage"
+  },
+  {
+    "from": "@/context/PermissionContext",
+    "to": "src/app/providers/PermissionProvider.tsx",
+    "type": "context usage"
+  },
+  {
+    "from": "@/context/SearchContext",
+    "to": "src/app/providers/SearchProvider.tsx",
+    "type": "context usage"
+  },
+  {
+    "from": "@/context/SidebarContext",
+    "to": "src/app/providers/SidebarProvider.tsx",
+    "type": "context usage"
+  },
+  {
+    "from": "@/context/TeamContext",
+    "to": "src/app/providers/TeamProvider.tsx",
+    "type": "context usage"
+  },
+  {
+    "from": "@/context/UserContext",
+    "to": "src/app/providers/UserProvider.tsx",
+    "type": "context usage"
+  },
+  {
+    "from": "@/hooks",
+    "to": "src/components/dialog/CommandMenu.tsx",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/hooks",
+    "to": "src/components/dialog/CommandMenu.tsx",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/hooks",
+    "to": "src/components/header/HeaderClient.tsx",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/hooks",
+    "to": "src/components/layout/RoleSwitcher.tsx",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/hooks",
+    "to": "src/components/profile/ProfileDropDown.tsx",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/hooks",
+    "to": "src/components/shadcn/search.tsx",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/hooks/useMobile",
+    "to": "src/components/shadcn/sidebar.tsx",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/hooks",
+    "to": "src/components/shadcn/theme-toggle.tsx",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/hooks",
+    "to": "src/components/sidebar/Sidebar.tsx",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/hooks",
+    "to": "src/components/sidebar/SidebarClient.tsx",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/hooks",
+    "to": "src/components/sidebar/SidebarMenuButton.tsx",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/hooks/useMobile",
+    "to": "src/components/sidebar/SidebarMenuButton.tsx",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/hooks",
+    "to": "src/components/sidebar/SidebarMenuSubButton.tsx",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/hooks",
+    "to": "src/components/sidebar/SidebarNavigation.tsx",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/hooks",
+    "to": "src/components/sidebar/SidebarRail.tsx",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/hooks",
+    "to": "src/components/sidebar/SidebarTrigger.tsx",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/hooks",
+    "to": "src/components/team/CreatorBadge.tsx",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/hooks",
+    "to": "src/components/team/PermissionAwareActions.tsx",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/hooks",
+    "to": "src/components/theme/ThemeSwitch.tsx",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/hooks",
+    "to": "src/components/ui/PermissionGuard.tsx",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/hooks",
+    "to": "src/components/ui/Search.tsx",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/hooks/useCICD",
+    "to": "src/context/CICDContext.tsx",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/context",
+    "to": "src/context/index.ts",
+    "type": "context usage"
+  },
+  {
+    "from": "@/hooks",
+    "to": "src/context/index.ts",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/context",
+    "to": "src/context/index.ts",
+    "type": "context usage"
+  },
+  {
+    "from": "@/hooks/useCICD",
+    "to": "src/context/index.ts",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/hooks/useQueryHelpers",
+    "to": "src/hooks/useCICD.ts",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/context/FontContext",
+    "to": "src/hooks/useFont.ts",
+    "type": "context usage"
+  },
+  {
+    "from": "@/context/PermissionContext",
+    "to": "src/hooks/usePermission.ts",
+    "type": "context usage"
+  },
+  {
+    "from": "@/context/UserContext",
+    "to": "src/hooks/usePermission.ts",
+    "type": "context usage"
+  },
+  {
+    "from": "@/hooks/useTeam",
+    "to": "src/hooks/usePermission.ts",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/hooks/useUser",
+    "to": "src/hooks/usePermission.ts",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/context/SearchContext",
+    "to": "src/hooks/useSearch.ts",
+    "type": "context usage"
+  },
+  {
+    "from": "@/context/SidebarContext",
+    "to": "src/hooks/useSidebar.ts",
+    "type": "context usage"
+  },
+  {
+    "from": "@/context/TeamContext",
+    "to": "src/hooks/useTeam.ts",
+    "type": "context usage"
+  },
+  {
+    "from": "@/hooks/useUser",
+    "to": "src/hooks/useTeam.ts",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/hooks/useUser",
+    "to": "src/hooks/useTeamResources.ts",
+    "type": "hook usage"
+  },
+  {
+    "from": "@/context/ThemeContext",
+    "to": "src/hooks/useTheme.ts",
+    "type": "context usage"
+  }
+]
+```
+
+## Key File Relationships
+
+The following files have the most dependencies or are most depended upon:
+
+```json
+[
+  {
+    "file": "react",
+    "connections": 131
+  },
+  {
+    "file": "@/lib/utils",
+    "connections": 50
+  },
+  {
+    "file": "lucide-react",
+    "connections": 30
+  },
+  {
+    "file": "@/components/shadcn/button",
+    "connections": 26
+  },
+  {
+    "file": "@/hooks",
+    "connections": 25
+  },
+  {
+    "file": "@/types/service/userServiceType",
+    "connections": 20
+  },
+  {
+    "file": "next/navigation",
+    "connections": 18
+  },
+  {
+    "file": "next-intl",
+    "connections": 18
+  },
+  {
+    "file": "@tanstack/react-query",
+    "connections": 17
+  },
+  {
+    "file": "@/types/context/teamContextType",
+    "connections": 17
+  },
+  {
+    "file": "next",
+    "connections": 14
+  },
+  {
+    "file": "src/components/shadcn/sidebar.tsx",
+    "connections": 14
+  },
+  {
+    "file": "@/app/actions/userAction",
+    "connections": 13
+  },
+  {
+    "file": "next/headers",
+    "connections": 13
+  },
+  {
+    "file": "src/components/header/HeaderClient.tsx",
+    "connections": 13
+  },
+  {
+    "file": "@/components/shadcn/use-toast",
+    "connections": 12
+  },
+  {
+    "file": "next-intl/server",
+    "connections": 12
+  },
+  {
+    "file": "@/lib/supabase/server",
+    "connections": 12
+  },
+  {
+    "file": "@/lib/utils/commonUtils",
+    "connections": 12
+  },
+  {
+    "file": "src/components/sidebar/SidebarClient.tsx",
+    "connections": 12
+  }
+]
+```
+

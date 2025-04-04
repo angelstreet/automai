@@ -30,7 +30,7 @@ import {
   parseProviderUrl,
 } from '@/types/component/cicdComponentType';
 
-interface CICDProviderFormProps {
+interface CICDFormDialogProps {
   providerId?: string;
   provider?: CICDProvider;
   onComplete: () => void;
@@ -48,7 +48,7 @@ interface FormValues {
   token: string;
 }
 
-const CICDProviderFormClient: React.FC<CICDProviderFormProps> = ({
+const CICDFormDialogClient: React.FC<CICDFormDialogProps> = ({
   providerId,
   provider,
   onComplete,
@@ -655,4 +655,4 @@ const CICDProviderFormClient: React.FC<CICDProviderFormProps> = ({
   );
 };
 
-export default CICDProviderFormClient;
+export default CICDFormDialogClient;

@@ -1,0 +1,553 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Feature Implementation Guide
+
+This document provides a step-by-step guide for implementing new features in the application following our established patterns.
+
+## Implementation Workflow
+
+```
+┌────────────────┐     ┌───────────────┐     ┌────────────────┐     ┌──────────────┐     ┌───────────────┐
+│ 1. Define Types│  →  │ 2. DB Layer   │  →  │ 3. Server Action│  →  │ 4. React Hook│  →  │ 5. Components │
+└────────────────┘     └───────────────┘     └────────────────┘     └──────────────┘     └───────────────┘
+```
+
+## Step 1: Define Types
+
+Start by defining the types for your feature in the appropriate `/types/` directory:
+
+```typescript
+// /types/component/featureComponentType.ts
+export interface Feature {
+  id: string;
+  name: string;
+  description?: string;
+  team_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FeatureCreatePayload {
+  name: string;
+  description?: string;
+}
+
+// /types/context/featureContextType.ts
+export interface ActionResult<T = any> {
+  success: boolean;
+  error?: string;
+  data?: T;
+}
+```
+
+## Step 2: Create Database Layer
+
+Create the database layer with CRUD operations in `/lib/db/featureDb.ts`:
+
+```typescript
+// /lib/db/featureDb.ts
+import { createClient } from '@/lib/supabase/server';
+import { DbResponse } from '@/lib/utils/commonUtils';
+import { Feature, FeatureCreatePayload } from '@/types/component/featureComponentType';
+
+export async function getFeatures(
+  teamId: string,
+  cookieStore?: any,
+): Promise<DbResponse<Feature[]>> {
+  try {
+    console.log(`[@db:featureDb:getFeatures] Getting features for team: ${teamId}`);
+    const supabase = await createClient(cookieStore);
+
+    const { data, error } = await supabase
+      .from('features')
+      .select('*')
+      .eq('team_id', teamId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error(`[@db:featureDb:getFeatures] Error: ${error.message}`);
+      return { success: false, error: error.message };
+    }
+
+    console.log(`[@db:featureDb:getFeatures] Found ${data.length} features`);
+    return { success: true, data };
+  } catch (error: any) {
+    console.error(`[@db:featureDb:getFeatures] Error: ${error.message}`);
+    return { success: false, error: error.message || 'Failed to get features' };
+  }
+}
+
+export async function createFeature(
+  feature: FeatureCreatePayload,
+  userId: string,
+  teamId: string,
+  cookieStore?: any,
+): Promise<DbResponse<Feature>> {
+  try {
+    console.log(`[@db:featureDb:createFeature] Creating feature: ${feature.name}`);
+    const supabase = await createClient(cookieStore);
+
+    const featureData = {
+      ...feature,
+      team_id: teamId,
+      creator_id: userId,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabase
+      .from('features')
+      .insert([featureData])
+      .select()
+      .single();
+
+    if (error) {
+      console.error(`[@db:featureDb:createFeature] Error: ${error.message}`);
+      return { success: false, error: error.message };
+    }
+
+    console.log(`[@db:featureDb:createFeature] Created feature with ID: ${data.id}`);
+    return { success: true, data };
+  } catch (error: any) {
+    console.error(`[@db:featureDb:createFeature] Error: ${error.message}`);
+    return { success: false, error: error.message || 'Failed to create feature' };
+  }
+}
+
+// Implement other CRUD functions following the same pattern
+```
+
+## Step 3: Create Server Actions
+
+Create server actions in `/app/actions/featureAction.ts`:
+
+```typescript
+// /app/actions/featureAction.ts
+'use server';
+
+import { revalidatePath } from 'next/cache';
+import { cookies } from 'next/headers';
+import { cache } from 'react';
+
+import { getUser } from '@/app/actions/userAction';
+import { getUserActiveTeam } from '@/app/actions/teamAction';
+import {
+  getFeatures as dbGetFeatures,
+  createFeature as dbCreateFeature,
+  // Import other DB functions
+} from '@/lib/db/featureDb';
+import type { Feature, FeatureCreatePayload } from '@/types/component/featureComponentType';
+import type { ActionResult } from '@/types/context/featureContextType';
+
+// READ operation with caching
+export const getFeatures = cache(async (): Promise<ActionResult<Feature[]>> => {
+  try {
+    console.log('[@action:feature:getFeatures] Starting to fetch features');
+    const user = await getUser();
+    if (!user) {
+      console.log('[@action:feature:getFeatures] No authenticated user found');
+      return { success: true, data: [] };
+    }
+
+    // Get the user's active team ID
+    const activeTeamResult = await getUserActiveTeam(user.id);
+    const teamId = activeTeamResult.id;
+    
+    const cookieStore = await cookies();
+    const result = await dbGetFeatures(teamId, cookieStore);
+
+    if (!result.success) {
+      console.error(`[@action:feature:getFeatures] Error from database: ${result.error}`);
+      return { success: false, error: result.error };
+    }
+
+    const features = result.data || [];
+    console.log(`[@action:feature:getFeatures] Found ${features.length} features`);
+    return { success: true, data: features };
+  } catch (error: any) {
+    console.error('[@action:feature:getFeatures] Error fetching features:', error);
+    return { success: false, error: error.message || 'Failed to fetch features' };
+  }
+});
+
+// WRITE operation without caching
+export async function createFeature(
+  payload: FeatureCreatePayload
+): Promise<ActionResult<Feature>> {
+  try {
+    const user = await getUser();
+    if (!user) {
+      return { success: false, error: 'User not authenticated' };
+    }
+
+    // Get the active team ID
+    const activeTeamResult = await getUserActiveTeam(user.id);
+    const teamId = activeTeamResult.id;
+    
+    const cookieStore = await cookies();
+    const result = await dbCreateFeature(payload, user.id, teamId, cookieStore);
+
+    if (!result.success) {
+      console.error(`[@action:feature:createFeature] Error: ${result.error}`);
+      return { success: false, error: result.error };
+    }
+
+    // Revalidate paths
+    revalidatePath('/[locale]/[tenant]/features');
+    
+    return { success: true, data: result.data };
+  } catch (error: any) {
+    console.error('[@action:feature:createFeature] Error:', error);
+    return { success: false, error: error.message || 'An unexpected error occurred' };
+  }
+}
+
+// Implement other action functions following the same pattern
+```
+
+## Step 4: Create React Query Hook
+
+Create a hook in `/hooks/useFeature.ts`:
+
+```typescript
+// /hooks/useFeature.ts
+'use client';
+
+import { useFetchQuery, useDataMutation } from '@/hooks/useQueryHelpers';
+import {
+  getFeatures,
+  createFeature,
+  updateFeature,
+  deleteFeature,
+} from '@/app/actions/featureAction';
+import { useToast } from '@/components/shadcn/use-toast';
+import type { Feature, FeatureCreatePayload } from '@/types/component/featureComponentType';
+
+export function useFeature() {
+  const { toast } = useToast();
+
+  // Get all features
+  const {
+    data: featuresResponse,
+    isLoading: isLoadingFeatures,
+    error: featuresError,
+    refetch: refetchFeatures,
+  } = useFetchQuery(['features'], getFeatures);
+
+  // Create feature mutation
+  const createFeatureMutation = useDataMutation(
+    (data: FeatureCreatePayload) => createFeature(data),
+    [['features']],
+    {
+      onSuccess: (response) => {
+        if (response.success) {
+          toast({
+            title: 'Success',
+            description: 'Feature created successfully',
+          });
+        } else {
+          toast({
+            title: 'Error',
+            description: response.error || 'Failed to create feature',
+            variant: 'destructive',
+          });
+        }
+        return response;
+      },
+      onError: (error: any) => {
+        toast({
+          title: 'Error',
+          description: error.message || 'Failed to create feature',
+          variant: 'destructive',
+        });
+      },
+    },
+  );
+
+  // DELETE feature mutation
+  const deleteFeatureMutation = useDataMutation(
+    (id: string) => deleteFeature(id),
+    [['features']],
+    {
+      onSuccess: (response) => {
+        if (response.success) {
+          toast({
+            title: 'Success',
+            description: 'Feature deleted successfully',
+          });
+        } else {
+          toast({
+            title: 'Error',
+            description: response.error || 'Failed to delete feature',
+            variant: 'destructive',
+          });
+        }
+        return response;
+      },
+      onError: (error: any) => {
+        toast({
+          title: 'Error',
+          description: error.message || 'Failed to delete feature',
+          variant: 'destructive',
+        });
+      },
+    },
+  );
+
+  return {
+    // Data
+    features: featuresResponse?.data || [],
+
+    // Status
+    isLoading: isLoadingFeatures,
+    error: featuresError,
+
+    // Query functions
+    refetchFeatures,
+
+    // Mutation functions
+    createFeature: createFeatureMutation.mutateAsync,
+    deleteFeature: deleteFeatureMutation.mutateAsync,
+
+    // Mutation status
+    isCreating: createFeatureMutation.isPending,
+    isDeleting: deleteFeatureMutation.isPending,
+  };
+}
+```
+
+## Step 5: Create UI Components
+
+### Step 5.1: Create Server Components
+
+Create a server component in `_components/FeatureContent.tsx`:
+
+```typescript
+// _components/FeatureContent.tsx
+import { getFeatures } from '@/app/actions/featureAction';
+import FeatureTableClient from './client/FeatureTableClient';
+
+export default async function FeatureContent() {
+  const featuresResponse = await getFeatures();
+  const features = featuresResponse.success ? featuresResponse.data || [] : [];
+  
+  if (!featuresResponse.success) {
+    console.error(`[@component:FeatureContent:render] Error: ${featuresResponse.error}`);
+  }
+  
+  return (
+    <div className="w-full border-0 shadow-none">
+      <FeatureTableClient initialFeatures={features} />
+    </div>
+  );
+}
+```
+
+### Step 5.2: Create Client Components
+
+Create a client component in `_components/client/FeatureTableClient.tsx`:
+
+```typescript
+// _components/client/FeatureTableClient.tsx
+'use client';
+
+import { useState } from 'react';
+import { useFeature } from '@/hooks/useFeature';
+import type { Feature } from '@/types/component/featureComponentType';
+import { 
+  Table, 
+  TableHeader, 
+  TableBody, 
+  TableRow, 
+  TableHead, 
+  TableCell 
+} from '@/components/shadcn/table';
+import { Button } from '@/components/shadcn/button';
+
+interface FeatureTableClientProps {
+  initialFeatures: Feature[];
+}
+
+export default function FeatureTableClient({ initialFeatures }: FeatureTableClientProps) {
+  const {
+    features,
+    isLoading,
+    deleteFeature,
+    isDeleting,
+  } = useFeature();
+  
+  // Use initialFeatures for first render, then React Query data
+  const displayFeatures = features.length > 0 ? features : initialFeatures;
+  
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteFeature(id);
+    } catch (error) {
+      // Error is handled in the hook
+    }
+  };
+  
+  return (
+    <div className="w-full">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Description</TableHead>
+            <TableHead>Created</TableHead>
+            <TableHead>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {displayFeatures.map((feature) => (
+            <TableRow key={feature.id}>
+              <TableCell>{feature.name}</TableCell>
+              <TableCell>{feature.description || 'N/A'}</TableCell>
+              <TableCell>{new Date(feature.created_at).toLocaleDateString()}</TableCell>
+              <TableCell>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => handleDelete(feature.id)}
+                  disabled={isDeleting}
+                >
+                  Delete
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+```
+
+### Step 5.3: Create Form Component
+
+Create a form component in `_components/client/FeatureFormClient.tsx`:
+
+```typescript
+// _components/client/FeatureFormClient.tsx
+'use client';
+
+import { useState } from 'react';
+import { useFeature } from '@/hooks/useFeature';
+import { Button } from '@/components/shadcn/button';
+import { Input } from '@/components/shadcn/input';
+import { Textarea } from '@/components/shadcn/textarea';
+import type { FeatureCreatePayload } from '@/types/component/featureComponentType';
+
+interface FeatureFormClientProps {
+  onClose?: () => void;
+}
+
+export default function FeatureFormClient({ onClose }: FeatureFormClientProps) {
+  const { createFeature, isCreating } = useFeature();
+  
+  const [formData, setFormData] = useState<FeatureCreatePayload>({
+    name: '',
+    description: '',
+  });
+  
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await createFeature(formData);
+      setFormData({ name: '', description: '' });
+      if (onClose) onClose();
+    } catch (error) {
+      // Error handling in hook
+    }
+  };
+  
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label htmlFor="name" className="block text-sm font-medium">
+          Name
+        </label>
+        <Input
+          id="name"
+          name="name"
+          value={formData.name}
+          onChange={handleChange}
+          required
+        />
+      </div>
+      
+      <div>
+        <label htmlFor="description" className="block text-sm font-medium">
+          Description
+        </label>
+        <Textarea
+          id="description"
+          name="description"
+          value={formData.description || ''}
+          onChange={handleChange}
+          rows={3}
+        />
+      </div>
+      
+      <div className="flex justify-end space-x-2">
+        {onClose && (
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+        )}
+        <Button type="submit" disabled={isCreating}>
+          {isCreating ? 'Creating...' : 'Create Feature'}
+        </Button>
+      </div>
+    </form>
+  );
+}
+```
+
+### Step 5.4: Create Actions Component
+
+Create an actions component in `_components/client/FeatureActionsClient.tsx`:
+
+```typescript
+// _components/client/FeatureActionsClient.tsx
+'use client';
+
+import { useState } from 'react';
+import { Button } from '@/components/shadcn/button';
+import { PlusIcon } from '@heroicons/react/24/outline';
+import { FeatureFormDialogClient } from '..';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
+
+export default function FeatureActionsClient() {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  
+  return (
+    <>
+      <Button 
+        onClick={() => setIsDialogOpen(true)}
+        className="flex items-center gap-1"
+      >
+        <PlusIcon className="h-4 w-4" />
+        <span>Add Feature</span>
+      </Button>
+      
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Feature</DialogTitle>
+          </DialogHeader>
+          <FeatureFormDialogClient onClose={() => setIsDialogOpen(false)} />
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+```

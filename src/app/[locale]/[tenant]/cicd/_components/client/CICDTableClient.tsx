@@ -1,7 +1,7 @@
 'use client';
 import { Edit, Trash, AlertCircle, RefreshCcw, MoreHorizontal, PlusCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 
 import { deleteCICDProvider } from '@/app/actions/cicdAction';
 import {
@@ -39,19 +39,29 @@ import {
 } from '@/components/shadcn/table';
 import { useToast } from '@/components/shadcn/use-toast';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { useCICD } from '@/hooks/useCICD';
 import type { CICDProvider } from '@/types/component/cicdComponentType';
 
-import { CICDProviderFormClient } from '..';
+import { CICDFormDialogClient } from '..';
 
 interface CICDTableClientProps {
   initialProviders: CICDProvider[];
-  isLoading?: boolean;
 }
 
-export default function CICDTableClient({
-  initialProviders,
-  isLoading = false,
-}: CICDTableClientProps) {
+export default function CICDTableClient({ initialProviders }: CICDTableClientProps) {
+  const {
+    providers: hookProviders,
+    isLoading: isLoadingProviders,
+    deleteProvider,
+    testProvider,
+    isDeleting,
+    isTesting,
+  } = useCICD();
+
+  // Use hook providers if available, otherwise use initialProviders
+  const providers = hookProviders.length > 0 ? hookProviders : initialProviders;
+  const isLoading = isLoadingProviders && initialProviders.length === 0;
+
   const [selectedProvider, setSelectedProvider] = useState<CICDProvider | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
@@ -94,46 +104,8 @@ export default function CICDTableClient({
           }),
         );
 
-        // Client-side function to test connection
-        const testConnection = async (provider: CICDProvider) => {
-          try {
-            // Use browser fetch for client-side testing
-            const response = await fetch(`/api/cicd/test-connection`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ provider }),
-            });
-
-            const result = await response.json();
-
-            if (!response.ok) {
-              throw new Error(result.error || 'Connection test failed');
-            }
-
-            return result;
-          } catch (error: any) {
-            console.error('Connection test error:', error);
-            throw new Error(error.message || 'Failed to test connection');
-          }
-        };
-
-        // Call the client-side test function
-        const result = await testConnection(provider);
-
-        if (result.success) {
-          toast({
-            title: 'Success',
-            description: 'Connection test was successful',
-          });
-        } else {
-          toast({
-            title: 'Error',
-            description: result.error || 'Connection test failed',
-            variant: 'destructive',
-          });
-        }
+        // Use the hook's testProvider function
+        await testProvider(provider.id);
       } catch (error: any) {
         toast({
           title: 'Error',
@@ -157,14 +129,12 @@ export default function CICDTableClient({
         );
       }
     },
-    [toast],
+    [toast, testProvider],
   );
 
   // Memoize dialog completion handler
   const handleDialogComplete = useCallback(() => {
     setIsAddEditDialogOpen(false);
-    // Use custom event instead of router.refresh()
-    window.dispatchEvent(new CustomEvent(REFRESH_CICD_PROVIDERS));
   }, []);
 
   // Memoize delete confirmation handler
@@ -173,23 +143,8 @@ export default function CICDTableClient({
 
     try {
       setIsProcessing(true);
-      // Use direct action
-      const result = await deleteCICDProvider(selectedProvider.id);
-
-      if (result.success) {
-        // Use custom event instead of router.refresh()
-        window.dispatchEvent(new CustomEvent(REFRESH_CICD_PROVIDERS));
-        toast({
-          title: 'Success',
-          description: 'Provider deleted successfully',
-        });
-      } else {
-        toast({
-          title: 'Error',
-          description: result.error || 'Failed to delete provider',
-          variant: 'destructive',
-        });
-      }
+      // Use the hook's deleteProvider function
+      await deleteProvider(selectedProvider.id);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -200,7 +155,7 @@ export default function CICDTableClient({
       setIsProcessing(false);
       setIsDeleteDialogOpen(false);
     }
-  }, [selectedProvider, toast]);
+  }, [selectedProvider, toast, deleteProvider]);
 
   // Memoize provider badge color function
   const getProviderBadgeColor = useCallback((type: string) => {
@@ -219,7 +174,7 @@ export default function CICDTableClient({
   }, []);
 
   // Empty state render
-  if (initialProviders.length === 0 && !isLoading) {
+  if (providers.length === 0 && !isLoading) {
     return (
       <Card className="border-0">
         <CardContent className="p-0">
@@ -275,7 +230,7 @@ export default function CICDTableClient({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {initialProviders.map((provider) => (
+            {providers.map((provider) => (
               <TableRow
                 key={provider.id}
                 className={testingProviders[provider.id] ? 'provider-testing-animation' : ''}
@@ -303,7 +258,7 @@ export default function CICDTableClient({
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem
                         onClick={() => handleTestProvider(provider)}
-                        disabled={testingProviders[provider.id]}
+                        disabled={testingProviders[provider.id] || isTesting}
                       >
                         <RefreshCcw
                           className={`mr-2 h-4 w-4 ${testingProviders[provider.id] ? 'animate-spin' : ''}`}
@@ -319,6 +274,7 @@ export default function CICDTableClient({
                       <DropdownMenuItem
                         className="text-destructive focus:text-destructive"
                         onClick={() => handleDeleteClick(provider)}
+                        disabled={isDeleting}
                       >
                         <Trash className="mr-2 h-4 w-4" />
                         <span>{t('delete')}</span>
@@ -348,13 +304,15 @@ export default function CICDTableClient({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isProcessing}>{t('cancel')}</AlertDialogCancel>
+            <AlertDialogCancel disabled={isProcessing || isDeleting}>
+              {t('cancel')}
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={isProcessing}
+              disabled={isProcessing || isDeleting}
             >
-              {isProcessing ? 'Deleting...' : t('delete')}
+              {isProcessing || isDeleting ? 'Deleting...' : t('delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -370,7 +328,7 @@ export default function CICDTableClient({
                 : t('add_provider_dialog_title', { fallback: 'Add CI/CD Provider' })}
             </DialogTitle>
           </DialogHeader>
-          <CICDProviderFormClient
+          <CICDFormDialogClient
             providerId={isEditing && selectedProvider ? selectedProvider.id : undefined}
             provider={isEditing && selectedProvider ? selectedProvider : undefined}
             onComplete={handleDialogComplete}

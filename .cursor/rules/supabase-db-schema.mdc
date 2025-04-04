@@ -1,0 +1,252 @@
+# Supabase Database Schema
+
+This document provides a concise overview of the actual Supabase database schema based on direct database queries, focusing on the key tables, relationships, and permissions model.
+
+## Core Tables and Relationships
+
+```mermaid
+erDiagram
+    profiles ||--o{ team_members : has
+    teams ||--o{ team_members : contains
+    teams ||--o{ hosts : owns
+    teams ||--o{ repositories : owns
+    teams ||--o{ deployments : owns
+    teams ||--o{ cicd_providers : owns
+    profiles ||--o{ permission_matrix : has
+    teams ||--o{ permission_matrix : defines
+    tenants ||--o{ teams : has
+    tenants ||--o{ profiles : has
+    git_providers ||--o{ repositories : provides
+    subscription_tiers ||--o{ resource_limits : defines
+    tenants }o--|| subscription_tiers : subscribes
+    role_templates ||--o{ permission_matrix : applies
+
+    profiles {
+        uuid id PK
+        text tenant_id FK
+        text role
+        text avatar_url
+        text tenant_name
+    }
+
+    teams {
+        uuid id PK
+        text name
+        text description
+        text tenant_id FK
+        uuid created_by FK
+        boolean is_default
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    team_members {
+        uuid team_id PK,FK
+        uuid profile_id PK,FK
+        text role
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    permission_matrix {
+        uuid id PK
+        uuid team_id FK
+        uuid profile_id FK
+        text resource_type
+        boolean can_select
+        boolean can_insert
+        boolean can_update
+        boolean can_delete
+        boolean can_execute
+        boolean can_update_own
+        boolean can_delete_own
+    }
+
+    hosts {
+        text id PK
+        text name
+        text description
+        text type
+        text ip
+        integer port
+        text user
+        text password
+        text status
+        boolean is_windows
+        uuid team_id FK
+        uuid creator_id FK
+    }
+
+    repositories {
+        uuid id PK
+        uuid provider_id FK
+        text provider_type
+        text name
+        text description
+        text owner
+        text url
+        boolean is_private
+        text default_branch
+        text language
+        text sync_status
+        timestamp last_synced_at
+        uuid team_id FK
+        uuid creator_id FK
+    }
+
+    cicd_providers {
+        uuid id PK
+        text name
+        text type
+        text url
+        integer port
+        text auth_type
+        jsonb config
+        text tenant_id FK
+        uuid team_id FK
+        uuid creator_id FK
+    }
+
+    deployments {
+        uuid id PK
+        text name
+        text description
+        uuid repository_id FK
+        text status
+        uuid user_id FK
+        text tenant_id FK
+        uuid team_id FK
+        timestamp created_at
+        timestamp started_at
+        timestamp completed_at
+        timestamp scheduled_time
+        text schedule_type
+        text cron_expression
+        integer repeat_count
+        text[] scripts_path
+        text[] scripts_parameters
+        text[] host_ids
+        jsonb environment_vars
+    }
+
+    cicd_jobs {
+        uuid id PK
+        text name
+        text description
+        text external_id
+        uuid provider_id FK
+        jsonb parameters
+        uuid team_id FK
+        uuid creator_id FK
+    }
+
+    tenants {
+        text id PK
+        text name
+        text domain
+        uuid organization_id
+        text subscription_tier_id FK
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    git_providers {
+        uuid id PK
+        uuid profile_id FK
+        text type
+        text name
+        text display_name
+        text server_url
+        text access_token
+        text refresh_token
+        timestamp expires_at
+        boolean is_configured
+        timestamp last_synced
+    }
+
+    subscription_tiers {
+        text id PK
+        text name
+        text description
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    resource_limits {
+        uuid id PK
+        text tier_id FK
+        text resource_type
+        integer max_count
+        boolean is_unlimited
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    role_templates {
+        uuid id PK
+        text name
+        jsonb permissions
+        timestamp created_at
+        timestamp updated_at
+    }
+```
+
+## Permission System
+
+The application uses a robust permission system based on these key components:
+
+1. **Team-Based Access Control**: All resources belong to teams, and users access resources through team membership.
+
+2. **Permission Matrix**: Defines granular permissions for each user within a team for different resource types:
+
+   - `can_select`: View permission
+   - `can_insert`: Create permission
+   - `can_update`: Edit permission
+   - `can_delete`: Delete permission
+   - `can_execute`: Execute permission (for operations like running deployments)
+   - `can_update_own`: Permission to update resources created by the user
+   - `can_delete_own`: Permission to delete resources created by the user
+
+3. **Role Templates**: Pre-defined permission sets that can be applied to users:
+
+   - Admin: Full access to all resources
+   - Developer: Create and edit but limited delete permissions
+   - Viewer: Read-only access
+
+4. **Row-Level Security Policies**: Every table has RLS policies that enforce the permission matrix rules at the database level.
+
+## Key Database Functions
+
+1. **apply_role_template(p_team_id, p_profile_id, p_role_name)**: Applies a predefined role template to a user in a team.
+
+2. **check_permission(p_profile_id, p_team_id, p_resource_type, p_operation, p_is_own_resource)**: Verifies if a user has a specific permission for a resource type.
+
+3. **handle_new_user()**: Trigger function that sets up profiles for new users.
+
+4. **handle_new_user_team()**: Trigger function that sets up default teams for new users.
+
+## Subscription and Resource Limits
+
+The system manages resources based on subscription tiers:
+
+1. Each tenant has a subscription tier (trial, pro, enterprise)
+2. Each tier has defined limits for different resource types:
+
+   - hosts
+   - repositories
+   - deployments
+   - cicd_providers
+
+3. The system tracks resource usage against these limits during resource creation.
+
+## Multi-tenancy Model
+
+The system implements multi-tenancy through:
+
+1. **Tenant Isolation**: Each user belongs to a tenant, and all resources are associated with teams within that tenant.
+
+2. **Row-Level Security**: Database policies ensure users can only access data within their tenant.
+
+3. **Organization Structure**: Enterprise tenants can have multiple teams with shared resources.
+
+This schema supports the application's core functionality including team management, permissions, CI/CD integrations, deployments, and infrastructure management.
