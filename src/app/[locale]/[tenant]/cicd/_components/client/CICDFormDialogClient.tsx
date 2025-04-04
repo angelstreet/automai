@@ -1,11 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { z } from 'zod';
 
-import { createCICDProvider, updateCICDProvider, testCICDProvider } from '@/app/actions/cicdAction';
-import { REFRESH_CICD_COMPLETE } from './CICDEventListener';
+import { createCICDProvider, testCICDProvider } from '@/app/actions/cicdAction';
 import { Button } from '@/components/shadcn/button';
 import {
   Form,
@@ -25,16 +23,14 @@ import {
 } from '@/components/shadcn/select';
 import { toast } from '@/components/shadcn/use-toast';
 import {
-  CICDProvider,
   CICDProviderPayload,
   CICDProviderType,
   CICDAuthType,
-  parseProviderUrl,
 } from '@/types/component/cicdComponentType';
 
+import { REFRESH_CICD_COMPLETE } from './CICDEventListener';
+
 interface CICDFormDialogProps {
-  providerId?: string;
-  provider?: CICDProvider;
   onComplete: () => void;
   isInDialog?: boolean;
 }
@@ -51,8 +47,6 @@ interface FormValues {
 }
 
 const CICDFormDialogClient: React.FC<CICDFormDialogProps> = ({
-  providerId,
-  provider,
   onComplete,
   isInDialog = false,
 }) => {
@@ -62,8 +56,6 @@ const CICDFormDialogClient: React.FC<CICDFormDialogProps> = ({
     success: boolean;
     message: string;
   } | null>(null);
-
-  const isEditMode = !!providerId;
 
   // Initialize form
   const form = useForm<FormValues>({
@@ -78,43 +70,6 @@ const CICDFormDialogClient: React.FC<CICDFormDialogProps> = ({
       token: '',
     },
   });
-
-  // Populate form with existing data if in edit mode
-  useEffect(() => {
-    if (isEditMode && provider) {
-      // Parse URL to extract port if present
-      const { url, port } = parseProviderUrl(provider.url);
-
-      form.reset({
-        name: provider.name || '',
-        type: provider.type || 'jenkins',
-        url: url || '',
-        port: port ? port.toString() : '',
-        auth_type: provider.config?.auth_type || 'token',
-        username: '', // Don't populate username for security
-        password: '', // Don't populate password for security
-        token: '', // Don't populate token for security
-      });
-
-      // Reset any form autocomplete data with a slight delay
-      setTimeout(() => {
-        // Find and clear any credential fields
-        const usernameFields = document.querySelectorAll(
-          'input[name="new-username"], input[name="basic-username"]',
-        );
-        const passwordField = document.querySelector(
-          'input[name="new-password"]',
-        ) as HTMLInputElement;
-        const tokenField = document.querySelector('input[name="new-token"]') as HTMLInputElement;
-
-        usernameFields.forEach((field: any) => {
-          if (field) field.value = '';
-        });
-        if (passwordField) passwordField.value = '';
-        if (tokenField) tokenField.value = '';
-      }, 0);
-    }
-  }, [isEditMode, provider, form]);
 
   // Handle credential input changes based on auth type
   const handleCredentialChange = (field: string, value: string) => {
@@ -185,7 +140,6 @@ const CICDFormDialogClient: React.FC<CICDFormDialogProps> = ({
 
       // Create provider data object with port
       const providerData: CICDProviderPayload = {
-        id: providerId,
         name: values.name,
         type: values.type,
         url: values.url,
@@ -258,7 +212,6 @@ const CICDFormDialogClient: React.FC<CICDFormDialogProps> = ({
 
       // Prepare provider payload with port
       const providerPayload: CICDProviderPayload = {
-        id: providerId,
         name: data.name,
         type: data.type,
         url: data.url,
@@ -269,12 +222,8 @@ const CICDFormDialogClient: React.FC<CICDFormDialogProps> = ({
         },
       };
 
-      // Create or update the provider
-      const action = providerId
-        ? () => updateCICDProvider(providerId, providerPayload)
-        : () => createCICDProvider(providerPayload);
-
-      const result = await action();
+      // Create the provider
+      const result = await createCICDProvider(providerPayload);
 
       if (result.success) {
         // Remove success toast
@@ -286,7 +235,7 @@ const CICDFormDialogClient: React.FC<CICDFormDialogProps> = ({
       } else {
         toast({
           title: 'Error',
-          description: result.error || `Failed to ${providerId ? 'update' : 'create'} the provider`,
+          description: result.error || 'Failed to create the provider',
           variant: 'destructive',
         });
       }
@@ -343,7 +292,7 @@ const CICDFormDialogClient: React.FC<CICDFormDialogProps> = ({
               disabled={isSubmitting}
               className={`h-7 px-3 text-xs ${testMessage?.success ? 'bg-green-600 hover:bg-green-700' : ''}`}
             >
-              {isSubmitting ? 'Saving...' : isEditMode ? 'Update' : 'Save'}
+              {isSubmitting ? 'Saving...' : 'Save'}
             </Button>
           </div>
         </div>
@@ -373,7 +322,7 @@ const CICDFormDialogClient: React.FC<CICDFormDialogProps> = ({
             disabled={isSubmitting}
             className={`h-7 text-xs ${testMessage?.success ? 'bg-green-600 hover:bg-green-700' : ''}`}
           >
-            {isSubmitting ? 'Saving...' : isEditMode ? 'Update Provider' : 'Create Provider'}
+            {isSubmitting ? 'Saving...' : 'Create Provider'}
           </Button>
         </div>
       </div>

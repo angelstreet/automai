@@ -91,7 +91,7 @@ export function DeploymentActionsClient({
             disabled={isRefreshing}
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-            {t('refresh')}
+            {c('refresh')}
           </Button>
         )}
         <Button

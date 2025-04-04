@@ -51,6 +51,7 @@ import { FILE_EXTENSION_COLORS, EXPLORER_TABS } from '../../constants';
 
 export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplorerProps) {
   const t = useTranslations('repositories');
+  const c = useTranslations('common');
   const [currentPath, setCurrentPath] = useState<string[]>([]);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [fileContent, setFileContent] = useState<string>('');
@@ -486,7 +487,7 @@ export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplo
                     <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>{isLoading ? t('loading') : t('refresh')}</TooltipContent>
+                <TooltipContent>{isLoading ? t('loading') : c('refresh')}</TooltipContent>
               </Tooltip>
             </TooltipProvider>
 

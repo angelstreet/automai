@@ -9,6 +9,7 @@ import { Button } from '@/components/shadcn/button';
 
 export function BillingActions() {
   const t = useTranslations('billing');
+  const c = useTranslations('common');
   const router = useRouter();
 
   const handleRefresh = useCallback(() => {
@@ -24,7 +25,7 @@ export function BillingActions() {
     <div className="flex items-center gap-2">
       <Button variant="outline" size="sm" className="h-8" onClick={handleRefresh}>
         <RefreshCw className="h-4 w-4 mr-2" />
-        {t('refresh')}
+        {c('refresh')}
       </Button>
       <Button size="sm" className="h-8 gap-1" onClick={handleManagePayment}>
         <CreditCard className="h-4 w-4" />

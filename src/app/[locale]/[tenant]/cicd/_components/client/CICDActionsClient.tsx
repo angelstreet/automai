@@ -20,6 +20,7 @@ export default function CICDActionsClient({
   providerCount: initialProviderCount = 0,
 }: CICDActionsClientProps) {
   const t = useTranslations('cicd');
+  const c = useTranslations('common');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
   // Use the CICD hook
@@ -64,7 +65,7 @@ export default function CICDActionsClient({
             disabled={isLoading}
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            {t('refresh')}
+            {c('refresh')}
           </Button>
         )}
         <Button

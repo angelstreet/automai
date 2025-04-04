@@ -294,13 +294,6 @@ export async function testCICDProvider(provider: CICDProviderPayload): Promise<A
       return { success: false, error: 'Provider configuration is required' };
     }
 
-    // Get the current authenticated user
-    const user = await getUser();
-    if (!user) {
-      console.error('[@action:cicd:testCICDProvider] User not authenticated');
-      return { success: false, error: 'User not authenticated' };
-    }
-
     // Test Jenkins connection
     if (provider.type === 'jenkins') {
       const jenkinsUrl = provider.url;
@@ -327,7 +320,6 @@ export async function testCICDProvider(provider: CICDProviderPayload): Promise<A
         }
 
         const fullUrl = port ? `${baseUrl}:${port}` : baseUrl;
-        console.log(`[@action:cicd:testCICDProvider] Testing Jenkins connection to: ${fullUrl}`);
 
         // Create AbortController with timeout
         const controller = new AbortController();
@@ -335,6 +327,9 @@ export async function testCICDProvider(provider: CICDProviderPayload): Promise<A
 
         try {
           // Test the Jenkins connection
+          console.log(
+            `[@action:cicd:testCICDProvider] Testing Jenkins connection to: ${fullUrl}/api/json`,
+          );
           const response = await fetch(`${fullUrl}/api/json`, {
             headers: {
               Authorization: `Basic ${Buffer.from(`${username}:${apiToken}`).toString('base64')}`,

@@ -227,7 +227,7 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
               <TableHead>{t('provider_type_label')}</TableHead>
               <TableHead>{t('provider_url_label')}</TableHead>
               <TableHead>{t('provider_auth_type_label')}</TableHead>
-              <TableHead className="text-right">{t('actions_label')}</TableHead>
+              <TableHead className="text-right">{c('actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -265,7 +265,7 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
                           className={`mr-2 h-4 w-4 ${testingProviders[provider.id] ? 'animate-spin' : ''}`}
                         />
                         <span>
-                          {testingProviders[provider.id] ? t('testing') : t('test_connection')}
+                          {testingProviders[provider.id] ? t('testing') : c('test_connection')}
                         </span>
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleAddEditProvider(provider)}>
@@ -278,7 +278,7 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
                         disabled={isDeleting}
                       >
                         <Trash className="mr-2 h-4 w-4" />
-                        <span>{t('delete')}</span>
+                        <span>{c('delete')}</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -306,14 +306,14 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isProcessing || isDeleting}>
-              {t('cancel')}
+              {c('cancel')}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={isProcessing || isDeleting}
             >
-              {isProcessing || isDeleting ? 'Deleting...' : t('delete')}
+              {isProcessing || isDeleting ? 'Deleting...' : c('delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
