@@ -264,9 +264,7 @@ export function HostCardClient({ host, onDelete, onTestConnection }: HostCardCli
         <CardContent className="p-4 pt-2">
           <div className="mt-2 space-y-3">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">
-                {t('ip_address')}
-              </span>
+              <span className="text-muted-foreground">{t('ip_address')}</span>
               <span className="font-medium">
                 {host.ip}
                 {host.port ? `:${host.port}` : ''}
@@ -299,9 +297,7 @@ export function HostCardClient({ host, onDelete, onTestConnection }: HostCardCli
             <DialogDescription>{errorMessage}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button onClick={() => setShowErrorDialog(false)}>
-              {c('close')}
-            </Button>
+            <Button onClick={() => setShowErrorDialog(false)}>{t('close')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
