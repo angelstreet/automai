@@ -614,14 +614,20 @@ export const getTenantResourceCounts = cache(async (tenantId: string) => {
       .select('id', { count: 'exact', head: true })
       .eq('tenant_id', tenantId);
 
+    const counts = {
+      repositories: repositories || 0,
+      deployments: deployments || 0,
+      cicdProviders: cicdProviders || 0,
+    };
+
     console.log(`[@action:team:getTenantResourceCounts] Successfully got resource counts`);
+    console.log(
+      `[@action:team:getTenantResourceCounts] Counts: repos=${counts.repositories}, deployments=${counts.deployments}, cicd=${counts.cicdProviders}`,
+    );
+
     return {
       success: true,
-      data: {
-        repositories: repositories || 0,
-        deployments: deployments || 0,
-        cicdProviders: cicdProviders || 0,
-      },
+      data: counts,
     };
   } catch (error: any) {
     console.error(`[@action:team:getTenantResourceCounts] Error:`, error);
