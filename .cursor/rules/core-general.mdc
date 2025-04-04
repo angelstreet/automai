@@ -26,7 +26,7 @@ alwaysApply: true
 - ✅ **Prefer Declarative Patterns**: Use state management, context, or events for component communication
 
 ## Planning and Communication
-- NEVER modify a file if mentionned at top #NEVER MODIFY
+- NEVER modify a file if mentionned at top #NEVER MODIFY or #NEVER EDIT
 - ALWAYS provide a clear plan before implementing code changes
 - Wait for explicit agreement before making changes
 - Document any deviations from the approved plan
