@@ -158,7 +158,7 @@ export default function ClientDeploymentWizard({
 
     switch (step) {
       case 1:
-        return <DeploymentWizardStep1 {...commonProps} repositories={initialRepositories} />;
+        return <DeploymentWizardStep1 {...commonProps} repositories={initialRepositories || []} />;
       case 2:
         return <DeploymentWizardStep2 {...commonProps} hosts={adaptedHosts} />;
       case 3:

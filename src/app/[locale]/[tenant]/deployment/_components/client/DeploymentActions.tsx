@@ -131,9 +131,9 @@ export function DeploymentActions({
             <DeploymentWizardClient
               onCancel={handleCloseWizard}
               onDeploymentCreated={handleDeploymentCreated}
-              repositories={repositories}
-              hosts={hosts}
-              cicdProviders={cicdProviders}
+              repositories={repositories || []}
+              hosts={hosts || []}
+              cicdProviders={cicdProviders || []}
             />
           )}
         </DialogContent>

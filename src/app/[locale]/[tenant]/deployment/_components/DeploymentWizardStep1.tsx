@@ -96,11 +96,13 @@ const DeploymentWizardStep1: React.FC<DeploymentWizardStep1Props> = ({
             required
           >
             <option value="">Select repository</option>
-            {repositories.map((repo) => (
-              <option key={repo.id} value={repo.id}>
-                {repo.name} ({repo.url ? new URL(repo.url).hostname : 'Unknown'})
-              </option>
-            ))}
+            {repositories && Array.isArray(repositories)
+              ? repositories.map((repo) => (
+                  <option key={repo.id} value={repo.id}>
+                    {repo.name} ({repo.url ? new URL(repo.url).hostname : 'Unknown'})
+                  </option>
+                ))
+              : null}
           </select>
           {repositoryError && <p className="text-sm text-red-500 mt-1">Error: {repositoryError}</p>}
         </div>
