@@ -11,6 +11,7 @@ const HostsEvents = {
 
   // Data Refresh Events
   REFRESH_HOSTS: 'REFRESH_HOSTS', // Request to refresh host data from server
+  TEST_ALL_HOSTS: 'TEST_ALL_HOSTS', // Request to test all hosts
 
   // Host Testing Events
   HOST_TESTING_START: 'HOST_TESTING_START', // Single host testing starts

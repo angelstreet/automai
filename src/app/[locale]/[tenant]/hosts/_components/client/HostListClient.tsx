@@ -21,7 +21,9 @@ interface HostListClientProps {
  * Client component for displaying and managing hosts
  * Supports both grid and table views with React Query for state management
  */
-export default function HostListClient({ initialHosts }: HostListClientProps) {
+export { HostListClient as default, HostListClient };
+
+function HostListClient({ initialHosts }: HostListClientProps) {
   // Initialize React Query with initial data from server
   const {
     hosts: queryHosts,
@@ -121,6 +123,37 @@ export default function HostListClient({ initialHosts }: HostListClientProps) {
     },
     [testConnectionMutation, setHosts, handleTestStarted, handleTestCompleted],
   );
+
+  // Test all hosts
+  const testAllHosts = useCallback(
+    async (hostIds: string[]) => {
+      console.log(`[@component:HostListClient] Testing all hosts: ${hostIds.length} hosts`);
+
+      for (const hostId of hostIds) {
+        const host = hosts.find((h) => h.id === hostId);
+        if (host) {
+          await handleTestConnection(host);
+        }
+      }
+    },
+    [hosts, handleTestConnection],
+  );
+
+  // Listen for TEST_ALL_HOSTS event
+  useEffect(() => {
+    const handleTestAllHosts = (event: CustomEvent) => {
+      console.log('[@component:HostListClient] Received TEST_ALL_HOSTS event', event);
+      if (event.detail && event.detail.hostIds) {
+        testAllHosts(event.detail.hostIds);
+      }
+    };
+
+    window.addEventListener(HostsEvents.TEST_ALL_HOSTS, handleTestAllHosts as EventListener);
+
+    return () => {
+      window.removeEventListener(HostsEvents.TEST_ALL_HOSTS, handleTestAllHosts as EventListener);
+    };
+  }, [testAllHosts]);
 
   // Handle host selection
   const handleSelectHost = (host: Host | string) => {

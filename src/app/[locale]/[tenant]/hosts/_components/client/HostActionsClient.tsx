@@ -126,39 +126,13 @@ export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActio
     };
   }, []);
 
-  // Helper function to test a single host
-  const testSingleHost = async (hostId: string) => {
-    const host = hosts.find((h) => h.id === hostId);
-    if (!host) return;
-
-    // Dispatch start event directly
-    window.dispatchEvent(
-      new CustomEvent(HostsEvents.HOST_TESTING_START, {
-        detail: { hostId: host.id },
-      }),
-    );
-
-    try {
-      await testConnection(host.id);
-    } catch (error) {
-      console.error(`[@component:HostActionsClient] Error testing host ${host.id}:`, error);
-    } finally {
-      // Dispatch complete event directly
-      window.dispatchEvent(
-        new CustomEvent(HostsEvents.HOST_TESTING_COMPLETE, {
-          detail: { hostId: host.id },
-        }),
-      );
-    }
-  };
-
   const handleRefresh = async () => {
     if (isRefetching || isTestingHosts) {
       console.log('[@component:HostActionsClient] Refresh already in progress, skipping');
       return;
     }
 
-    console.log('[@component:HostActionsClient] Starting hosts refresh and testing process');
+    console.log('[@component:HostActionsClient] Starting hosts refresh process');
 
     try {
       // First refresh hosts data
@@ -169,19 +143,19 @@ export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActio
       console.log('[@component:HostActionsClient] Calling refetchHosts()');
       await refetchHosts();
 
-      // Now test each host sequentially
-      console.log(`[@component:HostActionsClient] Testing ${hosts.length} hosts individually`);
-
-      // Skip the testing if there are no hosts
+      // Skip if there are no hosts
       if (hosts.length === 0) {
         console.log('[@component:HostActionsClient] No hosts to test');
         return;
       }
 
-      // Test each host individually, which will trigger their own events
-      for (const host of hosts) {
-        await testSingleHost(host.id);
-      }
+      // Dispatch a custom event to tell HostListClient to test all hosts
+      console.log('[@component:HostActionsClient] Dispatching event to test all hosts');
+      window.dispatchEvent(
+        new CustomEvent(HostsEvents.TEST_ALL_HOSTS, {
+          detail: { hostIds: hosts.map((h) => h.id) },
+        }),
+      );
     } catch (error) {
       console.error('[@component:HostActionsClient] Error during refresh process:', error);
       // Ensure animation stops on error
