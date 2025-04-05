@@ -1,6 +1,6 @@
 'use client';
 
-import { Loader2 } from 'lucide-react';
+import { Loader2, ShieldAlert } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React, { useState, useEffect } from 'react';
 
@@ -194,6 +194,17 @@ const EditPermissionsDialog = ({
           </div>
         </div>
 
+        {member?.role?.toLowerCase() === 'admin' && (
+          <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-md p-2 mb-2">
+            <p className="text-amber-700 dark:text-amber-400 text-sm flex items-center">
+              <ShieldAlert className="h-4 w-4 mr-2" />
+              {t('admin_protection_message', {
+                fallback: 'Admin users cannot be modified for security reasons',
+              })}
+            </p>
+          </div>
+        )}
+
         <div className="grid gap-3">
           <div className="grid gap-1">
             <Label htmlFor="role-template" className="text-sm">
@@ -260,7 +271,11 @@ const EditPermissionsDialog = ({
           <Button variant="outline" onClick={() => onOpenChange(false)} size="sm">
             {c('cancel')}
           </Button>
-          <Button onClick={handleSubmit} disabled={isLoading} size="sm">
+          <Button
+            onClick={handleSubmit}
+            disabled={isLoading || member?.role?.toLowerCase() === 'admin'}
+            size="sm"
+          >
             {isLoading && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
             {c('save')}
           </Button>

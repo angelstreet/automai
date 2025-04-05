@@ -153,7 +153,8 @@
     "roles_viewer": "Viewer",
     "roles_viewer_read_only": "Viewer (Read-Only)",
     "roles_tester": "Tester",
-    "roles_custom": "Custom"
+    "roles_custom": "Custom",
+    "admin_protection_tooltip": "Admin users cannot be edited or removed"
   },
   "index": {
     "title": "Automate your infrastructure with AI",

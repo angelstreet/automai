@@ -9,6 +9,7 @@ import permissionDb from '@/lib/db/permissionDb';
 import teamMemberDb from '@/lib/db/teamMemberDb';
 import type { ResourceType } from '@/types/context/permissionsContextType';
 import { ResourcePermissions } from '@/types/context/teamContextType';
+import { createClient } from '@/lib/supabase/server';
 
 /**
  * Get team members for a specific team
@@ -57,6 +58,31 @@ export const updateTeamMemberRole = cache(
 
       const cookieStore = await cookies();
 
+      // Check if the member being updated is an admin (prevent changing admin roles)
+      const supabase = await createClient(cookieStore);
+      const { data: memberData, error: memberError } = await supabase
+        .from('team_members')
+        .select('role')
+        .eq('team_id', teamId)
+        .eq('profile_id', profileId)
+        .single();
+
+      if (memberError) {
+        console.error(
+          '[@action:teamMemberAction:updateTeamMemberRole] Error checking member role:',
+          memberError,
+        );
+        return { success: false, error: 'Failed to check member role' };
+      }
+
+      // Prevent modifying admin users
+      if (memberData && memberData.role && memberData.role.toLowerCase() === 'admin') {
+        console.warn(
+          '[@action:teamMemberAction:updateTeamMemberRole] Attempted to modify an admin user - operation blocked',
+        );
+        return { success: false, error: 'Cannot modify admin users for security reasons' };
+      }
+
       // Update role
       const result = await teamMemberDb.updateTeamMemberRole(teamId, profileId, role, cookieStore);
 
@@ -94,7 +120,6 @@ export const addTeamMember = cache(async (teamId: string, email: string, role: s
 
     // Lookup the user ID from the email
     const cookieStore = await cookies();
-    const { createClient } = await import('@/lib/supabase/server');
     const supabase = await createClient(cookieStore);
 
     // Find user by email
@@ -312,6 +337,31 @@ export const removeTeamMember = cache(async (teamId: string, profileId: string) 
     }
 
     const cookieStore = await cookies();
+
+    // Check if the member being removed is an admin (prevent removal of admin users)
+    const supabase = await createClient(cookieStore);
+    const { data: memberData, error: memberError } = await supabase
+      .from('team_members')
+      .select('role')
+      .eq('team_id', teamId)
+      .eq('profile_id', profileId)
+      .single();
+
+    if (memberError) {
+      console.error(
+        '[@action:teamMemberAction:removeTeamMember] Error checking member role:',
+        memberError,
+      );
+      return { success: false, error: 'Failed to check member role' };
+    }
+
+    // Prevent removing admin users
+    if (memberData && memberData.role && memberData.role.toLowerCase() === 'admin') {
+      console.warn(
+        '[@action:teamMemberAction:removeTeamMember] Attempted to remove an admin user - operation blocked',
+      );
+      return { success: false, error: 'Cannot remove admin users for security reasons' };
+    }
 
     // Remove the member from the team
     const result = await teamMemberDb.removeTeamMember(teamId, profileId, cookieStore);

@@ -175,6 +175,8 @@ export function useUpdateMemberRole() {
       profileId: string;
       role: string;
     }) => {
+      return { teamId, profileId };
+      //TODO : remove this once the action is implemented
       const result = await updateTeamMemberRole(teamId, profileId, role);
       if (!result.success) {
         throw new Error(result.error || 'Failed to update role');

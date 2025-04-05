@@ -1,6 +1,6 @@
 'use client';
 
-import { MoreHorizontal, Search } from 'lucide-react';
+import { MoreHorizontal, Search, ShieldAlert } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState, useContext } from 'react';
 
@@ -23,6 +23,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/shadcn/table';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/shadcn/tooltip';
 import { TeamMemberDialogContext } from '@/context/TeamMemberDialogContext';
 import { usePermission } from '@/hooks';
 import { useRemoveTeamMember } from '@/hooks/useTeamMemberManagement';
@@ -174,6 +180,25 @@ function MembersTabContent({
                   <TableCell className="py-2">
                     <Badge className={getRoleBadgeColor(member.role)} variant="outline">
                       {member.role}
+                      {member.role.toLowerCase() === 'admin' && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <ShieldAlert
+                                className="ml-1 h-3 w-3 inline"
+                                aria-label="Admin protection"
+                              />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>
+                                {t('admin_protection_tooltip', {
+                                  fallback: 'Admin users cannot be edited or removed for safety',
+                                })}
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
                     </Badge>
                   </TableCell>
                   {canManageMembers && (
@@ -202,12 +227,14 @@ function MembersTabContent({
                                 console.warn('Dialog context not available');
                               }
                             }}
+                            disabled={member.role.toLowerCase() === 'admin'}
                           >
                             {c('edit')}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-destructive"
                             onClick={() => onRemoveMember(member.profile_id)}
+                            disabled={member.role.toLowerCase() === 'admin'}
                           >
                             {c('remove')}
                           </DropdownMenuItem>
@@ -284,6 +311,17 @@ export function MembersTab({ teamId, subscriptionTier }: MembersTabProps) {
     if (!teamId) return;
 
     try {
+      // Find the member to check if they're an admin
+      const memberToRemove = members.find((member) => member.profile_id === profileId);
+
+      // Prevent removing admin users
+      if (memberToRemove && memberToRemove.role.toLowerCase() === 'admin') {
+        console.warn(
+          '[@component:TeamMembersTab] Attempted to remove an admin user - operation blocked',
+        );
+        return;
+      }
+
       // Use the mutation hook instead of direct action call
       await removeTeamMemberMutation.mutateAsync({ teamId, profileId });
 
