@@ -409,8 +409,8 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
         {testSuccess && (
           <Alert variant="success" className="py-1">
             <Check className="h-3 w-3" />
-            <AlertTitle className="text-sm">{c('connectionSuccessful')}</AlertTitle>
-            <AlertDescription className="text-xs">{c('readyToConnect')}</AlertDescription>
+            <AlertTitle className="text-sm">{c('connection_success')}</AlertTitle>
+            <AlertDescription className="text-xs">{t('success_ready_to_connect')}</AlertDescription>
           </Alert>
         )}
       </div>

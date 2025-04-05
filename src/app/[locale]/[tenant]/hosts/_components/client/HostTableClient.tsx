@@ -32,7 +32,7 @@ interface HostTableClientProps {
 
 export function HostTableClient({
   hosts,
-  selectedHosts,
+  selectedHosts: _selectedHosts,
   selectMode,
   onSelect,
   onDelete,
@@ -63,11 +63,9 @@ export function HostTableClient({
         return (
           <div
             className={`${baseClasses} host-testing-animation ring-2 ring-yellow-300 ring-opacity-60 ${delayClass}`}
-            title={t('common.testing')}
+            title={t('testing')}
           />
         );
-      case 'pending':
-        return <div className={`${baseClasses} bg-yellow-500`} title={t('pending')} />;
       default:
         return <div className={`${baseClasses} bg-gray-400`} title={t('unknown')} />;
     }
@@ -112,7 +110,20 @@ export function HostTableClient({
                 {host.port ? `:${host.port}` : ''}
               </TableCell>
               <TableCell className="py-2">
-                {host.status === 'connected' ? new Date().toLocaleString() : t('never')}
+                {(() => {
+                  switch (host.status) {
+                    case 'connected':
+                      return host.updated_at
+                        ? new Date(host.updated_at).toLocaleString()
+                        : new Date().toLocaleString();
+                    case 'testing':
+                      return <span className="text-yellow-500">{t('testing')}</span>;
+                    case 'failed':
+                      return <span className="text-red-500">{t('failed')}</span>;
+                    default:
+                      return t('never');
+                  }
+                })()}
               </TableCell>
               <TableCell className="py-2">
                 <div className="flex items-center space-x-1">
