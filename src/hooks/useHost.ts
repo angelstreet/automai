@@ -157,20 +157,22 @@ export function useHost() {
           variant: 'destructive',
         });
       }
-      // Refresh host data after testing
-      queryClient.invalidateQueries({ queryKey: ['hosts'] });
 
-      // Check if response has data property and it contains an id
-      if (
-        typeof response === 'object' &&
-        response !== null &&
-        'data' in response &&
-        response.data &&
-        typeof response.data === 'object' &&
-        'id' in response.data
-      ) {
-        queryClient.invalidateQueries({ queryKey: ['host', response.data.id] });
-      }
+      // REMOVED: Don't automatically refresh host data after testing
+      // Let the client decide when to refresh all hosts after testing all connections
+      // queryClient.invalidateQueries({ queryKey: ['hosts'] });
+
+      // REMOVED: Don't automatically refresh individual host data
+      // if (
+      //   typeof response === 'object' &&
+      //   response !== null &&
+      //   'data' in response &&
+      //   response.data &&
+      //   typeof response.data === 'object' &&
+      //   'id' in response.data
+      // ) {
+      //   queryClient.invalidateQueries({ queryKey: ['host', response.data.id] });
+      // }
 
       return response;
     },

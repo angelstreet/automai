@@ -1,5 +1,5 @@
-import { ReactNode } from 'react';
 import { getTranslations } from 'next-intl/server';
+import { ReactNode } from 'react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
 
@@ -19,17 +19,17 @@ export default async function BillingContent({ pageMetadata }: BillingContentPro
       {/* Current Plan Card */}
       <Card className="border-0 shadow-none">
         <CardHeader>
-          <CardTitle>{t('current_plan_label')}</CardTitle>
+          <CardTitle>{t('current_plan')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-2">
             <div className="border p-4 rounded-md">
               <h3 className="text-lg font-semibold mb-2">{t('pro')}</h3>
               <p className="text-muted-foreground">
-                {t('price_label')}: $19.99 / {t('monthly')}
+                {t('price')}: $19.99 / {t('monthly')}
               </p>
               <div className="mt-4">
-                <p className="text-sm font-medium">{t('features_label')}:</p>
+                <p className="text-sm font-medium">{t('features')}:</p>
                 <ul className="list-disc list-inside text-sm text-muted-foreground mt-2 space-y-1">
                   <li>Unlimited deployments</li>
                   <li>10 team members</li>

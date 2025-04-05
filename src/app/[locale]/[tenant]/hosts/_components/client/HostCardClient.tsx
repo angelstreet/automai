@@ -76,7 +76,9 @@ function HostCardClient({ host, onDelete, onTestConnection }: HostCardClientProp
     const handleTestingStarted = (event: CustomEvent) => {
       // Only respond if this event is for this specific host
       if (event.detail && event.detail.hostId === host.id) {
-        console.log(`[HostCardClient] Testing started for host ${host.id}`);
+        console.log(
+          `[@debug:HostCardClient:${host.id}:${host.name}] Testing STARTED at ${new Date().toISOString()}`,
+        );
         setIsRefreshing(true);
         setLocalStatus('testing');
       }
@@ -85,21 +87,26 @@ function HostCardClient({ host, onDelete, onTestConnection }: HostCardClientProp
     const handleTestingCompleted = (event: CustomEvent) => {
       // Only respond if this event is for this specific host
       if (event.detail && event.detail.hostId === host.id) {
-        console.log(`[HostCardClient] Testing completed for host ${host.id}`);
+        console.log(
+          `[@debug:HostCardClient:${host.id}:${host.name}] Testing COMPLETED at ${new Date().toISOString()}`,
+        );
         setIsRefreshing(false);
         // Note: We don't set localStatus here because it's already handled by the host.status update
       }
     };
+
+    console.log(`[@debug:HostCardClient:${host.id}:${host.name}] Setting up event listeners`);
 
     // Cast the event handler to EventListener to satisfy TypeScript
     window.addEventListener(HOST_CONNECTION_TESTING, handleTestingStarted as EventListener);
     window.addEventListener(HOST_CONNECTION_TESTED, handleTestingCompleted as EventListener);
 
     return () => {
+      console.log(`[@debug:HostCardClient:${host.id}:${host.name}] Removing event listeners`);
       window.removeEventListener(HOST_CONNECTION_TESTING, handleTestingStarted as EventListener);
       window.removeEventListener(HOST_CONNECTION_TESTED, handleTestingCompleted as EventListener);
     };
-  }, [host.id]);
+  }, [host.id, host.name]);
 
   const getStatusDot = (status: string) => {
     const baseClasses = 'h-4 w-4 rounded-full transition-colors duration-300';

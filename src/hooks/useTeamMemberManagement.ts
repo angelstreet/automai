@@ -1,6 +1,7 @@
 'use client';
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+
 import {
   addTeamMember as addTeamMemberAction,
   addMultipleTeamMembers as addMultipleTeamMembersAction,
@@ -8,7 +9,6 @@ import {
   removeTeamMember as removeTeamMemberAction,
   updateTeamMemberRole,
 } from '@/app/actions/teamMemberAction';
-import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@/components/shadcn/use-toast';
 
 /**
@@ -21,13 +21,13 @@ export function useAvailableTenantProfiles(tenantId: string, teamId: string) {
       if (!tenantId || !teamId) {
         throw new Error('Tenant ID and Team ID are required');
       }
-      
+
       const result = await getAvailableTenantProfilesAction(tenantId, teamId);
-      
+
       if (!result.success) {
         throw new Error(result.error || 'Failed to fetch available tenant profiles');
       }
-      
+
       return result.data;
     },
     enabled: !!tenantId && !!teamId,
