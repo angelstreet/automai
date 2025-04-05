@@ -19,13 +19,8 @@ export interface HostFilter {
 export const getHosts = cache(
   async (filter?: HostFilter): Promise<{ success: boolean; error?: string; data?: Host[] }> => {
     try {
-      // Get current user
+      // Get current user and team
       const user = await getUser();
-      if (!user) {
-        return { success: false, error: 'Unauthorized - Please sign in' };
-      }
-
-      // Get the user's active team ID
       const activeTeamResult = await getUserActiveTeam(user.id);
       if (!activeTeamResult?.id) {
         return { success: false, error: 'No active team found' };
@@ -51,31 +46,44 @@ export const getHosts = cache(
 );
 
 /**
+ * Get a specific host by ID
+ */
+export async function getHostById(
+  id: string,
+): Promise<{ success: boolean; error?: string; data?: Host }> {
+  try {
+    if (!id) {
+      return { success: false, error: 'Host ID is required' };
+    }
+
+    // Call the hostDb.getHostById method
+    const result = await hostDb.getHostById(id);
+    if (!result.success || !result.data) {
+      return { success: false, error: result.error || 'Host not found' };
+    }
+
+    return { success: true, data: result.data };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Failed to fetch host' };
+  }
+}
+
+/**
  * Create a new host
  */
 export async function createHost(
   data: Omit<Host, 'id'>,
+  options?: { skipRevalidation?: boolean },
 ): Promise<{ success: boolean; error?: string; data?: Host }> {
   try {
-    // Get current user
+    // Get current user and team
     const user = await getUser();
-    if (!user) {
-      return {
-        success: false,
-        error: 'Unauthorized - Please sign in',
-      };
-    }
-
-    // Get active team directly
     const activeTeam = await getUserActiveTeam(user.id);
     if (!activeTeam?.id) {
-      return {
-        success: false,
-        error: 'No active team found. Please select a team first.',
-      };
+      return { success: false, error: 'No active team found' };
     }
 
-    // Prepare host data with simplified mapping
+    // Prepare host data
     const hostData = {
       name: data.name,
       description: data.description || '',
@@ -94,26 +102,22 @@ export async function createHost(
 
     // Basic validation for SSH connections
     if (data.type === 'ssh' && (!hostData.user || !hostData.password)) {
-      return {
-        success: false,
-        error: 'SSH connections require both username and password',
-      };
+      return { success: false, error: 'SSH connections require both username and password' };
     }
 
     // Create the host
     const result = await hostDb.createHost(hostData);
     if (!result.success || !result.data) {
-      return {
-        success: false,
-        error: result.error || 'Failed to add host',
-      };
+      return { success: false, error: result.error || 'Failed to add host' };
     }
 
-    // Revalidate paths
-    revalidatePath('/[locale]/[tenant]/hosts');
+    // Revalidate paths only if not skipped
+    if (!options?.skipRevalidation) {
+      revalidatePath('/[locale]/[tenant]/hosts');
+    }
+
     return { success: true, data: result.data };
   } catch (error: any) {
-    console.error(`[@action:hosts:createHost] Error:`, error.message);
     return { success: false, error: error.message || 'Failed to add host' };
   }
 }
@@ -124,90 +128,40 @@ export async function createHost(
 export async function updateHost(
   id: string,
   updates: Partial<Omit<Host, 'id'>>,
+  options?: { skipRevalidation?: boolean },
 ): Promise<{ success: boolean; error?: string; data?: Host }> {
   try {
     if (!id) {
       return { success: false, error: 'Host ID is required' };
-    }
-
-    // Get current user
-    const user = await getUser();
-    if (!user) {
-      return {
-        success: false,
-        error: 'Unauthorized - Please sign in',
-      };
     }
 
     // Call hostDb.updateHost with id and updates
     const result = await hostDb.updateHost(id, updates);
-
     if (!result.success || !result.data) {
-      return {
-        success: false,
-        error: result.error || 'Host not found or update failed',
-      };
+      return { success: false, error: result.error || 'Host not found or update failed' };
     }
 
-    // Revalidate paths
-    revalidatePath('/[locale]/[tenant]/hosts');
+    // Revalidate paths only if not skipped
+    if (!options?.skipRevalidation) {
+      revalidatePath('/[locale]/[tenant]/hosts');
+    }
 
     return { success: true, data: result.data };
   } catch (error: any) {
-    console.error('[@action:hosts:updateHost] Error updating host:', error);
     return { success: false, error: error.message || 'Failed to update host' };
-  }
-}
-
-/**
- * Get a specific host by ID
- */
-export async function getHostById(
-  id: string,
-): Promise<{ success: boolean; error?: string; data?: Host }> {
-  try {
-    if (!id) {
-      return { success: false, error: 'Host ID is required' };
-    }
-
-    // Get current user
-    const user = await getUser();
-    if (!user) {
-      return {
-        success: false,
-        error: 'Unauthorized - Please sign in',
-      };
-    }
-
-    // Call the hostDb.getHostById method
-    const result = await hostDb.getHostById(id);
-    if (!result.success || !result.data) {
-      return { success: false, error: result.error || 'Host not found' };
-    }
-
-    return { success: true, data: result.data };
-  } catch (error: any) {
-    console.error('[@action:hosts:getHostById] Error:', error.message);
-    return { success: false, error: error.message || 'Failed to fetch host' };
   }
 }
 
 /**
  * Delete a host by ID
  */
-export async function deleteHost(id: string): Promise<{ success: boolean; error?: string }> {
+export async function deleteHost(
+  id: string,
+  options?: { skipRevalidation?: boolean },
+): Promise<{ success: boolean; error?: string }> {
   try {
     if (!id) {
       return { success: false, error: 'Host ID is required' };
-    }
-
-    // Get current user
-    const user = await getUser();
-    if (!user) {
-      return {
-        success: false,
-        error: 'Unauthorized - Please sign in',
-      };
     }
 
     // Get the host first to verify it exists
@@ -216,17 +170,19 @@ export async function deleteHost(id: string): Promise<{ success: boolean; error?
       return { success: false, error: 'Host not found' };
     }
 
-    // Call hostDb.deleteHost with id
+    // Delete the host
     const result = await hostDb.deleteHost(id);
     if (!result.success) {
       return { success: false, error: result.error || 'Failed to delete host' };
     }
 
-    // Revalidate paths
-    revalidatePath('/[locale]/[tenant]/hosts');
+    // Revalidate paths only if not skipped
+    if (!options?.skipRevalidation) {
+      revalidatePath('/[locale]/[tenant]/hosts');
+    }
+
     return { success: true };
   } catch (error: any) {
-    console.error('[@action:hosts:deleteHost] Error:', error.message);
     return { success: false, error: error.message || 'Failed to delete host' };
   }
 }
@@ -234,27 +190,20 @@ export async function deleteHost(id: string): Promise<{ success: boolean; error?
 /**
  * Test connection with specific credentials
  */
-export async function testConnection(data: {
-  type: string;
-  ip: string;
-  port?: number;
-  username?: string;
-  password?: string;
-  hostId?: string;
-}): Promise<{ success: boolean; error?: string; message?: string; is_windows?: boolean }> {
+export async function testConnection(
+  data: {
+    type: string;
+    ip: string;
+    port?: number;
+    username?: string;
+    password?: string;
+    hostId?: string;
+  },
+  options?: { skipRevalidation?: boolean },
+): Promise<{ success: boolean; error?: string; message?: string; is_windows?: boolean }> {
   try {
-    // Create connection data object
-    const hostData = {
-      type: data.type,
-      ip: data.ip,
-      port: data.port,
-      username: data.username,
-      password: data.password,
-      hostId: data.hostId,
-    };
-
     // Test the connection
-    const result = await hostService.testHostConnection(hostData);
+    const result = await hostService.testHostConnection(data);
 
     // Format the response
     const response = {
@@ -264,8 +213,8 @@ export async function testConnection(data: {
       is_windows: result.is_windows || false,
     };
 
-    // Revalidate if host ID is provided
-    if (data.hostId) {
+    // Revalidate if host ID is provided and revalidation not skipped
+    if (data.hostId && !options?.skipRevalidation) {
       revalidatePath('/[locale]/[tenant]/hosts');
     }
 
@@ -283,16 +232,11 @@ export async function testConnection(data: {
  */
 export async function testHostConnection(
   id: string,
+  options?: { skipRevalidation?: boolean },
 ): Promise<{ success: boolean; error?: string; message?: string }> {
   try {
     if (!id) {
       return { success: false, error: 'Host ID is required' };
-    }
-
-    // Get current user and validate
-    const user = await getUser();
-    if (!user) {
-      return { success: false, error: 'Unauthorized - Please sign in' };
     }
 
     // Get the host details
@@ -307,20 +251,25 @@ export async function testHostConnection(
     await hostDb.updateHostStatus(id, 'testing');
 
     // Test the connection
-    const result = await testConnection({
-      type: host.type,
-      ip: host.ip,
-      port: host.port,
-      username: host.user,
-      password: host.password,
-      hostId: host.id,
-    });
+    const result = await testConnection(
+      {
+        type: host.type,
+        ip: host.ip,
+        port: host.port,
+        username: host.user,
+        password: host.password,
+        hostId: host.id,
+      },
+      { skipRevalidation: true }, // Skip revalidation in the inner call, we'll handle it here
+    );
 
     // Update status based on result
     await hostDb.updateHostStatus(id, result.success ? 'connected' : 'failed');
 
-    // Revalidate paths
-    revalidatePath('/[locale]/[tenant]/hosts');
+    // Revalidate paths only if not skipped
+    if (!options?.skipRevalidation) {
+      revalidatePath('/[locale]/[tenant]/hosts');
+    }
 
     return result;
   } catch (error: any) {
@@ -331,8 +280,19 @@ export async function testHostConnection(
       // Ignore update error
     }
 
-    // Revalidate paths
-    revalidatePath('/[locale]/[tenant]/hosts');
+    // Revalidate paths only if not skipped
+    if (!options?.skipRevalidation) {
+      revalidatePath('/[locale]/[tenant]/hosts');
+    }
+
     return { success: false, error: error.message || 'Failed to test connection' };
   }
+}
+
+/**
+ * Explicitly revalidate hosts pages
+ * This can be used after batch operations
+ */
+export async function revalidateHosts(): Promise<void> {
+  revalidatePath('/[locale]/[tenant]/hosts');
 }
