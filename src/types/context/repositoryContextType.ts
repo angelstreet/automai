@@ -187,5 +187,5 @@ export type TestRepositoryInput = z.infer<typeof testRepositorySchema>;
  * Filter for repositories
  */
 export interface RepositoryFilter {
-  providerId?: string;
+  provider_id?: string;
 }

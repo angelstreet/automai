@@ -46,8 +46,7 @@ export interface Repository {
   defaultBranch: string;
   language?: string;
   providerType: GitProviderType;
-  providerId: string;
-  provider_id?: string;
+  provider_id: string;
   owner: string;
   lastSyncedAt?: string;
   syncStatus: RepositorySyncStatus;
