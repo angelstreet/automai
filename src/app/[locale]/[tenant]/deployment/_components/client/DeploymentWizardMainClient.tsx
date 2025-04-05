@@ -2,7 +2,7 @@
 
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 import { saveDeploymentConfiguration, startDeployment } from '@/app/actions/deploymentWizardAction';
 import { toast } from '@/components/shadcn/use-toast';
@@ -67,7 +67,7 @@ const initialDeploymentData: DeploymentData = {
 // Wrap DeploymentWizard in React.memo to prevent unnecessary re-renders
 const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
   ({ onCancel, onDeploymentCreated, repositories = [], hosts = [], cicdProviders = [] }) => {
-    const router = useRouter();
+    const _router = useRouter();
     const [step, setStep] = useState(1);
     const [deploymentData, setDeploymentData] = useState<DeploymentData>(initialDeploymentData);
     const [isCreating, setIsCreating] = useState(false);
@@ -83,28 +83,6 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
     const [repositoryScripts, setRepositoryScripts] = useState<any[]>([]);
     const [isLoadingScripts, setIsLoadingScripts] = useState(false);
     const [scriptsError, setScriptsError] = useState<string | null>(null);
-
-    // Handler for timeouts
-    const handleTimeout = useCallback(() => {
-      toast({
-        title: 'Request Timeout',
-        description: 'The operation took too long to complete. Redirecting to deployment list.',
-        variant: 'destructive',
-      });
-
-      // Redirect after a short delay to allow the toast to be seen
-      setTimeout(() => {
-        router.push('./deployment');
-      }, 1500);
-    }, [router]);
-
-    // Check for timeout errors in server responses
-    useEffect(() => {
-      // Listen for error messages that indicate timeouts
-      if (scriptsError && scriptsError.includes('timed out')) {
-        handleTimeout();
-      }
-    }, [scriptsError, router, handleTimeout]);
 
     // Fetch scripts only when on step 2 and repository selected
     useEffect(() => {
@@ -162,18 +140,12 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
             try {
               // API endpoint to get repository files
               const apiUrl = `/api/repositories/explore?repositoryId=${selectedRepo.id}&providerId=${providerId}&repositoryUrl=${encodeURIComponent(selectedRepo.url)}&path=&branch=${userSelectedBranch}&action=list&recursive=true`;
-              console.log(`[DeploymentWizard]    scripts from: ${apiUrl}`);
+              console.log(`[DeploymentWizard] Fetching scripts from: ${apiUrl}`);
 
-              // Add timeout to prevent hanging requests
-              const controller = new AbortController();
-              const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-
+              // Simplified fetch without timeout handling - let server handle timeouts
               const response = await fetch(apiUrl, {
-                signal: controller.signal,
                 headers: { 'Cache-Control': 'no-cache' },
               });
-
-              clearTimeout(timeoutId);
 
               // Break out early on component unmount
               if (!isMounted) return;
@@ -225,16 +197,9 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
                 throw new Error(data.error || 'Failed to retrieve repository files');
               }
             } catch (error) {
-              // Check if the error is due to AbortController (timeout)
+              // Simplified error handling - no special case for AbortError anymore
               if (error instanceof Error) {
-                if (error.name === 'AbortError') {
-                  lastError = new Error(`Request timed out after 5 seconds`);
-                  // Handle timeout with redirect
-                  handleTimeout();
-                  return;
-                } else {
-                  lastError = error;
-                }
+                lastError = error;
               } else {
                 lastError = new Error('Unknown error occurred');
               }
@@ -242,7 +207,12 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               console.error('[DeploymentWizard] Error fetching scripts:', lastError);
 
               if (isMounted) {
-                setScriptsError(lastError.message);
+                // Check if error contains timeout messaging from server
+                if (lastError.message && lastError.message.includes('timed out')) {
+                  setScriptsError(`Repository request timed out. Please try again later.`);
+                } else {
+                  setScriptsError(lastError.message);
+                }
                 setRepositoryScripts([]);
               }
             }
@@ -272,8 +242,6 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
       deploymentData.selectedRepository,
       deploymentData.branch,
       isLoadingScripts,
-      router,
-      handleTimeout,
     ]);
 
     const handleInputChange = (
@@ -459,26 +427,6 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
       }
     };
 
-    const _isStepValid = () => {
-      switch (step) {
-        case 1:
-          return deploymentData.name !== '' && deploymentData.repositoryId !== '';
-        case 2:
-          return deploymentData.scriptIds.length > 0;
-        case 3:
-          return deploymentData.hostIds.length > 0;
-        case 4:
-          return (
-            deploymentData.schedule === 'now' ||
-            (deploymentData.schedule === 'later' && deploymentData.scheduledTime !== '')
-          );
-        case 5:
-          return true; // Review step is always valid
-        default:
-          return false;
-      }
-    };
-
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-2">
         <div className="mb-1">
@@ -617,7 +565,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               hostIds={deploymentData.hostIds}
               availableHosts={availableHosts}
               isLoadingHosts={false}
-              hostsError={null} // Never show host errors directly, we'll handle with toast+redirect
+              hostsError={null} // Server will handle timeouts
               onHostToggle={handleHostsChange}
               onPrevStep={handlePrevStep}
               onNextStep={handleNextStep}

@@ -286,6 +286,29 @@ export async function createRepositoryFromUrl(
       providerType = 'bitbucket';
     }
 
+    // Check for Gitea instances by looking for matching server URLs in providers
+    let detectedGiteaProviderId = null;
+    try {
+      const serverUrl = `${url.protocol}//${url.host}`;
+      const { data: giteaProviders } = await supabase
+        .from('git_providers')
+        .select('id, type, server_url')
+        .eq('type', 'gitea')
+        .ilike('server_url', serverUrl);
+
+      if (giteaProviders && giteaProviders.length > 0) {
+        providerType = 'gitea';
+        detectedGiteaProviderId = giteaProviders[0].id;
+        console.log(
+          `[@db:repositoryDb:createRepositoryFromUrl] Detected Gitea instance at ${serverUrl} with provider ID: ${detectedGiteaProviderId}`,
+        );
+      }
+    } catch (err) {
+      console.error(
+        `[@db:repositoryDb:createRepositoryFromUrl] Error checking for Gitea providers: ${err}`,
+      );
+    }
+
     // Parse the path to get owner and repo name
     // Remove .git extension if present
     const cleanPath = url.pathname.replace(/\.git$/, '');
@@ -310,45 +333,53 @@ export async function createRepositoryFromUrl(
     // Look up a default provider ID or create a placeholder one
     let providerId = '';
     try {
-      // Try to find an existing provider of the same type
-      const { data: providers } = await supabase
-        .from('git_providers')
-        .select('id')
-        .eq('type', providerType)
-        .limit(1);
-
-      if (providers && providers.length > 0) {
-        providerId = providers[0].id;
+      // If we detected a Gitea provider earlier, use it
+      if (detectedGiteaProviderId) {
+        providerId = detectedGiteaProviderId;
         console.log(
-          `[@db:repositoryDb:createRepositoryFromUrl] Found existing provider: ${providerId}`,
+          `[@db:repositoryDb:createRepositoryFromUrl] Using detected Gitea provider: ${providerId}`,
         );
       } else {
-        // Create a default provider if none exists
-        const { data: newProvider, error: providerError } = await supabase
+        // Try to find an existing provider of the same type
+        const { data: providers } = await supabase
           .from('git_providers')
-          .insert({
-            name: `Default ${providerType} provider`,
-            type: providerType,
-            auth_type: 'token',
-            creator_id: userId,
-            team_id: data.team_id,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .select()
-          .single();
+          .select('id')
+          .eq('type', providerType)
+          .limit(1);
 
-        if (providerError) {
+        if (providers && providers.length > 0) {
+          providerId = providers[0].id;
           console.log(
-            `[@db:repositoryDb:createRepositoryFromUrl] Error creating provider: ${providerError.message}`,
+            `[@db:repositoryDb:createRepositoryFromUrl] Found existing provider: ${providerId}`,
           );
-          // Use a placeholder - this is better than failing altogether
-          providerId = '00000000-0000-0000-0000-000000000000';
         } else {
-          providerId = newProvider.id;
-          console.log(
-            `[@db:repositoryDb:createRepositoryFromUrl] Created new provider: ${providerId}`,
-          );
+          // Create a default provider if none exists
+          const { data: newProvider, error: providerError } = await supabase
+            .from('git_providers')
+            .insert({
+              name: `Default ${providerType} provider`,
+              type: providerType,
+              auth_type: 'token',
+              creator_id: userId,
+              team_id: data.team_id,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .select()
+            .single();
+
+          if (providerError) {
+            console.log(
+              `[@db:repositoryDb:createRepositoryFromUrl] Error creating provider: ${providerError.message}`,
+            );
+            // Use a placeholder - this is better than failing altogether
+            providerId = '00000000-0000-0000-0000-000000000000';
+          } else {
+            providerId = newProvider.id;
+            console.log(
+              `[@db:repositoryDb:createRepositoryFromUrl] Created new provider: ${providerId}`,
+            );
+          }
         }
       }
     } catch (providerErr) {

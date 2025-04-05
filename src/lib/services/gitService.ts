@@ -30,58 +30,58 @@ export async function testGitProviderConnection(params: GitConnectionParams): Pr
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
-    
+
     // Determine base URL based on provider type
     const baseUrl = getBaseUrl(params);
     const endpoint = getEndpoint(params.type);
-    
+
     // Set up authorization header
     const headers: Record<string, string> = {};
     if (params.token) {
       headers.Authorization = `token ${params.token}`;
     }
-    
+
     console.log(`[GitService] Testing connection to ${params.type} at ${baseUrl}${endpoint}`);
-    
+
     // Make the request
     try {
       const response = await fetch(`${baseUrl}${endpoint}`, {
         headers,
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeout);
-      
+
       if (!response.ok) {
-        return { 
-          success: false, 
+        return {
+          success: false,
           error: `Connection failed with status ${response.status}`,
-          status: response.status 
+          status: response.status,
         };
       }
-      
+
       // Process successful response
       const data = await response.json();
       return { success: true, data };
     } catch (fetchError: any) {
       clearTimeout(timeout);
-      
+
       // Handle timeout
       if (fetchError.name === 'AbortError') {
-        return { 
-          success: false, 
+        return {
+          success: false,
           error: 'Connection timeout after 5 seconds',
-          status: 408 // Request Timeout
+          status: 408, // Request Timeout
         };
       }
-      
+
       throw fetchError; // Re-throw for outer catch
     }
   } catch (error: any) {
     console.error('[GitService] Error testing Git provider connection:', error);
-    return { 
-      success: false, 
-      error: error.message || 'Failed to connect to Git provider'
+    return {
+      success: false,
+      error: error.message || 'Failed to connect to Git provider',
     };
   }
 }
@@ -94,15 +94,15 @@ export async function testGitRepositoryAccess(params: GitRepositoryParams): Prom
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
-    
+
     // Set up headers if token provided
     const headers: Record<string, string> = {};
     if (params.token) {
       headers.Authorization = `token ${params.token}`;
     }
-    
+
     console.log(`[GitService] Testing repository access: ${params.url}`);
-    
+
     try {
       // Use HEAD request to just check accessibility without downloading content
       const response = await fetch(params.url, {
@@ -111,32 +111,32 @@ export async function testGitRepositoryAccess(params: GitRepositoryParams): Prom
         signal: controller.signal,
         redirect: 'follow',
       });
-      
+
       clearTimeout(timeout);
-      
+
       return {
         success: response.ok,
         status: response.status,
-        error: response.ok ? undefined : `Repository is not accessible (${response.status})`
+        error: response.ok ? undefined : `Repository is not accessible (${response.status})`,
       };
     } catch (fetchError: any) {
       clearTimeout(timeout);
-      
+
       if (fetchError.name === 'AbortError') {
         return {
           success: false,
           error: 'Connection timeout after 5 seconds',
-          status: 408
+          status: 408,
         };
       }
-      
+
       throw fetchError;
     }
   } catch (error: any) {
     console.error('[GitService] Error testing repository access:', error);
     return {
       success: false,
-      error: error.message || 'Failed to test repository connection'
+      error: error.message || 'Failed to test repository connection',
     };
   }
 }
