@@ -73,13 +73,15 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
       repository_id: formData.repositoryId,
       target_host_id: formData.targetHostId,
       script_path: formData.scriptPath || '',
-      cicd_provider_id: formData.cicdProviderId,
+      cicd_provider_id: formData.cicd_provider_id,
       configuration: formData.configuration || {},
       status: 'pending',
       scheduled: formData.scheduled || false,
       schedule: formData.schedule || null,
       tenant_id: user.tenant_id,
       user_id: user.id,
+      notifications: formData.notifications || { email: false, slack: false },
+      jenkins_config: formData.jenkinsConfig,
     };
 
     // Create the deployment

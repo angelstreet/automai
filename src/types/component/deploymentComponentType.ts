@@ -123,10 +123,10 @@ export interface DeploymentData {
   };
   jenkinsConfig?: {
     enabled: boolean;
-    providerId?: string;
+    provider_id?: string;
     jobId?: string;
     parameters?: Record<string, any>;
   };
   autoStart?: boolean;
-  cicdProviderId?: string;
+  cicd_provider_id?: string;
 }

@@ -102,7 +102,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
       if (step === 2 && deploymentData.repositoryId && !isLoadingScripts) {
         // Track if the effect was cleaned up
         let isMounted = true;
-        
+
         const loadScripts = async () => {
           try {
             setIsLoadingScripts(true);
@@ -120,7 +120,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
             }
 
             // Use either providerId or provider_id from the repository
-            const providerId = selectedRepo.providerId || selectedRepo.provider_id;
+            const providerId = selectedRepo.provider_id;
 
             if (!providerId) {
               throw new Error('Missing provider ID for the selected repository');
@@ -143,7 +143,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
 
             // For now, only try the user-selected branch
             console.log(`[DeploymentWizard] Trying branch: ${userSelectedBranch}`);
-            
+
             // Try only once to prevent API fetch loops
             try {
               // API endpoint to get repository files
@@ -153,20 +153,22 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               // Add timeout to prevent hanging requests
               const controller = new AbortController();
               const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-              
-              const response = await fetch(apiUrl, { 
+
+              const response = await fetch(apiUrl, {
                 signal: controller.signal,
-                headers: { 'Cache-Control': 'no-cache' } 
+                headers: { 'Cache-Control': 'no-cache' },
               });
-              
+
               clearTimeout(timeoutId);
-              
+
               // Break out early on component unmount
               if (!isMounted) return;
 
               if (!response.ok) {
                 const errorText = await response.text();
-                console.log(`[DeploymentWizard] API error: ${response.status} ${response.statusText} - ${errorText}`);
+                console.log(
+                  `[DeploymentWizard] API error: ${response.status} ${response.statusText} - ${errorText}`,
+                );
                 throw new Error(`Error ${response.status}: ${response.statusText}`);
               }
 
@@ -194,7 +196,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
                   console.log(
                     `[DeploymentWizard] Successfully found ${scripts.length} script files`,
                   );
-                  
+
                   if (isMounted) {
                     setRepositoryScripts(scripts);
                   }
@@ -219,9 +221,9 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               } else {
                 lastError = new Error('Unknown error occurred');
               }
-              
+
               console.error('[DeploymentWizard] Error fetching scripts:', lastError);
-              
+
               if (isMounted) {
                 setScriptsError(lastError.message);
                 setRepositoryScripts([]);
@@ -241,13 +243,18 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
         };
 
         loadScripts();
-        
+
         // Cleanup function to prevent state updates after unmount
         return () => {
           isMounted = false;
         };
       }
-    }, [step, deploymentData.repositoryId, deploymentData.selectedRepository, deploymentData.branch]);
+    }, [
+      step,
+      deploymentData.repositoryId,
+      deploymentData.selectedRepository,
+      deploymentData.branch,
+    ]);
 
     const handleInputChange = (
       e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
@@ -615,7 +622,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               onNextStep={handleNextStep}
               isStepValid={
                 deploymentData.schedule === 'now' ||
-                (deploymentData.schedule === 'later' && !!deploymentData.scheduledTime)
+                (deploymentData.schedule === 'later' && deploymentData.scheduledTime !== '')
               }
             />
           )}

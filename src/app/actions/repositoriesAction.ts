@@ -144,7 +144,7 @@ export async function connectRepository(
     const teamId = activeTeamResult.id;
 
     // If this is a quick clone (just URL provided)
-    if (data.url && !data.providerId) {
+    if (data.url && !data.provider_id) {
       console.log('[@action:repositories:connectRepository] Quick clone using URL', {
         url: data.url,
       });
@@ -179,7 +179,7 @@ export async function connectRepository(
     const repositoryData = {
       name: data.name || '',
       description: data.description || null,
-      provider_id: data.providerId || '',
+      provider_id: data.provider_id || '',
       provider_type: data.providerType || 'github',
       url: data.url || '',
       default_branch: data.defaultBranch || 'main',

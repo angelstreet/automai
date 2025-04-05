@@ -42,7 +42,7 @@ export function DeploymentWizardStep5Client({
 
   // Handle provider selection
   const handleProviderChange = (providerId: string) => {
-    onUpdateData({ cicdProviderId: providerId });
+    onUpdateData({ cicd_provider_id: providerId });
   };
 
   // Handle auto-start toggle
@@ -60,7 +60,7 @@ export function DeploymentWizardStep5Client({
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <FormLabel>CI/CD Provider</FormLabel>
-            <Select value={data.cicdProviderId || ''} onValueChange={handleProviderChange}>
+            <Select value={data.cicd_provider_id || ''} onValueChange={handleProviderChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Select a CI/CD provider" />
               </SelectTrigger>
