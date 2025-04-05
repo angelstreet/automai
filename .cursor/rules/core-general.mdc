@@ -153,5 +153,10 @@ export async function someServerAction() {
 - ✅ Event constants should follow this format: `REFRESH_[DOMAIN]_COMPLETE`
 - ✅ Always dispatch events after successful server actions: `window.dispatchEvent(new Event(REFRESH_DOMAIN_COMPLETE))`
 - ✅ Use `router.refresh()` in event listeners to trigger server component refreshes
+- ✅ For view toggle patterns (grid/table view switching):
+  - Store view preference in localStorage with a consistent key (e.g., `hostViewMode`)
+  - Implement toggle functionality in a custom hook that manages both state and persistence
+  - Use event-based communication (`TOGGLE_VIEW_MODE`) for cross-component coordination
+  - Render the appropriate view with conditional logic based on the current mode
 - ❌ NEVER rely on event-based communication for security-critical operations
 - ❌ NEVER use direct DOM manipulation like `document.getElementById('some-id')?.click()` for component communication

@@ -1,0 +1,73 @@
+---
+description: view toggle pattern
+globs: 
+alwaysApply: false
+---
+# View Toggle Pattern
+
+## Overview
+
+The view toggle pattern provides a consistent way to switch between different display modes (grid/table) for data throughout the application. This pattern uses client-side state management, localStorage persistence, and custom events for communication.
+
+## Implementation
+
+### Components Structure
+
+- **Parent Container (`HostListClient`)**: Renders either grid or table view based on the current viewMode
+- **Toggle Control (`HostActionsClient`)**: Contains the toggle button UI
+- **Event Listener (`HostsEventListener`)**: Handles app-wide events triggered by view changes
+
+### State Management
+
+```typescript
+// From the useHost hook
+const { viewMode, toggleViewMode } = useHost();
+```
+
+The hook:
+
+1. Loads the initial view preference from localStorage using `STORAGE_KEYS.HOST_VIEW_MODE`
+2. Provides a `toggleViewMode` function to switch between 'grid' and 'table' modes
+3. Persists changes to localStorage automatically
+
+### Conditional Rendering
+
+```typescript
+{viewMode === 'grid' ? (
+  <HostGridClient ... />
+) : (
+  <HostTableClient ... />
+)}
+```
+
+### Event Communication
+
+When a view is toggled:
+
+1. The toggle function is called: `toggleViewMode()`
+2. An event is dispatched: `window.dispatchEvent(new Event(TOGGLE_HOST_VIEW_MODE))`
+3. The `HostsEventListener` catches this event and can perform additional actions if needed
+
+## Constants
+
+```typescript
+// Local storage keys
+export const STORAGE_KEYS = {
+  HOST_VIEW_MODE: 'hostViewMode',
+};
+
+// Event names
+export const TOGGLE_HOST_VIEW_MODE = 'TOGGLE_HOST_VIEW_MODE';
+
+// View mode types
+export type ViewMode = 'grid' | 'table';
+export const DEFAULT_VIEW_MODE: ViewMode = 'grid';
+```
+
+## Best Practices
+
+1. Always use the constants for event names and storage keys
+2. Toggle UI should visually indicate the current view mode
+3. The default view mode should be defined in constants
+4. Components should handle both view modes gracefully
+5. Apply appropriate loading states during view transitions

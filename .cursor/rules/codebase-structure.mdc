@@ -91,6 +91,17 @@ alwaysApply: false
 }
 ```
 
+## UI Patterns
+
+### Standardized UI Patterns
+- **View Toggle Pattern**: Pattern for toggling between grid/table views in list components
+  - Used in HostListClient for switching display modes
+  - Implemented with localStorage persistence and event-based communication
+  - Follows the pattern defined in Event-Based Communication section of core-general.mdc
+- **Form Dialogs**: Pattern for modal forms with validation
+- **Empty States**: Consistent pattern for empty data views
+- **Loading States**: Skeleton loaders and loading indicators
+
 ## Architectural Patterns
 
 ### Server Components (62)
