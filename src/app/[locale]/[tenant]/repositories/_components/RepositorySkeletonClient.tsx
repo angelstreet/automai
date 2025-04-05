@@ -1,5 +1,3 @@
-'use client';
-
 import { Card, CardContent } from '@/components/shadcn/card';
 import { Skeleton } from '@/components/shadcn/skeleton';
 
@@ -20,7 +18,6 @@ export function RepositorySkeletonClient() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Skeleton className="h-8 w-24" />
             <Skeleton className="h-8 w-36" />
           </div>
 

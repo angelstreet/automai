@@ -4,7 +4,11 @@ import { Suspense } from 'react';
 import { getRepositories } from '@/app/actions/repositoriesAction';
 import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 
-import { RepositoryActionsClient, RepositoryContent, RepositorySkeletonClient } from './_components';
+import {
+  RepositoryActionsClient,
+  RepositoryContent,
+  RepositorySkeletonClient,
+} from './_components';
 
 export default async function RepositoriesPage() {
   const t = await getTranslations('repositories');
