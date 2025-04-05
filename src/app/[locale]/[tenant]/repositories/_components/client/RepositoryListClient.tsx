@@ -124,11 +124,11 @@ export function RepositoryListClient() {
       {/* Repository cards grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {isLoadingRepositories ? (
-          <div className="col-span-full flex justify-center p-8">
+          <div key="loading-spinner" className="col-span-full flex justify-center p-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         ) : currentRepositories.length === 0 ? (
-          <div className="col-span-full">
+          <div key="empty-state" className="col-span-full">
             <EmptyState
               icon={<GitBranch className="h-10 w-10" />}
               title={t('none')}
@@ -147,12 +147,12 @@ export function RepositoryListClient() {
           </div>
         ) : (
           currentRepositories.map((repo: Repository) => (
-            <div
-              key={repo.id}
-              onClick={() => handleViewRepository(repo)}
-              className="cursor-pointer"
-            >
-              <RepositoryCardClient repository={repo} isDeleting={isDeleting === repo.id} />
+            <div key={repo.id}>
+              <RepositoryCardClient
+                repository={repo}
+                isDeleting={isDeleting === repo.id}
+                onClick={() => handleViewRepository(repo)}
+              />
             </div>
           ))
         )}

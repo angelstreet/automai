@@ -136,6 +136,7 @@ export interface EnhancedRepositoryCardProps {
   repository: Repository;
   isDeleting?: boolean;
   onDelete?: (id: string) => void;
+  onClick?: () => void;
 }
 
 export interface RepositoryExplorerProps {

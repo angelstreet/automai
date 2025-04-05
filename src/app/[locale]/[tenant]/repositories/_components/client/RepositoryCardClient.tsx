@@ -24,6 +24,7 @@ export function RepositoryCardClient({
   repository,
   onDelete,
   isDeleting,
+  onClick,
 }: EnhancedRepositoryCardProps) {
   const [_isHovered, setIsHovered] = useState(false);
   const [_isClient, setIsClient] = useState(false);
@@ -81,9 +82,10 @@ export function RepositoryCardClient({
 
   return (
     <Card
-      className="overflow-hidden transition-all duration-160 hover:shadow-md"
+      className="overflow-hidden transition-all duration-160 hover:shadow-md cursor-pointer"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      onClick={onClick}
     >
       <CardHeader className="pb-2 pt-3 px-4 relative">
         <div className="flex items-center gap-2">
