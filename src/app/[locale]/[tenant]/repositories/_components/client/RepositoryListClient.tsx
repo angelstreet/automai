@@ -17,7 +17,8 @@ export function RepositoryListClient() {
   const t = useTranslations('repositories');
 
   // Use the repository hook to get data
-  const { repositories, isLoadingRepositories, refetchRepositories } = useRepository();
+  const { repositories, isLoadingRepositories, refetchRepositories, disconnectRepository } =
+    useRepository();
 
   // State for repository explorer
   const [selectedRepository, setSelectedRepository] = useState<Repository | null>(null);
@@ -56,7 +57,7 @@ export function RepositoryListClient() {
   // UI state
   const [activeTab, setActiveTab] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [isDeleting, _setIsDeleting] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const itemsPerPage = 12;
 
@@ -64,13 +65,6 @@ export function RepositoryListClient() {
     // Update state to show the explorer
     setSelectedRepository(repo);
     setShowExplorer(true);
-
-    // Also dispatch the event for backward compatibility
-    window.dispatchEvent(
-      new CustomEvent('repository-view-request', {
-        detail: { repo },
-      }),
-    );
   };
 
   const handleBackToList = () => {
@@ -111,6 +105,21 @@ export function RepositoryListClient() {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage,
   );
+
+  // Handle repository deletion
+  const handleDeleteRepository = async (id: string) => {
+    if (!id) return;
+
+    setIsDeleting(id);
+    try {
+      await disconnectRepository(id);
+      // Refresh will happen automatically via the hook's queryClient.invalidateQueries
+    } catch (error) {
+      console.error('[RepositoryListClient] Error deleting repository:', error);
+    } finally {
+      setIsDeleting(null);
+    }
+  };
 
   // If explorer is shown, render it
   if (showExplorer && selectedRepository) {
@@ -173,6 +182,7 @@ export function RepositoryListClient() {
                 repository={repo}
                 isDeleting={isDeleting === repo.id}
                 onClick={() => handleViewRepository(repo)}
+                onDelete={handleDeleteRepository}
               />
             </div>
           ))

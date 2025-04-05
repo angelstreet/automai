@@ -29,7 +29,7 @@ export function RepositoryCardClient({
   const [_isHovered, setIsHovered] = useState(false);
   const [_isClient, setIsClient] = useState(false);
   const t = useTranslations('repositories');
-
+  const c = useTranslations('common');
   // This effect only runs on the client after hydration is complete
   useEffect(() => {
     setIsClient(true);
@@ -44,7 +44,7 @@ export function RepositoryCardClient({
       return t('last_synced', {
         date: formatDistanceToNow(new Date(repository.lastSyncedAt), { addSuffix: true }),
       });
-    } catch (e) {
+    } catch {
       // Fall back to a simple format if there's an issue
       return t('last_synced', { date: t('recently') });
     }
@@ -146,23 +146,21 @@ export function RepositoryCardClient({
             className="hover:underline"
             onClick={(e) => e.stopPropagation()}
           >
-            {t('view_on_provider')}
+            {c('view')}
           </a>
         </div>
 
-        <div className="flex items-center gap-2">
-          {onDelete && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={handleDeleteClick}
-              disabled={isDeleting}
-            >
-              <Trash2 className="h-3.5 w-3.5 text-red-500" />
-            </Button>
-          )}
-        </div>
+        {onDelete && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={handleDeleteClick}
+            disabled={isDeleting}
+          >
+            <Trash2 className="h-3.5 w-3.5 text-red-500" />
+          </Button>
+        )}
       </CardFooter>
     </Card>
   );
