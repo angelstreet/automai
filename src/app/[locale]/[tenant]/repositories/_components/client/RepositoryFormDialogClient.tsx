@@ -25,7 +25,7 @@ import { EnhancedConnectRepositoryDialogProps } from '@/types/context/repository
 
 import { CONNECT_REPOSITORY_TABS, AUTH_METHODS } from '../../constants';
 
-export function RepositoryDialogClient({
+export function RepositoryFormDialogClient({
   open,
   onOpenChange,
   onSubmit,
@@ -92,8 +92,8 @@ export function RepositoryDialogClient({
           provider: {
             type: currentProvider,
             token: accessToken,
-            serverUrl: currentProvider === 'gitea' ? serverUrl : undefined
-          }
+            serverUrl: currentProvider === 'gitea' ? serverUrl : undefined,
+          },
         }),
       });
 
@@ -104,12 +104,13 @@ export function RepositoryDialogClient({
           title: 'Connection Successful',
           description: `Successfully connected to ${currentProvider}!`,
         });
-        
+
         // Since the createGitProvider was removed in the simplified hook,
         // we'll show a toast about completing the connection form
         toast({
           title: 'Next Steps',
-          description: 'Connection verified. To complete the process, please add a specific repository.',
+          description:
+            'Connection verified. To complete the process, please add a specific repository.',
         });
       } else {
         toast({
@@ -181,7 +182,10 @@ export function RepositoryDialogClient({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto" data-form-type="do-not-autofill">
+      <DialogContent
+        className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto"
+        data-form-type="do-not-autofill"
+      >
         <DialogHeader>
           <DialogTitle className="text-xl">{t('connect_repo')}</DialogTitle>
           <DialogDescription>{t('connect_to_git_provider')}</DialogDescription>

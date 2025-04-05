@@ -40,9 +40,9 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/Breadcrumb';
 import { cn } from '@/lib/utils';
+import { RepositoryFile } from '@/types/component/repositoryComponentType';
 import {
   RepositoryExplorerProps,
-  RepositoryFile,
   FilesAPIResponse,
   FileAPIResponse,
 } from '@/types/context/repositoryContextType';
@@ -97,19 +97,6 @@ export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplo
         return <GiteaIcon className="h-5 w-5" />;
       default:
         return <GitBranch className="h-5 w-5" />;
-    }
-  };
-
-  const getProviderName = () => {
-    switch (repository?.providerType) {
-      case 'github':
-        return 'GitHub';
-      case 'gitlab':
-        return 'GitLab';
-      case 'gitea':
-        return 'Gitea';
-      default:
-        return 'Git';
     }
   };
 
@@ -303,7 +290,14 @@ export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplo
     };
 
     fetchFiles();
-  }, [repository?.id, repository?.providerId, repository?.url, currentPath, isValidRepository]);
+  }, [
+    repository.id,
+    repository.providerId,
+    repository.url,
+    currentPath,
+    isValidRepository,
+    repository,
+  ]);
 
   // Go up one directory
   const handleNavigateUp = () => {

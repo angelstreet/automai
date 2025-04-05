@@ -3,7 +3,7 @@ export { RepositoryContent } from './RepositoryContent';
 
 // Client Components
 export { RepositoryListClient } from './client/RepositoryListClient';
-export { RepositoryDialogClient } from './client/RepositoryDialogClient';
+export { RepositoryFormDialogClient } from './client/RepositoryFormDialogClient';
 export { RepositoryCardClient } from './client/RepositoryCardClient';
 export { RepositoryActionsClient } from './client/RepositoryActionsClient';
 export { RepositorySkeleton } from './RepositorySkeleton';

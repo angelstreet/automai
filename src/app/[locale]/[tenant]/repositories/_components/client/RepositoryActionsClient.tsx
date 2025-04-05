@@ -1,15 +1,16 @@
 'use client';
 
-import { PlusCircle, RefreshCw, Search } from 'lucide-react';
+import { PlusCircle, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React, { useState, useEffect } from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/shadcn/tooltip';
 import { useToast } from '@/components/shadcn/use-toast';
 import { ConnectRepositoryValues } from '@/types/context/repositoryContextType';
 
-import { RepositoryDialogClient } from './RepositoryDialogClient';
+import { RepositoryFormDialogClient } from './RepositoryFormDialogClient';
 
 interface RepositoryActionsClientProps {
   repositoryCount?: number;
@@ -131,18 +132,23 @@ export function RepositoryActionsClient({ repositoryCount = 0 }: RepositoryActio
       )}
 
       <div className="flex items-center gap-2">
-        <Button
-          onClick={() => setConnectDialogOpen(true)}
-          id="add-repository-button"
-          size="sm"
-          className="h-8 gap-1"
-        >
-          <PlusCircle className="h-4 w-4" />
-          <span>{t('add_button')}</span>
-        </Button>
+        <Tooltip>
+          <TooltipTrigger>
+            <Button
+              onClick={() => setConnectDialogOpen(true)}
+              id="add-repository-button"
+              size="sm"
+              className="h-8 gap-1"
+            >
+              <PlusCircle className="h-4 w-4" />
+              <span>{t('add_button')}</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t('connect_repository')}</TooltipContent>
+        </Tooltip>
       </div>
 
-      <RepositoryDialogClient
+      <RepositoryFormDialogClient
         open={connectDialogOpen}
         onOpenChange={setConnectDialogOpen}
         onSubmit={handleConnectRepository}
