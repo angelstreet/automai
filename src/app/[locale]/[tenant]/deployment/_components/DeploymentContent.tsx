@@ -1,8 +1,10 @@
 import { getDeployments } from '@/app/actions/deploymentsAction';
 import { getRepositories } from '@/app/actions/repositoriesAction';
-import { DeploymentProvider } from '@/app/providers/DeploymentProvider';
 
-import { DeploymentEmptyStateClient, DeploymentList } from '.';
+import DeploymentEventListener from './client/DeploymentEventListener';
+import { DeploymentListClient } from './client/DeploymentListClient';
+
+import { DeploymentEmptyStateClient } from '.';
 
 export async function DeploymentContent() {
   // Fetch data at the server level
@@ -19,24 +21,21 @@ export async function DeploymentContent() {
     }
 
     return (
-      <DeploymentProvider
-        initialDeployments={[]}
-        initialRepositories={repositories}
-        initialLoading={false}
-      >
-        <DeploymentEmptyStateClient errorMessage={deploymentsResponse.error} />
-      </DeploymentProvider>
+      <>
+        <DeploymentEventListener />
+        <DeploymentEmptyStateClient
+          errorMessage={deploymentsResponse.error}
+          initialRepositories={repositories}
+        />
+      </>
     );
   }
 
-  // Otherwise, show the deployment list wrapped in provider
+  // Otherwise, show the deployment list
   return (
-    <DeploymentProvider
-      initialDeployments={deployments}
-      initialRepositories={repositories}
-      initialLoading={false}
-    >
-      <DeploymentListClient deployments={deployments} repositories={repositories} />
-    </DeploymentProvider>
+    <>
+      <DeploymentEventListener />
+      <DeploymentListClient initialDeployments={deployments} initialRepositories={repositories} />
+    </>
   );
 }

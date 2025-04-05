@@ -6,20 +6,24 @@ import { useTranslations } from 'next-intl';
 import { Alert, AlertDescription, AlertTitle } from '@/components/shadcn/alert';
 import { Button } from '@/components/shadcn/button';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { DeploymentEvents } from './DeploymentEventListener';
+import { Repository } from '@/types/component/repositoryComponentType';
 
 interface DeploymentEmptyStateClientProps {
   errorMessage?: string;
+  initialRepositories?: Repository[];
 }
 
-export function DeploymentEmptyStateClient({ errorMessage }: DeploymentEmptyStateClientProps) {
+export function DeploymentEmptyStateClient({
+  errorMessage,
+  initialRepositories = [],
+}: DeploymentEmptyStateClientProps) {
   const t = useTranslations('deployment');
 
   const handleNewDeployment = () => {
-    // Find and click the deployment button directly
-    const newDeploymentButton = document.getElementById('new-deployment-button');
-    if (newDeploymentButton) {
-      (newDeploymentButton as HTMLButtonElement).click();
-    }
+    console.log('[@component:DeploymentEmptyStateClient] Requesting new deployment dialog');
+    // Dispatch event instead of direct DOM manipulation
+    window.dispatchEvent(new Event(DeploymentEvents.OPEN_DEPLOYMENT_DIALOG));
   };
 
   return (

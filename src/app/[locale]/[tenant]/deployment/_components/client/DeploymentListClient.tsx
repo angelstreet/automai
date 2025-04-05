@@ -18,21 +18,30 @@ import { Button } from '@/components/shadcn/button';
 import { useToast } from '@/components/shadcn/use-toast';
 import { useDeployment } from '@/hooks';
 import { getFormattedTime } from '@/lib/utils/deploymentUtils';
-import { Deployment, Repository } from '@/types/component/deploymentComponentType';
+import { Deployment } from '@/types/component/deploymentComponentType';
+import { Repository } from '@/types/component/repositoryComponentType';
 
 import DeploymentStatusBadgeClient from './DeploymentStatusBadgeClient';
 
 interface DeploymentListProps {
-  deployments: Deployment[];
-  repositories?: Repository[];
+  initialDeployments: Deployment[];
+  initialRepositories?: Repository[];
   onViewDeployment?: (deploymentId: string) => void;
 }
 
 export function DeploymentListClient({
-  deployments = [],
-  repositories = [],
+  initialDeployments = [],
+  initialRepositories = [],
   onViewDeployment,
 }: DeploymentListProps) {
+  // Use the deployment hook to get data (initially using initialDeployments/initialRepositories)
+  const {
+    deployments,
+    isLoading: _isLoadingData,
+    deleteDeployment,
+    runDeployment,
+  } = useDeployment();
+
   const { toast } = useToast();
   const router = useRouter();
 
@@ -48,18 +57,22 @@ export function DeploymentListClient({
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState<string | null>(null);
 
+  // Use initial deployments for first render, then update with data from React Query
+  const displayDeploymentData = deployments.length > 0 ? deployments : initialDeployments;
+  const displayRepositoryData = initialRepositories;
+
   useEffect(() => {
     console.log('[DeploymentList] Loading state:', {
       isRefreshing,
-      deployments: deployments.length,
+      deployments: displayDeploymentData.length,
       hasAttemptedLoad,
     });
     setHasAttemptedLoad(true);
-  }, [isRefreshing, deployments.length, hasAttemptedLoad]);
+  }, [isRefreshing, displayDeploymentData.length, hasAttemptedLoad]);
 
   useEffect(() => {
-    if (repositories && repositories.length > 0) {
-      const repoMap = repositories.reduce(
+    if (displayRepositoryData && displayRepositoryData.length > 0) {
+      const repoMap = displayRepositoryData.reduce(
         (acc, repo) => {
           acc[repo.id] = repo;
           return acc;
@@ -68,7 +81,7 @@ export function DeploymentListClient({
       );
       setRepositoriesMap(repoMap);
     }
-  }, [repositories]);
+  }, [displayRepositoryData]);
 
   const handleViewDeployment = (deployment: Deployment, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -85,15 +98,12 @@ export function DeploymentListClient({
     setIsDeleteDialogOpen(true);
   };
 
-  // Use the deployment hook
-  const { deleteDeployment, runDeployment } = useDeployment();
-
   const handleConfirmDelete = async () => {
     if (!selectedDeployment) return;
     try {
       setActionInProgress(selectedDeployment.id);
       const result = await deleteDeployment(selectedDeployment.id);
-      if (result.success) {
+      if (result && result.success) {
         toast({
           title: 'Deployment Deleted',
           description: 'Successfully deleted.',
@@ -101,7 +111,11 @@ export function DeploymentListClient({
         });
         router.refresh();
       } else {
-        toast({ title: 'Error', description: 'Failed to delete', variant: 'destructive' });
+        toast({
+          title: 'Error',
+          description: result?.error || 'Failed to delete',
+          variant: 'destructive',
+        });
       }
     } catch (error: any) {
       toast({
@@ -122,15 +136,22 @@ export function DeploymentListClient({
   };
 
   const getFilteredDeployments = () => {
-    return deployments.filter((deployment) => {
-      if (activeTab === 'scheduled' && deployment.scheduleType !== 'scheduled') return false;
+    return displayDeploymentData.filter((deployment) => {
+      if (
+        activeTab === 'scheduled' &&
+        deployment.scheduleType !== 'now' &&
+        deployment.scheduleType !== 'later' &&
+        deployment.scheduleType !== 'cron'
+      )
+        return false;
       if (activeTab === 'pending' && deployment.status !== 'pending') return false;
-      if (activeTab === 'active' && deployment.status === 'in_progress') return true;
+      if (activeTab === 'active' && deployment.status !== 'running') return false;
       if (
         activeTab === 'completed' &&
-        (deployment.status === 'success' || deployment.status === 'failed')
+        deployment.status !== 'success' &&
+        deployment.status !== 'failed'
       )
-        return true;
+        return false;
       const repoName = getRepositoryName(deployment);
       const matchesSearch =
         searchQuery === '' ||
