@@ -11,6 +11,7 @@ import { Host } from '@/types/component/hostComponentType';
 
 import { HostGridClient } from './HostGridClient';
 import { HostTableClient } from './HostTableClient';
+import { OPEN_HOST_DIALOG } from './HostsEventListener';
 
 interface HostListClientProps {
   initialHosts: Host[];
@@ -128,7 +129,7 @@ export default function HostListClient({ initialHosts }: HostListClientProps) {
           description="Add your first host to get started"
           action={
             <Button
-              onClick={() => document.getElementById('add-host-button')?.click()}
+              onClick={() => window.dispatchEvent(new Event(OPEN_HOST_DIALOG))}
               size="sm"
               className="gap-1"
             >
