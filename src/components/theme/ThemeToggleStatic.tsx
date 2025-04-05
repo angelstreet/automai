@@ -24,16 +24,16 @@ export function ThemeToggleStatic() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="icon" className="rounded-full">
+        <Button variant="outline" size="icon" className="rounded-full h-8 w-8">
           {!isMounted ? (
             // Default icon during server render and before hydration
-            <div className="h-5 w-5 rounded-full bg-primary/20 animate-pulse" />
+            <div className="h-4 w-4 rounded-full bg-primary/20 animate-pulse" />
           ) : resolvedTheme === 'light' ? (
-            <Sun className="h-5 w-5" />
+            <Sun className="h-4 w-4" />
           ) : resolvedTheme === 'dark' ? (
-            <Moon className="h-5 w-5" />
+            <Moon className="h-4 w-4" />
           ) : (
-            <Cloud className="h-5 w-5" />
+            <Cloud className="h-4 w-4" />
           )}
           <span className="sr-only">Toggle theme</span>
         </Button>

@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
 
+import { STORAGE_KEYS, ViewMode, DEFAULT_VIEW_MODE } from '@/app/[locale]/[tenant]/hosts/constants';
 import {
   getHosts,
   createHost,
@@ -11,7 +12,6 @@ import {
   testHostConnection,
   getHostById,
 } from '@/app/actions/hostsAction';
-import { STORAGE_KEYS, ViewMode, DEFAULT_VIEW_MODE } from '@/app/[locale]/[tenant]/hosts/constants';
 import { useToast } from '@/components/shadcn/use-toast';
 
 /**
