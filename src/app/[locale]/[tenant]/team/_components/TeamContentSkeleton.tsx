@@ -3,7 +3,7 @@
 import { Skeleton } from '@/components/shadcn/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 
-export default function TeamSkeleton() {
+export default function TeamContentSkeleton() {
   return (
     <div className="space-y-6">
       {/* Tabs Skeleton */}

@@ -1,7 +1,3 @@
-'use client';
-
-import { useTranslations } from 'next-intl';
-
 import { Card, CardContent, CardHeader } from '@/components/shadcn/card';
 import { Skeleton } from '@/components/shadcn/skeleton';
 import {
@@ -13,9 +9,7 @@ import {
   TableRow,
 } from '@/components/shadcn/table';
 
-export default function MembersTabSkeleton() {
-  const t = useTranslations('team');
-
+export default function TeamMembersTableSkeleton() {
   return (
     <Card>
       <CardHeader className="py-2">

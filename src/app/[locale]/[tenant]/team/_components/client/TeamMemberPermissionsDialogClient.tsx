@@ -218,9 +218,11 @@ const EditPermissionsDialog = ({
             <Table className="text-xs">
               <TableHeader className="bg-background sticky top-0 z-10">
                 <TableRow>
-                  <TableHead className="py-2 w-[150px]">{t('members_edit_resource')}</TableHead>
+                  <TableHead className="py-2 w-[150px] min-w-[150px]">
+                    {t('members_edit_resource')}
+                  </TableHead>
                   {Object.keys(PERMISSIONS).map((perm) => (
-                    <TableHead key={perm} className="text-center py-2 px-1 w-[64px]">
+                    <TableHead key={perm} className="text-center py-2 px-1 w-[80px] min-w-[80px]">
                       {PERMISSIONS[perm]}
                     </TableHead>
                   ))}
@@ -229,11 +231,13 @@ const EditPermissionsDialog = ({
               <TableBody>
                 {Object.keys(permissions).map((resource) => (
                   <TableRow key={resource} className="h-8">
-                    <TableCell className="font-medium py-1">{resource.replace('_', ' ')}</TableCell>
+                    <TableCell className="font-medium py-1 w-[150px] min-w-[150px]">
+                      {resource.replace('_', ' ')}
+                    </TableCell>
                     {Object.keys(PERMISSIONS).map((permission) => (
                       <TableCell
                         key={`${resource}-${permission}`}
-                        className="text-center py-1 px-1"
+                        className="text-center py-1 px-1 w-[80px] min-w-[80px]"
                       >
                         <Checkbox
                           className="h-4 w-4"

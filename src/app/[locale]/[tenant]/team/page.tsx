@@ -5,9 +5,9 @@ import { getTeamDetails, getTeamResourceCounts } from '@/app/actions/teamAction'
 import { getUser } from '@/app/actions/userAction';
 import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 
+import TeamContentSkeleton from './_components/TeamContentSkeleton';
 import TeamHeader from './_components/TeamHeader';
 import TeamOverviewSkeleton from './_components/TeamOverviewSkeleton';
-import TeamSkeleton from './_components/TeamSkeleton';
 import TeamActionsClient from './_components/client/TeamActionsClient';
 import TeamContentClient from './_components/client/TeamContentClient';
 
@@ -54,7 +54,7 @@ export default async function TeamPage() {
       description={t('desc')}
       actions={<TeamActionsClient />}
     >
-      <Suspense fallback={<TeamSkeleton />}>
+      <Suspense fallback={<TeamContentSkeleton />}>
         {/* TeamHeader gets details from TeamContext */}
         <TeamHeader />
         <Suspense fallback={<TeamOverviewSkeleton />}>
