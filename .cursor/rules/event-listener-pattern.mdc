@@ -1,0 +1,224 @@
+---
+description: Documentation for the event-based communication pattern using EventListener components
+globs: ["**/*/client/**/*.tsx"]
+alwaysApply: false
+---
+
+# Event Listener Pattern
+
+## Overview
+
+The Event Listener pattern provides a standardized approach for component communication across the application. It uses browser's native event system combined with dedicated listener components to create loosely coupled interactions. This pattern can be used on its own or in combination with Zustand for more robust state management.
+
+## Key Principles
+
+1. **Centralized Constants**: All event name constants are defined and exported directly from their respective EventListener components
+2. **Dedicated Listener Components**: Each feature domain has its own EventListener component (e.g., `HostsEventListener.tsx`, `CICDEventListener.tsx`)
+3. **No Cross-Domain Events**: Events should be scoped to their feature domain
+4. **Direct Imports**: Components import event constants directly from their domain's EventListener
+5. **State Management Options**: Can be combined with Zustand stores for persistent shared state
+
+## Implementation
+
+### Event Listener Component Structure
+
+```typescript
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+
+// Define and export event constants here
+export const REFRESH_DOMAIN = 'REFRESH_DOMAIN';
+export const REFRESH_DOMAIN_COMPLETE = 'REFRESH_DOMAIN_COMPLETE';
+export const OPEN_DOMAIN_DIALOG = 'OPEN_DOMAIN_DIALOG';
+export const TOGGLE_DOMAIN_VIEW_MODE = 'TOGGLE_DOMAIN_VIEW_MODE';
+
+export default function DomainEventListener() {
+  const router = useRouter();
+
+  useEffect(() => {
+    // Event handlers
+    const handleRefreshComplete = () => {
+      console.log('[@component:DomainEventListener] Refreshing route');
+      router.refresh();
+    };
+
+    // Register event listeners
+    window.addEventListener(REFRESH_DOMAIN_COMPLETE, handleRefreshComplete);
+    
+    // Clean up listeners
+    return () => {
+      window.removeEventListener(REFRESH_DOMAIN_COMPLETE, handleRefreshComplete);
+    };
+  }, [router]);
+
+  // Listener components don't render anything
+  return null;
+}
+```
+
+### Importing Constants
+
+Always import directly from the EventListener component:
+
+```typescript
+// CORRECT
+import { REFRESH_DOMAIN_COMPLETE } from './DomainEventListener';
+
+// INCORRECT - don't import from constants.ts
+import { REFRESH_DOMAIN_COMPLETE } from '../../constants';
+```
+
+### Dispatching Events
+
+```typescript
+// Simple event
+window.dispatchEvent(new Event(REFRESH_DOMAIN_COMPLETE));
+
+// Event with data
+window.dispatchEvent(
+  new CustomEvent(DOMAIN_TESTING_CONNECTION, {
+    detail: { itemId: item.id }
+  })
+);
+```
+
+## Complementary Zustand Integration
+
+For cases where you need both event-based communication and shared state management, you can combine the Event Listener pattern with Zustand:
+
+### Creating a Zustand Store
+
+```typescript
+// src/store/domainStore.ts
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+
+interface DomainState {
+  // State properties
+  viewMode: 'grid' | 'table';
+  // Actions
+  setViewMode: (mode: 'grid' | 'table') => void;
+  toggleViewMode: () => void;
+}
+
+export const useDomainStore = create<DomainState>()(
+  persist(
+    (set) => ({
+      viewMode: 'grid', // default value
+      setViewMode: (mode) => set({ viewMode: mode }),
+      toggleViewMode: () => set((state) => ({ 
+        viewMode: state.viewMode === 'grid' ? 'table' : 'grid' 
+      })),
+    }),
+    { 
+      name: 'domain-store-key', // localStorage key
+    }
+  )
+);
+```
+
+### Using Zustand with Events
+
+```typescript
+import { TOGGLE_DOMAIN_VIEW_MODE } from './DomainEventListener';
+import { useDomainStore } from '@/store/domainStore';
+
+function ViewToggleButton() {
+  const { viewMode, toggleViewMode } = useDomainStore();
+  
+  const handleToggle = () => {
+    // Update state with Zustand
+    toggleViewMode();
+    
+    // Also dispatch event for listeners that need to respond
+    window.dispatchEvent(new Event(TOGGLE_DOMAIN_VIEW_MODE));
+  };
+  
+  return (
+    <Button onClick={handleToggle}>
+      {viewMode === 'grid' ? <ListIcon /> : <GridIcon />}
+    </Button>
+  );
+}
+```
+
+## When to Use Each Approach
+
+- **Events Only**: When you need component communication without persistent state
+- **Zustand Only**: When you need shared state management but no cross-component side effects
+- **Combined Approach**: When you need both persistent state and communication between unrelated components
+
+## Event Naming Conventions
+
+- **Format**: `VERB_DOMAIN_STATE`
+- **Examples**:
+  - `REFRESH_HOSTS_COMPLETE`
+  - `TOGGLE_HOST_VIEW_MODE`
+  - `OPEN_CICD_DIALOG`
+  - `CICD_TESTING_CONNECTION`
+
+## Best Practices
+
+1. **Do** define all event constants in the EventListener component
+2. **Do** use clear, descriptive event names that indicate action and domain
+3. **Do** create a dedicated EventListener component for each feature domain
+4. **Do** register the EventListener in your parent component
+5. **Do** consider Zustand for persistent state that needs to be shared between components
+6. **Don't** create cross-domain events that communicate between unrelated features
+7. **Don't** store event constants in constants.ts files
+8. **Don't** use DOM manipulation like `document.getElementById('id')?.click()`
+9. **Don't** use events for security-critical operations
+10. **Don't** duplicate state between Zustand stores and component state
+
+## Real-World Examples
+
+### HostsEventListener.tsx
+```typescript
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+
+// Define and export event constants
+export const REFRESH_HOSTS = 'REFRESH_HOSTS';
+export const REFRESH_HOSTS_COMPLETE = 'REFRESH_HOSTS_COMPLETE';
+export const OPEN_HOST_DIALOG = 'OPEN_HOST_DIALOG';
+export const TOGGLE_HOST_VIEW_MODE = 'TOGGLE_HOST_VIEW_MODE';
+
+export default function HostsEventListener() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const handleRefreshComplete = () => {
+      console.log('[@component:HostsEventListener] Refreshing route after Host operation');
+      router.refresh();
+    };
+
+    window.addEventListener(REFRESH_HOSTS_COMPLETE, handleRefreshComplete);
+    return () => {
+      window.removeEventListener(REFRESH_HOSTS_COMPLETE, handleRefreshComplete);
+    };
+  }, [router]);
+
+  return null;
+}
+```
+
+### Using Zustand with Events Example
+```typescript
+// In HostActionsClient.tsx
+import { TOGGLE_HOST_VIEW_MODE } from './HostsEventListener';
+import { useHostViewStore } from '@/store/hostViewStore';
+
+const { viewMode, toggleViewMode } = useHostViewStore();
+
+const handleViewModeToggle = () => {
+  // Toggle view mode in Zustand store
+  toggleViewMode();
+  
+  // Also dispatch event for any components listening
+  window.dispatchEvent(new Event(TOGGLE_HOST_VIEW_MODE));
+};
+``` 

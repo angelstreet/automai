@@ -6,14 +6,11 @@ import { useState, useEffect } from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
-import {
-  OPEN_HOST_DIALOG,
-  REFRESH_HOSTS,
-  TOGGLE_HOST_VIEW_MODE,
-} from '@/app/[locale]/[tenant]/hosts/constants';
 import { useHost } from '@/hooks/useHost';
+import { useHostViewStore } from '@/store/hostViewStore';
 
 import { HostFormDialogClient, FormData as ConnectionFormData } from './HostFormDialogClient';
+import { OPEN_HOST_DIALOG, REFRESH_HOSTS, TOGGLE_HOST_VIEW_MODE } from './HostsEventListener';
 
 interface HostActionsClientProps {
   hostCount?: number;
@@ -22,7 +19,9 @@ interface HostActionsClientProps {
 export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActionsClientProps) {
   const t = useTranslations('hosts');
   const c = useTranslations('common');
-  const { hosts, isLoading: isRefetching, refetchHosts, viewMode, toggleViewMode } = useHost();
+  const { hosts, isLoading: isRefetching, refetchHosts } = useHost();
+  // Get view mode state from Zustand store
+  const { viewMode, toggleViewMode } = useHostViewStore();
 
   const [showAddHost, setShowAddHost] = useState(false);
   const [formData, setFormData] = useState<ConnectionFormData>({
@@ -65,7 +64,7 @@ export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActio
     console.log(
       `[@component:HostActionsClient] Toggling view mode from ${viewMode} to ${viewMode === 'grid' ? 'table' : 'grid'}`,
     );
-    // Simply toggle the view mode in the hook - this will update state and localStorage
+    // Toggle view mode using Zustand store
     toggleViewMode();
     // Still dispatch the event for any listeners that might be interested
     window.dispatchEvent(new Event(TOGGLE_HOST_VIEW_MODE));

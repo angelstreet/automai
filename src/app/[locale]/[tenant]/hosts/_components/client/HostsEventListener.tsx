@@ -3,12 +3,11 @@
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
-import {
-  REFRESH_HOSTS,
-  REFRESH_HOSTS_COMPLETE,
-  OPEN_HOST_DIALOG,
-  TOGGLE_HOST_VIEW_MODE,
-} from '@/app/[locale]/[tenant]/hosts/constants';
+// Define and export event constants
+export const REFRESH_HOSTS = 'REFRESH_HOSTS';
+export const REFRESH_HOSTS_COMPLETE = 'REFRESH_HOSTS_COMPLETE';
+export const OPEN_HOST_DIALOG = 'OPEN_HOST_DIALOG';
+export const TOGGLE_HOST_VIEW_MODE = 'TOGGLE_HOST_VIEW_MODE';
 
 export default function HostsEventListener() {
   const router = useRouter();
@@ -27,8 +26,8 @@ export default function HostsEventListener() {
 
     const handleToggleViewMode = () => {
       console.log('[@component:HostsEventListener] Handling toggle view mode event');
-      // Do NOT refresh - this should be client-side only
-      // View mode toggle is handled by React state and localStorage
+      // No need to do anything here as Zustand will automatically update subscribers
+      // View mode toggle is handled by Zustand store
     };
 
     window.addEventListener(REFRESH_HOSTS_COMPLETE, handleRefreshComplete);

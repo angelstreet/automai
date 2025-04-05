@@ -345,6 +345,126 @@ export default async function CICDPage() {
 }
 ```
 
+## Component Communication Patterns
+
+Our application uses several patterns for component communication, each suited for different scenarios:
+
+### 1. Event-Based Communication Pattern (Basic Communication)
+
+For simple cross-component communication without persistent state:
+
+```
+┌─────────────────────┐     ┌────────────────────┐     ┌────────────────┐
+│ Component A         │ --> │ Custom DOM Event   │ --> │ Component B    │
+│ (Event Dispatcher)  │     │ (window.event)     │     │ (Event Listener)│
+└─────────────────────┘     └────────────────────┘     └────────────────┘
+```
+
+This pattern is ideal for simple notifications between unrelated components, like triggering a refresh or opening a dialog.
+
+**Example:**
+```typescript
+// Component A
+import { REFRESH_CICD_COMPLETE } from './CICDEventListener';
+window.dispatchEvent(new Event(REFRESH_CICD_COMPLETE));
+
+// Component B (via EventListener)
+window.addEventListener(REFRESH_CICD_COMPLETE, () => {
+  router.refresh();
+});
+```
+
+### 2. Zustand State Management (Shared State)
+
+For shared state that persists and updates multiple components:
+
+```
+┌──────────────────────────────────────────────────────────┐
+│ Zustand Store (useFeatureStore)                          │
+│ ┌────────────┐  ┌─────────────┐  ┌──────────────────┐    │
+│ │ State      │  │ Actions     │  │ Middleware       │    │
+│ │ viewMode   │  │ setViewMode │  │ persist          │    │
+│ │ ...        │  │ ...         │  │ ...              │    │
+│ └────────────┘  └─────────────┘  └──────────────────┘    │
+└───────┬──────────────────┬───────────────────┬───────────┘
+        │                  │                   │
+        ▼                  ▼                   ▼
+┌───────────────┐  ┌───────────────┐  ┌───────────────┐
+│ Component A   │  │ Component B   │  │ Component C   │
+└───────────────┘  └───────────────┘  └───────────────┘
+```
+
+This pattern is ideal for state that needs to be shared between multiple components, especially when those components aren't directly related in the component tree.
+
+**Example:**
+```typescript
+// In store/viewStore.ts
+export const useViewStore = create(persist(
+  (set) => ({
+    viewMode: 'grid',
+    toggleViewMode: () => set(state => ({ 
+      viewMode: state.viewMode === 'grid' ? 'table' : 'grid' 
+    }))
+  }),
+  { name: 'view-store' }
+));
+
+// In components
+const { viewMode, toggleViewMode } = useViewStore();
+```
+
+### 3. Combined Pattern (Recommended Approach)
+
+For complex scenarios requiring both shared state and side effects:
+
+```
+┌───────────────────┐     ┌───────────────────┐
+│ Zustand Store     │     │ DOM Events        │
+│ (Shared State)    │ ─┬─ │ (Side Effects)    │
+└───────────────────┘  │  └───────────────────┘
+         │             │           │
+         │             │           │
+         ▼             │           ▼
+┌───────────────────┐  │  ┌───────────────────┐
+│ Component A       │  │  │ EventListener     │
+│ (State Consumer)  │  └─>│ (Event Handler)   │
+└───────────────────┘     └───────────────────┘
+```
+
+This pattern uses Zustand for state management while still leveraging the event system for side effects like route refreshes.
+
+**Example:**
+```typescript
+// In a component
+const { viewMode, toggleViewMode } = useViewStore();
+
+const handleViewToggle = () => {
+  // Update Zustand state
+  toggleViewMode();
+  
+  // Also dispatch event for side effects
+  window.dispatchEvent(new Event(TOGGLE_VIEW_MODE));
+};
+```
+
+### Choosing the Right Pattern
+
+- **Use Event-Based Pattern When:** 
+  - Components need simple communication without persistent state
+  - You need to trigger route refreshes or server revalidation
+  - Components are unrelated in the component tree
+
+- **Use Zustand When:**
+  - State needs to be shared across multiple components
+  - State needs to persist across page refreshes
+  - You need fine-grained control over state updates
+  - You want to avoid React Context and prop drilling
+
+- **Use Combined Pattern When:**
+  - You need both persistent shared state AND side effects
+  - Components need to both share state and trigger route refreshes
+  - You have complex state with simple notifications
+
 ## Common Patterns and Best Practices
 
 ### Component Naming Patterns

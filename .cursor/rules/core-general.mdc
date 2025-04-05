@@ -158,5 +158,11 @@ export async function someServerAction() {
   - Implement toggle functionality in a custom hook that manages both state and persistence
   - Use event-based communication (`TOGGLE_VIEW_MODE`) for cross-component coordination
   - Render the appropriate view with conditional logic based on the current mode
+- ✅ Consider Zustand for shared state management:
+  - Use Zustand when state needs to be shared across multiple components
+  - Combine with event listeners for full component tree coordination
+  - Leverage Zustand's built-in persistence for automatic localStorage integration
+  - Example: `useHostViewStore` for view mode preferences
+- ✅ For event listener pattern, see detailed documentation in [event-listener-pattern.mdc](.cursor/rules/event-listener-pattern.mdc)
 - ❌ NEVER rely on event-based communication for security-critical operations
 - ❌ NEVER use direct DOM manipulation like `document.getElementById('some-id')?.click()` for component communication

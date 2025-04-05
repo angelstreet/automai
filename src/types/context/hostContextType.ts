@@ -11,7 +11,7 @@ import {
   HostConnectionStatus,
   HostAnalytics,
   VMType,
-  VMConfig
+  VMConfig,
 } from '@/types/component/hostComponentType';
 
 // Re-export core types for convenience
@@ -23,8 +23,26 @@ export type {
   HostConnectionStatus,
   HostAnalytics,
   VMType,
-  VMConfig
+  VMConfig,
 };
+
+/**
+ * Host input interface for creating and updating hosts
+ */
+export interface HostInput {
+  name: string;
+  description?: string;
+  type: HostConnectionType;
+  ip: string;
+  port: number;
+  username?: string;
+  password?: string;
+  user?: string;
+  status: HostStatus;
+  is_windows?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
 
 /**
  * Host data interface for the context

@@ -3,10 +3,6 @@ import { Edit, Trash, AlertCircle, RefreshCcw, MoreHorizontal, PlusCircle } from
 import { useTranslations } from 'next-intl';
 import React, { useState, useCallback } from 'react';
 
-// Define event constants locally instead of importing from provider
-const CICD_TESTING_CONNECTION = 'cicd-testing-connection';
-const CICD_TESTING_CONNECTION_COMPLETE = 'cicd-testing-connection-complete';
-
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,7 +38,11 @@ import type { CICDProvider } from '@/types/component/cicdComponentType';
 
 import { CICDFormDialogClient } from '..';
 
-import { OPEN_CICD_DIALOG } from './CICDEventListener';
+import {
+  OPEN_CICD_DIALOG,
+  CICD_TESTING_CONNECTION,
+  CICD_TESTING_CONNECTION_COMPLETE,
+} from './CICDEventListener';
 
 interface CICDTableClientProps {
   initialProviders: CICDProvider[];

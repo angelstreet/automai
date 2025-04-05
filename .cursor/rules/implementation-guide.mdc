@@ -13,6 +13,10 @@ This document provides a step-by-step guide for implementing new features in the
 ┌────────────────┐     ┌───────────────┐     ┌────────────────┐     ┌──────────────┐     ┌───────────────┐     ┌────────────────┐
 │ 1. Define Types│  →  │ 2. DB Layer   │  →  │ 3. Server Action│  →  │ 4. React Hook│  →  │ 5. Components │  →  │ 6. Event Listen│
 └────────────────┘     └───────────────┘     └────────────────┘     └──────────────┘     └───────────────┘     └────────────────┘
+                                                                          ↓
+                                                                    ┌──────────────┐
+                                                                    │ 4a. Zustand  │  Optional for shared state
+                                                                    └──────────────┘
 ```
 
 ## Step 1: Define Types
@@ -768,3 +772,57 @@ useEffect(() => {
 ```
 
 This event-based approach creates loose coupling between components, follows React's unidirectional data flow, and is much easier to test and maintain.
+
+## Step 4a: Create Zustand Store (Optional)
+
+For features that require shared state across multiple components, create a Zustand store:
+
+```typescript
+// /store/featureStore.ts
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+
+interface FeatureState {
+  viewMode: 'grid' | 'table';
+  setViewMode: (mode: 'grid' | 'table') => void;
+  toggleViewMode: () => void;
+}
+
+export const useFeatureStore = create<FeatureState>()(
+  persist(
+    (set) => ({
+      viewMode: 'grid', // default value
+      setViewMode: (mode) => set({ viewMode: mode }),
+      toggleViewMode: () => set((state) => ({ 
+        viewMode: state.viewMode === 'grid' ? 'table' : 'grid' 
+      })),
+    }),
+    { 
+      name: 'feature-view-settings', // localStorage key
+    }
+  )
+);
+```
+
+Use the store in components:
+
+```typescript
+import { useFeatureStore } from '@/store/featureStore';
+
+function FeatureViewToggle() {
+  const { viewMode, toggleViewMode } = useFeatureStore();
+  
+  return (
+    <Button onClick={toggleViewMode}>
+      {viewMode === 'grid' ? 'Switch to Table' : 'Switch to Grid'}
+    </Button>
+  );
+}
+```
+
+### When to Use Zustand
+
+- When state needs to be shared across multiple components
+- When state needs to persist across page refreshes
+- When you need fine-grained control over state updates
+- As a simpler alternative to Context API for global state

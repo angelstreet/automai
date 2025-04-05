@@ -1,9 +1,7 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState, useEffect } from 'react';
 
-import { STORAGE_KEYS, ViewMode, DEFAULT_VIEW_MODE } from '@/app/[locale]/[tenant]/hosts/constants';
 import {
   getHosts,
   createHost,
@@ -13,12 +11,12 @@ import {
   getHostById,
 } from '@/app/actions/hostsAction';
 import { useToast } from '@/components/shadcn/use-toast';
+import { HostInput } from '@/types/context/hostContextType';
 
 /**
- * Hook for managing hosts and view preferences
+ * Hook for managing hosts
  *
  * Provides functions for fetching, creating, updating, deleting, and testing hosts
- * Also manages view mode preference (grid/table)
  * Uses React Query for data fetching and caching
  */
 export function useHost() {
@@ -36,38 +34,6 @@ export function useHost() {
     queryFn: () => getHosts(),
   });
 
-  // View mode state management
-  const [viewMode, setViewMode] = useState<ViewMode>(DEFAULT_VIEW_MODE); // Always start with default
-
-  // Initialize view mode from localStorage, but only on client side
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedMode = localStorage.getItem(STORAGE_KEYS.HOST_VIEW_MODE);
-      console.log(
-        `[@hook:useHost] Loading view mode from localStorage: ${savedMode || 'none, using default'}`,
-      );
-
-      if (savedMode === 'grid' || savedMode === 'table') {
-        setViewMode(savedMode as ViewMode);
-      }
-    }
-  }, []);
-
-  // Update localStorage when viewMode changes, skip initial render
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      console.log(`[@hook:useHost] Saving view mode to localStorage: ${viewMode}`);
-      localStorage.setItem(STORAGE_KEYS.HOST_VIEW_MODE, viewMode);
-    }
-  }, [viewMode]);
-
-  // Toggle view mode function
-  const toggleViewMode = () => {
-    const newMode = viewMode === 'grid' ? 'table' : 'grid';
-    console.log(`[@hook:useHost] Toggling view mode from ${viewMode} to ${newMode}`);
-    setViewMode(newMode);
-  };
-
   // Get host by ID query factory
   const getHostQuery = (id: string) => {
     return useQuery({
@@ -79,7 +45,18 @@ export function useHost() {
 
   // Create host mutation
   const createHostMutation = useMutation({
-    mutationFn: (data: HostInput) => createHost(data),
+    mutationFn: (data: HostInput) => {
+      // Ensure required fields have default values
+      const currentDateTime = new Date().toISOString();
+      const hostData = {
+        ...data,
+        status: data.status || 'connected',
+        created_at: data.created_at || currentDateTime,
+        updated_at: data.updated_at || currentDateTime,
+        is_windows: data.is_windows ?? false,
+      };
+      return createHost(hostData);
+    },
     onSuccess: (response) => {
       if (response.success) {
         queryClient.invalidateQueries({ queryKey: ['hosts'] });
@@ -103,7 +80,14 @@ export function useHost() {
 
   // Update host mutation
   const updateHostMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<HostInput> }) => updateHost(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Partial<HostInput> }) => {
+      // Add updated_at timestamp if not provided
+      const updatedData = {
+        ...data,
+        updated_at: data.updated_at || new Date().toISOString(),
+      };
+      return updateHost(id, updatedData);
+    },
     onSuccess: (response) => {
       if (response.success) {
         toast({
@@ -111,7 +95,9 @@ export function useHost() {
           description: 'Host updated successfully',
         });
         queryClient.invalidateQueries({ queryKey: ['hosts'] });
-        queryClient.invalidateQueries({ queryKey: ['host', response.data?.id] });
+        if (response.data && 'id' in response.data) {
+          queryClient.invalidateQueries({ queryKey: ['host', response.data.id] });
+        }
       } else {
         toast({
           title: 'Error',
@@ -173,7 +159,19 @@ export function useHost() {
       }
       // Refresh host data after testing
       queryClient.invalidateQueries({ queryKey: ['hosts'] });
-      queryClient.invalidateQueries({ queryKey: ['host', response.data?.id] });
+
+      // Check if response has data property and it contains an id
+      if (
+        typeof response === 'object' &&
+        response !== null &&
+        'data' in response &&
+        response.data &&
+        typeof response.data === 'object' &&
+        'id' in response.data
+      ) {
+        queryClient.invalidateQueries({ queryKey: ['host', response.data.id] });
+      }
+
       return response;
     },
     onError: (error: any) => {
@@ -188,11 +186,6 @@ export function useHost() {
   return {
     // Data
     hosts: hostsResponse?.data || [],
-
-    // View mode
-    viewMode,
-    setViewMode,
-    toggleViewMode,
 
     // Status
     isLoading: isLoadingHosts,

@@ -4,10 +4,8 @@ import { Suspense } from 'react';
 import { getHosts } from '@/app/actions/hostsAction';
 import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 
-import HostContent from './_components/HostContent';
-import HostSkeleton from './_components/HostSkeleton';
-import { HostActionsClient } from './_components/client/HostActionsClient';
-import HostsEventListener from './_components/client/HostsEventListener';
+// Import from barrel file instead of direct paths
+import { HostContent, HostSkeleton, HostActionsClient, HostsEventListener } from './_components';
 
 export default async function HostsPage() {
   const t = await getTranslations('hosts');
@@ -27,7 +25,7 @@ export default async function HostsPage() {
       {/* Event listener component for handling refresh and view toggling events */}
       <HostsEventListener />
 
-      <Suspense fallback={<HostSkeleton />}>
+      <Suspense fallback={<HostSkeleton hostCount={hostCount} />}>
         <HostContent />
       </Suspense>
     </FeaturePageContainer>
