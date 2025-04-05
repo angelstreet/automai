@@ -28,25 +28,12 @@ export default function DeploymentEventListener() {
       router.refresh();
     };
 
-    const handleOpenDialog = () => {
-      console.log('[@component:DeploymentEventListener] Opening deployment dialog');
-
-      // Dispatch an internal event that the dialog component will listen for
-      // This allows components that manage dialogs to react to this event
-      const dialogOpenEvent = new CustomEvent('INTERNAL_OPEN_DEPLOYMENT_DIALOG', {
-        detail: { source: 'event-listener' },
-      });
-      window.dispatchEvent(dialogOpenEvent);
-    };
-
     // Set up event listeners
     window.addEventListener(DeploymentEvents.REFRESH_DEPLOYMENTS, handleRefreshDeployments);
-    window.addEventListener(DeploymentEvents.OPEN_DEPLOYMENT_DIALOG, handleOpenDialog);
 
     // Clean up event listeners
     return () => {
       window.removeEventListener(DeploymentEvents.REFRESH_DEPLOYMENTS, handleRefreshDeployments);
-      window.removeEventListener(DeploymentEvents.OPEN_DEPLOYMENT_DIALOG, handleOpenDialog);
     };
   }, [router]);
 

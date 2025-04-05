@@ -21,6 +21,7 @@ import { getFormattedTime } from '@/lib/utils/deploymentUtils';
 import { Deployment } from '@/types/component/deploymentComponentType';
 import { Repository } from '@/types/component/repositoryComponentType';
 
+import { DeploymentActionsClient } from './DeploymentActionsClient';
 import { DeploymentEvents } from './DeploymentEventListener';
 import DeploymentStatusBadgeClient from './DeploymentStatusBadgeClient';
 
@@ -243,6 +244,9 @@ export function DeploymentListClient({
 
   return (
     <div className="w-full">
+      <div className="hidden">
+        <DeploymentActionsClient deploymentCount={displayDeploymentData.length} />
+      </div>
       <div className="bg-transparent dark:bg-transparent rounded-lg border-0 shadow-none">
         <div className="p-3 border-b border-gray-200 dark:border-gray-700">
           <div className="flex flex-col sm:flex-row gap-3">

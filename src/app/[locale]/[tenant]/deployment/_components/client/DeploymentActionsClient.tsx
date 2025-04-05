@@ -8,6 +8,7 @@ import { Button } from '@/components/shadcn/button';
 import { useHost, useCICD } from '@/hooks';
 import { useRepository } from '@/hooks/useRepository';
 
+import { DeploymentEvents } from './DeploymentEventListener';
 import { DeploymentWizardDialogClient } from './DeploymentWizardDialogClient';
 
 interface DeploymentActionsClientProps {
@@ -63,16 +64,16 @@ export function DeploymentActionsClient({
     return () => window.removeEventListener('refresh-deployments-complete', handleRefreshComplete);
   }, []);
 
-  // Listen for internal dialog open events
+  // Listen for dialog open events
   useEffect(() => {
-    const handleInternalOpenDialog = () => {
-      console.log('[DeploymentActions] Received internal open dialog event');
+    const handleOpenDialog = () => {
+      console.log('[@component:DeploymentActionsClient] Received open dialog event');
       setShowWizard(true);
     };
 
-    window.addEventListener('INTERNAL_OPEN_DEPLOYMENT_DIALOG', handleInternalOpenDialog);
+    window.addEventListener(DeploymentEvents.OPEN_DEPLOYMENT_DIALOG, handleOpenDialog);
     return () => {
-      window.removeEventListener('INTERNAL_OPEN_DEPLOYMENT_DIALOG', handleInternalOpenDialog);
+      window.removeEventListener(DeploymentEvents.OPEN_DEPLOYMENT_DIALOG, handleOpenDialog);
     };
   }, []);
 
