@@ -23,12 +23,12 @@ interface TeamTabContainerProps {
   };
 }
 
-export default function TeamTabContainerClient({ user, resourceCounts }: TeamTabContainerProps) {
+export default function TeamContentClient({ user, resourceCounts }: TeamTabContainerProps) {
   const searchParams = useSearchParams();
   const activeTab = searchParams.get('tab') || 'overview';
 
   // Get team data from context and user data
-  const { activeTeam } = useTeam('TeamTabContainerClient');
+  const { activeTeam } = useTeam('TeamContentClient');
   // Extract the actual subscription tier with better defaults
   // If the Team object doesn't have a subscription_tier, get it from the user's tenant if possible
   const subscriptionTier =

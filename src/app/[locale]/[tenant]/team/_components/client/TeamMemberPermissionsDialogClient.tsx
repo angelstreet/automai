@@ -162,7 +162,7 @@ const EditPermissionsDialog = ({
   if (isLoadingPermissions) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-full max-w-3xl mx-auto p-4">
+        <DialogContent className="w-auto max-w-fit md:min-w-[24rem] mx-auto p-4">
           <DialogHeader className="pb-2">
             <DialogTitle>{t('members_edit_title')}</DialogTitle>
           </DialogHeader>
@@ -177,7 +177,7 @@ const EditPermissionsDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-3xl mx-auto p-4">
+      <DialogContent className="w-auto max-w-fit md:min-w-[32rem] mx-auto p-4">
         <DialogHeader className="pb-2 space-y-1">
           <DialogTitle>{t('members_edit_title')}</DialogTitle>
           <DialogDescription className="text-xs">{t('members_edit_desc')}</DialogDescription>
