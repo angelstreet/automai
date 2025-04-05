@@ -35,6 +35,8 @@ import {
 } from '@/components/shadcn/tooltip';
 import { Host } from '@/types/component/hostComponentType';
 
+import { HOST_CONNECTION_TESTING, HOST_CONNECTION_TESTED } from './HostsEventListener';
+
 interface HostCardClientProps {
   host: Host & { animationDelay?: number };
   onDelete?: (id: string) => void;
@@ -68,6 +70,36 @@ function HostCardClient({ host, onDelete, onTestConnection }: HostCardClientProp
       hasOnDelete: !!onDelete,
     });
   }, [host.id, onTestConnection, onDelete]);
+
+  // Listen for host-specific connection testing events
+  useEffect(() => {
+    const handleTestingStarted = (event: CustomEvent) => {
+      // Only respond if this event is for this specific host
+      if (event.detail && event.detail.hostId === host.id) {
+        console.log(`[HostCardClient] Testing started for host ${host.id}`);
+        setIsRefreshing(true);
+        setLocalStatus('testing');
+      }
+    };
+
+    const handleTestingCompleted = (event: CustomEvent) => {
+      // Only respond if this event is for this specific host
+      if (event.detail && event.detail.hostId === host.id) {
+        console.log(`[HostCardClient] Testing completed for host ${host.id}`);
+        setIsRefreshing(false);
+        // Note: We don't set localStatus here because it's already handled by the host.status update
+      }
+    };
+
+    // Cast the event handler to EventListener to satisfy TypeScript
+    window.addEventListener(HOST_CONNECTION_TESTING, handleTestingStarted as EventListener);
+    window.addEventListener(HOST_CONNECTION_TESTED, handleTestingCompleted as EventListener);
+
+    return () => {
+      window.removeEventListener(HOST_CONNECTION_TESTING, handleTestingStarted as EventListener);
+      window.removeEventListener(HOST_CONNECTION_TESTED, handleTestingCompleted as EventListener);
+    };
+  }, [host.id]);
 
   const getStatusDot = (status: string) => {
     const baseClasses = 'h-4 w-4 rounded-full transition-colors duration-300';

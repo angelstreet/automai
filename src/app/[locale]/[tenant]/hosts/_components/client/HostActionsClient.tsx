@@ -10,7 +10,13 @@ import { useHost } from '@/hooks/useHost';
 import { useHostViewStore } from '@/store/hostViewStore';
 
 import { HostFormDialogClient, FormData as ConnectionFormData } from './HostFormDialogClient';
-import { OPEN_HOST_DIALOG, REFRESH_HOSTS, TOGGLE_HOST_VIEW_MODE } from './HostsEventListener';
+import {
+  OPEN_HOST_DIALOG,
+  REFRESH_HOSTS,
+  TEST_ALL_HOSTS_REQUESTED,
+  TEST_ALL_HOSTS_COMPLETE,
+  TOGGLE_HOST_VIEW_MODE,
+} from './HostsEventListener';
 
 interface HostActionsClientProps {
   hostCount?: number;
@@ -20,10 +26,12 @@ export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActio
   const t = useTranslations('hosts');
   const c = useTranslations('common');
   const { hosts, isLoading: isRefetching, refetchHosts } = useHost();
+
   // Get view mode state from Zustand store
   const { viewMode, toggleViewMode } = useHostViewStore();
 
   const [showAddHost, setShowAddHost] = useState(false);
+  const [isTestingHosts, setIsTestingHosts] = useState(false);
   const [formData, setFormData] = useState<ConnectionFormData>({
     name: '',
     description: '',
@@ -37,23 +45,39 @@ export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActio
   // Derive host count from React Query's hosts data, falling back to the prop
   const currentHostCount = hosts?.length ?? initialHostCount;
 
-  // Listen for external open dialog events
+  // Listen for test completion event
   useEffect(() => {
     const handleOpenDialog = () => {
       setShowAddHost(true);
     };
 
+    const handleTestingComplete = () => {
+      console.log('[@component:HostActionsClient] All hosts tested, stopping animation');
+      setIsTestingHosts(false);
+    };
+
     window.addEventListener(OPEN_HOST_DIALOG, handleOpenDialog);
+    window.addEventListener(TEST_ALL_HOSTS_COMPLETE, handleTestingComplete);
+
     return () => {
       window.removeEventListener(OPEN_HOST_DIALOG, handleOpenDialog);
+      window.removeEventListener(TEST_ALL_HOSTS_COMPLETE, handleTestingComplete);
     };
   }, []);
 
   const handleRefresh = async () => {
-    if (isRefetching) return;
-    console.log('[@component:HostActionsClient] Dispatching refresh hosts event');
+    if (isRefetching || isTestingHosts) return;
+
+    console.log('[@component:HostActionsClient] Starting hosts refresh and testing');
+    setIsTestingHosts(true);
+
+    // First refresh hosts data
     window.dispatchEvent(new Event(REFRESH_HOSTS));
     await refetchHosts();
+
+    // Then request testing all hosts via the custom event
+    // This will be handled by HostListClient
+    window.dispatchEvent(new Event(TEST_ALL_HOSTS_REQUESTED));
   };
 
   const handleAddHost = () => {
@@ -90,6 +114,9 @@ export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActio
     refetchHosts();
   };
 
+  // Determine if the button should animate
+  const isRefreshingState = isRefetching || isTestingHosts;
+
   return (
     <>
       <div className="flex items-center gap-2">
@@ -103,9 +130,9 @@ export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActio
               size="sm"
               className="h-8"
               onClick={handleRefresh}
-              disabled={isRefetching}
+              disabled={isRefreshingState}
             >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isRefetching ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshingState ? 'animate-spin' : ''}`} />
               {c('refresh')}
             </Button>
           </>

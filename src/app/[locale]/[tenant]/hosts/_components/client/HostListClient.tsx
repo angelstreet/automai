@@ -11,7 +11,13 @@ import { Host } from '@/types/component/hostComponentType';
 
 import { HostGridClient } from './HostGridClient';
 import { HostTableClient } from './HostTableClient';
-import { OPEN_HOST_DIALOG } from './HostsEventListener';
+import {
+  HOST_CONNECTION_TESTING,
+  HOST_CONNECTION_TESTED,
+  OPEN_HOST_DIALOG,
+  TEST_ALL_HOSTS_REQUESTED,
+  TEST_ALL_HOSTS_COMPLETE,
+} from './HostsEventListener';
 
 interface HostListClientProps {
   initialHosts: Host[];
@@ -54,6 +60,13 @@ export default function HostListClient({ initialHosts }: HostListClientProps) {
     try {
       console.log(`[@client:hosts:HostListClient] Testing connection for host: ${host.name}`);
 
+      // Dispatch event that connection testing has started WITH THE HOST ID
+      window.dispatchEvent(
+        new CustomEvent(HOST_CONNECTION_TESTING, {
+          detail: { hostId: host.id },
+        }),
+      );
+
       // Update local state to show testing status
       setHosts((prevHosts) =>
         prevHosts.map((h) => (h.id === host.id ? { ...h, status: 'testing' } : h)),
@@ -69,6 +82,13 @@ export default function HostListClient({ initialHosts }: HostListClientProps) {
         ),
       );
 
+      // Dispatch event that connection testing has completed WITH THE HOST ID
+      window.dispatchEvent(
+        new CustomEvent(HOST_CONNECTION_TESTED, {
+          detail: { hostId: host.id },
+        }),
+      );
+
       return result.success;
     } catch (error) {
       console.error(`[@client:hosts:HostListClient] Error testing connection:`, error);
@@ -76,6 +96,13 @@ export default function HostListClient({ initialHosts }: HostListClientProps) {
       // Update the host status to failed
       setHosts((prevHosts) =>
         prevHosts.map((h) => (h.id === host.id ? { ...h, status: 'failed' } : h)),
+      );
+
+      // Dispatch event that connection testing has completed WITH THE HOST ID (with error)
+      window.dispatchEvent(
+        new CustomEvent(HOST_CONNECTION_TESTED, {
+          detail: { hostId: host.id },
+        }),
       );
 
       return false;
@@ -118,6 +145,40 @@ export default function HostListClient({ initialHosts }: HostListClientProps) {
       console.error('[@client:hosts:HostListClient] Error deleting host:', error);
     }
   };
+
+  // Listen for "test all hosts" request
+  useEffect(() => {
+    const handleTestAllHosts = async () => {
+      console.log('[@component:HostListClient] Testing all hosts...');
+
+      if (!hosts || hosts.length === 0) {
+        console.log('[@component:HostListClient] No hosts to test');
+        window.dispatchEvent(new Event(TEST_ALL_HOSTS_COMPLETE));
+        return;
+      }
+
+      // Test each host one by one
+      console.log(`[@component:HostListClient] Testing ${hosts.length} hosts`);
+
+      for (const host of hosts) {
+        try {
+          console.log(`[@component:HostListClient] Testing host: ${host.name}`);
+          await handleTestConnection(host);
+        } catch (error) {
+          console.error(`[@component:HostListClient] Error testing host ${host.name}:`, error);
+        }
+      }
+
+      console.log('[@component:HostListClient] All hosts tested, dispatching complete event');
+      window.dispatchEvent(new Event(TEST_ALL_HOSTS_COMPLETE));
+    };
+
+    window.addEventListener(TEST_ALL_HOSTS_REQUESTED, handleTestAllHosts);
+
+    return () => {
+      window.removeEventListener(TEST_ALL_HOSTS_REQUESTED, handleTestAllHosts);
+    };
+  }, [hosts]); // Include hosts in dependencies so we always have the latest
 
   // Empty state for no hosts
   if (hosts.length === 0) {
