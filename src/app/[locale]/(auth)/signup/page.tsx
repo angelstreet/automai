@@ -11,12 +11,12 @@ import {
 } from '@/app/actions/authAction';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
-import { useUser } from '@/hooks';
 
 export default function SignUpPage() {
   const router = useRouter();
   const { locale } = useParams();
   const t = useTranslations('auth');
+  const c = useTranslations('common');
   const [name, setName] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -26,21 +26,23 @@ export default function SignUpPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [redirectCountdown, setRedirectCountdown] = React.useState(3);
 
-  const { user, loading, error: authError } = useUser(null, 'SignupPage');
-
   React.useEffect(() => {
-    if (user && !loading) {
-      router.push(`/${locale}/${user.user_metadata?.tenant_id || 'default'}/dashboard`);
-    }
-  }, [user, loading, router, locale]);
+    const checkSession = async () => {
+      try {
+        const hasSession =
+          localStorage.getItem('sb-auth-token') || sessionStorage.getItem('supabase.auth.token');
 
-  React.useEffect(() => {
-    if (authError) {
-      setError(authError.message);
-    }
-  }, [authError]);
+        if (hasSession) {
+          router.push(`/${locale}/`);
+        }
+      } catch (err) {
+        console.error('Session check error:', err);
+      }
+    };
 
-  // Remove automatic redirect - user needs to verify email first
+    checkSession();
+  }, [router, locale]);
+
   React.useEffect(() => {
     let timer: NodeJS.Timeout;
     if (success && redirectCountdown > 0) {
@@ -56,18 +58,15 @@ export default function SignUpPage() {
     setError('');
     setIsSubmitting(true);
 
-    // Validate that passwords match
     if (password !== confirmPassword) {
-      setError(t('error_passwords_do_not_match') || 'Passwords do not match');
+      setError(t('error_passwords_do_not_match'));
       setIsSubmitting(false);
       return;
     }
 
     try {
-      // Create user with server action - use absolute URL with https for Supabase email confirmation
-      // Ensure correct format to prevent CORS/redirect issues
       const baseUrl = window.location.origin;
-      const redirectUrl = `${baseUrl}/${locale}/login`; // Redirect to login after email confirmation instead of auth-redirect
+      const redirectUrl = `${baseUrl}/${locale}/login`;
       const result = await signUpAction(email, password, name, redirectUrl);
 
       if (result.error) {
@@ -98,7 +97,6 @@ export default function SignUpPage() {
       }
 
       if (result.data?.url) {
-        // Redirect to OAuth provider
         window.location.href = result.data.url;
       }
     } catch (err: any) {
@@ -128,17 +126,13 @@ export default function SignUpPage() {
 
       <div className="w-full max-w-md p-6 space-y-4 bg-white dark:bg-gray-800 rounded-lg shadow-md">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">{t('signup_title') || 'Create account'}</h1>
-          <p className="mt-1 text-gray-600 dark:text-gray-400">
-            {t('signup_desc') || 'Enter your details to create your account'}
-          </p>
+          <h1 className="text-2xl font-bold">{t('signup_title')}</h1>
+          <p className="mt-1 text-gray-600 dark:text-gray-400">{t('signup_desc')}</p>
         </div>
 
         {success ? (
           <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-md text-center">
-            <p className="text-green-700 dark:text-green-300">
-              {t('signup_success') || 'Account created successfully!'}
-            </p>
+            <p className="text-green-700 dark:text-green-300">{t('signup_success')}</p>
             <div className="mt-3">
               <Link
                 href={`/${locale}/login`}
@@ -161,7 +155,7 @@ export default function SignUpPage() {
                 onChange={(e) => setName(e.target.value)}
                 required
                 className="mt-1 border border-gray-200 dark:border-gray-700"
-                placeholder={t('signup_name_placeholder') || 'Your name'}
+                placeholder={t('signup_name_placeholder')}
                 autoComplete="name"
                 disabled={isSubmitting}
               />
@@ -169,7 +163,7 @@ export default function SignUpPage() {
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium">
-                {t('signin_email_label') || 'Email'}
+                {c('email')}
               </label>
               <Input
                 id="email"
@@ -178,7 +172,7 @@ export default function SignUpPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 className="mt-1 border border-gray-200 dark:border-gray-700"
-                placeholder={t('signin_email_placeholder') || 'name@example.com'}
+                placeholder={t('signin_email_placeholder')}
                 autoComplete="email"
                 disabled={isSubmitting}
               />
@@ -186,7 +180,7 @@ export default function SignUpPage() {
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium">
-                {t('signin_password_label') || 'Password'}
+                {c('password')}
               </label>
               <Input
                 id="password"
@@ -195,7 +189,7 @@ export default function SignUpPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="mt-1 border border-gray-200 dark:border-gray-700"
-                placeholder={t('signin_password_placeholder') || 'Enter your password'}
+                placeholder={t('signin_password_placeholder')}
                 autoComplete="new-password"
                 disabled={isSubmitting}
               />
@@ -203,7 +197,7 @@ export default function SignUpPage() {
 
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium">
-                {t('signup_confirm_password_label') || 'Confirm Password'}
+                {t('signup_confirm_password')}
               </label>
               <Input
                 id="confirmPassword"
@@ -212,7 +206,7 @@ export default function SignUpPage() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 className="mt-1 border border-gray-200 dark:border-gray-700"
-                placeholder={t('signup_confirm_password_placeholder') || 'Confirm your password'}
+                placeholder={t('signup_confirm_password_placeholder')}
                 autoComplete="new-password"
                 disabled={isSubmitting}
               />
@@ -225,9 +219,7 @@ export default function SignUpPage() {
             )}
 
             <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting
-                ? t('signup_signing') || 'Creating account...'
-                : t('signup_button') || 'Create account'}
+              {isSubmitting ? t('signup_signing') : t('signup_button')}
             </Button>
 
             <div className="relative my-2">
@@ -236,7 +228,7 @@ export default function SignUpPage() {
               </div>
               <div className="relative flex justify-center text-sm">
                 <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
-                  {t('signin_button') || 'Or continue with'}
+                  {t('or_continue_with')}
                 </span>
               </div>
             </div>
@@ -295,7 +287,7 @@ export default function SignUpPage() {
             href={`/${locale}/login`}
             className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
           >
-            {t('signin_link') || 'Sign in'}
+            {t('signin_link')}
           </Link>
         </div>
       </div>

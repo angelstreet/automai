@@ -7,25 +7,36 @@ import * as React from 'react';
 import { resetPasswordForEmail } from '@/app/actions/authAction';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
-import { useUser } from '@/hooks';
 
 export default function ForgotPasswordPage() {
   const { locale } = useParams();
   const t = useTranslations('auth');
+  const c = useTranslations('common');
   const [email, setEmail] = React.useState('');
   const [error, setError] = React.useState('');
   const [success, setSuccess] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(false);
 
-  // Use the auth hook only for loading state
-  const { error: authError, loading } = useUser(null, 'ForgotPasswordPage');
-
-  // Set error from auth hook if present
   React.useEffect(() => {
-    if (authError) {
-      setError(authError.message);
-    }
-  }, [authError]);
+    const checkSession = async () => {
+      try {
+        setIsLoading(true);
+        const hasSession =
+          localStorage.getItem('sb-auth-token') || sessionStorage.getItem('supabase.auth.token');
+
+        if (hasSession) {
+          window.location.href = `/${locale}/`;
+        }
+      } catch (err) {
+        console.error('Session check error:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkSession();
+  }, [locale]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +46,6 @@ export default function ForgotPasswordPage() {
 
     try {
       const redirectUrl = `${window.location.origin}/${locale}/reset-password`;
-      // Use the server action directly instead of going through UserContext
       const result = await resetPasswordForEmail(email, redirectUrl);
 
       if (result.success) {
@@ -72,7 +82,7 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-gray-800 rounded-lg shadow-md">
         <div className="text-center">
           <h1 className="text-2xl font-bold">{t('signin_forgot_password')}</h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">{t('enterEmailToReset')}</p>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">{t('enter_email_to_reset')}</p>
         </div>
 
         {success ? (
@@ -83,7 +93,7 @@ export default function ForgotPasswordPage() {
           <form onSubmit={handleSubmit} className="mt-8 space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium">
-                {t('signin_email_label')}
+                {c('email')}
               </label>
               <Input
                 id="email"
@@ -102,8 +112,8 @@ export default function ForgotPasswordPage() {
               </div>
             )}
 
-            <Button type="submit" className="w-full" disabled={isSubmitting || loading}>
-              {isSubmitting || loading ? t('sending') : t('sendResetLink')}
+            <Button type="submit" className="w-full" disabled={isSubmitting || isLoading}>
+              {isSubmitting || isLoading ? t('sending') : t('send_reset_link')}
             </Button>
 
             <div className="text-center mt-4">

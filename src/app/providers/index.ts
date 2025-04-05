@@ -14,5 +14,6 @@ export { TeamMemberDialogProvider } from './TeamMemberDialogProvider';
 export { SearchProvider } from './SearchProvider';
 export { FontProvider } from './FontProvider';
 export { ThemeProvider } from './ThemeProvider';
+export { QueryProvider } from './QueryProvider';
 
 // Theme provider moved to src/providers/ThemeProvider.tsx

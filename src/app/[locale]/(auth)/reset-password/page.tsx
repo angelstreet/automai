@@ -7,7 +7,6 @@ import * as React from 'react';
 import { updatePassword } from '@/app/actions/authAction';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
-import { useUser } from '@/hooks';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -19,16 +18,33 @@ export default function ResetPasswordPage() {
   const [error, setError] = React.useState('');
   const [success, setSuccess] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [loading, setLoading] = React.useState(true);
 
-  // Use the auth hook only for loading state
-  const { error: authError, loading } = useUser(null, 'ResetPasswordPage');
-
-  // Set error from auth hook if present
+  // Replace useUser hook with a simpler check
   React.useEffect(() => {
-    if (authError) {
-      setError(authError.message);
-    }
-  }, [authError]);
+    // Check if user is already logged in
+    const checkSession = () => {
+      try {
+        // Check for session in localStorage or sessionStorage
+        const hasSession =
+          typeof window !== 'undefined' &&
+          (localStorage.getItem('supabase.auth.token') ||
+            sessionStorage.getItem('supabase.auth.token'));
+
+        if (hasSession) {
+          // If logged in, redirect to dashboard
+          router.push(`/${locale}/dashboard`);
+        }
+      } catch (err) {
+        console.error('Error checking session:', err);
+      } finally {
+        // Set loading to false whether there was an error or not
+        setLoading(false);
+      }
+    };
+
+    checkSession();
+  }, [locale, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

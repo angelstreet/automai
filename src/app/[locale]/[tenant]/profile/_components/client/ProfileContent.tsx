@@ -39,7 +39,8 @@ export function ProfileContent({
   const updateProfile = propUpdateProfile || contextUpdateProfile;
   const refreshUser = propRefreshUser || contextRefreshUser;
 
-  const t = useTranslations('profile');
+  const t = useTranslations('auth');
+  const c = useTranslations('common');
   const params = useParams();
   const locale = params.locale as string;
   const tenant = (params.tenant as string) || user?.tenant_id || 'trial';
@@ -119,7 +120,7 @@ export function ProfileContent({
                 </div>
               </div>
               <div>
-                <label className="text-sm font-medium">{t('signin_email_label')}</label>
+                <label className="text-sm font-medium">{c('email')}</label>
                 <p className="text-muted-foreground">{user.email}</p>
               </div>
               <div>
