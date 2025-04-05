@@ -1,7 +1,7 @@
 import { useTranslations } from 'next-intl';
 
 import { useToast } from '@/components/shadcn/use-toast';
-import {  Repository  } from '@/types/context/repositoryContextType';
+import { Repository } from '@/types/component/repositoryComponentType';
 
 interface RepositoryActionsProps {
   repositories?: Repository[];
@@ -20,6 +20,7 @@ export function RepositoryActions({
 }: RepositoryActionsProps) {
   const { toast } = useToast();
   const t = useTranslations('repositories');
+  const c = useTranslations('common');
 
   // Handle refreshing all repositories
   const handleRefreshAll = async (): Promise<void> => {
@@ -190,7 +191,7 @@ export function RepositoryActions({
 
       // Import the test repository action and repository update action
       const { testGitRepository, updateRepository, clearRepositoriesCache } = await import(
-        '@/app/[locale]/[tenant]/repositories/actions'
+        '../actions/repositoryActions'
       );
 
       // Find the repository

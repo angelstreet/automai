@@ -1,14 +1,12 @@
-import { AuthUser } from '../service/userServiceType';
+import { z } from 'zod';
+
 import {
-  Repository, 
-  GitProvider, 
+  Repository,
+  GitProvider,
   RepositoryFile,
   GitProviderType,
-  CreateGitProviderParams,
-  CreateRepositoryParams,
-  RepositorySyncStatus
 } from '../component/repositoryComponentType';
-import { z } from 'zod';
+import { AuthUser } from '../service/userServiceType';
 
 /**
  * Repository data interface - contains all state

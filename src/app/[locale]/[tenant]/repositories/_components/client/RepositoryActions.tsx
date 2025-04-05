@@ -18,6 +18,7 @@ export function RepositoryActions({
   repositoryCount: initialRepositoryCount = 0,
 }: RepositoryActionsProps) {
   const t = useTranslations('repositories');
+  const c = useTranslations('common');
   const [connectDialogOpen, setConnectDialogOpen] = useState<boolean>(false);
   const [currentRepositoryCount, setCurrentRepositoryCount] = useState(initialRepositoryCount);
   const [isRefreshing, setIsRefreshing] = useState(false);
