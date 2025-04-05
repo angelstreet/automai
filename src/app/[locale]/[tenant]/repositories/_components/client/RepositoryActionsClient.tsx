@@ -144,7 +144,7 @@ export function RepositoryActionsClient({ repositoryCount = 0 }: RepositoryActio
               <span>{t('add_button')}</span>
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{t('connect_repository')}</TooltipContent>
+          <TooltipContent>{t('connect_repo')}</TooltipContent>
         </Tooltip>
       </div>
 
