@@ -7,7 +7,6 @@ import {
   getRepository,
   connectRepository as connectRepositoryAction,
   disconnectRepository as disconnectRepositoryAction,
-  testGitRepository,
 } from '@/app/actions/repositoriesAction';
 import { useToast } from '@/components/shadcn/use-toast';
 import type { TestRepositoryInput } from '@/types/context/repositoryContextType';
@@ -100,28 +99,8 @@ export function useRepository() {
     return await disconnectRepositoryMutation.mutateAsync(id);
   };
 
-  // Internal mutation for URL validation that calls the API endpoint
-  const _validateUrlMutation = useMutation({
-    mutationFn: async (data: TestRepositoryInput) => {
-      const response = await fetch('/api/repositories/test-repository', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to validate repository URL');
-      }
-      
-      return response.json();
-    }
-  });
-
-  // Simplified URL validation function
-  const validateRepositoryUrl = async (
+  // Direct test repository function using API endpoint
+  const testRepository = async (
     data: TestRepositoryInput,
   ): Promise<{
     success: boolean;
@@ -134,7 +113,20 @@ export function useRepository() {
     }
 
     try {
-      const result = await _validateUrlMutation.mutateAsync(data);
+      // Call the API endpoint instead of server action directly
+      const response = await fetch('/api/repositories/test-connection', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to validate repository URL');
+      }
 
       // Show relevant toast based on result
       if (result.success) {
@@ -165,18 +157,6 @@ export function useRepository() {
     }
   };
 
-  // Test repository - calls validateRepositoryUrl
-  const testRepository = async (
-    data: TestRepositoryInput,
-  ): Promise<{
-    success: boolean;
-    error?: string;
-    status?: number;
-    message?: string;
-  }> => {
-    return validateRepositoryUrl(data);
-  };
-
   return {
     // Data and loading states
     repositories: repositoriesResponse?.data || [],
@@ -190,7 +170,6 @@ export function useRepository() {
     connectRepository,
     disconnectRepository,
     testRepository,
-    validateRepositoryUrl,
 
     // Refetch functions
     refetchRepositories,
@@ -198,6 +177,6 @@ export function useRepository() {
     // Mutation states
     isConnecting: connectRepositoryMutation.isPending,
     isDisconnecting: disconnectRepositoryMutation.isPending,
-    isValidating: _validateUrlMutation.isPending,
+    isValidating: false, // Replace with a proper loading state if needed
   };
 }
