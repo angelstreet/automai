@@ -3,12 +3,21 @@
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
-// Define event constants here instead of importing from server action
-export const REFRESH_CICD_PROVIDERS = 'REFRESH_CICD_PROVIDERS';
-export const REFRESH_CICD_COMPLETE = 'REFRESH_CICD_COMPLETE';
-export const OPEN_CICD_DIALOG = 'OPEN_CICD_DIALOG';
-export const CICD_TESTING_CONNECTION = 'CICD_TESTING_CONNECTION';
-export const CICD_TESTING_CONNECTION_COMPLETE = 'CICD_TESTING_CONNECTION_COMPLETE';
+// Define constants in an object to avoid Fast Refresh issues
+const CICDEvents = {
+  // UI Control Events
+  OPEN_CICD_DIALOG: 'OPEN_CICD_DIALOG',
+
+  // Data Refresh Events
+  REFRESH_CICD_COMPLETE: 'REFRESH_CICD_COMPLETE',
+
+  // Connection Testing Events
+  CICD_TESTING_CONNECTION: 'CICD_TESTING_CONNECTION',
+  CICD_TESTING_CONNECTION_COMPLETE: 'CICD_TESTING_CONNECTION_COMPLETE',
+};
+
+// Export the constants object
+export { CICDEvents };
 
 export default function CICDEventListener() {
   const router = useRouter();
@@ -20,9 +29,9 @@ export default function CICDEventListener() {
       router.refresh();
     };
 
-    window.addEventListener(REFRESH_CICD_COMPLETE, handleRefreshComplete);
+    window.addEventListener(CICDEvents.REFRESH_CICD_COMPLETE, handleRefreshComplete);
     return () => {
-      window.removeEventListener(REFRESH_CICD_COMPLETE, handleRefreshComplete);
+      window.removeEventListener(CICDEvents.REFRESH_CICD_COMPLETE, handleRefreshComplete);
     };
   }, [router]);
 

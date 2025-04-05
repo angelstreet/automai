@@ -12,11 +12,7 @@ import { CICDProvider } from '@/types/component/cicdComponentType';
 
 import { CICDFormDialogClient } from '..';
 
-import { OPEN_CICD_DIALOG, REFRESH_CICD_COMPLETE } from './CICDEventListener';
-
-// Define connection testing event constants
-const CICD_TESTING_CONNECTION = 'cicd-testing-connection';
-const CICD_TESTING_CONNECTION_COMPLETE = 'cicd-testing-connection-complete';
+import { CICDEvents } from './CICDEventListener';
 
 interface CICDActionsClientProps {
   providerCount: number;
@@ -40,9 +36,9 @@ export default function CICDActionsClient({
       setIsAddDialogOpen(true);
     };
 
-    window.addEventListener(OPEN_CICD_DIALOG, handleOpenDialog);
+    window.addEventListener(CICDEvents.OPEN_CICD_DIALOG, handleOpenDialog);
     return () => {
-      window.removeEventListener(OPEN_CICD_DIALOG, handleOpenDialog);
+      window.removeEventListener(CICDEvents.OPEN_CICD_DIALOG, handleOpenDialog);
     };
   }, []);
 
@@ -55,7 +51,7 @@ export default function CICDActionsClient({
     try {
       // Dispatch event to notify other components that a test is starting
       window.dispatchEvent(
-        new CustomEvent(CICD_TESTING_CONNECTION, {
+        new CustomEvent(CICDEvents.CICD_TESTING_CONNECTION, {
           detail: { providerId: provider.id },
         }),
       );
@@ -83,7 +79,7 @@ export default function CICDActionsClient({
 
       // Dispatch completion event regardless of result
       window.dispatchEvent(
-        new CustomEvent(CICD_TESTING_CONNECTION_COMPLETE, {
+        new CustomEvent(CICDEvents.CICD_TESTING_CONNECTION_COMPLETE, {
           detail: { providerId: provider.id, success: result.success },
         }),
       );
@@ -97,7 +93,7 @@ export default function CICDActionsClient({
 
       // Dispatch completion event on error
       window.dispatchEvent(
-        new CustomEvent(CICD_TESTING_CONNECTION_COMPLETE, {
+        new CustomEvent(CICDEvents.CICD_TESTING_CONNECTION_COMPLETE, {
           detail: { providerId: provider.id, success: false },
         }),
       );
@@ -143,7 +139,7 @@ export default function CICDActionsClient({
       }
 
       // Dispatch event to refresh the UI
-      window.dispatchEvent(new Event(REFRESH_CICD_COMPLETE));
+      window.dispatchEvent(new Event(CICDEvents.REFRESH_CICD_COMPLETE));
     }
   }, [isLoading, refetchProviders, providers, testProviderConnection, toast, c]);
 

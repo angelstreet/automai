@@ -38,11 +38,7 @@ import type { CICDProvider } from '@/types/component/cicdComponentType';
 
 import { CICDFormDialogClient } from '..';
 
-import {
-  OPEN_CICD_DIALOG,
-  CICD_TESTING_CONNECTION,
-  CICD_TESTING_CONNECTION_COMPLETE,
-} from './CICDEventListener';
+import { CICDEvents } from './CICDEventListener';
 
 interface CICDTableClientProps {
   initialProviders: CICDProvider[];
@@ -99,7 +95,7 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
 
         // Dispatch event to notify other components that a test is starting
         window.dispatchEvent(
-          new CustomEvent(CICD_TESTING_CONNECTION, {
+          new CustomEvent(CICDEvents.CICD_TESTING_CONNECTION, {
             detail: { providerId: provider.id },
           }),
         );
@@ -142,7 +138,7 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
 
         // Dispatch event to notify other components that the test is complete
         window.dispatchEvent(
-          new CustomEvent(CICD_TESTING_CONNECTION_COMPLETE, {
+          new CustomEvent(CICDEvents.CICD_TESTING_CONNECTION_COMPLETE, {
             detail: { providerId: provider.id },
           }),
         );
@@ -207,7 +203,7 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
               <Button
                 onClick={() => {
                   // Use event-based communication instead of direct DOM manipulation
-                  window.dispatchEvent(new Event(OPEN_CICD_DIALOG));
+                  window.dispatchEvent(new Event(CICDEvents.OPEN_CICD_DIALOG));
                 }}
               >
                 <PlusCircle className="h-4 w-4 mr-2" />
