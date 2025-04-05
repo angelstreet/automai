@@ -162,7 +162,7 @@ const EditPermissionsDialog = ({
   if (isLoadingPermissions) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-[800px] mx-auto p-4">
+        <DialogContent className="sm:max-w-[800px] lg:max-w-[900px] mx-auto p-4">
           <DialogHeader className="pb-2">
             <DialogTitle>{t('members_edit_title')}</DialogTitle>
           </DialogHeader>
@@ -177,7 +177,7 @@ const EditPermissionsDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[800px] mx-auto p-4">
+      <DialogContent className="sm:max-w-[800px] lg:max-w-[900px] mx-auto p-4">
         <DialogHeader className="pb-2 space-y-1">
           <DialogTitle>{t('members_edit_title')}</DialogTitle>
           <DialogDescription className="text-xs">{t('members_edit_desc')}</DialogDescription>
@@ -214,7 +214,7 @@ const EditPermissionsDialog = ({
             </Select>
           </div>
 
-          <div className="border rounded-md overflow-x-auto w-[760px]">
+          <div className="border rounded-md overflow-x-auto">
             <Table className="text-xs w-full">
               <TableHeader className="bg-background sticky top-0 z-10">
                 <TableRow>
