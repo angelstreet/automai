@@ -498,3 +498,82 @@ export async function getRepositoryFiles(
     return { success: false, error: error.message || 'Failed to get repository files' };
   }
 }
+
+/**
+ * Get file content for a specific file in a repository
+ * @param repositoryId Repository ID
+ * @param path Path to the file within the repository
+ * @param branch Branch to get the file from
+ */
+export async function getRepositoryFileContent(
+  repositoryId: string,
+  path: string,
+  branch: string = 'main',
+): Promise<{
+  success: boolean;
+  data?: {
+    content: string;
+    encoding: string;
+  };
+  error?: string;
+}> {
+  try {
+    console.log(
+      `[@action:repositories:getRepositoryFileContent] Starting for repo: ${repositoryId}, path: ${path}, branch: ${branch}`,
+    );
+
+    // Get authenticated user
+    const user = await getUser();
+    if (!user) {
+      console.log('[@action:repositories:getRepositoryFileContent] No authenticated user found');
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    // Get repository details
+    const repositoryResult = await getRepository(repositoryId);
+    if (!repositoryResult.success || !repositoryResult.data) {
+      console.log(
+        `[@action:repositories:getRepositoryFileContent] Repository not found: ${repositoryId}`,
+      );
+      return { success: false, error: 'Repository not found' };
+    }
+
+    const repository = repositoryResult.data;
+
+    // In a real implementation, we would:
+    // 1. Determine repository provider (GitHub, GitLab, etc.)
+    // 2. Get the auth token for that provider
+    // 3. Call the appropriate API to get the file content
+
+    // For now, simulate file content based on the path
+    let fileContent = '';
+
+    if (path === 'deploy.sh') {
+      fileContent =
+        '#!/bin/bash\necho "Deploying application..."\n# Deployment script contents\necho "Deployment completed successfully."';
+    } else if (path === 'setup.py') {
+      fileContent =
+        'from setuptools import setup\n\nsetup(\n    name="sample-app",\n    version="1.0.0",\n    description="Sample Python application",\n    author="Automai Team",\n    packages=["app"]\n)';
+    } else if (path === 'build.sh') {
+      fileContent =
+        '#!/bin/bash\necho "Building application..."\n# Build script contents\necho "Build completed successfully."';
+    } else {
+      console.log(`[@action:repositories:getRepositoryFileContent] File not found: ${path}`);
+      return { success: false, error: 'File not found' };
+    }
+
+    console.log(
+      `[@action:repositories:getRepositoryFileContent] Successfully retrieved file content for ${path}`,
+    );
+    return {
+      success: true,
+      data: {
+        content: fileContent,
+        encoding: 'text',
+      },
+    };
+  } catch (error: any) {
+    console.error('[@action:repositories:getRepositoryFileContent] Error:', error);
+    return { success: false, error: error.message || 'Failed to get file content' };
+  }
+}
