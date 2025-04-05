@@ -19,7 +19,6 @@ interface DeploymentWizardStep1ClientProps {
   ) => void;
   onNextStep: () => void;
   isStepValid: boolean | (() => boolean);
-  onRefreshRepositories?: () => void;
 }
 
 const DeploymentWizardStep1Client: React.FC<DeploymentWizardStep1ClientProps> = ({
@@ -32,7 +31,6 @@ const DeploymentWizardStep1Client: React.FC<DeploymentWizardStep1ClientProps> = 
   onInputChange,
   onNextStep,
   isStepValid,
-  onRefreshRepositories,
 }) => {
   // Check if step is valid - handle both function and boolean values
   const isValid = typeof isStepValid === 'function' ? isStepValid() : isStepValid;
@@ -65,6 +63,7 @@ const DeploymentWizardStep1Client: React.FC<DeploymentWizardStep1ClientProps> = 
             onChange={onInputChange}
             placeholder="Briefly describe this deployment"
             rows={2}
+            className="resize-none min-h-[64px] max-h-[64px]"
           />
         </div>
 
@@ -81,13 +80,17 @@ const DeploymentWizardStep1Client: React.FC<DeploymentWizardStep1ClientProps> = 
             required
           >
             <option value="">Select repository</option>
-            {repositories && Array.isArray(repositories)
-              ? repositories.map((repo) => (
-                  <option key={repo.id} value={repo.id}>
-                    {repo.name} ({repo.url ? new URL(repo.url).hostname : 'Unknown'})
-                  </option>
-                ))
-              : null}
+            {repositories && repositories.length > 0 ? (
+              repositories.map((repo) => (
+                <option key={repo.id} value={repo.id}>
+                  {repo.name} ({repo.url ? new URL(repo.url).hostname : 'Unknown'})
+                </option>
+              ))
+            ) : (
+              <option value="" disabled>
+                No repositories available
+              </option>
+            )}
           </select>
           {repositoryError && (
             <p className="text-sm text-red-500 mt-0.5">Error: {repositoryError}</p>

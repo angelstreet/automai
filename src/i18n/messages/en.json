@@ -415,7 +415,7 @@
     "none_title": "No deployments found",
     "none_desc": "Create your first deployment to get started",
     "wizard_next": "Next",
-    "wizard_previous": "Previous",
+    "wizard_prev": "Prev",
     "wizard_creating": "Creating...",
     "wizard_create_button": "Create Deployment",
     "wizard_jenkins_integration": "Jenkins Integration",

@@ -2,13 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/shadcn/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
 import { useHost, useCICD } from '@/hooks';
 import { useRepository } from '@/hooks/useRepository';
 import { Deployment } from '@/types/component/deploymentComponentType';
@@ -27,7 +21,6 @@ export function DeploymentWizardDialogClient({
   onSuccess,
 }: DeploymentWizardDialogClientProps) {
   const t = useTranslations('deployment');
-  const c = useTranslations('common');
   const { hosts, isLoading: isLoadingHosts } = useHost();
   const { providers: cicdProviders, isLoading: isLoadingCICD } = useCICD();
   const { repositories, isLoading: isLoadingRepositories } = useRepository();
@@ -61,11 +54,6 @@ export function DeploymentWizardDialogClient({
         <DialogHeader className="pb-2">
           <DialogTitle>{t('wizard_create_button')}</DialogTitle>
         </DialogHeader>
-        <DialogDescription className="text-sm text-muted-foreground mb-4">
-          {t('wizard_desc_placeholder', {
-            defaultValue: 'Configure your new deployment settings',
-          })}
-        </DialogDescription>
 
         {open && !isLoading && (
           <DeploymentWizardMainClient

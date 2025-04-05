@@ -26,19 +26,44 @@ export const getHosts = cache(
         return { success: false, error: 'No active team found' };
       }
 
-      // Get hosts for team
-      const result = await hostDb.getHosts(activeTeamResult.id);
-      if (!result.success || !result.data) {
-        return { success: false, error: result.error || 'Failed to fetch hosts' };
-      }
+      // Create a promise that will reject after 10 seconds
+      const timeoutPromise = new Promise<{ success: false; error: string }>((_, reject) => {
+        setTimeout(() => {
+          console.log('[@action:hosts:getHosts] Request timed out after 10 seconds');
+          reject({ success: false, error: 'Request timed out after 10 seconds' });
+        }, 10000);
+      });
 
-      // Apply status filter if provided
-      let filteredData = result.data;
-      if (filter?.status) {
-        filteredData = filteredData.filter((host) => host.status === filter.status);
-      }
+      // Create the actual data fetch promise
+      const fetchPromise = new Promise<{ success: boolean; error?: string; data?: Host[] }>(
+        async (resolve) => {
+          try {
+            // Get hosts for team
+            const result = await hostDb.getHosts(activeTeamResult.id);
+            if (!result.success || !result.data) {
+              resolve({ success: false, error: result.error || 'Failed to fetch hosts' });
+              return;
+            }
 
-      return { success: true, data: filteredData };
+            // Apply status filter if provided
+            let filteredData = result.data;
+            if (filter?.status) {
+              filteredData = filteredData.filter((host) => host.status === filter.status);
+            }
+
+            resolve({ success: true, data: filteredData });
+          } catch (error: any) {
+            resolve({ success: false, error: error.message || 'Failed to fetch hosts' });
+          }
+        },
+      );
+
+      // Race the fetch against the timeout
+      try {
+        return await Promise.race([fetchPromise, timeoutPromise]);
+      } catch (error: any) {
+        return { success: false, error: error.error || 'Request timed out' };
+      }
     } catch (error: any) {
       return { success: false, error: error.message || 'Failed to fetch hosts' };
     }

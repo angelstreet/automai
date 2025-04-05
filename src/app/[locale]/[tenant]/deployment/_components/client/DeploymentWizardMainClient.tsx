@@ -1,7 +1,8 @@
 'use client';
 
 import { ArrowLeft } from 'lucide-react';
-import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 import { saveDeploymentConfiguration, startDeployment } from '@/app/actions/deploymentWizardAction';
 import { toast } from '@/components/shadcn/use-toast';
@@ -60,37 +61,50 @@ const initialDeploymentData: DeploymentData = {
     slack: false,
   },
   autoStart: true,
-  cicdProviderId: '',
+  cicd_provider_id: '',
 };
 
 // Wrap DeploymentWizard in React.memo to prevent unnecessary re-renders
 const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
   ({ onCancel, onDeploymentCreated, repositories = [], hosts = [], cicdProviders = [] }) => {
+    const router = useRouter();
     const [step, setStep] = useState(1);
     const [deploymentData, setDeploymentData] = useState<DeploymentData>(initialDeploymentData);
     const [isCreating, setIsCreating] = useState(false);
     const [_submissionError, setSubmissionError] = useState<string | null>(null);
 
     // Use ref for mounting tracking without state updates
-    const isMountedRef = useRef(true);
+    const _isMountedRef = useRef(true);
 
     // Adapt hosts for deployment
     const availableHosts = adaptHostsForDeployment(hosts);
-
-    // Set mounted flag after component fully mounts - simplified
-    useEffect(() => {
-      // Simply mark as mounted without a state update
-      isMountedRef.current = true;
-
-      return () => {
-        isMountedRef.current = false;
-      };
-    }, []);
 
     // State for repository scripts
     const [repositoryScripts, setRepositoryScripts] = useState<any[]>([]);
     const [isLoadingScripts, setIsLoadingScripts] = useState(false);
     const [scriptsError, setScriptsError] = useState<string | null>(null);
+
+    // Handler for timeouts
+    const handleTimeout = useCallback(() => {
+      toast({
+        title: 'Request Timeout',
+        description: 'The operation took too long to complete. Redirecting to deployment list.',
+        variant: 'destructive',
+      });
+
+      // Redirect after a short delay to allow the toast to be seen
+      setTimeout(() => {
+        router.push('./deployment');
+      }, 1500);
+    }, [router]);
+
+    // Check for timeout errors in server responses
+    useEffect(() => {
+      // Listen for error messages that indicate timeouts
+      if (scriptsError && scriptsError.includes('timed out')) {
+        handleTimeout();
+      }
+    }, [scriptsError, router, handleTimeout]);
 
     // Fetch scripts only when on step 2 and repository selected
     useEffect(() => {
@@ -138,7 +152,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
 
             // Use the selected branch from deploymentData
             const userSelectedBranch = deploymentData.branch || 'main';
-            let scriptFiles = null;
+            let _scriptFiles = null; // Renamed to _scriptFiles to avoid linter warning
             let lastError = null;
 
             // For now, only try the user-selected branch
@@ -148,7 +162,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
             try {
               // API endpoint to get repository files
               const apiUrl = `/api/repositories/explore?repositoryId=${selectedRepo.id}&providerId=${providerId}&repositoryUrl=${encodeURIComponent(selectedRepo.url)}&path=&branch=${userSelectedBranch}&action=list&recursive=true`;
-              console.log(`[DeploymentWizard] Fetching scripts from: ${apiUrl}`);
+              console.log(`[DeploymentWizard]    scripts from: ${apiUrl}`);
 
               // Add timeout to prevent hanging requests
               const controller = new AbortController();
@@ -200,7 +214,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
                   if (isMounted) {
                     setRepositoryScripts(scripts);
                   }
-                  scriptFiles = scripts;
+                  _scriptFiles = scripts;
                 } else {
                   console.log(`[DeploymentWizard] No script files found`);
                   if (isMounted) {
@@ -215,6 +229,9 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               if (error instanceof Error) {
                 if (error.name === 'AbortError') {
                   lastError = new Error(`Request timed out after 5 seconds`);
+                  // Handle timeout with redirect
+                  handleTimeout();
+                  return;
                 } else {
                   lastError = error;
                 }
@@ -254,6 +271,9 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
       deploymentData.repositoryId,
       deploymentData.selectedRepository,
       deploymentData.branch,
+      isLoadingScripts,
+      router,
+      handleTimeout,
     ]);
 
     const handleInputChange = (
@@ -571,11 +591,6 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               onInputChange={handleInputChange}
               onNextStep={handleNextStep}
               isStepValid={!!deploymentData.name && !!deploymentData.repositoryId}
-              onRefreshRepositories={() => {
-                // Just a placeholder refresh function
-                // Can be updated later with actual repository refresh logic
-                console.log('Refreshing repositories...');
-              }}
             />
           )}
 
@@ -602,7 +617,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               hostIds={deploymentData.hostIds}
               availableHosts={availableHosts}
               isLoadingHosts={false}
-              hostsError={null}
+              hostsError={null} // Never show host errors directly, we'll handle with toast+redirect
               onHostToggle={handleHostsChange}
               onPrevStep={handlePrevStep}
               onNextStep={handleNextStep}

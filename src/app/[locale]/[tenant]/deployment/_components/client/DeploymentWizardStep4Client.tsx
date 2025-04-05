@@ -26,7 +26,7 @@ const DeploymentWizardStep4Client: React.FC<DeploymentWizardStep4Props> = ({
   onNextStep,
   isStepValid,
 }) => {
-  const t = useTranslations('deployment.wizard');
+  const t = useTranslations('deployment');
 
   // Check if step is valid - handle both function and boolean values
   const isValid = typeof isStepValid === 'function' ? isStepValid() : isStepValid;
