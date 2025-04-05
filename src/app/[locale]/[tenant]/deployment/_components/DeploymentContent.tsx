@@ -3,7 +3,6 @@ import { getRepositories } from '@/app/actions/repositoriesAction';
 
 // Import with direct relative paths
 import { DeploymentEmptyStateClient } from './client/DeploymentEmptyStateClient';
-import DeploymentEventListener from './client/DeploymentEventListener';
 import { DeploymentListClient } from './client/DeploymentListClient';
 
 export async function DeploymentContent() {
@@ -21,21 +20,15 @@ export async function DeploymentContent() {
     }
 
     return (
-      <>
-        <DeploymentEventListener />
-        <DeploymentEmptyStateClient
-          errorMessage={deploymentsResponse.error}
-          initialRepositories={repositories}
-        />
-      </>
+      <DeploymentEmptyStateClient
+        errorMessage={deploymentsResponse.error}
+        initialRepositories={repositories}
+      />
     );
   }
 
   // Otherwise, show the deployment list
   return (
-    <>
-      <DeploymentEventListener />
-      <DeploymentListClient initialDeployments={deployments} initialRepositories={repositories} />
-    </>
+    <DeploymentListClient initialDeployments={deployments} initialRepositories={repositories} />
   );
 }

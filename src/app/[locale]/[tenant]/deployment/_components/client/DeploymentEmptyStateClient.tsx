@@ -6,18 +6,14 @@ import { useTranslations } from 'next-intl';
 import { Alert, AlertDescription, AlertTitle } from '@/components/shadcn/alert';
 import { Button } from '@/components/shadcn/button';
 import { EmptyState } from '@/components/ui/EmptyState';
+
 import { DeploymentEvents } from './DeploymentEventListener';
-import { Repository } from '@/types/component/repositoryComponentType';
 
 interface DeploymentEmptyStateClientProps {
   errorMessage?: string;
-  initialRepositories?: Repository[];
 }
 
-export function DeploymentEmptyStateClient({
-  errorMessage,
-  initialRepositories = [],
-}: DeploymentEmptyStateClientProps) {
+export function DeploymentEmptyStateClient({ errorMessage }: DeploymentEmptyStateClientProps) {
   const t = useTranslations('deployment');
 
   const handleNewDeployment = () => {
