@@ -124,6 +124,7 @@
     "resources_hosts": "Hosts",
     "resources_repositories": "Repositories",
     "resources_deployments": "Deployments",
+    "resources_cicd": "CI/CD",
     "resources_cicd_providers": "CI/CD Providers",
     "resources_cicd_jobs": "CI/CD Jobs",
     "members_add_title": "Add Team Member",

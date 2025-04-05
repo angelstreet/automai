@@ -7,9 +7,8 @@ import { Skeleton } from '@/components/shadcn/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 import { useTeam } from '@/hooks/useTeam';
 import { TeamDetails } from '@/types/context/teamContextType';
-import { User } from '@/types/service/userServiceType';
 
-export default function TeamHeader({ user }: { user?: User | null }) {
+export default function TeamHeader() {
   const t = useTranslations('team');
   const c = useTranslations('common');
   const router = useRouter();

@@ -32,8 +32,7 @@ export default function TeamOverview({ team }: TeamOverviewProps) {
   };
 
   // Check for both cicd and cicdProviders fields to handle different data structures
-  const cicdCount =
-    resourceCounts.cicd !== undefined ? resourceCounts.cicd : resourceCounts.cicdProviders || 0;
+  const cicdCount = resourceCounts.cicd || w0;
 
   // Create resource cards for the overview
   const resourceCards = [
@@ -49,7 +48,7 @@ export default function TeamOverview({ team }: TeamOverviewProps) {
     },
     {
       type: 'cicd',
-      name: t('title'),
+      name: t('resources_cicd'),
       count: cicdCount, // Use the cicdCount variable
     },
     {
@@ -116,12 +115,8 @@ export default function TeamOverview({ team }: TeamOverviewProps) {
 
       {/* Resources Card */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle>{t('title')}</CardTitle>
-          <CardDescription>{c('overview')}</CardDescription>
-        </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
             {resourceCards.map((resource) => (
               <ResourceCard key={resource.type} resource={resource} />
             ))}

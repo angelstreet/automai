@@ -218,9 +218,7 @@ const EditPermissionsDialog = ({
             <Table className="text-xs">
               <TableHeader className="bg-background sticky top-0 z-10">
                 <TableRow>
-                  <TableHead className="py-2 w-[150px]">
-                    {t('members_edit_resource')}
-                  </TableHead>
+                  <TableHead className="py-2 w-[150px]">{t('members_edit_resource')}</TableHead>
                   {Object.keys(PERMISSIONS).map((perm) => (
                     <TableHead key={perm} className="text-center py-2 px-1 w-[64px]">
                       {PERMISSIONS[perm]}
@@ -260,7 +258,7 @@ const EditPermissionsDialog = ({
           </Button>
           <Button onClick={handleSubmit} disabled={isLoading} size="sm">
             {isLoading && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
-            {t('save')}
+            {c('save')}
           </Button>
         </DialogFooter>
       </DialogContent>

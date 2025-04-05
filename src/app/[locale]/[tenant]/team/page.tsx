@@ -56,7 +56,7 @@ export default async function TeamPage() {
     >
       <Suspense fallback={<TeamSkeleton />}>
         {/* TeamHeader gets details from TeamContext */}
-        <TeamHeader user={user} />
+        <TeamHeader />
         <Suspense fallback={<TeamOverviewSkeleton />}>
           <TeamTabContainerClient user={user} resourceCounts={resourceCounts} />
         </Suspense>
