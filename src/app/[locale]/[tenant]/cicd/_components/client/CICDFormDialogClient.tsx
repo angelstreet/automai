@@ -28,7 +28,7 @@ import {
   CICDAuthType,
 } from '@/types/component/cicdComponentType';
 
-import { REFRESH_CICD_COMPLETE } from './CICDEventListener';
+import { CICDEvents } from './CICDEventListener';
 
 interface CICDFormDialogProps {
   onComplete: () => void;
@@ -239,7 +239,7 @@ const CICDFormDialogClient: React.FC<CICDFormDialogProps> = ({
         onComplete();
 
         // Dispatch event to notify listeners of successful operation
-        window.dispatchEvent(new Event(REFRESH_CICD_COMPLETE));
+        window.dispatchEvent(new Event(CICDEvents.REFRESH_CICD_COMPLETE));
       } else {
         toast({
           title: 'Error',

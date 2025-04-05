@@ -339,12 +339,7 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
           <DialogHeader>
             <DialogTitle>{isEditing ? t('edit_title') : t('add_title')}</DialogTitle>
           </DialogHeader>
-          <CICDFormDialogClient
-            providerId={isEditing && selectedProvider ? selectedProvider.id : undefined}
-            provider={isEditing && selectedProvider ? selectedProvider : undefined}
-            onComplete={handleDialogComplete}
-            isInDialog={true}
-          />
+          <CICDFormDialogClient onComplete={handleDialogComplete} isInDialog={true} />
         </DialogContent>
       </Dialog>
     </Card>
