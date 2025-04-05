@@ -1,10 +1,10 @@
 import { getDeployments } from '@/app/actions/deploymentsAction';
 import { getRepositories } from '@/app/actions/repositoriesAction';
 
+// Import with direct relative paths
+import { DeploymentEmptyStateClient } from './client/DeploymentEmptyStateClient';
 import DeploymentEventListener from './client/DeploymentEventListener';
 import { DeploymentListClient } from './client/DeploymentListClient';
-
-import { DeploymentEmptyStateClient } from '.';
 
 export async function DeploymentContent() {
   // Fetch data at the server level
