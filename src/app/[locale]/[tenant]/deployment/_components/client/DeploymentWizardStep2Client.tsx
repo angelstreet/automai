@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import React from 'react';
 
 import { Repository } from '@/types/component/repositoryComponentType';
-import { Script } from '@/types/context/deploymentContextType';
+import { Script } from '@/types/component/scriptComponentType';
 
 import DeploymentScriptSelectorClient from './DeploymentScriptSelectorClient';
 
@@ -43,14 +43,16 @@ const DeploymentWizardStep2Client: React.FC<DeploymentWizardStep2Props> = ({
   return (
     <div className="p-4 bg-black/5 dark:bg-black/20 rounded-md border border-gray-200 dark:border-gray-800">
       <h2 className="text-lg font-medium mb-4">Select Scripts</h2>
-      
+
       {/* Display error if any */}
       {scriptsError && (
         <div className="mb-4 p-2 border border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800 rounded-md">
           <p className="text-sm text-red-600 dark:text-red-400">
             Error loading scripts: {scriptsError}
           </p>
-          <p className="text-xs text-red-500 dark:text-red-400 mt-1">Please try again or select a different repository.</p>
+          <p className="text-xs text-red-500 dark:text-red-400 mt-1">
+            Please try again or select a different repository.
+          </p>
         </div>
       )}
 
@@ -64,7 +66,7 @@ const DeploymentWizardStep2Client: React.FC<DeploymentWizardStep2Props> = ({
         isLoading={isLoadingScripts}
         error={scriptsError}
       />
-      
+
       <div className="mt-8 flex justify-between">
         <button
           type="button"

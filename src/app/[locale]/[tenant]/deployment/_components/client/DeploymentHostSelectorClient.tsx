@@ -1,10 +1,9 @@
-
 'use client';
 
 import { Server, Check, Filter } from 'lucide-react';
 import React, { useState } from 'react';
 
-import {  Host  } from '@/types/component/hostComponentType';
+import { Host } from '@/types/component/hostComponentType';
 
 interface HostSelectorProps {
   availableHosts: Host[];

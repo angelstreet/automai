@@ -19,12 +19,7 @@ export async function DeploymentContent() {
       console.error('Error loading deployments:', deploymentsResponse.error);
     }
 
-    return (
-      <DeploymentEmptyStateClient
-        errorMessage={deploymentsResponse.error}
-        initialRepositories={repositories}
-      />
-    );
+    return <DeploymentEmptyStateClient errorMessage={deploymentsResponse.error} />;
   }
 
   // Otherwise, show the deployment list
