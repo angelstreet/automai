@@ -40,10 +40,6 @@ export default async function TeamPage() {
         cicd: countsResult.data.cicdProviders || 0,
         deployments: countsResult.data.deployments || 0,
       };
-
-      // Log the actual resource counts for debugging
-      console.log('Server-side team resourceCounts:', resourceCounts);
-      console.log('Raw team countsResult.data:', countsResult.data);
     }
   }
 

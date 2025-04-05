@@ -2,7 +2,7 @@ import { getDeployments } from '@/app/actions/deploymentsAction';
 import { getRepositories } from '@/app/actions/repositoriesAction';
 import { DeploymentProvider } from '@/app/providers/DeploymentProvider';
 
-import { DeploymentEmptyStateClient, DeploymentListClient } from '.';
+import { DeploymentEmptyStateClient, DeploymentList } from '.';
 
 export async function DeploymentContent() {
   // Fetch data at the server level

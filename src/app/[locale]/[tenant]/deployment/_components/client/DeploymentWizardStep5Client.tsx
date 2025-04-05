@@ -96,7 +96,7 @@ export function DeploymentWizardStep5Client({
           </Button>
 
           <Button onClick={onSubmit} disabled={isPending}>
-            {isPending ? t('creating') : t('createDeployment')}
+            {isPending ? t('creating') : t('wizard_create_button')}
           </Button>
         </div>
       </div>

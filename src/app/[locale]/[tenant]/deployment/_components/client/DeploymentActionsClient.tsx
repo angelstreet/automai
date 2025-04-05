@@ -17,7 +17,8 @@ interface DeploymentActionsClientProps {
 export function DeploymentActionsClient({
   deploymentCount: initialDeploymentCount = 0,
 }: DeploymentActionsClientProps) {
-  const t = useTranslations('team');
+  const t = useTranslations('deployment');
+  const c = useTranslations('common');
   const { refetchHosts } = useHost();
   const { refetchProviders } = useCICD();
   const { refetchRepositories } = useRepository();

@@ -26,8 +26,8 @@ export function DeploymentWizardDialogClient({
   onOpenChange,
   onSuccess,
 }: DeploymentWizardDialogClientProps) {
-  const t = useTranslations('team');
-  const tc = useTranslations('deployment');
+  const t = useTranslations('deployment');
+  const c = useTranslations('common');
   const { hosts, isLoading: isLoadingHosts } = useHost();
   const { providers: cicdProviders, isLoading: isLoadingCICD } = useCICD();
   const { repositories, isLoading: isLoadingRepositories } = useRepository();
@@ -59,7 +59,7 @@ export function DeploymentWizardDialogClient({
     >
       <DialogContent className="sm:max-w-[900px] p-4">
         <DialogHeader className="pb-2">
-          <DialogTitle>{tc('wizard.createDeployment')}</DialogTitle>
+          <DialogTitle>{t('wizard_create_button')}</DialogTitle>
         </DialogHeader>
         <DialogDescription className="text-sm text-muted-foreground mb-4">
           {t('wizard_desc_placeholder', {

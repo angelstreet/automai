@@ -1,5 +1,3 @@
-'use client';
-
 import { Skeleton } from '@/components/shadcn/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 
