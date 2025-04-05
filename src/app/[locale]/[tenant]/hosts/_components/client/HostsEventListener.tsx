@@ -4,8 +4,6 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 // Define and export event constants
-export const REFRESH_HOSTS = 'REFRESH_HOSTS';
-export const REFRESH_HOSTS_COMPLETE = 'REFRESH_HOSTS_COMPLETE';
 export const OPEN_HOST_DIALOG = 'OPEN_HOST_DIALOG';
 export const TOGGLE_HOST_VIEW_MODE = 'TOGGLE_HOST_VIEW_MODE';
 export const HOST_CONNECTION_TESTING = 'HOST_CONNECTION_TESTING';

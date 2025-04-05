@@ -146,7 +146,15 @@ export function useHost() {
 
   // Test host connection
   const testConnectionMutation = useMutation({
-    mutationFn: (id: string) => testHostConnection(id),
+    mutationFn: (params: string | { id: string; skipRevalidation?: boolean }) => {
+      if (typeof params === 'string') {
+        // Backward compatibility: if just a string ID is passed
+        return testHostConnection(params);
+      } else {
+        // New format: if an object with ID and options is passed
+        return testHostConnection(params.id, { skipRevalidation: params.skipRevalidation });
+      }
+    },
     onSuccess: (response) => {
       if (response.success) {
         // Success toast removed
@@ -161,18 +169,6 @@ export function useHost() {
       // REMOVED: Don't automatically refresh host data after testing
       // Let the client decide when to refresh all hosts after testing all connections
       // queryClient.invalidateQueries({ queryKey: ['hosts'] });
-
-      // REMOVED: Don't automatically refresh individual host data
-      // if (
-      //   typeof response === 'object' &&
-      //   response !== null &&
-      //   'data' in response &&
-      //   response.data &&
-      //   typeof response.data === 'object' &&
-      //   'id' in response.data
-      // ) {
-      //   queryClient.invalidateQueries({ queryKey: ['host', response.data.id] });
-      // }
 
       return response;
     },

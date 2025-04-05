@@ -12,7 +12,7 @@ interface HostGridClientProps {
   selectMode: boolean;
   onSelect: (id: string) => void;
   onDelete?: (id: string) => void;
-  onTestConnection?: (host: Host) => Promise<boolean>;
+  onTestConnection?: (host: Host, options?: { skipRevalidation?: boolean }) => Promise<boolean>;
 }
 
 export function HostGridClient({

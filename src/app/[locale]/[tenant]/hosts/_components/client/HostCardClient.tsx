@@ -40,7 +40,7 @@ import { HOST_CONNECTION_TESTING, HOST_CONNECTION_TESTED } from './HostsEventLis
 interface HostCardClientProps {
   host: Host & { animationDelay?: number };
   onDelete?: (id: string) => void;
-  onTestConnection?: (host: Host) => Promise<boolean>;
+  onTestConnection?: (host: Host, options?: { skipRevalidation?: boolean }) => Promise<boolean>;
 }
 
 // Export both as default and named export for backward compatibility
@@ -110,8 +110,6 @@ function HostCardClient({ host, onDelete, onTestConnection }: HostCardClientProp
 
   const getStatusDot = (status: string) => {
     const baseClasses = 'h-4 w-4 rounded-full transition-colors duration-300';
-    const delayClass =
-      host.animationDelay !== undefined ? `delay-${Math.min(host.animationDelay, 5)}` : '';
 
     if (!status) {
       return (
@@ -161,7 +159,7 @@ function HostCardClient({ host, onDelete, onTestConnection }: HostCardClientProp
             <Tooltip>
               <TooltipTrigger>
                 <div
-                  className={`${baseClasses} host-testing-animation ring-2 ring-yellow-300 ring-opacity-60 ${delayClass}`}
+                  className={`${baseClasses} host-testing-animation ring-2 ring-yellow-300 ring-opacity-60`}
                 />
               </TooltipTrigger>
               <TooltipContent>
@@ -281,7 +279,7 @@ function HostCardClient({ host, onDelete, onTestConnection }: HostCardClientProp
         throw new Error('Test connection callback not provided');
       }
 
-      const result = await onTestConnection(host);
+      const result = await onTestConnection(host, { skipRevalidation: false });
       console.log('[HostCardClient] Refresh result:', { hostId: host.id, success: result });
 
       // Update localStatus based on the test result

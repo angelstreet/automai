@@ -27,7 +27,7 @@ interface HostTableClientProps {
   selectMode: boolean;
   onSelect: (id: string) => void;
   onDelete?: (id: string) => void;
-  onTestConnection?: (host: Host) => Promise<boolean>;
+  onTestConnection?: (host: Host, options?: { skipRevalidation?: boolean }) => Promise<boolean>;
 }
 
 export function HostTableClient({
@@ -50,9 +50,8 @@ export function HostTableClient({
     };
   };
 
-  const getStatusDot = (status: string, animationDelay?: number) => {
+  const getStatusDot = (status: string) => {
     const baseClasses = 'h-3 w-3 rounded-full';
-    const delayClass = animationDelay !== undefined ? `delay-${Math.min(animationDelay, 5)}` : '';
 
     switch (status) {
       case 'connected':
@@ -62,7 +61,7 @@ export function HostTableClient({
       case 'testing':
         return (
           <div
-            className={`${baseClasses} host-testing-animation ring-2 ring-yellow-300 ring-opacity-60 ${delayClass}`}
+            className={`${baseClasses} host-testing-animation ring-2 ring-yellow-300 ring-opacity-60`}
             title={t('testing')}
           />
         );
@@ -100,9 +99,7 @@ export function HostTableClient({
               onClick={() => selectMode && onSelect(host.id)}
             >
               <TableCell className="py-2">
-                <div className="flex justify-center">
-                  {getStatusDot(host.status, host.animationDelay)}
-                </div>
+                <div className="flex justify-center">{getStatusDot(host.status)}</div>
               </TableCell>
               <TableCell className="font-medium py-2">{host.name}</TableCell>
               <TableCell className="py-2">
@@ -156,7 +153,7 @@ export function HostTableClient({
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         key={`refresh-${host.id}`}
-                        onClick={() => onTestConnection?.(host)}
+                        onClick={() => onTestConnection?.(host, { skipRevalidation: false })}
                         className="py-1.5"
                       >
                         <RefreshCw className="mr-2 h-3.5 w-3.5" />
