@@ -28,7 +28,6 @@ import { CONNECT_REPOSITORY_TABS, AUTH_METHODS } from '../../constants';
 export function RepositoryFormDialogClient({
   open,
   onOpenChange,
-  onSubmit,
   defaultTab = CONNECT_REPOSITORY_TABS.QUICK_CLONE,
 }: EnhancedConnectRepositoryDialogProps) {
   const t = useTranslations('repositories');
@@ -45,7 +44,7 @@ export function RepositoryFormDialogClient({
   const router = useRouter();
 
   // Use the repository hook
-  const { connectRepository, validateRepositoryUrl } = useRepository();
+  const { connectRepository, testRepositoryUrl } = useRepository();
 
   const handleConnect = (provider: string) => {
     setCurrentProvider(provider);
@@ -138,7 +137,7 @@ export function RepositoryFormDialogClient({
 
     try {
       // First validate the URL
-      const verifyResult = await validateRepositoryUrl({ url: quickCloneUrl });
+      const verifyResult = await testRepositoryUrl({ url: quickCloneUrl });
 
       if (!verifyResult || !verifyResult.success) {
         // Validation already shows toast, no need to show another one
@@ -159,13 +158,7 @@ export function RepositoryFormDialogClient({
         // Refresh the page to show the new repository
         router.refresh();
 
-        if (onSubmit) {
-          onSubmit({
-            url: quickCloneUrl,
-            method: 'url' as const,
-          });
-        }
-
+        // Close the dialog
         onOpenChange(false);
       }
     } catch (error: any) {

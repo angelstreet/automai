@@ -99,8 +99,8 @@ export function useRepository() {
     return await disconnectRepositoryMutation.mutateAsync(id);
   };
 
-  // Direct test repository function using API endpoint
-  const testRepository = async (
+  // Repository URL validation function that calls the API endpoint
+  const testRepositoryUrl = async (
     data: TestRepositoryInput,
   ): Promise<{
     success: boolean;
@@ -112,8 +112,19 @@ export function useRepository() {
       return { success: false, error: 'Repository URL is required' };
     }
 
+    // Add simple Git URL validation
+    const gitUrlPattern = /^(https?:\/\/|git@)([^\/]+)\/(.+)(\.git)?$/;
+    if (!gitUrlPattern.test(data.url)) {
+      toast({
+        title: 'URL Invalid',
+        description: 'Please enter a valid Git repository URL',
+        variant: 'destructive',
+      });
+      return { success: false, error: 'Invalid Git repository URL format' };
+    }
+
     try {
-      // Call the API endpoint instead of server action directly
+      // Call the API endpoint
       const response = await fetch('/api/repositories/test-connection', {
         method: 'POST',
         headers: {
@@ -169,7 +180,7 @@ export function useRepository() {
     // Action functions
     connectRepository,
     disconnectRepository,
-    testRepository,
+    testRepositoryUrl,
 
     // Refetch functions
     refetchRepositories,
@@ -177,6 +188,6 @@ export function useRepository() {
     // Mutation states
     isConnecting: connectRepositoryMutation.isPending,
     isDisconnecting: disconnectRepositoryMutation.isPending,
-    isValidating: false, // Replace with a proper loading state if needed
+    isValidating: false,
   };
 }

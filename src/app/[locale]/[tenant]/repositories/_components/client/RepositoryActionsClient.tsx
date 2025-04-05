@@ -8,7 +8,7 @@ import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/shadcn/tooltip';
 import { useToast } from '@/components/shadcn/use-toast';
-import { ConnectRepositoryValues } from '@/types/context/repositoryContextType';
+import { useRepository } from '@/hooks/useRepository';
 
 import { RepositoryFormDialogClient } from './RepositoryFormDialogClient';
 
@@ -72,51 +72,6 @@ export function RepositoryActionsClient({ repositoryCount = 0 }: RepositoryActio
     window.dispatchEvent(new CustomEvent('refresh-repositories'));
   };
 
-  // Handle repository connection
-  const handleConnectRepository = async (values: ConnectRepositoryValues): Promise<void> => {
-    try {
-      // Connect repository via API
-      const connectResponse = await fetch('/api/repositories', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values),
-      });
-
-      if (!connectResponse.ok) {
-        let errorMessage = 'Failed to connect repository';
-        try {
-          const errorData = await connectResponse.json();
-          if (errorData && typeof errorData.error === 'string') {
-            errorMessage = errorData.error;
-          }
-        } catch (parseError) {
-          console.error('Error parsing error response:', parseError);
-        }
-        throw new Error(errorMessage);
-      }
-
-      // Close dialog
-      setConnectDialogOpen(false);
-
-      // Show success message - using global toast system or event dispatch
-      window.dispatchEvent(new CustomEvent('repository-connected'));
-    } catch (error: unknown) {
-      console.error('Error connecting repository:', error);
-      // Show error message
-      toast({
-        title: 'Repository Connection Failed',
-        description: error instanceof Error ? error.message : 'Unknown error occurred',
-        variant: 'destructive',
-      });
-
-      window.dispatchEvent(
-        new CustomEvent('repository-connection-error', {
-          detail: { message: error instanceof Error ? error.message : 'Unknown error' },
-        }),
-      );
-    }
-  };
-
   return (
     <div className="flex items-center gap-4">
       {currentRepositoryCount > 0 && (
@@ -150,11 +105,7 @@ export function RepositoryActionsClient({ repositoryCount = 0 }: RepositoryActio
         </Tooltip>
       </div>
 
-      <RepositoryFormDialogClient
-        open={connectDialogOpen}
-        onOpenChange={setConnectDialogOpen}
-        onSubmit={handleConnectRepository}
-      />
+      <RepositoryFormDialogClient open={connectDialogOpen} onOpenChange={setConnectDialogOpen} />
     </div>
   );
 }
