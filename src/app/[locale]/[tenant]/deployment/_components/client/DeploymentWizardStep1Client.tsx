@@ -38,11 +38,10 @@ const DeploymentWizardStep1Client: React.FC<DeploymentWizardStep1ClientProps> = 
   const isValid = typeof isStepValid === 'function' ? isStepValid() : isStepValid;
 
   return (
-    <div className="p-4 bg-black/5 dark:bg-black/20 rounded-md border border-gray-200 dark:border-gray-800">
-      <h2 className="text-lg font-medium mb-4">Deployment Details</h2>
-      <div className="space-y-4">
+    <div className="p-3 bg-black/5 dark:bg-black/20 rounded-md border border-gray-200 dark:border-gray-800">
+      <div className="space-y-2">
         <div>
-          <label htmlFor="name" className="block text-sm font-medium mb-1">
+          <label htmlFor="name" className="block text-sm font-medium mb-0.5">
             Deployment Name
           </label>
           <Input
@@ -56,7 +55,7 @@ const DeploymentWizardStep1Client: React.FC<DeploymentWizardStep1ClientProps> = 
         </div>
 
         <div>
-          <label htmlFor="description" className="block text-sm font-medium mb-1">
+          <label htmlFor="description" className="block text-sm font-medium mb-0.5">
             Description
           </label>
           <Textarea
@@ -65,22 +64,20 @@ const DeploymentWizardStep1Client: React.FC<DeploymentWizardStep1ClientProps> = 
             value={description}
             onChange={onInputChange}
             placeholder="Briefly describe this deployment"
-            rows={3}
+            rows={2}
           />
         </div>
 
         <div>
-          <div className="mb-1">
-            <label htmlFor="repositoryId" className="block text-sm font-medium">
-              Repository
-            </label>
-          </div>
+          <label htmlFor="repositoryId" className="block text-sm font-medium mb-0.5">
+            Repository
+          </label>
           <select
             id="repositoryId"
             name="repositoryId"
             value={repositoryId}
             onChange={onInputChange}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             required
           >
             <option value="">Select repository</option>
@@ -92,11 +89,13 @@ const DeploymentWizardStep1Client: React.FC<DeploymentWizardStep1ClientProps> = 
                 ))
               : null}
           </select>
-          {repositoryError && <p className="text-sm text-red-500 mt-1">Error: {repositoryError}</p>}
+          {repositoryError && (
+            <p className="text-sm text-red-500 mt-0.5">Error: {repositoryError}</p>
+          )}
         </div>
 
         <div>
-          <label htmlFor="branch" className="block text-sm font-medium mb-1">
+          <label htmlFor="branch" className="block text-sm font-medium mb-0.5">
             Branch
           </label>
           <Input
@@ -107,13 +106,10 @@ const DeploymentWizardStep1Client: React.FC<DeploymentWizardStep1ClientProps> = 
             placeholder="main"
             className="w-full"
           />
-          <p className="text-xs text-gray-500 mt-1">
-            Default branch to use for deployment. Common values: main, master, develop
-          </p>
         </div>
       </div>
 
-      <div className="mt-8 flex justify-end">
+      <div className="mt-4 flex justify-end">
         <Button type="button" onClick={onNextStep} disabled={!isValid}>
           Next
         </Button>
