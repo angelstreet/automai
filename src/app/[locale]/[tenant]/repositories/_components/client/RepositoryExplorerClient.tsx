@@ -3,7 +3,6 @@
 import {
   ArrowLeft,
   GitBranch,
-  RefreshCw,
   FolderTree,
   Code,
   Play,
@@ -21,17 +20,10 @@ import { useState, useEffect } from 'react';
 
 import { GitHubIcon, GitLabIcon, GiteaIcon } from '@/components/icons';
 import { Alert, AlertDescription } from '@/components/shadcn/alert';
-import { Badge } from '@/components/shadcn/badge';
 import { Button } from '@/components/shadcn/button';
 import { Card, CardContent } from '@/components/shadcn/card';
 import { ScrollArea } from '@/components/shadcn/scroll-area';
 import { Tabs, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/shadcn/tooltip';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -451,40 +443,8 @@ export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplo
           <div className="flex items-center space-x-2">
             <Button variant="ghost" size="sm" onClick={onBack} className="h-7 text-xs">
               <ArrowLeft className="h-3.5 w-3.5 mr-1" />
-              <span>{t('back')}</span>
+              <span>{c('back')}</span>
             </Button>
-
-            <div className="flex items-center">
-              {getProviderIcon()}
-              <span className="ml-2 font-semibold text-sm">
-                {isValidRepository ? `${repository.owner} / ${repository.name}` : 'Loading...'}
-              </span>
-              {isValidRepository && repository.isPrivate && (
-                <Badge variant="outline" className="ml-2 text-xs">
-                  {t('sort_private')}
-                </Badge>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={handleRefresh}
-                    disabled={isLoading}
-                  >
-                    <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{isLoading ? t('loading') : c('refresh')}</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-
             <Button variant="outline" size="sm" className="h-7 text-xs">
               <Star className="h-3.5 w-3.5 mr-1" />
               <span>Star</span>

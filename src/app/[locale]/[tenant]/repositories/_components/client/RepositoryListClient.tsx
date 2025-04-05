@@ -11,12 +11,17 @@ import { useRepository } from '@/hooks/useRepository';
 import { Repository } from '@/types/component/repositoryComponentType';
 
 import { RepositoryCardClient } from './RepositoryCardClient';
+import { RepositoryExplorerClient } from './RepositoryExplorerClient';
 
 export function RepositoryListClient() {
   const t = useTranslations('repositories');
 
   // Use the repository hook to get data
   const { repositories, isLoadingRepositories, refetchRepositories } = useRepository();
+
+  // State for repository explorer
+  const [selectedRepository, setSelectedRepository] = useState<Repository | null>(null);
+  const [showExplorer, setShowExplorer] = useState(false);
 
   // Dispatch event when repository count changes
   useEffect(() => {
@@ -56,11 +61,21 @@ export function RepositoryListClient() {
   const itemsPerPage = 12;
 
   const handleViewRepository = (repo: Repository) => {
+    // Update state to show the explorer
+    setSelectedRepository(repo);
+    setShowExplorer(true);
+
+    // Also dispatch the event for backward compatibility
     window.dispatchEvent(
       new CustomEvent('repository-view-request', {
         detail: { repo },
       }),
     );
+  };
+
+  const handleBackToList = () => {
+    setSelectedRepository(null);
+    setShowExplorer(false);
   };
 
   // Filter repositories
@@ -97,6 +112,12 @@ export function RepositoryListClient() {
     currentPage * itemsPerPage,
   );
 
+  // If explorer is shown, render it
+  if (showExplorer && selectedRepository) {
+    return <RepositoryExplorerClient repository={selectedRepository} onBack={handleBackToList} />;
+  }
+
+  // Otherwise render repository list
   return (
     <div>
       {/* Tabs filter and search */}
