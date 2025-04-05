@@ -16,6 +16,8 @@ export { DeploymentListClient } from './client/DeploymentListClient';
 export { DeploymentWizardMainClient } from './client/DeploymentWizardMainClient';
 export { DeploymentActionsClient } from './client/DeploymentActionsClient';
 export { DeploymentWizardDialogClient } from './client/DeploymentWizardDialogClient';
-
-// Other client components
 export { DeploymentEmptyStateClient } from './client/DeploymentEmptyStateClient';
+
+// Export event listener
+export { default as DeploymentEventListener } from './client/DeploymentEventListener';
+export { DeploymentEvents } from './client/DeploymentEventListener';

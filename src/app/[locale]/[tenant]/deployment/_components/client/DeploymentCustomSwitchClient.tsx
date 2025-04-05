@@ -9,7 +9,7 @@ interface CustomSwitchProps {
   className?: string;
 }
 
-const CustomSwitch: React.FC<CustomSwitchProps> = ({
+const DeploymentCustomSwitchClient: React.FC<CustomSwitchProps> = ({
   checked,
   onCheckedChange,
   label,
@@ -37,4 +37,5 @@ const CustomSwitch: React.FC<CustomSwitchProps> = ({
   );
 };
 
-export default CustomSwitch;
+export default DeploymentCustomSwitchClient;
+export { DeploymentCustomSwitchClient };

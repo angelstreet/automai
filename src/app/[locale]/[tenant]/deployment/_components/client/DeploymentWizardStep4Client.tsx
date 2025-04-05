@@ -161,3 +161,4 @@ const DeploymentWizardStep4Client: React.FC<DeploymentWizardStep4Props> = ({
 };
 
 export default DeploymentWizardStep4Client;
+export { DeploymentWizardStep4Client };

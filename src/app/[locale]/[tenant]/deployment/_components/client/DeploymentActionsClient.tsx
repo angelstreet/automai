@@ -63,6 +63,19 @@ export function DeploymentActionsClient({
     return () => window.removeEventListener('refresh-deployments-complete', handleRefreshComplete);
   }, []);
 
+  // Listen for internal dialog open events
+  useEffect(() => {
+    const handleInternalOpenDialog = () => {
+      console.log('[DeploymentActions] Received internal open dialog event');
+      setShowWizard(true);
+    };
+
+    window.addEventListener('INTERNAL_OPEN_DEPLOYMENT_DIALOG', handleInternalOpenDialog);
+    return () => {
+      window.removeEventListener('INTERNAL_OPEN_DEPLOYMENT_DIALOG', handleInternalOpenDialog);
+    };
+  }, []);
+
   const handleRefresh = async () => {
     if (isRefreshing) return;
 

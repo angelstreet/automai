@@ -12,7 +12,14 @@ import {
 } from '@/app/actions/deploymentsAction';
 import { useToast } from '@/components/shadcn/use-toast';
 
-import type { DeploymentFormData } from '@/app/types/deployment';
+import type { DeploymentFormData } from '@/types/component/deploymentComponentType';
+
+// Define proper return types for server actions
+interface ActionResult<T = any> {
+  success: boolean;
+  error?: string;
+  data?: T;
+}
 
 /**
  * Hook for managing deployments
@@ -77,17 +84,17 @@ export function useDeployment() {
     mutationFn: ({ id, data }: { id: string; data: Partial<DeploymentFormData> }) =>
       updateDeployment(id, data),
     onSuccess: (response) => {
-      if (response.success) {
+      if (response) {
         toast({
           title: 'Success',
           description: 'Deployment updated successfully',
         });
         queryClient.invalidateQueries({ queryKey: ['deployments'] });
-        queryClient.invalidateQueries({ queryKey: ['deployment', response.data?.id] });
+        queryClient.invalidateQueries({ queryKey: ['deployment', response?.id] });
       } else {
         toast({
           title: 'Error',
-          description: response.error || 'Failed to update deployment',
+          description: 'Failed to update deployment',
           variant: 'destructive',
         });
       }
@@ -102,9 +109,16 @@ export function useDeployment() {
     },
   });
 
-  // Delete deployment mutation
+  // Delete deployment mutation - wrapping the boolean response with proper type
   const deleteDeploymentMutation = useMutation({
-    mutationFn: (id: string) => deleteDeployment(id),
+    mutationFn: async (id: string): Promise<ActionResult<null>> => {
+      const result = await deleteDeployment(id);
+      // Transform the boolean result to our ActionResult type
+      return {
+        success: !!result,
+        error: result ? undefined : 'Failed to delete deployment',
+      };
+    },
     onSuccess: (response) => {
       if (response.success) {
         toast({
@@ -130,9 +144,16 @@ export function useDeployment() {
     },
   });
 
-  // Run deployment mutation
+  // Run deployment mutation - wrapping the result with proper type
   const runDeploymentMutation = useMutation({
-    mutationFn: (id: string) => runDeployment(id),
+    mutationFn: async (id: string): Promise<ActionResult<null>> => {
+      const result = await runDeployment(id);
+      // Transform to our ActionResult type
+      return {
+        success: result.success,
+        error: result.error,
+      };
+    },
     onSuccess: (response) => {
       if (response.success) {
         toast({
@@ -140,7 +161,6 @@ export function useDeployment() {
           description: 'Deployment started successfully',
         });
         queryClient.invalidateQueries({ queryKey: ['deployments'] });
-        queryClient.invalidateQueries({ queryKey: ['deployment', response.data?.id] });
       } else {
         toast({
           title: 'Error',

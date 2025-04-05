@@ -56,3 +56,4 @@ const DeploymentStatusBadgeClient: React.FC<StatusBadgeProps> = ({ status, class
 };
 
 export default DeploymentStatusBadgeClient;
+export { DeploymentStatusBadgeClient };

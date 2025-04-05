@@ -92,3 +92,4 @@ const DeploymentWizardStep3Client: React.FC<DeploymentWizardStep3Props> = ({
 };
 
 export default DeploymentWizardStep3Client;
+export { DeploymentWizardStep3Client };

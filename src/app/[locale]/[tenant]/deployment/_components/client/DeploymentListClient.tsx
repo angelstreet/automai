@@ -21,6 +21,7 @@ import { getFormattedTime } from '@/lib/utils/deploymentUtils';
 import { Deployment } from '@/types/component/deploymentComponentType';
 import { Repository } from '@/types/component/repositoryComponentType';
 
+import { DeploymentEvents } from './DeploymentEventListener';
 import DeploymentStatusBadgeClient from './DeploymentStatusBadgeClient';
 
 interface DeploymentListProps {
@@ -103,13 +104,16 @@ export function DeploymentListClient({
     try {
       setActionInProgress(selectedDeployment.id);
       const result = await deleteDeployment(selectedDeployment.id);
+
       if (result && result.success) {
         toast({
           title: 'Deployment Deleted',
           description: 'Successfully deleted.',
           variant: 'default',
         });
-        router.refresh();
+
+        // Dispatch a single refresh event
+        window.dispatchEvent(new Event(DeploymentEvents.REFRESH_DEPLOYMENTS));
       } else {
         toast({
           title: 'Error',
@@ -210,17 +214,19 @@ export function DeploymentListClient({
     try {
       const result = await runDeployment(deployment.id);
 
-      if (result.success) {
+      if (result && result.success) {
         toast({
           title: 'Success',
           description: 'Deployment started successfully',
           variant: 'default',
         });
-        router.refresh();
+
+        // Dispatch a single refresh event
+        window.dispatchEvent(new Event(DeploymentEvents.REFRESH_DEPLOYMENTS));
       } else {
         toast({
           title: 'Error',
-          description: result.error || 'Failed to start deployment',
+          description: result?.error || 'Failed to start deployment',
           variant: 'destructive',
         });
       }
