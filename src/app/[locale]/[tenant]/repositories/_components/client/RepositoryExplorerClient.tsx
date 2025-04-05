@@ -56,7 +56,7 @@ export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplo
   const isValidRepository =
     repository &&
     repository.id &&
-    repository.providerId &&
+    (repository.providerId || repository.provider_id) &&
     repository.url &&
     repository.name &&
     repository.owner;
@@ -69,7 +69,7 @@ export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplo
         name: repository.name,
         owner: repository.owner,
         url: repository.url,
-        providerId: repository.providerId,
+        providerId: repository.providerId || repository.provider_id,
         providerType: repository.providerType,
         isValid: isValidRepository,
       });
@@ -119,7 +119,7 @@ export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplo
 
       try {
         // Use the providerId directly from the repository object
-        const providerId = repository.providerId;
+        const providerId = repository.providerId || repository.provider_id;
 
         console.log('[RepositoryExplorer] Fetching file content with params:', {
           repositoryId: repository.id,
@@ -203,7 +203,7 @@ export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplo
         const pathString = currentPath.join('/');
 
         // Use the providerId directly from the repository object
-        const providerId = repository.providerId;
+        const providerId = repository.providerId || repository.provider_id;
 
         console.log('[RepositoryExplorer] Fetching files with params:', {
           repositoryId: repository.id,
@@ -285,6 +285,7 @@ export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplo
   }, [
     repository.id,
     repository.providerId,
+    repository.provider_id,
     repository.url,
     currentPath,
     isValidRepository,
