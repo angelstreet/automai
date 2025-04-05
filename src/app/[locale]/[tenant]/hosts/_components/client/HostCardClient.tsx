@@ -35,7 +35,7 @@ import {
 } from '@/components/shadcn/tooltip';
 import { Host } from '@/types/component/hostComponentType';
 
-import { HOST_CONNECTION_TESTING, HOST_CONNECTION_TESTED } from './HostsEventListener';
+import { HostsEvents } from './HostsEventListener';
 
 interface HostCardClientProps {
   host: Host & { animationDelay?: number };
@@ -70,43 +70,6 @@ function HostCardClient({ host, onDelete, onTestConnection }: HostCardClientProp
       hasOnDelete: !!onDelete,
     });
   }, [host.id, onTestConnection, onDelete]);
-
-  // Listen for host-specific connection testing events
-  useEffect(() => {
-    const handleTestingStarted = (event: CustomEvent) => {
-      // Only respond if this event is for this specific host
-      if (event.detail && event.detail.hostId === host.id) {
-        console.log(
-          `[@debug:HostCardClient:${host.id}:${host.name}] Testing STARTED at ${new Date().toISOString()}`,
-        );
-        setIsRefreshing(true);
-        setLocalStatus('testing');
-      }
-    };
-
-    const handleTestingCompleted = (event: CustomEvent) => {
-      // Only respond if this event is for this specific host
-      if (event.detail && event.detail.hostId === host.id) {
-        console.log(
-          `[@debug:HostCardClient:${host.id}:${host.name}] Testing COMPLETED at ${new Date().toISOString()}`,
-        );
-        setIsRefreshing(false);
-        // Note: We don't set localStatus here because it's already handled by the host.status update
-      }
-    };
-
-    console.log(`[@debug:HostCardClient:${host.id}:${host.name}] Setting up event listeners`);
-
-    // Cast the event handler to EventListener to satisfy TypeScript
-    window.addEventListener(HOST_CONNECTION_TESTING, handleTestingStarted as EventListener);
-    window.addEventListener(HOST_CONNECTION_TESTED, handleTestingCompleted as EventListener);
-
-    return () => {
-      console.log(`[@debug:HostCardClient:${host.id}:${host.name}] Removing event listeners`);
-      window.removeEventListener(HOST_CONNECTION_TESTING, handleTestingStarted as EventListener);
-      window.removeEventListener(HOST_CONNECTION_TESTED, handleTestingCompleted as EventListener);
-    };
-  }, [host.id, host.name]);
 
   const getStatusDot = (status: string) => {
     const baseClasses = 'h-4 w-4 rounded-full transition-colors duration-300';
@@ -266,36 +229,38 @@ function HostCardClient({ host, onDelete, onTestConnection }: HostCardClientProp
   const handleRefreshClick = useCallback(async () => {
     // Don't execute if already refreshing or deleting
     if (isRefreshing || isDeleting) {
-      console.log('[HostCardClient] Skipping refresh - already in progress or deleting');
+      console.log(`[HostCardClient:${host.id}] Skipping refresh - already in progress or deleting`);
       return;
     }
 
-    console.log('[HostCardClient] Starting refresh for host:', host.id);
+    console.log(`[HostCardClient:${host.id}] Starting refresh for host:`, host.id);
     setIsRefreshing(true);
     setLocalStatus('testing'); // Set local status to testing immediately
+
+    // No need to dispatch events here - HostListClient will handle it
 
     try {
       if (!onTestConnection) {
         throw new Error('Test connection callback not provided');
       }
 
-      const result = await onTestConnection(host, { skipRevalidation: false });
-      console.log('[HostCardClient] Refresh result:', { hostId: host.id, success: result });
+      // Call parent component's handler, which will dispatch events
+      console.log(`[HostCardClient:${host.id}] Calling onTestConnection`);
+      const result = await onTestConnection(host);
+      console.log(`[HostCardClient:${host.id}] Refresh result:`, {
+        hostId: host.id,
+        success: result,
+      });
 
-      // Update localStatus based on the test result
-      setLocalStatus(result ? 'connected' : 'failed');
-
-      if (result === false) {
-        setErrorMessage('Failed to connect to host. Please check your connection settings.');
-        setShowErrorDialog(true);
-      }
+      // The status update will come from the parent through the host prop
     } catch (error) {
-      console.error('[HostCardClient] Refresh error:', error);
+      console.error(`[HostCardClient:${host.id}] Refresh error:`, error);
       setErrorMessage(error instanceof Error ? error.message : 'An unexpected error occurred');
       setShowErrorDialog(true);
       setLocalStatus('failed'); // Set status to failed on error
     } finally {
       setIsRefreshing(false);
+      // No need to dispatch events here - HostListClient will handle it
     }
   }, [host, onTestConnection, isRefreshing, isDeleting]);
 

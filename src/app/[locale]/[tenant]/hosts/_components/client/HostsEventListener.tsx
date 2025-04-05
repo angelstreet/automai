@@ -3,43 +3,78 @@
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
-// Define and export event constants
-export const REFRESH_HOSTS = 'REFRESH_HOSTS';
-export const REFRESH_HOSTS_COMPLETE = 'REFRESH_HOSTS_COMPLETE';
-export const OPEN_HOST_DIALOG = 'OPEN_HOST_DIALOG';
-export const TOGGLE_HOST_VIEW_MODE = 'TOGGLE_HOST_VIEW_MODE';
-export const HOST_CONNECTION_TESTING = 'HOST_CONNECTION_TESTING';
-export const HOST_CONNECTION_TESTED = 'HOST_CONNECTION_TESTED';
+// Define constants in an object to avoid Fast Refresh issues
+const HostsEvents = {
+  // UI Control Events
+  OPEN_HOST_DIALOG: 'OPEN_HOST_DIALOG', // Open the "Add Host" dialog
+  TOGGLE_HOST_VIEW_MODE: 'TOGGLE_HOST_VIEW_MODE', // Switch between grid/table view
+
+  // Data Refresh Events
+  REFRESH_HOSTS: 'REFRESH_HOSTS', // Request to refresh host data from server
+
+  // Host Testing Events
+  HOST_TESTING_START: 'HOST_TESTING_START', // Single host testing starts
+  HOST_TESTING_COMPLETE: 'HOST_TESTING_COMPLETE', // Single host testing completes
+};
+
+// Export the constants object
+export { HostsEvents };
 
 export default function HostsEventListener() {
   const router = useRouter();
 
   useEffect(() => {
-    const handleRefreshComplete = () => {
-      // Refresh the route when events complete
-      console.log('[@component:HostsEventListener] Refreshing route after Host operation');
-      router.refresh();
-    };
-
+    // Handle refresh hosts request
     const handleRefreshHosts = () => {
-      console.log('[@component:HostsEventListener] Handling refresh hosts request');
+      console.log('[@component:HostsEventListener] REFRESH_HOSTS: Refreshing hosts data');
       router.refresh();
     };
 
-    const handleToggleViewMode = () => {
-      console.log('[@component:HostsEventListener] Handling toggle view mode event');
-      // No need to do anything here as Zustand will automatically update subscribers
-      // View mode toggle is handled by Zustand store
+    // Handle individual host testing events
+    const handleHostTestingStart = (event: CustomEvent) => {
+      if (event.detail?.hostId) {
+        console.log(
+          `[@component:HostsEventListener] HOST_TESTING_START: Host ${event.detail.hostId}`,
+        );
+      }
     };
 
-    window.addEventListener(REFRESH_HOSTS_COMPLETE, handleRefreshComplete);
-    window.addEventListener(REFRESH_HOSTS, handleRefreshHosts);
-    window.addEventListener(TOGGLE_HOST_VIEW_MODE, handleToggleViewMode);
+    const handleHostTestingComplete = (event: CustomEvent) => {
+      if (event.detail?.hostId) {
+        console.log(
+          `[@component:HostsEventListener] HOST_TESTING_COMPLETE: Host ${event.detail.hostId}`,
+        );
+      }
+    };
+
+    // Debug message when component mounts
+    console.log('[@component:HostsEventListener] Setting up event listeners');
+
+    // Add event listeners
+    window.addEventListener(HostsEvents.REFRESH_HOSTS, handleRefreshHosts);
+    window.addEventListener(
+      HostsEvents.HOST_TESTING_START,
+      handleHostTestingStart as EventListener,
+    );
+    window.addEventListener(
+      HostsEvents.HOST_TESTING_COMPLETE,
+      handleHostTestingComplete as EventListener,
+    );
 
     return () => {
-      window.removeEventListener(REFRESH_HOSTS_COMPLETE, handleRefreshComplete);
-      window.removeEventListener(REFRESH_HOSTS, handleRefreshHosts);
-      window.removeEventListener(TOGGLE_HOST_VIEW_MODE, handleToggleViewMode);
+      // Debug message when component unmounts
+      console.log('[@component:HostsEventListener] Removing event listeners');
+
+      // Remove event listeners
+      window.removeEventListener(HostsEvents.REFRESH_HOSTS, handleRefreshHosts);
+      window.removeEventListener(
+        HostsEvents.HOST_TESTING_START,
+        handleHostTestingStart as EventListener,
+      );
+      window.removeEventListener(
+        HostsEvents.HOST_TESTING_COMPLETE,
+        handleHostTestingComplete as EventListener,
+      );
     };
   }, [router]);
 

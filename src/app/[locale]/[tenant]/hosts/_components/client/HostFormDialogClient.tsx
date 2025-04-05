@@ -19,7 +19,7 @@ import {
 import { Textarea } from '@/components/shadcn/textarea';
 import { useHost } from '@/hooks/useHost';
 
-import { REFRESH_HOSTS_COMPLETE } from './HostsEventListener';
+import { HostsEvents } from './HostsEventListener';
 
 // Define a throttle constant for testing connections
 const REQUEST_THROTTLE_MS = 1000;
@@ -220,7 +220,7 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
 
       if (result.success) {
         // Dispatch event to notify listeners of successful operation
-        window.dispatchEvent(new Event(REFRESH_HOSTS_COMPLETE));
+        window.dispatchEvent(new Event(HostsEvents.REFRESH_HOSTS));
 
         // Close dialog if onCancel is provided
         if (onCancel) {

@@ -7,7 +7,7 @@ import { getUserActiveTeam } from '@/app/actions/teamAction';
 import { getUser } from '@/app/actions/userAction';
 import hostDb from '@/lib/db/hostDb';
 import hostService from '@/lib/services/hostService';
-import { Host } from '@/types/context/hostContextType';
+import { Host, HostStatus } from '@/types/context/hostContextType';
 
 export interface HostFilter {
   status?: string;
@@ -21,7 +21,7 @@ export const getHosts = cache(
     try {
       // Get current user and team
       const user = await getUser();
-      const activeTeamResult = await getUserActiveTeam(user.id);
+      const activeTeamResult = await getUserActiveTeam(user?.id ?? '');
       if (!activeTeamResult?.id) {
         return { success: false, error: 'No active team found' };
       }
@@ -73,12 +73,11 @@ export async function getHostById(
  */
 export async function createHost(
   data: Omit<Host, 'id'>,
-  options?: { skipRevalidation?: boolean },
 ): Promise<{ success: boolean; error?: string; data?: Host }> {
   try {
     // Get current user and team
     const user = await getUser();
-    const activeTeam = await getUserActiveTeam(user.id);
+    const activeTeam = await getUserActiveTeam(user?.id ?? '');
     if (!activeTeam?.id) {
       return { success: false, error: 'No active team found' };
     }
@@ -97,7 +96,7 @@ export async function createHost(
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       team_id: activeTeam.id,
-      creator_id: user.id,
+      creator_id: user?.id ?? '',
     };
 
     // Basic validation for SSH connections
@@ -111,10 +110,8 @@ export async function createHost(
       return { success: false, error: result.error || 'Failed to add host' };
     }
 
-    // Revalidate paths only if not skipped
-    if (!options?.skipRevalidation) {
-      revalidatePath('/[locale]/[tenant]/hosts');
-    }
+    // Revalidate for data-modifying operations
+    revalidatePath('/[locale]/[tenant]/hosts', 'page');
 
     return { success: true, data: result.data };
   } catch (error: any) {
@@ -128,7 +125,6 @@ export async function createHost(
 export async function updateHost(
   id: string,
   updates: Partial<Omit<Host, 'id'>>,
-  options?: { skipRevalidation?: boolean },
 ): Promise<{ success: boolean; error?: string; data?: Host }> {
   try {
     if (!id) {
@@ -141,10 +137,8 @@ export async function updateHost(
       return { success: false, error: result.error || 'Host not found or update failed' };
     }
 
-    // Revalidate paths only if not skipped
-    if (!options?.skipRevalidation) {
-      revalidatePath('/[locale]/[tenant]/hosts');
-    }
+    // Revalidate for data-modifying operations
+    revalidatePath('/[locale]/[tenant]/hosts', 'page');
 
     return { success: true, data: result.data };
   } catch (error: any) {
@@ -155,10 +149,7 @@ export async function updateHost(
 /**
  * Delete a host by ID
  */
-export async function deleteHost(
-  id: string,
-  options?: { skipRevalidation?: boolean },
-): Promise<{ success: boolean; error?: string }> {
+export async function deleteHost(id: string): Promise<{ success: boolean; error?: string }> {
   try {
     if (!id) {
       return { success: false, error: 'Host ID is required' };
@@ -176,10 +167,8 @@ export async function deleteHost(
       return { success: false, error: result.error || 'Failed to delete host' };
     }
 
-    // Revalidate paths only if not skipped
-    if (!options?.skipRevalidation) {
-      revalidatePath('/[locale]/[tenant]/hosts');
-    }
+    // Revalidate for data-modifying operations
+    revalidatePath('/[locale]/[tenant]/hosts', 'page');
 
     return { success: true };
   } catch (error: any) {
@@ -190,17 +179,14 @@ export async function deleteHost(
 /**
  * Test connection with specific credentials
  */
-export async function testConnection(
-  data: {
-    type: string;
-    ip: string;
-    port?: number;
-    username?: string;
-    password?: string;
-    hostId?: string;
-  },
-  options?: { skipRevalidation?: boolean },
-): Promise<{ success: boolean; error?: string; message?: string; is_windows?: boolean }> {
+export async function testConnection(data: {
+  type: string;
+  ip: string;
+  port?: number;
+  username?: string;
+  password?: string;
+  hostId?: string;
+}): Promise<{ success: boolean; error?: string; message?: string; is_windows?: boolean }> {
   try {
     // Test the connection
     const result = await hostService.testHostConnection(data);
@@ -213,10 +199,7 @@ export async function testConnection(
       is_windows: result.is_windows || false,
     };
 
-    // Revalidate if host ID is provided and revalidation not skipped
-    if (data.hostId && !options?.skipRevalidation) {
-      revalidatePath('/[locale]/[tenant]/hosts');
-    }
+    // No revalidation - let the UI handle state updates
 
     return response;
   } catch (error: any) {
@@ -232,7 +215,6 @@ export async function testConnection(
  */
 export async function testHostConnection(
   id: string,
-  options?: { skipRevalidation?: boolean },
 ): Promise<{ success: boolean; error?: string; message?: string }> {
   try {
     if (!id) {
@@ -248,51 +230,85 @@ export async function testHostConnection(
     const host = hostResponse.data;
 
     // Update host status to testing
-    await hostDb.updateHostStatus(id, 'testing');
+    await updateHost(id, { status: 'testing' });
 
-    // Test the connection
-    const result = await testConnection(
-      {
+    try {
+      // Test the connection
+      const testData = {
         type: host.type,
         ip: host.ip,
         port: host.port,
         username: host.user,
         password: host.password,
-        hostId: host.id,
-      },
-      { skipRevalidation: true }, // Skip revalidation in the inner call, we'll handle it here
-    );
+        hostId: id,
+      };
 
-    // Update status based on result
-    await hostDb.updateHostStatus(id, result.success ? 'connected' : 'failed');
+      const testResult = await testConnection(testData);
 
-    // Revalidate paths only if not skipped
-    if (!options?.skipRevalidation) {
-      revalidatePath('/[locale]/[tenant]/hosts');
+      // Update the host status based on the test result
+      await updateHost(id, {
+        status: testResult.success ? 'connected' : 'failed',
+        updated_at: new Date().toISOString(),
+        is_windows: testResult.is_windows || host.is_windows,
+      });
+
+      // No revalidation - let the UI handle state updates
+
+      return {
+        success: testResult.success,
+        error: testResult.error,
+        message: testResult.message,
+      };
+    } catch (error: any) {
+      // Update the host status to failed if there was an error
+      await updateHost(id, {
+        status: 'failed',
+        updated_at: new Date().toISOString(),
+      });
+
+      return {
+        success: false,
+        error: error.message || 'Failed to test connection',
+      };
     }
-
-    return result;
   } catch (error: any) {
-    // Update status to failed on error
-    try {
-      await hostDb.updateHostStatus(id, 'failed');
-    } catch {
-      // Ignore update error
-    }
-
-    // Revalidate paths only if not skipped
-    if (!options?.skipRevalidation) {
-      revalidatePath('/[locale]/[tenant]/hosts');
-    }
-
-    return { success: false, error: error.message || 'Failed to test connection' };
+    return {
+      success: false,
+      error: error.message || 'Failed to test host connection',
+    };
   }
 }
 
 /**
- * Explicitly revalidate hosts pages
- * This can be used after batch operations
+ * Set host status
+ */
+export async function setHostStatus(
+  id: string,
+  status: string | HostStatus,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!id) {
+      return { success: false, error: 'Host ID is required' };
+    }
+
+    // Update the host status
+    const result = await updateHost(id, {
+      status: status as HostStatus,
+      updated_at: new Date().toISOString(),
+    });
+    if (!result.success) {
+      return { success: false, error: result.error || 'Failed to update host status' };
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Failed to update host status' };
+  }
+}
+
+/**
+ * Revalidate hosts page
  */
 export async function revalidateHosts(): Promise<void> {
-  revalidatePath('/[locale]/[tenant]/hosts');
+  revalidatePath('/[locale]/[tenant]/hosts', 'page');
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { Server, PlusCircle } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -11,13 +11,7 @@ import { Host } from '@/types/component/hostComponentType';
 
 import { HostGridClient } from './HostGridClient';
 import { HostTableClient } from './HostTableClient';
-import {
-  HOST_CONNECTION_TESTING,
-  HOST_CONNECTION_TESTED,
-  OPEN_HOST_DIALOG,
-  TEST_ALL_HOSTS_REQUESTED,
-  TEST_ALL_HOSTS_COMPLETE,
-} from './HostsEventListener';
+import { HostsEvents } from './HostsEventListener';
 
 interface HostListClientProps {
   initialHosts: Host[];
@@ -55,81 +49,78 @@ export default function HostListClient({ initialHosts }: HostListClientProps) {
     }
   }, [queryHosts]);
 
+  // Create helper functions to handle test start/complete
+  const handleTestStarted = useCallback((hostId: string) => {
+    console.log(`[@component:HostListClient] Dispatching HOST_TESTING_START for host ${hostId}`);
+    window.dispatchEvent(
+      new CustomEvent(HostsEvents.HOST_TESTING_START, {
+        detail: { hostId },
+      }),
+    );
+  }, []);
+
+  const handleTestCompleted = useCallback((hostId: string) => {
+    console.log(`[@component:HostListClient] Dispatching HOST_TESTING_COMPLETE for host ${hostId}`);
+    window.dispatchEvent(
+      new CustomEvent(HostsEvents.HOST_TESTING_COMPLETE, {
+        detail: { hostId },
+      }),
+    );
+  }, []);
+
   // Handle connection test for a host
-  const handleTestConnection = async (host: Host): Promise<boolean> => {
-    try {
-      console.log(
-        `[@debug:HostListClient] handleTestConnection START for host: ${host.name} (${host.id}) at ${new Date().toISOString()}`,
-      );
+  const handleTestConnection = useCallback(
+    async (host: Host): Promise<boolean> => {
+      try {
+        console.log(
+          `[@component:HostListClient] Testing connection for host: ${host.name} (${host.id})`,
+        );
 
-      // Dispatch event that connection testing has started WITH THE HOST ID
-      console.log(
-        `[@debug:HostListClient] Dispatching HOST_CONNECTION_TESTING for host: ${host.id}`,
-      );
-      window.dispatchEvent(
-        new CustomEvent(HOST_CONNECTION_TESTING, {
-          detail: { hostId: host.id },
-        }),
-      );
+        // Dispatch event for test start
+        handleTestStarted(host.id);
 
-      // Update local state to show testing status
-      setHosts((prevHosts) =>
-        prevHosts.map((h) => (h.id === host.id ? { ...h, status: 'testing' } : h)),
-      );
+        // Update local state to show testing status
+        setHosts((prevHosts) =>
+          prevHosts.map((h) => (h.id === host.id ? { ...h, status: 'testing' } : h)),
+        );
 
-      // Call the mutation
-      console.log(`[@debug:HostListClient] Calling testConnectionMutation for host: ${host.id}`);
-      const result = await testConnectionMutation(host.id);
-      console.log(
-        `[@debug:HostListClient] testConnectionMutation result for host ${host.id}:`,
-        result,
-      );
+        // Call the mutation
+        const result = await testConnectionMutation(host.id);
+        console.log(
+          `[@component:HostListClient] Test connection result for host ${host.id}:`,
+          result,
+        );
 
-      // Manually update the UI immediately for better UX
-      setHosts((prevHosts) =>
-        prevHosts.map((h) =>
-          h.id === host.id ? { ...h, status: result.success ? 'connected' : 'failed' } : h,
-        ),
-      );
+        // Update the UI based on result
+        setHosts((prevHosts) =>
+          prevHosts.map((h) =>
+            h.id === host.id ? { ...h, status: result.success ? 'connected' : 'failed' } : h,
+          ),
+        );
 
-      // Dispatch event that connection testing has completed WITH THE HOST ID
-      console.log(
-        `[@debug:HostListClient] Dispatching HOST_CONNECTION_TESTED for host: ${host.id}`,
-      );
-      window.dispatchEvent(
-        new CustomEvent(HOST_CONNECTION_TESTED, {
-          detail: { hostId: host.id },
-        }),
-      );
+        // Dispatch event for test completion
+        handleTestCompleted(host.id);
 
-      console.log(
-        `[@debug:HostListClient] handleTestConnection END for host: ${host.name} (${host.id}) at ${new Date().toISOString()}`,
-      );
-      return result.success;
-    } catch (error) {
-      console.error(`[@debug:HostListClient] Error testing connection for host ${host.id}:`, error);
+        return result.success;
+      } catch (error) {
+        console.error(
+          `[@component:HostListClient] Error testing connection for host ${host.id}:`,
+          error,
+        );
 
-      // Update the host status to failed
-      setHosts((prevHosts) =>
-        prevHosts.map((h) => (h.id === host.id ? { ...h, status: 'failed' } : h)),
-      );
+        // Update the host status to failed
+        setHosts((prevHosts) =>
+          prevHosts.map((h) => (h.id === host.id ? { ...h, status: 'failed' } : h)),
+        );
 
-      // Dispatch event that connection testing has completed WITH THE HOST ID (with error)
-      console.log(
-        `[@debug:HostListClient] Dispatching HOST_CONNECTION_TESTED (error) for host: ${host.id}`,
-      );
-      window.dispatchEvent(
-        new CustomEvent(HOST_CONNECTION_TESTED, {
-          detail: { hostId: host.id },
-        }),
-      );
+        // Still dispatch completion event on error
+        handleTestCompleted(host.id);
 
-      console.log(
-        `[@debug:HostListClient] handleTestConnection ERROR for host: ${host.name} (${host.id}) at ${new Date().toISOString()}`,
-      );
-      return false;
-    }
-  };
+        return false;
+      }
+    },
+    [testConnectionMutation, setHosts, handleTestStarted, handleTestCompleted],
+  );
 
   // Handle host selection
   const handleSelectHost = (host: Host | string) => {
@@ -168,69 +159,6 @@ export default function HostListClient({ initialHosts }: HostListClientProps) {
     }
   };
 
-  // Listen for "test all hosts" request
-  useEffect(() => {
-    const handleTestAllHosts = async () => {
-      console.log('[@debug:HostListClient] Testing all hosts STARTED at', new Date().toISOString());
-
-      if (!hosts || hosts.length === 0) {
-        console.log('[@debug:HostListClient] No hosts to test');
-        window.dispatchEvent(new Event(TEST_ALL_HOSTS_COMPLETE));
-        return;
-      }
-
-      // Log detailed info about all hosts
-      console.log(
-        `[@debug:HostListClient] Host details before testing:`,
-        hosts.map((h) => ({ id: h.id, name: h.name, status: h.status })),
-      );
-
-      // Test each host one by one
-      console.log(
-        `[@debug:HostListClient] Testing ${hosts.length} hosts: ${hosts.map((h) => h.id).join(', ')}`,
-      );
-
-      // Use for...of loop to ensure sequential execution with await
-      for (const host of hosts) {
-        try {
-          console.log(
-            `[@debug:HostListClient] BEFORE testing host: ${host.name} (${host.id}) at ${new Date().toISOString()}`,
-          );
-          await handleTestConnection(host);
-          console.log(
-            `[@debug:HostListClient] AFTER testing host: ${host.name} (${host.id}) at ${new Date().toISOString()}`,
-          );
-        } catch (error) {
-          console.error(
-            `[@debug:HostListClient] Error testing host ${host.name} (${host.id}):`,
-            error,
-          );
-        }
-      }
-
-      // Add a small delay to ensure all events and UI updates have processed
-      console.log(
-        '[@debug:HostListClient] All hosts tested, waiting 500ms before firing complete event',
-      );
-
-      setTimeout(() => {
-        console.log(
-          '[@debug:HostListClient] Dispatching complete event at',
-          new Date().toISOString(),
-        );
-        window.dispatchEvent(new Event(TEST_ALL_HOSTS_COMPLETE));
-      }, 500);
-    };
-
-    console.log('[@debug:HostListClient] Setting up TEST_ALL_HOSTS_REQUESTED listener');
-    window.addEventListener(TEST_ALL_HOSTS_REQUESTED, handleTestAllHosts);
-
-    return () => {
-      console.log('[@debug:HostListClient] Removing TEST_ALL_HOSTS_REQUESTED listener');
-      window.removeEventListener(TEST_ALL_HOSTS_REQUESTED, handleTestAllHosts);
-    };
-  }, [hosts]); // Include hosts in dependencies so we always have the latest
-
   // Empty state for no hosts
   if (hosts.length === 0) {
     return (
@@ -241,7 +169,7 @@ export default function HostListClient({ initialHosts }: HostListClientProps) {
           description="Add your first host to get started"
           action={
             <Button
-              onClick={() => window.dispatchEvent(new Event(OPEN_HOST_DIALOG))}
+              onClick={() => window.dispatchEvent(new Event(HostsEvents.OPEN_HOST_DIALOG))}
               size="sm"
               className="gap-1"
             >

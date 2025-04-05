@@ -2,7 +2,7 @@
 
 import { PlusCircle, RefreshCw, Grid, List } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
@@ -10,13 +10,7 @@ import { useHost } from '@/hooks/useHost';
 import { useHostViewStore } from '@/store/hostViewStore';
 
 import { HostFormDialogClient, FormData as ConnectionFormData } from './HostFormDialogClient';
-import {
-  OPEN_HOST_DIALOG,
-  REFRESH_HOSTS,
-  TEST_ALL_HOSTS_REQUESTED,
-  TEST_ALL_HOSTS_COMPLETE,
-  TOGGLE_HOST_VIEW_MODE,
-} from './HostsEventListener';
+import { HostsEvents } from './HostsEventListener';
 
 interface HostActionsClientProps {
   hostCount?: number;
@@ -25,13 +19,15 @@ interface HostActionsClientProps {
 export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActionsClientProps) {
   const t = useTranslations('hosts');
   const c = useTranslations('common');
-  const { hosts, isLoading: isRefetching, refetchHosts } = useHost();
+  const { hosts, isLoading: isRefetching, refetchHosts, testConnection } = useHost();
 
   // Get view mode state from Zustand store
   const { viewMode, toggleViewMode } = useHostViewStore();
 
   const [showAddHost, setShowAddHost] = useState(false);
   const [isTestingHosts, setIsTestingHosts] = useState(false);
+  const activeTestingHosts = useRef<Set<string>>(new Set());
+
   const [formData, setFormData] = useState<ConnectionFormData>({
     name: '',
     description: '',
@@ -45,39 +41,153 @@ export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActio
   // Derive host count from React Query's hosts data, falling back to the prop
   const currentHostCount = hosts?.length ?? initialHostCount;
 
-  // Listen for test completion event
+  // Listen for host-specific testing events
   useEffect(() => {
+    console.log('[@component:HostActionsClient] Setting up event listeners');
+
     const handleOpenDialog = () => {
+      console.log('[@component:HostActionsClient] OPEN_HOST_DIALOG event received');
       setShowAddHost(true);
     };
 
-    const handleTestingComplete = () => {
-      console.log('[@component:HostActionsClient] All hosts tested, stopping animation');
-      setIsTestingHosts(false);
+    // Track individual host testing
+    const handleHostTestingStart = (event: CustomEvent) => {
+      console.log('[@component:HostActionsClient] HOST_TESTING_START event received', event);
+      if (event.detail && event.detail.hostId) {
+        console.log(`[@component:HostActionsClient] Host testing started: ${event.detail.hostId}`);
+        activeTestingHosts.current.add(event.detail.hostId);
+        console.log(
+          `[@component:HostActionsClient] Active testing hosts: ${Array.from(activeTestingHosts.current).join(', ')}`,
+        );
+        setIsTestingHosts(true);
+      } else {
+        console.warn(
+          '[@component:HostActionsClient] HOST_TESTING_START event received without hostId in detail',
+        );
+      }
     };
 
-    window.addEventListener(OPEN_HOST_DIALOG, handleOpenDialog);
-    window.addEventListener(TEST_ALL_HOSTS_COMPLETE, handleTestingComplete);
+    const handleHostTestingComplete = (event: CustomEvent) => {
+      console.log('[@component:HostActionsClient] HOST_TESTING_COMPLETE event received', event);
+      if (event.detail && event.detail.hostId) {
+        console.log(
+          `[@component:HostActionsClient] Host testing completed: ${event.detail.hostId}`,
+        );
+        activeTestingHosts.current.delete(event.detail.hostId);
+        console.log(
+          `[@component:HostActionsClient] Remaining testing hosts: ${Array.from(activeTestingHosts.current).join(', ') || 'none'}`,
+        );
+
+        // Only stop animation if no hosts are being tested
+        if (activeTestingHosts.current.size === 0) {
+          console.log(
+            '[@component:HostActionsClient] No more hosts being tested, stopping animation',
+          );
+          setIsTestingHosts(false);
+        } else {
+          console.log(
+            `[@component:HostActionsClient] ${activeTestingHosts.current.size} hosts still being tested, continuing animation`,
+          );
+        }
+      } else {
+        console.warn(
+          '[@component:HostActionsClient] HOST_TESTING_COMPLETE event received without hostId in detail',
+        );
+      }
+    };
+
+    // Add all event listeners
+    console.log(`[@component:HostActionsClient] Adding event listeners for events:
+      - ${HostsEvents.OPEN_HOST_DIALOG}
+      - ${HostsEvents.HOST_TESTING_START}
+      - ${HostsEvents.HOST_TESTING_COMPLETE}`);
+
+    window.addEventListener(HostsEvents.OPEN_HOST_DIALOG, handleOpenDialog);
+    window.addEventListener(
+      HostsEvents.HOST_TESTING_START,
+      handleHostTestingStart as EventListener,
+    );
+    window.addEventListener(
+      HostsEvents.HOST_TESTING_COMPLETE,
+      handleHostTestingComplete as EventListener,
+    );
 
     return () => {
-      window.removeEventListener(OPEN_HOST_DIALOG, handleOpenDialog);
-      window.removeEventListener(TEST_ALL_HOSTS_COMPLETE, handleTestingComplete);
+      console.log('[@component:HostActionsClient] Removing event listeners');
+      window.removeEventListener(HostsEvents.OPEN_HOST_DIALOG, handleOpenDialog);
+      window.removeEventListener(
+        HostsEvents.HOST_TESTING_START,
+        handleHostTestingStart as EventListener,
+      );
+      window.removeEventListener(
+        HostsEvents.HOST_TESTING_COMPLETE,
+        handleHostTestingComplete as EventListener,
+      );
     };
   }, []);
 
+  // Helper function to test a single host
+  const testSingleHost = async (hostId: string) => {
+    const host = hosts.find((h) => h.id === hostId);
+    if (!host) return;
+
+    // Dispatch start event directly
+    window.dispatchEvent(
+      new CustomEvent(HostsEvents.HOST_TESTING_START, {
+        detail: { hostId: host.id },
+      }),
+    );
+
+    try {
+      await testConnection(host.id);
+    } catch (error) {
+      console.error(`[@component:HostActionsClient] Error testing host ${host.id}:`, error);
+    } finally {
+      // Dispatch complete event directly
+      window.dispatchEvent(
+        new CustomEvent(HostsEvents.HOST_TESTING_COMPLETE, {
+          detail: { hostId: host.id },
+        }),
+      );
+    }
+  };
+
   const handleRefresh = async () => {
-    if (isRefetching || isTestingHosts) return;
+    if (isRefetching || isTestingHosts) {
+      console.log('[@component:HostActionsClient] Refresh already in progress, skipping');
+      return;
+    }
 
-    console.log('[@component:HostActionsClient] Starting hosts refresh and testing');
-    setIsTestingHosts(true);
+    console.log('[@component:HostActionsClient] Starting hosts refresh and testing process');
 
-    // First refresh hosts data
-    window.dispatchEvent(new Event(REFRESH_HOSTS));
-    await refetchHosts();
+    try {
+      // First refresh hosts data
+      console.log('[@component:HostActionsClient] Dispatching REFRESH_HOSTS event');
+      window.dispatchEvent(new Event(HostsEvents.REFRESH_HOSTS));
 
-    // Then request testing all hosts via the custom event
-    // This will be handled by HostListClient
-    window.dispatchEvent(new Event(TEST_ALL_HOSTS_REQUESTED));
+      // Wait for refetch to complete
+      console.log('[@component:HostActionsClient] Calling refetchHosts()');
+      await refetchHosts();
+
+      // Now test each host sequentially
+      console.log(`[@component:HostActionsClient] Testing ${hosts.length} hosts individually`);
+
+      // Skip the testing if there are no hosts
+      if (hosts.length === 0) {
+        console.log('[@component:HostActionsClient] No hosts to test');
+        return;
+      }
+
+      // Test each host individually, which will trigger their own events
+      for (const host of hosts) {
+        await testSingleHost(host.id);
+      }
+    } catch (error) {
+      console.error('[@component:HostActionsClient] Error during refresh process:', error);
+      // Ensure animation stops on error
+      setIsTestingHosts(false);
+      activeTestingHosts.current.clear();
+    }
   };
 
   const handleAddHost = () => {
@@ -91,7 +201,7 @@ export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActio
     // Toggle view mode using Zustand store
     toggleViewMode();
     // Still dispatch the event for any listeners that might be interested
-    window.dispatchEvent(new Event(TOGGLE_HOST_VIEW_MODE));
+    window.dispatchEvent(new Event(HostsEvents.TOGGLE_HOST_VIEW_MODE));
   };
 
   const handleFormChange = (newFormData: ConnectionFormData) => {

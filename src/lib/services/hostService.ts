@@ -44,14 +44,14 @@ export async function testHostConnection(data: {
       try {
         // Create debug handler for connection monitoring
         const debugHandler = (message: string) => {
-          console.log(`[Windows Detection] Debug message: ${message}`);
+          //console.log(`[Windows Detection] Debug message: ${message}`);
 
           // Look for OpenSSH for Windows in the remote ident
           if (message.includes('Remote ident:') && message.includes('OpenSSH_for_Windows')) {
-            console.log(`[Windows Detection] Remote ident from ${data.ip}: ${message}`);
-            console.log(
-              `[Windows Detection] 🪟 WINDOWS DETECTED from remote ident from ${data.ip}`,
-            );
+            //console.log(`[Windows Detection] Remote ident from ${data.ip}: ${message}`);
+            //console.log(
+            //  `[Windows Detection] 🪟 WINDOWS DETECTED from remote ident from ${data.ip}`,
+            //);
             detectedWindows = true;
             console.info('Windows detected from remote ident', { ip: data.ip });
           }
@@ -66,10 +66,10 @@ export async function testHostConnection(data: {
           }
           // Also check for OpenSSH which often indicates Windows
           else if (message.includes('OpenSSH') && !detectedWindows) {
-            console.log(`[Windows Detection] OpenSSH detected from ${data.ip}: ${message}`);
-            console.log(
-              `[Windows Detection] 🪟 WINDOWS LIKELY from OpenSSH detection from ${data.ip}`,
-            );
+            //console.log(`[Windows Detection] OpenSSH detected from ${data.ip}: ${message}`);
+            //console.log(
+            //  `[Windows Detection] 🪟 WINDOWS LIKELY from OpenSSH detection from ${data.ip}`,
+            //);
             detectedWindows = true;
             console.info('Windows likely detected from OpenSSH', { ip: data.ip });
           }
@@ -97,7 +97,7 @@ export async function testHostConnection(data: {
             password: data.password,
             readyTimeout: 10000, // 10 seconds timeout
             debug: (message: string) => {
-              console.log(`SSH Debug: ${message}`);
+              //console.log(`SSH Debug: ${message}`);
               debugHandler(message); // Pass message to our debug handler for Windows detection
             },
           });
