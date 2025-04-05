@@ -192,3 +192,57 @@ export async function someServerAction() {
 - ❌ NEVER use direct DOM manipulation for component communication
 - ❌ NEVER create cross-domain events (e.g., CICD events should not be handled by HostsEventListener)
 - ❌ NEVER duplicate event handling logic across multiple components
+
+## DOM and CSS Best Practices
+
+- ✅ **Use React-friendly CSS approaches**:
+  - Use CSS modules or styled-components for component styling
+  - Apply styles through className and attributes on React elements
+  - Create dedicated CSS helper components for global CSS concerns
+  
+- ✅ **For global CSS or document-level styling**:
+  - Create React Components like `<CSSHelper />` that apply classList changes 
+  - Keep all DOM manipulation in dedicated effect hooks
+  - Group all CSS-related effects in a single component
+  - Properly clean up effects on unmount
+  
+- ✅ **Example of proper React CSS helper pattern**:
+  ```typescript
+  function HeaderCSSHelper() {
+    const { isVisible } = useHeaderStore();
+    
+    useEffect(() => {
+      console.log(`[@component:HeaderCSSHelper] Updating CSS classes`);
+      
+      // Add class to body for global styling
+      if (isVisible) {
+        document.body.classList.remove('header-collapsed');
+        document.body.classList.add('header-expanded');
+      } else {
+        document.body.classList.remove('header-expanded');
+        document.body.classList.add('header-collapsed');
+      }
+      
+      // Cleanup on unmount
+      return () => {
+        document.body.classList.remove('header-expanded', 'header-collapsed');
+      };
+    }, [isVisible]);
+    
+    return null;
+  }
+  ```
+  
+- ❌ **NEVER manipulate the DOM directly in React components**:
+  - No `document.getElementById()`
+  - No `document.querySelector()`
+  - No `document.documentElement.setAttribute()`
+  - No direct DOM node method calls like `.click()` or `.focus()`
+  
+- ❌ **NEVER use these DOM APIs directly**:
+  ```typescript
+  // DON'T DO THIS
+  document.documentElement.setAttribute('data-theme', theme);
+  document.getElementById('some-id')?.click();
+  document.querySelector('.some-class').focus();
+  ```

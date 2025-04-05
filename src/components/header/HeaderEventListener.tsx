@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useHeaderStore } from '@/store/headerStore';
 
 // Define constants in an object to avoid Fast Refresh issues
 const HeaderEvents = {
@@ -10,6 +11,36 @@ const HeaderEvents = {
 
 // Export the constants object
 export { HeaderEvents };
+
+/**
+ * CSS helper component that adds a class to the body element based on header state
+ * This allows for global styling without direct DOM manipulation in components
+ */
+function HeaderCSSHelper() {
+  const { isVisible } = useHeaderStore();
+
+  useEffect(() => {
+    console.log(
+      `[@component:HeaderCSSHelper] Updating global CSS classes: header ${isVisible ? 'expanded' : 'collapsed'}`,
+    );
+
+    // Add class to body element for global styling
+    if (isVisible) {
+      document.body.classList.remove('header-collapsed');
+      document.body.classList.add('header-expanded');
+    } else {
+      document.body.classList.remove('header-expanded');
+      document.body.classList.add('header-collapsed');
+    }
+
+    // Cleanup on unmount
+    return () => {
+      document.body.classList.remove('header-expanded', 'header-collapsed');
+    };
+  }, [isVisible]);
+
+  return null;
+}
 
 export default function HeaderEventListener() {
   useEffect(() => {
@@ -34,6 +65,6 @@ export default function HeaderEventListener() {
     };
   }, []);
 
-  // Listener components don't render anything
-  return null;
+  // Render the CSS helper alongside the event listener
+  return <HeaderCSSHelper />;
 }

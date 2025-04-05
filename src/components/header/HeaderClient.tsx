@@ -44,16 +44,10 @@ export function HeaderClient({
     window.dispatchEvent(new Event(HeaderEvents.TOGGLE_HEADER_VISIBILITY));
   };
 
-  // Add a CSS class to the document for styling
+  // Log when visibility changes
   useEffect(() => {
     console.log(
-      `[@component:HeaderClient] Setting header visibility: ${isVisible ? 'expanded' : 'collapsed'}`,
-    );
-
-    // Set a data attribute on document for CSS targeting if needed
-    document.documentElement.setAttribute(
-      'data-header-state',
-      isVisible ? 'expanded' : 'collapsed',
+      `[@component:HeaderClient] Header visibility changed to: ${isVisible ? 'expanded' : 'collapsed'}`,
     );
   }, [isVisible]);
 
@@ -65,6 +59,7 @@ export function HeaderClient({
         className,
       )}
       data-sidebar-header="true"
+      data-header-state={isVisible ? 'expanded' : 'collapsed'}
     >
       <div
         className={cn('flex h-14 items-center relative')}
