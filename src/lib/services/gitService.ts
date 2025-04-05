@@ -355,32 +355,58 @@ export function getProviderApiConfig(
     // Gitea API format: /api/v1/repos/{owner}/{repo}/git/trees/{ref}?recursive=1
     const { owner, repo } = extractRepoInfo(provider);
 
-    // Try to get server URL from global variable, localStorage, or use the passed URL
+    // Try to get server URL from different sources
     let serverUrl = '';
-    if (typeof window !== 'undefined') {
-      // Client-side
+
+    // 1. First try global variable (set from query param)
+    if (typeof global !== 'undefined' && global.giteaServerUrl) {
+      serverUrl = global.giteaServerUrl;
+    }
+    // 2. Try to extract from the repository URL itself
+    else if (typeof global !== 'undefined' && global.repositoryUrl) {
+      const repoUrl = global.repositoryUrl;
+      const urlMatch = repoUrl.match(/^(https?:\/\/[^\/]+)/);
+      if (urlMatch && urlMatch[1]) {
+        serverUrl = urlMatch[1];
+      }
+    }
+    // 3. Then try localStorage if we're in a browser
+    else if (typeof window !== 'undefined') {
       serverUrl = localStorage.getItem('gitea_server_url') || '';
-    } else {
-      // Server-side
-      serverUrl = global.giteaServerUrl || '';
+
+      // If not in localStorage, try to extract from repo URL in localStorage
+      if (!serverUrl && localStorage.getItem('repository_url')) {
+        const repoUrl = localStorage.getItem('repository_url') || '';
+        const urlMatch = repoUrl.match(/^(https?:\/\/[^\/]+)/);
+        if (urlMatch && urlMatch[1]) {
+          serverUrl = urlMatch[1];
+        }
+      }
     }
 
-    // If still empty, use default port 3000
+    // If still empty after all attempts, use default
     if (!serverUrl) {
+      console.warn('[GitService] No Gitea server URL found, using default http://localhost:3000');
       serverUrl = 'http://localhost:3000';
     }
+
+    // For Gitea repositories, use 'master' as the default branch if 'main' is specified
+    // (since most Gitea repos use the older convention)
+    const giteaRef = ref === 'main' ? 'master' : ref;
+
+    console.log(`[GitService] Using Gitea server URL: ${serverUrl} with branch: ${giteaRef}`);
 
     if (path.endsWith('.md') || path.endsWith('.txt') || path.includes('.')) {
       // Get a specific file
       return {
         ...config,
-        url: `${serverUrl}/api/v1/repos/${owner}/${repo}/contents/${encodedPath}?ref=${ref}`,
+        url: `${serverUrl}/api/v1/repos/${owner}/${repo}/contents/${encodedPath}?ref=${giteaRef}`,
       };
     } else {
       // Get directory tree (recursive by default for better performance)
       return {
         ...config,
-        url: `${serverUrl}/api/v1/repos/${owner}/${repo}/git/trees/${ref}?recursive=1`,
+        url: `${serverUrl}/api/v1/repos/${owner}/${repo}/git/trees/${giteaRef}?recursive=1`,
       };
     }
   } else {

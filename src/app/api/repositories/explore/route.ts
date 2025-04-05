@@ -260,8 +260,7 @@ export async function GET(request: NextRequest) {
     const repositoryId = searchParams.get('repositoryId') || '';
     const providerId = searchParams.get('providerId') || '';
     const action = searchParams.get('action') || 'list';
-    const giteaServer = searchParams.get('server') || '';
-    const branch = searchParams.get('branch') || 'main';
+    const branch = searchParams.get('branch') || 'master'; // Default to master instead of main
 
     // Automatically detect provider from URL if not specified
     let provider = searchParams.get('provider') || '';
@@ -273,10 +272,18 @@ export async function GET(request: NextRequest) {
       provider = 'github'; // Default fallback
     }
 
-    // Store the repository URL in global for server-side access
-    global.repositoryUrl = repositoryUrl;
+    // Extract Gitea server URL from repository URL if it's a Gitea repo
+    let giteaServer = searchParams.get('server') || '';
+    if (provider === 'gitea' && !giteaServer && repositoryUrl) {
+      const serverMatch = repositoryUrl.match(/^(https?:\/\/[^\/]+)/);
+      if (serverMatch && serverMatch[1]) {
+        giteaServer = serverMatch[1];
+        console.log(`[@api:repositories:explore] Extracted Gitea server from URL: ${giteaServer}`);
+      }
+    }
 
-    // If gitea server is specified, temporarily store it in a global variable
+    // Store values in global for server-side access
+    global.repositoryUrl = repositoryUrl;
     if (provider === 'gitea' && giteaServer) {
       global.giteaServerUrl = giteaServer;
     }
@@ -288,9 +295,7 @@ export async function GET(request: NextRequest) {
       repositoryId,
       repositoryUrl,
       branch,
-      ...(provider === 'gitea'
-        ? { server: giteaServer || global.giteaServerUrl || 'default server' }
-        : {}),
+      ...(provider === 'gitea' ? { server: giteaServer || 'default server' } : {}),
     });
 
     // Verify user authentication
