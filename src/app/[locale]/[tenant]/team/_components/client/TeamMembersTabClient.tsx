@@ -170,7 +170,7 @@ function MembersTabContent({
                   <TableCell className="py-2 font-medium">
                     {member.user?.name || t('unknown')}
                   </TableCell>
-                  <TableCell className="py-2">{c('select')}</TableCell>
+                  <TableCell className="py-2">{member.team_name}</TableCell>
                   <TableCell className="py-2">
                     {member.user?.email &&
                     member.user.email !== 'Email unavailable in profiles table'
@@ -254,7 +254,7 @@ function MembersTabContent({
 }
 
 // Main exported component that provides the dialog context
-export function MembersTab({ teamId, subscriptionTier }: MembersTabProps) {
+export function MembersTab({ teamId, subscriptionTier: _subscriptionTier }: MembersTabProps) {
   const teamMembersQuery = useTeamMembers(teamId);
   const [members, setMembers] = useState<TeamMemberDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);

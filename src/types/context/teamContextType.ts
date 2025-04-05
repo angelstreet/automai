@@ -97,6 +97,7 @@ export interface TeamMemberDetails {
   role: string;
   created_at: string;
   updated_at: string;
+  team_name?: string;
   profiles: {
     id: string;
     role?: string;

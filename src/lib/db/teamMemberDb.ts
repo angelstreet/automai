@@ -25,7 +25,8 @@ export async function getTeamMembers(
         role,
         created_at,
         updated_at,
-        profiles:profiles(id, tenant_id, tenant_name, role)
+        profiles:profiles(id, tenant_id, tenant_name, role),
+        teams:team_id(id, name)
       `,
       )
       .eq('team_id', teamId);
@@ -56,7 +57,11 @@ export async function getTeamMembers(
       // Map user profiles to team members
       data.forEach((member) => {
         const profile = member.profiles as any;
+        const team = member.teams as any;
         const userProfile = userProfiles?.find((p) => p.id === member.profile_id);
+
+        // Add team name to member
+        member.team_name = team?.name || 'Unknown Team';
 
         // Get avatar with fallbacks, checking metadata if it exists
         let avatarUrl = userProfile?.avatar_url;
