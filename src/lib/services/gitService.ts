@@ -172,3 +172,335 @@ function getEndpoint(type: string): string {
       return '/user';
   }
 }
+
+/**
+ * Detect provider type from repository URL
+ */
+export function detectProviderFromUrl(url: string): 'github' | 'gitlab' | 'gitea' {
+  if (!url) return 'gitea'; // Default to Gitea if no URL provided
+
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname.toLowerCase();
+
+    if (hostname.includes('github')) return 'github';
+    if (hostname.includes('gitlab')) return 'gitlab';
+    if (hostname.includes('gitea')) return 'gitea';
+
+    // Default to Gitea if provider can't be determined from hostname
+    return 'gitea';
+  } catch {
+    console.warn('[GitService] Invalid URL:', url);
+    return 'gitea'; // Default to Gitea for invalid URLs
+  }
+}
+
+/**
+ * Extract repository owner, name, and project path (for GitLab) from URL
+ */
+export function extractRepoInfo(provider: string): {
+  owner: string;
+  repo: string;
+  projectPath: string;
+} {
+  try {
+    // Try to get URL from different sources (client or server)
+    let url = '';
+
+    // First check if we have a server-side global variable
+    if (typeof global !== 'undefined' && global.repositoryUrl) {
+      url = global.repositoryUrl;
+      console.log('[GitService] Using server-side repository URL:', url);
+    }
+    // Then try localStorage if we're in a browser
+    else if (typeof window !== 'undefined') {
+      url = localStorage.getItem('repository_url') || '';
+      console.log('[GitService] Using client-side repository URL:', url);
+    }
+
+    // Default values
+    let owner = '';
+    let repo = '';
+    let projectPath = '';
+
+    if (!url) {
+      console.warn('[GitService] No repository URL found');
+      return { owner, repo, projectPath };
+    }
+
+    // If URL is URL-encoded, decode it
+    if (url.includes('%')) {
+      url = decodeURIComponent(url);
+    }
+
+    // Remove .git suffix if present
+    url = url.replace(/\.git$/, '');
+
+    console.log(`[GitService] Extracting info from URL (${provider}):`, url);
+
+    if (provider === 'github') {
+      // For GitHub URLs like https://github.com/owner/repo
+      const match = url.match(/github\.com\/([^\/]+)\/([^\/\.]+)/);
+      if (match) {
+        owner = match[1];
+        repo = match[2];
+      } else {
+        // Try alternative patterns or fallback for non-standard URLs
+        const decodedUrl = decodeURIComponent(url);
+        const parts = decodedUrl
+          .replace(/^https?:\/\//, '')
+          .split('/')
+          .filter(Boolean);
+
+        if (parts.length >= 2) {
+          // Use the last two parts as owner/repo
+          repo = parts[parts.length - 1].replace(/\.git$/, '');
+          owner = parts[parts.length - 2];
+        }
+      }
+    } else if (provider === 'gitlab') {
+      // For GitLab URLs like https://gitlab.com/owner/repo or https://gitlab.com/group/subgroup/repo
+      const urlWithoutProtocol = url.replace(/^https?:\/\//, '');
+      const parts = urlWithoutProtocol.split('/').filter(Boolean);
+
+      if (parts.length >= 3) {
+        // Skip the domain (gitlab.com)
+        const domainIndex = parts.findIndex((part) => part.includes('gitlab'));
+        const pathParts = parts.slice(domainIndex + 1);
+
+        // The last part is the repo name
+        repo = pathParts[pathParts.length - 1];
+
+        // Everything before is the owner/group path
+        owner = pathParts.slice(0, pathParts.length - 1).join('/');
+
+        // For GitLab API, we need the full project path (URL encoded)
+        projectPath = encodeURIComponent(pathParts.join('/'));
+      }
+    } else if (provider === 'gitea') {
+      // For Gitea URLs
+      const urlWithoutProtocol = url.replace(/^https?:\/\//, '');
+      const parts = urlWithoutProtocol.split('/').filter(Boolean);
+
+      // Skip the domain
+      if (parts.length >= 3) {
+        // Skip the server part
+        const pathStart = parts[0].includes(':') ? 1 : 1; // Skip domain or IP:port
+        const pathParts = parts.slice(pathStart);
+
+        // For URLs like domain.com/owner/repo
+        if (pathParts.length >= 2) {
+          repo = pathParts[pathParts.length - 1].replace(/\.git$/, '');
+          owner = pathParts[pathParts.length - 2];
+        }
+      }
+    }
+
+    return { owner, repo, projectPath };
+  } catch (err) {
+    console.error('[GitService] Error extracting repo info:', err);
+    // Return empty values if any error occurs
+    return { owner: '', repo: '', projectPath: '' };
+  }
+}
+
+/**
+ * Generate provider-specific API configuration for repository exploration
+ */
+export function getProviderApiConfig(
+  provider: string,
+  path: string = '',
+  ref: string = 'master',
+): {
+  method: string;
+  url: string;
+  headers: Record<string, string>;
+} {
+  // Encode path for URL safety only if not empty
+  const encodedPath = path ? encodeURIComponent(path) : '';
+
+  // Default configuration
+  const config = {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+  };
+
+  if (provider === 'gitlab') {
+    // Use project path format for GitLab API v4
+    // For paths: https://gitlab.com/api/v4/projects/PROJECT_PATH/repository/tree?path=PATH
+    // For files: https://gitlab.com/api/v4/projects/PROJECT_PATH/repository/files/FILE_PATH/raw?ref=BRANCH
+    const { projectPath } = extractRepoInfo(provider);
+
+    // Make sure we don't have a trailing .git
+    const cleanProjectPath = projectPath.replace(/%2F\.git$/, '');
+
+    if (path.endsWith('.md') || path.endsWith('.txt') || path.includes('.')) {
+      // This is likely a file - use the file endpoint
+      return {
+        ...config,
+        url: `https://gitlab.com/api/v4/projects/${cleanProjectPath}/repository/files/${encodedPath}/raw?ref=${ref}`,
+      };
+    } else {
+      // This is likely a directory - use the tree endpoint
+      const queryParams = encodedPath ? `?path=${encodedPath}` : '?recursive=true';
+      return {
+        ...config,
+        url: `https://gitlab.com/api/v4/projects/${cleanProjectPath}/repository/tree${queryParams}`,
+      };
+    }
+  } else if (provider === 'gitea') {
+    // Gitea API format: /api/v1/repos/{owner}/{repo}/git/trees/{ref}?recursive=1
+    const { owner, repo } = extractRepoInfo(provider);
+
+    // Try to get server URL from global variable, localStorage, or use the passed URL
+    let serverUrl = '';
+    if (typeof window !== 'undefined') {
+      // Client-side
+      serverUrl = localStorage.getItem('gitea_server_url') || '';
+    } else {
+      // Server-side
+      serverUrl = global.giteaServerUrl || '';
+    }
+
+    // If still empty, use default port 3000
+    if (!serverUrl) {
+      serverUrl = 'http://localhost:3000';
+    }
+
+    if (path.endsWith('.md') || path.endsWith('.txt') || path.includes('.')) {
+      // Get a specific file
+      return {
+        ...config,
+        url: `${serverUrl}/api/v1/repos/${owner}/${repo}/contents/${encodedPath}?ref=${ref}`,
+      };
+    } else {
+      // Get directory tree (recursive by default for better performance)
+      return {
+        ...config,
+        url: `${serverUrl}/api/v1/repos/${owner}/${repo}/git/trees/${ref}?recursive=1`,
+      };
+    }
+  } else {
+    // GitHub API format remains the same
+    return {
+      ...config,
+      url: `https://api.github.com/repos/${extractRepoInfo(provider).owner}/${
+        extractRepoInfo(provider).repo
+      }/contents/${path}`,
+      headers: {
+        ...config.headers,
+        Authorization: process.env.GITHUB_TOKEN ? `token ${process.env.GITHUB_TOKEN}` : '',
+      },
+    };
+  }
+}
+
+/**
+ * Standardize the API response
+ */
+export function standardizeResponse(provider: string, data: any, _action: string): any {
+  // If the response is text/plain (from GitLab raw endpoint)
+  if (typeof data === 'string') {
+    return {
+      content: btoa(data), // Convert to base64 for consistent handling
+      encoding: 'base64',
+    };
+  }
+
+  // Handle different provider responses
+  if (provider === 'gitlab') {
+    if (Array.isArray(data)) {
+      // This is a directory listing
+      return data.map((item: any) => ({
+        name: item.name,
+        path: item.path,
+        type: item.type === 'tree' ? 'dir' : 'file',
+        size: item.size || 0,
+        download_url:
+          item.type === 'blob'
+            ? `https://gitlab.com/api/v4/projects/${extractRepoInfo(provider).projectPath}/repository/files/${encodeURIComponent(item.path)}/raw`
+            : null,
+      }));
+    } else {
+      // This could be file content or other responses
+      return data;
+    }
+  } else if (provider === 'gitea') {
+    // Handle Gitea responses
+    if (data.tree && Array.isArray(data.tree)) {
+      // This is a tree response (directory listing)
+      // Filter out symlinks and other non-standard entries
+      return data.tree
+        .filter((item: any) => item.type === 'blob' || item.type === 'tree')
+        .map((item: any) => {
+          // Split path to get just the filename
+          const pathParts = item.path.split('/');
+          const name = pathParts[pathParts.length - 1];
+
+          // Get server URL from global or localStorage
+          let serverUrl = '';
+          if (typeof window !== 'undefined') {
+            // Client-side
+            serverUrl = localStorage.getItem('gitea_server_url') || '';
+          } else {
+            // Server-side
+            serverUrl = global.giteaServerUrl || '';
+          }
+
+          // If still empty, use default
+          if (!serverUrl) {
+            serverUrl = 'http://localhost:3000';
+          }
+
+          const { owner, repo } = extractRepoInfo(provider);
+
+          return {
+            name,
+            path: item.path,
+            type: item.type === 'tree' ? 'dir' : 'file',
+            size: item.size || 0,
+            download_url:
+              item.type === 'blob'
+                ? `${serverUrl}/api/v1/repos/${owner}/${repo}/raw/${item.path}`
+                : null,
+          };
+        });
+    } else if (data.content) {
+      // This is file content
+      return {
+        content: data.content,
+        encoding: data.encoding || 'base64',
+      };
+    }
+    // Return the data as-is if we don't recognize the format
+    return data;
+  } else {
+    // GitHub response standardization remains the same
+    if (Array.isArray(data)) {
+      return data.map((item: any) => ({
+        name: item.name,
+        path: item.path,
+        type: item.type,
+        size: item.size,
+        download_url: item.download_url,
+      }));
+    } else {
+      return data;
+    }
+  }
+}
+
+// Export repository service functions
+const gitService = {
+  testGitProviderConnection,
+  testGitRepositoryAccess,
+  detectProviderFromUrl,
+  extractRepoInfo,
+  getProviderApiConfig,
+  standardizeResponse,
+};
+
+export default gitService;

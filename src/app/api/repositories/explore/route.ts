@@ -1,5 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { createClient } from '@/lib/supabase/server';
 import { getUser } from '@/app/actions/userAction';
+import * as gitService from '@/lib/services/gitService';
+
+// Define global type for giteaServerUrl
+declare global {
+  var giteaServerUrl: string;
+  var repositoryUrl: string;
+}
 
 // Simple in-memory cache
 class SimpleCache {
@@ -238,71 +247,122 @@ function extractOwnerAndRepo(url: string): [string | null, string | null] {
 
 /**
  * GET /api/repositories/explore
- * Endpoint to explore repository files
+ * API endpoint for exploring repositories (listing files, getting file content)
  */
-export async function GET(req: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    // Get query parameters
-    const url = new URL(req.url);
-    const repositoryId = url.searchParams.get('repositoryId');
-    const path = url.searchParams.get('path') || '';
-    const branch = url.searchParams.get('branch') || 'main';
-    const action = url.searchParams.get('action') || 'list'; // Get the action parameter
+    console.log('[@api:repositories:explore] Starting repository explorer request');
 
-    // Validate required parameters
-    if (!repositoryId) {
+    // Parse query parameters
+    const searchParams = request.nextUrl.searchParams;
+    const path = searchParams.get('path') || '';
+    const repositoryUrl = searchParams.get('repositoryUrl') || '';
+    const repositoryId = searchParams.get('repositoryId') || '';
+    const providerId = searchParams.get('providerId') || '';
+    const action = searchParams.get('action') || 'list';
+    const giteaServer = searchParams.get('server') || '';
+    const branch = searchParams.get('branch') || 'main';
+
+    // Automatically detect provider from URL if not specified
+    let provider = searchParams.get('provider') || '';
+    if (!provider && repositoryUrl) {
+      // Use our detection function to get the correct provider
+      provider = gitService.detectProviderFromUrl(repositoryUrl);
+      console.log(`[@api:repositories:explore] Auto-detected provider from URL: ${provider}`);
+    } else if (!provider) {
+      provider = 'github'; // Default fallback
+    }
+
+    // Store the repository URL in global for server-side access
+    global.repositoryUrl = repositoryUrl;
+
+    // If gitea server is specified, temporarily store it in a global variable
+    if (provider === 'gitea' && giteaServer) {
+      global.giteaServerUrl = giteaServer;
+    }
+
+    console.log('[@api:repositories:explore] Parameters:', {
+      path,
+      provider,
+      action,
+      repositoryId,
+      repositoryUrl,
+      branch,
+      ...(provider === 'gitea'
+        ? { server: giteaServer || global.giteaServerUrl || 'default server' }
+        : {}),
+    });
+
+    // Verify user authentication
+    const cookieStore = await cookies();
+    const supabase = await createClient(cookieStore);
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
+      console.log('[@api:repositories:explore] Authentication failed: No session');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Get current user for additional security checks if needed
+    const currentUser = await getUser();
+    if (!currentUser) {
+      console.log('[@api:repositories:explore] Authentication failed: No user found');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Get API configuration from the gitService
+    const config = gitService.getProviderApiConfig(provider, path, branch);
+
+    console.log('[@api:repositories:explore] API request configuration:', {
+      url: config.url,
+      method: config.method,
+    });
+
+    // Make the API request to the git provider
+    const response = await fetch(config.url, {
+      method: config.method,
+      headers: config.headers,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.log('[@api:repositories:explore] Provider API error:', {
+        status: response.status,
+        error: errorText,
+      });
       return NextResponse.json(
-        { success: false, error: 'Repository ID is required' },
-        { status: 400 },
+        {
+          error: `Provider API error: ${response.status}`,
+          details: errorText,
+        },
+        { status: response.status },
       );
     }
 
-    console.log(
-      `[API] /api/repositories/explore - repositoryId: ${repositoryId}, path: ${path}, branch: ${branch}, action: ${action}`,
-    );
-
-    // Based on the action parameter, call the appropriate function
-    if (action === 'file') {
-      const result = await getRepositoryFileContent(repositoryId, path, branch, req.url);
-
-      if (!result.success) {
-        // Determine appropriate status code based on error
-        let statusCode = 500;
-        if (result.error === 'Unauthorized') {
-          statusCode = 401;
-        } else if (result.error === 'Repository not found' || result.error === 'File not found') {
-          statusCode = 404;
-        }
-        return NextResponse.json({ success: false, error: result.error }, { status: statusCode });
-      }
-
-      return NextResponse.json({
-        success: true,
-        data: result.data,
-      });
+    // Parse the API response
+    let data;
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      data = await response.json();
     } else {
-      const result = await getRepositoryFiles(repositoryId, path, branch, req.url);
-
-      if (!result.success) {
-        // Determine appropriate status code based on error
-        let statusCode = 500;
-        if (result.error === 'Unauthorized') {
-          statusCode = 401;
-        } else if (result.error === 'Repository not found') {
-          statusCode = 404;
-        }
-        return NextResponse.json({ success: false, error: result.error }, { status: statusCode });
-      }
-
-      return NextResponse.json({
-        success: true,
-        data: result.data,
-      });
+      // For raw text content (like GitLab's raw file endpoint)
+      data = await response.text();
     }
+
+    // Standardize the response format using gitService
+    const standardizedData = gitService.standardizeResponse(provider, data, action);
+
+    console.log('[@api:repositories:explore] Successfully processed response');
+    return NextResponse.json({
+      success: true,
+      data: standardizedData,
+    });
   } catch (error: any) {
-    console.error('[API] /api/repositories/explore - Error:', error);
+    console.error('[@api:repositories:explore] Error:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Internal server error' },
+      { error: error.message || 'Failed to explore repository' },
       { status: 500 },
     );
   }
