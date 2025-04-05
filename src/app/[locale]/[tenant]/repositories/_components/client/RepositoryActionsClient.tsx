@@ -18,7 +18,6 @@ interface RepositoryActionsClientProps {
 
 export function RepositoryActionsClient({ repositoryCount = 0 }: RepositoryActionsClientProps) {
   const t = useTranslations('repositories');
-  const c = useTranslations('common');
   const [connectDialogOpen, setConnectDialogOpen] = useState<boolean>(false);
   const [currentRepositoryCount, setCurrentRepositoryCount] = useState(repositoryCount);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -63,7 +62,8 @@ export function RepositoryActionsClient({ repositoryCount = 0 }: RepositoryActio
   }, []);
 
   // Handle refresh action
-  const handleRefresh = () => {
+  const _handleRefresh = () => {
+    // Prefix with _ to avoid unused var warning
     if (isRefreshing) return;
 
     console.log('[RepositoryActionsClient] Triggering refresh');
@@ -133,16 +133,18 @@ export function RepositoryActionsClient({ repositoryCount = 0 }: RepositoryActio
 
       <div className="flex items-center gap-2">
         <Tooltip>
-          <TooltipTrigger>
-            <Button
-              onClick={() => setConnectDialogOpen(true)}
-              id="add-repository-button"
-              size="sm"
-              className="h-8 gap-1"
-            >
-              <PlusCircle className="h-4 w-4" />
-              <span>{t('add_button')}</span>
-            </Button>
+          <TooltipTrigger asChild>
+            <span>
+              <Button
+                onClick={() => setConnectDialogOpen(true)}
+                id="add-repository-button"
+                size="sm"
+                className="h-8 gap-1"
+              >
+                <PlusCircle className="h-4 w-4" />
+                <span>{t('add_button')}</span>
+              </Button>
+            </span>
           </TooltipTrigger>
           <TooltipContent>{t('connect_repo')}</TooltipContent>
         </Tooltip>

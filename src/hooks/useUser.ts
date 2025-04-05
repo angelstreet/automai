@@ -103,14 +103,40 @@ export function useUser(initialUser: User | null = null, componentName = 'unknow
   } = useQuery({
     queryKey: ['user'],
     queryFn: async () => {
-      console.log(`[@hook:useUser:useUser] #${instanceId.current} Fetching user data from server`);
-      const result = await getUser();
-      console.log(
-        `[@hook:useUser:useUser] #${instanceId.current} Received user data:`,
-        result ? 'User found' : 'No user',
-        user,
-      );
-      return result;
+      try {
+        console.log(
+          `[@hook:useUser:useUser] #${instanceId.current} Fetching user data from server`,
+        );
+
+        // Call the server action with proper error handling
+        const result = await getUser().catch((error) => {
+          console.error(
+            `[@hook:useUser:useUser] #${instanceId.current} Server action threw error:`,
+            error,
+          );
+          return null;
+        });
+
+        // Handle case where server action returns undefined (likely due to server action hash mismatch)
+        if (result === undefined) {
+          console.error(
+            `[@hook:useUser:useUser] #${instanceId.current} Server action returned undefined`,
+          );
+          return null;
+        }
+
+        console.log(
+          `[@hook:useUser:useUser] #${instanceId.current} Received user data:`,
+          result ? 'User found' : 'No user',
+          result,
+        );
+
+        return result;
+      } catch (error) {
+        // Handle any unexpected errors in the queryFn itself
+        console.error(`[@hook:useUser:useUser] #${instanceId.current} Error in queryFn:`, error);
+        return null;
+      }
     },
     initialData: initialUser,
     staleTime: 5 * 60 * 1000, // 5 minutes

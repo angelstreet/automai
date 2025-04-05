@@ -14,10 +14,53 @@ export function useTeamMembers(teamId: string | null) {
   return useQuery({
     queryKey: ['teamMembers', teamId],
     queryFn: async () => {
-      if (!teamId) return { success: false, error: 'No team ID provided' };
-      return await getTeamMembers(teamId);
+      try {
+        // If teamId is null, return a standardized empty response
+        if (!teamId) {
+          console.log('[@hook:useTeamMembers] No team ID provided, returning empty result');
+          return { success: false, error: 'No team ID provided', data: [] };
+        }
+
+        // Call the server action with proper error handling
+        const result = await getTeamMembers(teamId).catch((error) => {
+          console.error('[@hook:useTeamMembers] Server action threw error:', error);
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Server action failed',
+            data: [],
+          };
+        });
+
+        // Handle case where server action returns undefined (likely due to server action hash mismatch)
+        if (result === undefined) {
+          console.error(
+            '[@hook:useTeamMembers] Server action returned undefined for teamId:',
+            teamId,
+          );
+          return {
+            success: false,
+            error: 'Server action returned undefined (possible server deployment mismatch)',
+            data: [],
+          };
+        }
+
+        // Return the result with validation to ensure expected structure
+        return {
+          success: result.success === true,
+          error: result.error || null,
+          data: result.data || [],
+        };
+      } catch (error) {
+        // Handle any unexpected errors in the queryFn itself
+        console.error('[@hook:useTeamMembers] Error in queryFn:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Error fetching team members',
+          data: [],
+        };
+      }
     },
-    // Don't run the query if teamId is null
+    // Only run the query if teamId exists
     enabled: !!teamId,
     // Don't refetch on window focus
     refetchOnWindowFocus: false,

@@ -153,6 +153,17 @@ export interface RoleTemplate {
   permissions: ResourcePermissions;
 }
 
+// Permission types for resources
+export const PERMISSIONS = {
+  SELECT: 'select',
+  INSERT: 'insert',
+  UPDATE: 'update',
+  DELETE: 'delete',
+  UPDATE_OWN: 'update_own',
+  DELETE_OWN: 'delete_own',
+  EXECUTE: 'execute',
+};
+
 export const ROLE_TEMPLATES: Record<string, ResourcePermissions> = {
   admin: {
     hosts: {

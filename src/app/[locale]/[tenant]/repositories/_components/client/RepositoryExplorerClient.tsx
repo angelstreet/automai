@@ -600,7 +600,7 @@ export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplo
 
         {activeTab !== EXPLORER_TABS.CODE && (
           <Alert className="mb-4">
-            <AlertDescription>{t('featureNotImplemented')}</AlertDescription>
+            <AlertDescription>{t('feature_not_implemented')}</AlertDescription>
           </Alert>
         )}
       </div>
