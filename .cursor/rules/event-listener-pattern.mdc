@@ -8,15 +8,15 @@ alwaysApply: false
 
 ## Overview
 
-The Event Listener pattern provides a standardized approach for component communication across the application. It uses browser's native event system combined with dedicated listener components to create loosely coupled interactions. This pattern can be used on its own or in combination with Zustand for more robust state management.
+The Event Listener pattern provides a standardized approach for component communication across the application. It uses browser's native event system combined with dedicated listener components to create loosely coupled interactions. This pattern is the primary communication mechanism throughout the application and can be supplemented with Zustand for persistent state management.
 
 ## Key Principles
 
-1. **Centralized Constants**: All event name constants are defined and exported directly from their respective EventListener components
+1. **Centralized Constants in Objects**: All event name constants are defined and exported in an object directly from their respective EventListener components
 2. **Dedicated Listener Components**: Each feature domain has its own EventListener component (e.g., `HostsEventListener.tsx`, `CICDEventListener.tsx`)
 3. **No Cross-Domain Events**: Events should be scoped to their feature domain
 4. **Direct Imports**: Components import event constants directly from their domain's EventListener
-5. **State Management Options**: Can be combined with Zustand stores for persistent shared state
+5. **State Management Integration**: Zustand is used for persistent state while events handle communication
 
 ## Implementation
 
@@ -28,28 +28,43 @@ The Event Listener pattern provides a standardized approach for component commun
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
-// Define and export event constants here
-export const REFRESH_DOMAIN = 'REFRESH_DOMAIN';
-export const REFRESH_DOMAIN_COMPLETE = 'REFRESH_DOMAIN_COMPLETE';
-export const OPEN_DOMAIN_DIALOG = 'OPEN_DOMAIN_DIALOG';
-export const TOGGLE_DOMAIN_VIEW_MODE = 'TOGGLE_DOMAIN_VIEW_MODE';
+// Define constants in an object to avoid Fast Refresh issues
+const DomainEvents = {
+  // UI Control Events
+  OPEN_DOMAIN_DIALOG: 'OPEN_DOMAIN_DIALOG',
+  TOGGLE_DOMAIN_VIEW_MODE: 'TOGGLE_DOMAIN_VIEW_MODE',
+
+  // Data Refresh Events
+  REFRESH_DOMAIN: 'REFRESH_DOMAIN',
+  
+  // Domain-specific events
+  DOMAIN_TESTING_START: 'DOMAIN_TESTING_START',
+  DOMAIN_TESTING_COMPLETE: 'DOMAIN_TESTING_COMPLETE',
+};
+
+// Export the constants object
+export { DomainEvents };
 
 export default function DomainEventListener() {
   const router = useRouter();
 
   useEffect(() => {
-    // Event handlers
-    const handleRefreshComplete = () => {
-      console.log('[@component:DomainEventListener] Refreshing route');
+    // Event handlers with consistent logging pattern
+    const handleRefresh = () => {
+      console.log('[@component:DomainEventListener] REFRESH_DOMAIN: Refreshing domain data');
       router.refresh();
     };
 
     // Register event listeners
-    window.addEventListener(REFRESH_DOMAIN_COMPLETE, handleRefreshComplete);
+    window.addEventListener(DomainEvents.REFRESH_DOMAIN, handleRefresh);
+    
+    // Debug message when component mounts
+    console.log('[@component:DomainEventListener] Setting up event listeners');
     
     // Clean up listeners
     return () => {
-      window.removeEventListener(REFRESH_DOMAIN_COMPLETE, handleRefreshComplete);
+      console.log('[@component:DomainEventListener] Removing event listeners');
+      window.removeEventListener(DomainEvents.REFRESH_DOMAIN, handleRefresh);
     };
   }, [router]);
 
@@ -60,33 +75,33 @@ export default function DomainEventListener() {
 
 ### Importing Constants
 
-Always import directly from the EventListener component:
+Always import the events object directly from the EventListener component:
 
 ```typescript
 // CORRECT
-import { REFRESH_DOMAIN_COMPLETE } from './DomainEventListener';
+import { DomainEvents } from './DomainEventListener';
 
 // INCORRECT - don't import from constants.ts
-import { REFRESH_DOMAIN_COMPLETE } from '../../constants';
+import { REFRESH_DOMAIN } from '../../constants';
 ```
 
 ### Dispatching Events
 
 ```typescript
 // Simple event
-window.dispatchEvent(new Event(REFRESH_DOMAIN_COMPLETE));
+window.dispatchEvent(new Event(DomainEvents.REFRESH_DOMAIN));
 
 // Event with data
 window.dispatchEvent(
-  new CustomEvent(DOMAIN_TESTING_CONNECTION, {
+  new CustomEvent(DomainEvents.DOMAIN_TESTING_START, {
     detail: { itemId: item.id }
   })
 );
 ```
 
-## Complementary Zustand Integration
+## Zustand Integration
 
-For cases where you need both event-based communication and shared state management, you can combine the Event Listener pattern with Zustand:
+For cases where you need both event-based communication and shared state management, combine the Event Listener pattern with Zustand:
 
 ### Creating a Zustand Store
 
@@ -122,7 +137,7 @@ export const useDomainStore = create<DomainState>()(
 ### Using Zustand with Events
 
 ```typescript
-import { TOGGLE_DOMAIN_VIEW_MODE } from './DomainEventListener';
+import { DomainEvents } from './DomainEventListener';
 import { useDomainStore } from '@/store/domainStore';
 
 function ViewToggleButton() {
@@ -133,7 +148,7 @@ function ViewToggleButton() {
     toggleViewMode();
     
     // Also dispatch event for listeners that need to respond
-    window.dispatchEvent(new Event(TOGGLE_DOMAIN_VIEW_MODE));
+    window.dispatchEvent(new Event(DomainEvents.TOGGLE_DOMAIN_VIEW_MODE));
   };
   
   return (
@@ -146,33 +161,21 @@ function ViewToggleButton() {
 
 ## When to Use Each Approach
 
-- **Events Only**: When you need component communication without persistent state
-- **Zustand Only**: When you need shared state management but no cross-component side effects
-- **Combined Approach**: When you need both persistent state and communication between unrelated components
+- **Events**: For component communication, UI refreshes, transient state changes
+- **Zustand**: For persistent state that needs to survive page refreshes
+- **Combined Approach**: For most features, where both persistent settings and communication are needed
 
 ## Event Naming Conventions
 
-- **Format**: `VERB_DOMAIN_STATE`
+- **Event Object**: Use plural form (`HostsEvents`, `CICDEvents`)
+- **Event Categories**: Group events by purpose (UI Control, Data Refresh, Domain-specific)
+- **Format**: Use descriptive, uppercase names that indicate the action
 - **Examples**:
-  - `REFRESH_HOSTS_COMPLETE`
-  - `TOGGLE_HOST_VIEW_MODE`
-  - `OPEN_CICD_DIALOG`
-  - `CICD_TESTING_CONNECTION`
+  - UI Control: `OPEN_HOST_DIALOG`, `TOGGLE_HOST_VIEW_MODE`
+  - Data Refresh: `REFRESH_HOSTS`
+  - Domain Actions: `TEST_ALL_HOSTS`, `HOST_TESTING_START`, `HOST_TESTING_COMPLETE`
 
-## Best Practices
-
-1. **Do** define all event constants in the EventListener component
-2. **Do** use clear, descriptive event names that indicate action and domain
-3. **Do** create a dedicated EventListener component for each feature domain
-4. **Do** register the EventListener in your parent component
-5. **Do** consider Zustand for persistent state that needs to be shared between components
-6. **Don't** create cross-domain events that communicate between unrelated features
-7. **Don't** store event constants in constants.ts files
-8. **Don't** use DOM manipulation like `document.getElementById('id')?.click()`
-9. **Don't** use events for security-critical operations
-10. **Don't** duplicate state between Zustand stores and component state
-
-## Real-World Examples
+## Real-World Example: Hosts Feature
 
 ### HostsEventListener.tsx
 ```typescript
@@ -181,24 +184,55 @@ function ViewToggleButton() {
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
-// Define and export event constants
-export const REFRESH_HOSTS = 'REFRESH_HOSTS';
-export const REFRESH_HOSTS_COMPLETE = 'REFRESH_HOSTS_COMPLETE';
-export const OPEN_HOST_DIALOG = 'OPEN_HOST_DIALOG';
-export const TOGGLE_HOST_VIEW_MODE = 'TOGGLE_HOST_VIEW_MODE';
+// Define constants in an object to avoid Fast Refresh issues
+const HostsEvents = {
+  // UI Control Events
+  OPEN_HOST_DIALOG: 'OPEN_HOST_DIALOG', // Open the "Add Host" dialog
+  TOGGLE_HOST_VIEW_MODE: 'TOGGLE_HOST_VIEW_MODE', // Switch between grid/table view
+
+  // Data Refresh Events
+  REFRESH_HOSTS: 'REFRESH_HOSTS', // Request to refresh host data from server
+  TEST_ALL_HOSTS: 'TEST_ALL_HOSTS', // Request to test all hosts
+
+  // Host Testing Events
+  HOST_TESTING_START: 'HOST_TESTING_START', // Single host testing starts
+  HOST_TESTING_COMPLETE: 'HOST_TESTING_COMPLETE', // Single host testing completes
+};
+
+// Export the constants object
+export { HostsEvents };
 
 export default function HostsEventListener() {
   const router = useRouter();
 
   useEffect(() => {
-    const handleRefreshComplete = () => {
-      console.log('[@component:HostsEventListener] Refreshing route after Host operation');
+    // Handle refresh hosts request
+    const handleRefreshHosts = () => {
+      console.log('[@component:HostsEventListener] REFRESH_HOSTS: Refreshing hosts data');
       router.refresh();
     };
 
-    window.addEventListener(REFRESH_HOSTS_COMPLETE, handleRefreshComplete);
+    // Handle individual host testing events
+    const handleHostTestingStart = (event: CustomEvent) => {
+      if (event.detail?.hostId) {
+        console.log(
+          `[@component:HostsEventListener] HOST_TESTING_START: Host ${event.detail.hostId}`,
+        );
+      }
+    };
+
+    window.addEventListener(HostsEvents.REFRESH_HOSTS, handleRefreshHosts);
+    window.addEventListener(
+      HostsEvents.HOST_TESTING_START,
+      handleHostTestingStart as EventListener,
+    );
+
     return () => {
-      window.removeEventListener(REFRESH_HOSTS_COMPLETE, handleRefreshComplete);
+      window.removeEventListener(HostsEvents.REFRESH_HOSTS, handleRefreshHosts);
+      window.removeEventListener(
+        HostsEvents.HOST_TESTING_START,
+        handleHostTestingStart as EventListener,
+      );
     };
   }, [router]);
 
@@ -206,19 +240,73 @@ export default function HostsEventListener() {
 }
 ```
 
-### Using Zustand with Events Example
+### Using in HostActionsClient.tsx
 ```typescript
-// In HostActionsClient.tsx
-import { TOGGLE_HOST_VIEW_MODE } from './HostsEventListener';
+import { HostsEvents } from './HostsEventListener';
 import { useHostViewStore } from '@/store/hostViewStore';
 
-const { viewMode, toggleViewMode } = useHostViewStore();
+// In component
+useEffect(() => {
+  const handleHostTestingStart = (event: CustomEvent) => {
+    if (event.detail && event.detail.hostId) {
+      activeTestingHosts.current.add(event.detail.hostId);
+      setIsTestingHosts(true);
+    }
+  };
 
-const handleViewModeToggle = () => {
-  // Toggle view mode in Zustand store
-  toggleViewMode();
-  
-  // Also dispatch event for any components listening
-  window.dispatchEvent(new Event(TOGGLE_HOST_VIEW_MODE));
+  window.addEventListener(
+    HostsEvents.HOST_TESTING_START,
+    handleHostTestingStart as EventListener,
+  );
+
+  return () => {
+    window.removeEventListener(
+      HostsEvents.HOST_TESTING_START,
+      handleHostTestingStart as EventListener,
+    );
+  };
+}, []);
+
+// In event handler
+const handleRefresh = async () => {
+  // Dispatch a custom event to tell HostListClient to test all hosts
+  window.dispatchEvent(
+    new CustomEvent(HostsEvents.TEST_ALL_HOSTS, {
+      detail: { hostIds: hosts.map(h => h.id) },
+    }),
+  );
 };
-``` 
+```
+
+### In HostListClient.tsx
+```typescript
+// Test all hosts
+useEffect(() => {
+  const handleTestAllHosts = (event: CustomEvent) => {
+    if (event.detail && event.detail.hostIds) {
+      testAllHosts(event.detail.hostIds);
+    }
+  };
+
+  window.addEventListener(HostsEvents.TEST_ALL_HOSTS, handleTestAllHosts as EventListener);
+
+  return () => {
+    window.removeEventListener(HostsEvents.TEST_ALL_HOSTS, handleTestAllHosts as EventListener);
+  };
+}, [testAllHosts]);
+```
+
+## Best Practices
+
+1. **Do** define all event constants in an object in the EventListener component
+2. **Do** use consistent logging with the format `[@component:ComponentName]` prefix
+3. **Do** create a dedicated EventListener component for each feature domain
+4. **Do** use Zustand for persistent state that needs to be shared
+5. **Do** use clear, descriptive event names organized by category
+6. **Do** include debug logging for event setup and handling
+7. **Do** provide detailed information in CustomEvent detail objects
+8. **Don't** create cross-domain events that communicate between unrelated features
+9. **Don't** store event constants in constants.ts files
+10. **Don't** use DOM manipulation for component communication
+11. **Don't** use events for security-critical operations
+12. **Don't** dispatch events without proper error handling 

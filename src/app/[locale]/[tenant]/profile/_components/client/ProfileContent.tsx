@@ -124,7 +124,7 @@ export function ProfileContent({
                 <p className="text-muted-foreground">{user.email}</p>
               </div>
               <div>
-                <label className="text-sm font-medium">{t('plan_label')}</label>
+                <label className="text-sm font-medium">{t('plan')}</label>
                 <p className="text-muted-foreground">{'TRIAL'}</p>
               </div>
             </CardContent>

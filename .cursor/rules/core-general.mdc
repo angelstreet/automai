@@ -149,20 +149,46 @@ export async function someServerAction() {
 ## Event-Based Communication Pattern
 
 - ✅ Use custom browser events for communication between components
-- ✅ Create dedicated Event Listener components (like `CICDEventListener`) for each feature domain
-- ✅ Event constants should follow this format: `REFRESH_[DOMAIN]_COMPLETE`
-- ✅ Always dispatch events after successful server actions: `window.dispatchEvent(new Event(REFRESH_DOMAIN_COMPLETE))`
-- ✅ Use `router.refresh()` in event listeners to trigger server component refreshes
-- ✅ For view toggle patterns (grid/table view switching):
-  - Store view preference in localStorage with a consistent key (e.g., `hostViewMode`)
-  - Implement toggle functionality in a custom hook that manages both state and persistence
-  - Use event-based communication (`TOGGLE_VIEW_MODE`) for cross-component coordination
-  - Render the appropriate view with conditional logic based on the current mode
-- ✅ Consider Zustand for shared state management:
-  - Use Zustand when state needs to be shared across multiple components
-  - Combine with event listeners for full component tree coordination
-  - Leverage Zustand's built-in persistence for automatic localStorage integration
-  - Example: `useHostViewStore` for view mode preferences
-- ✅ For event listener pattern, see detailed documentation in [event-listener-pattern.mdc](.cursor/rules/event-listener-pattern.mdc)
+- ✅ Create dedicated Event Listener components (like `HostsEventListener`) for each feature domain
+- ✅ Define all event constants in an object inside the EventListener component:
+  ```typescript
+  const HostsEvents = {
+    // UI Control Events
+    OPEN_HOST_DIALOG: 'OPEN_HOST_DIALOG',
+    TOGGLE_HOST_VIEW_MODE: 'TOGGLE_HOST_VIEW_MODE',
+    
+    // Data Refresh Events
+    REFRESH_HOSTS: 'REFRESH_HOSTS',
+    
+    // Domain-specific Actions
+    HOST_TESTING_START: 'HOST_TESTING_START',
+    HOST_TESTING_COMPLETE: 'HOST_TESTING_COMPLETE',
+  };
+  ```
+- ✅ Group events by category with comments (UI Control, Data Refresh, Domain-specific Actions)
+- ✅ Export the events object directly from EventListener: `export { HostsEvents };`
+- ✅ For view toggle patterns:
+  - Use Zustand for persistent view mode state: `useHostViewStore`
+  - Dispatch events after toggle for cross-component coordination: `window.dispatchEvent(new Event(HostsEvents.TOGGLE_HOST_VIEW_MODE))`
+  - Include consistent logging for all events: `console.log('[@component:ComponentName] Event description')`
+- ✅ Always use CustomEvent with detailed data for events that carry information:
+  ```typescript
+  window.dispatchEvent(
+    new CustomEvent(HostsEvents.HOST_TESTING_START, {
+      detail: { hostId: host.id },
+    }),
+  );
+  ```
+- ✅ Use consistent event listener registration pattern with TypeScript cast:
+  ```typescript
+  window.addEventListener(
+    HostsEvents.HOST_TESTING_START,
+    handleHostTestingStart as EventListener,
+  );
+  ```
+- ✅ Always clean up event listeners in the return function of useEffect
+- ✅ Document purpose and data structure of each event in comments
 - ❌ NEVER rely on event-based communication for security-critical operations
-- ❌ NEVER use direct DOM manipulation like `document.getElementById('some-id')?.click()` for component communication
+- ❌ NEVER use direct DOM manipulation for component communication
+- ❌ NEVER create cross-domain events (e.g., CICD events should not be handled by HostsEventListener)
+- ❌ NEVER duplicate event handling logic across multiple components

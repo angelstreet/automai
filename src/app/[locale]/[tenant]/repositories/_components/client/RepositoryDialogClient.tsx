@@ -194,7 +194,7 @@ export function RepositoryDialogClient({
               className="flex items-center justify-center"
             >
               <Github className="w-4 h-4 mr-2" />
-              {t('git_provider_label')}
+              {t('git_provider')}
             </TabsTrigger>
             <TabsTrigger
               value={CONNECT_REPOSITORY_TABS.QUICK_CLONE}
@@ -268,7 +268,7 @@ export function RepositoryDialogClient({
                       {currentProvider !== 'gitea' && (
                         <TabsTrigger value={AUTH_METHODS.OAUTH}>OAuth</TabsTrigger>
                       )}
-                      <TabsTrigger value={AUTH_METHODS.TOKEN}>{t('access_token_label')}</TabsTrigger>
+                      <TabsTrigger value={AUTH_METHODS.TOKEN}>{t('access_token')}</TabsTrigger>
                     </TabsList>
 
                     {currentProvider !== 'gitea' && (
@@ -312,7 +312,7 @@ export function RepositoryDialogClient({
                       <div className="space-y-4">
                         {currentProvider === 'gitea' && (
                           <div className="space-y-2">
-                            <Label htmlFor="serverUrl">{t('server_url_label')}</Label>
+                            <Label htmlFor="serverUrl">{t('server_url')}</Label>
                             <Input
                               id="serverUrl"
                               placeholder="https://gitea.example.com"
@@ -329,7 +329,7 @@ export function RepositoryDialogClient({
                               : currentProvider === 'gitlab'
                                 ? 'GitLab'
                                 : 'Gitea'}{' '}
-                            {t('access_token_label')}
+                            {t('access_token')}
                           </Label>
                           <Input
                             id="accessToken"
@@ -390,7 +390,7 @@ export function RepositoryDialogClient({
 
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="repoUrl">{t('repo_url_label')}</Label>
+                  <Label htmlFor="repoUrl">{t('repo_url')}</Label>
                   <Input
                     id="repoUrl"
                     placeholder="https://github.com/username/repository.git"

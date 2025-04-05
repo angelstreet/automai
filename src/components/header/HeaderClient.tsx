@@ -1,7 +1,7 @@
 'use client';
 
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { Suspense, useState, useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 
 import { RoleSwitcher } from '@/components/layout/RoleSwitcher';
 import { ProfileDropDown } from '@/components/profile/ProfileDropDown';
@@ -10,10 +10,12 @@ import { Separator } from '@/components/shadcn/separator';
 import { SidebarTrigger } from '@/components/sidebar';
 import { ThemeToggleStatic } from '@/components/theme';
 import { Search } from '@/components/ui/Search';
-import { useSidebar } from '@/hooks';
 import { cn } from '@/lib/utils';
+import { useHeaderStore } from '@/store/headerStore';
 import { Team } from '@/types/context/teamContextType';
 import { User } from '@/types/service/userServiceType';
+
+import { HeaderEvents } from './HeaderEventListener';
 
 interface HeaderClientProps {
   className?: string;
@@ -28,23 +30,32 @@ export function HeaderClient({
   user,
   activeTeam = null,
 }: HeaderClientProps) {
-  const { state } = useSidebar('HeaderClient');
-  const isCollapsed = state === 'collapsed';
-  const [headerVisible, setHeaderVisible] = useState(true);
+  // Get header visibility state from Zustand store
+  const { isVisible, toggleVisibility } = useHeaderStore();
 
   // Function to toggle header visibility
-  const toggleHeader = () => {
-    setHeaderVisible(!headerVisible);
-    console.log(`Header is now ${!headerVisible ? 'visible' : 'hidden'}`);
+  const handleToggleHeader = () => {
+    console.log(`[@component:HeaderClient] Toggling header: ${isVisible ? 'hiding' : 'showing'}`);
+
+    // Update state in Zustand store
+    toggleVisibility();
+
+    // Dispatch event for any listeners
+    window.dispatchEvent(new Event(HeaderEvents.TOGGLE_HEADER_VISIBILITY));
   };
 
-  // Update document with header state for global CSS targeting
+  // Add a CSS class to the document for styling
   useEffect(() => {
+    console.log(
+      `[@component:HeaderClient] Setting header visibility: ${isVisible ? 'expanded' : 'collapsed'}`,
+    );
+
+    // Set a data attribute on document for CSS targeting if needed
     document.documentElement.setAttribute(
       'data-header-state',
-      headerVisible ? 'expanded' : 'collapsed',
+      isVisible ? 'expanded' : 'collapsed',
     );
-  }, [headerVisible]);
+  }, [isVisible]);
 
   return (
     <header
@@ -57,9 +68,9 @@ export function HeaderClient({
     >
       <div
         className={cn('flex h-14 items-center relative')}
-        data-header-state={headerVisible ? 'expanded' : 'collapsed'}
+        data-header-state={isVisible ? 'expanded' : 'collapsed'}
       >
-        {headerVisible && (
+        {isVisible && (
           <>
             {/* Left section */}
             <div className="relative flex items-center h-full">
@@ -110,15 +121,11 @@ export function HeaderClient({
             variant="outline"
             size="icon"
             className="h-8 w-8"
-            onClick={toggleHeader}
-            title={headerVisible ? 'Hide Header' : 'Show Header'}
+            onClick={handleToggleHeader}
+            title={isVisible ? 'Hide Header' : 'Show Header'}
           >
-            {headerVisible ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
-            <span className="sr-only">{headerVisible ? 'Hide Header' : 'Show Header'}</span>
+            {isVisible ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            <span className="sr-only">{isVisible ? 'Hide Header' : 'Show Header'}</span>
           </Button>
         </div>
       </div>

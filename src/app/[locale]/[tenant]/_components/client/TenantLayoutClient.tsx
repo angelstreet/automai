@@ -6,6 +6,7 @@ import { ReactNode, Suspense, useCallback } from 'react';
 import { setUserActiveTeam } from '@/app/actions/teamAction';
 import { TeamProvider, UserProvider, SidebarProvider, PermissionProvider } from '@/app/providers';
 import { HeaderClient, HeaderSkeleton } from '@/components/header';
+import HeaderEventListener from '@/components/header/HeaderEventListener';
 import { SidebarSkeleton, SidebarClient } from '@/components/sidebar';
 import { Team } from '@/types/context/teamContextType';
 import { User } from '@/types/service/userServiceType';
@@ -56,6 +57,7 @@ export default function TenantLayoutClient({
         >
           <PermissionProvider initialPermissions={permissions}>
             <SidebarProvider showTooltips={false}>
+              <HeaderEventListener />
               <div className="flex">
                 <Suspense fallback={<SidebarSkeleton />}>
                   <aside>

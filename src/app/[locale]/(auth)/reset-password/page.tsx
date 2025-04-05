@@ -127,7 +127,7 @@ export default function ResetPasswordPage() {
 
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium">
-                {t('signup_confirm_password_label')}
+                {t('signup_confirm_password')}
               </label>
               <Input
                 id="confirmPassword"

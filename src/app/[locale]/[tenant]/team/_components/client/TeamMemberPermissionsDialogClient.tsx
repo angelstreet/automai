@@ -36,7 +36,7 @@ import { usePermission, useUpdateMemberRole, useDialogState } from '@/hooks';
 import {
   EditPermissionsDialogProps,
   ROLE_TEMPLATES,
-  PERMISSION_LABELS,
+  PERMISSIONS,
   ResourcePermissions,
 } from '@/types/context/teamContextType';
 
@@ -219,11 +219,11 @@ const EditPermissionsDialog = ({
               <TableHeader className="bg-background sticky top-0 z-10">
                 <TableRow>
                   <TableHead className="py-2 w-[150px]">
-                    {t('members_edit_resource_label')}
+                    {t('members_edit_resource')}
                   </TableHead>
-                  {Object.keys(PERMISSION_LABELS).map((perm) => (
+                  {Object.keys(PERMISSIONS).map((perm) => (
                     <TableHead key={perm} className="text-center py-2 px-1 w-[64px]">
-                      {PERMISSION_LABELS[perm]}
+                      {PERMISSIONS[perm]}
                     </TableHead>
                   ))}
                 </TableRow>
@@ -232,7 +232,7 @@ const EditPermissionsDialog = ({
                 {Object.keys(permissions).map((resource) => (
                   <TableRow key={resource} className="h-8">
                     <TableCell className="font-medium py-1">{resource.replace('_', ' ')}</TableCell>
-                    {Object.keys(PERMISSION_LABELS).map((permission) => (
+                    {Object.keys(PERMISSIONS).map((permission) => (
                       <TableCell
                         key={`${resource}-${permission}`}
                         className="text-center py-1 px-1"
@@ -243,7 +243,7 @@ const EditPermissionsDialog = ({
                           onCheckedChange={(checked) =>
                             handlePermissionChange(resource, permission, checked)
                           }
-                          aria-label={`${PERMISSION_LABELS[permission]} ${resource.replace('_', ' ')}`}
+                          aria-label={`${PERMISSIONS[permission]} ${resource.replace('_', ' ')}`}
                         />
                       </TableCell>
                     ))}

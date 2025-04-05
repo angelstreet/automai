@@ -131,7 +131,7 @@ function MembersTabContent({
               <TableHead>{c('name')}</TableHead>
               <TableHead>{c('team')}</TableHead>
               <TableHead>{c('email')}</TableHead>
-              <TableHead>{t('members_role_label')}</TableHead>
+              <TableHead>{t('members_role')}</TableHead>
               {canManageMembers && <TableHead className="text-right">{c('actions')}</TableHead>}
             </TableRow>
           </TableHeader>

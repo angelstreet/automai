@@ -146,7 +146,7 @@ const AddMemberDialog = ({ open, onOpenChange, teamId }: AddMemberDialogProps) =
 
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
-            <Label htmlFor="role">{t('members_role_label')}</Label>
+            <Label htmlFor="role">{t('members_role')}</Label>
             <Select value={role} onValueChange={setRole}>
               <SelectTrigger id="role">
                 <SelectValue placeholder={t('members_add_role_placeholder')} />

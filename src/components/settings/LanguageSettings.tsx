@@ -44,7 +44,7 @@ export function LanguageSettings() {
       <CardContent>
         <div className="space-y-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium">{t('current_language_label')}</label>
+            <label className="text-sm font-medium">{t('current_language')}</label>
             <Select value={currentLocale} onValueChange={handleLanguageChange}>
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder={t('select_language')} />

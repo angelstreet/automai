@@ -7,27 +7,11 @@ alwaysApply: false
 
 ## Overview
 
-The view toggle pattern provides a consistent way to switch between different display modes (grid/table) for data throughout the application. This pattern can be implemented using either client-side state management with localStorage, or with Zustand for more robust state management.
+The view toggle pattern provides a consistent way to switch between different display modes (grid/table) for data throughout the application. Our approach combines Zustand for persistent state management with event-based communication for component coordination.
 
-## Implementation Options
+## Implementation: Zustand with Events
 
-### Option 1: Custom Hook with localStorage (Original Approach)
-
-#### State Management
-
-```typescript
-// From the useHost hook
-const { viewMode, toggleViewMode } = useHost();
-```
-
-The hook:
-1. Loads the initial view preference from localStorage using `STORAGE_KEYS.HOST_VIEW_MODE`
-2. Provides a `toggleViewMode` function to switch between 'grid' and 'table' modes
-3. Persists changes to localStorage automatically
-
-### Option 2: Zustand with Persistence (Recommended Approach)
-
-#### Zustand Store Setup
+### 1. Zustand Store Setup
 
 ```typescript
 // src/store/hostViewStore.ts
@@ -58,61 +42,131 @@ export const useHostViewStore = create<HostViewState>()(
 );
 ```
 
-#### Component Usage
+### 2. Event Definition in EventListener
 
 ```typescript
-// In components that need view mode state
-import { useHostViewStore } from '@/store/hostViewStore';
-
-// Get view mode from Zustand store
-const { viewMode, toggleViewMode } = useHostViewStore();
-```
-
-## Common Components Structure
-
-- **Parent Container (`HostListClient`)**: Renders either grid or table view based on the current viewMode
-- **Toggle Control (`HostActionsClient`)**: Contains the toggle button UI
-- **Event Listener (`HostsEventListener`)**: Handles app-wide events triggered by view changes
-
-## Conditional Rendering
-
-```typescript
-{viewMode === 'grid' ? (
-  <HostGridClient ... />
-) : (
-  <HostTableClient ... />
-)}
-```
-
-## Event Communication
-
-When a view is toggled:
-1. The toggle function is called: `toggleViewMode()`
-2. An event is dispatched: `window.dispatchEvent(new Event(TOGGLE_HOST_VIEW_MODE))`
-3. The `HostsEventListener` catches this event and can perform additional actions if needed
-
-## Constants
-
-```typescript
-// Local storage keys (for Option 1)
-export const STORAGE_KEYS = {
-  HOST_VIEW_MODE: 'hostViewMode',
+// src/app/[locale]/[tenant]/hosts/_components/client/HostsEventListener.tsx
+const HostsEvents = {
+  // Other events...
+  TOGGLE_HOST_VIEW_MODE: 'TOGGLE_HOST_VIEW_MODE', // Switch between grid/table view
 };
 
-// Event names
-export const TOGGLE_HOST_VIEW_MODE = 'TOGGLE_HOST_VIEW_MODE';
+export { HostsEvents };
+```
 
-// View mode types
+### 3. Toggle Component Implementation
+
+```typescript
+// src/app/[locale]/[tenant]/hosts/_components/client/HostActionsClient.tsx
+import { Grid, List } from 'lucide-react';
+import { useHostViewStore } from '@/store/hostViewStore';
+import { HostsEvents } from './HostsEventListener';
+
+function ViewToggleButton() {
+  // Get view mode state from Zustand store
+  const { viewMode, toggleViewMode } = useHostViewStore();
+
+  const handleViewModeToggle = () => {
+    console.log(
+      `[@component:HostActionsClient] Toggling view mode from ${viewMode} to ${viewMode === 'grid' ? 'table' : 'grid'}`,
+    );
+    // Toggle view mode using Zustand store
+    toggleViewMode();
+    // Also dispatch event for any listeners that might be interested
+    window.dispatchEvent(new Event(HostsEvents.TOGGLE_HOST_VIEW_MODE));
+  };
+
+  return (
+    <Button variant="outline" size="sm" className="h-8" onClick={handleViewModeToggle}>
+      {viewMode === 'grid' ? <List className="h-4 w-4" /> : <Grid className="h-4 w-4" />}
+    </Button>
+  );
+}
+```
+
+### 4. View Container with Conditional Rendering
+
+```typescript
+// src/app/[locale]/[tenant]/hosts/_components/client/HostListClient.tsx
+import { useHostViewStore } from '@/store/hostViewStore';
+
+function HostListClient() {
+  // Get view mode from Zustand store
+  const { viewMode } = useHostViewStore();
+
+  // Render the appropriate view based on viewMode
+  return (
+    <div className="space-y-4 p-4">
+      {viewMode === 'grid' ? (
+        <HostGridClient
+          hosts={hosts}
+          // Other props...
+        />
+      ) : (
+        <HostTableClient
+          hosts={hosts}
+          // Other props...
+        />
+      )}
+    </div>
+  );
+}
+```
+
+## Advantages of this Approach
+
+1. **Persistence**: View preference survives page refreshes through Zustand's persist middleware
+2. **Loose Coupling**: Components can react to view mode changes without direct dependencies
+3. **Centralized State**: Zustand provides a single source of truth for view mode
+4. **Consistent UX**: All components show the same view mode at all times
+5. **Debuggability**: Events and state changes are logged for easier troubleshooting
+
+## Types and Constants
+
+```typescript
+// Types for view modes
 export type ViewMode = 'grid' | 'table';
 export const DEFAULT_VIEW_MODE: ViewMode = 'grid';
 ```
 
+## Event Handling Considerations
+
+1. **When to listen for TOGGLE events**: Components that need to perform side effects when view mode changes
+2. **When to use Zustand directly**: Components that only need to render based on the current view mode
+3. **Logging**: Always log view mode changes for debugging purposes
+
 ## Best Practices
 
-1. Always use the constants for event names and storage keys
-2. Toggle UI should visually indicate the current view mode
-3. The default view mode should be defined in constants
-4. Components should handle both view modes gracefully
-5. Apply appropriate loading states during view transitions
-6. Prefer Zustand for shared state management across components
-7. Use event dispatch alongside Zustand for additional side effects
+1. **Always use Zustand + Events together** for view toggles to ensure both persistent state and proper communication
+2. **Use the constants from HostsEvents** for event names to ensure consistency
+3. **Always include visual feedback** in the toggle button to indicate current mode
+4. **Handle loading states gracefully** during view transitions
+5. **Log view mode changes** for easier debugging
+6. **Use consistent naming pattern** for all implementations:
+   - Store: `use[Feature]ViewStore`
+   - Event: `TOGGLE_[FEATURE]_VIEW_MODE`
+   - Component props: `viewMode`, `toggleViewMode`
+7. **Apply appropriate animations** for smooth transitions between views
+
+## Real-World Example: Hosts Feature
+
+```typescript
+// In HostActionsClient.tsx
+const { viewMode, toggleViewMode } = useHostViewStore();
+
+const handleViewModeToggle = () => {
+  console.log(
+    `[@component:HostActionsClient] Toggling view mode from ${viewMode} to ${viewMode === 'grid' ? 'table' : 'grid'}`,
+  );
+  // Toggle view mode using Zustand store
+  toggleViewMode();
+  // Still dispatch the event for any listeners that might be interested
+  window.dispatchEvent(new Event(HostsEvents.TOGGLE_HOST_VIEW_MODE));
+};
+
+return (
+  <Button variant="outline" size="sm" className="h-8" onClick={handleViewModeToggle}>
+    {viewMode === 'grid' ? <List className="h-4 w-4" /> : <Grid className="h-4 w-4" />}
+  </Button>
+);
+```
