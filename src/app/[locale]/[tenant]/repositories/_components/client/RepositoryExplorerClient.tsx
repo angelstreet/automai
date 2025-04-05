@@ -18,7 +18,6 @@ import {
 import { useTranslations } from 'next-intl';
 import { useState, useEffect } from 'react';
 
-import { GitHubIcon, GitLabIcon, GiteaIcon } from '@/components/icons';
 import { Alert, AlertDescription } from '@/components/shadcn/alert';
 import { Button } from '@/components/shadcn/button';
 import { Card, CardContent } from '@/components/shadcn/card';
@@ -78,20 +77,6 @@ export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplo
     }
   }, [repository, isValidRepository]);
 
-  // Get provider icon and name
-  const getProviderIcon = () => {
-    switch (repository?.providerType) {
-      case 'github':
-        return <GitHubIcon className="h-5 w-5" />;
-      case 'gitlab':
-        return <GitLabIcon className="h-5 w-5" />;
-      case 'gitea':
-        return <GiteaIcon className="h-5 w-5" />;
-      default:
-        return <GitBranch className="h-5 w-5" />;
-    }
-  };
-
   // Get file icon based on extension using constants
   const getFileIcon = (fileName: string) => {
     const extension = fileName.split('.').pop()?.toLowerCase() || 'default';
@@ -133,53 +118,43 @@ export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplo
         const repoUrl = repository.url || '';
         const filePath = item.path || '';
 
-        // Try multiple branch names since we don't know the default branch
-        const branchesToTry = ['master', 'main', 'develop', 'dev'];
-        let content = null;
-        let lastError = null;
+        // Use only the main branch
+        const branch = 'main';
 
-        for (const branch of branchesToTry) {
-          try {
-            const apiUrl = `/api/repositories/explore?repositoryId=${repoId}&providerId=${providerId}&repositoryUrl=${encodeURIComponent(repoUrl)}&path=${encodeURIComponent(filePath)}&branch=${branch}&action=file`;
+        try {
+          const apiUrl = `/api/repositories/explore?repositoryId=${repoId}&providerId=${providerId}&repositoryUrl=${encodeURIComponent(repoUrl)}&path=${encodeURIComponent(filePath)}&branch=${branch}&action=file`;
 
-            console.log(`[RepositoryExplorer] Trying branch: ${branch}`);
-            const response = await fetch(apiUrl);
+          console.log(`[RepositoryExplorer] Getting file content using branch: ${branch}`);
+          const response = await fetch(apiUrl);
 
-            if (response.ok) {
-              const data = (await response.json()) as FileAPIResponse;
+          if (response.ok) {
+            const data = (await response.json()) as FileAPIResponse;
 
-              if (data.success && data.data) {
-                // Decode base64 content if needed
-                if (data.data.encoding === 'base64' && data.data.content) {
-                  const decodedContent = atob(data.data.content);
-                  setFileContent(decodedContent);
-                } else {
-                  setFileContent(data.data.content || 'No content available');
-                }
-                console.log(`[RepositoryExplorer] Successfully loaded file with branch: ${branch}`);
-                content = data;
-                break;
+            if (data.success && data.data) {
+              // Decode base64 content if needed
+              if (data.data.encoding === 'base64' && data.data.content) {
+                const decodedContent = atob(data.data.content);
+                setFileContent(decodedContent);
+              } else {
+                setFileContent(data.data.content || 'No content available');
               }
+              console.log(`[RepositoryExplorer] Successfully loaded file content`);
             } else {
-              const errorText = await response.text();
-              console.log(`[RepositoryExplorer] Failed with branch ${branch}:`, errorText);
-              lastError = new Error(
-                `Error with branch ${branch}: ${response.status} ${response.statusText}`,
-              );
+              throw new Error(data.error || 'Failed to load file content');
             }
-          } catch (branchError: any) {
-            console.error(`[RepositoryExplorer] Error with branch ${branch}:`, branchError);
-            lastError = branchError;
+          } else {
+            const errorText = await response.text();
+            console.log(`[RepositoryExplorer] Failed to get file content:`, errorText);
+            throw new Error(`Error: ${response.status} ${response.statusText}`);
           }
-        }
-
-        if (!content && lastError) {
-          throw lastError;
+        } catch (error: any) {
+          console.error(`[RepositoryExplorer] Error getting file content:`, error);
+          throw error;
         }
       } catch (error: any) {
         console.error('[RepositoryExplorer] Error fetching file content:', error);
         setFileContent(
-          `Error loading file: ${error.message}\n\nThis could be due to:\n- Authentication issues with the repository\n- The file might not exist\n- API rate limiting\n- The file may be in a different branch than we tried (master, main, develop, dev)`,
+          `Error loading file: ${error.message}\n\nThis could be due to:\n- Authentication issues with the repository\n- The file might not exist\n- API rate limiting\n- The file may be in a different branch than 'main'`,
         );
       }
     }
@@ -217,63 +192,45 @@ export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplo
         const repoUrl = repository.url || '';
         const safePath = pathString || '';
 
-        // Try multiple branch names since we don't know the default branch
-        const branchesToTry = ['master', 'main', 'develop', 'dev'];
-        let files = null;
-        let lastError = null;
+        // Use only the main branch
+        const branch = 'main';
 
-        for (const branch of branchesToTry) {
-          try {
-            const apiUrl = `/api/repositories/explore?repositoryId=${repoId}&providerId=${providerId}&repositoryUrl=${encodeURIComponent(repoUrl)}&path=${encodeURIComponent(safePath)}&branch=${branch}&action=list`;
+        try {
+          const apiUrl = `/api/repositories/explore?repositoryId=${repoId}&providerId=${providerId}&repositoryUrl=${encodeURIComponent(repoUrl)}&path=${encodeURIComponent(safePath)}&branch=${branch}&action=list`;
 
-            console.log(`[RepositoryExplorer] Trying to list files with branch: ${branch}`);
-            const response = await fetch(apiUrl);
+          console.log(`[RepositoryExplorer] Listing files using branch: ${branch}`);
+          const response = await fetch(apiUrl);
 
-            if (response.ok) {
-              const data = (await response.json()) as FilesAPIResponse;
+          if (response.ok) {
+            const data = (await response.json()) as FilesAPIResponse;
 
-              if (data.success && data.data) {
-                // Sort files: directories first, then files, both alphabetically
-                const sortedFiles = [...data.data].sort((a, b) => {
-                  if (a.type === 'dir' && b.type !== 'dir') return -1;
-                  if (a.type !== 'dir' && b.type === 'dir') return 1;
-                  return a.name.localeCompare(b.name);
-                });
+            if (data.success && data.data) {
+              // Sort files: directories first, then files, both alphabetically
+              const sortedFiles = [...data.data].sort((a, b) => {
+                if (a.type === 'dir' && b.type !== 'dir') return -1;
+                if (a.type !== 'dir' && b.type === 'dir') return 1;
+                return a.name.localeCompare(b.name);
+              });
 
-                console.log(
-                  `[RepositoryExplorer] Successfully loaded file list with branch: ${branch}`,
-                );
-                setFiles(sortedFiles);
-                files = data;
-                break;
-              }
+              console.log(`[RepositoryExplorer] Successfully loaded file list`);
+              setFiles(sortedFiles);
             } else {
-              const errorText = await response.text();
-              console.log(
-                `[RepositoryExplorer] Failed to list files with branch ${branch}:`,
-                errorText,
-              );
-              lastError = new Error(
-                `Error with branch ${branch}: ${response.status} ${response.statusText}`,
-              );
+              throw new Error(data.error || 'Failed to load file list');
             }
-          } catch (branchError: any) {
-            console.error(
-              `[RepositoryExplorer] Error listing files with branch ${branch}:`,
-              branchError,
-            );
-            lastError = branchError;
+          } else {
+            const errorText = await response.text();
+            console.log(`[RepositoryExplorer] Failed to list files:`, errorText);
+            throw new Error(`Error: ${response.status} ${response.statusText}`);
           }
-        }
-
-        if (!files && lastError) {
-          throw lastError;
+        } catch (error: any) {
+          console.error(`[RepositoryExplorer] Error listing files:`, error);
+          throw error;
         }
       } catch (error: any) {
         console.error('[RepositoryExplorer] Error fetching repository files:', error);
         setError(
           error.message ||
-            'Failed to fetch repository files. The repository may not be accessible or the branch names we tried (master, main, develop, dev) are not available.',
+            'Failed to fetch repository files. The repository may not be accessible or the "main" branch may not exist.',
         );
         setFiles([]);
       } finally {
@@ -414,25 +371,6 @@ export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplo
         </BreadcrumbList>
       </Breadcrumb>
     );
-  };
-
-  // Handle refresh button click
-  const handleRefresh = () => {
-    // If a file is selected, reload the file content
-    if (selectedFile) {
-      const matchingFile = files.find((f) => f.path === selectedFile);
-      if (matchingFile) {
-        handleNavigate(matchingFile, matchingFile.type === 'dir');
-      }
-    } else {
-      // Otherwise reload the file list
-      setFiles([]);
-      setIsLoading(true);
-      // This will trigger the useEffect to refetch the files
-      const pathCopy = [...currentPath];
-      setCurrentPath([]);
-      setTimeout(() => setCurrentPath(pathCopy), 100);
-    }
   };
 
   return (
