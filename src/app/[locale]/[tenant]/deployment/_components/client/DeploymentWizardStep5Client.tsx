@@ -45,7 +45,6 @@ export function DeploymentWizardStep5Client({
 
   // State for views and config
   const [showJenkinsView, setShowJenkinsView] = useState(!!data.cicd_provider_id);
-  const [autoStart, setAutoStart] = useState(data.autoStart || false);
 
   // CI/CD functionality from the hook
   const {
@@ -99,19 +98,6 @@ export function DeploymentWizardStep5Client({
     });
   };
 
-  // Handle job selection
-  const _handleJobChange = (jobId: string) => {
-    const _job = jobs.find((j) => j.id === jobId);
-
-    onUpdateData({
-      jenkinsConfig: {
-        ...data.jenkinsConfig,
-        enabled: true,
-        jobId,
-        parameters: {}, // Reset parameters when job changes
-      },
-    });
-  };
 
   // Handle parameter change
   const _handleParameterChange = (name: string, value: string) => {
@@ -241,8 +227,40 @@ export function DeploymentWizardStep5Client({
                 </Select>
               </div>
 
-              <code className="block bg-gray-900 dark:bg-gray-800 p-3 rounded text-xs overflow-x-auto whitespace-pre text-gray-300">
-                {`pipeline {
+              {/* Show selected hosts above the pipeline code */}
+              {data.hostIds.length > 0 && (
+                <div className="mb-2">
+                  <h5 className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                    {t('wizard_target_hosts')}
+                  </h5>
+                  <div className="flex flex-wrap gap-1 bg-gray-100 dark:bg-gray-800 p-1.5 rounded-md">
+                    {data.hostIds.map((hostId) => {
+                      const host = availableHosts?.find((h) => h.id === hostId);
+                      if (!host) return null;
+
+                      return (
+                        <div
+                          key={hostId}
+                          className="flex items-center px-2 py-0.5 bg-white dark:bg-gray-700 rounded text-xs"
+                        >
+                          <div
+                            className={`w-1.5 h-1.5 rounded-full mr-1.5 ${host.status === 'connected' ? 'bg-green-500' : 'bg-red-500'}`}
+                          ></div>
+                          <span className="font-medium">{host.name}</span>
+                          <span className="text-gray-500 ml-1">({host.ip})</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div
+                className="bg-gray-900 rounded-md shadow-sm border border-gray-700 overflow-auto"
+                style={{ maxHeight: '400px' }}
+              >
+                <pre className="text-xs text-white font-mono whitespace-pre p-2 overflow-x-auto">
+                  {`pipeline {
     agent any
     
     parameters {
@@ -305,14 +323,15 @@ export function DeploymentWizardStep5Client({
         }
     }
 }`}
-              </code>
+                </pre>
+              </div>
             </div>
           </div>
         ) : (
           // Summary View
           <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
             <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {t('wizard_deployment_summary')}
+              {t('wizard_summary')}
             </h4>
 
             <div className="space-y-4">
@@ -397,11 +416,14 @@ export function DeploymentWizardStep5Client({
 
                         return (
                           <div key={id} className="text-xs flex items-center">
-                            <div
-                              className={`w-2 h-2 rounded-full mr-2 ${host.status === 'connected' ? 'bg-green-500' : 'bg-red-500'}`}
-                            ></div>
-                            <span className="text-gray-800 dark:text-gray-200">{host.name}</span>
-                            <span className="text-gray-500 ml-1">({host.ip})</span>
+                            <div className="flex items-center">
+                              <div
+                                className={`w-2 h-2 rounded-full mr-2 ${host.status === 'connected' ? 'bg-green-500' : 'bg-red-500'}`}
+                              ></div>
+                              <span className="text-xs text-gray-600 dark:text-gray-400">
+                                {host.status === 'connected' ? c('connected') : c('status_failed')}
+                              </span>
+                            </div>
                           </div>
                         );
                       })}
@@ -451,17 +473,6 @@ export function DeploymentWizardStep5Client({
             </div>
           </div>
         )}
-
-        {/* Auto-start option */}
-        <div className="flex items-center space-x-2 mt-4">
-          <Switch id="auto-start" checked={autoStart} onCheckedChange={handleAutoStartToggle} />
-          <label
-            htmlFor="auto-start"
-            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-          >
-            {t('wizard_auto_start')}
-          </label>
-        </div>
       </div>
     </div>
   );
