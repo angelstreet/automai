@@ -1,7 +1,6 @@
 'use client';
 
-import { formatDistanceToNow } from 'date-fns';
-import { GitBranch, Clock, ExternalLink, Globe, Lock, Trash2 } from 'lucide-react';
+import { GitBranch, ExternalLink, Globe, Lock, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState, useEffect } from 'react';
 
@@ -44,24 +43,6 @@ export function RepositoryCardClient({
     setIsClient(true);
   }, []);
 
-  // Format the last synced date - using a more stable approach to avoid hydration issues
-  const getLastSyncedText = () => {
-    if (!repository?.lastSyncedAt) return t('never');
-
-    // Use a safer method that's less likely to cause hydration errors
-    try {
-      return t('last_synced', {
-        date: formatDistanceToNow(new Date(repository.lastSyncedAt), { addSuffix: true }),
-      });
-    } catch {
-      // Fall back to a simple format if there's an issue
-      return t('last_synced', { date: t('recently') });
-    }
-  };
-
-  // Get the text outside of render to reduce dynamic content
-  const lastSyncedText = getLastSyncedText();
-
   // Get the provider icon based on the type
   const getProviderIcon = () => {
     switch (repository?.providerType) {
@@ -71,8 +52,6 @@ export function RepositoryCardClient({
         return <GitLabIcon className="h-5 w-5" />;
       case 'gitea':
         return <GiteaIcon className="h-5 w-5" />;
-      default:
-        return <GitBranch className="h-5 w-5" />;
     }
   };
 
@@ -146,8 +125,8 @@ export function RepositoryCardClient({
             )}
 
             <div className="flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              <span>{lastSyncedText}</span>
+              <GitBranch className="h-3 w-3" />
+              <span>{repository?.defaultBranch || 'main'}</span>
             </div>
           </div>
         </CardContent>

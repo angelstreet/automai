@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronLeft, ChevronRight, GitBranch, PlusCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, GitBranch, PlusCircle, Star } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React, { useState, useEffect } from 'react';
 
@@ -58,7 +58,7 @@ export function RepositoryListClient() {
   const [activeTab, setActiveTab] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, _setSearchQuery] = useState('');
   const itemsPerPage = 12;
 
   const handleViewRepository = (repo: Repository) => {
@@ -130,25 +130,22 @@ export function RepositoryListClient() {
   return (
     <div>
       {/* Tabs filter and search */}
-      <div className="flex justify-between items-center py-4 mb-4 relative">
-        <div className="absolute inset-0 flex justify-center items-center pointer-events-none">
-          <Tabs
-            defaultValue="all"
-            value={activeTab}
-            onValueChange={setActiveTab}
-            className="pointer-events-auto"
-          >
-            <TabsList className="grid grid-cols-3 min-w-[400px]">
-              <TabsTrigger value="all">{t('sort_all')}</TabsTrigger>
-              <TabsTrigger value="public">{t('sort_public')}</TabsTrigger>
-              <TabsTrigger value="private">{t('sort_private')}</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
+      <div className="flex justify-between items-center py-4 mb-4">
+        <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid grid-cols-4 min-w-[400px]">
+            <TabsTrigger value="all">{t('sort_all')}</TabsTrigger>
+            <TabsTrigger value="starred">
+              <div className="flex items-center">
+                <Star className="h-4 w-4 mr-1" />
+                <span>{t('sort_starred')}</span>
+              </div>
+            </TabsTrigger>
+            <TabsTrigger value="public">{t('sort_public')}</TabsTrigger>
+            <TabsTrigger value="private">{t('sort_private')}</TabsTrigger>
+          </TabsList>
+        </Tabs>
 
-        <div className="invisible">
-          <div className="w-[300px]" />
-        </div>
+        <div className="ml-auto">{/* Empty div for spacing */}</div>
       </div>
 
       {/* Repository cards grid */}
