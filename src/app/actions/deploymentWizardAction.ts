@@ -4,12 +4,12 @@ import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 import { cache } from 'react';
 
+import type { DeploymentFormData } from '@/app/[locale]/[tenant]/deployment/types';
 import { getCICDProviders } from '@/app/actions/cicdAction';
 import { getHosts } from '@/app/actions/hostsAction';
 import { getRepositories } from '@/app/actions/repositoriesAction';
 import { getUser } from '@/app/actions/userAction';
 import { createDeployment as dbCreateDeployment } from '@/lib/db/deploymentDb';
-import type { DeploymentFormData } from '@/types/component/deploymentComponentType';
 
 /**
  * Fetches all data needed for the deployment wizard
@@ -56,13 +56,13 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
       '[@action:deploymentWizard:saveDeploymentConfiguration] Starting process with form data:',
       {
         name: formData.name,
-        repository: formData.repository,
-        provider_id: formData.provider_id,
+        repositoryId: formData.repositoryId,
+        cicdProviderId: formData.cicdProviderId,
       },
     );
 
     // Validate required fields
-    if (!formData.name || !formData.repository) {
+    if (!formData.name || !formData.repositoryId) {
       console.error(
         '[@action:deploymentWizard:saveDeploymentConfiguration] Missing required fields',
       );
@@ -97,7 +97,7 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
     let cicdJobId = null;
 
     // Find the CICD provider ID (try different possible property names)
-    const cicdProviderId = formData.provider_id;
+    const cicdProviderId = formData.cicdProviderId;
 
     // Step 1: Create CICD job if a provider is selected
     if (cicdProviderId) {
@@ -169,7 +169,7 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
             name: jobName,
             description: formData.description || '',
             repository: {
-              id: formData.repository,
+              id: formData.repositoryId,
             },
             stages: [
               {
@@ -278,22 +278,21 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
     const teamId = selectedTeamCookie || user.teams?.[0]?.id;
 
     // Extract data from configuration if available
-    const scriptIds = formData.selectedScripts || [];
-    const hostIds = formData.selectedHosts || [];
-    const scriptParameters = formData.parameters || [];
+    const scriptIds = formData.configuration?.scriptIds || [];
+    const hostIds = formData.configuration?.hostIds || [];
+    const scriptParameters = formData.configuration?.parameters || {};
 
     // Prepare deployment data (removing fields that don't exist in the table)
     const deploymentData = {
       name: formData.name,
       description: formData.description || '',
-      repository_id: formData.repository,
-      target_host_id: formData.targetHostId,
+      repository_id: formData.repositoryId,
       scripts_path: scriptIds, // Use the array of script IDs/paths
       scripts_parameters: scriptParameters, // Use script parameters
       host_ids: hostIds, // Use host IDs
       status: 'pending',
-      scheduled_time: formData.scheduled || null,
-      schedule_type: formData.schedule || 'now',
+      scheduled_time: formData.scheduledTime || null, // Use the scheduledTime (timestamp) field
+      schedule_type: formData.configuration?.schedule || formData.schedule || 'now',
       tenant_id: user.tenant_id,
       user_id: user.id,
       team_id: teamId,

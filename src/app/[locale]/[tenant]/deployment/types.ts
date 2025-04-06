@@ -132,10 +132,11 @@ export interface CICDJob {
 export interface DeploymentFormData {
   name: string;
   description?: string;
-  repository: string;
+  repository?: string;
+  repositoryId?: string;
   selectedScripts?: string[];
   selectedHosts?: string[];
-  schedule: 'now' | 'later' | 'cron';
+  schedule?: 'now' | 'later' | 'cron';
   schedule_type?: 'now' | 'later' | 'cron';
   scheduledTime?: string;
   cronExpression?: string;
@@ -147,6 +148,26 @@ export interface DeploymentFormData {
     slack: boolean;
   };
   provider_id?: string;
+  cicdProviderId?: string;
+  targetHostId?: string;
+  branch?: string;
+  scheduled?: boolean;
+  autoStart?: boolean;
+  configuration?: {
+    scriptIds?: string[];
+    hostIds?: string[];
+    schedule?: 'now' | 'later' | 'cron';
+    scheduledTime?: string;
+    cronExpression?: string;
+    repeatCount?: number;
+    environmentVars?: any[];
+    parameters?: Record<string, any>;
+    notifications?: {
+      email: boolean;
+      slack: boolean;
+    };
+    scriptMapping?: Record<string, { path: string; name: string; type: string }>;
+  };
   scriptMapping?: Record<string, { path: string; name: string; type: string }>;
 }
 
