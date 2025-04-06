@@ -6,6 +6,7 @@ import React, { useState, useEffect, useRef } from 'react';
 
 import { saveDeploymentConfiguration, startDeployment } from '@/app/actions/deploymentWizardAction';
 import { toast } from '@/components/shadcn/use-toast';
+import * as gitService from '@/lib/services/gitService';
 import { DeploymentData } from '@/types/component/deploymentComponentType';
 import { Host as HostType, Host as SystemHost } from '@/types/component/hostComponentType';
 import { Repository } from '@/types/component/repositoryComponentType';
@@ -15,6 +16,8 @@ import { DeploymentWizardStep2Client } from './DeploymentWizardStep2Client';
 import { DeploymentWizardStep3Client } from './DeploymentWizardStep3Client';
 import { DeploymentWizardStep4Client } from './DeploymentWizardStep4Client';
 import { DeploymentWizardStep5Client } from './DeploymentWizardStep5Client';
+
+// Add imports for gitService
 
 // Helper function to adapt system hosts to the format expected by the deployment module
 const adaptHostsForDeployment = (systemHosts: SystemHost[]): HostType[] => {
@@ -84,20 +87,31 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
     const [isLoadingScripts, setIsLoadingScripts] = useState(false);
     const [scriptsError, setScriptsError] = useState<string | null>(null);
 
-    // Fetch scripts only when on step 2 and repository selected
+    // Add a ref to track loading state outside of the effect dependency cycle
+    const isLoadingRef = useRef(false);
+
+    // Modify the useEffect dependency array to remove isLoadingScripts
     useEffect(() => {
       console.log(
         `[DeploymentWizard] Current step: ${step}, repositoryId: ${deploymentData.repositoryId?.substring(0, 8) || 'none'}...`,
       );
 
       // Only fetch scripts when on step 2 and a repository is selected
-      if (step === 2 && deploymentData.repositoryId && !isLoadingScripts) {
+      // Check loading ref instead of state to avoid dependency cycle
+      if (step === 2 && deploymentData.repositoryId && !isLoadingRef.current) {
         // Track if the effect was cleaned up
         let isMounted = true;
+        console.log('Test1');
+
+        // Set loading ref to true
+        isLoadingRef.current = true;
+
+        // Set loading state
+        setIsLoadingScripts(true);
+        console.log('[DeploymentWizard] Setting loading state to true');
 
         const loadScripts = async () => {
           try {
-            setIsLoadingScripts(true);
             setScriptsError(null);
 
             // Get repository information from the selected repository
@@ -106,14 +120,14 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               url?: string;
               provider_id?: string;
             };
-
+            console.log('Test2');
             if (!selectedRepo) {
               throw new Error('No repository selected');
             }
-
+            console.log('Test3');
             // Use either providerId or provider_id from the repository
             const providerId = selectedRepo.provider_id;
-
+            console.log('Test4');
             if (!providerId) {
               throw new Error('Missing provider ID for the selected repository');
             }
@@ -122,50 +136,147 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               throw new Error('Missing repository URL');
             }
 
-            console.log(`[DeploymentWizard] Loading scripts for repository: ${selectedRepo.name}`, {
-              id: selectedRepo.id,
-              providerId,
-              url: selectedRepo.url,
-            });
+            console.log(`[DeploymentWizard] Getting files directly using gitService`);
+            // Instead of calling the API endpoint, use gitService directly
 
-            // Use the selected branch from deploymentData
-            const userSelectedBranch = deploymentData.branch || 'main';
-            let _scriptFiles = null; // Renamed to _scriptFiles to avoid linter warning
-            let lastError = null;
+            // Determine provider type
+            const providerType = gitService.detectProviderFromUrl(selectedRepo.url);
+            console.log(`[DeploymentWizard] Provider type: ${providerType}`);
 
-            // For now, only try the user-selected branch
-            console.log(`[DeploymentWizard] Trying branch: ${userSelectedBranch}`);
+            // Log the repository URL to check what we're working with
+            console.log(`[DeploymentWizard] Repository URL: ${selectedRepo.url}`);
 
-            // Try only once to prevent API fetch loops
+            // Manually extract owner and repo from URL since server-side functions
+            // might not work properly in client context
+            let owner = '';
+            let repo = '';
+
             try {
-              // API endpoint to get repository files
-              const apiUrl = `/api/repositories/explore?repositoryId=${selectedRepo.id}&providerId=${providerId}&repositoryUrl=${encodeURIComponent(selectedRepo.url)}&path=&branch=${userSelectedBranch}&action=list&recursive=true`;
-              console.log(`[DeploymentWizard] Fetching scripts from: ${apiUrl}`);
+              // Extract owner and repo from URL
+              if (selectedRepo.url) {
+                // Remove .git suffix if present
+                const cleanUrl = selectedRepo.url.replace(/\.git$/, '');
 
-              // Simplified fetch without timeout handling - let server handle timeouts
-              const response = await fetch(apiUrl, {
-                headers: { 'Cache-Control': 'no-cache' },
+                // Parse the URL
+                const urlObj = new URL(cleanUrl);
+
+                // GitHub URL format: https://github.com/owner/repo
+                if (providerType === 'github') {
+                  const pathParts = urlObj.pathname.split('/').filter(Boolean);
+                  if (pathParts.length >= 2) {
+                    owner = pathParts[0];
+                    repo = pathParts[1];
+                  }
+                }
+                // GitLab URL format
+                else if (providerType === 'gitlab') {
+                  // Skip domain and get path parts
+                  const pathParts = urlObj.pathname.split('/').filter(Boolean);
+                  if (pathParts.length >= 2) {
+                    // The last part is the repo name
+                    repo = pathParts[pathParts.length - 1];
+                    // Everything before is the owner/group path
+                    owner = pathParts.slice(0, pathParts.length - 1).join('/');
+                  }
+                }
+                // Gitea URL format
+                else if (providerType === 'gitea') {
+                  const pathParts = urlObj.pathname.split('/').filter(Boolean);
+                  if (pathParts.length >= 2) {
+                    owner = pathParts[0];
+                    repo = pathParts[1];
+                  }
+                }
+              }
+
+              console.log(`[DeploymentWizard] Extracted owner: ${owner}, repo: ${repo}`);
+            } catch (error) {
+              console.error('[DeploymentWizard] Error parsing repository URL:', error);
+            }
+
+            // Get provider configuration with extracted owner/repo for better URL generation
+            let config;
+
+            // If we have owner and repo, use a custom URL directly
+            if (owner && repo && providerType === 'github') {
+              // For GitHub, construct URL directly
+              config = {
+                method: 'GET',
+                url: `https://api.github.com/repos/${owner}/${repo}/contents/`,
+                headers: {
+                  Accept: 'application/json',
+                  'Content-Type': 'application/json',
+                },
+              };
+              console.log(`[DeploymentWizard] Using direct GitHub URL: ${config.url}`);
+            } else {
+              // Use the standard config from gitService
+              config = gitService.getProviderApiConfig(
+                providerType,
+                '',
+                deploymentData.branch || 'main',
+              );
+              console.log(`[DeploymentWizard] Using URL from gitService: ${config.url}`);
+            }
+
+            // Use a timeout to prevent UI from hanging indefinitely
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
+            try {
+              // Call the provider API directly instead of going through our API route
+              const response = await fetch(config.url, {
+                method: config.method,
+                headers: config.headers,
+                signal: controller.signal,
               });
+
+              // Clear timeout since request completed
+              clearTimeout(timeoutId);
 
               // Break out early on component unmount
               if (!isMounted) return;
 
               if (!response.ok) {
-                const errorText = await response.text();
-                console.log(
-                  `[DeploymentWizard] API error: ${response.status} ${response.statusText} - ${errorText}`,
-                );
                 throw new Error(`Error ${response.status}: ${response.statusText}`);
               }
 
-              const data = await response.json();
+              // Parse response based on content type
+              let rawData;
+              const contentType = response.headers.get('content-type') || '';
+              if (contentType.includes('application/json')) {
+                rawData = await response.json();
+              } else {
+                rawData = await response.text();
+              }
 
+              // Standardize response using gitService
+              const data = {
+                success: true,
+                data: gitService.standardizeResponse(providerType, rawData, 'list'),
+              };
+
+              // Check if we have valid data
+              if (!data.data || (Array.isArray(data.data) && data.data.length === 0)) {
+                throw new Error('No files found in repository');
+              }
+
+              // Process the data as before
               if (data.success && data.data) {
+                // Add debug logs to see what files we're getting
+                console.log(`[DeploymentWizard] API returned files`);
+
                 // Filter for script files (.sh, .py)
-                const filteredFiles = data.data.filter(
-                  (file: any) =>
-                    file.type === 'file' &&
-                    (file.name.endsWith('.sh') || file.name.endsWith('.py')),
+                const filteredFiles = Array.isArray(data.data)
+                  ? data.data.filter(
+                      (file: any) =>
+                        file.type === 'file' &&
+                        (file.name.endsWith('.sh') || file.name.endsWith('.py')),
+                    )
+                  : [];
+
+                console.log(
+                  `[DeploymentWizard] After filtering: ${filteredFiles.length} script files`,
                 );
 
                 if (filteredFiles.length > 0) {
@@ -185,55 +296,76 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
 
                   if (isMounted) {
                     setRepositoryScripts(scripts);
+                    // Reset loading state after successful script load
+                    setIsLoadingScripts(false);
+                    isLoadingRef.current = false;
+                    console.log('[DeploymentWizard] Reset loading state after finding scripts');
                   }
-                  _scriptFiles = scripts;
                 } else {
                   console.log(`[DeploymentWizard] No script files found`);
                   if (isMounted) {
                     setRepositoryScripts([]);
+                    // Add an informative message when no script files are found
+                    setScriptsError(
+                      'No Python (.py) or Shell (.sh) scripts found in this repository.',
+                    );
+                    // Reset loading state when no scripts are found
+                    setIsLoadingScripts(false);
+                    isLoadingRef.current = false;
+                    console.log('[DeploymentWizard] Reset loading state when no scripts found');
                   }
                 }
               } else {
-                throw new Error(data.error || 'Failed to retrieve repository files');
+                throw new Error('Failed to retrieve repository files');
               }
-            } catch (error) {
-              // Simplified error handling - no special case for AbortError anymore
-              if (error instanceof Error) {
-                lastError = error;
+            } catch (directFetchError: any) {
+              // Clear timeout on error
+              clearTimeout(timeoutId);
+
+              // Handle abort errors (timeouts)
+              if (directFetchError.name === 'AbortError') {
+                console.log(`[DeploymentWizard] Direct fetch timed out`);
+                setScriptsError(
+                  'Request timed out. Please try again or select a different repository.',
+                );
               } else {
-                lastError = new Error('Unknown error occurred');
+                console.error('[DeploymentWizard] Error fetching directly:', directFetchError);
+                setScriptsError(directFetchError.message || 'Failed to connect to repository');
               }
 
-              console.error('[DeploymentWizard] Error fetching scripts:', lastError);
-
-              if (isMounted) {
-                // Check if error contains timeout messaging from server
-                if (lastError.message && lastError.message.includes('timed out')) {
-                  setScriptsError(`Repository request timed out. Please try again later.`);
-                } else {
-                  setScriptsError(lastError.message);
-                }
-                setRepositoryScripts([]);
-              }
+              // Reset states
+              setRepositoryScripts([]);
+              setIsLoadingScripts(false);
+              isLoadingRef.current = false;
+              console.log('[DeploymentWizard] Reset loading state after error');
+              return; // Exit early
             }
           } catch (error) {
             console.error('[DeploymentWizard] Error in script loading process:', error);
             if (isMounted) {
               setScriptsError(error instanceof Error ? error.message : 'Failed to load scripts');
               setRepositoryScripts([]);
-            }
-          } finally {
-            if (isMounted) {
+
+              // Reset loading state
               setIsLoadingScripts(false);
+              isLoadingRef.current = false;
+              console.log('[DeploymentWizard] Reset loading state after error');
             }
           }
         };
 
         loadScripts();
 
-        // Cleanup function to prevent state updates after unmount
+        // Cleanup function that always runs when component unmounts or deps change
         return () => {
           isMounted = false;
+
+          // Make sure loading state is reset in cleanup
+          if (isLoadingRef.current) {
+            isLoadingRef.current = false;
+            setIsLoadingScripts(false);
+            console.log('[DeploymentWizard] Reset loading state in cleanup');
+          }
         };
       }
     }, [
@@ -241,8 +373,41 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
       deploymentData.repositoryId,
       deploymentData.selectedRepository,
       deploymentData.branch,
-      isLoadingScripts,
     ]);
+
+    // Update the step change effect to use the ref
+    useEffect(() => {
+      // If we're not on step 2 anymore but loading state is still true
+      if (step !== 2 && (isLoadingScripts || isLoadingRef.current)) {
+        console.log(
+          '[DeploymentWizard] Step changed during script loading - resetting loading state',
+        );
+        setIsLoadingScripts(false);
+        isLoadingRef.current = false;
+
+        // If we have pending API requests, also show an error
+        if (scriptsError === null) {
+          setScriptsError('Operation cancelled due to navigation');
+        }
+      }
+    }, [step, isLoadingScripts, scriptsError]);
+
+    // Update the timeout effect to use the ref
+    useEffect(() => {
+      if (isLoadingScripts || isLoadingRef.current) {
+        // Set a 15-second maximum loading time as UI safeguard
+        const timeoutId = setTimeout(() => {
+          console.log('[DeploymentWizard] Loading timeout reached - resetting state');
+          setIsLoadingScripts(false);
+          isLoadingRef.current = false;
+          setScriptsError(
+            'Repository request timed out. Please try again or select a different repository.',
+          );
+        }, 15000);
+
+        return () => clearTimeout(timeoutId);
+      }
+    }, [isLoadingScripts]);
 
     const handleInputChange = (
       e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,

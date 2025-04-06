@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { createClient } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
+
 import { getUser } from '@/app/actions/userAction';
 import * as gitService from '@/lib/services/gitService';
+import { createClient } from '@/lib/supabase/server';
 
 // Define global type for giteaServerUrl
 declare global {
