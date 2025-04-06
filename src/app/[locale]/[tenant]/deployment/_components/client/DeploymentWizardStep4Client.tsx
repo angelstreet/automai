@@ -32,12 +32,12 @@ const DeploymentWizardStep4Client: React.FC<DeploymentWizardStep4Props> = ({
   const isValid = typeof isStepValid === 'function' ? isStepValid() : isStepValid;
 
   return (
-    <div>
-      <div className="flex justify-between mb-1">
+    <div className="p-4 bg-transparent dark:bg-transparent rounded-md border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div className="flex justify-between mb-4">
         <button
           type="button"
           onClick={onPrevStep}
-          className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-md shadow-sm text-sm font-medium bg-background dark:bg-gray-800 text-foreground hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-400"
         >
           {c('prev')}
         </button>
@@ -46,10 +46,10 @@ const DeploymentWizardStep4Client: React.FC<DeploymentWizardStep4Props> = ({
           type="button"
           onClick={onNextStep}
           disabled={!isValid}
-          className={`px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+          className={`px-4 py-2 rounded-md shadow-sm text-sm font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-gray-400 ${
             isValid
-              ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600'
-              : 'bg-blue-300 dark:bg-blue-800 cursor-not-allowed'
+              ? 'bg-background dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
+              : 'bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 cursor-not-allowed opacity-70'
           }`}
         >
           {c('next')}
@@ -57,10 +57,10 @@ const DeploymentWizardStep4Client: React.FC<DeploymentWizardStep4Props> = ({
       </div>
 
       <div className="mb-3">
-        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label className="block text-sm font-medium text-foreground mb-2">
           {t('wizard_schedule_later')}
         </label>
-        <div className="flex items-center space-x-4 mb-2">
+        <div className="flex items-center space-x-4 mb-4">
           <div className="flex items-center">
             <input
               type="radio"
@@ -69,9 +69,9 @@ const DeploymentWizardStep4Client: React.FC<DeploymentWizardStep4Props> = ({
               value="now"
               checked={schedule === 'now'}
               onChange={onInputChange}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600"
+              className="h-4 w-4 text-gray-600 dark:text-gray-400 focus:ring-gray-500 border-gray-300 dark:border-gray-600"
             />
-            <label htmlFor="scheduleNow" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+            <label htmlFor="scheduleNow" className="ml-2 text-sm text-foreground">
               {t('wizard_deploy_now')}
             </label>
           </div>
@@ -83,12 +83,9 @@ const DeploymentWizardStep4Client: React.FC<DeploymentWizardStep4Props> = ({
               value="later"
               checked={schedule === 'later'}
               onChange={onInputChange}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600"
+              className="h-4 w-4 text-gray-600 dark:text-gray-400 focus:ring-gray-500 border-gray-300 dark:border-gray-600"
             />
-            <label
-              htmlFor="scheduleLater"
-              className="ml-2 text-sm text-gray-700 dark:text-gray-300"
-            >
+            <label htmlFor="scheduleLater" className="ml-2 text-sm text-foreground">
               {t('wizard_schedule_later')}
             </label>
           </div>

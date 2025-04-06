@@ -36,7 +36,7 @@ const DeploymentWizardStep1Client: React.FC<DeploymentWizardStep1ClientProps> = 
   const isValid = typeof isStepValid === 'function' ? isStepValid() : isStepValid;
 
   return (
-    <div className="p-3 bg-black/5 dark:bg-black/20 rounded-md border border-gray-200 dark:border-gray-800">
+    <div className="p-3 bg-transparent dark:bg-transparent rounded-md border border-gray-200 dark:border-gray-700 shadow-sm">
       <div className="space-y-2">
         <div>
           <label htmlFor="name" className="block text-sm font-medium mb-0.5">
@@ -132,7 +132,13 @@ const DeploymentWizardStep1Client: React.FC<DeploymentWizardStep1ClientProps> = 
       </div>
 
       <div className="mt-4 flex justify-end">
-        <Button type="button" onClick={onNextStep} disabled={!isValid}>
+        <Button
+          type="button"
+          onClick={onNextStep}
+          disabled={!isValid}
+          variant="default"
+          className="bg-background dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-foreground hover:bg-gray-100 dark:hover:bg-gray-700"
+        >
           Next
         </Button>
       </div>

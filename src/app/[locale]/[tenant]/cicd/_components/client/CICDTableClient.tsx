@@ -3,6 +3,7 @@ import { Edit, Trash, AlertCircle, RefreshCcw, MoreHorizontal, PlusCircle } from
 import { useTranslations } from 'next-intl';
 import React, { useState, useCallback } from 'react';
 
+import { testCICDProvider } from '@/app/actions/cicdAction';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,7 +40,6 @@ import type { CICDProvider } from '@/types/component/cicdComponentType';
 import { CICDFormDialogClient } from '..';
 
 import { CICDEvents } from './CICDEventListener';
-import { testCICDProvider } from '@/app/actions/cicdAction';
 
 interface CICDTableClientProps {
   initialProviders: CICDProvider[];

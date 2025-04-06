@@ -505,12 +505,12 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
     };
 
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-2">
+      <div className="bg-background dark:bg-gray-800 rounded-lg shadow-md p-2">
         <div className="mb-1">
           <div className="flex justify-between items-center">
             <button
               onClick={handleCancelWizard}
-              className="flex items-center text-xs text-blue-600 dark:text-blue-400 hover:underline"
+              className="flex items-center text-xs text-gray-600 dark:text-gray-400 hover:underline"
             >
               <ArrowLeft size={12} className="mr-1" />
               Back to Deployments
@@ -523,10 +523,10 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
         <div className="mb-1 relative">
           <div className="flex justify-between">
             <div
-              className={`flex flex-col items-center ${step >= 1 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-600'}`}
+              className={`flex flex-col items-center ${step >= 1 ? 'text-gray-600 dark:text-gray-400' : 'text-gray-400 dark:text-gray-600'}`}
             >
               <div
-                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${step >= 1 ? 'bg-blue-100 dark:bg-blue-900' : 'bg-gray-100 dark:bg-gray-700'}`}
+                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${step >= 1 ? 'bg-gray-100 dark:bg-gray-900' : 'bg-gray-100 dark:bg-gray-700'}`}
               >
                 1
               </div>
@@ -535,15 +535,15 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
 
             <div className="flex-1 flex items-center">
               <div
-                className={`h-0.5 w-full ${step >= 2 ? 'bg-blue-600 dark:bg-blue-400' : 'bg-gray-200 dark:bg-gray-700'}`}
+                className={`h-0.5 w-full ${step >= 2 ? 'bg-gray-500 dark:bg-gray-500' : 'bg-gray-200 dark:bg-gray-700'}`}
               ></div>
             </div>
 
             <div
-              className={`flex flex-col items-center ${step >= 2 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-600'}`}
+              className={`flex flex-col items-center ${step >= 2 ? 'text-gray-600 dark:text-gray-400' : 'text-gray-400 dark:text-gray-600'}`}
             >
               <div
-                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${step >= 2 ? 'bg-blue-100 dark:bg-blue-900' : 'bg-gray-100 dark:bg-gray-700'}`}
+                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${step >= 2 ? 'bg-gray-100 dark:bg-gray-900' : 'bg-gray-100 dark:bg-gray-700'}`}
               >
                 2
               </div>
@@ -552,15 +552,15 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
 
             <div className="flex-1 flex items-center">
               <div
-                className={`h-0.5 w-full ${step >= 3 ? 'bg-blue-600 dark:bg-blue-400' : 'bg-gray-200 dark:bg-gray-700'}`}
+                className={`h-0.5 w-full ${step >= 3 ? 'bg-gray-500 dark:bg-gray-500' : 'bg-gray-200 dark:bg-gray-700'}`}
               ></div>
             </div>
 
             <div
-              className={`flex flex-col items-center ${step >= 3 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-600'}`}
+              className={`flex flex-col items-center ${step >= 3 ? 'text-gray-600 dark:text-gray-400' : 'text-gray-400 dark:text-gray-600'}`}
             >
               <div
-                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${step >= 3 ? 'bg-blue-100 dark:bg-blue-900' : 'bg-gray-100 dark:bg-gray-700'}`}
+                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${step >= 3 ? 'bg-gray-100 dark:bg-gray-900' : 'bg-gray-100 dark:bg-gray-700'}`}
               >
                 3
               </div>
@@ -569,15 +569,15 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
 
             <div className="flex-1 flex items-center">
               <div
-                className={`h-0.5 w-full ${step >= 4 ? 'bg-blue-600 dark:bg-blue-400' : 'bg-gray-200 dark:bg-gray-700'}`}
+                className={`h-0.5 w-full ${step >= 4 ? 'bg-gray-500 dark:bg-gray-500' : 'bg-gray-200 dark:bg-gray-700'}`}
               ></div>
             </div>
 
             <div
-              className={`flex flex-col items-center ${step >= 4 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-600'}`}
+              className={`flex flex-col items-center ${step >= 4 ? 'text-gray-600 dark:text-gray-400' : 'text-gray-400 dark:text-gray-600'}`}
             >
               <div
-                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${step >= 4 ? 'bg-blue-100 dark:bg-blue-900' : 'bg-gray-100 dark:bg-gray-700'}`}
+                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${step >= 4 ? 'bg-gray-100 dark:bg-gray-900' : 'bg-gray-100 dark:bg-gray-700'}`}
               >
                 4
               </div>
@@ -586,15 +586,15 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
 
             <div className="flex-1 flex items-center">
               <div
-                className={`h-0.5 w-full ${step >= 5 ? 'bg-blue-600 dark:bg-blue-400' : 'bg-gray-200 dark:bg-gray-700'}`}
+                className={`h-0.5 w-full ${step >= 5 ? 'bg-gray-500 dark:bg-gray-500' : 'bg-gray-200 dark:bg-gray-700'}`}
               ></div>
             </div>
 
             <div
-              className={`flex flex-col items-center ${step >= 5 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-600'}`}
+              className={`flex flex-col items-center ${step >= 5 ? 'text-gray-600 dark:text-gray-400' : 'text-gray-400 dark:text-gray-600'}`}
             >
               <div
-                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${step >= 5 ? 'bg-blue-100 dark:bg-blue-900' : 'bg-gray-100 dark:bg-gray-700'}`}
+                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${step >= 5 ? 'bg-gray-100 dark:bg-gray-900' : 'bg-gray-100 dark:bg-gray-700'}`}
               >
                 5
               </div>

@@ -117,7 +117,7 @@ const DeploymentWizardStep2Client: React.FC<DeploymentWizardStep2Props> = ({
   );
 
   return (
-    <div className="p-4 bg-black/5 dark:bg-black/20 rounded-md border border-gray-200 dark:border-gray-800">
+    <div className="p-4 bg-transparent dark:bg-transparent rounded-md border border-gray-200 dark:border-gray-700 shadow-sm">
       <h2 className="text-lg font-medium mb-4">Select Scripts</h2>
 
       {/* 
@@ -151,7 +151,7 @@ const DeploymentWizardStep2Client: React.FC<DeploymentWizardStep2Props> = ({
         <button
           type="button"
           onClick={onPrevStep}
-          className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-md shadow-sm text-sm font-medium bg-background dark:bg-gray-800 text-foreground hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-400"
         >
           Previous
         </button>
@@ -160,10 +160,10 @@ const DeploymentWizardStep2Client: React.FC<DeploymentWizardStep2Props> = ({
           type="button"
           onClick={onNextStep}
           disabled={!isValid}
-          className={`px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+          className={`px-4 py-2 rounded-md shadow-sm text-sm font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-gray-400 ${
             isValid
-              ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600'
-              : 'bg-blue-300 dark:bg-blue-800 cursor-not-allowed'
+              ? 'bg-background dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
+              : 'bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 cursor-not-allowed opacity-70'
           }`}
         >
           Next

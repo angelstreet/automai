@@ -404,7 +404,7 @@
     "provider_url": "URL",
     "provider_auth_type": "Auth Type",
     "delete_provider_title": "Delete CI/CD Provider",
-    "delete_provider_confirm": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone and will remove all access to this provider.",
+    "delete_provider_confirm": "Are you sure you want to delete ? This action cannot be undone and will remove all access to this provider.",
     "auth_type_token": "API Token",
     "auth_type_basic": "Username & Password",
     "auth_type_oauth": "OAuth",

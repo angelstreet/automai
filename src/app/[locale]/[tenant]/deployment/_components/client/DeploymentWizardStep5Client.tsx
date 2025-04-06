@@ -1,10 +1,11 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 
 import { Switch } from '@/components/shadcn/switch';
 import { useCICD } from '@/hooks';
+import { PipelineGenerator } from '@/lib/services/cicd/pipelineGenerator';
 import { CICDProvider, CICDJob } from '@/types/component/cicdComponentType';
 import { DeploymentData } from '@/types/component/deploymentComponentType';
 import { Host } from '@/types/component/hostComponentType';
@@ -57,7 +58,7 @@ export function DeploymentWizardStep5Client({
   const [_jobDetailsError, _setJobDetailsError] = useState<string | null>(null);
 
   // Construct a Jenkins config object from props to match expected interface
-  const jenkinsConfig = {
+  const _jenkinsConfig = {
     enabled: !!data.cicd_provider_id,
     provider_id: data.cicd_provider_id,
     jobId: data.jenkinsConfig?.jobId,
@@ -67,13 +68,9 @@ export function DeploymentWizardStep5Client({
   // Handle toggle for Jenkins integration
   const handleJenkinsToggle = (checked: boolean) => {
     onUpdateData({
-      cicd_provider_id: checked ? jenkinsConfig.provider_id || '' : '',
+      cicd_provider_id: checked ? data.cicd_provider_id || cicdProviders[0]?.id || '' : '',
       jenkinsConfig: checked ? data.jenkinsConfig : undefined,
     });
-
-    if (checked) {
-      setShowJenkinsView(true);
-    }
   };
 
   // Handle provider selection
@@ -119,6 +116,72 @@ export function DeploymentWizardStep5Client({
     });
   };
 
+  // Generate Jenkins pipeline
+  const jenkinsCode = useMemo(() => {
+    if (!data) return '';
+
+    // Get scripts details from the scriptIds
+    const scriptDetails = repositoryScripts
+      .filter((s) => data.scriptIds.includes(s.id))
+      .map((script) => ({
+        id: script.id,
+        path: script.path || script.filename || script.id,
+        type: script.type || 'shell',
+        parameters: script.parameters || '',
+      }));
+
+    // Get host details from the hostIds
+    const hostDetails = availableHosts
+      .filter((h) => data.hostIds.includes(h.id))
+      .map((host) => ({
+        id: host.id,
+        name: host.name,
+        ip: host.ip,
+        environment: host.environment || 'Production',
+      }));
+
+    // Repository details
+    const repoUrl = data.repositoryId
+      ? `https://github.com/example/${data.repositoryId}.git`
+      : 'https://github.com/example/repo.git';
+    const branch = data.branch || 'main';
+
+    // Generate pipeline using the new service
+    return PipelineGenerator.generate('jenkins', {
+      repositoryUrl: repoUrl,
+      branch: branch,
+      deploymentName: data.name || 'Deployment',
+      deploymentId: data.id || 'DEP-123',
+      scripts: scriptDetails,
+      hosts: hostDetails,
+      schedule: data.schedule as any,
+      scheduledTime: data.scheduledTime,
+      additionalParams: {
+        repository: data.repositoryId || 'default',
+      },
+    });
+  }, [data, repositoryScripts, availableHosts]);
+
+  // Render Jenkins view
+  const renderJenkinsView = () => {
+    return (
+      <>
+        <div className="mb-4">
+          <h3 className="text-xl font-medium text-foreground mb-2">
+            {t('review.jenkins_pipeline') || 'Jenkins Pipeline'}
+          </h3>
+        </div>
+
+        <div
+          className="bg-gray-900 rounded-md shadow-sm border border-gray-700 overflow-auto"
+          style={{ maxHeight: '500px' }}
+        >
+          <pre className="p-4 text-sm text-gray-200 whitespace-pre font-mono">{jenkinsCode}</pre>
+        </div>
+      </>
+    );
+  };
+
   return (
     <div className="max-h-[80vh] overflow-auto">
       <div className="flex items-center justify-between mb-2">
@@ -137,9 +200,7 @@ export function DeploymentWizardStep5Client({
               checked={showJenkinsView}
               onCheckedChange={(checked) => {
                 setShowJenkinsView(checked);
-                if (checked) {
-                  handleJenkinsToggle(true);
-                }
+                handleJenkinsToggle(checked);
               }}
             />
             <span className="text-xs text-gray-500">{t('wizard_cicd_view')}</span>
@@ -198,83 +259,14 @@ export function DeploymentWizardStep5Client({
       {/* Fixed width container to prevent layout shifts */}
       <div className="w-full" style={{ minHeight: '500px' }}>
         {/* Common container with fixed dimensions */}
-        <div className="w-full h-[500px] bg-gray-50 dark:bg-gray-700 rounded-md p-2 transition-all duration-150 relative">
+        <div className="w-full h-[500px] bg-background dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 p-2 transition-all duration-150 relative">
           {/* Jenkins View - Absolutely positioned */}
           <div
             className={`absolute inset-0 p-2 transition-opacity duration-150 ${
               showJenkinsView ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
             }`}
           >
-            <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('wizard_jenkins_pipeline_preview')}
-            </h4>
-            <div className="bg-gray-900 rounded-md shadow-sm border border-gray-700 overflow-auto h-[450px] w-full">
-              <pre className="text-xs text-white font-mono whitespace-pre p-2 overflow-x-auto">
-                {`pipeline {
-    agent any
-    
-    parameters {
-        string(name: 'DEPLOYMENT_NAME', defaultValue: '${data.name || 'deployment'}', description: 'Deployment name')
-        string(name: 'REPOSITORY', defaultValue: '${data.repositoryId || ''}', description: 'Repository')
-        ${
-          data.schedule === 'later'
-            ? `string(name: 'SCHEDULED_TIME', defaultValue: '${data.scheduledTime || ''}', description: 'Scheduled time')`
-            : '// Immediate deployment'
-        }
-    }
-    
-    stages {
-        stage('Prepare') {
-            steps {
-                echo "Preparing deployment: \${params.DEPLOYMENT_NAME}"
-                checkout scm
-            }
-        }
-        
-        stage('Deploy to Hosts') {
-            steps {
-                script {
-                    def hosts = ${JSON.stringify(
-                      data.hostIds.map((id) => {
-                        const host = availableHosts.find((h) => h.id === id);
-                        return host ? `${host.name} (${host.ip})` : id;
-                      }),
-                    )}
-                    
-                    hosts.each { host ->
-                        echo "Deploying to \${host}"
-                    }
-                    
-                    ${data.scriptIds
-                      .map((scriptId) => {
-                        const script = repositoryScripts.find((s) => s.id === scriptId);
-                        const params = data.scriptParameters[scriptId]?.['raw'] || '';
-                        return `                    sh "automai-deploy ${script?.path || scriptId} ${params}"`;
-                      })
-                      .join('\n')}
-                }
-            }
-        }
-        
-        stage('Verify') {
-            steps {
-                echo "Verifying deployment"
-                // Add verification steps here
-            }
-        }
-    }
-    
-    post {
-        success {
-            echo "Deployment completed successfully"
-        }
-        failure {
-            echo "Deployment failed"
-        }
-    }
-}`}
-              </pre>
-            </div>
+            {renderJenkinsView()}
           </div>
 
           {/* Summary View - Absolutely positioned */}
@@ -283,58 +275,56 @@ export function DeploymentWizardStep5Client({
               !showJenkinsView ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
             }`}
           >
-            <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('wizard_summary')}
-            </h4>
+            <h4 className="text-sm font-medium text-foreground mb-2">{t('wizard_summary')}</h4>
 
-            <div className="space-y-2 h-[450px] overflow-auto">
+            <div className="space-y-4 h-[450px] overflow-auto pr-1">
               {/* Scripts */}
               <div className="space-y-1 mb-2">
-                <h3 className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                <h3 className="text-sm font-medium text-foreground mb-2">
                   {t('wizard_selected_scripts')} ({data.scriptIds.length})
                 </h3>
-                <div className="bg-white dark:bg-gray-800 rounded-md shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div className="bg-background dark:bg-gray-800 rounded-md shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
                   <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 table-fixed">
-                    <thead className="bg-gray-50 dark:bg-gray-800">
+                    <thead className="bg-gray-50 dark:bg-gray-900">
                       <tr>
                         <th
                           scope="col"
-                          className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-10"
+                          className="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-10"
                         >
                           #
                         </th>
                         <th
                           scope="col"
-                          className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/2"
+                          className="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-1/2"
                         >
                           {t('wizard_script_path')}
                         </th>
                         <th
                           scope="col"
-                          className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/2"
+                          className="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-1/2"
                         >
                           {t('wizard_parameters')}
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    <tbody className="bg-background dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                       {data.scriptIds.map((scriptId, index) => {
                         const script = repositoryScripts.find((s) => s.id === scriptId);
                         const params = data.scriptParameters[scriptId]?.['raw'] || '';
 
                         return (
                           <tr key={scriptId}>
-                            <td className="px-2 py-1 whitespace-nowrap">
-                              <div className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-1 py-0.5 rounded text-center text-xs">
+                            <td className="px-2 py-2 whitespace-nowrap">
+                              <div className="bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 px-1.5 py-0.5 rounded text-center text-xs">
                                 {index + 1}
                               </div>
                             </td>
-                            <td className="px-2 py-1 whitespace-nowrap">
+                            <td className="px-2 py-2 whitespace-nowrap">
                               <span className="text-xs text-gray-800 dark:text-gray-200 font-mono">
                                 {script?.path || scriptId}
                               </span>
                             </td>
-                            <td className="px-2 py-1 whitespace-nowrap">
+                            <td className="px-2 py-2 whitespace-nowrap">
                               {params && (
                                 <span className="text-xs text-gray-600 dark:text-gray-400 font-mono">
                                   {params}
@@ -351,10 +341,10 @@ export function DeploymentWizardStep5Client({
 
               {/* Target Hosts */}
               <div>
-                <h5 className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                <h5 className="text-sm font-medium text-foreground mb-2">
                   {t('wizard_target_hosts')}
                 </h5>
-                <div className="bg-gray-100 dark:bg-gray-800 rounded-md p-2">
+                <div className="bg-background dark:bg-gray-800 rounded-md p-3 border border-gray-200 dark:border-gray-700">
                   {data.hostIds && data.hostIds.length > 0 ? (
                     <div className="grid grid-cols-2 gap-2">
                       {data.hostIds.map((id) => {
@@ -369,12 +359,12 @@ export function DeploymentWizardStep5Client({
                             <div
                               className={`w-2 h-2 rounded-full ${isActive ? 'bg-green-500' : 'bg-red-500'}`}
                             ></div>
-                            <span className="text-gray-800 dark:text-gray-200 font-medium">
-                              {host.name || id}
-                            </span>
-                            {host.ip && <span className="text-gray-500">({host.ip})</span>}
+                            <span className="text-foreground font-medium">{host.name || id}</span>
+                            {host.ip && (
+                              <span className="text-gray-500 dark:text-gray-400">({host.ip})</span>
+                            )}
                             {host.environment && (
-                              <span className="px-1.5 py-0.5 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                              <span className="px-1.5 py-0.5 text-xs rounded-full bg-gray-100 dark:bg-gray-700 text-foreground">
                                 #
                                 {typeof host.environment === 'string'
                                   ? host.environment.toLowerCase()
@@ -386,18 +376,18 @@ export function DeploymentWizardStep5Client({
                       })}
                     </div>
                   ) : (
-                    <p className="text-xs text-gray-500">{t('wizard_no_hosts')}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {t('wizard_no_hosts')}
+                    </p>
                   )}
                 </div>
               </div>
 
               {/* Schedule */}
               <div>
-                <h5 className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                  {t('wizard_schedule')}
-                </h5>
-                <div className="bg-gray-100 dark:bg-gray-800 rounded-md p-1.5">
-                  <div className="text-xs text-gray-800 dark:text-gray-200">
+                <h5 className="text-sm font-medium text-foreground mb-2">{t('wizard_schedule')}</h5>
+                <div className="bg-background dark:bg-gray-800 rounded-md p-3 border border-gray-200 dark:border-gray-700">
+                  <div className="text-xs text-foreground">
                     {data.schedule === 'now' ? (
                       <span>{t('wizard_deploy_immediately')}</span>
                     ) : (
@@ -409,7 +399,7 @@ export function DeploymentWizardStep5Client({
                         {data.cronExpression && (
                           <div>
                             Cron:{' '}
-                            <code className="bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded">
+                            <code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-foreground">
                               {data.cronExpression}
                             </code>
                           </div>
