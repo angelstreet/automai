@@ -168,7 +168,7 @@ export function DeploymentWizardStep5Client({
       <>
         <div className="mb-4">
           <h3 className="text-xl font-medium text-foreground mb-2">
-            {t('review.jenkins_pipeline') || 'Jenkins Pipeline'}
+            {t('wizard_cicd_view') || 'Jenkins Pipeline'}
           </h3>
         </div>
 

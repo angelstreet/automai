@@ -1,6 +1,7 @@
 'use client';
 
 import { Server, Check, Filter } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import React, { useState } from 'react';
 
 import { Host } from '@/types/component/hostComponentType';
@@ -19,6 +20,8 @@ const HostSelector: React.FC<HostSelectorProps> = ({
   selectedHosts,
   onHostToggle,
 }) => {
+  const t = useTranslations('deployment');
+  const c = useTranslations('common');
   const [selectedEnvironments, setSelectedEnvironments] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
 
@@ -71,33 +74,41 @@ const HostSelector: React.FC<HostSelectorProps> = ({
       <div className="flex justify-between items-center mb-2">
         <div className="flex items-center">
           <Server size={16} className="mr-1" />
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            {selectedHosts.length} of {availableHosts.length} hosts selected
+          <span className="text-xs text-gray-500 dark:text-gray-400 px-1 py-0.5 bg-gray-50 dark:bg-gray-700 rounded">
+            {selectedHosts.length}/{availableHosts.length}{' '}
+            {t('hosts_selected', {
+              fallback: 'hosts selected',
+            })}
           </span>
         </div>
 
-        <div className="flex space-x-2">
+        <div className="flex items-center space-x-2">
           <button
             type="button"
             onClick={(e) => toggleFilters(e)}
             className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
             <Filter size={14} className="inline mr-1" />
-            Filter
+            {t('filter', { fallback: 'Filter' })}
           </button>
           <button
             type="button"
-            onClick={(e) => selectAll(e)}
-            className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              // If all filtered hosts are selected, unselect all
+              const allSelected = filteredHosts.every((host) => selectedHosts.includes(host.id));
+              if (allSelected) {
+                unselectAll(e);
+              } else {
+                selectAll(e);
+              }
+            }}
+            className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-md text-gray-700 dark:text-gray-300"
           >
-            Select All
-          </button>
-          <button
-            type="button"
-            onClick={(e) => unselectAll(e)}
-            className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          >
-            Unselect All
+            {filteredHosts.every((host) => selectedHosts.includes(host.id))
+              ? t('deselect_all', { fallback: 'Deselect All' })
+              : t('select_all', { fallback: 'Select All' })}
           </button>
         </div>
       </div>
@@ -105,7 +116,7 @@ const HostSelector: React.FC<HostSelectorProps> = ({
       {showFilters && (
         <div className="mb-2 p-2 border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-800">
           <div className="text-xs font-medium mb-1 text-gray-700 dark:text-gray-300">
-            Filter by environment:
+            {t('filter_by_environment', { fallback: 'Filter by environment:' })}
           </div>
           <div className="flex flex-wrap gap-1">
             {environments.map((env) => (
@@ -129,7 +140,7 @@ const HostSelector: React.FC<HostSelectorProps> = ({
 
       {availableHosts.length === 0 ? (
         <div className="border border-gray-200 dark:border-gray-700 rounded-md p-4 bg-gray-50 dark:bg-gray-800 text-center text-sm text-gray-500 dark:text-gray-400">
-          No hosts available
+          {t('no_hosts_available', { fallback: 'No hosts available' })}
         </div>
       ) : (
         <div className="border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">

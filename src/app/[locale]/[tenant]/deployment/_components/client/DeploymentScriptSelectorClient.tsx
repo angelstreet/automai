@@ -156,25 +156,31 @@ const DeploymentScriptSelectorClient: React.FC<EnhancedScriptSelectorProps> = ({
                     return (
                       <tr
                         key={script.id}
-                        className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                        className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : ''} cursor-pointer`}
+                        onClick={(e) => {
+                          // Don't toggle if clicking on the input field in the parameters column
+                          if (
+                            e.target instanceof HTMLElement &&
+                            (e.target.tagName === 'INPUT' ||
+                              e.target.closest('input') ||
+                              e.target.closest('.h-7 input'))
+                          ) {
+                            return;
+                          }
+                          handleToggleScript(script.id);
+                        }}
                       >
                         <td className="px-3 py-1.5 whitespace-nowrap">
-                          <div
-                            className="flex items-center"
-                            onClick={() => handleToggleScript(script.id)}
-                          >
+                          <div className="flex items-center">
                             {isSelected ? (
-                              <CheckSquare className="h-4 w-4 text-blue-500 cursor-pointer" />
+                              <CheckSquare className="h-4 w-4 text-blue-500" />
                             ) : (
-                              <Square className="h-4 w-4 text-gray-400 cursor-pointer" />
+                              <Square className="h-4 w-4 text-gray-400" />
                             )}
                           </div>
                         </td>
-                        <td
-                          className="px-3 py-1.5 whitespace-nowrap"
-                          onClick={() => handleToggleScript(script.id)}
-                        >
-                          <div className="text-xs text-gray-900 dark:text-white truncate max-w-[300px] cursor-pointer">
+                        <td className="px-3 py-1.5 whitespace-nowrap">
+                          <div className="text-xs text-gray-900 dark:text-white truncate max-w-[300px]">
                             {script.path}
                           </div>
                         </td>
