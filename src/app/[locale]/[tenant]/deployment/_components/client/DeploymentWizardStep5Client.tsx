@@ -140,18 +140,17 @@ export function DeploymentWizardStep5Client({
           </h3>
         </div>
 
-        <div
-          className="bg-gray-900 rounded-md shadow-sm border border-gray-700 overflow-auto"
-          style={{ maxHeight: '500px' }}
-        >
-          <pre className="p-4 text-sm text-gray-200 whitespace-pre font-mono">{jenkinsCode}</pre>
+        <div className="bg-gray-900 rounded-md shadow-sm border border-gray-700 h-[400px] overflow-hidden">
+          <pre className="p-4 text-sm text-gray-200 whitespace-pre font-mono h-full overflow-auto">
+            {jenkinsCode}
+          </pre>
         </div>
       </>
     );
   };
 
   return (
-    <div className="max-h-[80vh] overflow-auto">
+    <div className="h-full">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center space-x-4">
           <button
@@ -216,7 +215,7 @@ export function DeploymentWizardStep5Client({
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 ></path>
               </svg>
-              {t('wizard_creating')}
+              {c('creating')}
             </>
           ) : (
             t('wizard_create_deployment')
@@ -225,12 +224,12 @@ export function DeploymentWizardStep5Client({
       </div>
 
       {/* Fixed width container to prevent layout shifts */}
-      <div className="w-full" style={{ minHeight: '500px' }}>
+      <div className="w-full">
         {/* Common container with fixed dimensions */}
-        <div className="w-full h-[500px] bg-background  rounded-md border border-gray-200 dark:border-gray-700 p-2 transition-all duration-150 relative">
+        <div className="w-full h-[500px] bg-background rounded-md border border-gray-200 dark:border-gray-700 p-4 transition-all duration-150 relative">
           {/* Jenkins View - Absolutely positioned */}
           <div
-            className={`absolute inset-0 p-2 transition-opacity duration-150 ${
+            className={`absolute inset-0 p-4 transition-opacity duration-150 ${
               showJenkinsView ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
             }`}
           >
@@ -239,13 +238,13 @@ export function DeploymentWizardStep5Client({
 
           {/* Summary View - Absolutely positioned */}
           <div
-            className={`absolute inset-0 p-2 transition-opacity duration-150 ${
+            className={`absolute inset-0 p-4 transition-opacity duration-150 ${
               !showJenkinsView ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
             }`}
           >
             <h4 className="text-sm font-medium text-foreground mb-2">{t('wizard_summary')}</h4>
 
-            <div className="space-y-4 h-[450px] overflow-auto pr-1">
+            <div className="space-y-4 h-[430px] overflow-auto pr-1">
               {/* Scripts */}
               <div className="space-y-1 mb-2">
                 <h3 className="text-sm font-medium text-foreground mb-2">
