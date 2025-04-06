@@ -50,7 +50,7 @@ const initialDeploymentData: DeploymentData = {
   description: '',
   repositoryId: '',
   selectedRepository: null,
-  branch: 'main', // Default branch
+  branch: '', // Default branch
   schedule: 'now',
   scheduledTime: '',
   scriptIds: [],

@@ -107,8 +107,9 @@ const DeploymentWizardStep1Client: React.FC<DeploymentWizardStep1ClientProps> = 
               name="branch"
               value={branch}
               onChange={onInputChange}
-              placeholder="main"
+              placeholder="Select a repository first"
               className={`w-full ${repositoryId ? 'pr-[120px]' : ''}`}
+              disabled={!repositoryId}
             />
             {repositoryId && (
               <div className="absolute inset-y-0 right-0 flex items-center pr-3 bg-transparent">
@@ -118,7 +119,11 @@ const DeploymentWizardStep1Client: React.FC<DeploymentWizardStep1ClientProps> = 
               </div>
             )}
           </div>
-          {repositoryId && (
+          {!repositoryId ? (
+            <p className="text-xs text-muted-foreground mt-1">
+              Select a repository to use its default branch
+            </p>
+          ) : (
             <p className="text-xs text-muted-foreground mt-1">
               Using default branch from the selected repository
             </p>
