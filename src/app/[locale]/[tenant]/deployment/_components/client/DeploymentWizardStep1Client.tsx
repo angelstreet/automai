@@ -36,7 +36,7 @@ const DeploymentWizardStep1Client: React.FC<DeploymentWizardStep1ClientProps> = 
   const isValid = typeof isStepValid === 'function' ? isStepValid() : isStepValid;
 
   return (
-    <div className="p-3 bg-transparent dark:bg-transparent rounded-md border border-gray-200 dark:border-gray-700 shadow-sm">
+    <div className="p-3 rounded-md border border-gray-200 dark:border-gray-700">
       <div className="space-y-2">
         <div>
           <label htmlFor="name" className="block text-sm font-medium mb-0.5">
@@ -49,6 +49,7 @@ const DeploymentWizardStep1Client: React.FC<DeploymentWizardStep1ClientProps> = 
             onChange={onInputChange}
             placeholder="Enter deployment name"
             required
+            className="bg-background"
           />
         </div>
 
@@ -108,7 +109,7 @@ const DeploymentWizardStep1Client: React.FC<DeploymentWizardStep1ClientProps> = 
               value={branch}
               onChange={onInputChange}
               placeholder="Select a repository first"
-              className={`w-full ${repositoryId ? 'pr-[120px]' : ''}`}
+              className={`w-full ${repositoryId ? 'pr-[120px]' : ''} bg-background`}
               disabled={!repositoryId}
             />
             {repositoryId && (
