@@ -9,6 +9,7 @@ import {
   disconnectRepository as disconnectRepositoryAction,
 } from '@/app/actions/repositoriesAction';
 import { useToast } from '@/components/shadcn/use-toast';
+import * as gitService from '@/lib/services/gitService';
 import type { TestRepositoryInput } from '@/types/context/repositoryContextType';
 
 /**
@@ -64,7 +65,28 @@ export function useRepository() {
 
   // Connect repository function that returns the result
   const connectRepository = async (data: any) => {
-    return await connectRepositoryMutation.mutateAsync(data);
+    try {
+      // Before connecting, detect the default branch
+      console.log('[useRepository] Detecting default branch for repository:', data.url);
+
+      // Detect the default branch using our gitService
+      const defaultBranch = await gitService.getRepositoryDefaultBranch(data.url);
+      console.log(`[useRepository] Detected default branch: ${defaultBranch}`);
+
+      // Add the default branch to the repository data
+      const enhancedData = {
+        ...data,
+        defaultBranch, // This will be used in the server action
+      };
+
+      // Now connect with the enhanced data
+      return await connectRepositoryMutation.mutateAsync(enhancedData);
+    } catch (error) {
+      console.error('[useRepository] Error detecting default branch:', error);
+      // If branch detection fails, proceed with the original data
+      // The server will use 'main' as the default
+      return await connectRepositoryMutation.mutateAsync(data);
+    }
   };
 
   // Disconnect repository mutation

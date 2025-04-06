@@ -790,6 +790,101 @@ export function standardizeResponse(provider: string, data: any, _action: string
   }
 }
 
+/**
+ * Get repository default branch using the appropriate provider API
+ * @param url Repository URL
+ * @param providerType Optional provider type (auto-detected if not provided)
+ * @returns The default branch name (or sensible fallback if detection fails)
+ */
+export async function getRepositoryDefaultBranch(
+  url: string,
+  providerType?: string,
+): Promise<string> {
+  try {
+    // Auto-detect provider if not specified
+    const provider = providerType || detectProviderFromUrl(url);
+    const { owner, repo } = parseRepositoryUrl(url, provider);
+
+    if (!owner || !repo) {
+      console.warn('[GitService] Could not parse repository URL:', url);
+      return provider === 'github' ? 'main' : 'master'; // Use common defaults as fallback
+    }
+
+    console.log(`[GitService] Getting default branch for ${owner}/${repo} (${provider})`);
+
+    // Use different APIs based on provider
+    if (provider === 'gitlab') {
+      // GitLab: Use projects API to get repository metadata
+      const projectId = encodeURIComponent(`${owner}/${repo}`);
+      const response = await fetch(`https://gitlab.com/api/v4/projects/${projectId}`, {
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.error(`[GitService] GitLab API error: ${response.status}`);
+        return 'master'; // Fallback to master for GitLab
+      }
+
+      const data = await response.json();
+      console.log(`[GitService] Detected GitLab default branch: ${data.default_branch}`);
+      return data.default_branch || 'master';
+    } else if (provider === 'github') {
+      // GitHub: Use repos API to get repository metadata
+      const response = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.error(`[GitService] GitHub API error: ${response.status}`);
+        return 'main'; // Fallback to main for GitHub
+      }
+
+      const data = await response.json();
+      console.log(`[GitService] Detected GitHub default branch: ${data.default_branch}`);
+      return data.default_branch || 'main';
+    } else if (provider === 'gitea') {
+      try {
+        // For Gitea we need server URL, try to extract from repository URL
+        const urlObj = new URL(url);
+        const serverUrl = `${urlObj.protocol}//${urlObj.host}`;
+
+        const response = await fetch(`${serverUrl}/api/v1/repos/${owner}/${repo}`, {
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          console.error(`[GitService] Gitea API error: ${response.status}`);
+          return 'master'; // Fallback to master for Gitea
+        }
+
+        const data = await response.json();
+        console.log(`[GitService] Detected Gitea default branch: ${data.default_branch}`);
+        return data.default_branch || 'master';
+      } catch (giteaError) {
+        console.error('[GitService] Error fetching Gitea repository info:', giteaError);
+        return 'master'; // Fallback to master for Gitea
+      }
+    }
+
+    // Unknown provider, use common defaults
+    console.log(`[GitService] Using default branch for unknown provider: ${provider}`);
+    return provider === 'github' ? 'main' : 'master';
+  } catch (error) {
+    console.error('[GitService] Error getting default branch:', error);
+    // Fallback to a sensible default based on provider
+    return providerType === 'github' ? 'main' : 'master';
+  }
+}
+
 // Export repository service functions
 const gitService = {
   testGitProviderConnection,
@@ -805,6 +900,7 @@ const gitService = {
   buildGitLabFileContentUrl,
   fetchRepositoryContents,
   fetchFileContent,
+  getRepositoryDefaultBranch,
 };
 
 export default gitService;

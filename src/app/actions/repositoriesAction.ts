@@ -149,7 +149,13 @@ export async function connectRepository(
         is_private: data.isPrivate || false,
         description: data.description || null,
         team_id: teamId,
+        default_branch: data.defaultBranch || 'main',
       };
+
+      console.log(
+        '[@action:repositories:connectRepository] Using default branch:',
+        quickCloneData.default_branch,
+      );
 
       // Use the repository module's createRepositoryFromUrl method
       const result = await repositoryDb.createRepositoryFromUrl(

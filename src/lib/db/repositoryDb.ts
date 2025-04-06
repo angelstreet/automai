@@ -260,159 +260,86 @@ export async function deleteRepository(
 }
 
 /**
- * Create a repository from a URL
+ * Create a repository from a URL (quick clone)
  */
 export async function createRepositoryFromUrl(
-  data: { url: string; is_private?: boolean; description?: string | null; team_id?: string },
+  data: {
+    url: string;
+    is_private?: boolean;
+    description?: string | null;
+    team_id?: string;
+    default_branch?: string;
+  },
   userId: string,
   cookieStore?: ReadonlyRequestCookies,
 ): Promise<DbResponse<any>> {
   try {
-    console.log(
-      `[@db:repositoryDb:createRepositoryFromUrl] Creating repository from URL: ${data.url}`,
-    );
+    console.log('[@db:repositoryDb:createRepositoryFromUrl] Starting with URL:', data.url);
     const supabase = await createClient(cookieStore);
 
-    // Extract repository info from URL
-    const url = new URL(data.url);
-
-    // Determine provider type from hostname
-    let providerType = 'git'; // Default
-    if (url.hostname.includes('github.com')) {
-      providerType = 'github';
-    } else if (url.hostname.includes('gitlab.com')) {
-      providerType = 'gitlab';
-    } else if (url.hostname.includes('bitbucket.org')) {
-      providerType = 'bitbucket';
+    // Extract repository name from URL
+    let repoName = '';
+    try {
+      const urlObj = new URL(data.url);
+      const pathParts = urlObj.pathname.split('/');
+      repoName = pathParts[pathParts.length - 1].replace(/\.git$/, '') || 'Unknown Repository';
+    } catch (error) {
+      console.error('[@db:repositoryDb:createRepositoryFromUrl] Error parsing URL:', error);
+      repoName = 'Unknown Repository';
     }
 
-    // Check for Gitea instances by looking for matching server URLs in providers
-    let detectedGiteaProviderId = null;
+    // Determine provider type from URL
+    let providerType = 'github'; // Default
     try {
-      const serverUrl = `${url.protocol}//${url.host}`;
-      const { data: giteaProviders } = await supabase
-        .from('git_providers')
-        .select('id, type, server_url')
-        .eq('type', 'gitea')
-        .ilike('server_url', serverUrl);
-
-      if (giteaProviders && giteaProviders.length > 0) {
+      const urlObj = new URL(data.url);
+      const hostname = urlObj.hostname.toLowerCase();
+      if (hostname.includes('github')) {
+        providerType = 'github';
+      } else if (hostname.includes('gitlab')) {
+        providerType = 'gitlab';
+      } else if (hostname.includes('gitea')) {
         providerType = 'gitea';
-        detectedGiteaProviderId = giteaProviders[0].id;
-        console.log(
-          `[@db:repositoryDb:createRepositoryFromUrl] Detected Gitea instance at ${serverUrl} with provider ID: ${detectedGiteaProviderId}`,
-        );
       }
-    } catch (err) {
+    } catch (error) {
       console.error(
-        `[@db:repositoryDb:createRepositoryFromUrl] Error checking for Gitea providers: ${err}`,
+        '[@db:repositoryDb:createRepositoryFromUrl] Error detecting provider type:',
+        error,
       );
     }
 
-    // Parse the path to get owner and repo name
-    // Remove .git extension if present
-    const cleanPath = url.pathname.replace(/\.git$/, '');
-    const pathParts = cleanPath.split('/').filter(Boolean);
-
-    // Default values if we can't parse the URL properly
-    let repoName = 'repository';
+    // Extract owner from URL
     let owner = '';
-
-    // Most Git URLs follow the pattern: hostname/owner/repo
-    if (pathParts.length >= 2) {
-      owner = pathParts[pathParts.length - 2];
-      repoName = pathParts[pathParts.length - 1];
-    } else if (pathParts.length === 1) {
-      repoName = pathParts[0];
-    }
-
-    console.log(
-      `[@db:repositoryDb:createRepositoryFromUrl] Extracted info: provider=${providerType}, owner=${owner}, repo=${repoName}`,
-    );
-
-    // Look up a default provider ID or create a placeholder one
-    let providerId = '';
     try {
-      // If we detected a Gitea provider earlier, use it
-      if (detectedGiteaProviderId) {
-        providerId = detectedGiteaProviderId;
-        console.log(
-          `[@db:repositoryDb:createRepositoryFromUrl] Using detected Gitea provider: ${providerId}`,
-        );
-      } else {
-        // Try to find an existing provider of the same type
-        const { data: providers } = await supabase
-          .from('git_providers')
-          .select('id')
-          .eq('type', providerType)
-          .limit(1);
-
-        if (providers && providers.length > 0) {
-          providerId = providers[0].id;
-          console.log(
-            `[@db:repositoryDb:createRepositoryFromUrl] Found existing provider: ${providerId}`,
-          );
-        } else {
-          // Create a default provider if none exists
-          const { data: newProvider, error: providerError } = await supabase
-            .from('git_providers')
-            .insert({
-              name: `Default ${providerType} provider`,
-              type: providerType,
-              auth_type: 'token',
-              creator_id: userId,
-              team_id: data.team_id,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            })
-            .select()
-            .single();
-
-          if (providerError) {
-            console.log(
-              `[@db:repositoryDb:createRepositoryFromUrl] Error creating provider: ${providerError.message}`,
-            );
-            // Use a placeholder - this is better than failing altogether
-            providerId = '00000000-0000-0000-0000-000000000000';
-          } else {
-            providerId = newProvider.id;
-            console.log(
-              `[@db:repositoryDb:createRepositoryFromUrl] Created new provider: ${providerId}`,
-            );
-          }
-        }
+      const urlObj = new URL(data.url);
+      const pathParts = urlObj.pathname.split('/');
+      if (pathParts.length >= 2) {
+        owner = pathParts[pathParts.length - 2];
       }
-    } catch (providerErr) {
-      console.error(
-        `[@db:repositoryDb:createRepositoryFromUrl] Error getting/creating provider: ${providerErr}`,
-      );
-      // Last resort placeholder
-      providerId = '00000000-0000-0000-0000-000000000000';
+    } catch (error) {
+      console.error('[@db:repositoryDb:createRepositoryFromUrl] Error extracting owner:', error);
     }
 
-    // Create repository data
+    // Prepare repository data
     const repositoryData = {
       name: repoName,
-      url: data.url,
-      is_private: data.is_private || false,
-      description: data.description,
-      owner: owner,
-      team_id: data.team_id,
-      creator_id: userId,
-      provider_id: providerId, // Add the provider_id here
+      description: data.description || null,
+      provider_id: null, // Quick clone doesn't require a provider_id
       provider_type: providerType,
-      default_branch: 'main',
+      url: data.url,
+      default_branch: data.default_branch || 'main', // Use provided default branch or fallback
+      is_private: data.is_private || false,
+      owner: owner || null,
+      team_id: data.team_id,
+      sync_status: 'IDLE',
+      creator_id: userId,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      last_synced_at: new Date().toISOString(), // Add the last_synced_at field
     };
 
-    console.log(`[@db:repositoryDb:createRepositoryFromUrl] Inserting repository with data:`, {
+    console.log('[@db:repositoryDb:createRepositoryFromUrl] Creating repository with data:', {
       name: repositoryData.name,
-      owner: repositoryData.owner,
       provider_type: repositoryData.provider_type,
-      team_id: repositoryData.team_id,
-      provider_id: providerId,
+      default_branch: repositoryData.default_branch,
     });
 
     const { data: result, error } = await supabase
