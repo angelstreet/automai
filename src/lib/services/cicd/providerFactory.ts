@@ -12,6 +12,12 @@ export class CICDProviderFactory {
   static createProvider(config: CICDProviderConfig): CICDProvider {
     console.log(`[@service:cicd:providerFactory] Creating provider for type: ${config.type}`);
 
+    // Debug log to check for port information
+    const port = (config as any).port || (config as any).config?.port;
+    if (port) {
+      console.log(`[@service:cicd:providerFactory] Provider has port: ${port}`);
+    }
+
     // Make sure we have the minimal required properties
     if (!config.type) {
       console.error('[@service:cicd:providerFactory] Provider type is undefined');

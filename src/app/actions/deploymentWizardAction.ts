@@ -130,6 +130,7 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
           name: providerConfig.name,
           type: providerConfig.type,
           url: providerConfig.url,
+          port: providerConfig.port,
           auth_type: providerConfig.auth_type,
           hasCredentials: !!providerConfig.credentials || !!providerConfig.config?.credentials,
         });

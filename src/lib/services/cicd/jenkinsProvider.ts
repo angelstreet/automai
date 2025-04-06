@@ -28,26 +28,39 @@ export class JenkinsProvider implements CICDProvider {
     // Handle URL construction with proper port
     let baseUrl = config.url;
 
-    // Check if port is specified directly or in the config object
-    const port = (config as any).port || (config as any).config?.port;
+    // Check for port in different possible locations
+    // 1. Direct port property in config (as in database schema)
+    // 2. Nested in config.port
+    // 3. Nested in config.config.port
+    const port =
+      (config as any).port || (config as any).config?.port || (config as any).credentials?.port;
 
-    if (port && !baseUrl.includes(':')) {
-      console.log(`[@service:jenkins:initialize] Adding port ${port} to URL`);
-      try {
-        const urlObj = new URL(baseUrl);
-        // Only add port if it's not the default port for the protocol
-        if (
-          (urlObj.protocol === 'http:' && port !== 80) ||
-          (urlObj.protocol === 'https:' && port !== 443)
-        ) {
-          urlObj.port = port.toString();
-          baseUrl = urlObj.toString();
+    if (port) {
+      console.log(`[@service:jenkins:initialize] Found port ${port} for provider ${config.name}`);
+
+      // Only add port if the URL doesn't already include it
+      if (!baseUrl.includes(':' + port)) {
+        try {
+          const urlObj = new URL(baseUrl);
+          // Only add port if it's not the default port for the protocol
+          if (
+            (urlObj.protocol === 'http:' && port !== 80) ||
+            (urlObj.protocol === 'https:' && port !== 443)
+          ) {
+            console.log(`[@service:jenkins:initialize] Adding port ${port} to URL ${baseUrl}`);
+            urlObj.port = port.toString();
+            baseUrl = urlObj.toString();
+          }
+        } catch (error: any) {
+          console.error(
+            `[@service:jenkins:initialize] Invalid URL format: ${baseUrl}, error: ${error.message}`,
+          );
         }
-      } catch (error: any) {
-        console.error(
-          `[@service:jenkins:initialize] Invalid URL format: ${baseUrl}, error: ${error.message}`,
-        );
+      } else {
+        console.log(`[@service:jenkins:initialize] URL already contains port: ${baseUrl}`);
       }
+    } else {
+      console.log(`[@service:jenkins:initialize] No port specified for provider ${config.name}`);
     }
 
     // Log the URL we're using
@@ -68,14 +81,35 @@ export class JenkinsProvider implements CICDProvider {
         console.log(
           `[@service:jenkins:initialize] Using token authentication. Token exists: ${Boolean(token)}`,
         );
-        this.authHeader = `Bearer ${token}`;
+
+        // Check if token already has Bearer prefix
+        if (token.startsWith('Bearer ')) {
+          this.authHeader = token;
+        } else {
+          this.authHeader = `Bearer ${token}`;
+        }
       } else if (config.auth_type === 'basic_auth') {
         const username = config.credentials?.username || '';
         const password = config.credentials?.password || '';
         console.log(
-          `[@service:jenkins:initialize] Using basic auth. Username exists: ${Boolean(username)}, Password exists: ${Boolean(password)}`,
+          `[@service:jenkins:initialize] Using basic auth. Username: ${username}, Password: ${password ? '********' : 'not provided'}`,
         );
-        this.authHeader = `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`;
+
+        // Check if credentials are already Base64 encoded
+        if (username && password) {
+          const base64Credentials = Buffer.from(`${username}:${password}`).toString('base64');
+          this.authHeader = `Basic ${base64Credentials}`;
+
+          // Log a hint of the auth header for debugging (hiding most of it)
+          const authHeaderHint =
+            this.authHeader.substring(0, 10) +
+            '...' +
+            this.authHeader.substring(this.authHeader.length - 5);
+          console.log(`[@service:jenkins:initialize] Auth header created: ${authHeaderHint}`);
+        } else {
+          console.warn(`[@service:jenkins:initialize] Missing username or password for basic auth`);
+          this.authHeader = '';
+        }
       } else {
         console.error(
           `[@service:jenkins:initialize] Unsupported authentication type: ${config.auth_type}`,
@@ -97,8 +131,50 @@ export class JenkinsProvider implements CICDProvider {
    */
   async testConnection(): Promise<CICDResponse<boolean>> {
     try {
-      // Basic implementation - just try to get the Jenkins API info
+      // First check if CSRF protection is enabled
+      console.log(
+        `[@service:jenkins:testConnection] Testing connection to Jenkins: ${this.baseUrl}`,
+      );
+
+      try {
+        // Try to get a crumb to see if CSRF is enabled
+        const crumbResponse = await fetch(`${this.baseUrl}crumbIssuer/api/json`, {
+          headers: {
+            Authorization: this.authHeader,
+            Accept: 'application/json',
+          },
+        });
+
+        if (crumbResponse.ok) {
+          const crumbData = await crumbResponse.json();
+          console.log(
+            `[@service:jenkins:testConnection] CSRF protection is enabled, crumb field: ${crumbData.crumbRequestField}`,
+          );
+        } else if (crumbResponse.status === 404) {
+          console.log(`[@service:jenkins:testConnection] CSRF protection appears to be disabled`);
+        } else {
+          console.warn(
+            `[@service:jenkins:testConnection] Unexpected response from crumbIssuer: ${crumbResponse.status}`,
+          );
+        }
+      } catch (error: any) {
+        console.warn(`[@service:jenkins:testConnection] Error checking CSRF: ${error.message}`);
+      }
+
+      // Now test the main API endpoint
       const url = `${this.baseUrl}api/json`;
+      console.log(`[@service:jenkins:testConnection] Testing API endpoint: ${url}`);
+
+      // Log curl equivalent for debugging (with masked auth)
+      const maskedAuth = this.authHeader.startsWith('Bearer ')
+        ? 'Bearer ***TOKEN***'
+        : this.authHeader.startsWith('Basic ')
+          ? 'Basic ***CREDENTIALS***'
+          : this.authHeader;
+
+      const curlCommand = `curl -v "${url}" -H "Authorization: ${maskedAuth}" -H "Accept: application/json"`;
+      console.log(`[@service:jenkins:testConnection] Curl equivalent: \n${curlCommand}`);
+
       const response = await fetch(url, {
         headers: {
           Authorization: this.authHeader,
@@ -107,17 +183,22 @@ export class JenkinsProvider implements CICDProvider {
       });
 
       if (!response.ok) {
+        console.error(
+          `[@service:jenkins:testConnection] API test failed: ${response.status} ${response.statusText}`,
+        );
         return {
           success: false,
           error: `Failed to connect to Jenkins: ${response.status} ${response.statusText}`,
         };
       }
 
+      console.log(`[@service:jenkins:testConnection] Connection successful`);
       return {
         success: true,
         data: true,
       };
     } catch (error: any) {
+      console.error(`[@service:jenkins:testConnection] Error: ${error.message}`);
       return {
         success: false,
         error: error.message || 'Failed to connect to Jenkins',
@@ -428,15 +509,84 @@ export class JenkinsProvider implements CICDProvider {
 
       url += 'createItem?name=' + encodeURIComponent(jobName);
 
+      // Log the exact URL we're using
+      console.log(`[@service:jenkins:createJob] Using URL: ${url}`);
+
       // Create a Jenkins pipeline job config XML
       const jobConfigXml = this.createPipelineJobConfig(pipelineConfig);
 
+      // Log the job config for debugging
+      console.log(
+        `[@service:jenkins:createJob] Job config XML: ${jobConfigXml.substring(0, 500)}...`,
+      );
+
+      // Jenkins requires a CSRF token (crumb) for POST requests
+      // First, we need to fetch the crumb
+      console.log(`[@service:jenkins:createJob] Fetching Jenkins CSRF crumb`);
+
+      let crumb = null;
+      let crumbRequestField = null;
+
+      try {
+        const crumbResponse = await fetch(`${this.baseUrl}crumbIssuer/api/json`, {
+          headers: {
+            Authorization: this.authHeader,
+            Accept: 'application/json',
+          },
+        });
+
+        if (crumbResponse.ok) {
+          const crumbData = await crumbResponse.json();
+          crumb = crumbData.crumb;
+          crumbRequestField = crumbData.crumbRequestField;
+          console.log(
+            `[@service:jenkins:createJob] CSRF crumb obtained: ${crumbRequestField}=${crumb.substring(0, 10)}...`,
+          );
+        } else {
+          console.warn(
+            `[@service:jenkins:createJob] Failed to get CSRF crumb: ${crumbResponse.status} ${crumbResponse.statusText}`,
+          );
+          console.log(
+            '[@service:jenkins:createJob] Proceeding without crumb - this may fail if CSRF protection is enabled',
+          );
+        }
+      } catch (crumbError: any) {
+        console.warn(`[@service:jenkins:createJob] Error fetching crumb: ${crumbError.message}`);
+        console.log(
+          '[@service:jenkins:createJob] Proceeding without crumb - this may fail if CSRF protection is enabled',
+        );
+      }
+
+      // Prepare headers for the job creation request
+      const headers: Record<string, string> = {
+        Authorization: this.authHeader,
+        'Content-Type': 'application/xml',
+      };
+
+      // Add the crumb header if we got one
+      if (crumb && crumbRequestField) {
+        headers[crumbRequestField] = crumb;
+      }
+
+      // Log a curl-equivalent command for debugging (with masked auth)
+      const maskedAuth = this.authHeader.startsWith('Bearer ')
+        ? 'Bearer ***TOKEN***'
+        : this.authHeader.startsWith('Basic ')
+          ? 'Basic ***CREDENTIALS***'
+          : this.authHeader;
+
+      const curlCommand = `curl -X POST "${url}" \\
+        -H "Authorization: ${maskedAuth}" \\
+        -H "Content-Type: application/xml" \\
+        ${crumb ? `-H "${crumbRequestField}: ${crumb}" \\` : ''}
+        -d '${jobConfigXml.substring(0, 100)}...(truncated)...'`;
+
+      console.log(`[@service:jenkins:createJob] Curl equivalent: \n${curlCommand}`);
+
+      // Make the create job request
       const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          Authorization: this.authHeader,
-          'Content-Type': 'application/xml',
-        },
+        headers: headers,
         body: jobConfigXml,
       });
 
