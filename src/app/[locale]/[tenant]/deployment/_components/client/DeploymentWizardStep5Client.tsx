@@ -361,8 +361,8 @@ export function DeploymentWizardStep5Client({
                         const host = availableHosts.find((h) => h.id === id);
                         if (!host) return null;
 
-                        // Check for valid connected status
-                        const isActive = host.status === 'connected' || host.status === 'success';
+                        // Check for online status to match step 3 conversion
+                        const isActive = host.status === ('online' as any);
 
                         return (
                           <div key={id} className="text-xs flex items-center space-x-2">
