@@ -70,51 +70,45 @@ export class JenkinsProvider implements CICDProvider {
     this.baseUrl = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
 
     // Set up authentication with better error handling
-    if (!config.auth_type) {
-      console.warn(`[@service:jenkins:initialize] No auth_type provided, defaulting to 'token'`);
-      config.auth_type = 'token';
-    }
-
     try {
-      if (config.auth_type === 'token') {
-        const token = config.credentials?.token || '';
+      // Jenkins requires Basic auth for both username/password and username/apitoken
+      // Extract credentials from nested config structures if needed
+      const credentials = {
+        username:
+          config.credentials?.username || (config as any).config?.credentials?.username || '',
+        token: config.credentials?.token || (config as any).config?.credentials?.token || '',
+        password:
+          config.credentials?.password || (config as any).config?.credentials?.password || '',
+      };
+
+      console.log(`[@service:jenkins:initialize] Found credentials:`, {
+        hasUsername: !!credentials.username,
+        hasToken: !!credentials.token,
+        hasPassword: !!credentials.password,
+        username: credentials.username, // Log actual username for debugging
+      });
+
+      // For Jenkins, always use Basic auth with username + (token or password)
+      const secret = credentials.token || credentials.password;
+
+      if (credentials.username && secret) {
+        // Create Basic auth with username:token (or username:password)
         console.log(
-          `[@service:jenkins:initialize] Using token authentication. Token exists: ${Boolean(token)}`,
+          `[@service:jenkins:initialize] Creating Basic auth with username: ${credentials.username}`,
         );
-
-        // Check if token already has Bearer prefix
-        if (token.startsWith('Bearer ')) {
-          this.authHeader = token;
-        } else {
-          this.authHeader = `Bearer ${token}`;
-        }
-      } else if (config.auth_type === 'basic_auth') {
-        const username = config.credentials?.username || '';
-        const password = config.credentials?.password || '';
-        console.log(
-          `[@service:jenkins:initialize] Using basic auth. Username: ${username}, Password: ${password ? '********' : 'not provided'}`,
+        const base64Credentials = Buffer.from(`${credentials.username}:${secret}`).toString(
+          'base64',
         );
+        this.authHeader = `Basic ${base64Credentials}`;
 
-        // Check if credentials are already Base64 encoded
-        if (username && password) {
-          const base64Credentials = Buffer.from(`${username}:${password}`).toString('base64');
-          this.authHeader = `Basic ${base64Credentials}`;
-
-          // Log a hint of the auth header for debugging (hiding most of it)
-          const authHeaderHint =
-            this.authHeader.substring(0, 10) +
-            '...' +
-            this.authHeader.substring(this.authHeader.length - 5);
-          console.log(`[@service:jenkins:initialize] Auth header created: ${authHeaderHint}`);
-        } else {
-          console.warn(`[@service:jenkins:initialize] Missing username or password for basic auth`);
-          this.authHeader = '';
-        }
+        // Log a sanitized version of the auth header for debugging
+        const authHeaderHint = `Basic ${base64Credentials.substring(0, 5)}...${base64Credentials.substring(base64Credentials.length - 5)}`;
+        console.log(`[@service:jenkins:initialize] Auth header created: ${authHeaderHint}`);
       } else {
         console.error(
-          `[@service:jenkins:initialize] Unsupported authentication type: ${config.auth_type}`,
+          `[@service:jenkins:initialize] Missing required credentials (username and token/password)`,
         );
-        throw new Error(`Unsupported authentication type: ${config.auth_type}`);
+        throw new Error('Missing required credentials (username and token/password)');
       }
     } catch (error: any) {
       console.error(`[@service:jenkins:initialize] Error setting up authentication:`, error);
@@ -131,39 +125,42 @@ export class JenkinsProvider implements CICDProvider {
    */
   async testConnection(): Promise<CICDResponse<boolean>> {
     try {
-      // First check if CSRF protection is enabled
       console.log(
         `[@service:jenkins:testConnection] Testing connection to Jenkins: ${this.baseUrl}`,
       );
 
-      try {
-        // Try to get a crumb to see if CSRF is enabled
-        const crumbResponse = await fetch(`${this.baseUrl}crumbIssuer/api/json`, {
-          headers: {
-            Authorization: this.authHeader,
-            Accept: 'application/json',
-          },
-        });
+      // Log the authentication header format we're using (without showing the actual credentials)
+      const authType = this.authHeader.startsWith('Basic ')
+        ? 'Basic Auth'
+        : this.authHeader.startsWith('Bearer ')
+          ? 'Bearer Token'
+          : this.authHeader
+            ? 'Custom'
+            : 'None';
+      console.log(`[@service:jenkins:testConnection] Using authentication type: ${authType}`);
 
-        if (crumbResponse.ok) {
-          const crumbData = await crumbResponse.json();
-          console.log(
-            `[@service:jenkins:testConnection] CSRF protection is enabled, crumb field: ${crumbData.crumbRequestField}`,
-          );
-        } else if (crumbResponse.status === 404) {
-          console.log(`[@service:jenkins:testConnection] CSRF protection appears to be disabled`);
-        } else {
-          console.warn(
-            `[@service:jenkins:testConnection] Unexpected response from crumbIssuer: ${crumbResponse.status}`,
-          );
-        }
+      // First try a simple unauthenticated request to check if the server is reachable
+      try {
+        console.log(`[@service:jenkins:testConnection] Testing server reachability (no auth)`);
+        const reachabilityResponse = await fetch(this.baseUrl, {
+          method: 'HEAD',
+        });
+        console.log(
+          `[@service:jenkins:testConnection] Server is reachable, status: ${reachabilityResponse.status}`,
+        );
       } catch (error: any) {
-        console.warn(`[@service:jenkins:testConnection] Error checking CSRF: ${error.message}`);
+        console.error(
+          `[@service:jenkins:testConnection] Server is not reachable: ${error.message}`,
+        );
+        return {
+          success: false,
+          error: `Server is not reachable: ${error.message}`,
+        };
       }
 
-      // Now test the main API endpoint
-      const url = `${this.baseUrl}api/json`;
-      console.log(`[@service:jenkins:testConnection] Testing API endpoint: ${url}`);
+      // STEP 1: Test basic API access with authentication
+      console.log(`[@service:jenkins:testConnection] Testing authenticated API access`);
+      const apiUrl = `${this.baseUrl}api/json`;
 
       // Log curl equivalent for debugging (with masked auth)
       const maskedAuth = this.authHeader.startsWith('Bearer ')
@@ -172,10 +169,10 @@ export class JenkinsProvider implements CICDProvider {
           ? 'Basic ***CREDENTIALS***'
           : this.authHeader;
 
-      const curlCommand = `curl -v "${url}" -H "Authorization: ${maskedAuth}" -H "Accept: application/json"`;
+      const curlCommand = `curl -v "${apiUrl}" -H "Authorization: ${maskedAuth}" -H "Accept: application/json"`;
       console.log(`[@service:jenkins:testConnection] Curl equivalent: \n${curlCommand}`);
 
-      const response = await fetch(url, {
+      const response = await fetch(apiUrl, {
         headers: {
           Authorization: this.authHeader,
           Accept: 'application/json',
@@ -186,13 +183,66 @@ export class JenkinsProvider implements CICDProvider {
         console.error(
           `[@service:jenkins:testConnection] API test failed: ${response.status} ${response.statusText}`,
         );
+        const errorText = await response.text();
+        console.error(
+          `[@service:jenkins:testConnection] Error details: ${errorText.substring(0, 200)}...`,
+        );
+
+        if (response.status === 401 || response.status === 403) {
+          return {
+            success: false,
+            error: `Authentication failed (${response.status}). Please check your Jenkins credentials.`,
+          };
+        }
+
         return {
           success: false,
           error: `Failed to connect to Jenkins: ${response.status} ${response.statusText}`,
         };
       }
 
-      console.log(`[@service:jenkins:testConnection] Connection successful`);
+      console.log(`[@service:jenkins:testConnection] API access successful`);
+
+      // STEP 2: Test CSRF crumb access which is needed for job creation
+      try {
+        console.log(`[@service:jenkins:testConnection] Testing CSRF crumb access`);
+        const crumbUrl = `${this.baseUrl}crumbIssuer/api/json`;
+        const crumbResponse = await fetch(crumbUrl, {
+          headers: {
+            Authorization: this.authHeader,
+            Accept: 'application/json',
+          },
+        });
+
+        if (crumbResponse.ok) {
+          const crumbData = await crumbResponse.json();
+          const crumbField = crumbData.crumbRequestField || 'Jenkins-Crumb';
+          console.log(
+            `[@service:jenkins:testConnection] CSRF crumb access successful. Field: ${crumbField}`,
+          );
+        } else if (crumbResponse.status === 404) {
+          console.log(
+            `[@service:jenkins:testConnection] CSRF protection appears to be disabled (404 on crumbIssuer)`,
+          );
+        } else {
+          console.warn(
+            `[@service:jenkins:testConnection] CSRF crumb access failed: ${crumbResponse.status} ${crumbResponse.statusText}`,
+          );
+          const errorText = await crumbResponse.text();
+          console.warn(
+            `[@service:jenkins:testConnection] CSRF error details: ${errorText.substring(0, 200)}...`,
+          );
+
+          // This might be an issue when creating jobs later, but not a connection failure
+          console.warn(
+            `[@service:jenkins:testConnection] CSRF protection issues may cause problems when creating jobs`,
+          );
+        }
+      } catch (error: any) {
+        console.warn(`[@service:jenkins:testConnection] Error checking CSRF: ${error.message}`);
+      }
+
+      console.log(`[@service:jenkins:testConnection] Connection test successful`);
       return {
         success: true,
         data: true,
@@ -520,12 +570,11 @@ export class JenkinsProvider implements CICDProvider {
         `[@service:jenkins:createJob] Job config XML: ${jobConfigXml.substring(0, 500)}...`,
       );
 
-      // Jenkins requires a CSRF token (crumb) for POST requests
-      // First, we need to fetch the crumb
+      // Step 1: Get CSRF crumb first - this is required for POST requests to Jenkins
       console.log(`[@service:jenkins:createJob] Fetching Jenkins CSRF crumb`);
 
       let crumb = null;
-      let crumbRequestField = null;
+      let crumbRequestField = 'Jenkins-Crumb'; // Default crumb field name in Jenkins
 
       try {
         const crumbResponse = await fetch(`${this.baseUrl}crumbIssuer/api/json`, {
@@ -538,14 +587,31 @@ export class JenkinsProvider implements CICDProvider {
         if (crumbResponse.ok) {
           const crumbData = await crumbResponse.json();
           crumb = crumbData.crumb;
-          crumbRequestField = crumbData.crumbRequestField;
+
+          // Use the crumb field from the response, but default to Jenkins-Crumb if not specified
+          crumbRequestField = crumbData.crumbRequestField || 'Jenkins-Crumb';
+
           console.log(
             `[@service:jenkins:createJob] CSRF crumb obtained: ${crumbRequestField}=${crumb.substring(0, 10)}...`,
           );
         } else {
+          // Log the error for debugging
+          const errorText = await crumbResponse.text();
           console.warn(
             `[@service:jenkins:createJob] Failed to get CSRF crumb: ${crumbResponse.status} ${crumbResponse.statusText}`,
           );
+          console.warn(
+            `[@service:jenkins:createJob] Error details: ${errorText.substring(0, 300)}...`,
+          );
+
+          if (crumbResponse.status === 403 || crumbResponse.status === 401) {
+            console.error(`[@service:jenkins:createJob] Authentication error when fetching crumb`);
+            return {
+              success: false,
+              error: `Authentication failed. Please check your Jenkins credentials.`,
+            };
+          }
+
           console.log(
             '[@service:jenkins:createJob] Proceeding without crumb - this may fail if CSRF protection is enabled',
           );
@@ -557,15 +623,16 @@ export class JenkinsProvider implements CICDProvider {
         );
       }
 
-      // Prepare headers for the job creation request
+      // Step 2: Prepare headers for the job creation request
       const headers: Record<string, string> = {
         Authorization: this.authHeader,
         'Content-Type': 'application/xml',
       };
 
-      // Add the crumb header if we got one
-      if (crumb && crumbRequestField) {
+      // Add the crumb header using the correct field name
+      if (crumb) {
         headers[crumbRequestField] = crumb;
+        console.log(`[@service:jenkins:createJob] Added crumb header: ${crumbRequestField}`);
       }
 
       // Log a curl-equivalent command for debugging (with masked auth)
@@ -583,7 +650,8 @@ export class JenkinsProvider implements CICDProvider {
 
       console.log(`[@service:jenkins:createJob] Curl equivalent: \n${curlCommand}`);
 
-      // Make the create job request
+      // Step 3: Make the create job request
+      console.log(`[@service:jenkins:createJob] Sending POST request to create job`);
       const response = await fetch(url, {
         method: 'POST',
         headers: headers,
@@ -593,8 +661,29 @@ export class JenkinsProvider implements CICDProvider {
       if (!response.ok) {
         const errorText = await response.text();
         console.error(
-          `[@service:jenkins:createJob] Error response: ${response.status} - ${errorText}`,
+          `[@service:jenkins:createJob] Error response: ${response.status} - ${errorText.substring(0, 500)}`,
         );
+
+        // Check if this is a "No valid crumb" error
+        if (errorText.includes('No valid crumb was included')) {
+          console.error(
+            `[@service:jenkins:createJob] CSRF protection error - invalid or missing crumb`,
+          );
+          return {
+            success: false,
+            error: `Jenkins requires CSRF protection but we couldn't provide a valid crumb. Please check your authentication.`,
+          };
+        }
+
+        // Check if this is an authentication issue
+        if (response.status === 403 || response.status === 401) {
+          console.error(`[@service:jenkins:createJob] Authentication error when creating job`);
+          return {
+            success: false,
+            error: `Authentication failed. Please check your Jenkins credentials.`,
+          };
+        }
+
         return {
           success: false,
           error: `Failed to create Jenkins job: ${response.status} ${response.statusText}`,
