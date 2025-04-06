@@ -38,6 +38,16 @@ export function RepositoryCardClient({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const t = useTranslations('repositories');
   const c = useTranslations('common');
+
+  // Debug log
+  useEffect(() => {
+    console.log(
+      `[@component:RepositoryCard] Repository provider type:`,
+      repository?.provider_type,
+      `ID: ${repository?.id}`,
+    );
+  }, [repository]);
+
   // This effect only runs on the client after hydration is complete
   useEffect(() => {
     setIsClient(true);
@@ -45,13 +55,15 @@ export function RepositoryCardClient({
 
   // Get the provider icon based on the type
   const getProviderIcon = () => {
-    switch (repository?.providerType) {
+    switch (repository?.provider_type) {
       case 'github':
         return <GitHubIcon className="h-5 w-5" />;
       case 'gitlab':
         return <GitLabIcon className="h-5 w-5" />;
       case 'gitea':
         return <GiteaIcon className="h-5 w-5" />;
+      default:
+        return <GitBranch className="h-5 w-5" />;
     }
   };
 
@@ -90,7 +102,7 @@ export function RepositoryCardClient({
                 {repository?.name || 'Unnamed Repository'}
               </CardTitle>
             </div>
-            {repository?.isPrivate ? (
+            {repository?.is_private ? (
               <Badge variant="outline" className="flex items-center">
                 <Lock className="h-3 w-3 mr-1" />
                 {t('sort_private')}
@@ -126,7 +138,7 @@ export function RepositoryCardClient({
 
             <div className="flex items-center gap-1">
               <GitBranch className="h-3 w-3" />
-              <span>{repository?.defaultBranch || 'main'}</span>
+              <span>{repository?.default_branch || 'main'}</span>
             </div>
           </div>
         </CardContent>

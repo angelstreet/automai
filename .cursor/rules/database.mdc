@@ -5,6 +5,23 @@ alwaysApply: false
 ---
 # Database Access Rules
 
+## Data Format: Database Uses Snake Case
+
+**IMPORTANT**: All database fields use snake_case naming (e.g., `provider_type`, `default_branch`, `created_at`), while TypeScript types might use camelCase (e.g., `providerType`, `defaultBranch`, `createdAt`). Always be aware of this conversion when:
+
+1. Accessing database fields directly (`repository.provider_type`)
+2. Writing database queries (`supabase.from('repositories').select('provider_type')`)
+3. Defining type mappings between database records and TypeScript types
+
+If you're seeing undefined values when accessing a property, check if you're using the correct case format:
+```typescript
+// If data comes directly from database:
+const providerType = record.provider_type; // Use snake_case
+
+// If data has been transformed to match TypeScript types:
+const providerType = record.providerType; // Use camelCase
+```
+
 ## CRITICAL: Always Await createClient()
 
 The most important rule when working with Supabase in this codebase is to **always await the `createClient()` function**. This function returns a Promise, not the actual client.

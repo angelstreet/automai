@@ -34,6 +34,19 @@ export function RepositoryListClient() {
     );
   }, [repositories.length]);
 
+  // Debug log for repository data
+  useEffect(() => {
+    if (repositories.length > 0) {
+      console.log('[RepositoryListClient] Debug repositories data:');
+      repositories.forEach((repo) => {
+        console.log(`- Repository: ${repo.name || 'unnamed'}`);
+        console.log(`  provider_type: ${repo.provider_type || 'undefined'}`);
+        console.log(`  default_branch: ${repo.default_branch || 'undefined'}`);
+        console.log(`  All data:`, repo);
+      });
+    }
+  }, [repositories]);
+
   // Handle refresh events
   useEffect(() => {
     const handleRefresh = async () => {
@@ -91,8 +104,8 @@ export function RepositoryListClient() {
     }
 
     // Filter by tab
-    if (activeTab === 'public' && repo.isPrivate === true) return false;
-    if (activeTab === 'private' && repo.isPrivate !== true) return false;
+    if (activeTab === 'public' && repo.is_private === true) return false;
+    if (activeTab === 'private' && repo.is_private !== true) return false;
     // We no longer have starring functionality
     if (activeTab === 'starred') return false;
 

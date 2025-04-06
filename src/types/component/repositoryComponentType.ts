@@ -42,15 +42,15 @@ export interface Repository {
   name: string;
   description?: string;
   url?: string;
-  isPrivate: boolean;
-  defaultBranch: string;
+  is_private: boolean;
+  default_branch: string;
   language?: string;
-  providerType: GitProviderType;
+  provider_type: GitProviderType;
   provider_id: string;
   owner: string;
-  lastSyncedAt?: string;
-  syncStatus: RepositorySyncStatus;
-  createdAt: string;
+  last_synced_at?: string;
+  sync_status: RepositorySyncStatus;
+  created_at: string;
   updated_at: string;
   provider?: GitProvider;
 }
