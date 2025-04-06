@@ -134,6 +134,9 @@ export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActio
 
     console.log('[@component:HostActionsClient] Starting hosts refresh process');
 
+    // Set testing state immediately for instant visual feedback
+    setIsTestingHosts(true);
+
     try {
       // First refresh hosts data
       console.log('[@component:HostActionsClient] Dispatching REFRESH_HOSTS event');
@@ -146,6 +149,7 @@ export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActio
       // Skip if there are no hosts
       if (hosts.length === 0) {
         console.log('[@component:HostActionsClient] No hosts to test');
+        setIsTestingHosts(false);
         return;
       }
 

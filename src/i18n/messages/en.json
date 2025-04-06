@@ -455,6 +455,7 @@
     "wizard_failed_fetch_providers": "Failed to fetch CI/CD providers",
     "wizard_failed_fetch_jobs": "Failed to fetch CI/CD jobs",
     "wizard_failed_fetch_job_details": "Failed to fetch job details",
+    "wizard_date_and_time": "Date and Time",
     "filter_all": "All Deployments",
     "filter_active": "Active",
     "filter_completed": "Completed",

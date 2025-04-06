@@ -87,10 +87,7 @@ function HostListClient({ initialHosts }: HostListClientProps) {
           prevHosts.map((h) => (h.id === host.id ? { ...h, status: 'testing' } : h)),
         );
 
-        // Small delay to ensure the testing state is visually apparent
-        await new Promise((resolve) => setTimeout(resolve, 150));
-
-        // Call the mutation
+        // Call the mutation - no initial delay for better responsiveness
         const result = await testConnectionMutation(host.id);
         console.log(
           `[@component:HostListClient] Test connection result for host ${host.id}:`,
@@ -98,7 +95,7 @@ function HostListClient({ initialHosts }: HostListClientProps) {
         );
 
         // Small delay before updating final status to ensure animation is visible
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 50));
 
         // Update the UI based on result
         setHosts((prevHosts) =>
@@ -136,13 +133,10 @@ function HostListClient({ initialHosts }: HostListClientProps) {
     async (hostIds: string[]) => {
       console.log(`[@component:HostListClient] Testing all hosts: ${hostIds.length} hosts`);
 
-      // Update all hosts to 'testing' status first for visible animation
+      // Update all hosts to 'testing' status first for visible animation - immediate visual feedback
       setHosts((prevHosts) =>
         prevHosts.map((h) => (hostIds.includes(h.id) ? { ...h, status: 'testing' } : h)),
       );
-
-      // Add small delay to ensure the status updates are rendered
-      await new Promise((resolve) => setTimeout(resolve, 50));
 
       // Start tests with staggered delays for better visual feedback
       hostIds.forEach((hostId, index) => {
