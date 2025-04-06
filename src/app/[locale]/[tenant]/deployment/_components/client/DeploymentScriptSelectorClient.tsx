@@ -78,14 +78,6 @@ const DeploymentScriptSelectorClient: React.FC<EnhancedScriptSelectorProps> = ({
     return <div className="p-4 text-red-500">Error loading scripts: {error}</div>;
   }
 
-  if (!selectedRepository) {
-    return (
-      <div className="p-4 text-gray-500 dark:text-gray-400">
-        Please select a repository first to view available scripts.
-      </div>
-    );
-  }
-
   if (availableScripts.length === 0) {
     return (
       <div className="p-4 text-gray-500 dark:text-gray-400">
@@ -95,7 +87,7 @@ const DeploymentScriptSelectorClient: React.FC<EnhancedScriptSelectorProps> = ({
   }
 
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
+    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-background">
       <div className="mt-2 px-3 pb-3">
         <div className="flex justify-between items-center mb-2">
           <div className="text-xs text-gray-500 dark:text-gray-400 px-1 py-0.5 bg-gray-50 dark:bg-gray-700 rounded">
@@ -126,8 +118,8 @@ const DeploymentScriptSelectorClient: React.FC<EnhancedScriptSelectorProps> = ({
                 {isLoading ? 'Loading scripts...' : 'No scripts found'}
               </div>
             ) : (
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 table-fixed">
-                <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 table-fixed ">
+                <thead className="bg-background sticky top-0">
                   <tr>
                     <th
                       scope="col"
@@ -149,7 +141,7 @@ const DeploymentScriptSelectorClient: React.FC<EnhancedScriptSelectorProps> = ({
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                <tbody className="bg-background divide-y divide-gray-200 dark:divide-gray-700">
                   {filteredScripts.map((script) => {
                     const isSelected = selectedScriptIds.includes(script.id);
 

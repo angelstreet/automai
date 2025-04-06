@@ -117,7 +117,7 @@ const DeploymentWizardStep2Client: React.FC<DeploymentWizardStep2Props> = ({
   );
 
   return (
-    <div className="p-4 bg-transparent dark:bg-transparent rounded-md border border-gray-200 dark:border-gray-700 shadow-sm">
+    <div className="p-4 rounded-md border border-gray-200 dark:border-gray-700">
       <h2 className="text-lg font-medium mb-4">Select Scripts</h2>
 
       {/* 

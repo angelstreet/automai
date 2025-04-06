@@ -227,7 +227,7 @@ export function DeploymentWizardStep5Client({
       {/* Fixed width container to prevent layout shifts */}
       <div className="w-full" style={{ minHeight: '500px' }}>
         {/* Common container with fixed dimensions */}
-        <div className="w-full h-[500px] bg-background dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 p-2 transition-all duration-150 relative">
+        <div className="w-full h-[500px] bg-background  rounded-md border border-gray-200 dark:border-gray-700 p-2 transition-all duration-150 relative">
           {/* Jenkins View - Absolutely positioned */}
           <div
             className={`absolute inset-0 p-2 transition-opacity duration-150 ${
@@ -251,7 +251,7 @@ export function DeploymentWizardStep5Client({
                 <h3 className="text-sm font-medium text-foreground mb-2">
                   {t('wizard_selected_scripts')} ({data.scriptIds.length})
                 </h3>
-                <div className="bg-background dark:bg-gray-800 rounded-md shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div className="bg-background  rounded-md shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
                   <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 table-fixed">
                     <thead className="bg-gray-50 dark:bg-gray-900">
                       <tr>
@@ -275,7 +275,7 @@ export function DeploymentWizardStep5Client({
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="bg-background dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    <tbody className="bg-background  divide-y divide-gray-200 dark:divide-gray-700">
                       {data.scriptIds.map((scriptId, index) => {
                         const script = repositoryScripts.find((s) => s.id === scriptId);
                         const params = data.scriptParameters[scriptId]?.['raw'] || '';
@@ -312,7 +312,7 @@ export function DeploymentWizardStep5Client({
                 <h5 className="text-sm font-medium text-foreground mb-2">
                   {t('wizard_target_hosts')}
                 </h5>
-                <div className="bg-background dark:bg-gray-800 rounded-md p-3 border border-gray-200 dark:border-gray-700">
+                <div className="bg-background rounded-md p-3 border border-gray-200 dark:border-gray-700">
                   {data.hostIds && data.hostIds.length > 0 ? (
                     <div className="grid grid-cols-2 gap-2">
                       {data.hostIds.map((id) => {
@@ -354,7 +354,7 @@ export function DeploymentWizardStep5Client({
               {/* Schedule */}
               <div>
                 <h5 className="text-sm font-medium text-foreground mb-2">{t('wizard_schedule')}</h5>
-                <div className="bg-background dark:bg-gray-800 rounded-md p-3 border border-gray-200 dark:border-gray-700">
+                <div className="bg-background  rounded-md p-3 border border-gray-200 dark:border-gray-700">
                   <div className="text-xs text-foreground">
                     {data.schedule === 'now' ? (
                       <span>{t('wizard_deploy_immediately')}</span>
