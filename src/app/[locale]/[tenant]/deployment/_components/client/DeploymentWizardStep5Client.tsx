@@ -195,22 +195,22 @@ export function DeploymentWizardStep5Client({
         </button>
       </div>
 
-      <div className="space-y-2">
-        {showJenkinsView ? (
-          // Jenkins View
-          <div className="bg-gray-50 dark:bg-gray-700 p-2 rounded-md">
+      {/* Fixed width container to prevent layout shifts */}
+      <div className="w-full" style={{ minHeight: '500px' }}>
+        {/* Common container with fixed dimensions */}
+        <div className="w-full h-[500px] bg-gray-50 dark:bg-gray-700 rounded-md p-2 transition-all duration-150 relative">
+          {/* Jenkins View - Absolutely positioned */}
+          <div
+            className={`absolute inset-0 p-2 transition-opacity duration-150 ${
+              showJenkinsView ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
+            }`}
+          >
             <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t('wizard_jenkins_pipeline_preview')}
             </h4>
-
-            <div className="space-y-1">
-              {/* Show selected hosts above the pipeline code */}
-              <div
-                className="bg-gray-900 rounded-md shadow-sm border border-gray-700 overflow-auto"
-                style={{ maxHeight: '300px' }}
-              >
-                <pre className="text-xs text-white font-mono whitespace-pre p-2 overflow-x-auto">
-                  {`pipeline {
+            <div className="bg-gray-900 rounded-md shadow-sm border border-gray-700 overflow-auto h-[450px] w-full">
+              <pre className="text-xs text-white font-mono whitespace-pre p-2 overflow-x-auto">
+                {`pipeline {
     agent any
     
     parameters {
@@ -273,18 +273,21 @@ export function DeploymentWizardStep5Client({
         }
     }
 }`}
-                </pre>
-              </div>
+              </pre>
             </div>
           </div>
-        ) : (
-          // Summary View
-          <div className="bg-gray-50 dark:bg-gray-700 p-2 rounded-md">
+
+          {/* Summary View - Absolutely positioned */}
+          <div
+            className={`absolute inset-0 p-2 transition-opacity duration-150 ${
+              !showJenkinsView ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
+            }`}
+          >
             <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t('wizard_summary')}
             </h4>
 
-            <div className="space-y-2">
+            <div className="space-y-2 h-[450px] overflow-auto">
               {/* Scripts */}
               <div className="space-y-1 mb-2">
                 <h3 className="text-xs font-medium text-gray-700 dark:text-gray-300">
@@ -413,7 +416,7 @@ export function DeploymentWizardStep5Client({
               </div>
             </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
