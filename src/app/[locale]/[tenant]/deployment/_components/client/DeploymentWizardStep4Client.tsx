@@ -27,7 +27,7 @@ const DeploymentWizardStep4Client: React.FC<DeploymentWizardStep4Props> = ({
   isStepValid,
 }) => {
   const t = useTranslations('deployment');
-
+  const c = useTranslations('common');
   // Check if step is valid - handle both function and boolean values
   const isValid = typeof isStepValid === 'function' ? isStepValid() : isStepValid;
 
@@ -39,7 +39,7 @@ const DeploymentWizardStep4Client: React.FC<DeploymentWizardStep4Props> = ({
           onClick={onPrevStep}
           className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
-          {t('previous')}
+          {c('prev')}
         </button>
 
         <button
@@ -52,7 +52,7 @@ const DeploymentWizardStep4Client: React.FC<DeploymentWizardStep4Props> = ({
               : 'bg-blue-300 dark:bg-blue-800 cursor-not-allowed'
           }`}
         >
-          {t('next')}
+          {c('next')}
         </button>
       </div>
 

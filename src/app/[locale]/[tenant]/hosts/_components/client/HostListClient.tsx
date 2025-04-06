@@ -93,15 +93,18 @@ function HostListClient({ initialHosts }: HostListClientProps) {
           result,
         );
 
-        // Update the UI based on result
-        setHosts((prevHosts) =>
-          prevHosts.map((h) =>
-            h.id === host.id ? { ...h, status: result.success ? 'connected' : 'failed' } : h,
-          ),
-        );
+        // Ensure state updates are properly applied
+        setTimeout(() => {
+          // Update the UI based on result
+          setHosts((prevHosts) =>
+            prevHosts.map((h) =>
+              h.id === host.id ? { ...h, status: result.success ? 'connected' : 'failed' } : h,
+            ),
+          );
 
-        // Dispatch event for test completion
-        handleTestCompleted(host.id);
+          // Dispatch event for test completion
+          handleTestCompleted(host.id);
+        }, 100);
 
         return result.success;
       } catch (error) {
@@ -129,12 +132,17 @@ function HostListClient({ initialHosts }: HostListClientProps) {
     async (hostIds: string[]) => {
       console.log(`[@component:HostListClient] Testing all hosts: ${hostIds.length} hosts`);
 
-      for (const hostId of hostIds) {
+      // Start all tests in parallel
+      const testPromises = hostIds.map((hostId) => {
         const host = hosts.find((h) => h.id === hostId);
         if (host) {
-          await handleTestConnection(host);
+          return handleTestConnection(host);
         }
-      }
+        return Promise.resolve(false);
+      });
+
+      // Wait for all tests to complete
+      await Promise.all(testPromises);
     },
     [hosts, handleTestConnection],
   );
