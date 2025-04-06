@@ -137,208 +137,92 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
             }
 
             console.log(`[DeploymentWizard] Getting files directly using gitService`);
-            // Instead of calling the API endpoint, use gitService directly
-
-            // Determine provider type
-            const providerType = gitService.detectProviderFromUrl(selectedRepo.url);
-            console.log(`[DeploymentWizard] Provider type: ${providerType}`);
-
-            // Log the repository URL to check what we're working with
-            console.log(`[DeploymentWizard] Repository URL: ${selectedRepo.url}`);
-
-            // Manually extract owner and repo from URL since server-side functions
-            // might not work properly in client context
-            let owner = '';
-            let repo = '';
 
             try {
-              // Extract owner and repo from URL
-              if (selectedRepo.url) {
-                // Remove .git suffix if present
-                const cleanUrl = selectedRepo.url.replace(/\.git$/, '');
+              // Determine provider type and extract repository info using gitService
+              const providerType = gitService.detectProviderFromUrl(selectedRepo.url);
+              const { owner, repo } = gitService.parseRepositoryUrl(selectedRepo.url, providerType);
 
-                // Parse the URL
-                const urlObj = new URL(cleanUrl);
-
-                // GitHub URL format: https://github.com/owner/repo
-                if (providerType === 'github') {
-                  const pathParts = urlObj.pathname.split('/').filter(Boolean);
-                  if (pathParts.length >= 2) {
-                    owner = pathParts[0];
-                    repo = pathParts[1];
-                  }
-                }
-                // GitLab URL format
-                else if (providerType === 'gitlab') {
-                  // Skip domain and get path parts
-                  const pathParts = urlObj.pathname.split('/').filter(Boolean);
-                  if (pathParts.length >= 2) {
-                    // The last part is the repo name
-                    repo = pathParts[pathParts.length - 1];
-                    // Everything before is the owner/group path
-                    owner = pathParts.slice(0, pathParts.length - 1).join('/');
-                  }
-                }
-                // Gitea URL format
-                else if (providerType === 'gitea') {
-                  const pathParts = urlObj.pathname.split('/').filter(Boolean);
-                  if (pathParts.length >= 2) {
-                    owner = pathParts[0];
-                    repo = pathParts[1];
-                  }
-                }
-              }
-
-              console.log(`[DeploymentWizard] Extracted owner: ${owner}, repo: ${repo}`);
-            } catch (error) {
-              console.error('[DeploymentWizard] Error parsing repository URL:', error);
-            }
-
-            // Get provider configuration with extracted owner/repo for better URL generation
-            let config;
-
-            // If we have owner and repo, use a custom URL directly
-            if (owner && repo && providerType === 'github') {
-              // For GitHub, construct URL directly
-              config = {
-                method: 'GET',
-                url: `https://api.github.com/repos/${owner}/${repo}/contents/`,
-                headers: {
-                  Accept: 'application/json',
-                  'Content-Type': 'application/json',
-                },
-              };
-              console.log(`[DeploymentWizard] Using direct GitHub URL: ${config.url}`);
-            } else {
-              // Use the standard config from gitService
-              config = gitService.getProviderApiConfig(
-                providerType,
-                '',
-                deploymentData.branch || 'main',
+              console.log(
+                `[DeploymentWizard] Repository info - provider: ${providerType}, owner: ${owner}, repo: ${repo}`,
               );
-              console.log(`[DeploymentWizard] Using URL from gitService: ${config.url}`);
-            }
 
-            // Use a timeout to prevent UI from hanging indefinitely
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-
-            try {
-              // Call the provider API directly instead of going through our API route
-              const response = await fetch(config.url, {
-                method: config.method,
-                headers: config.headers,
-                signal: controller.signal,
-              });
-
-              // Clear timeout since request completed
-              clearTimeout(timeoutId);
-
-              // Break out early on component unmount
-              if (!isMounted) return;
-
-              if (!response.ok) {
-                throw new Error(`Error ${response.status}: ${response.statusText}`);
+              if (!owner || !repo) {
+                throw new Error('Could not determine repository owner and name from URL');
               }
 
-              // Parse response based on content type
-              let rawData;
-              const contentType = response.headers.get('content-type') || '';
-              if (contentType.includes('application/json')) {
-                rawData = await response.json();
-              } else {
-                rawData = await response.text();
-              }
+              // Use gitService.fetchRepositoryContents to get repository files
+              const branch = deploymentData.branch || 'main';
+              const files = await gitService.fetchRepositoryContents(
+                selectedRepo.url,
+                owner,
+                repo,
+                '', // empty path to get root directory
+                branch,
+                providerType,
+              );
 
-              // Standardize response using gitService
-              const data = {
-                success: true,
-                data: gitService.standardizeResponse(providerType, rawData, 'list'),
-              };
+              console.log(`[DeploymentWizard] API returned ${files.length} files`);
 
-              // Check if we have valid data
-              if (!data.data || (Array.isArray(data.data) && data.data.length === 0)) {
-                throw new Error('No files found in repository');
-              }
+              // Filter for script files (.sh, .py)
+              const filteredFiles = files.filter(
+                (file) =>
+                  file.type === 'file' && (file.name.endsWith('.sh') || file.name.endsWith('.py')),
+              );
 
-              // Process the data as before
-              if (data.success && data.data) {
-                // Add debug logs to see what files we're getting
-                console.log(`[DeploymentWizard] API returned files`);
+              console.log(
+                `[DeploymentWizard] After filtering: ${filteredFiles.length} script files`,
+              );
 
-                // Filter for script files (.sh, .py)
-                const filteredFiles = Array.isArray(data.data)
-                  ? data.data.filter(
-                      (file: any) =>
-                        file.type === 'file' &&
-                        (file.name.endsWith('.sh') || file.name.endsWith('.py')),
-                    )
-                  : [];
+              if (filteredFiles.length > 0) {
+                // Transform to script format
+                const scripts = filteredFiles.map((file, index) => ({
+                  id: `script-${index}`,
+                  name: file.name,
+                  path: file.path,
+                  description: `${file.path} (${file.size} bytes)`,
+                  parameters: [],
+                  type: file.name.endsWith('.py') ? 'python' : 'shell',
+                }));
 
-                console.log(
-                  `[DeploymentWizard] After filtering: ${filteredFiles.length} script files`,
-                );
+                console.log(`[DeploymentWizard] Successfully found ${scripts.length} script files`);
 
-                if (filteredFiles.length > 0) {
-                  // Transform to script format
-                  const scripts = filteredFiles.map((file: any, index: number) => ({
-                    id: `script-${index}`,
-                    name: file.name,
-                    path: file.path,
-                    description: `${file.path} (${file.size} bytes)`,
-                    parameters: [],
-                    type: file.name.endsWith('.py') ? 'python' : 'shell',
-                  }));
-
-                  console.log(
-                    `[DeploymentWizard] Successfully found ${scripts.length} script files`,
-                  );
-
-                  if (isMounted) {
-                    setRepositoryScripts(scripts);
-                    // Reset loading state after successful script load
-                    setIsLoadingScripts(false);
-                    isLoadingRef.current = false;
-                    console.log('[DeploymentWizard] Reset loading state after finding scripts');
-                  }
-                } else {
-                  console.log(`[DeploymentWizard] No script files found`);
-                  if (isMounted) {
-                    setRepositoryScripts([]);
-                    // Add an informative message when no script files are found
-                    setScriptsError(
-                      'No Python (.py) or Shell (.sh) scripts found in this repository.',
-                    );
-                    // Reset loading state when no scripts are found
-                    setIsLoadingScripts(false);
-                    isLoadingRef.current = false;
-                    console.log('[DeploymentWizard] Reset loading state when no scripts found');
-                  }
+                if (isMounted) {
+                  setRepositoryScripts(scripts);
+                  // Reset loading state after successful script load
+                  setIsLoadingScripts(false);
+                  isLoadingRef.current = false;
+                  console.log('[DeploymentWizard] Reset loading state after finding scripts');
                 }
               } else {
-                throw new Error('Failed to retrieve repository files');
+                console.log(`[DeploymentWizard] No script files found`);
+                if (isMounted) {
+                  setRepositoryScripts([]);
+                  // Add an informative message when no script files are found
+                  setScriptsError(
+                    'No Python (.py) or Shell (.sh) scripts found in this repository.',
+                  );
+                  // Reset loading state when no scripts are found
+                  setIsLoadingScripts(false);
+                  isLoadingRef.current = false;
+                  console.log('[DeploymentWizard] Reset loading state when no scripts found');
+                }
               }
-            } catch (directFetchError: any) {
-              // Clear timeout on error
-              clearTimeout(timeoutId);
+            } catch (fetchError: any) {
+              console.error('[DeploymentWizard] Error fetching repository contents:', fetchError);
 
-              // Handle abort errors (timeouts)
-              if (directFetchError.name === 'AbortError') {
-                console.log(`[DeploymentWizard] Direct fetch timed out`);
-                setScriptsError(
-                  'Request timed out. Please try again or select a different repository.',
-                );
-              } else {
-                console.error('[DeploymentWizard] Error fetching directly:', directFetchError);
-                setScriptsError(directFetchError.message || 'Failed to connect to repository');
+              if (isMounted) {
+                const errorMessage =
+                  fetchError.name === 'AbortError'
+                    ? 'Request timed out. Please try again or select a different repository.'
+                    : fetchError.message || 'Failed to retrieve repository files';
+
+                setScriptsError(errorMessage);
+                setRepositoryScripts([]);
+                setIsLoadingScripts(false);
+                isLoadingRef.current = false;
+                console.log('[DeploymentWizard] Reset loading state after error');
               }
-
-              // Reset states
-              setRepositoryScripts([]);
-              setIsLoadingScripts(false);
-              isLoadingRef.current = false;
-              console.log('[DeploymentWizard] Reset loading state after error');
-              return; // Exit early
             }
           } catch (error) {
             console.error('[DeploymentWizard] Error in script loading process:', error);
