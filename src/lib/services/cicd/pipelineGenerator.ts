@@ -66,17 +66,10 @@ export class PipelineGenerator {
    * @returns Jenkins pipeline as a string
    */
   private static generateJenkinsPipeline(options: PipelineGeneratorOptions): string {
-    const {
-      repositoryUrl,
-      branch,
-      deploymentName,
-      deploymentId,
-      scripts,
-      hosts,
-      schedule,
-      scheduledTime,
-      additionalParams,
-    } = options;
+    const { repositoryUrl, branch, deploymentName, scripts, hosts, additionalParams } = options;
+
+    // Get description from additionalParams if available
+    const description = additionalParams?.DEPLOYMENT_DESCRIPTION || '';
 
     // Format hosts as JSON array for the pipeline
     const hostsJson = JSON.stringify(
@@ -97,34 +90,20 @@ export class PipelineGenerator {
       })
       .join('\n');
 
-    // Build the pipeline
+    // Build simplified pipeline
     return `pipeline {
     agent any
     
     parameters {
-        string(name: 'DEPLOYMENT_NAME', defaultValue: '${deploymentName}', description: 'Deployment name')
-        string(name: 'DEPLOYMENT_ID', defaultValue: '${deploymentId}', description: 'Deployment ID')
         string(name: 'REPOSITORY_URL', defaultValue: '${repositoryUrl}', description: 'Repository URL')
-        string(name: 'BRANCH', defaultValue: '${branch}', description: 'Repository branch')${
-          schedule === 'later' && scheduledTime
-            ? `\n        string(name: 'SCHEDULED_TIME', defaultValue: '${scheduledTime}', description: 'Scheduled time')`
-            : '\n        // Immediate deployment'
-        }${
-          additionalParams
-            ? Object.entries(additionalParams)
-                .map(
-                  ([key, value]) =>
-                    `\n        string(name: '${key.toUpperCase()}', defaultValue: '${value}', description: '${key}')`,
-                )
-                .join('')
-            : ''
-        }
+        string(name: 'BRANCH', defaultValue: '${branch}', description: 'Repository branch')
+        string(name: 'DEPLOYMENT_NAME', defaultValue: '${deploymentName}', description: 'Deployment name')
+        string(name: 'DEPLOYMENT_DESCRIPTION', defaultValue: '${description}', description: 'Deployment description')
     }
     
     stages {
-        stage('Prepare') {
+        stage('Checkout') {
             steps {
-                echo "Preparing deployment: \${params.DEPLOYMENT_NAME} (ID: \${params.DEPLOYMENT_ID})"
                 checkout([
                     $class: 'GitSCM',
                     branches: [[name: "\${params.BRANCH}"]],
@@ -145,22 +124,6 @@ export class PipelineGenerator {
 ${scriptCommands}
                 }
             }
-        }
-        
-        stage('Verify') {
-            steps {
-                echo "Verifying deployment"
-                // Add verification steps here
-            }
-        }
-    }
-    
-    post {
-        success {
-            echo "Deployment completed successfully"
-        }
-        failure {
-            echo "Deployment failed"
         }
     }
 }`;
