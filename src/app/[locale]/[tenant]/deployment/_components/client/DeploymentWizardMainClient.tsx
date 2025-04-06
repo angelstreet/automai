@@ -50,7 +50,7 @@ const initialDeploymentData: DeploymentData = {
   description: '',
   repositoryId: '',
   selectedRepository: null,
-  branch: '', // Default branch
+  branch: '', // Empty string initially
   schedule: 'now',
   scheduledTime: '',
   scriptIds: [],
@@ -71,6 +71,17 @@ const initialDeploymentData: DeploymentData = {
 const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
   ({ onCancel, onDeploymentCreated, repositories = [], hosts = [], cicdProviders = [] }) => {
     const _router = useRouter();
+
+    // Log repositories and their default branches for debugging
+    console.log(
+      '[DeploymentWizard] Repository list with default branches:',
+      repositories.map((repo) => ({
+        id: repo.id,
+        name: repo.name,
+        default_branch: (repo as any).default_branch,
+      })),
+    );
+
     const [step, setStep] = useState(1);
     const [deploymentData, setDeploymentData] = useState<DeploymentData>(initialDeploymentData);
     const [isCreating, setIsCreating] = useState(false);
@@ -316,7 +327,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
 
           if (selectedRepo) {
             // Get the default branch from repository or fall back to 'main'
-            const defaultBranch = selectedRepo.defaultBranch || 'main';
+            const defaultBranch = (selectedRepo as any).default_branch || 'main';
 
             console.log(
               `[DeploymentWizard] Selected repository: ${selectedRepo.name}, default branch: ${defaultBranch}`,
