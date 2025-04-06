@@ -10,23 +10,50 @@ export class CICDProviderFactory {
    * Create a CI/CD provider instance based on the provider type
    */
   static createProvider(config: CICDProviderConfig): CICDProvider {
-    let provider: CICDProvider;
+    console.log(`[@service:cicd:providerFactory] Creating provider for type: ${config.type}`);
 
-    switch (config.type.toLowerCase()) {
-      case 'jenkins':
-        provider = new JenkinsProvider();
-        break;
-      case 'github':
-        provider = new GitHubProvider();
-        break;
-      default:
-        throw new Error(`Unsupported CI/CD provider type: ${config.type}`);
+    // Make sure we have the minimal required properties
+    if (!config.type) {
+      console.error('[@service:cicd:providerFactory] Provider type is undefined');
+      throw new Error('Provider type is required');
     }
 
-    // Initialize the provider with config
-    provider.initialize(config);
+    // Ensure config has auth_type - default to token if not provided
+    if (!config.auth_type) {
+      console.log('[@service:cicd:providerFactory] auth_type not provided, using token as default');
+      config.auth_type = 'token';
+    }
 
-    return provider;
+    // Ensure credentials exists as an object even if empty
+    if (!config.credentials) {
+      console.log(
+        '[@service:cicd:providerFactory] credentials not provided, initializing empty object',
+      );
+      config.credentials = {};
+    }
+
+    let provider: CICDProvider;
+
+    try {
+      switch (config.type.toLowerCase()) {
+        case 'jenkins':
+          provider = new JenkinsProvider();
+          break;
+        case 'github':
+          provider = new GitHubProvider();
+          break;
+        default:
+          throw new Error(`Unsupported CI/CD provider type: ${config.type}`);
+      }
+
+      // Initialize the provider with config
+      provider.initialize(config);
+
+      return provider;
+    } catch (error) {
+      console.error(`[@service:cicd:providerFactory] Error creating provider:`, error);
+      throw error;
+    }
   }
 
   /**

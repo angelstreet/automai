@@ -19,19 +19,47 @@ export class JenkinsProvider implements CICDProvider {
    * Initialize the Jenkins provider with configuration
    */
   initialize(config: CICDProviderConfig): void {
+    console.log(
+      `[@service:jenkins:initialize] Initializing Jenkins provider with config: ${config.name}, auth_type: ${config.auth_type}`,
+    );
+
     this.config = config;
     this.baseUrl = config.url.endsWith('/') ? config.url : `${config.url}/`;
 
-    // Set up authentication
-    if (config.auth_type === 'token') {
-      const token = config.credentials.token;
-      this.authHeader = `Bearer ${token}`;
-    } else if (config.auth_type === 'basic_auth') {
-      const { username, password } = config.credentials;
-      this.authHeader = `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`;
-    } else {
-      throw new Error(`Unsupported authentication type: ${config.auth_type}`);
+    // Set up authentication with better error handling
+    if (!config.auth_type) {
+      console.warn(`[@service:jenkins:initialize] No auth_type provided, defaulting to 'token'`);
+      config.auth_type = 'token';
     }
+
+    try {
+      if (config.auth_type === 'token') {
+        const token = config.credentials?.token || '';
+        console.log(
+          `[@service:jenkins:initialize] Using token authentication. Token exists: ${Boolean(token)}`,
+        );
+        this.authHeader = `Bearer ${token}`;
+      } else if (config.auth_type === 'basic_auth') {
+        const username = config.credentials?.username || '';
+        const password = config.credentials?.password || '';
+        console.log(
+          `[@service:jenkins:initialize] Using basic auth. Username exists: ${Boolean(username)}, Password exists: ${Boolean(password)}`,
+        );
+        this.authHeader = `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`;
+      } else {
+        console.error(
+          `[@service:jenkins:initialize] Unsupported authentication type: ${config.auth_type}`,
+        );
+        throw new Error(`Unsupported authentication type: ${config.auth_type}`);
+      }
+    } catch (error: any) {
+      console.error(`[@service:jenkins:initialize] Error setting up authentication:`, error);
+      throw new Error(`Failed to set up authentication: ${error.message}`);
+    }
+
+    console.log(
+      `[@service:jenkins:initialize] Successfully initialized Jenkins provider for ${this.baseUrl}`,
+    );
   }
 
   /**
@@ -355,15 +383,145 @@ export class JenkinsProvider implements CICDProvider {
    * Create a new job
    */
   async createJob(
-    _jobName: string,
-    _pipelineConfig: CICDPipelineConfig,
-    _folderPath?: string,
+    jobName: string,
+    pipelineConfig: CICDPipelineConfig,
+    folderPath?: string,
   ): Promise<CICDResponse<string>> {
-    // Implementation for creating Jenkins jobs
-    return {
-      success: false,
-      error: 'Creating Jenkins jobs is not yet implemented',
-    };
+    try {
+      console.log(`[@service:jenkins:createJob] Creating new job: ${jobName}`);
+
+      // Determine the URL (with folder support)
+      let url = this.baseUrl;
+      if (folderPath) {
+        url += `job/${encodeURIComponent(folderPath)}/`;
+      }
+      url += `createItem?name=${encodeURIComponent(jobName)}`;
+
+      // Generate a Jenkins pipeline script from the pipelineConfig
+      const pipelineScript = this.generatePipelineFromConfig(pipelineConfig);
+
+      // Create job XML definition for Jenkins pipeline
+      const jobXml = `<?xml version='1.1' encoding='UTF-8'?>
+<flow-definition plugin="workflow-job">
+  <description>${pipelineConfig.description || ''}</description>
+  <keepDependencies>false</keepDependencies>
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps">
+    <script>${pipelineScript}</script>
+    <sandbox>true</sandbox>
+  </definition>
+  <disabled>false</disabled>
+</flow-definition>`;
+
+      // Make the API request to create the job
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: this.authHeader,
+          'Content-Type': 'application/xml',
+        },
+        body: jobXml,
+      });
+
+      if (!response.ok) {
+        console.error(
+          `[@service:jenkins:createJob] Failed to create job ${jobName}: ${response.status} ${response.statusText}`,
+        );
+        return {
+          success: false,
+          error: `Failed to create Jenkins job: ${response.status} ${response.statusText}`,
+        };
+      }
+
+      // Get the job URL for confirmation
+      const jobUrl = `${this.baseUrl}job/${encodeURIComponent(jobName)}/`;
+      console.log(`[@service:jenkins:createJob] Job ${jobName} created successfully at ${jobUrl}`);
+
+      return {
+        success: true,
+        data: jobName,
+      };
+    } catch (error: any) {
+      console.error(`[@service:jenkins:createJob] Error creating job ${jobName}:`, error);
+      return {
+        success: false,
+        error: error.message || `Failed to create Jenkins job ${jobName}`,
+      };
+    }
+  }
+
+  /**
+   * Generate a Jenkins pipeline script from CICDPipelineConfig
+   */
+  private generatePipelineFromConfig(pipelineConfig: CICDPipelineConfig): string {
+    const { repository, stages, parameters } = pipelineConfig;
+    // Unused variables are prefixed with underscore
+    const _name = pipelineConfig.name;
+    const _description = pipelineConfig.description;
+    const _triggers = pipelineConfig.triggers;
+
+    // Start building the pipeline script
+    let pipeline = `pipeline {
+  agent any
+  
+  parameters {
+    string(name: 'REPOSITORY_ID', defaultValue: '${repository.id}', description: 'Repository ID')`;
+
+    // Add any additional parameters
+    if (parameters && parameters.length > 0) {
+      for (const param of parameters) {
+        pipeline += `
+    string(name: '${param.name}', defaultValue: '${param.defaultValue || ''}', description: '${param.description || ''}')`;
+      }
+    }
+
+    pipeline += `
+  }
+  
+  stages {`;
+
+    // Add stages
+    for (const stage of stages) {
+      pipeline += `
+    stage('${stage.name}') {
+      steps {
+        script {`;
+
+      // Add steps for each stage
+      for (const step of stage.steps) {
+        if (step.type === 'shell' || step.type === 'bash') {
+          pipeline += `
+          sh '''${step.command}'''`;
+        } else if (step.type === 'powershell' || step.type === 'pwsh') {
+          pipeline += `
+          powershell '''${step.command}'''`;
+        } else {
+          // Default to shell command
+          pipeline += `
+          sh '${step.command}'`;
+        }
+      }
+
+      pipeline += `
+        }
+      }
+    }`;
+    }
+
+    // Close the stages and pipeline sections
+    pipeline += `
+  }
+  
+  post {
+    success {
+      echo 'Deployment successful'
+    }
+    failure {
+      echo 'Deployment failed'
+    }
+  }
+}`;
+
+    return pipeline;
   }
 
   /**
