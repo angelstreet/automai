@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 
+import { testGitRepository as testGitRepositoryAction } from '@/app/actions/repositoriesAction';
 import { GitHubIcon, GitLabIcon, GiteaIcon } from '@/components/icons';
 import { Alert, AlertDescription } from '@/components/shadcn/alert';
 import { Badge } from '@/components/shadcn/badge';
@@ -81,22 +82,16 @@ export function RepositoryFormDialogClient({
     setIsConnecting(true);
 
     try {
-      // Test the connection using the API endpoint
-      const response = await fetch('/api/repositories/test-connection', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          provider: {
-            type: currentProvider,
-            token: accessToken,
-            serverUrl: currentProvider === 'gitea' ? serverUrl : undefined,
-          },
-        }),
+      // Test the connection using the server action directly
+      const result = await testGitRepositoryAction({
+        url:
+          currentProvider === 'gitea' && serverUrl
+            ? serverUrl
+            : currentProvider === 'github'
+              ? 'https://github.com'
+              : 'https://gitlab.com',
+        token: accessToken,
       });
-
-      const result = await response.json();
 
       if (result.success) {
         toast({

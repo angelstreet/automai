@@ -39,6 +39,7 @@ import type { CICDProvider } from '@/types/component/cicdComponentType';
 import { CICDFormDialogClient } from '..';
 
 import { CICDEvents } from './CICDEventListener';
+import { testCICDProvider } from '@/app/actions/cicdAction';
 
 interface CICDTableClientProps {
   initialProviders: CICDProvider[];
@@ -100,16 +101,8 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
           }),
         );
 
-        // Call the API endpoint instead of using the hook's testProvider function
-        const response = await fetch('/api/cicd/test-connection', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ provider }),
-        });
-
-        const result = await response.json();
+        // Call the server action directly instead of the API endpoint
+        const result = await testCICDProvider(provider);
 
         if (!result.success) {
           throw new Error(result.error || 'Failed to test connection');

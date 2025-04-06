@@ -13,6 +13,7 @@ import { CICDProvider } from '@/types/component/cicdComponentType';
 import { CICDFormDialogClient } from '..';
 
 import { CICDEvents } from './CICDEventListener';
+import { testCICDProvider } from '@/app/actions/cicdAction';
 
 interface CICDActionsClientProps {
   providerCount: number;
@@ -56,16 +57,8 @@ export default function CICDActionsClient({
         }),
       );
 
-      // Call the API endpoint to test the connection
-      const response = await fetch('/api/cicd/test-connection', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ provider }),
-      });
-
-      const result = await response.json();
+      // Call the server action directly instead of the API endpoint
+      const result = await testCICDProvider(provider);
 
       if (!result.success) {
         console.warn(

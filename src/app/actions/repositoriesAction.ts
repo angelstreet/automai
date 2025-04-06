@@ -296,3 +296,63 @@ export async function disconnectRepository(
     return { success: false, error: error.message || 'Failed to disconnect repository' };
   }
 }
+
+/**
+ * Test repository access
+ * @param data Repository data to test
+ */
+export async function testGitRepository(data: {
+  url: string;
+  token?: string;
+}): Promise<{ success: boolean; error?: string; message?: string }> {
+  try {
+    console.log('[@action:repositories:testGitRepository] Testing repository access', {
+      url: data.url,
+    });
+
+    // Get authenticated user for logging purposes
+    const currentUser = await getUser();
+    const userId = currentUser?.id || 'anonymous';
+
+    console.log(
+      `[@action:repositories:testGitRepository] User ${userId} testing repository URL: ${data.url}`,
+    );
+
+    // Import gitService directly
+    const gitService = await import('@/lib/services/gitService');
+
+    // Test the repository access using gitService
+    const result = await gitService.testGitRepositoryAccess({
+      url: data.url,
+      token: data.token,
+    });
+
+    if (result.success) {
+      console.log('[@action:repositories:testGitRepository] Repository is accessible', {
+        url: data.url,
+      });
+      return {
+        success: true,
+        message: 'Repository is accessible',
+      };
+    } else {
+      console.log('[@action:repositories:testGitRepository] Repository is not accessible', {
+        url: data.url,
+        error: result.error,
+      });
+      return {
+        success: false,
+        error: result.error || 'Repository is not accessible',
+      };
+    }
+  } catch (error: any) {
+    console.error('[@action:repositories:testGitRepository] Error testing repository access', {
+      url: data.url,
+      error: error.message,
+    });
+    return {
+      success: false,
+      error: error.message || 'An unexpected error occurred',
+    };
+  }
+}

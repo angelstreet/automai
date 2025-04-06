@@ -309,6 +309,8 @@
     "delete_failed": "Failed to delete repository",
     "confirm_delete_repo": "Delete Repository?",
     "delete_repo_warning": "This action cannot be undone. The repository will be removed from your account but will remain in the Git provider.",
+    "delete_repository": "Delete Repository",
+    "delete_repository_confirmation": "Are you sure you want to delete this repository?",
     "quick_clone": "Quick Clone",
     "import_from_git": "Import from Git",
     "enter_repo_url": "Enter repository URL",

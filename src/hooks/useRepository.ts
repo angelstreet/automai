@@ -7,6 +7,7 @@ import {
   getRepository,
   connectRepository as connectRepositoryAction,
   disconnectRepository as disconnectRepositoryAction,
+  testGitRepository as testGitRepositoryAction,
 } from '@/app/actions/repositoriesAction';
 import { useToast } from '@/components/shadcn/use-toast';
 import * as gitService from '@/lib/services/gitService';
@@ -146,20 +147,13 @@ export function useRepository() {
     }
 
     try {
-      // Call the API endpoint
-      const response = await fetch('/api/repositories/test-connection', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
+      console.log('[useRepository] Testing repository URL:', data.url);
+
+      // Call the server action directly instead of the API endpoint
+      const result = await testGitRepositoryAction({
+        url: data.url,
+        token: data.token || '',
       });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to validate repository URL');
-      }
 
       // Show relevant toast based on result
       if (result.success) {

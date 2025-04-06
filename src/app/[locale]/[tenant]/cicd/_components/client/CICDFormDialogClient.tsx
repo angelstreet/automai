@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 
-import { createCICDProvider } from '@/app/actions/cicdAction';
+import { createCICDProvider, testCICDProvider } from '@/app/actions/cicdAction';
 import { Button } from '@/components/shadcn/button';
 import {
   Form,
@@ -111,31 +111,31 @@ const CICDFormDialogClient: React.FC<CICDFormDialogProps> = ({
 
   // Test the connection to the CI/CD provider
   const handleTestConnection = async () => {
-    // Don't proceed if required fields are missing
-    if (!canTestConnection()) {
-      setTestMessage({
-        success: false,
-        message:
-          'Please fill in all required fields: Display Name, Server URL, Port, and authentication credentials.',
-      });
-      return;
-    }
+    if (!canTestConnection()) return;
 
     setIsTesting(true);
     setTestMessage(null);
 
     try {
-      // Get values from the form
       const values = form.getValues();
 
       // Prepare credentials based on auth type
-      const credentials: any = {};
-      if (values.auth_type === 'token') {
-        credentials.token = values.token;
-        credentials.username = values.username;
-      } else if (values.auth_type === 'basic_auth') {
-        credentials.username = values.username;
-        credentials.password = values.password;
+      let credentials: any = {};
+
+      switch (values.auth_type) {
+        case 'basic_auth':
+          credentials = {
+            username: values.username,
+            password: values.password,
+          };
+          break;
+        case 'token':
+          credentials = {
+            username: values.username,
+            token: values.token,
+          };
+          break;
+        // Add other auth types as needed
       }
 
       // Create provider data object with port
@@ -150,16 +150,8 @@ const CICDFormDialogClient: React.FC<CICDFormDialogProps> = ({
         },
       };
 
-      // Call the API endpoint instead of direct server action
-      const response = await fetch('/api/cicd/test-connection', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ provider: providerData }),
-      });
-
-      const result = await response.json();
+      // Call the server action directly instead of API endpoint
+      const result = await testCICDProvider(providerData);
 
       if (result.success) {
         setTestMessage({
