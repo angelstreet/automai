@@ -142,7 +142,7 @@ export function DeploymentWizardStep5Client({
                 }
               }}
             />
-            <span className="text-xs text-gray-500">{t('wizard_jenkins_view')}</span>
+            <span className="text-xs text-gray-500">{t('wizard_cicd_view')}</span>
           </div>
         </div>
 
