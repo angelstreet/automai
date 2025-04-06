@@ -1,5 +1,5 @@
 'use client';
-import { Edit, Trash, AlertCircle, RefreshCcw, MoreHorizontal, PlusCircle } from 'lucide-react';
+import { Trash, AlertCircle, RefreshCcw, MoreHorizontal, PlusCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React, { useState, useCallback } from 'react';
 
@@ -58,33 +58,14 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
   const providers = hookProviders.length > 0 ? hookProviders : initialProviders;
   const isLoading = isLoadingProviders && initialProviders.length === 0;
 
-  const [selectedProvider, setSelectedProvider] = useState<CICDProvider | null>(null);
+  const [_selectedProvider, setSelectedProvider] = useState<CICDProvider | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [testingProviders, setTestingProviders] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
   const t = useTranslations('cicd');
   const c = useTranslations('common');
-
-  // Memoize dialog handlers
-  const handleAddEditProvider = useCallback((provider?: CICDProvider) => {
-    if (provider) {
-      setSelectedProvider(provider);
-      setIsEditing(true);
-    } else {
-      setSelectedProvider(null);
-      setIsEditing(false);
-    }
-    setIsAddEditDialogOpen(true);
-  }, []);
-
-  // Memoize delete handler
-  const handleDeleteClick = useCallback((provider: CICDProvider) => {
-    setSelectedProvider(provider);
-    setIsDeleteDialogOpen(true);
-  }, []);
 
   // Memoize test provider handler
   const handleTestProvider = useCallback(
@@ -140,6 +121,12 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
     [toast, c],
   );
 
+  // Memoize delete handler
+  const handleDeleteClick = useCallback((provider: CICDProvider) => {
+    setSelectedProvider(provider);
+    setIsDeleteDialogOpen(true);
+  }, []);
+
   // Memoize dialog completion handler
   const handleDialogComplete = useCallback(() => {
     setIsAddEditDialogOpen(false);
@@ -147,12 +134,12 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
 
   // Memoize delete confirmation handler
   const handleConfirmDelete = useCallback(async () => {
-    if (!selectedProvider) return;
+    if (!_selectedProvider) return;
 
     try {
       setIsProcessing(true);
       // Use the hook's deleteProvider function
-      await deleteProvider(selectedProvider.id);
+      await deleteProvider(_selectedProvider.id);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -163,7 +150,7 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
       setIsProcessing(false);
       setIsDeleteDialogOpen(false);
     }
-  }, [selectedProvider, toast, deleteProvider]);
+  }, [_selectedProvider, toast, deleteProvider]);
 
   // Memoize provider badge color function
   const getProviderBadgeColor = useCallback((type: string) => {
@@ -275,10 +262,6 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
                           {testingProviders[provider.id] ? c('testing') : c('test_connection')}
                         </span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleAddEditProvider(provider)}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        <span>{c('edit')}</span>
-                      </DropdownMenuItem>
                       <DropdownMenuItem
                         className="text-destructive focus:text-destructive"
                         onClick={() => handleDeleteClick(provider)}
@@ -302,9 +285,9 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
           <AlertDialogHeader>
             <AlertDialogTitle>{t('delete_provider_title')}</AlertDialogTitle>
             <AlertDialogDescription>
-              {selectedProvider &&
+              {_selectedProvider &&
                 t('delete_provider_confirm', {
-                  name: selectedProvider.name,
+                  name: _selectedProvider.name,
                 })}
               <br />
               <br />
@@ -330,7 +313,7 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
       <Dialog open={isAddEditDialogOpen} onOpenChange={setIsAddEditDialogOpen}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>{isEditing ? t('edit_title') : t('add_title')}</DialogTitle>
+            <DialogTitle>{t('add_title')}</DialogTitle>
           </DialogHeader>
           <CICDFormDialogClient onComplete={handleDialogComplete} isInDialog={true} />
         </DialogContent>
