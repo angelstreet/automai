@@ -101,14 +101,28 @@ const DeploymentWizardStep1Client: React.FC<DeploymentWizardStep1ClientProps> = 
           <label htmlFor="branch" className="block text-sm font-medium mb-0.5">
             Branch
           </label>
-          <Input
-            id="branch"
-            name="branch"
-            value={branch}
-            onChange={onInputChange}
-            placeholder="main"
-            className="w-full"
-          />
+          <div className="relative">
+            <Input
+              id="branch"
+              name="branch"
+              value={branch}
+              onChange={onInputChange}
+              placeholder="main"
+              className={`w-full ${repositoryId ? 'pr-[120px]' : ''}`}
+            />
+            {repositoryId && (
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 bg-transparent">
+                <span className="text-xs text-muted-foreground px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded">
+                  Default branch
+                </span>
+              </div>
+            )}
+          </div>
+          {repositoryId && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Using default branch from the selected repository
+            </p>
+          )}
         </div>
       </div>
 

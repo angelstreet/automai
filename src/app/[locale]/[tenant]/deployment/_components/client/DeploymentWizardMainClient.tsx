@@ -293,6 +293,15 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
       }
     }, [isLoadingScripts]);
 
+    // Log when branch changes to help debug
+    useEffect(() => {
+      if (deploymentData.repositoryId && deploymentData.branch) {
+        console.log(
+          `[DeploymentWizard] Branch updated for repo ${deploymentData.repositoryId}: ${deploymentData.branch}`,
+        );
+      }
+    }, [deploymentData.repositoryId, deploymentData.branch]);
+
     const handleInputChange = (
       e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
     ) => {
@@ -300,16 +309,25 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
 
       // Special handling for repositoryId to log selection
       if (name === 'repositoryId') {
-        // Avoid unnecessary log noise
+        // If repositoryId is empty or changed, update related fields
         if (value) {
+          // Find the repository in our array
           const selectedRepo = repositories.find((r) => r.id === value) as Repository;
 
           if (selectedRepo) {
-            // Store the full repository object
+            // Get the default branch from repository or fall back to 'main'
+            const defaultBranch = selectedRepo.defaultBranch || 'main';
+
+            console.log(
+              `[DeploymentWizard] Selected repository: ${selectedRepo.name}, default branch: ${defaultBranch}`,
+            );
+
+            // Update multiple fields at once
             setDeploymentData((prev) => ({
               ...prev,
               repositoryId: value,
               selectedRepository: selectedRepo as any, // Cast to any to avoid type conflicts
+              branch: defaultBranch, // Always set the branch to the repository's default branch
             }));
 
             // Early return since we've already updated the state
@@ -322,6 +340,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           ...prev,
           repositoryId: value,
           selectedRepository: null,
+          branch: 'main', // Reset to default
         }));
 
         return;
