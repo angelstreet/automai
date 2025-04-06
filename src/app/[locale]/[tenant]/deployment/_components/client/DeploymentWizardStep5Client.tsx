@@ -38,7 +38,7 @@ export function DeploymentWizardStep5Client({
   const c = useTranslations('common');
 
   // State for views and config
-  const [showPipelineView, setShowPipelineView] = useState(!!data.cicd_provider_id);
+  const [showPipelineView, setShowPipelineView] = useState(false); // Always default to summary view
 
   // CI/CD functionality from the hook
   const {
@@ -59,8 +59,16 @@ export function DeploymentWizardStep5Client({
 
   // Get the selected CI/CD provider
   const selectedProvider = useMemo(() => {
+    // Add debugging to trace why provider might be null
+    console.log('[DeploymentWizardStep5] cicd_provider_id:', data.cicd_provider_id);
+    console.log('[DeploymentWizardStep5] cicdProviders:', cicdProviders);
+
     if (!data.cicd_provider_id || !cicdProviders.length) return null;
-    return cicdProviders.find((p) => p.id === data.cicd_provider_id) || null;
+
+    const provider = cicdProviders.find((p) => p.id === data.cicd_provider_id) || null;
+    console.log('[DeploymentWizardStep5] found provider:', provider);
+
+    return provider;
   }, [data.cicd_provider_id, cicdProviders]);
 
   // Get provider type (jenkins, github, gitlab, circleci)
@@ -465,26 +473,34 @@ export function DeploymentWizardStep5Client({
                 </h5>
                 <div className="bg-background rounded-md p-3 border border-gray-200 dark:border-gray-700">
                   <div className="text-xs text-foreground">
-                    <div className="space-y-1">
-                      <div className="flex items-start">
-                        <span className="font-medium mr-2">{c('common.name') || 'Name'}:</span>
-                        <span>{selectedProvider!.name}</span>
-                      </div>
-
-                      <div className="flex items-start">
-                        <span className="font-medium mr-2">{c('common.type') || 'Type'}:</span>
-                        <span>{providerType.charAt(0).toUpperCase() + providerType.slice(1)}</span>
-                      </div>
-
-                      {providerConnection?.url && (
+                    {showPipelineView && selectedProvider ? (
+                      <div className="space-y-1">
                         <div className="flex items-start">
-                          <span className="font-medium mr-2">{c('common.url') || 'URL'}:</span>
-                          <span className="text-gray-600 dark:text-gray-400 break-all">
-                            {providerConnection.url}
+                          <span className="font-medium mr-2">{c('name') || 'Name'}:</span>
+                          <span>{selectedProvider.name}</span>
+                        </div>
+
+                        <div className="flex items-start">
+                          <span className="font-medium mr-2">{c('type') || 'Type'}:</span>
+                          <span>
+                            {providerType.charAt(0).toUpperCase() + providerType.slice(1)}
                           </span>
                         </div>
-                      )}
-                    </div>
+
+                        {providerConnection?.url && (
+                          <div className="flex items-start">
+                            <span className="font-medium mr-2">{c('url') || 'URL'}:</span>
+                            <span className="text-gray-600 dark:text-gray-400 break-all">
+                              {providerConnection.url}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {t('wizard_no_cicd_provider') || 'No CI/CD provider selected'}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
