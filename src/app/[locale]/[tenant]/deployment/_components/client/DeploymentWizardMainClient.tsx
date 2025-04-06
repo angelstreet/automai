@@ -112,33 +112,30 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
       if (step === 2 && deploymentData.repositoryId && !isLoadingRef.current) {
         // Track if the effect was cleaned up
         let isMounted = true;
-        console.log('Test1');
 
-        // Set loading ref to true
+        // Set loading state FIRST before any other operations
         isLoadingRef.current = true;
-
-        // Set loading state
         setIsLoadingScripts(true);
-        console.log('[DeploymentWizard] Setting loading state to true');
+        setScriptsError(null);
+
+        console.log('[DeploymentWizard] Starting to load scripts for repository');
 
         const loadScripts = async () => {
           try {
-            setScriptsError(null);
-
             // Get repository information from the selected repository
             const selectedRepo = deploymentData.selectedRepository as Repository & {
               providerId?: string;
               url?: string;
               provider_id?: string;
             };
-            console.log('Test2');
+
             if (!selectedRepo) {
               throw new Error('No repository selected');
             }
-            console.log('Test3');
+
             // Use either providerId or provider_id from the repository
             const providerId = selectedRepo.provider_id;
-            console.log('Test4');
+
             if (!providerId) {
               throw new Error('Missing provider ID for the selected repository');
             }
@@ -185,9 +182,13 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
                 `[DeploymentWizard] After filtering: ${filteredFiles.length} script files`,
               );
 
+              // Prepare final state updates - we'll apply them all at once
+              let newScripts: any[] = [];
+              let newError: string | null = null;
+
               if (filteredFiles.length > 0) {
                 // Transform to script format
-                const scripts = filteredFiles.map((file, index) => ({
+                newScripts = filteredFiles.map((file, index) => ({
                   id: `script-${index}`,
                   name: file.name,
                   path: file.path,
@@ -196,28 +197,22 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
                   type: file.name.endsWith('.py') ? 'python' : 'shell',
                 }));
 
-                console.log(`[DeploymentWizard] Successfully found ${scripts.length} script files`);
-
-                if (isMounted) {
-                  setRepositoryScripts(scripts);
-                  // Reset loading state after successful script load
-                  setIsLoadingScripts(false);
-                  isLoadingRef.current = false;
-                  console.log('[DeploymentWizard] Reset loading state after finding scripts');
-                }
+                console.log(
+                  `[DeploymentWizard] Successfully found ${newScripts.length} script files`,
+                );
               } else {
                 console.log(`[DeploymentWizard] No script files found`);
-                if (isMounted) {
-                  setRepositoryScripts([]);
-                  // Add an informative message when no script files are found
-                  setScriptsError(
-                    'No Python (.py) or Shell (.sh) scripts found in this repository.',
-                  );
-                  // Reset loading state when no scripts are found
-                  setIsLoadingScripts(false);
-                  isLoadingRef.current = false;
-                  console.log('[DeploymentWizard] Reset loading state when no scripts found');
-                }
+                newError = 'No Python (.py) or Shell (.sh) scripts found in this repository.';
+              }
+
+              // Only update state if component is still mounted
+              if (isMounted) {
+                // Batch all state updates together to prevent multiple re-renders
+                setRepositoryScripts(newScripts);
+                setScriptsError(newError);
+                setIsLoadingScripts(false);
+                isLoadingRef.current = false;
+                console.log('[DeploymentWizard] Script loading complete');
               }
             } catch (fetchError: any) {
               console.error('[DeploymentWizard] Error fetching repository contents:', fetchError);
@@ -228,23 +223,23 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
                     ? 'Request timed out. Please try again or select a different repository.'
                     : fetchError.message || 'Failed to retrieve repository files';
 
-                setScriptsError(errorMessage);
+                // Batch all state updates to prevent multiple re-renders
                 setRepositoryScripts([]);
+                setScriptsError(errorMessage);
                 setIsLoadingScripts(false);
                 isLoadingRef.current = false;
-                console.log('[DeploymentWizard] Reset loading state after error');
+                console.log('[DeploymentWizard] Error in script loading');
               }
             }
           } catch (error) {
             console.error('[DeploymentWizard] Error in script loading process:', error);
             if (isMounted) {
-              setScriptsError(error instanceof Error ? error.message : 'Failed to load scripts');
+              // Batch all state updates to prevent multiple re-renders
               setRepositoryScripts([]);
-
-              // Reset loading state
+              setScriptsError(error instanceof Error ? error.message : 'Failed to load scripts');
               setIsLoadingScripts(false);
               isLoadingRef.current = false;
-              console.log('[DeploymentWizard] Reset loading state after error');
+              console.log('[DeploymentWizard] Error in script loading');
             }
           }
         };
@@ -259,15 +254,14 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           if (isLoadingRef.current) {
             isLoadingRef.current = false;
             setIsLoadingScripts(false);
-            console.log('[DeploymentWizard] Reset loading state in cleanup');
           }
         };
       }
     }, [
       step,
       deploymentData.repositoryId,
-      deploymentData.selectedRepository,
       deploymentData.branch,
+      deploymentData.selectedRepository,
     ]);
 
     // Update the step change effect to use the ref

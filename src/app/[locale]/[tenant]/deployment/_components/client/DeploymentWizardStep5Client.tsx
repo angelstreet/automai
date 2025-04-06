@@ -38,6 +38,7 @@ export function DeploymentWizardStep5Client({
   cicdProviders,
 }: DeploymentWizardStep5ClientProps) {
   const t = useTranslations('deployment');
+  const c = useTranslations('common');
   const [autoStart, setAutoStart] = useState(data.autoStart || false);
 
   // Handle provider selection
@@ -81,18 +82,18 @@ export function DeploymentWizardStep5Client({
       <div className="flex items-center space-x-2">
         <Switch id="auto-start" checked={autoStart} onCheckedChange={handleAutoStartToggle} />
         <FormLabel htmlFor="auto-start" className="cursor-pointer">
-          {t('autoStart')}
+          {t('wizard_auto_start')}
         </FormLabel>
       </div>
 
       <div className="flex justify-between pt-6">
         <Button variant="outline" onClick={onBack} disabled={isPending}>
-          {t('back')}
+          {c('back')}
         </Button>
 
         <div className="space-x-2">
           <Button variant="ghost" onClick={onCancel} disabled={isPending}>
-            {t('cancel')}
+            {c('cancel')}
           </Button>
 
           <Button onClick={onSubmit} disabled={isPending}>
