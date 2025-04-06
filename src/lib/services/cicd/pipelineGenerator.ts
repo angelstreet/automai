@@ -97,14 +97,7 @@ export class PipelineGenerator {
             
             echo "Connecting to ${host.name} (${host.ip})"
             
-            // Create a temporary SSH key file if we have a key
-            def hasKey = ${!!host.key}
-            if (hasKey) {
-              writeFile file: 'temp_key.pem', text: '''${host.key || ''}'''
-              sh 'chmod 600 temp_key.pem'
-            }
-            
-            def sshOptions = hasKey ? "-i temp_key.pem -o StrictHostKeyChecking=no" : "-o StrictHostKeyChecking=no"
+            def sshOptions = "-o StrictHostKeyChecking=no"
             def sshPass = "sshpass -p '$PASSWORD'"
             
             try {
@@ -136,10 +129,7 @@ export class PipelineGenerator {
                 })
                 .join('\n              ')}
             } finally {
-              // Clean up key file if created
-              if (hasKey) {
-                sh 'rm -f temp_key.pem'
-              }
+              // No key file to clean up
             }
           }`;
 
