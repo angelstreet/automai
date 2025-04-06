@@ -465,34 +465,26 @@ export function DeploymentWizardStep5Client({
                 </h5>
                 <div className="bg-background rounded-md p-3 border border-gray-200 dark:border-gray-700">
                   <div className="text-xs text-foreground">
-                    {selectedProvider ? (
-                      <div className="space-y-1">
-                        <div className="flex items-start">
-                          <span className="font-medium mr-2">{c('name') || 'Name'}:</span>
-                          <span>{selectedProvider.name}</span>
-                        </div>
+                    <div className="space-y-1">
+                      <div className="flex items-start">
+                        <span className="font-medium mr-2">{c('common.name') || 'Name'}:</span>
+                        <span>{selectedProvider!.name}</span>
+                      </div>
 
+                      <div className="flex items-start">
+                        <span className="font-medium mr-2">{c('common.type') || 'Type'}:</span>
+                        <span>{providerType.charAt(0).toUpperCase() + providerType.slice(1)}</span>
+                      </div>
+
+                      {providerConnection?.url && (
                         <div className="flex items-start">
-                          <span className="font-medium mr-2">{c('type') || 'Type'}:</span>
-                          <span>
-                            {providerType.charAt(0).toUpperCase() + providerType.slice(1)}
+                          <span className="font-medium mr-2">{c('common.url') || 'URL'}:</span>
+                          <span className="text-gray-600 dark:text-gray-400 break-all">
+                            {providerConnection.url}
                           </span>
                         </div>
-
-                        {providerConnection?.url && (
-                          <div className="flex items-start">
-                            <span className="font-medium mr-2">{c('url') || 'URL'}:</span>
-                            <span className="text-gray-600 dark:text-gray-400 break-all">
-                              {providerConnection.url}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {t('wizard_no_cicd_provider') || 'No CI/CD provider selected'}
-                      </p>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
