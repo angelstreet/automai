@@ -98,6 +98,16 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
     const [isLoadingScripts, setIsLoadingScripts] = useState(false);
     const [scriptsError, setScriptsError] = useState<string | null>(null);
 
+    // Set default CI/CD provider when available
+    useEffect(() => {
+      if (cicdProviders.length > 0 && !deploymentData.cicd_provider_id) {
+        setDeploymentData((prev) => ({
+          ...prev,
+          cicd_provider_id: cicdProviders[0].id,
+        }));
+      }
+    }, [cicdProviders, deploymentData.cicd_provider_id]);
+
     // Add a ref to track loading state outside of the effect dependency cycle
     const isLoadingRef = useRef(false);
 
@@ -663,8 +673,9 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               onPrevStep={handlePrevStep}
               onNextStep={handleNextStep}
               isStepValid={
-                deploymentData.schedule === 'now' ||
-                (deploymentData.schedule === 'later' && deploymentData.scheduledTime !== '')
+                (deploymentData.schedule === 'now' ||
+                  (deploymentData.schedule === 'later' && deploymentData.scheduledTime !== '')) &&
+                !!deploymentData.cicd_provider_id
               }
             />
           )}

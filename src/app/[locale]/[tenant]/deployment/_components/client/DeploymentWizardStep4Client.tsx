@@ -174,11 +174,13 @@ const DeploymentWizardStep4Client: React.FC<DeploymentWizardStep4Props> = ({
             <select
               id="cicd_provider_id"
               name="cicd_provider_id"
-              value={cicd_provider_id || ''}
+              value={cicd_provider_id || (cicdProviders.length > 0 ? cicdProviders[0].id : '')}
               onChange={onInputChange}
               className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
             >
-              <option value="">{t('wizard_select_provider') || 'Select provider'}</option>
+              {cicdProviders.length === 0 ? (
+                <option value="">{t('wizard_select_provider') || 'Select provider'}</option>
+              ) : null}
               {cicdProviders.map((provider) => (
                 <option key={provider.id} value={provider.id}>
                   {provider.name} ({provider.type})
