@@ -89,13 +89,32 @@ export function DeploymentWizardStep5Client({
   const providerConnection = useMemo(() => {
     if (!selectedProvider) return null;
 
-    return {
-      url: (selectedProvider as any).url || '',
+    // Get proper URL with port if available
+    let url = (selectedProvider as any).url || '';
+    const port = (selectedProvider as any).port || (selectedProvider as any).config?.port;
+
+    // If we have a port and the URL doesn't already include it, add it
+    if (port && !url.includes(':' + port)) {
+      console.log(`[DeploymentWizardStep5] Adding port ${port} to URL ${url}`);
+      url = `${url}:${port}`;
+    }
+
+    const connection = {
+      url: url,
       token: (selectedProvider as any).token || '',
       username: (selectedProvider as any).username || '',
       password: (selectedProvider as any).password || '',
       authType: (selectedProvider as any).auth_type || 'token',
     };
+
+    console.log('[DeploymentWizardStep5] Provider connection:', {
+      ...connection,
+      // Don't log full credentials
+      token: connection.token ? '***' : undefined,
+      password: connection.password ? '***' : undefined,
+    });
+
+    return connection;
   }, [selectedProvider]);
 
   // Handle toggle for pipeline integration
@@ -179,6 +198,12 @@ export function DeploymentWizardStep5Client({
     if (providerConnection) {
       additionalParams.CICD_PROVIDER_URL = providerConnection.url;
       additionalParams.CICD_PROVIDER_TYPE = providerType;
+
+      // Add port explicitly if it's available
+      const port = (selectedProvider as any).port || (selectedProvider as any).config?.port;
+      if (port) {
+        additionalParams.CICD_PROVIDER_PORT = port;
+      }
 
       // We'll need these for actual job creation in the server action
       // But they won't be included in the displayed pipeline code

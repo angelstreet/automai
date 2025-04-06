@@ -24,7 +24,37 @@ export class JenkinsProvider implements CICDProvider {
     );
 
     this.config = config;
-    this.baseUrl = config.url.endsWith('/') ? config.url : `${config.url}/`;
+
+    // Handle URL construction with proper port
+    let baseUrl = config.url;
+
+    // Check if port is specified directly or in the config object
+    const port = (config as any).port || (config as any).config?.port;
+
+    if (port && !baseUrl.includes(':')) {
+      console.log(`[@service:jenkins:initialize] Adding port ${port} to URL`);
+      try {
+        const urlObj = new URL(baseUrl);
+        // Only add port if it's not the default port for the protocol
+        if (
+          (urlObj.protocol === 'http:' && port !== 80) ||
+          (urlObj.protocol === 'https:' && port !== 443)
+        ) {
+          urlObj.port = port.toString();
+          baseUrl = urlObj.toString();
+        }
+      } catch (error: any) {
+        console.error(
+          `[@service:jenkins:initialize] Invalid URL format: ${baseUrl}, error: ${error.message}`,
+        );
+      }
+    }
+
+    // Log the URL we're using
+    console.log(`[@service:jenkins:initialize] Using Jenkins URL: ${baseUrl}`);
+
+    // Ensure URL ends with a slash
+    this.baseUrl = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
 
     // Set up authentication with better error handling
     if (!config.auth_type) {
@@ -395,36 +425,25 @@ export class JenkinsProvider implements CICDProvider {
       if (folderPath) {
         url += `job/${encodeURIComponent(folderPath)}/`;
       }
-      url += `createItem?name=${encodeURIComponent(jobName)}`;
 
-      // Generate a Jenkins pipeline script from the pipelineConfig
-      const pipelineScript = this.generatePipelineFromConfig(pipelineConfig);
+      url += 'createItem?name=' + encodeURIComponent(jobName);
 
-      // Create job XML definition for Jenkins pipeline
-      const jobXml = `<?xml version='1.1' encoding='UTF-8'?>
-<flow-definition plugin="workflow-job">
-  <description>${pipelineConfig.description || ''}</description>
-  <keepDependencies>false</keepDependencies>
-  <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps">
-    <script>${pipelineScript}</script>
-    <sandbox>true</sandbox>
-  </definition>
-  <disabled>false</disabled>
-</flow-definition>`;
+      // Create a Jenkins pipeline job config XML
+      const jobConfigXml = this.createPipelineJobConfig(pipelineConfig);
 
-      // Make the API request to create the job
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           Authorization: this.authHeader,
           'Content-Type': 'application/xml',
         },
-        body: jobXml,
+        body: jobConfigXml,
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
         console.error(
-          `[@service:jenkins:createJob] Failed to create job ${jobName}: ${response.status} ${response.statusText}`,
+          `[@service:jenkins:createJob] Error response: ${response.status} - ${errorText}`,
         );
         return {
           success: false,
@@ -432,106 +451,169 @@ export class JenkinsProvider implements CICDProvider {
         };
       }
 
-      // Get the job URL for confirmation
-      const jobUrl = `${this.baseUrl}job/${encodeURIComponent(jobName)}/`;
-      console.log(`[@service:jenkins:createJob] Job ${jobName} created successfully at ${jobUrl}`);
+      console.log(`[@service:jenkins:createJob] Job created successfully: ${jobName}`);
 
       return {
         success: true,
         data: jobName,
       };
     } catch (error: any) {
-      console.error(`[@service:jenkins:createJob] Error creating job ${jobName}:`, error);
+      console.error(`[@service:jenkins:createJob] Error:`, error);
       return {
         success: false,
-        error: error.message || `Failed to create Jenkins job ${jobName}`,
+        error: error.message || 'Failed to create Jenkins job',
       };
     }
   }
 
   /**
-   * Generate a Jenkins pipeline script from CICDPipelineConfig
+   * Delete a job
    */
-  private generatePipelineFromConfig(pipelineConfig: CICDPipelineConfig): string {
-    const { repository, stages, parameters } = pipelineConfig;
-    // Unused variables are prefixed with underscore
-    const _name = pipelineConfig.name;
-    const _description = pipelineConfig.description;
-    const _triggers = pipelineConfig.triggers;
+  async deleteJob(jobId: string): Promise<CICDResponse<boolean>> {
+    try {
+      console.log(`[@service:jenkins:deleteJob] Deleting job: ${jobId}`);
 
-    // Start building the pipeline script
-    let pipeline = `pipeline {
-  agent any
-  
-  parameters {
-    string(name: 'REPOSITORY_ID', defaultValue: '${repository.id}', description: 'Repository ID')`;
+      const url = `${this.baseUrl}job/${encodeURIComponent(jobId)}/doDelete`;
 
-    // Add any additional parameters
-    if (parameters && parameters.length > 0) {
-      for (const param of parameters) {
-        pipeline += `
-    string(name: '${param.name}', defaultValue: '${param.defaultValue || ''}', description: '${param.description || ''}')`;
-      }
-    }
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: this.authHeader,
+        },
+      });
 
-    pipeline += `
-  }
-  
-  stages {`;
-
-    // Add stages
-    for (const stage of stages) {
-      pipeline += `
-    stage('${stage.name}') {
-      steps {
-        script {`;
-
-      // Add steps for each stage
-      for (const step of stage.steps) {
-        if (step.type === 'shell' || step.type === 'bash') {
-          pipeline += `
-          sh '''${step.command}'''`;
-        } else if (step.type === 'powershell' || step.type === 'pwsh') {
-          pipeline += `
-          powershell '''${step.command}'''`;
-        } else {
-          // Default to shell command
-          pipeline += `
-          sh '${step.command}'`;
-        }
+      if (!response.ok) {
+        return {
+          success: false,
+          error: `Failed to delete Jenkins job: ${response.status} ${response.statusText}`,
+        };
       }
 
-      pipeline += `
-        }
-      }
-    }`;
+      return {
+        success: true,
+        data: true,
+      };
+    } catch (error: any) {
+      console.error(`[@service:jenkins:deleteJob] Error:`, error);
+      return {
+        success: false,
+        error: error.message || `Failed to delete Jenkins job ${jobId}`,
+      };
     }
-
-    // Close the stages and pipeline sections
-    pipeline += `
-  }
-  
-  post {
-    success {
-      echo 'Deployment successful'
-    }
-    failure {
-      echo 'Deployment failed'
-    }
-  }
-}`;
-
-    return pipeline;
   }
 
   /**
-   * Delete a job
+   * Create a Jenkins pipeline job configuration XML
    */
-  async deleteJob(_jobId: string, _folderPath?: string): Promise<CICDResponse<boolean>> {
-    // Implementation for deleting Jenkins jobs
-    return {
-      success: false,
-      error: 'Deleting Jenkins jobs is not yet implemented',
-    };
+  private createPipelineJobConfig(pipelineConfig: CICDPipelineConfig): string {
+    // Generate Jenkinsfile script from pipeline configuration
+    const scriptContent = this.generateJenkinsfileScript(pipelineConfig);
+
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<flow-definition plugin="workflow-job">
+  <description>${pipelineConfig.description || ''}</description>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <hudson.model.ParametersDefinitionProperty>
+      <parameterDefinitions>
+        ${this.generateParameterDefinitions(pipelineConfig.parameters || [])}
+      </parameterDefinitions>
+    </hudson.model.ParametersDefinitionProperty>
+  </properties>
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps">
+    <script>${scriptContent}</script>
+    <sandbox>true</sandbox>
+  </definition>
+  <triggers/>
+  <disabled>false</disabled>
+</flow-definition>`;
+  }
+
+  /**
+   * Generate Jenkinsfile script from pipeline configuration
+   */
+  private generateJenkinsfileScript(pipelineConfig: CICDPipelineConfig): string {
+    // Create a basic pipeline script from stages
+    let script = 'pipeline {\n';
+    script += '  agent any\n';
+
+    // Add parameters if any
+    if (pipelineConfig.parameters && pipelineConfig.parameters.length > 0) {
+      script += '  parameters {\n';
+      for (const param of pipelineConfig.parameters) {
+        if (param.type === 'string') {
+          script += `    string(name: '${param.name}', defaultValue: '${param.defaultValue || ''}', description: '${param.description || ''}')\n`;
+        } else if (param.type === 'boolean') {
+          script += `    booleanParam(name: '${param.name}', defaultValue: ${param.defaultValue || false}, description: '${param.description || ''}')\n`;
+        } else if (param.type === 'choice') {
+          const choices = (param.choices || []).map((c) => `'${c}'`).join(', ');
+          script += `    choice(name: '${param.name}', choices: [${choices}], description: '${param.description || ''}')\n`;
+        }
+      }
+      script += '  }\n';
+    }
+
+    // Add stages
+    script += '  stages {\n';
+    for (const stage of pipelineConfig.stages) {
+      script += `    stage('${stage.name}') {\n`;
+      script += '      steps {\n';
+
+      for (const step of stage.steps) {
+        if (step.type === 'command' && step.command) {
+          script += `        sh '${step.command}'\n`;
+        } else if (step.type === 'script' && step.script) {
+          script += `        sh '''\n${step.script}\n'''\n`;
+        }
+      }
+
+      script += '      }\n';
+      script += '    }\n';
+    }
+    script += '  }\n';
+
+    script += '}\n';
+    return script;
+  }
+
+  /**
+   * Generate parameter definitions XML for Jenkins config
+   */
+  private generateParameterDefinitions(parameters: any[]): string {
+    if (!parameters || parameters.length === 0) {
+      return '';
+    }
+
+    return parameters
+      .map((param) => {
+        // Map parameter types to Jenkins parameter XML
+        if (param.type === 'string' || param.type === 'text') {
+          return `<hudson.model.StringParameterDefinition>
+            <name>${param.name}</name>
+            <description>${param.description || ''}</description>
+            <defaultValue>${param.defaultValue || ''}</defaultValue>
+            <trim>false</trim>
+          </hudson.model.StringParameterDefinition>`;
+        } else if (param.type === 'boolean') {
+          return `<hudson.model.BooleanParameterDefinition>
+            <name>${param.name}</name>
+            <description>${param.description || ''}</description>
+            <defaultValue>${param.defaultValue || false}</defaultValue>
+          </hudson.model.BooleanParameterDefinition>`;
+        } else if (param.type === 'choice') {
+          const choices = (param.choices || []).join('\n');
+          return `<hudson.model.ChoiceParameterDefinition>
+            <name>${param.name}</name>
+            <description>${param.description || ''}</description>
+            <choices class="java.util.Arrays$ArrayList">
+              <a class="string-array">
+                <string>${choices}</string>
+              </a>
+            </choices>
+          </hudson.model.ChoiceParameterDefinition>`;
+        }
+        return '';
+      })
+      .join('\n');
   }
 }
