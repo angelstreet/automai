@@ -23,7 +23,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/shadcn/dialog';
 import { EnhancedRepositoryCardProps } from '@/types/context/repositoryContextType';
 
