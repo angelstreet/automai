@@ -25,6 +25,11 @@ export interface PipelineGeneratorOptions {
     name: string;
     ip: string;
     environment?: string;
+    username?: string; // SSH username
+    password?: string; // SSH password or token
+    key?: string; // SSH private key
+    token?: string; // Authentication token if applicable
+    is_windows?: boolean; // Whether host is a Windows machine
   }>;
 
   // Schedule information
@@ -79,16 +84,68 @@ export class PipelineGenerator {
       ),
     );
 
-    // Format script execution commands
-    const scriptCommands = scripts
-      .map((script) => {
-        const scriptPath = script.path || script.id;
-        const params = script.parameters ? ` ${script.parameters}` : '';
-        const executor = script.type === 'python' ? 'python' : 'sh';
+    // Generate host connection configurations using credentials from database
+    const hostConnectionConfigs = hosts
+      .map((host) => {
+        const isWindows = host.is_windows || host.environment?.toLowerCase() === 'windows';
+        const username = host.username || 'ubuntu'; // Default username
 
-        return `                    ${executor === 'python' ? 'sh "python ' : 'sh "'}${scriptPath}${params}"`;
+        const connectionConfig = `          // Connect to ${host.name} (${host.ip})
+          withCredentials([usernamePassword(credentialsId: 'host-credentials-${host.id}', usernameVariable: 'USER', passwordVariable: 'PASSWORD')]) {
+            def hostIP = "${host.ip}"
+            def hostUser = "$USER"
+            
+            echo "Connecting to ${host.name} (${host.ip})"
+            
+            // Create a temporary SSH key file if we have a key
+            def hasKey = ${!!host.key}
+            if (hasKey) {
+              writeFile file: 'temp_key.pem', text: '''${host.key || ''}'''
+              sh 'chmod 600 temp_key.pem'
+            }
+            
+            def sshOptions = hasKey ? "-i temp_key.pem -o StrictHostKeyChecking=no" : "-o StrictHostKeyChecking=no"
+            def sshPass = "sshpass -p '$PASSWORD'"
+            
+            try {
+              // Copy scripts to remote host
+              ${scripts
+                .map((script) => {
+                  const scriptPath = script.path || script.id;
+                  return `sh "$sshPass scp $sshOptions ${scriptPath} $hostUser@$hostIP:/tmp/"`;
+                })
+                .join('\n              ')}
+              
+              // Execute scripts on remote host
+              ${scripts
+                .map((script) => {
+                  const scriptPath = script.path || script.id;
+                  const params = script.parameters ? ` ${script.parameters}` : '';
+                  const executor = script.type === 'python' ? 'python' : 'sh';
+                  const remotePath = `/tmp/${scriptPath.split('/').pop()}`;
+
+                  if (isWindows) {
+                    return `sh "$sshPass ssh $sshOptions $hostUser@$hostIP powershell -Command \\"${
+                      executor === 'python' ? 'python' : '.'
+                    } ${remotePath}${params}\\""`;
+                  } else {
+                    return `sh "$sshPass ssh $sshOptions $hostUser@$hostIP '${
+                      executor === 'python' ? 'python' : 'bash'
+                    } ${remotePath}${params}'"`;
+                  }
+                })
+                .join('\n              ')}
+            } finally {
+              // Clean up key file if created
+              if (hasKey) {
+                sh 'rm -f temp_key.pem'
+              }
+            }
+          }`;
+
+        return connectionConfig;
       })
-      .join('\n');
+      .join('\n\n');
 
     // Build simplified pipeline
     return `pipeline {
@@ -112,18 +169,37 @@ export class PipelineGenerator {
             }
         }
         
+        stage('Install dependencies') {
+            steps {
+                sh 'apt-get update && apt-get install -y sshpass'
+            }
+        }
+        
         stage('Deploy to Hosts') {
             steps {
                 script {
                     def hosts = ${hostsJson}
+                    echo "Deploying to hosts: \${hosts}"
                     
-                    hosts.each { host ->
-                        echo "Deploying to \${host}"
-                    }
-                    
-${scriptCommands}
+${hostConnectionConfigs}
                 }
             }
+        }
+        
+        stage('Verification') {
+            steps {
+                echo "Verifying deployment of \${params.DEPLOYMENT_NAME}"
+                echo "Deployment completed"
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo "Deployment successful"
+        }
+        failure {
+            echo "Deployment failed"
         }
     }
 }`;
@@ -202,10 +278,75 @@ verify:
    * @param options Pipeline generation options
    * @returns CircleCI config as a string
    */
-  private static generateCircleCI(_options: PipelineGeneratorOptions): string {
-    // Basic CircleCI config implementation
-    return `# CircleCI configuration
+  private static generateCircleCI(options: PipelineGeneratorOptions): string {
+    const { repositoryUrl, branch, deploymentName, scripts, hosts, schedule, scheduledTime } =
+      options;
+
+    // Format host information for the pipeline
+    const hostsJson = JSON.stringify(
+      hosts.map(
+        (host) =>
+          `${host.name} (${host.ip})${host.environment ? ' #' + host.environment.toLowerCase() : ''}`,
+      ),
+    );
+
+    // Format script execution commands
+    const scriptCommands = scripts
+      .map((script) => {
+        const scriptPath = script.path || script.id;
+        const params = script.parameters ? ` ${script.parameters}` : '';
+        const executor = script.type === 'python' ? 'python' : 'sh';
+
+        if (executor === 'python') {
+          return `      - run:
+          name: "Execute ${scriptPath}"
+          command: python ${scriptPath}${params}`;
+        } else {
+          return `      - run:
+          name: "Execute ${scriptPath}"
+          command: sh ${scriptPath}${params}`;
+        }
+      })
+      .join('\n');
+
+    // Generate deployment commands for each host
+    const hostCommands =
+      hosts.length > 0
+        ? `      - run:
+          name: "Define Hosts"
+          command: |
+            HOSTS=(${hostsJson.replace(/"/g, '\\"')})
+            echo "Available deployment targets: \${HOSTS[@]}"
+            
+      - run:
+          name: "Deploy to Hosts"
+          command: |
+            for host in ${hosts.map((h) => `"${h.name} (${h.ip})"`).join(' ')}; do
+              echo "Deploying to $host"
+            done`
+        : '';
+
+    // Build the CircleCI config
+    return `# CircleCI configuration for ${deploymentName}
 version: 2.1
+
+parameters:
+  deployment-name:
+    type: string
+    default: "${deploymentName}"
+  repository-url:
+    type: string
+    default: "${repositoryUrl}"
+  branch:
+    type: string
+    default: "${branch}"
+${
+  schedule === 'later' && scheduledTime
+    ? `  scheduled-time:
+    type: string
+    default: "${scheduledTime}"`
+    : ''
+}
 
 jobs:
   deploy:
@@ -213,17 +354,45 @@ jobs:
       - image: cimg/base:2023.03
     steps:
       - checkout
+      
       - run:
-          name: "Deploy to hosts"
-          command: echo "Deploying to hosts"
+          name: "Setup Deployment"
+          command: |
+            echo "Setting up deployment << pipeline.parameters.deployment-name >>"
+            echo "Repository: << pipeline.parameters.repository-url >>"
+            echo "Branch: << pipeline.parameters.branch >>"
+${
+  schedule === 'later' && scheduledTime
+    ? `            echo "Scheduled time: << pipeline.parameters.scheduled-time >>"`
+    : ''
+}
+
+${hostCommands}
+
+${scriptCommands}
+      
       - run:
-          name: "Verify deployment"
-          command: echo "Verifying deployment"
+          name: "Verify Deployment"
+          command: |
+            echo "Verifying deployment"
+            echo "Deployment completed successfully"
 
 workflows:
   version: 2
   deployment:
     jobs:
-      - deploy`;
+      - deploy${
+        schedule === 'later'
+          ? `
+    # Scheduled execution can be configured here
+    triggers:
+      - schedule:
+          cron: "${scheduledTime ? '0 0 * * *' : '0 0 * * *'}" # Default daily at midnight
+          filters:
+            branches:
+              only:
+                - ${branch}`
+          : ''
+      }`;
   }
 }

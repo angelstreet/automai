@@ -77,7 +77,8 @@
     "close": "Close",
     "connection": "Connection",
     "ip": "IP",
-    "custom": "Custom"
+    "custom": "Custom",
+    "url": "URL"
   },
   "auth": {
     "signin_title": "Sign In",
@@ -401,7 +402,6 @@
     "edit_title": "Edit CI/CD Provider",
     "none_title": "No CI/CD Providers",
     "none_desc": "Add a CI/CD provider to start creating deployments",
-    "provider_url": "URL",
     "provider_auth_type": "Auth Type",
     "delete_provider_title": "Delete CI/CD Provider",
     "delete_provider_confirm": "Are you sure you want to delete ? This action cannot be undone and will remove all access to this provider.",

@@ -38,7 +38,7 @@ export function DeploymentWizardStep5Client({
   const c = useTranslations('common');
 
   // State for views and config
-  const [showJenkinsView, setShowJenkinsView] = useState(!!data.cicd_provider_id);
+  const [showPipelineView, setShowPipelineView] = useState(!!data.cicd_provider_id);
 
   // CI/CD functionality from the hook
   const {
@@ -57,31 +57,75 @@ export function DeploymentWizardStep5Client({
   const [_isLoadingJobDetails, _setIsLoadingJobDetails] = useState(false);
   const [_jobDetailsError, _setJobDetailsError] = useState<string | null>(null);
 
-  // Handle toggle for Jenkins integration
-  const handleJenkinsToggle = (checked: boolean) => {
+  // Get the selected CI/CD provider
+  const selectedProvider = useMemo(() => {
+    if (!data.cicd_provider_id || !cicdProviders.length) return null;
+    return cicdProviders.find((p) => p.id === data.cicd_provider_id) || null;
+  }, [data.cicd_provider_id, cicdProviders]);
+
+  // Get provider type (jenkins, github, gitlab, circleci)
+  const providerType = useMemo(() => {
+    if (!selectedProvider) return 'jenkins'; // Default fallback
+    const type = selectedProvider.type?.toLowerCase() || '';
+
+    // Map provider types to the ones supported by PipelineGenerator
+    if (type.includes('jenkins')) return 'jenkins';
+    if (type.includes('github')) return 'github';
+    if (type.includes('gitlab')) return 'gitlab';
+    if (type.includes('circle')) return 'circleci';
+
+    return 'jenkins'; // Default fallback
+  }, [selectedProvider]);
+
+  // Extract CI/CD provider connection details
+  const providerConnection = useMemo(() => {
+    if (!selectedProvider) return null;
+
+    return {
+      url: (selectedProvider as any).url || '',
+      token: (selectedProvider as any).token || '',
+      username: (selectedProvider as any).username || '',
+      password: (selectedProvider as any).password || '',
+      authType: (selectedProvider as any).auth_type || 'token',
+    };
+  }, [selectedProvider]);
+
+  // Handle toggle for pipeline integration
+  const handlePipelineToggle = (checked: boolean) => {
     onUpdateData({
       cicd_provider_id: checked ? data.cicd_provider_id || cicdProviders[0]?.id || '' : '',
       jenkinsConfig: checked ? data.jenkinsConfig : undefined,
     });
   };
 
-  // Handle provider selection
-  const _handleProviderChange = (providerId: string) => {
-    const _provider = cicdProviders.find((p) => p.id === providerId);
+  // Update provider details before submission
+  const handleSubmit = (e: React.MouseEvent) => {
+    e.preventDefault();
 
-    onUpdateData({
-      cicd_provider_id: providerId,
-      jenkinsConfig: {
-        ...data.jenkinsConfig,
-        enabled: true,
-        provider_id: providerId,
-        jobId: undefined, // Reset job when provider changes
-      },
-    });
+    // Since we can't directly modify the DeploymentData structure,
+    // we'll ensure the cicd_provider_id is correctly set
+    if (selectedProvider) {
+      onUpdateData({
+        cicd_provider_id: selectedProvider.id,
+      });
+    }
+
+    // Call the original submit function
+    if (typeof onSubmit === 'function') {
+      if ('length' in onSubmit && onSubmit.length === 0) {
+        // It's a () => void function
+        (onSubmit as () => void)();
+      } else {
+        // It's a FormEventHandler
+        (onSubmit as React.FormEventHandler<HTMLFormElement>)(
+          e as unknown as React.FormEvent<HTMLFormElement>,
+        );
+      }
+    }
   };
 
-  // Generate Jenkins pipeline
-  const jenkinsCode = useMemo(() => {
+  // Generate pipeline code based on provider type
+  const pipelineCode = useMemo(() => {
     if (!data) return '';
 
     // Get scripts details from the scriptIds
@@ -102,6 +146,10 @@ export function DeploymentWizardStep5Client({
         name: host.name,
         ip: host.ip,
         environment: host.environment || 'Production',
+        username: (host as any).username,
+        password: (host as any).password,
+        key: (host as any).key,
+        is_windows: (host as any).is_windows,
       }));
 
     // Use actual repository URL if available or construct it from repositoryId
@@ -110,39 +158,77 @@ export function DeploymentWizardStep5Client({
       (data.repositoryId ? `https://github.com/${data.repositoryId}.git` : '');
     const branch = data.branch || 'main';
 
-    // Generate pipeline using the new service
-    return PipelineGenerator.generate('jenkins', {
+    // Create additionalParams with basic deployment info
+    const additionalParams: Record<string, any> = {
+      DEPLOYMENT_NAME: data.name || 'Deployment',
+      REPOSITORY_URL: repoUrl,
+      BRANCH: branch,
+      REPOSITORY: data.repositoryId || '',
+      DESCRIPTION: data.description || '',
+    };
+
+    // Add CI/CD provider connection details to additionalParams
+    if (providerConnection) {
+      additionalParams.CICD_PROVIDER_URL = providerConnection.url;
+      additionalParams.CICD_PROVIDER_TYPE = providerType;
+
+      // We'll need these for actual job creation in the server action
+      // But they won't be included in the displayed pipeline code
+      additionalParams.CICD_PROVIDER_ID = selectedProvider?.id;
+      additionalParams.CICD_PROVIDER_TOKEN = providerConnection.token;
+      additionalParams.CICD_PROVIDER_USERNAME = providerConnection.username;
+      additionalParams.CICD_PROVIDER_PASSWORD = providerConnection.password;
+      additionalParams.CICD_PROVIDER_AUTH_TYPE = providerConnection.authType;
+    }
+
+    // Log the provider info for debugging (will be removed in production)
+    console.log(
+      '[PipelineGenerator] Using provider:',
+      selectedProvider?.name,
+      'type:',
+      providerType,
+    );
+
+    // Generate pipeline using the provider type
+    return PipelineGenerator.generate(providerType, {
       repositoryUrl: repoUrl,
       branch: branch,
       deploymentName: data.name || 'Deployment',
-      deploymentId: 'DEP-AUTO', // Placeholder that will be replaced by Jenkins
+      deploymentId: 'DEP-AUTO', // Placeholder that will be replaced by CI/CD system
       scripts: scriptDetails,
       hosts: hostDetails,
       schedule: data.schedule as any,
       scheduledTime: data.scheduledTime,
-      additionalParams: {
-        // Include all required parameters for Jenkins pipeline
-        DEPLOYMENT_NAME: data.name || 'Deployment',
-        REPOSITORY_URL: repoUrl,
-        BRANCH: branch,
-        REPOSITORY: data.repositoryId || '',
-      },
+      additionalParams,
     });
-  }, [data, repositoryScripts, availableHosts]);
+  }, [data, repositoryScripts, availableHosts, providerType, providerConnection, selectedProvider]);
 
-  // Render Jenkins view
-  const renderJenkinsView = () => {
+  // Render pipeline view
+  const renderPipelineView = () => {
+    // Get display name for the provider type
+    const providerDisplayName =
+      selectedProvider?.name ||
+      (providerType === 'jenkins'
+        ? 'Jenkins'
+        : providerType === 'github'
+          ? 'GitHub Actions'
+          : providerType === 'gitlab'
+            ? 'GitLab CI'
+            : providerType === 'circleci'
+              ? 'CircleCI'
+              : 'CI/CD');
+
     return (
       <>
         <div className="mb-4">
           <h3 className="text-xl font-medium text-foreground mb-2">
-            {t('wizard_cicd_view') || 'Jenkins Pipeline'}
+            {t('wizard_cicd_view') || `${providerDisplayName} Pipeline`}
           </h3>
         </div>
 
         <div className="bg-gray-900 rounded-md shadow-sm border border-gray-700 h-[400px] overflow-hidden">
           <pre className="p-4 text-sm text-gray-200 whitespace-pre font-mono h-full overflow-auto">
-            {jenkinsCode}
+            {pipelineCode}
           </pre>
         </div>
       </>
@@ -164,10 +250,10 @@ export function DeploymentWizardStep5Client({
           <div className="flex items-center space-x-2">
             <span className="text-xs text-gray-500">{t('wizard_summary_view')}</span>
             <Switch
-              checked={showJenkinsView}
+              checked={showPipelineView}
               onCheckedChange={(checked) => {
-                setShowJenkinsView(checked);
-                handleJenkinsToggle(checked);
+                setShowPipelineView(checked);
+                handlePipelineToggle(checked);
               }}
             />
             <span className="text-xs text-gray-500">{t('wizard_cicd_view')}</span>
@@ -176,20 +262,7 @@ export function DeploymentWizardStep5Client({
 
         <button
           type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            if (typeof onSubmit === 'function') {
-              if ('length' in onSubmit && onSubmit.length === 0) {
-                // It's a () => void function
-                (onSubmit as () => void)();
-              } else {
-                // It's a FormEventHandler
-                (onSubmit as React.FormEventHandler<HTMLFormElement>)(
-                  e as unknown as React.FormEvent<HTMLFormElement>,
-                );
-              }
-            }
-          }}
+          onClick={handleSubmit}
           className="px-4 py-1.5 rounded-md shadow-sm text-xs font-medium text-white bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 focus:outline-none focus:ring-1 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={isPending}
         >
@@ -227,19 +300,19 @@ export function DeploymentWizardStep5Client({
       <div className="w-full">
         {/* Common container with fixed dimensions */}
         <div className="w-full h-[500px] bg-background rounded-md border border-gray-200 dark:border-gray-700 p-4 transition-all duration-150 relative">
-          {/* Jenkins View - Absolutely positioned */}
+          {/* Pipeline View - Absolutely positioned */}
           <div
             className={`absolute inset-0 p-4 transition-opacity duration-150 ${
-              showJenkinsView ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
+              showPipelineView ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
             }`}
           >
-            {renderJenkinsView()}
+            {renderPipelineView()}
           </div>
 
           {/* Summary View - Absolutely positioned */}
           <div
             className={`absolute inset-0 p-4 transition-opacity duration-150 ${
-              !showJenkinsView ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
+              !showPipelineView ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
             }`}
           >
             <h4 className="text-sm font-medium text-foreground mb-2">{t('wizard_summary')}</h4>
@@ -380,6 +453,45 @@ export function DeploymentWizardStep5Client({
                           </div>
                         )}
                       </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* CI/CD Provider */}
+              <div>
+                <h5 className="text-sm font-medium text-foreground mb-2">
+                  {t('wizard_cicd_provider') || 'CI/CD Provider'}
+                </h5>
+                <div className="bg-background rounded-md p-3 border border-gray-200 dark:border-gray-700">
+                  <div className="text-xs text-foreground">
+                    {selectedProvider ? (
+                      <div className="space-y-1">
+                        <div className="flex items-start">
+                          <span className="font-medium mr-2">{c('name') || 'Name'}:</span>
+                          <span>{selectedProvider.name}</span>
+                        </div>
+
+                        <div className="flex items-start">
+                          <span className="font-medium mr-2">{c('type') || 'Type'}:</span>
+                          <span>
+                            {providerType.charAt(0).toUpperCase() + providerType.slice(1)}
+                          </span>
+                        </div>
+
+                        {providerConnection?.url && (
+                          <div className="flex items-start">
+                            <span className="font-medium mr-2">{c('url') || 'URL'}:</span>
+                            <span className="text-gray-600 dark:text-gray-400 break-all">
+                              {providerConnection.url}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {t('wizard_no_cicd_provider') || 'No CI/CD provider selected'}
+                      </p>
                     )}
                   </div>
                 </div>
