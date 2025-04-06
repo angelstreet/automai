@@ -505,9 +505,9 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
     };
 
     return (
-      <div className="bg-background dark:bg-gray-800 rounded-lg shadow-md p-2">
-        <div className="mb-1">
-          <div className="flex justify-between items-center">
+      <div className="rounded-lg shadow-md p-2 bg-background ">
+        <div className="mb-1 ">
+          <div className="flex justify-between items-center ">
             <button
               onClick={handleCancelWizard}
               className="flex items-center text-xs text-gray-600 dark:text-gray-400 hover:underline"
