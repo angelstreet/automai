@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/s
 import { useHost, useCICD } from '@/hooks';
 import { useRepository } from '@/hooks/useRepository';
 import { Deployment } from '@/types/component/deploymentComponentType';
+import { Repository } from '@/types/component/repositoryComponentType';
 
 import { DeploymentWizardMainClient } from './DeploymentWizardMainClient';
 
@@ -13,19 +14,29 @@ interface DeploymentWizardDialogClientProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: (deployment: Deployment) => void;
+  repositories?: Repository[];
 }
 
 export function DeploymentWizardDialogClient({
   open,
   onOpenChange,
   onSuccess,
+  repositories: initialRepositories,
 }: DeploymentWizardDialogClientProps) {
   const t = useTranslations('deployment');
   const { hosts, isLoading: isLoadingHosts } = useHost();
   const { providers: cicdProviders, isLoading: isLoadingCICD } = useCICD();
-  const { repositories, isLoading: isLoadingRepositories } = useRepository();
 
-  const isLoading = isLoadingHosts || isLoadingCICD || isLoadingRepositories;
+  // Only use the repository hook if no repositories were provided
+  const { repositories: fetchedRepositories, isLoading: isLoadingRepositories } = useRepository({
+    enabled: !initialRepositories || initialRepositories.length === 0,
+  });
+
+  // Use the provided repositories if available, otherwise use the fetched ones
+  const repositories = initialRepositories || fetchedRepositories || [];
+
+  const isLoading =
+    isLoadingHosts || isLoadingCICD || (!initialRepositories && isLoadingRepositories);
 
   const handleDeploymentCreated = () => {
     // Close the dialog
@@ -59,7 +70,7 @@ export function DeploymentWizardDialogClient({
           <DeploymentWizardMainClient
             onCancel={() => onOpenChange(false)}
             onDeploymentCreated={handleDeploymentCreated}
-            repositories={repositories || []}
+            repositories={repositories}
             hosts={hosts || []}
             cicdProviders={cicdProviders || []}
           />

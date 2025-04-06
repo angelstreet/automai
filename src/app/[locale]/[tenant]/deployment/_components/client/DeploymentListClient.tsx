@@ -245,7 +245,10 @@ export function DeploymentListClient({
   return (
     <div className="w-full">
       <div className="hidden">
-        <DeploymentActionsClient deploymentCount={displayDeploymentData.length} />
+        <DeploymentActionsClient
+          deploymentCount={displayDeploymentData.length}
+          repositories={initialRepositories}
+        />
       </div>
       <div className="bg-transparent dark:bg-transparent rounded-lg border-0 shadow-none">
         <div className="p-3 border-b border-gray-200 dark:border-gray-700">

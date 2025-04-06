@@ -7,16 +7,19 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/shadcn/button';
 import { useHost, useCICD } from '@/hooks';
 import { useRepository } from '@/hooks/useRepository';
+import { Repository } from '@/types/component/repositoryComponentType';
 
 import { DeploymentEvents } from './DeploymentEventListener';
 import { DeploymentWizardDialogClient } from './DeploymentWizardDialogClient';
 
 interface DeploymentActionsClientProps {
   deploymentCount?: number;
+  repositories?: Repository[];
 }
 
 export function DeploymentActionsClient({
   deploymentCount: initialDeploymentCount = 0,
+  repositories,
 }: DeploymentActionsClientProps) {
   const t = useTranslations('deployment');
   const c = useTranslations('common');
@@ -120,7 +123,11 @@ export function DeploymentActionsClient({
         </Button>
       </div>
 
-      <DeploymentWizardDialogClient open={showWizard} onOpenChange={setShowWizard} />
+      <DeploymentWizardDialogClient
+        open={showWizard}
+        onOpenChange={setShowWizard}
+        repositories={repositories}
+      />
     </>
   );
 }
