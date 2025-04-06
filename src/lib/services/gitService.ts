@@ -22,6 +22,24 @@ export interface GitRepositoryParams {
   branch?: string;
 }
 
+export interface RepoInfo {
+  owner: string;
+  repo: string;
+  projectPath: string;
+}
+
+export interface RepositoryFileInfo {
+  name: string;
+  path: string;
+  type: 'file' | 'dir';
+  size?: number | string;
+  lastModified?: string;
+  download_url?: string | null;
+  content?: string;
+  children?: Record<string, RepositoryFileInfo>;
+  encoding?: string;
+}
+
 /**
  * Test connection to a Git provider
  * @param params Connection parameters
@@ -176,7 +194,7 @@ function getEndpoint(type: string): string {
 /**
  * Detect provider type from repository URL
  */
-export function detectProviderFromUrl(url: string): 'github' | 'gitlab' | 'gitea' {
+export function detectProviderFromUrl(url?: string): 'github' | 'gitlab' | 'gitea' {
   if (!url) return 'gitea'; // Default to Gitea if no URL provided
 
   try {
@@ -196,13 +214,64 @@ export function detectProviderFromUrl(url: string): 'github' | 'gitlab' | 'gitea
 }
 
 /**
- * Extract repository owner, name, and project path (for GitLab) from URL
+ * Parse a repository URL and extract owner and repo information
+ * @param url Repository URL
+ * @param providerType The Git provider type
+ * @returns Object containing owner, repo, and projectPath
  */
-export function extractRepoInfo(provider: string): {
-  owner: string;
-  repo: string;
-  projectPath: string;
-} {
+export function parseRepositoryUrl(url?: string, providerType?: string): RepoInfo {
+  if (!url) {
+    console.warn('[GitService] No repository URL provided for parsing');
+    return { owner: '', repo: '', projectPath: '' };
+  }
+
+  const provider = providerType || detectProviderFromUrl(url);
+  let owner = '';
+  let repo = '';
+  let projectPath = '';
+
+  try {
+    // Remove .git suffix if present
+    const cleanUrl = url.replace(/\.git$/, '');
+
+    // Parse the URL
+    const urlObj = new URL(cleanUrl);
+    const pathParts = urlObj.pathname.split('/').filter(Boolean);
+
+    console.log(`[GitService] Parsing repository URL: ${cleanUrl}, provider: ${provider}`);
+
+    if (provider === 'github') {
+      if (pathParts.length >= 2) {
+        owner = pathParts[0];
+        repo = pathParts[1];
+      }
+    } else if (provider === 'gitlab') {
+      if (pathParts.length >= 2) {
+        repo = pathParts[pathParts.length - 1];
+        owner = pathParts.slice(0, pathParts.length - 1).join('/');
+        projectPath = encodeURIComponent(`${owner}/${repo}`);
+      }
+    } else if (provider === 'gitea') {
+      if (pathParts.length >= 2) {
+        owner = pathParts[0];
+        repo = pathParts[1];
+      }
+    }
+
+    console.log(`[GitService] Parsed repository info - owner: ${owner}, repo: ${repo}`);
+
+    return { owner, repo, projectPath };
+  } catch (error) {
+    console.error('[GitService] Error parsing repository URL:', error);
+    return { owner: '', repo: '', projectPath: '' };
+  }
+}
+
+/**
+ * Extract repository owner, name, and project path (for GitLab) from URL
+ * @deprecated Use parseRepositoryUrl instead
+ */
+export function extractRepoInfo(provider: string): RepoInfo {
   try {
     // Try to get URL from different sources (client or server)
     let url = '';
@@ -305,6 +374,207 @@ export function extractRepoInfo(provider: string): {
 }
 
 /**
+ * Build a GitHub URL for file listings
+ */
+export function buildGitHubFileListingUrl(
+  owner: string,
+  repo: string,
+  path: string = '',
+  branch: string = 'main',
+): string {
+  const pathSegment = path ? `/${encodeURIComponent(path)}` : '';
+  return `https://api.github.com/repos/${owner}/${repo}/contents${pathSegment}?ref=${branch}`;
+}
+
+/**
+ * Build a GitHub URL for file content
+ */
+export function buildGitHubFileContentUrl(
+  owner: string,
+  repo: string,
+  path: string,
+  branch: string = 'main',
+): string {
+  return `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}?ref=${branch}`;
+}
+
+/**
+ * Build a GitLab URL for file listings
+ */
+export function buildGitLabFileListingUrl(
+  owner: string,
+  repo: string,
+  path: string = '',
+  branch: string = 'main',
+): string {
+  const projectId = encodeURIComponent(`${owner}/${repo}`);
+  const baseUrl = `https://gitlab.com/api/v4/projects/${projectId}/repository/tree`;
+
+  if (path) {
+    return `${baseUrl}?path=${encodeURIComponent(path)}&ref=${branch}`;
+  } else {
+    return `${baseUrl}?ref=${branch}`;
+  }
+}
+
+/**
+ * Build a GitLab URL for file content
+ */
+export function buildGitLabFileContentUrl(
+  owner: string,
+  repo: string,
+  path: string,
+  branch: string = 'main',
+): string {
+  const projectId = encodeURIComponent(`${owner}/${repo}`);
+  // GitLab requires special path encoding for the files API
+  const encodedFilePath = encodeURIComponent(path.replace(/\//g, '%2F'));
+
+  return `https://gitlab.com/api/v4/projects/${projectId}/repository/files/${encodedFilePath}?ref=${branch}`;
+}
+
+/**
+ * Fetch repository file listing using the appropriate provider API
+ */
+export async function fetchRepositoryContents(
+  url: string,
+  owner: string,
+  repo: string,
+  path: string = '',
+  branch: string = 'main',
+  providerType: string = 'github',
+): Promise<RepositoryFileInfo[]> {
+  console.log(
+    `[GitService] Fetching repository contents - provider: ${providerType}, owner: ${owner}, repo: ${repo}, path: ${path}`,
+  );
+
+  // Determine API URL based on provider
+  let apiUrl: string;
+
+  if (providerType === 'github') {
+    apiUrl = buildGitHubFileListingUrl(owner, repo, path, branch);
+  } else if (providerType === 'gitlab') {
+    apiUrl = buildGitLabFileListingUrl(owner, repo, path, branch);
+  } else {
+    // Use standard config for other providers
+    const config = getProviderApiConfig(providerType, path, branch);
+    apiUrl = config.url;
+  }
+
+  console.log(`[GitService] Using API URL for repository contents: ${apiUrl}`);
+
+  try {
+    // Use a timeout to prevent hanging
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new Error(`Error ${response.status}: ${response.statusText}`);
+    }
+
+    // Parse response based on content type
+    let rawData;
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      rawData = await response.json();
+    } else {
+      rawData = await response.text();
+    }
+
+    // Standardize the response
+    return standardizeResponse(providerType, rawData, 'list');
+  } catch (error: any) {
+    console.error('[GitService] Error fetching repository contents:', error);
+    throw error;
+  }
+}
+
+/**
+ * Fetch file content using the appropriate provider API
+ */
+export async function fetchFileContent(
+  url: string,
+  owner: string,
+  repo: string,
+  path: string,
+  branch: string = 'main',
+  providerType: string = 'github',
+): Promise<string> {
+  console.log(
+    `[GitService] Fetching file content - provider: ${providerType}, owner: ${owner}, repo: ${repo}, path: ${path}`,
+  );
+
+  // Determine API URL based on provider
+  let apiUrl: string;
+
+  if (providerType === 'github') {
+    apiUrl = buildGitHubFileContentUrl(owner, repo, path, branch);
+  } else if (providerType === 'gitlab') {
+    apiUrl = buildGitLabFileContentUrl(owner, repo, path, branch);
+  } else {
+    // Use standard config for other providers
+    const config = getProviderApiConfig(providerType, path, branch);
+    apiUrl = config.url;
+  }
+
+  console.log(`[GitService] Using API URL for file content: ${apiUrl}`);
+
+  try {
+    // Use a timeout to prevent hanging
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new Error(`Error ${response.status}: ${response.statusText}`);
+    }
+
+    // Parse response based on content type
+    let rawData;
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      rawData = await response.json();
+    } else {
+      rawData = await response.text();
+    }
+
+    // Standardize the response
+    const fileData = standardizeResponse(providerType, rawData, 'file');
+
+    // Handle file content based on encoding
+    if (fileData.encoding === 'base64' && fileData.content) {
+      return atob(fileData.content);
+    } else {
+      return fileData.content || 'No content available';
+    }
+  } catch (error: any) {
+    console.error('[GitService] Error fetching file content:', error);
+    throw error;
+  }
+}
+
+/**
  * Generate provider-specific API configuration for repository exploration
  */
 export function getProviderApiConfig(
@@ -344,11 +614,12 @@ export function getProviderApiConfig(
         url: `https://gitlab.com/api/v4/projects/${cleanProjectPath}/repository/files/${encodedPath}/raw?ref=${ref}`,
       };
     } else {
-      // This is likely a directory - use the tree endpoint
-      const queryParams = encodedPath ? `?path=${encodedPath}` : '?recursive=true';
+      // This is likely a directory - use the tree endpoint with proper query params
       return {
         ...config,
-        url: `https://gitlab.com/api/v4/projects/${cleanProjectPath}/repository/tree${queryParams}`,
+        url: encodedPath
+          ? `https://gitlab.com/api/v4/projects/${cleanProjectPath}/repository/tree?path=${encodedPath}&ref=${ref}`
+          : `https://gitlab.com/api/v4/projects/${cleanProjectPath}/repository/tree?ref=${ref}`,
       };
     }
   } else if (provider === 'gitea') {
@@ -509,7 +780,7 @@ export function standardizeResponse(provider: string, data: any, _action: string
       return data.map((item: any) => ({
         name: item.name,
         path: item.path,
-        type: item.type,
+        type: item.type === 'dir' ? 'dir' : 'file', // Ensure proper type mapping
         size: item.size,
         download_url: item.download_url,
       }));
@@ -524,9 +795,16 @@ const gitService = {
   testGitProviderConnection,
   testGitRepositoryAccess,
   detectProviderFromUrl,
+  parseRepositoryUrl,
   extractRepoInfo,
   getProviderApiConfig,
   standardizeResponse,
+  buildGitHubFileListingUrl,
+  buildGitHubFileContentUrl,
+  buildGitLabFileListingUrl,
+  buildGitLabFileContentUrl,
+  fetchRepositoryContents,
+  fetchFileContent,
 };
 
 export default gitService;

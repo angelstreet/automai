@@ -29,6 +29,7 @@ const DeploymentWizardStep3Client: React.FC<DeploymentWizardStep3Props> = ({
   isStepValid,
 }) => {
   const t = useTranslations('deployment');
+  const c = useTranslations('common');
   const [timeoutError, setTimeoutError] = useState<string | null>(null);
 
   // Check if step is valid - handle both function and boolean values
@@ -68,7 +69,7 @@ const DeploymentWizardStep3Client: React.FC<DeploymentWizardStep3Props> = ({
           onClick={onPrevStep}
           className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
-          {t('prev')}
+          {c('prev')}
         </button>
 
         <button
@@ -81,21 +82,25 @@ const DeploymentWizardStep3Client: React.FC<DeploymentWizardStep3Props> = ({
               : 'bg-blue-300 dark:bg-blue-800 cursor-not-allowed'
           }`}
         >
-          {t('next')}
+          {c('next')}
         </button>
       </div>
 
       {isLoadingHosts ? (
         <div className="flex items-center justify-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-          <span className="ml-3 text-sm text-gray-600 dark:text-gray-400">{t('loadingHosts')}</span>
+          <span className="ml-3 text-sm text-gray-600 dark:text-gray-400">
+            {t('wizard_loading_hosts')}
+          </span>
         </div>
       ) : displayError ? (
         <div className="mb-2 p-2 border border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-900 rounded-md">
           <p className="text-xs text-red-600 dark:text-red-400">
-            {t('hostsError')}: {displayError}
+            {t('wizard_hosts_error')}: {displayError}
           </p>
-          <p className="text-xs text-red-500 dark:text-red-400 mt-1">{t('tryRefreshing')}</p>
+          <p className="text-xs text-red-500 dark:text-red-400 mt-1">
+            {t('wizard_try_refreshing')}
+          </p>
         </div>
       ) : (
         <DeploymentHostSelectorClient

@@ -30,13 +30,10 @@ import {
   BreadcrumbList,
   BreadcrumbSeparator,
 } from '@/components/ui/Breadcrumb';
+import * as gitService from '@/lib/services/gitService';
 import { cn } from '@/lib/utils';
 import { RepositoryFile } from '@/types/component/repositoryComponentType';
-import {
-  RepositoryExplorerProps,
-  FilesAPIResponse,
-  FileAPIResponse,
-} from '@/types/context/repositoryContextType';
+import { RepositoryExplorerProps } from '@/types/context/repositoryContextType';
 
 import { FILE_EXTENSION_COLORS, EXPLORER_TABS } from '../../constants';
 
@@ -103,53 +100,47 @@ export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplo
       setFileContent('Loading file content...');
 
       try {
-        // Use the provider_id directly from the repository object
-        const providerId = repository.provider_id;
+        const branch = 'main'; // Use only the main branch
 
         console.log('[RepositoryExplorer] Fetching file content with params:', {
           repositoryId: repository.id,
-          providerId,
           url: repository.url,
           path: item.path,
         });
 
-        // Ensure all parameters are strings
-        const repoId = repository.id;
-        const repoUrl = repository.url || '';
-        const filePath = item.path || '';
+        // Determine provider type and extract repository info using gitService
+        const providerType = repository.url
+          ? gitService.detectProviderFromUrl(repository.url)
+          : 'unknown';
 
-        // Use only the main branch
-        const branch = 'main';
+        const { owner, repo } = repository.url
+          ? gitService.parseRepositoryUrl(repository.url, providerType)
+          : { owner: '', repo: '' };
 
-        try {
-          const apiUrl = `/api/repositories/explore?repositoryId=${repoId}&providerId=${providerId}&repositoryUrl=${encodeURIComponent(repoUrl)}&path=${encodeURIComponent(filePath)}&branch=${branch}&action=file`;
+        console.log(
+          `[RepositoryExplorer] Using provider: ${providerType}, owner: ${owner}, repo: ${repo}`,
+        );
 
-          console.log(`[RepositoryExplorer] Getting file content using branch: ${branch}`);
-          const response = await fetch(apiUrl);
+        // Use gitService to fetch file content
+        if (owner && repo) {
+          try {
+            const content = await gitService.fetchFileContent(
+              repository.url || '',
+              owner,
+              repo,
+              item.path || '',
+              branch,
+              providerType,
+            );
 
-          if (response.ok) {
-            const data = (await response.json()) as FileAPIResponse;
-
-            if (data.success && data.data) {
-              // Decode base64 content if needed
-              if (data.data.encoding === 'base64' && data.data.content) {
-                const decodedContent = atob(data.data.content);
-                setFileContent(decodedContent);
-              } else {
-                setFileContent(data.data.content || 'No content available');
-              }
-              console.log(`[RepositoryExplorer] Successfully loaded file content`);
-            } else {
-              throw new Error(data.error || 'Failed to load file content');
-            }
-          } else {
-            const errorText = await response.text();
-            console.log(`[RepositoryExplorer] Failed to get file content:`, errorText);
-            throw new Error(`Error: ${response.status} ${response.statusText}`);
+            setFileContent(content);
+            console.log(`[RepositoryExplorer] Successfully loaded file content`);
+          } catch (fetchError: any) {
+            console.error('[RepositoryExplorer] Error fetching file content:', fetchError);
+            throw fetchError;
           }
-        } catch (error: any) {
-          console.error(`[RepositoryExplorer] Error getting file content:`, error);
-          throw error;
+        } else {
+          throw new Error('Could not determine repository owner and name from URL');
         }
       } catch (error: any) {
         console.error('[RepositoryExplorer] Error fetching file content:', error);
@@ -176,55 +167,66 @@ export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplo
 
       try {
         const pathString = currentPath.join('/');
+        const branch = 'main'; // Use only the main branch
 
-        // Use the provider_id directly from the repository object
-        const providerId = repository.provider_id;
+        // Determine provider type and extract repository info using gitService
+        const providerType = repository.url
+          ? gitService.detectProviderFromUrl(repository.url)
+          : 'unknown';
 
-        console.log('[RepositoryExplorer] Fetching files with params:', {
-          repositoryId: repository.id,
-          providerId,
-          url: repository.url,
-          path: pathString,
-        });
+        const { owner, repo } = repository.url
+          ? gitService.parseRepositoryUrl(repository.url, providerType)
+          : { owner: '', repo: '' };
 
-        // Ensure all parameters are strings
-        const repoId = repository.id;
-        const repoUrl = repository.url || '';
-        const safePath = pathString || '';
+        console.log(
+          `[RepositoryExplorer] Using provider: ${providerType}, owner: ${owner}, repo: ${repo}, path: ${pathString}`,
+        );
 
-        // Use only the main branch
-        const branch = 'main';
+        // Use gitService to fetch repository contents
+        if (owner && repo) {
+          try {
+            const listData = await gitService.fetchRepositoryContents(
+              repository.url || '',
+              owner,
+              repo,
+              pathString,
+              branch,
+              providerType,
+            );
 
-        try {
-          const apiUrl = `/api/repositories/explore?repositoryId=${repoId}&providerId=${providerId}&repositoryUrl=${encodeURIComponent(repoUrl)}&path=${encodeURIComponent(safePath)}&branch=${branch}&action=list`;
+            if (!listData || (Array.isArray(listData) && listData.length === 0)) {
+              console.log(`[RepositoryExplorer] No files found in this directory`);
+              setFiles([]);
+            } else {
+              // Convert to RepositoryFile type and sort files
+              const filesData = listData.map((item) => ({
+                name: item.name,
+                path: item.path,
+                type: item.type,
+                size: typeof item.size === 'number' ? item.size.toString() : item.size || '',
+                lastModified: item.lastModified,
+                content: item.content,
+                encoding: item.encoding,
+              })) as RepositoryFile[];
 
-          console.log(`[RepositoryExplorer] Listing files using branch: ${branch}`);
-          const response = await fetch(apiUrl);
-
-          if (response.ok) {
-            const data = (await response.json()) as FilesAPIResponse;
-
-            if (data.success && data.data) {
               // Sort files: directories first, then files, both alphabetically
-              const sortedFiles = [...data.data].sort((a, b) => {
+              const sortedFiles = [...filesData].sort((a, b) => {
                 if (a.type === 'dir' && b.type !== 'dir') return -1;
                 if (a.type !== 'dir' && b.type === 'dir') return 1;
                 return a.name.localeCompare(b.name);
               });
 
-              console.log(`[RepositoryExplorer] Successfully loaded file list`);
+              console.log(
+                `[RepositoryExplorer] Successfully loaded file list with ${sortedFiles.length} items`,
+              );
               setFiles(sortedFiles);
-            } else {
-              throw new Error(data.error || 'Failed to load file list');
             }
-          } else {
-            const errorText = await response.text();
-            console.log(`[RepositoryExplorer] Failed to list files:`, errorText);
-            throw new Error(`Error: ${response.status} ${response.statusText}`);
+          } catch (fetchError) {
+            console.error('[RepositoryExplorer] Error fetching repository contents:', fetchError);
+            throw fetchError;
           }
-        } catch (error: any) {
-          console.error(`[RepositoryExplorer] Error listing files:`, error);
-          throw error;
+        } else {
+          throw new Error('Could not determine repository owner and name from URL');
         }
       } catch (error: any) {
         console.error('[RepositoryExplorer] Error fetching repository files:', error);
@@ -239,14 +241,7 @@ export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplo
     };
 
     fetchFiles();
-  }, [
-    repository.id,
-    repository.provider_id,
-    repository.url,
-    currentPath,
-    isValidRepository,
-    repository,
-  ]);
+  }, [repository.id, repository.url, currentPath, isValidRepository, repository]);
 
   // Go up one directory
   const handleNavigateUp = () => {
