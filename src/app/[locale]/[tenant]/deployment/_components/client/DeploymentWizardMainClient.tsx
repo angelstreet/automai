@@ -676,10 +676,12 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               }}
               onNext={() => {}} // Step 5 doesn't have a next step
               onBack={handlePrevStep}
-              onCancel={onCancel}
+              _onCancel={onCancel}
               onSubmit={handleSubmit}
               isPending={isCreating}
               cicdProviders={cicdProviders}
+              availableHosts={availableHosts}
+              repositoryScripts={repositoryScripts}
             />
           )}
         </form>

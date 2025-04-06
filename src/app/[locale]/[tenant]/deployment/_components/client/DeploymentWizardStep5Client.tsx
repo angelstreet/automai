@@ -354,20 +354,33 @@ export function DeploymentWizardStep5Client({
                 <h5 className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                   {t('wizard_target_hosts')}
                 </h5>
-                <div className="bg-gray-100 dark:bg-gray-800 rounded-md p-1.5">
-                  {data.hostIds.length > 0 ? (
-                    <div className="grid grid-cols-2 gap-1">
+                <div className="bg-gray-100 dark:bg-gray-800 rounded-md p-2">
+                  {data.hostIds && data.hostIds.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-2">
                       {data.hostIds.map((id) => {
                         const host = availableHosts.find((h) => h.id === id);
                         if (!host) return null;
 
+                        // Check for valid connected status
+                        const isActive = host.status === 'connected' || host.status === 'success';
+
                         return (
-                          <div key={id} className="text-xs flex items-center">
+                          <div key={id} className="text-xs flex items-center space-x-2">
                             <div
-                              className={`w-1.5 h-1.5 rounded-full mr-1.5 ${host.status === 'connected' ? 'bg-green-500' : 'bg-red-500'}`}
+                              className={`w-2 h-2 rounded-full ${isActive ? 'bg-green-500' : 'bg-red-500'}`}
                             ></div>
-                            <span className="font-medium">{host.name}</span>
-                            <span className="text-gray-500 ml-1">({host.ip})</span>
+                            <span className="text-gray-800 dark:text-gray-200 font-medium">
+                              {host.name || id}
+                            </span>
+                            {host.ip && <span className="text-gray-500">({host.ip})</span>}
+                            {host.environment && (
+                              <span className="px-1.5 py-0.5 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                                #
+                                {typeof host.environment === 'string'
+                                  ? host.environment.toLowerCase()
+                                  : host.environment}
+                              </span>
+                            )}
                           </div>
                         );
                       })}
