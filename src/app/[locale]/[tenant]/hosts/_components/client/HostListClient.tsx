@@ -81,10 +81,15 @@ function HostListClient({ initialHosts }: HostListClientProps) {
         // Dispatch event for test start
         handleTestStarted(host.id);
 
-        // Force the status to 'testing' to ensure animation is visible
-        // Use a separate setState call to ensure it gets processed
+        // Set status to testing only if it's not already set
+        // This handles individual card refresh without interfering with batch testing
         setHosts((prevHosts) =>
-          prevHosts.map((h) => (h.id === host.id ? { ...h, status: 'testing' } : h)),
+          prevHosts.map((h) => {
+            if (h.id === host.id && h.status !== 'testing') {
+              return { ...h, status: 'testing' };
+            }
+            return h;
+          }),
         );
 
         // Call the mutation - no initial delay for better responsiveness
@@ -94,8 +99,8 @@ function HostListClient({ initialHosts }: HostListClientProps) {
           result,
         );
 
-        // Small delay before updating final status to ensure animation is visible
-        await new Promise((resolve) => setTimeout(resolve, 50));
+        // Minimal delay before updating final status to prevent flickering
+        await new Promise((resolve) => setTimeout(resolve, 30));
 
         // Update the UI based on result
         setHosts((prevHosts) =>
@@ -138,17 +143,18 @@ function HostListClient({ initialHosts }: HostListClientProps) {
         prevHosts.map((h) => (hostIds.includes(h.id) ? { ...h, status: 'testing' } : h)),
       );
 
-      // Start tests with staggered delays for better visual feedback
+      // For better UX, start several tests immediately, then stagger the rest
       hostIds.forEach((hostId, index) => {
         const host = hosts.find((h) => h.id === hostId);
         if (host) {
-          // Add staggered delay between each test (100ms per host)
+          // Start first 3 tests immediately for better responsiveness
+          const delay = index < 3 ? 0 : index * 100;
           setTimeout(() => {
             console.log(
               `[@component:HostListClient] Starting test for host ${index + 1}/${hostIds.length}: ${hostId}`,
             );
             handleTestConnection(host);
-          }, index * 100);
+          }, delay);
         }
       });
     },

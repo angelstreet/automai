@@ -55,7 +55,7 @@ export function DeploymentWizardStep5Client({
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">{t('cicdIntegration')}</CardTitle>
+          <CardTitle className="text-lg">{t('wizard_cicd_integration')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -73,7 +73,7 @@ export function DeploymentWizardStep5Client({
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-sm text-muted-foreground">{t('cicdProviderDescription')}</p>
+            <p className="text-sm text-muted-foreground">{t('wizard_cicd_provider_description')}</p>
           </div>
         </CardContent>
       </Card>
