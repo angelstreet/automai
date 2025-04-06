@@ -1,7 +1,7 @@
 import { GitHubProvider } from './githubProvider';
 import { JenkinsProvider } from './jenkinsProvider';
-import { CICDProviderFactory } from './providerFactory';
 import { PipelineGenerator, PipelineGeneratorOptions } from './pipelineGenerator';
+import { CICDProviderFactory } from './providerFactory';
 import type {
   ServiceResponse,
   CICDResponse,

@@ -17,9 +17,6 @@ export * from './sshService';
 export * from './repositoryService';
 export * from './gitService';
 
-// Deployment services
-export * from './deploymentService';
-
 // CICD services
 export * from './cicdService';
 

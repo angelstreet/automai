@@ -14,7 +14,6 @@ export * from './db/cicdDb';
 export * from './services/teamService';
 export * from './services/hostService';
 export * from './services/sshService';
-export * from './services/deploymentService';
 export * from './services/cicdService';
 export * from './services/repositoryService';
 export * from './services/authService';
