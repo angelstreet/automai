@@ -438,6 +438,7 @@
     "wizard_script_path": "Script Path",
     "wizard_parameters": "Parameters",
     "wizard_no_scripts": "No scripts selected",
+    "wizard_no_cicd_provider": "No CI/CD provider selected",
     "filter": "Target Hosts",
     "wizard_no_hosts": "No hosts selected",
     "wizard_schedule": "Schedule",

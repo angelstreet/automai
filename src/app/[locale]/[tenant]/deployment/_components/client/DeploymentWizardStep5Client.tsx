@@ -467,13 +467,13 @@ export function DeploymentWizardStep5Client({
               </div>
 
               {/* CI/CD Provider */}
-              <div>
-                <h5 className="text-sm font-medium text-foreground mb-2">
-                  {t('wizard_cicd_provider') || 'CI/CD Provider'}
-                </h5>
-                <div className="bg-background rounded-md p-3 border border-gray-200 dark:border-gray-700">
-                  <div className="text-xs text-foreground">
-                    {showPipelineView && selectedProvider ? (
+              {selectedProvider && (
+                <div>
+                  <h5 className="text-sm font-medium text-foreground mb-2">
+                    {t('wizard_cicd_provider') || 'CI/CD Provider'}
+                  </h5>
+                  <div className="bg-background rounded-md p-3 border border-gray-200 dark:border-gray-700">
+                    <div className="text-xs text-foreground">
                       <div className="space-y-1">
                         <div className="flex items-start">
                           <span className="font-medium mr-2">{c('name') || 'Name'}:</span>
@@ -496,14 +496,10 @@ export function DeploymentWizardStep5Client({
                           </div>
                         )}
                       </div>
-                    ) : (
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {t('wizard_no_cicd_provider') || 'No CI/CD provider selected'}
-                      </p>
-                    )}
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
