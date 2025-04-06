@@ -76,7 +76,7 @@ const HostSelector: React.FC<HostSelectorProps> = ({
           <Server size={16} className="mr-1" />
           <span className="text-xs text-gray-500 dark:text-gray-400 px-1 py-0.5 bg-gray-50 dark:bg-gray-700 rounded">
             {selectedHosts.length}/{availableHosts.length}{' '}
-            {t('hosts_selected', {
+            {t('wizard_target_hosts', {
               fallback: 'hosts selected',
             })}
           </span>
@@ -89,7 +89,7 @@ const HostSelector: React.FC<HostSelectorProps> = ({
             className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
             <Filter size={14} className="inline mr-1" />
-            {t('filter', { fallback: 'Filter' })}
+            {c('filter', { fallback: 'Filter' })}
           </button>
           <button
             type="button"
@@ -107,8 +107,8 @@ const HostSelector: React.FC<HostSelectorProps> = ({
             className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-md text-gray-700 dark:text-gray-300"
           >
             {filteredHosts.every((host) => selectedHosts.includes(host.id))
-              ? t('deselect_all', { fallback: 'Deselect All' })
-              : t('select_all', { fallback: 'Select All' })}
+              ? c('deselect_all', { fallback: 'Deselect All' })
+              : c('select_all', { fallback: 'Select All' })}
           </button>
         </div>
       </div>

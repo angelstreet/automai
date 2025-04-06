@@ -57,14 +57,6 @@ export function DeploymentWizardStep5Client({
   const [_isLoadingJobDetails, _setIsLoadingJobDetails] = useState(false);
   const [_jobDetailsError, _setJobDetailsError] = useState<string | null>(null);
 
-  // Construct a Jenkins config object from props to match expected interface
-  const _jenkinsConfig = {
-    enabled: !!data.cicd_provider_id,
-    provider_id: data.cicd_provider_id,
-    jobId: data.jenkinsConfig?.jobId,
-    parameters: data.jenkinsConfig?.parameters || {},
-  };
-
   // Handle toggle for Jenkins integration
   const handleJenkinsToggle = (checked: boolean) => {
     onUpdateData({
@@ -84,34 +76,6 @@ export function DeploymentWizardStep5Client({
         enabled: true,
         provider_id: providerId,
         jobId: undefined, // Reset job when provider changes
-      },
-    });
-  };
-
-  // Handle job selection
-  const _handleJobChange = (jobId: string) => {
-    const _job = _jobs.find((j) => j.id === jobId);
-
-    onUpdateData({
-      jenkinsConfig: {
-        ...data.jenkinsConfig,
-        enabled: true,
-        jobId,
-        parameters: {}, // Reset parameters when job changes
-      },
-    });
-  };
-
-  // Handle parameter change
-  const _handleParameterChange = (name: string, value: string) => {
-    onUpdateData({
-      jenkinsConfig: {
-        ...data.jenkinsConfig,
-        enabled: true,
-        parameters: {
-          ...(data.jenkinsConfig?.parameters || {}),
-          [name]: value,
-        },
       },
     });
   };
@@ -140,10 +104,10 @@ export function DeploymentWizardStep5Client({
         environment: host.environment || 'Production',
       }));
 
-    // Repository details
-    const repoUrl = data.repositoryId
-      ? `https://github.com/example/${data.repositoryId}.git`
-      : 'https://github.com/example/repo.git';
+    // Use actual repository URL if available or construct it from repositoryId
+    const repoUrl =
+      data.selectedRepository?.url ||
+      (data.repositoryId ? `https://github.com/${data.repositoryId}.git` : '');
     const branch = data.branch || 'main';
 
     // Generate pipeline using the new service
@@ -151,13 +115,17 @@ export function DeploymentWizardStep5Client({
       repositoryUrl: repoUrl,
       branch: branch,
       deploymentName: data.name || 'Deployment',
-      deploymentId: data.id || 'DEP-123',
+      deploymentId: 'DEP-AUTO', // Placeholder that will be replaced by Jenkins
       scripts: scriptDetails,
       hosts: hostDetails,
       schedule: data.schedule as any,
       scheduledTime: data.scheduledTime,
       additionalParams: {
-        repository: data.repositoryId || 'default',
+        // Include all required parameters for Jenkins pipeline
+        DEPLOYMENT_NAME: data.name || 'Deployment',
+        REPOSITORY_URL: repoUrl,
+        BRANCH: branch,
+        REPOSITORY: data.repositoryId || '',
       },
     });
   }, [data, repositoryScripts, availableHosts]);
