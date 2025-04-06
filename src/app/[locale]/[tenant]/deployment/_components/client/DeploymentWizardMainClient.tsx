@@ -398,6 +398,10 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
     };
 
     const handleNextStep = () => {
+      // If going to step 2 with a repository selected, set loading state
+      if (step === 1 && deploymentData.repositoryId) {
+        setIsLoadingScripts(true);
+      }
       setStep((prev) => prev + 1);
     };
 

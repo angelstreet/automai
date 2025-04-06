@@ -5,7 +5,6 @@ import React, { useState } from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
-import { FormLabel } from '@/components/shadcn/form';
 import {
   Select,
   SelectContent,
@@ -43,7 +42,8 @@ export function DeploymentWizardStep5Client({
 
   // Handle provider selection
   const handleProviderChange = (providerId: string) => {
-    onUpdateData({ cicd_provider_id: providerId });
+    // Convert "none" to empty string for backend compatibility
+    onUpdateData({ cicd_provider_id: providerId === 'none' ? '' : providerId });
   };
 
   // Handle auto-start toggle
@@ -60,13 +60,15 @@ export function DeploymentWizardStep5Client({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <FormLabel>CI/CD Provider</FormLabel>
-            <Select value={data.cicd_provider_id || ''} onValueChange={handleProviderChange}>
+            <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+              CI/CD Provider
+            </label>
+            <Select value={data.cicd_provider_id || 'none'} onValueChange={handleProviderChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Select a CI/CD provider" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
+                <SelectItem value="none">None</SelectItem>
                 {cicdProviders.map((provider) => (
                   <SelectItem key={provider.id} value={provider.id}>
                     {provider.name} ({provider.type})
@@ -81,9 +83,12 @@ export function DeploymentWizardStep5Client({
 
       <div className="flex items-center space-x-2">
         <Switch id="auto-start" checked={autoStart} onCheckedChange={handleAutoStartToggle} />
-        <FormLabel htmlFor="auto-start" className="cursor-pointer">
+        <label
+          htmlFor="auto-start"
+          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+        >
           {t('wizard_auto_start')}
-        </FormLabel>
+        </label>
       </div>
 
       <div className="flex justify-between pt-6">
@@ -96,7 +101,23 @@ export function DeploymentWizardStep5Client({
             {c('cancel')}
           </Button>
 
-          <Button onClick={onSubmit} disabled={isPending}>
+          <Button
+            onClick={(e) => {
+              e.preventDefault();
+              if (typeof onSubmit === 'function') {
+                if ('length' in onSubmit && onSubmit.length === 0) {
+                  // It's a () => void function
+                  (onSubmit as () => void)();
+                } else {
+                  // It's a FormEventHandler
+                  (onSubmit as React.FormEventHandler<HTMLFormElement>)(
+                    e as unknown as React.FormEvent<HTMLFormElement>,
+                  );
+                }
+              }
+            }}
+            disabled={isPending}
+          >
             {isPending ? t('creating') : t('wizard_create_button')}
           </Button>
         </div>

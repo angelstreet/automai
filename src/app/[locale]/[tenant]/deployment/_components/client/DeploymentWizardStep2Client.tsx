@@ -120,8 +120,15 @@ const DeploymentWizardStep2Client: React.FC<DeploymentWizardStep2Props> = ({
     <div className="p-4 bg-black/5 dark:bg-black/20 rounded-md border border-gray-200 dark:border-gray-800">
       <h2 className="text-lg font-medium mb-4">Select Scripts</h2>
 
-      {/* Show different states based on loading/error/empty */}
-      {isLoadingScripts ? (
+      {/* 
+        Modified state handling:
+        1. Always show loading indicator if isLoadingScripts is true
+        2. When selectedRepository is present but we're not explicitly loading and have no scripts yet,
+           show loading indicator instead of errors - this prevents flash
+        3. Only show errors after explicit loading has finished
+      */}
+      {isLoadingScripts ||
+      (selectedRepository && repositoryScripts.length === 0 && !scriptsError) ? (
         <LoadingIndicator />
       ) : scriptsError ? (
         <ErrorIndicator />
