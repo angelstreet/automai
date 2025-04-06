@@ -16,7 +16,7 @@ import {
   PlusCircle,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 import { Alert, AlertDescription } from '@/components/shadcn/alert';
 import { Button } from '@/components/shadcn/button';
@@ -48,6 +48,12 @@ export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplo
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState(EXPLORER_TABS.CODE);
 
+  // Helper function to get the default branch regardless of property name
+  const getDefaultBranch = useCallback(() => {
+    // Try both TypeScript interface property and actual database column
+    return (repository as any).default_branch || repository.defaultBranch || 'main';
+  }, [repository]);
+
   // Validate repository has required properties
   const isValidRepository =
     repository &&
@@ -67,18 +73,19 @@ export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplo
         url: repository.url,
         provider_id: repository.provider_id,
         providerType: repository.providerType,
+        default_branch: (repository as any).default_branch,
+        defaultBranch: repository.defaultBranch,
+        effectiveBranch: getDefaultBranch(),
         isValid: isValidRepository,
       });
     } else {
       console.log('[RepositoryExplorer] No repository data provided');
     }
-  }, [repository, isValidRepository]);
+  }, [repository, isValidRepository, getDefaultBranch]);
 
   // Get file icon based on extension using constants
   const getFileIcon = (fileName: string) => {
-    const extension = fileName.split('.').pop()?.toLowerCase() || 'default';
-    const colorClass = FILE_EXTENSION_COLORS[extension] || FILE_EXTENSION_COLORS.default;
-
+    const colorClass = gitService.getFileIconColorClass(fileName, FILE_EXTENSION_COLORS);
     return <FileCode className={`h-4 w-4 ${colorClass}`} />;
   };
 
@@ -100,52 +107,48 @@ export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplo
       setFileContent('Loading file content...');
 
       try {
-        const branch = 'main'; // Use only the main branch
+        const branch = getDefaultBranch(); // Use helper
+        console.log(`[RepositoryExplorer] Using branch: ${branch}`);
 
         console.log('[RepositoryExplorer] Fetching file content with params:', {
           repositoryId: repository.id,
           url: repository.url,
           path: item.path,
+          branch,
         });
 
-        // Determine provider type and extract repository info using gitService
-        const providerType = repository.url
-          ? gitService.detectProviderFromUrl(repository.url)
-          : 'unknown';
+        // Use gitService for navigation
+        const providerType =
+          repository.providerType || gitService.detectProviderFromUrl(repository.url || '');
+        const { owner, repo } = gitService.parseRepositoryUrl(repository.url || '', providerType);
 
-        const { owner, repo } = repository.url
-          ? gitService.parseRepositoryUrl(repository.url, providerType)
-          : { owner: '', repo: '' };
+        if (!owner || !repo) {
+          throw new Error('Could not determine repository owner and name from URL');
+        }
 
-        console.log(
-          `[RepositoryExplorer] Using provider: ${providerType}, owner: ${owner}, repo: ${repo}`,
+        // Use the new navigation function
+        const result = await gitService.navigateRepository(
+          repository.url || '',
+          owner,
+          repo,
+          item.path || '',
+          branch,
+          providerType,
+          false, // Not a directory
         );
 
-        // Use gitService to fetch file content
-        if (owner && repo) {
-          try {
-            const content = await gitService.fetchFileContent(
-              repository.url || '',
-              owner,
-              repo,
-              item.path || '',
-              branch,
-              providerType,
-            );
+        if (result.error) {
+          throw new Error(result.error);
+        }
 
-            setFileContent(content);
-            console.log(`[RepositoryExplorer] Successfully loaded file content`);
-          } catch (fetchError: any) {
-            console.error('[RepositoryExplorer] Error fetching file content:', fetchError);
-            throw fetchError;
-          }
-        } else {
-          throw new Error('Could not determine repository owner and name from URL');
+        if (result.fileContent) {
+          setFileContent(result.fileContent);
+          console.log(`[RepositoryExplorer] Successfully loaded file content`);
         }
       } catch (error: any) {
         console.error('[RepositoryExplorer] Error fetching file content:', error);
         setFileContent(
-          `Error loading file: ${error.message}\n\nThis could be due to:\n- Authentication issues with the repository\n- The file might not exist\n- API rate limiting\n- The file may be in a different branch than 'main'`,
+          `Error loading file: ${error.message}\n\nThis could be due to:\n- Authentication issues with the repository\n- The file might not exist\n- API rate limiting\n- The file may be in a different branch than the default branch`,
         );
       }
     }
@@ -166,73 +169,45 @@ export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplo
       setError(null);
 
       try {
-        const pathString = currentPath.join('/');
-        const branch = 'main'; // Use only the main branch
+        const branch = getDefaultBranch(); // Use helper
+        console.log(`[RepositoryExplorer] Using branch: ${branch}`);
 
-        // Determine provider type and extract repository info using gitService
-        const providerType = repository.url
-          ? gitService.detectProviderFromUrl(repository.url)
-          : 'unknown';
-
-        const { owner, repo } = repository.url
-          ? gitService.parseRepositoryUrl(repository.url, providerType)
-          : { owner: '', repo: '' };
-
-        console.log(
-          `[RepositoryExplorer] Using provider: ${providerType}, owner: ${owner}, repo: ${repo}, path: ${pathString}`,
+        // Use the new service function to load repository structure
+        const result = await gitService.loadRepositoryStructure(
+          repository.url || '',
+          currentPath,
+          branch,
         );
 
-        // Use gitService to fetch repository contents
-        if (owner && repo) {
-          try {
-            const listData = await gitService.fetchRepositoryContents(
-              repository.url || '',
-              owner,
-              repo,
-              pathString,
-              branch,
-              providerType,
-            );
+        if (result.error) {
+          throw new Error(result.error);
+        }
 
-            if (!listData || (Array.isArray(listData) && listData.length === 0)) {
-              console.log(`[RepositoryExplorer] No files found in this directory`);
-              setFiles([]);
-            } else {
-              // Convert to RepositoryFile type and sort files
-              const filesData = listData.map((item) => ({
-                name: item.name,
-                path: item.path,
-                type: item.type,
-                size: typeof item.size === 'number' ? item.size.toString() : item.size || '',
-                lastModified: item.lastModified,
-                content: item.content,
-                encoding: item.encoding,
-              })) as RepositoryFile[];
-
-              // Sort files: directories first, then files, both alphabetically
-              const sortedFiles = [...filesData].sort((a, b) => {
-                if (a.type === 'dir' && b.type !== 'dir') return -1;
-                if (a.type !== 'dir' && b.type === 'dir') return 1;
-                return a.name.localeCompare(b.name);
-              });
-
-              console.log(
-                `[RepositoryExplorer] Successfully loaded file list with ${sortedFiles.length} items`,
-              );
-              setFiles(sortedFiles);
-            }
-          } catch (fetchError) {
-            console.error('[RepositoryExplorer] Error fetching repository contents:', fetchError);
-            throw fetchError;
-          }
+        if (!result.files || result.files.length === 0) {
+          console.log('[RepositoryExplorer] No files found in this directory');
+          setFiles([]);
         } else {
-          throw new Error('Could not determine repository owner and name from URL');
+          // Convert to RepositoryFile type
+          const filesData = result.files.map((item) => ({
+            name: item.name,
+            path: item.path,
+            type: item.type,
+            size: typeof item.size === 'number' ? item.size.toString() : item.size || '',
+            lastModified: item.lastModified,
+            content: item.content,
+            encoding: item.encoding,
+          })) as RepositoryFile[];
+
+          console.log(
+            `[RepositoryExplorer] Successfully loaded file list with ${filesData.length} items`,
+          );
+          setFiles(filesData);
         }
       } catch (error: any) {
         console.error('[RepositoryExplorer] Error fetching repository files:', error);
         setError(
           error.message ||
-            'Failed to fetch repository files. The repository may not be accessible or the "main" branch may not exist.',
+            `Failed to fetch repository files. The repository may not be accessible or the "${getDefaultBranch()}" branch may not exist.`,
         );
         setFiles([]);
       } finally {
@@ -241,7 +216,7 @@ export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplo
     };
 
     fetchFiles();
-  }, [repository.id, repository.url, currentPath, isValidRepository, repository]);
+  }, [repository.id, repository.url, currentPath, isValidRepository, repository, getDefaultBranch]);
 
   // Go up one directory
   const handleNavigateUp = () => {
@@ -291,7 +266,7 @@ export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplo
       );
     }
 
-    // Sort files: folders first, then files alphabetically
+    // Sort files: directories first, then files, both alphabetically
     const sortedFiles = [...files].sort((a, b) => {
       if (a.type === 'dir' && b.type !== 'dir') return -1;
       if (a.type !== 'dir' && b.type === 'dir') return 1;
@@ -461,7 +436,7 @@ export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplo
                     <div className="flex items-center">
                       <Button variant="outline" size="sm" className="h-6 text-xs">
                         <GitBranch className="h-3 w-3 mr-1" />
-                        <span>main</span>
+                        <span>{getDefaultBranch()}</span>
                         <ChevronDown className="h-3 w-3 ml-1" />
                       </Button>
                     </div>

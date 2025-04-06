@@ -405,7 +405,7 @@ export function buildGitLabFileListingUrl(
   owner: string,
   repo: string,
   path: string = '',
-  branch: string = 'main',
+  branch: string = 'master',
 ): string {
   const projectId = encodeURIComponent(`${owner}/${repo}`);
   const baseUrl = `https://gitlab.com/api/v4/projects/${projectId}/repository/tree`;
@@ -424,7 +424,7 @@ export function buildGitLabFileContentUrl(
   owner: string,
   repo: string,
   path: string,
-  branch: string = 'main',
+  branch: string = 'master',
 ): string {
   const projectId = encodeURIComponent(`${owner}/${repo}`);
   // GitLab requires special path encoding for the files API
@@ -885,6 +885,150 @@ export async function getRepositoryDefaultBranch(
   }
 }
 
+/**
+ * Navigate to a file or directory in the repository explorer
+ * @param repositoryUrl Repository URL
+ * @param owner Repository owner
+ * @param repo Repository name
+ * @param path Path to navigate to
+ * @param branch Branch to navigate in
+ * @param providerType Provider type
+ * @param isDirectory Whether the item is a directory
+ * @returns Content of the file or directory
+ */
+export async function navigateRepository(
+  repositoryUrl: string,
+  owner: string,
+  repo: string,
+  path: string,
+  branch: string = 'main',
+  providerType: string = 'github',
+  isDirectory: boolean = false,
+): Promise<{
+  fileContent?: string;
+  files?: RepositoryFileInfo[];
+  error?: string;
+}> {
+  try {
+    console.log(`[GitService] Navigating repository - path: ${path}, isDirectory: ${isDirectory}`);
+
+    // Use appropriate branch based on provider if default branch ('main') is provided
+    let branchToUse = branch;
+    if (branch === 'main' && providerType === 'gitlab') {
+      branchToUse = 'master'; // Use 'master' for GitLab when 'main' is specified
+      console.log(`[GitService] Adjusted branch from 'main' to 'master' for GitLab provider`);
+    }
+
+    if (isDirectory) {
+      // Navigate to directory - fetch contents
+      const files = await fetchRepositoryContents(
+        repositoryUrl,
+        owner,
+        repo,
+        path,
+        branchToUse,
+        providerType,
+      );
+      return { files };
+    } else {
+      // Navigate to file - fetch content
+      const content = await fetchFileContent(
+        repositoryUrl,
+        owner,
+        repo,
+        path,
+        branchToUse,
+        providerType,
+      );
+      return { fileContent: content };
+    }
+  } catch (error: any) {
+    console.error('[GitService] Error navigating repository:', error);
+    return {
+      error:
+        error.message ||
+        'Failed to navigate repository. This could be due to authentication issues, the file might not exist, or the branch may be different.',
+    };
+  }
+}
+
+/**
+ * Load a repository structure (files and directories)
+ * @param repositoryUrl Repository URL
+ * @param currentPath Current path in the repository
+ * @param branch Branch to load
+ * @returns Repository structure
+ */
+export async function loadRepositoryStructure(
+  repositoryUrl: string,
+  currentPath: string[] = [],
+  branch: string = 'main',
+): Promise<{
+  files: RepositoryFileInfo[];
+  error?: string;
+}> {
+  try {
+    console.log(`[GitService] Loading repository structure - path: ${currentPath.join('/')}`);
+
+    // Detect provider and parse repository info
+    const providerType = detectProviderFromUrl(repositoryUrl);
+    const { owner, repo } = parseRepositoryUrl(repositoryUrl, providerType);
+
+    if (!owner || !repo) {
+      throw new Error('Could not determine repository owner and name from URL');
+    }
+
+    console.log(`[GitService] Using provider: ${providerType}, owner: ${owner}, repo: ${repo}`);
+
+    // Use appropriate branch based on provider if default branch ('main') is provided
+    let branchToUse = branch;
+    if (branch === 'main' && providerType === 'gitlab') {
+      branchToUse = 'master'; // Use 'master' for GitLab when 'main' is specified
+      console.log(`[GitService] Adjusted branch from 'main' to 'master' for GitLab provider`);
+    }
+
+    // Fetch repository contents
+    const pathString = currentPath.join('/');
+    const files = await fetchRepositoryContents(
+      repositoryUrl,
+      owner,
+      repo,
+      pathString,
+      branchToUse,
+      providerType,
+    );
+
+    // Sort files: directories first, then files alphabetically
+    const sortedFiles = [...files].sort((a, b) => {
+      if (a.type === 'dir' && b.type !== 'dir') return -1;
+      if (a.type !== 'dir' && b.type === 'dir') return 1;
+      return a.name.localeCompare(b.name);
+    });
+
+    return { files: sortedFiles };
+  } catch (error: any) {
+    console.error('[GitService] Error loading repository structure:', error);
+    return {
+      files: [],
+      error: error.message || 'Failed to load repository structure',
+    };
+  }
+}
+
+/**
+ * Get a file icon color class based on file extension
+ * @param fileName Filename to analyze
+ * @param colorMap Map of extensions to color classes
+ * @returns CSS color class
+ */
+export function getFileIconColorClass(
+  fileName: string,
+  colorMap: Record<string, string> = {},
+): string {
+  const extension = fileName.split('.').pop()?.toLowerCase() || 'default';
+  return colorMap[extension] || colorMap.default || '';
+}
+
 // Export repository service functions
 const gitService = {
   testGitProviderConnection,
@@ -901,6 +1045,9 @@ const gitService = {
   fetchRepositoryContents,
   fetchFileContent,
   getRepositoryDefaultBranch,
+  navigateRepository,
+  loadRepositoryStructure,
+  getFileIconColorClass,
 };
 
 export default gitService;
