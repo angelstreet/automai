@@ -58,7 +58,7 @@ const DeploymentWizardStep4Client: React.FC<DeploymentWizardStep4Props> = ({
 
       <div className="mb-3">
         <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-          {t('deploymentSchedule')}
+          {t('wizard_schedule_later')}
         </label>
         <div className="flex items-center space-x-4 mb-2">
           <div className="flex items-center">
@@ -72,7 +72,7 @@ const DeploymentWizardStep4Client: React.FC<DeploymentWizardStep4Props> = ({
               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600"
             />
             <label htmlFor="scheduleNow" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-              {t('deployNow')}
+              {t('wizard_deploy_now')}
             </label>
           </div>
           <div className="flex items-center">
@@ -89,7 +89,7 @@ const DeploymentWizardStep4Client: React.FC<DeploymentWizardStep4Props> = ({
               htmlFor="scheduleLater"
               className="ml-2 text-sm text-gray-700 dark:text-gray-300"
             >
-              {t('scheduleLater')}
+              {t('wizard_schedule_later')}
             </label>
           </div>
         </div>
@@ -101,7 +101,7 @@ const DeploymentWizardStep4Client: React.FC<DeploymentWizardStep4Props> = ({
                 htmlFor="scheduledTime"
                 className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
               >
-                {t('dateAndTime')}
+                {t('wizard_date_and_time')}
               </label>
               <input
                 type="datetime-local"

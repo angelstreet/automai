@@ -578,7 +578,7 @@
       "scriptsError": "Error loading scripts",
       "hostsError": "Error loading hosts",
       "tryRefreshing": "Please try refreshing the page or contact support if the issue persists.",
-      "loadingHosts": "Loading hosts...",
+      "loadingHosts": "Loading hostsdate...",
       "deploymentSchedule": "Deployment Schedule",
       "deployNow": "Deploy now",
       "scheduleLater": "Schedule for later",

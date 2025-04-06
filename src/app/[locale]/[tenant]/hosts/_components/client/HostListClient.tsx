@@ -81,10 +81,14 @@ function HostListClient({ initialHosts }: HostListClientProps) {
         // Dispatch event for test start
         handleTestStarted(host.id);
 
-        // Update local state to show testing status
+        // Force the status to 'testing' to ensure animation is visible
+        // Use a separate setState call to ensure it gets processed
         setHosts((prevHosts) =>
           prevHosts.map((h) => (h.id === host.id ? { ...h, status: 'testing' } : h)),
         );
+
+        // Small delay to ensure the testing state is visually apparent
+        await new Promise((resolve) => setTimeout(resolve, 150));
 
         // Call the mutation
         const result = await testConnectionMutation(host.id);
@@ -93,18 +97,18 @@ function HostListClient({ initialHosts }: HostListClientProps) {
           result,
         );
 
-        // Ensure state updates are properly applied
-        setTimeout(() => {
-          // Update the UI based on result
-          setHosts((prevHosts) =>
-            prevHosts.map((h) =>
-              h.id === host.id ? { ...h, status: result.success ? 'connected' : 'failed' } : h,
-            ),
-          );
+        // Small delay before updating final status to ensure animation is visible
+        await new Promise((resolve) => setTimeout(resolve, 100));
 
-          // Dispatch event for test completion
-          handleTestCompleted(host.id);
-        }, 100);
+        // Update the UI based on result
+        setHosts((prevHosts) =>
+          prevHosts.map((h) =>
+            h.id === host.id ? { ...h, status: result.success ? 'connected' : 'failed' } : h,
+          ),
+        );
+
+        // Dispatch event for test completion
+        handleTestCompleted(host.id);
 
         return result.success;
       } catch (error) {
@@ -132,17 +136,27 @@ function HostListClient({ initialHosts }: HostListClientProps) {
     async (hostIds: string[]) => {
       console.log(`[@component:HostListClient] Testing all hosts: ${hostIds.length} hosts`);
 
-      // Start all tests in parallel
-      const testPromises = hostIds.map((hostId) => {
+      // Update all hosts to 'testing' status first for visible animation
+      setHosts((prevHosts) =>
+        prevHosts.map((h) => (hostIds.includes(h.id) ? { ...h, status: 'testing' } : h)),
+      );
+
+      // Add small delay to ensure the status updates are rendered
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Start tests with staggered delays for better visual feedback
+      hostIds.forEach((hostId, index) => {
         const host = hosts.find((h) => h.id === hostId);
         if (host) {
-          return handleTestConnection(host);
+          // Add staggered delay between each test (100ms per host)
+          setTimeout(() => {
+            console.log(
+              `[@component:HostListClient] Starting test for host ${index + 1}/${hostIds.length}: ${hostId}`,
+            );
+            handleTestConnection(host);
+          }, index * 100);
         }
-        return Promise.resolve(false);
       });
-
-      // Wait for all tests to complete
-      await Promise.all(testPromises);
     },
     [hosts, handleTestConnection],
   );
