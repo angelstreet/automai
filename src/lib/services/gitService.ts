@@ -3,6 +3,21 @@
  * Handles all external Git provider API calls
  */
 
+// Add TypeScript declarations for our global variables
+declare global {
+  interface Window {
+    gitPathParams?: { owner: string; repo: string };
+    gitRepoUrl?: string;
+  }
+
+  namespace NodeJS {
+    interface Global {
+      gitPathParams?: { owner: string; repo: string };
+      gitRepoUrl?: string;
+    }
+  }
+}
+
 export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
@@ -267,111 +282,8 @@ export function parseRepositoryUrl(url?: string, providerType?: string): RepoInf
   }
 }
 
-/**
- * Extract repository owner, name, and project path (for GitLab) from URL
- * @deprecated Use parseRepositoryUrl instead
- */
-export function extractRepoInfo(provider: string): RepoInfo {
-  try {
-    // Try to get URL from different sources (client or server)
-    let url = '';
-
-    // First check if we have a server-side global variable
-    if (typeof global !== 'undefined' && global.repositoryUrl) {
-      url = global.repositoryUrl;
-      console.log('[GitService] Using server-side repository URL:', url);
-    }
-    // Then try localStorage if we're in a browser
-    else if (typeof window !== 'undefined') {
-      url = localStorage.getItem('repository_url') || '';
-      console.log('[GitService] Using client-side repository URL:', url);
-    }
-
-    // Default values
-    let owner = '';
-    let repo = '';
-    let projectPath = '';
-
-    if (!url) {
-      console.warn('[GitService] No repository URL found');
-      return { owner, repo, projectPath };
-    }
-
-    // If URL is URL-encoded, decode it
-    if (url.includes('%')) {
-      url = decodeURIComponent(url);
-    }
-
-    // Remove .git suffix if present
-    url = url.replace(/\.git$/, '');
-
-    console.log(`[GitService] Extracting info from URL (${provider}):`, url);
-
-    if (provider === 'github') {
-      // For GitHub URLs like https://github.com/owner/repo
-      const match = url.match(/github\.com\/([^\/]+)\/([^\/\.]+)/);
-      if (match) {
-        owner = match[1];
-        repo = match[2];
-      } else {
-        // Try alternative patterns or fallback for non-standard URLs
-        const decodedUrl = decodeURIComponent(url);
-        const parts = decodedUrl
-          .replace(/^https?:\/\//, '')
-          .split('/')
-          .filter(Boolean);
-
-        if (parts.length >= 2) {
-          // Use the last two parts as owner/repo
-          repo = parts[parts.length - 1].replace(/\.git$/, '');
-          owner = parts[parts.length - 2];
-        }
-      }
-    } else if (provider === 'gitlab') {
-      // For GitLab URLs like https://gitlab.com/owner/repo or https://gitlab.com/group/subgroup/repo
-      const urlWithoutProtocol = url.replace(/^https?:\/\//, '');
-      const parts = urlWithoutProtocol.split('/').filter(Boolean);
-
-      if (parts.length >= 3) {
-        // Skip the domain (gitlab.com)
-        const domainIndex = parts.findIndex((part) => part.includes('gitlab'));
-        const pathParts = parts.slice(domainIndex + 1);
-
-        // The last part is the repo name
-        repo = pathParts[pathParts.length - 1];
-
-        // Everything before is the owner/group path
-        owner = pathParts.slice(0, pathParts.length - 1).join('/');
-
-        // For GitLab API, we need the full project path (URL encoded)
-        projectPath = encodeURIComponent(pathParts.join('/'));
-      }
-    } else if (provider === 'gitea') {
-      // For Gitea URLs
-      const urlWithoutProtocol = url.replace(/^https?:\/\//, '');
-      const parts = urlWithoutProtocol.split('/').filter(Boolean);
-
-      // Skip the domain
-      if (parts.length >= 3) {
-        // Skip the server part
-        const pathStart = parts[0].includes(':') ? 1 : 1; // Skip domain or IP:port
-        const pathParts = parts.slice(pathStart);
-
-        // For URLs like domain.com/owner/repo
-        if (pathParts.length >= 2) {
-          repo = pathParts[pathParts.length - 1].replace(/\.git$/, '');
-          owner = pathParts[pathParts.length - 2];
-        }
-      }
-    }
-
-    return { owner, repo, projectPath };
-  } catch (err) {
-    console.error('[GitService] Error extracting repo info:', err);
-    // Return empty values if any error occurs
-    return { owner: '', repo: '', projectPath: '' };
-  }
-}
+// The extractRepoInfo function has been removed and replaced with parseRepositoryUrl
+// which is called directly from the components that need it.
 
 /**
  * Build a GitHub URL for file listings
@@ -467,7 +379,7 @@ export async function fetchRepositoryContents(
     // Use a timeout to prevent hanging
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
-    
+
     // Check for GitHub token in environment or localStorage
     let githubToken = '';
     if (providerType === 'github') {
@@ -500,7 +412,9 @@ export async function fetchRepositoryContents(
     if (!response.ok) {
       // Provide a clearer error message for 403 errors (API rate limits)
       if (response.status === 403) {
-        throw new Error(`API rate limit reached (HTTP 403). GitHub is restricting access to this repository.`);
+        throw new Error(
+          `API rate limit reached (HTTP 403). GitHub is restricting access to this repository.`,
+        );
       } else {
         throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
@@ -557,7 +471,7 @@ export async function fetchFileContent(
     // Use a timeout to prevent hanging
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
-    
+
     // Check for GitHub token in environment or localStorage
     let githubToken = '';
     if (providerType === 'github') {
@@ -590,7 +504,9 @@ export async function fetchFileContent(
     if (!response.ok) {
       // Provide a clearer error message for 403 errors (API rate limits)
       if (response.status === 403) {
-        throw new Error(`API rate limit reached (HTTP 403). GitHub is restricting access to this repository.`);
+        throw new Error(
+          `API rate limit reached (HTTP 403). GitHub is restricting access to this repository.`,
+        );
       } else {
         throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
@@ -648,7 +564,11 @@ export function getProviderApiConfig(
     // Use project path format for GitLab API v4
     // For paths: https://gitlab.com/api/v4/projects/PROJECT_PATH/repository/tree?path=PATH
     // For files: https://gitlab.com/api/v4/projects/PROJECT_PATH/repository/files/FILE_PATH/raw?ref=BRANCH
-    const { projectPath } = extractRepoInfo(provider);
+    // Get the values that were stored by findScriptsRecursively
+    const pathParams = global.gitPathParams || window?.gitPathParams || { owner: '', repo: '' };
+
+    // Create project path by combining owner and repo, like in the original extractRepoInfo
+    const projectPath = encodeURIComponent(`${pathParams.owner}/${pathParams.repo}`);
 
     // Make sure we don't have a trailing .git
     const cleanProjectPath = projectPath.replace(/%2F\.git$/, '');
@@ -669,28 +589,32 @@ export function getProviderApiConfig(
       };
     }
   } else if (provider === 'gitea') {
-    // Get the repository URL from localStorage or global
-    let repoUrl = '';
-    if (typeof global !== 'undefined' && global.repositoryUrl) {
-      repoUrl = global.repositoryUrl;
-    } else if (typeof window !== 'undefined' && localStorage.getItem('repository_url')) {
-      repoUrl = localStorage.getItem('repository_url') || '';
+    // Since this is being called from fetchRepositoryContents, we can use the URL already passed in
+    // from findScriptsRecursively which has the correct URL from the UI component
+
+    // Instead of re-extracting from localStorage/global, use the values we already have
+    // These are from the repository object selected in the UI
+    let owner = '',
+      repo = '';
+
+    // Get the owner and repo directly from path parameters passed in from the UI
+    const pathParams = global.gitPathParams || window?.gitPathParams;
+    if (pathParams?.owner && pathParams?.repo) {
+      owner = pathParams.owner;
+      repo = pathParams.repo;
     }
-    
-    // Use the non-deprecated parseRepositoryUrl instead of extractRepoInfo
-    const { owner, repo } = parseRepositoryUrl(repoUrl, 'gitea');
-    
-    // Extract server URL from the repository URL
+
+    // Extract server URL directly from the repository URL that we already have
     let serverUrl = '';
-    if (repoUrl) {
+    if (global.gitRepoUrl || window?.gitRepoUrl) {
       try {
-        const urlObj = new URL(repoUrl);
+        const urlObj = new URL(global.gitRepoUrl || window?.gitRepoUrl);
         serverUrl = `${urlObj.protocol}//${urlObj.host}`;
       } catch (e) {
         console.error('[GitService] Error extracting server URL from repo URL:', e);
       }
     }
-    
+
     // If still empty after the attempt, use default
     if (!serverUrl) {
       console.warn('[GitService] No Gitea server URL found, using default http://localhost:3000');
@@ -700,7 +624,9 @@ export function getProviderApiConfig(
     // For Gitea repositories, use 'master' as the default branch if 'main' is specified
     const giteaRef = ref === 'main' ? 'master' : ref;
 
-    console.log(`[GitService] Using Gitea server URL: ${serverUrl} with branch: ${giteaRef}, owner: ${owner}, repo: ${repo}`);
+    console.log(
+      `[GitService] Using Gitea server URL: ${serverUrl} with branch: ${giteaRef}, owner: ${owner}, repo: ${repo}`,
+    );
 
     // Use a consistent content path structure for all Gitea requests
     return {
@@ -709,11 +635,11 @@ export function getProviderApiConfig(
     };
   } else {
     // GitHub API format remains the same
+    // Use the stored values from findScriptsRecursively
+    const pathParams = global.gitPathParams || window?.gitPathParams || { owner: '', repo: '' };
     return {
       ...config,
-      url: `https://api.github.com/repos/${extractRepoInfo(provider).owner}/${
-        extractRepoInfo(provider).repo
-      }/contents/${path}`,
+      url: `https://api.github.com/repos/${pathParams.owner}/${pathParams.repo}/contents/${path}`,
       headers: {
         ...config.headers,
         Authorization: process.env.GITHUB_TOKEN ? `token ${process.env.GITHUB_TOKEN}` : '',
@@ -745,7 +671,7 @@ export function standardizeResponse(provider: string, data: any, _action: string
         size: item.size || 0,
         download_url:
           item.type === 'blob'
-            ? `https://gitlab.com/api/v4/projects/${extractRepoInfo(provider).projectPath}/repository/files/${encodeURIComponent(item.path)}/raw`
+            ? `https://gitlab.com/api/v4/projects/${encodeURIComponent((global.gitPathParams || window?.gitPathParams || { owner: '', repo: '' }).owner + '/' + (global.gitPathParams || window?.gitPathParams || { owner: '', repo: '' }).repo)}/repository/files/${encodeURIComponent(item.path)}/raw`
             : null,
       }));
     } else {
@@ -779,7 +705,9 @@ export function standardizeResponse(provider: string, data: any, _action: string
             serverUrl = 'http://localhost:3000';
           }
 
-          const { owner, repo } = extractRepoInfo(provider);
+          // Get the stored owner and repo values
+          const pathParams = global.gitPathParams ||
+            window?.gitPathParams || { owner: '', repo: '' };
 
           return {
             name,
@@ -788,7 +716,7 @@ export function standardizeResponse(provider: string, data: any, _action: string
             size: item.size || 0,
             download_url:
               item.type === 'blob'
-                ? `${serverUrl}/api/v1/repos/${owner}/${repo}/raw/${item.path}`
+                ? `${serverUrl}/api/v1/repos/${pathParams.owner}/${pathParams.repo}/raw/${item.path}`
                 : null,
           };
         });
@@ -1076,8 +1004,16 @@ export async function findScriptsRecursively(
   providerType: string = 'github',
   path: string = '',
   depth: number = 0,
-  maxDepth: number = 2
+  maxDepth: number = 2,
 ): Promise<RepositoryFileInfo[]> {
+  // Store these values globally so they can be accessed by getProviderApiConfig
+  if (typeof window !== 'undefined') {
+    window.gitPathParams = { owner, repo };
+    window.gitRepoUrl = url;
+  } else if (typeof global !== 'undefined') {
+    global.gitPathParams = { owner, repo };
+    global.gitRepoUrl = url;
+  }
   // Display warning about depth and folder limits at the start
   if (depth === 0) {
     console.warn(`
@@ -1091,7 +1027,7 @@ export async function findScriptsRecursively(
 ╚═════════════════════════════════════════════════════════════════════════╝
     `);
   }
-  
+
   let allScripts = [];
 
   // Stop recursion if we've reached the maximum depth
@@ -1101,46 +1037,46 @@ export async function findScriptsRecursively(
   }
 
   // Skip hidden directories and special folders
-  if (path.includes('/.') || path.includes('/node_modules/') || path.includes('/__') || path.includes('\\__')) {
+  if (
+    path.includes('/.') ||
+    path.includes('/node_modules/') ||
+    path.includes('/__') ||
+    path.includes('\\__')
+  ) {
     return allScripts;
   }
 
   try {
     // Get files at current path
-    const files = await fetchRepositoryContents(
-      url,
-      owner,
-      repo,
-      path,
-      branch,
-      providerType,
-    );
+    const files = await fetchRepositoryContents(url, owner, repo, path, branch, providerType);
 
     // Find scripts in current directory
     const scripts = files.filter(
-      (file) =>
-        file.type === 'file' &&
-        (file.name.endsWith('.sh') || file.name.endsWith('.py')),
+      (file) => file.type === 'file' && (file.name.endsWith('.sh') || file.name.endsWith('.py')),
     );
 
     // Add them to our collection
     allScripts.push(...scripts);
 
     // Find all directories and scan them recursively, excluding hidden and special ones
-    const directories = files.filter((file) => 
-      file.type === 'dir' && !file.name.startsWith('.') && !file.name.startsWith('__')
+    const directories = files.filter(
+      (file) => file.type === 'dir' && !file.name.startsWith('.') && !file.name.startsWith('__'),
     );
-    
+
     // Scan up to 10 directories per level
     const dirsToScan = directories.slice(0, 10);
-    
+
     for (const dir of dirsToScan) {
       try {
         // Skip node_modules and special folders
-        if (dir.path.includes('/node_modules/') || dir.path.includes('/__') || dir.path.includes('\\__')) {
+        if (
+          dir.path.includes('/node_modules/') ||
+          dir.path.includes('/__') ||
+          dir.path.includes('\\__')
+        ) {
           continue;
         }
-        
+
         const subDirScripts = await findScriptsRecursively(
           url,
           owner,
@@ -1149,9 +1085,9 @@ export async function findScriptsRecursively(
           providerType,
           dir.path,
           depth + 1,
-          maxDepth
+          maxDepth,
         );
-        
+
         allScripts.push(...subDirScripts);
       } catch (error) {
         // Continue with next directory on error
@@ -1174,7 +1110,6 @@ const gitService = {
   testGitRepositoryAccess,
   detectProviderFromUrl,
   parseRepositoryUrl,
-  extractRepoInfo,
   getProviderApiConfig,
   standardizeResponse,
   buildGitHubFileListingUrl,
