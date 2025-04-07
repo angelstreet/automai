@@ -5,6 +5,8 @@ import { useTranslations } from 'next-intl';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
 import { useHost, useCICD } from '@/hooks';
 import { useRepository } from '@/hooks/useRepository';
+import { useTeam } from '@/hooks/useTeam';
+import { useUser } from '@/hooks/useUser';
 import { Deployment } from '@/types/component/deploymentComponentType';
 import { Repository } from '@/types/component/repositoryComponentType';
 
@@ -26,6 +28,8 @@ export function DeploymentWizardDialogClient({
   const t = useTranslations('deployment');
   const { hosts, isLoading: isLoadingHosts } = useHost();
   const { providers: cicdProviders, isLoading: isLoadingCICD } = useCICD();
+  const { activeTeam } = useTeam();
+  const { user } = useUser();
 
   // Only use the repository hook if no repositories were provided
   const { repositories: fetchedRepositories, isLoading: isLoadingRepositories } = useRepository({
@@ -73,6 +77,8 @@ export function DeploymentWizardDialogClient({
             repositories={repositories}
             hosts={hosts || []}
             cicdProviders={cicdProviders || []}
+            teamId={activeTeam?.id || ''}
+            userId={user?.id || ''}
           />
         )}
 

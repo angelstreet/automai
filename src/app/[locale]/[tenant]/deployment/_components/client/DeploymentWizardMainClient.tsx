@@ -46,6 +46,8 @@ interface DeploymentWizardProps {
   repositories: Repository[];
   hosts: SystemHost[];
   cicdProviders: any[];
+  teamId: string;
+  userId: string;
 }
 
 const initialDeploymentData: DeploymentData = {
@@ -72,7 +74,15 @@ const initialDeploymentData: DeploymentData = {
 
 // Wrap DeploymentWizard in React.memo to prevent unnecessary re-renders
 const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
-  ({ onCancel, onDeploymentCreated, repositories = [], hosts = [], cicdProviders = [] }) => {
+  ({
+    onCancel,
+    onDeploymentCreated,
+    repositories = [],
+    hosts = [],
+    cicdProviders = [],
+    teamId,
+    userId,
+  }) => {
     // Log repositories and their default branches for debugging
     console.log(
       '[DeploymentWizard] Repository list with default branches:',
@@ -514,9 +524,11 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           name: deploymentData.name,
           description: deploymentData.description,
           repositoryId: deploymentData.repositoryId,
-          branch: deploymentData.branch || 'main', // Use selected branch
-          targetHostId: deploymentData.hostIds[0], // First host ID
-          cicdProviderId: cicdProviders.length > 0 ? cicdProviders[0].id : '',
+          branch: deploymentData.branch || 'main',
+          targetHostId: deploymentData.hostIds[0],
+          team_id: teamId,
+          creator_id: userId,
+          cicd_provider_id: deploymentData.cicd_provider_id || cicdProviders[0].id,
           configuration: {
             scriptIds: deploymentData.scriptIds,
             scriptMapping,
@@ -530,7 +542,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
             notifications: deploymentData.notifications,
           },
           scheduled: deploymentData.schedule !== 'now',
-          autoStart: deploymentData.schedule === 'now', // Auto-start for immediate deployments
+          autoStart: deploymentData.schedule === 'now',
         };
 
         console.log('[DeploymentWizard] Submitting deployment with data:', formData);

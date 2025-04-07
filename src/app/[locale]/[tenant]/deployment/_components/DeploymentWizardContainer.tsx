@@ -70,14 +70,13 @@ export default async function DeploymentWizardContainer({
         onDeploymentCreated={onDeploymentCreated}
       />
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in DeploymentWizardContainer:', error);
-
     return (
       <div className="p-8 text-center">
-        <div className="text-destructive mb-2">Unexpected error</div>
+        <div className="text-destructive mb-2">Error</div>
         <p className="text-muted-foreground text-sm">
-          An unexpected error occurred while loading the wizard
+          {error.message || 'An unexpected error occurred'}
         </p>
         <button
           onClick={onCancel}
