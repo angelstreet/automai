@@ -1,6 +1,6 @@
 'use client';
 
-import { Search, Clock, Play, Eye, PlayCircle, Trash2 } from 'lucide-react';
+import { Search, Clock, Play, Eye, PlayCircle, Trash2, MoreHorizontal } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
 
@@ -15,6 +15,12 @@ import {
   AlertDialogTitle,
 } from '@/components/shadcn/alert-dialog';
 import { Button } from '@/components/shadcn/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/shadcn/dropdown-menu';
 import { useToast } from '@/components/shadcn/use-toast';
 import { useDeployment } from '@/hooks';
 import { getFormattedTime } from '@/lib/utils/deploymentUtils';
@@ -444,52 +450,50 @@ export function DeploymentListClient({
                               : '-'}
                       </td>
                       <td className="px-2 py-1 whitespace-nowrap text-sm">
-                        <div className="flex space-x-2 justify-center">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex items-center text-xs"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleViewDeployment(deployment);
-                            }}
-                          >
-                            <Eye className="mr-1 h-3 w-3" /> View
-                          </Button>
-
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex items-center text-xs"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRunDeployment(deployment);
-                            }}
-                            disabled={isRunning === deployment.id}
-                          >
-                            {isRunning === deployment.id ? (
-                              <>
-                                <span className="animate-spin mr-1">⟳</span> Running...
-                              </>
-                            ) : (
-                              <>
-                                <PlayCircle className="mr-1 h-3 w-3" /> Run
-                              </>
-                            )}
-                          </Button>
-
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex items-center text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteClick(deployment, e);
-                            }}
-                            disabled={actionInProgress === deployment.id}
-                          >
-                            <Trash2 className="mr-1 h-3 w-3" /> Delete
-                          </Button>
+                        <div className="flex justify-center">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 flex items-center justify-center"
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleViewDeployment(deployment);
+                                }}
+                              >
+                                <Eye className="mr-2 h-4 w-4" />
+                                View
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRunDeployment(deployment);
+                                }}
+                                disabled={isRunning === deployment.id}
+                              >
+                                <PlayCircle className="mr-2 h-4 w-4" />
+                                {isRunning === deployment.id ? 'Running...' : 'Run'}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-red-600"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteClick(deployment, e);
+                                }}
+                                disabled={actionInProgress === deployment.id}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </td>
                     </tr>
