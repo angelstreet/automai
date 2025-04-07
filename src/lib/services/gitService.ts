@@ -713,19 +713,11 @@ export function getProviderApiConfig(
 
     console.log(`[GitService] Using Gitea server URL: ${serverUrl} with branch: ${giteaRef}`);
 
-    if (path.endsWith('.md') || path.endsWith('.txt') || path.includes('.')) {
-      // Get a specific file
-      return {
-        ...config,
-        url: `${serverUrl}/api/v1/repos/${owner}/${repo}/contents/${encodedPath}?ref=${giteaRef}`,
-      };
-    } else {
-      // Get directory tree (recursive by default for better performance)
-      return {
-        ...config,
-        url: `${serverUrl}/api/v1/repos/${owner}/${repo}/git/trees/${giteaRef}?recursive=1`,
-      };
-    }
+    // Use a consistent content path structure for all Gitea requests
+    return {
+      ...config,
+      url: `${serverUrl}/api/v1/repos/${owner}/${repo}/contents${path ? '/' + encodedPath : ''}?ref=${giteaRef}`,
+    };
   } else {
     // GitHub API format remains the same
     return {
