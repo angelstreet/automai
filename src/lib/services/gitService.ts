@@ -498,7 +498,12 @@ export async function fetchRepositoryContents(
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      throw new Error(`Error ${response.status}: ${response.statusText}`);
+      // Provide a clearer error message for 403 errors (API rate limits)
+      if (response.status === 403) {
+        throw new Error(`API rate limit reached (HTTP 403). GitHub is restricting access to this repository.`);
+      } else {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
     }
 
     // Parse response based on content type
@@ -583,7 +588,12 @@ export async function fetchFileContent(
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      throw new Error(`Error ${response.status}: ${response.statusText}`);
+      // Provide a clearer error message for 403 errors (API rate limits)
+      if (response.status === 403) {
+        throw new Error(`API rate limit reached (HTTP 403). GitHub is restricting access to this repository.`);
+      } else {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
     }
 
     // Parse response based on content type
@@ -1103,14 +1113,41 @@ export async function findScriptsRecursively(
 
   try {
     // Get files at current path
-    const files = await fetchRepositoryContents(
-      url,
-      owner,
-      repo,
-      path,
-      branch,
-      providerType,
-    );
+    let files;
+    try {
+      console.log(`[GitService] ATTEMPT: Scanning directory for scripts (py/sh): ${path || 'ROOT'}`);
+      files = await fetchRepositoryContents(
+        url,
+        owner,
+        repo,
+        path,
+        branch,
+        providerType,
+      );
+      console.log(`[GitService] SUCCESS: API request to ${path || 'ROOT'} succeeded with ${files.length} files`);
+      
+      // Log the file names and types for debugging
+      if (files.length > 0) {
+        console.log(`[GitService] FILES in ${path || 'ROOT'}: ${files.map(f => `${f.name} (${f.type})`).join(', ')}`);
+        
+        // Special logging for root directory to check for src and tests
+        if (path === '') {
+          const rootDirs = files.filter(f => f.type === 'dir').map(f => f.name);
+          console.log(`[GitService] ROOT DIRECTORIES: ${rootDirs.join(', ')}`);
+          console.log(`[GitService] 'src' directory exists: ${rootDirs.includes('src')}`);
+          console.log(`[GitService] 'tests' directory exists: ${rootDirs.includes('tests')}`);
+        }
+      }
+    } catch (fetchError: any) {
+      // Specifically check for 403 and provide a clearer error
+      if (fetchError.message && fetchError.message.includes('403')) {
+        console.error(`[GitService] ERROR 403 API RATE LIMIT for ${path || 'ROOT'} - GitHub is blocking access`);
+        // Rethrow with more specific message
+        throw new Error('API rate limit reached (HTTP 403). GitHub is restricting access to this repository.');
+      }
+      console.error(`[GitService] ERROR scanning ${path || 'ROOT'}: ${fetchError.message}`);
+      throw fetchError; // Re-throw other errors
+    }
 
     // Find scripts in current directory
     const scripts = files.filter(
@@ -1118,6 +1155,13 @@ export async function findScriptsRecursively(
         file.type === 'file' &&
         (file.name.endsWith('.sh') || file.name.endsWith('.py')),
     );
+    
+    // Log script files found in this directory
+    if (scripts.length > 0) {
+      console.log(`[GitService] FOUND ${scripts.length} script files in ${path || 'ROOT'}: ${scripts.map(s => s.name).join(', ')}`);
+    } else {
+      console.log(`[GitService] NO SCRIPTS found in ${path || 'ROOT'}`);
+    }
 
     // Add them to our collection
     allScripts.push(...scripts);
@@ -1127,15 +1171,32 @@ export async function findScriptsRecursively(
       file.type === 'dir' && !file.name.startsWith('.')
     );
     
-    // Only scan up to 3 directories per level to avoid API limits
-    const dirsToScan = directories.slice(0, 3);
+    console.log(`[GitService] FOUND ${directories.length} valid subdirectories to scan in ${path || 'ROOT'}`);
+    if (directories.length > 0) {
+      console.log(`[GitService] SUBDIRS in ${path || 'ROOT'}: ${directories.map(d => d.name).join(', ')}`);
+    }
+    
+    // Scan up to 10 directories per level to include src and tests
+    const dirsToScan = directories.slice(0, 10);
+    if (directories.length > 10) {
+      console.log(`[GitService] LIMITING scan to first 10 directories: ${dirsToScan.map(d => d.name).join(', ')}`);
+    }
+    
+    // Track scanned directories at this level
+    let scannedDirs = 0;
+    let successfulDirs = 0;
+    let errorDirs = 0;
     
     for (const dir of dirsToScan) {
       try {
         // Skip if we got a 403 for this path
         if (dir.path.includes('/node_modules/')) {
+          console.log(`[GitService] SKIPPING node_modules directory: ${dir.path}`);
           continue;
         }
+        
+        scannedDirs++;
+        console.log(`[GitService] RECURSING into directory (${depth+1}/${maxDepth}): ${dir.path}`);
         
         const subDirScripts = await findScriptsRecursively(
           url,
@@ -1147,19 +1208,71 @@ export async function findScriptsRecursively(
           depth + 1,  // Increment depth
           maxDepth
         );
+        
+        // Log results from subdirectory
+        if (subDirScripts.length > 0) {
+          console.log(`[GitService] FOUND ${subDirScripts.length} scripts in subdirectory: ${dir.path}`);
+          successfulDirs++;
+        } else {
+          console.log(`[GitService] NO SCRIPTS found in subdirectory: ${dir.path}`);
+          successfulDirs++;
+        }
+        
         allScripts.push(...subDirScripts);
-      } catch (error) {
+      } catch (error: any) {
         // If we get an error (especially 403), just continue with the next directory
-        console.error(`[GitService] Error scanning directory ${dir.path}:`, error);
+        errorDirs++;
+        if (error.message && error.message.includes('403')) {
+          console.error(`[GitService] ERROR 403 API RATE LIMIT scanning subdirectory: ${dir.path}`);
+        } else {
+          console.error(`[GitService] ERROR scanning subdirectory ${dir.path}: ${error.message}`);
+        }
         continue;
       }
     }
+    
+    // Log summary of directory scan
+    console.log(`[GitService] COMPLETED level ${depth} scan of ${path || 'ROOT'}: scanned=${scannedDirs}, success=${successfulDirs}, errors=${errorDirs}`);
+    
   } catch (error: any) {
     console.error(`[GitService] Error scanning directory ${path}:`, error);
     
     // If we hit a 403 error, stop recursion for this branch
     if (error.message && error.message.includes('403')) {
-      console.log('[GitService] API returned 403 Forbidden, stopping recursive scan');
+      console.error(`[GitService] ERROR 403 API RATE LIMIT, stopping recursive scan of ${path || 'ROOT'}`);
+    }
+  }
+
+  if (depth === 0) {
+    // Only log this at the root level to avoid spamming
+    console.log(`[GitService] SUMMARY: Found total of ${allScripts.length} script files in repository`);
+    if (allScripts.length > 0) {
+      console.log(`[GitService] SCRIPTS FOUND: ${allScripts.map(s => s.path).join(', ')}`);
+    } else {
+      console.log(`[GitService] NO SCRIPTS FOUND in the entire repository scan`);
+      
+      // Check if we're missing important directories like src and tests
+      console.log(`[GitService] IMPORTANT: Check if 'src' and 'tests' directories were scanned!`);
+      // Try to directly fetch these directories to see if they exist
+      try {
+        fetchRepositoryContents(url, owner, repo, 'src', branch, providerType)
+          .then(files => {
+            console.log(`[GitService] Direct check of 'src' directory - EXISTS with ${files.length} files`);
+          })
+          .catch(err => {
+            console.error(`[GitService] Direct check of 'src' directory - ERROR: ${err.message}`);
+          });
+          
+        fetchRepositoryContents(url, owner, repo, 'tests', branch, providerType)
+          .then(files => {
+            console.log(`[GitService] Direct check of 'tests' directory - EXISTS with ${files.length} files`);
+          })
+          .catch(err => {
+            console.error(`[GitService] Direct check of 'tests' directory - ERROR: ${err.message}`);
+          });
+      } catch (e) {
+        console.error('[GitService] Error checking important directories');
+      }
     }
   }
 

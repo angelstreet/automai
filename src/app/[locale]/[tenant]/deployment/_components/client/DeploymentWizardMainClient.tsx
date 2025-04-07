@@ -191,15 +191,13 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               console.log(
                 `[DeploymentWizard] Recursive scan found ${allFiles.length} script files`,
               );
+              
+              // Log if we're missing 'src' or 'tests' directories in our scan
+              console.log(
+                `[DeploymentWizard] IMPORTANT: Check if important directories were scanned in your logs!`
+              );
 
-              // Log when no files are found
-              if (allFiles.length === 0) {
-                console.log(
-                  '[DeploymentWizard] No script files found, possibly due to API limitations or permissions',
-                );
-              }
-
-              // Otherwise, use all the script files we found
+              // Use all the script files we found
               const filteredFiles = allFiles;
 
               console.log(
@@ -225,8 +223,18 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
                   `[DeploymentWizard] Successfully found ${newScripts.length} script files`,
                 );
               } else {
-                console.log(`[DeploymentWizard] No script files found`);
-                newError = 'No Python (.py) or Shell (.sh) scripts found in this repository.';
+                // Check if we have API errors by checking fetchError in the error catch blocks
+                let detected403Error = hasApiPermissionError;
+                
+                // If we have no scripts but the API calls are going through, it's likely just an empty repo
+                // But if we're getting 403 errors, we should show that instead
+                if (detected403Error) {
+                  console.log(`[DeploymentWizard] API rate limit error detected`);
+                  newError = 'API rate limit reached (HTTP 403). GitHub is restricting access to this repository.';
+                } else {
+                  console.log(`[DeploymentWizard] No script files found, but API appears to be working`);
+                  newError = 'No Python (.py) or Shell (.sh) scripts found in this repository.';
+                }
               }
 
               // Only update state if component is still mounted
