@@ -684,8 +684,8 @@ export class JenkinsProvider implements CICDProvider {
           };
         }
 
-        return {
-          success: false,
+    return {
+      success: false,
           error: `Failed to create Jenkins job: ${response.status} ${response.statusText}`,
         };
       }
@@ -734,8 +734,8 @@ export class JenkinsProvider implements CICDProvider {
       };
     } catch (error: any) {
       console.error(`[@service:jenkins:deleteJob] Error:`, error);
-      return {
-        success: false,
+    return {
+      success: false,
         error: error.message || `Failed to delete Jenkins job ${jobId}`,
       };
     }
