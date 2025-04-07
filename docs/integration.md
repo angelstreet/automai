@@ -14,7 +14,13 @@ Our deployment-CICD integration follows this workflow:
 2. **Running a Deployment**:
 
    ```typescript
-   // 1. Trigger CICD job
+   // 1. Get CICD job mapping
+   const mappingResult = await cicdDb.getCICDDeploymentMapping(
+     { where: { deployment_id: deploymentId } },
+     cookieStore,
+   );
+
+   // 2. Trigger the existing CICD job
    const triggerResult = await cicdService.triggerJob(
      providerId,
      jobId,
@@ -22,14 +28,14 @@ Our deployment-CICD integration follows this workflow:
      cookieStore,
    );
 
-   // 2. Update deployment status to 'running'
+   // 3. Update deployment status to 'running'
    await deploymentDb.updateDeploymentStatus(deploymentId, 'running', cookieStore);
    ```
 
 3. **Status Updates via Webhook**:
 
    ```typescript
-   // src/app/api/webhooks/jenkins/route.ts
+   // src/app/[locale]/[tenant]/deployment/webhooks/jenkins/route.ts
    export async function POST(req: Request) {
      const cookieStore = cookies();
      const payload = await req.json();
@@ -106,7 +112,7 @@ export const DeploymentEvents = {
 1. Configure Jenkins Notification Plugin:
 
    - Install "Notification Plugin" in Jenkins
-   - Add webhook URL: `https://your-domain/api/webhooks/jenkins`
+   - Add webhook URL: `https://your-domain/[locale]/[tenant]/deployment/webhooks/jenkins`
    - Configure payload format:
      ```json
      {
@@ -133,6 +139,27 @@ export const DeploymentEvents = {
    }
    ```
 
+## Implementation Plan
+
+### 1. Update `runDeployment` in `deploymentsAction.ts`
+
+- Modify to retrieve the CICD job mapping for the deployment
+- Use `cicdService.triggerJob()` to trigger the existing Jenkins job
+- Update deployment status to "running"
+
+### 2. Create webhook endpoint
+
+- Create `src/app/[locale]/[tenant]/deployment/webhooks/jenkins/route.ts`
+- Implement payload validation
+- Update CICD job status
+- Query deployment mapping
+- Update deployment status based on mapping
+
+### 3. Add necessary DB layer functions
+
+- Ensure `cicdDb` has a function to update job status
+- Use existing `deploymentDb.updateDeploymentStatus` function
+
 ## Best Practices
 
 1. **Status Consistency**
@@ -156,7 +183,7 @@ export const DeploymentEvents = {
 
 Follow the established logging format:
 
-```typitten
+```typescript
 console.log(`[@webhook:jenkins] Received status update for job: ${jobId}`);
 console.log(`[@webhook:jenkins] Updating deployment status: ${deploymentId} -> ${status}`);
 console.error(`[@webhook:jenkins] Error processing webhook: ${error.message}`);
