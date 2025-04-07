@@ -1029,6 +1029,68 @@ export function getFileIconColorClass(
   return colorMap[extension] || colorMap.default || '';
 }
 
+/**
+ * Recursively scans repository directories for script files
+ * @param url Repository URL
+ * @param owner Repository owner
+ * @param repo Repository name
+ * @param branch Repository branch
+ * @param providerType Git provider type (github, gitlab, gitea)
+ * @param path Starting path to scan from
+ * @returns Array of script files found
+ */
+export async function findScriptsRecursively(
+  url: string,
+  owner: string,
+  repo: string,
+  branch: string = 'main',
+  providerType: string = 'github',
+  path: string = ''
+): Promise<RepositoryFileInfo[]> {
+  let allScripts = [];
+
+  try {
+    // Get files at current path
+    const files = await fetchRepositoryContents(
+      url,
+      owner,
+      repo,
+      path,
+      branch,
+      providerType,
+    );
+
+    // Find scripts in current directory
+    const scripts = files.filter(
+      (file) =>
+        file.type === 'file' &&
+        (file.name.endsWith('.sh') || file.name.endsWith('.py')),
+    );
+
+    // Add them to our collection
+    allScripts.push(...scripts);
+
+    // Find all directories and scan them recursively
+    const directories = files.filter((file) => file.type === 'dir');
+
+    for (const dir of directories) {
+      const subDirScripts = await findScriptsRecursively(
+        url,
+        owner,
+        repo,
+        branch,
+        providerType,
+        dir.path
+      );
+      allScripts.push(...subDirScripts);
+    }
+  } catch (error) {
+    console.error(`[GitService] Error scanning directory ${path}:`, error);
+  }
+
+  return allScripts;
+}
+
 // Export repository service functions
 const gitService = {
   testGitProviderConnection,
@@ -1048,6 +1110,7 @@ const gitService = {
   navigateRepository,
   loadRepositoryStructure,
   getFileIconColorClass,
+  findScriptsRecursively,
 };
 
 export default gitService;

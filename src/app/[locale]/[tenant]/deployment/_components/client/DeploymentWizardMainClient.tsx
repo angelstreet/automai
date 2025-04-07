@@ -171,50 +171,20 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
 
               // Use gitService.fetchRepositoryContents to get repository files
               const branch = deploymentData.branch || 'main';
-              
-              // Function to recursively scan repository directories for script files
-              async function findScriptsRecursively(path = '') {
-                let allScripts = [];
-                
-                try {
-                  // Get files at current path
-                  const files = await gitService.fetchRepositoryContents(
-                    selectedRepo.url,
-                    owner,
-                    repo,
-                    path,
-                    branch,
-                    providerType,
-                  );
-                  
-                  // Find scripts in current directory
-                  const scripts = files.filter(
-                    (file) =>
-                      file.type === 'file' && (file.name.endsWith('.sh') || file.name.endsWith('.py')),
-                  );
-                  
-                  // Add them to our collection
-                  allScripts.push(...scripts);
-                  
-                  // Find all directories and scan them recursively
-                  const directories = files.filter(file => file.type === 'dir');
-                  
-                  for (const dir of directories) {
-                    const subDirScripts = await findScriptsRecursively(dir.path);
-                    allScripts.push(...subDirScripts);
-                  }
-                } catch (error) {
-                  console.error(`[DeploymentWizard] Error scanning directory ${path}:`, error);
-                }
-                
-                return allScripts;
-              }
-              
+
               // Find all scripts in the repository (root and subdirectories)
-              const allFiles = await findScriptsRecursively();
-              
-              console.log(`[DeploymentWizard] Recursive scan found ${allFiles.length} script files`);
-              
+              const allFiles = await gitService.findScriptsRecursively(
+                selectedRepo.url,
+                owner,
+                repo,
+                branch,
+                providerType
+              );
+
+              console.log(
+                `[DeploymentWizard] Recursive scan found ${allFiles.length} script files`,
+              );
+
               // Use all the script files we found
               const filteredFiles = allFiles;
 
