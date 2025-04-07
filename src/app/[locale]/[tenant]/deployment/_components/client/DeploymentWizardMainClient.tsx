@@ -1,7 +1,6 @@
 'use client';
 
 import { ArrowLeft } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import React, { useState, useEffect, useRef } from 'react';
 
 // Constants for repository scanning
@@ -74,8 +73,6 @@ const initialDeploymentData: DeploymentData = {
 // Wrap DeploymentWizard in React.memo to prevent unnecessary re-renders
 const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
   ({ onCancel, onDeploymentCreated, repositories = [], hosts = [], cicdProviders = [] }) => {
-    const _router = useRouter();
-
     // Log repositories and their default branches for debugging
     console.log(
       '[DeploymentWizard] Repository list with default branches:',
@@ -90,9 +87,6 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
     const [deploymentData, setDeploymentData] = useState<DeploymentData>(initialDeploymentData);
     const [isCreating, setIsCreating] = useState(false);
     const [_submissionError, setSubmissionError] = useState<string | null>(null);
-
-    // Use ref for mounting tracking without state updates
-    const _isMountedRef = useRef(true);
 
     // Adapt hosts for deployment
     const availableHosts = adaptHostsForDeployment(hosts);
