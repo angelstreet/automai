@@ -21,6 +21,7 @@ import {
   DeploymentStatus,
   DeploymentData,
 } from '@/types/component/deploymentComponentType';
+import { CICDProviderConfig } from '@/types/service/cicdServiceTypes';
 import { AuthUser, User } from '@/types/service/userServiceType';
 
 /**
@@ -478,7 +479,36 @@ export async function runDeployment(
         cookieStore,
       );
 
+      console.log(
+        `[@action:deployments:runDeployment] CICD mapping result:`,
+        JSON.stringify(mappingResult, null, 2),
+      );
       const jobId = mappingResult.data?.cicd_job_id;
+
+      // Get provider details with credentials
+      const { getCICDProvider } = await import('@/lib/db/cicdDb');
+
+      const providerResult = await getCICDProvider(
+        { where: { id: deployment.cicd_provider_id } },
+        cookieStore,
+      );
+
+      if (!providerResult.success || !providerResult.data) {
+        console.error('[@action:deployments:runDeployment] Failed to get CICD provider details');
+        return { success: false, error: 'Failed to get CICD provider details' };
+      }
+
+      // Get provider configuration
+      const providerConfig = providerResult.data as unknown as CICDProviderConfig;
+
+      console.log(`[@action:deployments:runDeployment] Provider config:`, {
+        id: providerConfig.id,
+        name: providerConfig.name,
+        type: providerConfig.type,
+        url: providerConfig.url,
+        auth_type: providerConfig.auth_type,
+        hasCredentials: !!providerConfig.credentials,
+      });
 
       // Extract deployment parameters from the deployment
       const deploymentParameters = deployment.scriptParameters || {};
@@ -486,9 +516,9 @@ export async function runDeployment(
       // Trigger the CICD job
       console.log(`[@action:deployments:runDeployment] Triggering job: ${jobId}`);
       console.log(
-        `[@action:deployments:runDeployment] CICD provider ID: ${deployment.cicd_provider_id}, Job ID: ${jobId}, Parameters:`,
-        JSON.stringify(deploymentParameters, null, 2),
+        `[@action:deployments:runDeployment] Full Jenkins URL that will be called: ${providerConfig.url}/job/${jobId}/build`,
       );
+
       const triggerResult = await cicdService.triggerJob(
         deployment.cicd_provider_id,
         jobId,
