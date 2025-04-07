@@ -302,8 +302,9 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
       repeat_count: formData.repeatCount || formData.configuration?.repeatCount || null,
       tenant_id: user.tenant_id,
       user_id: user.id,
-      team_id: teamId,
-      cicd_provider_id: cicdProviderId || null, // Add the CICD provider ID if selected
+      team_id: formData.team_id || teamId, // Use form data team_id first
+      creator_id: formData.creator_id || user.id, // Use form data creator_id first
+      cicd_provider_id: formData.cicd_provider_id || cicdProviderId || null, // Use form data cicd_provider_id first
     };
 
     console.log(

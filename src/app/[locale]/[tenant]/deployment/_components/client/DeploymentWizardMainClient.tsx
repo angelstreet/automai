@@ -10,6 +10,7 @@ const MAX_FOLDERS_PER_LEVEL = 3;
 import { saveDeploymentConfiguration, startDeployment } from '@/app/actions/deploymentWizardAction';
 import { toast } from '@/components/shadcn/use-toast';
 import * as gitService from '@/lib/services/gitService';
+import { CICDProvider } from '@/types/component/cicdComponentType';
 import { DeploymentData } from '@/types/component/deploymentComponentType';
 import { Host as HostType, Host as SystemHost } from '@/types/component/hostComponentType';
 import { Repository } from '@/types/component/repositoryComponentType';
@@ -42,10 +43,10 @@ const adaptHostsForDeployment = (systemHosts: SystemHost[]): HostType[] => {
 
 interface DeploymentWizardProps {
   onCancel: () => void;
-  onDeploymentCreated?: () => void;
-  repositories: Repository[];
-  hosts: SystemHost[];
-  cicdProviders: any[];
+  onDeploymentCreated: () => void;
+  repositories?: Repository[];
+  hosts?: SystemHost[];
+  cicdProviders?: CICDProvider[];
   teamId: string;
   userId: string;
 }
