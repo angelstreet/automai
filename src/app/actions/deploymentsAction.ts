@@ -485,6 +485,10 @@ export async function runDeployment(
 
       // Trigger the CICD job
       console.log(`[@action:deployments:runDeployment] Triggering job: ${jobId}`);
+      console.log(
+        `[@action:deployments:runDeployment] CICD provider ID: ${deployment.cicd_provider_id}, Job ID: ${jobId}, Parameters:`,
+        JSON.stringify(deploymentParameters, null, 2),
+      );
       const triggerResult = await cicdService.triggerJob(
         deployment.cicd_provider_id,
         jobId,
