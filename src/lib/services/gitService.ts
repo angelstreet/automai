@@ -991,9 +991,7 @@ export function getFileIconColorClass(
  * @param repo Repository name
  * @param branch Repository branch
  * @param providerType Git provider type (github, gitlab, gitea)
- * @param path Starting path to scan from
- * @param depth Current recursion depth (internal parameter)
- * @param maxDepth Maximum directory depth to scan
+ * @param config Optional configuration parameters
  * @returns Array of script files found
  */
 export async function findScriptsRecursively(
@@ -1002,10 +1000,15 @@ export async function findScriptsRecursively(
   repo: string,
   branch: string = 'main',
   providerType: string = 'github',
-  path: string = '',
-  depth: number = 0,
-  maxDepth: number = 2,
+  config: {
+    path?: string;
+    depth?: number;
+    maxDepth?: number;
+    maxFoldersPerLevel?: number;
+  } = {},
 ): Promise<RepositoryFileInfo[]> {
+  const { path = '', depth = 0, maxDepth = 2, maxFoldersPerLevel = 10 } = config;
+
   // Store these values globally so they can be accessed by getProviderApiConfig
   if (typeof window !== 'undefined') {
     window.gitPathParams = { owner, repo };
@@ -1020,7 +1023,7 @@ export async function findScriptsRecursively(
 ╔═════════════════════════════════════════════════════════════════════════╗
 ║ [GitService] WARNING: Script search limited to:                          ║
 ║   - Maximum depth: ${maxDepth} levels                                    ║
-║   - Maximum directories per level: 10                                    ║
+║   - Maximum directories per level: ${maxFoldersPerLevel}                 ║
 ║   - Only scanning .py and .sh files                                      ║
 ║   - Skipping hidden directories (starting with '.')                      ║
 ║   - Skipping special folders like __pycache__, node_modules              ║
@@ -1028,7 +1031,7 @@ export async function findScriptsRecursively(
     `);
   }
 
-  let allScripts = [];
+  let allScripts: RepositoryFileInfo[] = [];
 
   // Stop recursion if we've reached the maximum depth
   if (depth > maxDepth) {
@@ -1063,8 +1066,8 @@ export async function findScriptsRecursively(
       (file) => file.type === 'dir' && !file.name.startsWith('.') && !file.name.startsWith('__'),
     );
 
-    // Scan up to 10 directories per level
-    const dirsToScan = directories.slice(0, 10);
+    // Scan up to maxFoldersPerLevel directories per level
+    const dirsToScan = directories.slice(0, maxFoldersPerLevel);
 
     for (const dir of dirsToScan) {
       try {
@@ -1077,19 +1080,15 @@ export async function findScriptsRecursively(
           continue;
         }
 
-        const subDirScripts = await findScriptsRecursively(
-          url,
-          owner,
-          repo,
-          branch,
-          providerType,
-          dir.path,
-          depth + 1,
+        const subDirScripts = await findScriptsRecursively(url, owner, repo, branch, providerType, {
+          path: dir.path,
+          depth: depth + 1,
           maxDepth,
-        );
+          maxFoldersPerLevel,
+        });
 
         allScripts.push(...subDirScripts);
-      } catch (error) {
+      } catch (_error) {
         // Continue with next directory on error
         continue;
       }

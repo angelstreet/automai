@@ -4,6 +4,10 @@ import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import React, { useState, useEffect, useRef } from 'react';
 
+// Constants for repository scanning
+const MAX_REPOSITORY_SCAN_DEPTH = 0;
+const MAX_FOLDERS_PER_LEVEL = 3;
+
 import { saveDeploymentConfiguration, startDeployment } from '@/app/actions/deploymentWizardAction';
 import { toast } from '@/components/shadcn/use-toast';
 import * as gitService from '@/lib/services/gitService';
@@ -188,9 +192,12 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
                 repo,
                 branch,
                 providerType,
-                '', // path
-                0, // start at depth 0
-                1, // maximum depth of 2 levels
+                {
+                  path: '',
+                  depth: 0,
+                  maxDepth: MAX_REPOSITORY_SCAN_DEPTH,
+                  maxFoldersPerLevel: MAX_FOLDERS_PER_LEVEL,
+                },
               );
 
               console.log(
