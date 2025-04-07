@@ -545,6 +545,34 @@ export async function getCICDDeploymentMapping(
   }
 }
 
+/**
+ * Get CICD job mapping for a deployment
+ */
+export async function getCICDJobForDeployment(deploymentId: string, cookieStore?: any) {
+  try {
+    console.log(
+      `[@db:cicdDb:getCICDJobForDeployment] Getting CICD job for deployment: ${deploymentId}`,
+    );
+
+    const client = await createClient(cookieStore);
+    const { data, error } = await client
+      .from('deployment_cicd_mappings')
+      .select('cicd_job_id')
+      .eq('deployment_id', deploymentId)
+      .single();
+
+    if (error) {
+      console.error(`[@db:cicdDb:getCICDJobForDeployment] Error:`, error);
+      return null;
+    }
+
+    return data;
+  } catch (error: any) {
+    console.error('[@db:cicdDb:getCICDJobForDeployment] Error:', error);
+    return null;
+  }
+}
+
 // Default export for all CICD database operations
 const cicdDb = {
   getCICDProviders,
@@ -566,6 +594,7 @@ const cicdDb = {
   deleteCICDJob,
   deleteDeploymentCICDMapping,
   getCICDDeploymentMapping,
+  getCICDJobForDeployment,
 };
 
 export default cicdDb;

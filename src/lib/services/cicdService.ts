@@ -180,13 +180,13 @@ const cicdService = {
         const providerConfig = providerResult.data as unknown as CICDProviderConfig;
         const provider = CICDProviderFactory.createProvider(providerConfig);
 
-      // Get available jobs
-      const jobsResult = await provider.getAvailableJobs();
-      return {
-        success: jobsResult.success,
-        data: jobsResult.data,
-        error: jobsResult.error,
-      };
+        // Get available jobs
+        const jobsResult = await provider.getAvailableJobs();
+        return {
+          success: jobsResult.success,
+          data: jobsResult.data,
+          error: jobsResult.error,
+        };
       } catch (error: any) {
         console.error('[@service:cicdService:getAvailableJobs] Error:', error);
         return {
@@ -231,13 +231,13 @@ const cicdService = {
         const providerConfig = providerResult.data as unknown as CICDProviderConfig;
         const provider = CICDProviderFactory.createProvider(providerConfig);
 
-      // Get job details
-      const jobResult = await provider.getJobDetails(jobId);
-      return {
-        success: jobResult.success,
-        data: jobResult.data,
-        error: jobResult.error,
-      };
+        // Get job details
+        const jobResult = await provider.getJobDetails(jobId);
+        return {
+          success: jobResult.success,
+          data: jobResult.data,
+          error: jobResult.error,
+        };
       } catch (error: any) {
         console.error('[@service:cicdService:getJobDetails] Error:', error);
         return {
@@ -283,13 +283,13 @@ const cicdService = {
         const providerConfig = providerResult.data as unknown as CICDProviderConfig;
         const provider = CICDProviderFactory.createProvider(providerConfig);
 
-      // Trigger the job
-      const buildResult = await provider.triggerJob(jobId, parameters);
-      return {
-        success: buildResult.success,
-        data: buildResult.data,
-        error: buildResult.error,
-      };
+        // Trigger the job
+        const buildResult = await provider.triggerJob(jobId, parameters);
+        return {
+          success: buildResult.success,
+          data: buildResult.data,
+          error: buildResult.error,
+        };
       } catch (error: any) {
         console.error('[@service:cicdService:triggerJob] Error:', error);
         return {
@@ -314,6 +314,44 @@ const cicdService = {
     options: PipelineGeneratorOptions,
   ): string {
     return PipelineGenerator.generate(provider, options);
+  },
+
+  /**
+   * Delete a CICD job from provider
+   */
+  async deleteProviderJob(
+    providerId: string,
+    jobId: string,
+    cookieStore?: any,
+  ): Promise<ServiceResponse<boolean>> {
+    try {
+      // Get provider configuration
+      const providerResult = await cicdDb.getCICDProvider(
+        { where: { id: providerId } },
+        cookieStore,
+      );
+
+      if (!providerResult.success || !providerResult.data) {
+        return {
+          success: false,
+          error: providerResult.error || 'Provider not found',
+        };
+      }
+
+      // Create provider instance and delete job
+      const provider = CICDProviderFactory.createProvider(
+        providerResult.data as unknown as CICDProviderConfig,
+      );
+      const result = await provider.deleteJob(jobId);
+
+      return result;
+    } catch (error: any) {
+      console.error('[@service:cicdService:deleteProviderJob] Error:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to delete provider job',
+      };
+    }
   },
 };
 

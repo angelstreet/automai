@@ -6,77 +6,22 @@ import { cache } from 'react';
 
 import { getUserActiveTeam } from '@/app/actions/teamAction';
 import { getUser } from '@/app/actions/userAction';
+import cicdDb from '@/lib/db/cicdDb';
 import {
   getDeployments as dbGetDeployments,
   getDeploymentById as dbGetDeploymentById,
   createDeployment as dbCreateDeployment,
   updateDeployment as dbUpdateDeployment,
   deleteDeployment as dbDeleteDeployment,
-  updateDeploymentStatus as dbUpdateDeploymentStatus,
   runDeployment as dbRunDeployment,
 } from '@/lib/db/deploymentDb';
+import cicdService from '@/lib/services/cicdService';
 import {
   Deployment,
   DeploymentFormData,
   DeploymentStatus,
 } from '@/types/component/deploymentComponentType';
 import { AuthUser, User } from '@/types/service/userServiceType';
-
-// Define CICDPipelineConfig type
-interface CICDPipelineConfig {
-  name: string;
-  description: string;
-  repository: {
-    id: string;
-  };
-  stages: Array<{
-    name: string;
-    steps: Array<{
-      type: string;
-      script: string;
-      command: string;
-      parameters?: {
-        args: string;
-      };
-    }>;
-  }>;
-  parameters: Array<{
-    name: string;
-    type: 'text';
-    description: string;
-    defaultValue: string;
-  }>;
-  triggers: Array<{
-    type: 'schedule';
-    config: {
-      schedule: string;
-    };
-  }>;
-}
-
-// Define a function to map database deployment to Deployment type
-function mapDbDeploymentToDeployment(dbDeployment: any): Deployment {
-  return {
-    id: dbDeployment.id,
-    name: dbDeployment.name,
-    description: dbDeployment.description,
-    repositoryId: dbDeployment.repository_id,
-    scriptsPath: dbDeployment.scripts_path || [],
-    scriptsParameters: dbDeployment.scripts_parameters || [],
-    hostIds: dbDeployment.host_ids || [],
-    status: dbDeployment.status as DeploymentStatus,
-    scheduleType: dbDeployment.schedule_type || 'now',
-    scheduledTime: dbDeployment.scheduled_time,
-    cronExpression: dbDeployment.cron_expression,
-    repeatCount: dbDeployment.repeat_count,
-    environmentVars: dbDeployment.environment_vars || [],
-    tenantId: dbDeployment.tenant_id,
-    userId: dbDeployment.user_id,
-    createdAt: dbDeployment.created_at,
-    startedAt: dbDeployment.started_at,
-    completedAt: dbDeployment.completed_at,
-  };
-}
 
 /**
  * Get all deployments for the current user
@@ -306,7 +251,6 @@ export async function updateDeployment(
       scripts_path: data.selectedScripts,
       scripts_parameters: data.parameters,
       host_ids: data.selectedHosts,
-      status: data.status,
       schedule_type: data.schedule,
       scheduled_time: data.scheduledTime,
       cron_expression: data.cronExpression,
@@ -361,23 +305,57 @@ export async function deleteDeployment(id: string): Promise<boolean> {
     // Get cookie store
     const cookieStore = await cookies();
 
-    // Delete the deployment
-    const result = await dbDeleteDeployment(id, cookieStore);
+    // Get deployment details
+    const deploymentResult = await dbGetDeploymentById(id, cookieStore);
+    if (!deploymentResult.success || !deploymentResult.data) {
+      console.error('[@action:deployments:deleteDeployment] Deployment not found');
+      return false;
+    }
 
-    // Revalidate relevant paths
-    revalidatePath('/[locale]/[tenant]/deployment');
+    // Extract just the CICD provider ID from the deployment data
+    const deployment = deploymentResult.data as { cicd_provider_id?: string };
 
-    if (!result.success) {
+    // If deployment has a CICD provider, try to delete the Jenkins job
+    if (deployment.cicd_provider_id) {
+      // Get CICD job mapping
+      const cicdJob = await cicdDb.getCICDJobForDeployment(id, cookieStore);
+
+      if (cicdJob) {
+        // Delete the Jenkins job first
+        const deleteResult = await cicdService.deleteProviderJob(
+          deployment.cicd_provider_id,
+          cicdJob.cicd_job_id,
+          cookieStore,
+        );
+
+        if (!deleteResult.success) {
+          console.error(
+            '[@action:deployments:deleteDeployment] Failed to delete Jenkins job:',
+            deleteResult.error,
+          );
+          // We continue with deployment deletion even if Jenkins job deletion fails
+          // This is because the database cascade will clean up the mappings
+        }
+      }
+    }
+
+    // Delete the deployment from the database
+    const deleteResult = await dbDeleteDeployment(id, cookieStore);
+    if (!deleteResult.success) {
       console.error(
-        `[@action:deployments:deleteDeployment] Failed to delete deployment: ${result.error || 'Unknown error'}`,
+        '[@action:deployments:deleteDeployment] Failed to delete deployment:',
+        deleteResult.error,
       );
       return false;
     }
 
-    console.log(`[@action:deployments:deleteDeployment] Successfully deleted deployment: ${id}`);
+    // Revalidate the deployments page
+    revalidatePath('/deployments');
+
+    console.log('[@action:deployments:deleteDeployment] Deployment deleted successfully');
     return true;
   } catch (error) {
-    console.error(`[@action:deployments:deleteDeployment] Error deleting deployment ${id}:`, error);
+    console.error('[@action:deployments:deleteDeployment] Error deleting deployment:', error);
     return false;
   }
 }
@@ -398,9 +376,9 @@ export async function abortDeployment(id: string): Promise<{
     const cookieStore = await cookies();
 
     // Update the deployment status to aborted
-    const updateData = {
-      status: 'aborted' as DeploymentStatus,
-      completed_at: new Date().toISOString(),
+    const updateData: Partial<Deployment> = {
+      status: 'cancelled' as DeploymentStatus,
+      completedAt: new Date().toISOString(),
     };
 
     // Update the deployment in the database
@@ -490,14 +468,13 @@ export async function runDeployment(
     const cookieStore = await cookies();
 
     // Update deployment status to running
-    const updateResult = await dbUpdateDeployment(
-      deploymentId,
-      {
-        status: 'running',
-        started_at: new Date().toISOString(),
-      },
-      cookieStore,
-    );
+    const updateData: Partial<Deployment> = {
+      status: 'running' as DeploymentStatus,
+      startedAt: new Date().toISOString(),
+    };
+
+    // Update the deployment in the database
+    const updateResult = await dbUpdateDeployment(deploymentId, updateData, cookieStore);
 
     if (!updateResult.success) {
       console.error(
