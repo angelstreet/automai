@@ -167,6 +167,17 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               console.log(
                 `[DeploymentWizard] Repository info - provider: ${providerType}, owner: ${owner}, repo: ${repo}`,
               );
+              
+              // Show clear warning about search limits
+              console.warn(`
+╔═══════════════════════════════════════════════════════════════════════════╗
+║ [DeploymentWizard] IMPORTANT: Scanning repository for script files         ║
+║   - Searching for files with .py or .sh extensions only                    ║
+║   - Limited to examining max 10 directories at each level                  ║
+║   - Limited to max depth of 2 levels (root + 2 levels down)                ║
+║   - Important directories like src/ and tests/ should be in first 10 dirs  ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+              `);
 
               if (!owner || !repo) {
                 throw new Error('Could not determine repository owner and name from URL');

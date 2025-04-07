@@ -1097,6 +1097,19 @@ export async function findScriptsRecursively(
   depth: number = 0,
   maxDepth: number = 2
 ): Promise<RepositoryFileInfo[]> {
+  // Display warning about depth and folder limits at the start
+  if (depth === 0) {
+    console.warn(`
+╔═════════════════════════════════════════════════════════════════════════╗
+║ [GitService] WARNING: Script search limited to:                          ║
+║   - Maximum depth: ${maxDepth} levels                                    ║
+║   - Maximum directories per level: 10                                    ║
+║   - Only scanning .py and .sh files                                      ║
+║   - Skipping hidden directories (starting with '.')                      ║
+╚═════════════════════════════════════════════════════════════════════════╝
+    `);
+  }
+  
   let allScripts = [];
 
   // Stop recursion if we've reached the maximum depth
