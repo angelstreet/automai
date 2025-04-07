@@ -252,6 +252,14 @@ export async function deleteCICDProvider(id: string): Promise<ActionResult> {
     // Get the cookieStore
     const cookieStore = await cookies();
 
+    // First check if there are any jobs linked to this provider
+    const jobs = await dbGetCICDJobs(id, cookieStore);
+    if (jobs.success && jobs.data && jobs.data.length > 0) {
+      const errorMessage = `Cannot delete this provider because it has ${jobs.data.length} linked job(s). Please delete all jobs associated with this provider first.`;
+      console.error(`[@action:cicd:deleteCICDProvider] ${errorMessage}`);
+      return { success: false, error: errorMessage };
+    }
+
     // Delete the provider
     const result = await dbDeleteCICDProvider(id, cookieStore);
 
