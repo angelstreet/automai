@@ -178,7 +178,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
                 owner,
                 repo,
                 branch,
-                providerType
+                providerType,
               );
 
               console.log(
