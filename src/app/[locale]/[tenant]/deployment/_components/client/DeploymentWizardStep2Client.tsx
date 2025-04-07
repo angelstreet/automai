@@ -51,36 +51,48 @@ const DeploymentWizardStep2Client: React.FC<DeploymentWizardStep2Props> = ({
   );
 
   // Error indicator component with retry option
-  const ErrorIndicator = () => (
-    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-4 my-4">
-      <div className="flex">
-        <div className="flex-shrink-0">
-          <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-            <path
-              fillRule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-              clipRule="evenodd"
-            />
-          </svg>
-        </div>
-        <div className="ml-3">
-          <h3 className="text-sm font-medium text-red-800 dark:text-red-200">Repository Error</h3>
-          <div className="mt-2 text-sm text-red-700 dark:text-red-300">
-            <p>{scriptsError || 'Failed to load scripts from repository'}</p>
+  const ErrorIndicator = () => {
+    // Check if this is a GitHub API rate limit error
+    const isRateLimitError = scriptsError?.includes('API rate limit reached') || scriptsError?.includes('403');
+    
+    return (
+      <div className={`${isRateLimitError ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'} border rounded-md p-4 my-4`}>
+        <div className="flex">
+          <div className="flex-shrink-0">
+            <svg className={`h-5 w-5 ${isRateLimitError ? 'text-orange-400' : 'text-red-400'}`} viewBox="0 0 20 20" fill="currentColor">
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                clipRule="evenodd"
+              />
+            </svg>
           </div>
-          <div className="mt-4">
-            <button
-              type="button"
-              onClick={onPrevStep}
-              className="inline-flex items-center px-3 py-1.5 border border-red-300 dark:border-red-700 shadow-sm text-xs font-medium rounded text-red-700 dark:text-red-300 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/30 focus:outline-none"
-            >
-              Select Different Repository
-            </button>
+          <div className="ml-3">
+            <h3 className={`text-sm font-medium ${isRateLimitError ? 'text-orange-800 dark:text-orange-200' : 'text-red-800 dark:text-red-200'}`}>
+              {isRateLimitError ? 'GitHub API Rate Limit' : 'Repository Error'}
+            </h3>
+            <div className={`mt-2 text-sm ${isRateLimitError ? 'text-orange-700 dark:text-orange-300' : 'text-red-700 dark:text-red-300'}`}>
+              <p>{scriptsError || 'Failed to load scripts from repository'}</p>
+              {isRateLimitError && (
+                <p className="mt-1">
+                  GitHub limits API requests to prevent abuse. Try again later or select a different repository.
+                </p>
+              )}
+            </div>
+            <div className="mt-4">
+              <button
+                type="button"
+                onClick={onPrevStep}
+                className={`inline-flex items-center px-3 py-1.5 border ${isRateLimitError ? 'border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/30' : 'border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30'} shadow-sm text-xs font-medium rounded bg-white dark:bg-gray-800 focus:outline-none`}
+              >
+                Select Different Repository
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // Empty scripts indicator
   const EmptyScriptsIndicator = () => (

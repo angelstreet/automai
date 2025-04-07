@@ -467,13 +467,31 @@ export async function fetchRepositoryContents(
     // Use a timeout to prevent hanging
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
+    
+    // Check for GitHub token in environment or localStorage
+    let githubToken = '';
+    if (providerType === 'github') {
+      if (typeof process !== 'undefined' && process.env && process.env.GITHUB_TOKEN) {
+        githubToken = process.env.GITHUB_TOKEN;
+      } else if (typeof window !== 'undefined' && window.localStorage) {
+        githubToken = localStorage.getItem('github_token') || '';
+      }
+    }
+
+    // Set up headers with auth token if available
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    };
+
+    if (githubToken) {
+      headers.Authorization = `token ${githubToken}`;
+      console.log('[GitService] Using GitHub token for authentication');
+    }
 
     const response = await fetch(apiUrl, {
       method: 'GET',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
+      headers,
       signal: controller.signal,
     });
 
@@ -534,13 +552,31 @@ export async function fetchFileContent(
     // Use a timeout to prevent hanging
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
+    
+    // Check for GitHub token in environment or localStorage
+    let githubToken = '';
+    if (providerType === 'github') {
+      if (typeof process !== 'undefined' && process.env && process.env.GITHUB_TOKEN) {
+        githubToken = process.env.GITHUB_TOKEN;
+      } else if (typeof window !== 'undefined' && window.localStorage) {
+        githubToken = localStorage.getItem('github_token') || '';
+      }
+    }
+
+    // Set up headers with auth token if available
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    };
+
+    if (githubToken) {
+      headers.Authorization = `token ${githubToken}`;
+      console.log('[GitService] Using GitHub token for authentication');
+    }
 
     const response = await fetch(apiUrl, {
       method: 'GET',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
+      headers,
       signal: controller.signal,
     });
 
@@ -1037,6 +1073,8 @@ export function getFileIconColorClass(
  * @param branch Repository branch
  * @param providerType Git provider type (github, gitlab, gitea)
  * @param path Starting path to scan from
+ * @param depth Current recursion depth (internal parameter)
+ * @param maxDepth Maximum directory depth to scan
  * @returns Array of script files found
  */
 export async function findScriptsRecursively(
@@ -1045,9 +1083,23 @@ export async function findScriptsRecursively(
   repo: string,
   branch: string = 'main',
   providerType: string = 'github',
-  path: string = ''
+  path: string = '',
+  depth: number = 0,
+  maxDepth: number = 2
 ): Promise<RepositoryFileInfo[]> {
   let allScripts = [];
+
+  // Stop recursion if we've reached the maximum depth
+  if (depth > maxDepth) {
+    console.log(`[GitService] Max recursion depth (${maxDepth}) reached for path: ${path}`);
+    return allScripts;
+  }
+
+  // Skip hidden directories
+  if (path.includes('/.') || path.includes('/node_modules/')) {
+    console.log(`[GitService] Skipping hidden directory: ${path}`);
+    return allScripts;
+  }
 
   try {
     // Get files at current path
@@ -1070,22 +1122,45 @@ export async function findScriptsRecursively(
     // Add them to our collection
     allScripts.push(...scripts);
 
-    // Find all directories and scan them recursively
-    const directories = files.filter((file) => file.type === 'dir');
-
-    for (const dir of directories) {
-      const subDirScripts = await findScriptsRecursively(
-        url,
-        owner,
-        repo,
-        branch,
-        providerType,
-        dir.path
-      );
-      allScripts.push(...subDirScripts);
+    // Find all directories and scan them recursively, excluding hidden ones
+    const directories = files.filter((file) => 
+      file.type === 'dir' && !file.name.startsWith('.')
+    );
+    
+    // Only scan up to 3 directories per level to avoid API limits
+    const dirsToScan = directories.slice(0, 3);
+    
+    for (const dir of dirsToScan) {
+      try {
+        // Skip if we got a 403 for this path
+        if (dir.path.includes('/node_modules/')) {
+          continue;
+        }
+        
+        const subDirScripts = await findScriptsRecursively(
+          url,
+          owner,
+          repo,
+          branch,
+          providerType,
+          dir.path,
+          depth + 1,  // Increment depth
+          maxDepth
+        );
+        allScripts.push(...subDirScripts);
+      } catch (error) {
+        // If we get an error (especially 403), just continue with the next directory
+        console.error(`[GitService] Error scanning directory ${dir.path}:`, error);
+        continue;
+      }
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error(`[GitService] Error scanning directory ${path}:`, error);
+    
+    // If we hit a 403 error, stop recursion for this branch
+    if (error.message && error.message.includes('403')) {
+      console.log('[GitService] API returned 403 Forbidden, stopping recursive scan');
+    }
   }
 
   return allScripts;

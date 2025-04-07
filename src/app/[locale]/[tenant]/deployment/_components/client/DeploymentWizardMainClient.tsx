@@ -97,6 +97,8 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
     const [repositoryScripts, setRepositoryScripts] = useState<any[]>([]);
     const [isLoadingScripts, setIsLoadingScripts] = useState(false);
     const [scriptsError, setScriptsError] = useState<string | null>(null);
+    // Track permanent API failures to prevent retries
+    const [hasApiPermissionError, setHasApiPermissionError] = useState(false);
 
     // Set default CI/CD provider when available
     useEffect(() => {
@@ -119,7 +121,8 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
 
       // Only fetch scripts when on step 2 and a repository is selected
       // Check loading ref instead of state to avoid dependency cycle
-      if (step === 2 && deploymentData.repositoryId && !isLoadingRef.current) {
+      // Also skip if we already know there's a permission error with this repo
+      if (step === 2 && deploymentData.repositoryId && !isLoadingRef.current && !hasApiPermissionError) {
         // Track if the effect was cleaned up
         let isMounted = true;
 
@@ -173,19 +176,30 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               const branch = deploymentData.branch || 'main';
 
               // Find all scripts in the repository (root and subdirectories)
+              // Limit to depth 2 to avoid infinite recursion and API rate limits
               const allFiles = await gitService.findScriptsRecursively(
                 selectedRepo.url,
                 owner,
                 repo,
                 branch,
                 providerType,
+                '', // path
+                0, // start at depth 0
+                2, // maximum depth of 2 levels
               );
 
               console.log(
                 `[DeploymentWizard] Recursive scan found ${allFiles.length} script files`,
               );
 
-              // Use all the script files we found
+              // Log when no files are found
+              if (allFiles.length === 0) {
+                console.log(
+                  '[DeploymentWizard] No script files found, possibly due to API limitations or permissions',
+                );
+              }
+
+              // Otherwise, use all the script files we found
               const filteredFiles = allFiles;
 
               console.log(
@@ -228,8 +242,18 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               console.error('[DeploymentWizard] Error fetching repository contents:', fetchError);
 
               if (isMounted) {
-                const errorMessage =
-                  fetchError.name === 'AbortError'
+                // Check specifically for 403 errors
+                const is403Error = fetchError.message && fetchError.message.includes('403');
+                
+                if (is403Error) {
+                  console.log('[DeploymentWizard] Detected 403 Forbidden error, marking repository as inaccessible');
+                  // Set the permanent error flag to prevent future retries
+                  setHasApiPermissionError(true);
+                }
+                
+                const errorMessage = is403Error
+                  ? 'API rate limit reached (HTTP 403). GitHub is restricting access due to too many requests. Please try again later or select a different repository.'
+                  : fetchError.name === 'AbortError'
                     ? 'Request timed out. Please try again or select a different repository.'
                     : fetchError.message || 'Failed to retrieve repository files';
 
@@ -241,9 +265,18 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
                 console.log('[DeploymentWizard] Error in script loading');
               }
             }
-          } catch (error) {
+          } catch (error: any) {
             console.error('[DeploymentWizard] Error in script loading process:', error);
             if (isMounted) {
+              // Check for 403 in general errors too
+              const is403Error = error?.message && error.message.includes('403');
+              
+              if (is403Error) {
+                console.log('[DeploymentWizard] Detected 403 Forbidden error in general error handler');
+                // Set the permanent error flag to prevent future retries
+                setHasApiPermissionError(true);
+              }
+              
               // Batch all state updates to prevent multiple re-renders
               setRepositoryScripts([]);
               setScriptsError(error instanceof Error ? error.message : 'Failed to load scripts');
@@ -272,6 +305,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
       deploymentData.repositoryId,
       deploymentData.branch,
       deploymentData.selectedRepository,
+      hasApiPermissionError, // Include this to prevent re-runs if we've seen a 403
     ]);
 
     // Update the step change effect to use the ref
@@ -336,6 +370,13 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
             console.log(
               `[DeploymentWizard] Selected repository: ${selectedRepo.name}, default branch: ${defaultBranch}`,
             );
+            
+            // If user changes repository, reset the API permission error state
+            // This allows trying a different repository after a 403
+            if (deploymentData.repositoryId !== value && hasApiPermissionError) {
+              console.log('[DeploymentWizard] Repository changed, resetting API permission error state');
+              setHasApiPermissionError(false);
+            }
 
             // Update multiple fields at once
             setDeploymentData((prev) => ({
@@ -357,6 +398,11 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           selectedRepository: null,
           branch: 'main', // Reset to default
         }));
+        
+        // Reset API permission error when clearing repository
+        if (hasApiPermissionError) {
+          setHasApiPermissionError(false);
+        }
 
         return;
       }
