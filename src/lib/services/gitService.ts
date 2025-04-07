@@ -1106,6 +1106,7 @@ export async function findScriptsRecursively(
 ║   - Maximum directories per level: 10                                    ║
 ║   - Only scanning .py and .sh files                                      ║
 ║   - Skipping hidden directories (starting with '.')                      ║
+║   - Skipping special folders like __pycache__, node_modules              ║
 ╚═════════════════════════════════════════════════════════════════════════╝
     `);
   }
@@ -1118,8 +1119,8 @@ export async function findScriptsRecursively(
     return allScripts;
   }
 
-  // Skip hidden directories
-  if (path.includes('/.') || path.includes('/node_modules/')) {
+  // Skip hidden directories and special folders
+  if (path.includes('/.') || path.includes('/node_modules/') || path.includes('/__') || path.includes('\\__')) {
     return allScripts;
   }
 
@@ -1144,9 +1145,9 @@ export async function findScriptsRecursively(
     // Add them to our collection
     allScripts.push(...scripts);
 
-    // Find all directories and scan them recursively, excluding hidden ones
+    // Find all directories and scan them recursively, excluding hidden and special ones
     const directories = files.filter((file) => 
-      file.type === 'dir' && !file.name.startsWith('.')
+      file.type === 'dir' && !file.name.startsWith('.') && !file.name.startsWith('__')
     );
     
     // Scan up to 10 directories per level
@@ -1154,8 +1155,8 @@ export async function findScriptsRecursively(
     
     for (const dir of dirsToScan) {
       try {
-        // Skip node_modules
-        if (dir.path.includes('/node_modules/')) {
+        // Skip node_modules and special folders
+        if (dir.path.includes('/node_modules/') || dir.path.includes('/__') || dir.path.includes('\\__')) {
           continue;
         }
         
