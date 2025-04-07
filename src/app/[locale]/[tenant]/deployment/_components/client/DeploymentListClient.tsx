@@ -171,7 +171,6 @@ export function DeploymentListClient({
     const filtered = getFilteredDeployments();
     return [...filtered].sort((a, b) => {
       if (sortBy === 'name') return a.name.localeCompare(b.name);
-      if (sortBy === 'repository') return getRepositoryName(a).localeCompare(getRepositoryName(b));
       if (sortBy === 'status') return a.status.localeCompare(b.status);
       const dateA = new Date(a.startedAt || a.scheduledTime || a.createdAt).getTime();
       const dateB = new Date(b.startedAt || b.scheduledTime || b.createdAt).getTime();
@@ -188,9 +187,6 @@ export function DeploymentListClient({
         <tr key={`skeleton-${index}`} className="animate-pulse">
           <td className="px-2 py-3 whitespace-nowrap">
             <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
-          </td>
-          <td className="px-2 py-3 whitespace-nowrap">
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
           </td>
           <td className="px-2 py-3 whitespace-nowrap">
             <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
@@ -278,7 +274,6 @@ export function DeploymentListClient({
                 <option value="date">Date</option>
                 <option value="name">Name</option>
                 <option value="status">Status</option>
-                <option value="repository">Repository</option>
               </select>
               <label htmlFor="filterStatus" className="text-sm text-gray-600 dark:text-gray-400">
                 Status:
@@ -353,12 +348,6 @@ export function DeploymentListClient({
                       scope="col"
                       className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                     >
-                      Repository
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                    >
                       Status
                     </th>
                     <th
@@ -401,12 +390,6 @@ export function DeploymentListClient({
                       scope="col"
                       className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                     >
-                      Repository
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                    >
                       Status
                     </th>
                     <th
@@ -439,11 +422,6 @@ export function DeploymentListClient({
                       <td className="px-2 py-1 whitespace-nowrap">
                         <div className="text-sm text-gray-900 dark:text-white">
                           {deployment.name}
-                        </div>
-                      </td>
-                      <td className="px-2 py-1 whitespace-nowrap">
-                        <div className="text-sm text-gray-600 dark:text-gray-300">
-                          {getRepositoryName(deployment)}
                         </div>
                       </td>
                       <td className="px-2 py-1 whitespace-nowrap">
@@ -553,12 +531,6 @@ export function DeploymentListClient({
                       className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                     >
                       Name
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                    >
-                      Repository
                     </th>
                     <th
                       scope="col"

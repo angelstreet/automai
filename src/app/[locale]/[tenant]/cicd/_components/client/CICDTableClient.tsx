@@ -219,7 +219,7 @@ export default function CICDTableClient({ initialProviders }: CICDTableClientPro
             <TableRow>
               <TableHead className="w-[250px]">{c('name')}</TableHead>
               <TableHead>{t('provider_type')}</TableHead>
-              <TableHead>{t('provider_url')}</TableHead>
+              <TableHead>{c('url')}</TableHead>
               <TableHead>{t('provider_auth_type')}</TableHead>
               <TableHead className="text-right">{c('actions')}</TableHead>
             </TableRow>
