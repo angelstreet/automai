@@ -1,8 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
-import { getTeamDetails, getTeamResourceCounts } from '@/app/actions/teamAction';
-import { getUser } from '@/app/actions/userAction';
+import { getTeamPageData } from '@/app/actions/teamAction';
 import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 
 import TeamContentSkeleton from './_components/TeamContentSkeleton';
@@ -14,34 +13,18 @@ import TeamContentClient from './_components/client/TeamContentClient';
 export default async function TeamPage() {
   const t = await getTranslations('team');
 
-  // Get the user from auth - it's already a User type, no need to map
-  const user = await getUser();
-
-  // Get team details including the tenant ID
-  const teamDetailsResult = await getTeamDetails();
-  const teamDetails = teamDetailsResult.success ? teamDetailsResult.data : null;
-  const teamId = teamDetails?.team?.id;
-
-  // Fetch resource counts directly if we have a team ID
-  let resourceCounts = {
-    repositories: 0,
-    hosts: 0,
-    cicd: 0,
-    deployments: 0,
-  };
-
-  if (teamId) {
-    // Use the team-specific function to get resources for this team
-    const countsResult = await getTeamResourceCounts(teamId);
-    if (countsResult.success && countsResult.data) {
-      resourceCounts = {
-        repositories: countsResult.data.repositories || 0,
-        hosts: countsResult.data.hosts || 0,
-        cicd: countsResult.data.cicdProviders || 0,
-        deployments: countsResult.data.deployments || 0,
-      };
-    }
+  // Get all team page data in a single optimized server action
+  const pageData = await getTeamPageData();
+  
+  if (!pageData.success) {
+    console.error('Failed to load team page data:', pageData.error);
   }
+  
+  const { user, teamDetails, teamMembers } = pageData.success ? pageData.data : { 
+    user: null, 
+    teamDetails: null, 
+    teamMembers: [] 
+  };
 
   // Using FeaturePageContainer directly like repositories page
   return (
@@ -54,7 +37,11 @@ export default async function TeamPage() {
         {/* TeamHeader gets details from TeamContext */}
         <TeamHeader />
         <Suspense fallback={<TeamOverviewSkeleton />}>
-          <TeamContentClient user={user} resourceCounts={resourceCounts} />
+          <TeamContentClient 
+            user={user} 
+            teamDetails={teamDetails} 
+            teamMembers={teamMembers} 
+          />
         </Suspense>
       </Suspense>
     </FeaturePageContainer>

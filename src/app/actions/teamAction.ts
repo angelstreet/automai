@@ -696,3 +696,115 @@ export const getTeamResourceCounts = cache(async (teamId: string) => {
     };
   }
 });
+
+/**
+ * Get all team data in a single server action to optimize loading
+ * Combines team details, resource counts, and team members
+ */
+export const getTeamPageData = cache(async () => {
+  try {
+    const start = Date.now();
+    console.log(`[@action:team:getTeamPageData] Starting team page data fetch`);
+    
+    // Get the user
+    const user = await getUser();
+    if (!user) {
+      console.log(`[@action:team:getTeamPageData] No user found, returning default data`);
+      return {
+        success: true,
+        data: {
+          user: null,
+          teamDetails: {
+            team: null,
+            memberCount: 0,
+            userRole: null,
+            resourceCounts: {
+              repositories: 0,
+              hosts: 0,
+              cicd: 0,
+              deployments: 0,
+            },
+          },
+          teamMembers: [],
+        },
+      };
+    }
+    
+    const cookieStore = await cookies();
+    const supabase = await createClient(cookieStore);
+    
+    // Get user's teams
+    const teamsResult = await dbGetUserTeams(user.id, cookieStore);
+    if (!teamsResult.success || !teamsResult.data || teamsResult.data.length === 0) {
+      console.log(`[@action:team:getTeamPageData] No teams found for user: ${user.id}`);
+      return {
+        success: true,
+        data: {
+          user,
+          teamDetails: {
+            team: null,
+            memberCount: 0,
+            userRole: null,
+            resourceCounts: {
+              repositories: 0,
+              hosts: 0,
+              cicd: 0,
+              deployments: 0,
+            },
+          },
+          teamMembers: [],
+        },
+      };
+    }
+    
+    // Get active team
+    const activeTeamResult = await dbGetUserActiveTeam(user.id, cookieStore, teamsResult.data);
+    const activeTeam = activeTeamResult.success && activeTeamResult.data 
+      ? activeTeamResult.data 
+      : teamsResult.data[0]; // Default to first team
+    
+    // Get team members
+    const membersResult = await teamMemberDb.getTeamMembers(activeTeam.id, cookieStore);
+    const members = membersResult.success && membersResult.data ? membersResult.data : [];
+    const userMember = members.find((m) => m.profile_id === user.id);
+    const userRole = userMember ? userMember.role : null;
+    
+    // Get all resource counts in parallel with a single database connection
+    const [repoCount, hostCount, deploymentCount, cicdCount] = await Promise.all([
+      supabase.from('repositories').select('id', { count: 'exact', head: true }).eq('team_id', activeTeam.id),
+      supabase.from('hosts').select('id', { count: 'exact', head: true }).eq('team_id', activeTeam.id),
+      supabase.from('Deployments').select('id', { count: 'exact', head: true }).eq('team_id', activeTeam.id),
+      supabase.from('cicd_providers').select('id', { count: 'exact', head: true }).eq('team_id', activeTeam.id)
+    ]);
+    
+    const resourceCounts = {
+      repositories: repoCount.count || 0,
+      hosts: hostCount.count || 0,
+      deployments: deploymentCount.count || 0,
+      cicd: cicdCount.count || 0,
+    };
+    
+    const end = Date.now();
+    console.log(`[@action:team:getTeamPageData] Completed team page data fetch in ${end - start}ms`);
+    
+    return {
+      success: true,
+      data: {
+        user,
+        teamDetails: {
+          team: activeTeam,
+          memberCount: members.length,
+          userRole,
+          resourceCounts,
+        },
+        teamMembers: members,
+      },
+    };
+  } catch (error: any) {
+    console.error(`[@action:team:getTeamPageData] Error:`, error);
+    return {
+      success: false,
+      error: error.message || 'Failed to get team page data',
+    };
+  }
+});

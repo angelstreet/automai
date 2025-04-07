@@ -254,16 +254,26 @@ function MembersTabContent({
 }
 
 // Main exported component that provides the dialog context
-export function MembersTab({ teamId, subscriptionTier: _subscriptionTier }: MembersTabProps) {
+export function MembersTab({ 
+  teamId, 
+  subscriptionTier: _subscriptionTier,
+  initialMembers = []
+}: MembersTabProps & { initialMembers?: TeamMember[] }) {
   const teamMembersQuery = useTeamMembers(teamId);
-  const [members, setMembers] = useState<TeamMemberDetails[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [members, setMembers] = useState<TeamMemberDetails[]>(initialMembers as TeamMemberDetails[]);
+  const [isLoading, setIsLoading] = useState(initialMembers.length === 0);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Use our new React Query hook for removing team members
   const removeTeamMemberMutation = useRemoveTeamMember();
 
   useEffect(() => {
+    // If we have initial members, don't fetch again on mount
+    if (initialMembers.length > 0 && !teamMembersQuery.isLoading) {
+      setIsLoading(false);
+      return;
+    }
+    
     const fetchMembers = async () => {
       if (!teamId) {
         setMembers([]);
@@ -295,7 +305,7 @@ export function MembersTab({ teamId, subscriptionTier: _subscriptionTier }: Memb
     };
 
     fetchMembers();
-  }, [teamId, teamMembersQuery.data]);
+  }, [teamId, teamMembersQuery.data, initialMembers, teamMembersQuery.isLoading]);
 
   // Listen for refresh events from outside components (like TeamActionsClient)
   useEffect(() => {
@@ -338,7 +348,7 @@ export function MembersTab({ teamId, subscriptionTier: _subscriptionTier }: Memb
       teamId={teamId}
       members={members}
       onRemoveMember={handleRemoveMember}
-      isLoading={isLoading || teamMembersQuery.isLoading}
+      isLoading={isLoading}
       searchQuery={searchQuery}
       setSearchQuery={setSearchQuery}
     />
