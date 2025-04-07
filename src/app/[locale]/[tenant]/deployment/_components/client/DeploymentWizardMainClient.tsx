@@ -122,7 +122,12 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
       // Only fetch scripts when on step 2 and a repository is selected
       // Check loading ref instead of state to avoid dependency cycle
       // Also skip if we already know there's a permission error with this repo
-      if (step === 2 && deploymentData.repositoryId && !isLoadingRef.current && !hasApiPermissionError) {
+      if (
+        step === 2 &&
+        deploymentData.repositoryId &&
+        !isLoadingRef.current &&
+        !hasApiPermissionError
+      ) {
         // Track if the effect was cleaned up
         let isMounted = true;
 
@@ -185,7 +190,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
                 providerType,
                 '', // path
                 0, // start at depth 0
-                2, // maximum depth of 2 levels
+                1, // maximum depth of 2 levels
               );
 
               console.log(
@@ -220,14 +225,17 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               } else {
                 // Check if we have API errors by checking fetchError in the error catch blocks
                 let detected403Error = hasApiPermissionError;
-                
+
                 // If we have no scripts but the API calls are going through, it's likely just an empty repo
                 // But if we're getting 403 errors, we should show that instead
                 if (detected403Error) {
                   console.log(`[DeploymentWizard] API rate limit error detected`);
-                  newError = 'API rate limit reached (HTTP 403). GitHub is restricting access to this repository.';
+                  newError =
+                    'API rate limit reached (HTTP 403). GitHub is restricting access to this repository.';
                 } else {
-                  console.log(`[DeploymentWizard] No script files found, but API appears to be working`);
+                  console.log(
+                    `[DeploymentWizard] No script files found, but API appears to be working`,
+                  );
                   newError = 'No Python (.py) or Shell (.sh) scripts found in this repository.';
                 }
               }
@@ -247,13 +255,15 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               if (isMounted) {
                 // Check specifically for 403 errors
                 const is403Error = fetchError.message && fetchError.message.includes('403');
-                
+
                 if (is403Error) {
-                  console.log('[DeploymentWizard] Detected 403 Forbidden error, marking repository as inaccessible');
+                  console.log(
+                    '[DeploymentWizard] Detected 403 Forbidden error, marking repository as inaccessible',
+                  );
                   // Set the permanent error flag to prevent future retries
                   setHasApiPermissionError(true);
                 }
-                
+
                 const errorMessage = is403Error
                   ? 'API rate limit reached (HTTP 403). GitHub is restricting access due to too many requests. Please try again later or select a different repository.'
                   : fetchError.name === 'AbortError'
@@ -273,13 +283,15 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
             if (isMounted) {
               // Check for 403 in general errors too
               const is403Error = error?.message && error.message.includes('403');
-              
+
               if (is403Error) {
-                console.log('[DeploymentWizard] Detected 403 Forbidden error in general error handler');
+                console.log(
+                  '[DeploymentWizard] Detected 403 Forbidden error in general error handler',
+                );
                 // Set the permanent error flag to prevent future retries
                 setHasApiPermissionError(true);
               }
-              
+
               // Batch all state updates to prevent multiple re-renders
               setRepositoryScripts([]);
               setScriptsError(error instanceof Error ? error.message : 'Failed to load scripts');
@@ -373,11 +385,13 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
             console.log(
               `[DeploymentWizard] Selected repository: ${selectedRepo.name}, default branch: ${defaultBranch}`,
             );
-            
+
             // If user changes repository, reset the API permission error state
             // This allows trying a different repository after a 403
             if (deploymentData.repositoryId !== value && hasApiPermissionError) {
-              console.log('[DeploymentWizard] Repository changed, resetting API permission error state');
+              console.log(
+                '[DeploymentWizard] Repository changed, resetting API permission error state',
+              );
               setHasApiPermissionError(false);
             }
 
@@ -401,7 +415,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           selectedRepository: null,
           branch: 'main', // Reset to default
         }));
-        
+
         // Reset API permission error when clearing repository
         if (hasApiPermissionError) {
           setHasApiPermissionError(false);
