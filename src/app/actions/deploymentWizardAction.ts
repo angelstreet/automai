@@ -280,7 +280,10 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
     // Extract data from configuration if available
     const scriptIds = formData.configuration?.scriptIds || [];
     const hostIds = formData.configuration?.hostIds || [];
-    const scriptParameters = formData.configuration?.parameters || {};
+    // Convert script parameters to an array format if it's an object
+    const scriptParameters = Array.isArray(formData.configuration?.parameters)
+      ? formData.configuration?.parameters
+      : formData.parameters || [];
 
     // Prepare deployment data (removing fields that don't exist in the table)
     const deploymentData = {
@@ -288,14 +291,19 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
       description: formData.description || '',
       repository_id: formData.repositoryId,
       scripts_path: scriptIds, // Use the array of script IDs/paths
-      scripts_parameters: scriptParameters, // Use script parameters
+      scripts_parameters: scriptParameters, // Use the array of script parameters
       host_ids: hostIds, // Use host IDs
       status: 'pending',
-      scheduled_time: formData.scheduledTime || null, // Use the scheduledTime (timestamp) field
+      scheduled_time: formData.scheduledTime
+        ? new Date(formData.scheduledTime).toISOString()
+        : null, // Ensure proper ISO timestamp
       schedule_type: formData.configuration?.schedule || formData.schedule || 'now',
+      cron_expression: formData.cronExpression || formData.configuration?.cronExpression || null,
+      repeat_count: formData.repeatCount || formData.configuration?.repeatCount || null,
       tenant_id: user.tenant_id,
       user_id: user.id,
       team_id: teamId,
+      cicd_provider_id: cicdProviderId || null, // Add the CICD provider ID if selected
     };
 
     console.log(
@@ -392,7 +400,7 @@ export async function startDeployment(deploymentId: string) {
       deploymentId,
       {
         status: 'running',
-        started_at: new Date().toISOString(),
+        startedAt: new Date().toISOString(),
       },
       cookieStore,
     );
