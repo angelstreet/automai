@@ -669,49 +669,38 @@ export function getProviderApiConfig(
       };
     }
   } else if (provider === 'gitea') {
-    // Gitea API format: /api/v1/repos/{owner}/{repo}/git/trees/{ref}?recursive=1
-    const { owner, repo } = extractRepoInfo(provider);
-
-    // Try to get server URL from different sources
+    // Get the repository URL from localStorage or global
+    let repoUrl = '';
+    if (typeof global !== 'undefined' && global.repositoryUrl) {
+      repoUrl = global.repositoryUrl;
+    } else if (typeof window !== 'undefined' && localStorage.getItem('repository_url')) {
+      repoUrl = localStorage.getItem('repository_url') || '';
+    }
+    
+    // Use the non-deprecated parseRepositoryUrl instead of extractRepoInfo
+    const { owner, repo } = parseRepositoryUrl(repoUrl, 'gitea');
+    
+    // Extract server URL from the repository URL
     let serverUrl = '';
-
-    // 1. First try global variable (set from query param)
-    if (typeof global !== 'undefined' && global.giteaServerUrl) {
-      serverUrl = global.giteaServerUrl;
-    }
-    // 2. Try to extract from the repository URL itself
-    else if (typeof global !== 'undefined' && global.repositoryUrl) {
-      const repoUrl = global.repositoryUrl;
-      const urlMatch = repoUrl.match(/^(https?:\/\/[^\/]+)/);
-      if (urlMatch && urlMatch[1]) {
-        serverUrl = urlMatch[1];
+    if (repoUrl) {
+      try {
+        const urlObj = new URL(repoUrl);
+        serverUrl = `${urlObj.protocol}//${urlObj.host}`;
+      } catch (e) {
+        console.error('[GitService] Error extracting server URL from repo URL:', e);
       }
     }
-    // 3. Then try localStorage if we're in a browser
-    else if (typeof window !== 'undefined') {
-      serverUrl = localStorage.getItem('gitea_server_url') || '';
-
-      // If not in localStorage, try to extract from repo URL in localStorage
-      if (!serverUrl && localStorage.getItem('repository_url')) {
-        const repoUrl = localStorage.getItem('repository_url') || '';
-        const urlMatch = repoUrl.match(/^(https?:\/\/[^\/]+)/);
-        if (urlMatch && urlMatch[1]) {
-          serverUrl = urlMatch[1];
-        }
-      }
-    }
-
-    // If still empty after all attempts, use default
+    
+    // If still empty after the attempt, use default
     if (!serverUrl) {
       console.warn('[GitService] No Gitea server URL found, using default http://localhost:3000');
       serverUrl = 'http://localhost:3000';
     }
 
     // For Gitea repositories, use 'master' as the default branch if 'main' is specified
-    // (since most Gitea repos use the older convention)
     const giteaRef = ref === 'main' ? 'master' : ref;
 
-    console.log(`[GitService] Using Gitea server URL: ${serverUrl} with branch: ${giteaRef}`);
+    console.log(`[GitService] Using Gitea server URL: ${serverUrl} with branch: ${giteaRef}, owner: ${owner}, repo: ${repo}`);
 
     // Use a consistent content path structure for all Gitea requests
     return {
