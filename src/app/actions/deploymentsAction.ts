@@ -13,13 +13,13 @@ import {
   createDeployment as dbCreateDeployment,
   updateDeployment as dbUpdateDeployment,
   deleteDeployment as dbDeleteDeployment,
-  runDeployment as dbRunDeployment,
 } from '@/lib/db/deploymentDb';
 import cicdService from '@/lib/services/cicdService';
 import {
   Deployment,
   DeploymentFormData,
   DeploymentStatus,
+  DeploymentData,
 } from '@/types/component/deploymentComponentType';
 import { AuthUser, User } from '@/types/service/userServiceType';
 
@@ -159,7 +159,7 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
 
     // Extract raw parameters from formData
     const rawParameters =
-      formData.selectedScripts?.map((scriptPath, index) => {
+      formData.selectedScripts?.map((scriptPath, _index) => {
         const scriptParam = formData.parameters?.find((p) => p.script_path === scriptPath);
         return scriptParam?.raw || '';
       }) || [];
@@ -457,15 +457,49 @@ export async function runDeployment(
   try {
     console.log(`[@action:deployments:runDeployment] Starting deployment with ID: ${deploymentId}`);
 
-    // Get current user
-    const user = await getUser();
-    if (!user) {
-      console.error('[@action:deployments:runDeployment] User not authenticated');
-      return { success: false, error: 'User not authenticated' };
-    }
-
     // Get cookie store
     const cookieStore = await cookies();
+
+    // Get deployment details
+    const deploymentResult = await dbGetDeploymentById(deploymentId, cookieStore);
+    if (!deploymentResult.success || !deploymentResult.data) {
+      console.error('[@action:deployments:runDeployment] Deployment not found');
+      return { success: false, error: 'Deployment not found' };
+    }
+
+    // Cast to DeploymentData to access additional properties
+    const deployment = deploymentResult.data as unknown as DeploymentData;
+
+    // Check if deployment has a CICD provider
+    if (deployment.cicd_provider_id) {
+      // Get the CICD job mapping
+      const mappingResult = await cicdDb.getCICDDeploymentMapping(
+        { where: { deployment_id: deploymentId } },
+        cookieStore,
+      );
+
+      const jobId = mappingResult.data?.cicd_job_id;
+
+      // Extract deployment parameters from the deployment
+      const deploymentParameters = deployment.scriptParameters || {};
+
+      // Trigger the CICD job
+      console.log(`[@action:deployments:runDeployment] Triggering job: ${jobId}`);
+      const triggerResult = await cicdService.triggerJob(
+        deployment.cicd_provider_id,
+        jobId,
+        deploymentParameters,
+        cookieStore,
+      );
+
+      if (!triggerResult.success) {
+        console.error(
+          '[@action:deployments:runDeployment] Failed to trigger CICD job:',
+          triggerResult.error,
+        );
+        return { success: false, error: `Failed to trigger CICD job: ${triggerResult.error}` };
+      }
+    }
 
     // Update deployment status to running
     const updateData: Partial<Deployment> = {
@@ -481,16 +515,6 @@ export async function runDeployment(
         `[@action:deployments:runDeployment] Failed to update status: ${updateResult.error || 'Unknown error'}`,
       );
       return { success: false, error: updateResult.error || 'Failed to update deployment status' };
-    }
-
-    // Create a run record
-    const runDeploymentResult = await dbRunDeployment(deploymentId, user.id, cookieStore);
-
-    if (!runDeploymentResult.success) {
-      console.error(
-        `[@action:deployments:runDeployment] Failed to run deployment: ${runDeploymentResult.error || 'Unknown error'}`,
-      );
-      return { success: false, error: runDeploymentResult.error || 'Failed to run deployment' };
     }
 
     // Revalidate relevant paths
