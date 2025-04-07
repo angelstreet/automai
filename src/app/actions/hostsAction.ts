@@ -26,12 +26,12 @@ export const getHosts = cache(
         return { success: false, error: 'No active team found' };
       }
 
-      // Create a promise that will reject after 10 seconds
-      const timeoutPromise = new Promise<{ success: false; error: string }>((_, reject) => {
+      // Create a promise that will resolve (not reject) after 15 seconds
+      const timeoutPromise = new Promise<{ success: false; error: string }>((resolve) => {
         setTimeout(() => {
-          console.log('[@action:hosts:getHosts] Request timed out after 10 seconds');
-          reject({ success: false, error: 'Request timed out after 10 seconds' });
-        }, 10000);
+          console.log('[@action:hosts:getHosts] Request timed out after 15 seconds');
+          resolve({ success: false, error: 'Request timed out after 15 seconds' });
+        }, 15000); // Increased timeout to 15 seconds
       });
 
       // Create the actual data fetch promise
@@ -58,12 +58,8 @@ export const getHosts = cache(
         },
       );
 
-      // Race the fetch against the timeout
-      try {
-        return await Promise.race([fetchPromise, timeoutPromise]);
-      } catch (error: any) {
-        return { success: false, error: error.error || 'Request timed out' };
-      }
+      // Race the fetch against the timeout - both will resolve, not reject
+      return await Promise.race([fetchPromise, timeoutPromise]);
     } catch (error: any) {
       return { success: false, error: error.message || 'Failed to fetch hosts' };
     }
