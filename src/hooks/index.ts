@@ -18,4 +18,3 @@ export * from './useUser';
 export * from './useHost';
 export * from './useDeployment';
 export * from './useCICD';
-export * from './useDeploymentWizard';

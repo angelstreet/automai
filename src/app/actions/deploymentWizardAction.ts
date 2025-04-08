@@ -81,7 +81,10 @@ export async function createDeploymentWithCICD(formData: CICDDeploymentFormData)
     );
 
     if (!jobResult.success) {
-      throw new Error(`Failed to create Jenkins job: ${jobResult.error}`);
+      const errorMessage = jobResult.error?.includes('timed out')
+        ? 'Jenkins job creation timed out. The server might be busy or unavailable.'
+        : `Failed to create Jenkins job: ${jobResult.error}`;
+      throw new Error(errorMessage);
     }
 
     // 2. Store Jenkins Job in DB

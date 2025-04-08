@@ -610,7 +610,9 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
         setSubmissionError(error.message);
         toast({
           title: 'Error creating deployment',
-          description: error.message,
+          description: error.message.includes('timed out')
+            ? 'The Jenkins server is taking too long to respond. Please try again or contact support if the issue persists.'
+            : error.message,
           variant: 'destructive',
         });
       } finally {

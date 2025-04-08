@@ -40,28 +40,42 @@ export class JenkinsProvider implements CICDProvider {
       const jobPath = folder ? `job/${folder}/job/${name}` : `job/${name}`;
       const createUrl = `${this.baseUrl}createItem?name=${encodeURIComponent(name)}`;
 
-      // Create job
-      const response = await fetch(createUrl, {
-        method: 'POST',
-        headers: {
-          Authorization: this.authHeader,
-          'Content-Type': 'application/xml',
-        },
-        body: jobConfig,
-      });
+      // Create job with 30s timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 seconds timeout
 
-      if (!response.ok) {
-        throw new Error(`Failed to create job: ${response.statusText}`);
+      try {
+        const response = await fetch(createUrl, {
+          method: 'POST',
+          headers: {
+            Authorization: this.authHeader,
+            'Content-Type': 'application/xml',
+          },
+          body: jobConfig,
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          throw new Error(`Failed to create job: ${response.statusText}`);
+        }
+
+        return {
+          success: true,
+          data: {
+            id: name,
+            name,
+            url: `${this.baseUrl}${jobPath}`,
+          },
+        };
+      } catch (error: any) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+          throw new Error('Jenkins job creation timed out after 30 seconds');
+        }
+        throw error;
       }
-
-      return {
-        success: true,
-        data: {
-          id: name,
-          name,
-          url: `${this.baseUrl}${jobPath}`,
-        },
-      };
     } catch (error: any) {
       console.error(`[@service:jenkins:createJob] Error:`, error);
       return { success: false, error: error.message };

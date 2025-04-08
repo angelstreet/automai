@@ -18,24 +18,15 @@ export { usePermission } from '@/hooks/usePermission';
 export { useHost } from '@/hooks/useHost';
 export { useCICD } from '@/hooks/useCICD';
 export { useDeployment } from '@/hooks/useDeployment';
-export { useDeploymentWizard } from '@/hooks/useDeploymentWizard';
 export { useRepository } from '@/hooks/useRepository';
 export { useSidebar } from '@/hooks/useSidebar';
 export { useUser } from '@/hooks/useUser';
 export { useTheme } from '@/hooks/useTheme';
 export { useTeamMembers } from '@/hooks/useTeamMembers';
-export { useTeamResources } from '@/hooks/useTeamResources';
 export { useTeamMemberDialog } from '@/app/providers/TeamMemberDialogProvider';
-
-// DEPRECATED: Import these from @/hooks in the future
-export { FontProvider, useFont } from './FontContext';
-export { SearchProvider, useSearch } from './SearchContext';
-export { ThemeProvider } from '@/app/providers';
-
 // Export types (still valid, these won't change)
 export type { ResourceType, Operation };
 export type { UserContextType } from '@/types/context/userContextType';
-export type { SidebarContext } from '@/types/context/sidebarContextType';
 export type {
   TeamMember,
   TeamCreateInput,
@@ -65,12 +56,6 @@ export const userSelectors = {
 
   // Get loading state only
   isLoading: (context: UserContextType) => context.loading,
-
-  // Get just the team data
-  teams: (context: UserContextType) => context.teams,
-
-  // Get just the selected team
-  selectedTeam: (context: UserContextType) => context.selectedTeam,
 };
 
 /**
@@ -88,7 +73,6 @@ export const userSelectors = {
  *    - useHost
  *    - useCICD
  *    - useDeployment
- *    - useDeploymentWizard
  *    - useRepository
  *    - useSidebar
  *    - useUser
@@ -106,7 +90,6 @@ export const userSelectors = {
  */
 export { TeamContext, type TeamContextState } from './TeamContext';
 export { PermissionContext } from './PermissionContext';
-export { UserContext, type UserContextState } from './UserContext';
 export { SidebarContext } from './SidebarContext';
 export { SearchContext } from './SearchContext';
 export { FontContext } from './FontContext';
