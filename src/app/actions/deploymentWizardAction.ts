@@ -218,8 +218,8 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
             }, 15000);
           });
 
-          // Get tenant name from user data
-          const tenantName = user.tenant_id || 'trial'; // Use tenant ID from user or default to 'trial'
+          // For Jenkins folder path, always use 'trial' as tenant name
+          const tenantName = 'trial'; // Fixed tenant name for Jenkins folders
           
           // Get username from provider credentials or user data
           const jenkinsUsername = providerResult.data.credentials?.username || 

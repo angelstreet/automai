@@ -606,8 +606,8 @@ export async function runDeployment(
         // Create a provider instance directly
         const provider = CICDProviderFactory.createProvider(providerConfig);
         
-        // Get tenant name from user data
-        const tenantName = user.tenant_id || 'trial';
+        // For Jenkins folder path, always use 'trial' as tenant name
+        const tenantName = 'trial'; // Fixed tenant name for Jenkins folders
         
         // Get username from provider credentials or user data
         const jenkinsUsername = providerConfig.credentials?.username || 
