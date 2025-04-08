@@ -506,10 +506,42 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
 
     const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
+      console.log('[@component:DeploymentWizardMainClient:handleSubmit] Starting form submission');
       setIsCreating(true);
       setSubmissionError(null);
 
       try {
+        // Log all form data for debugging
+        console.log('[@component:DeploymentWizardMainClient:handleSubmit] Full deployment data:', {
+          basic_info: {
+            name: deploymentData.name,
+            description: deploymentData.description,
+            repository_id: deploymentData.repositoryId,
+            branch: deploymentData.branch,
+          },
+          scripts: {
+            ids: deploymentData.scriptIds,
+            parameters: deploymentData.scriptParameters,
+            mapping: createScriptMapping(deploymentData.scriptIds, repositoryScripts),
+          },
+          hosts: {
+            ids: deploymentData.hostIds,
+            available_hosts: availableHosts?.length,
+          },
+          cicd: {
+            provider_id: deploymentData.cicd_provider_id,
+            available_providers: cicdProviders?.length,
+            selected_provider: selectedProvider,
+          },
+          scheduling: {
+            schedule: deploymentData.schedule,
+            autoStart: deploymentData.schedule === 'now',
+          },
+        });
+
+        console.log(
+          '[@component:DeploymentWizardMainClient:handleSubmit] Creating form data object',
+        );
         const formData: CICDDeploymentFormData = {
           name: deploymentData.name,
           description: deploymentData.description,
@@ -527,9 +559,19 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           autoStart: deploymentData.schedule === 'now',
         };
 
+        console.log(
+          '[@component:DeploymentWizardMainClient:handleSubmit] Calling createDeploymentWithCICD',
+        );
         const result = await createDeploymentWithCICD(formData);
+        console.log(
+          '[@component:DeploymentWizardMainClient:handleSubmit] Server response:',
+          result,
+        );
 
         if (result.success) {
+          console.log(
+            '[@component:DeploymentWizardMainClient:handleSubmit] Deployment created successfully',
+          );
           toast({
             title: 'Deployment created',
             description: 'Your deployment has been created successfully.',
@@ -542,9 +584,21 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           queryClient.invalidateQueries({ queryKey: ['deployments'] });
           onDeploymentCreated();
         } else {
+          console.error(
+            '[@component:DeploymentWizardMainClient:handleSubmit] Server returned error:',
+            result.error,
+          );
           throw new Error(result.error);
         }
       } catch (error: any) {
+        console.error(
+          '[@component:DeploymentWizardMainClient:handleSubmit] Error creating deployment:',
+          {
+            message: error.message,
+            stack: error.stack,
+            formData: deploymentData,
+          },
+        );
         setSubmissionError(error.message);
         toast({
           title: 'Error creating deployment',
@@ -552,6 +606,9 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           variant: 'destructive',
         });
       } finally {
+        console.log(
+          '[@component:DeploymentWizardMainClient:handleSubmit] Form submission completed',
+        );
         setIsCreating(false);
       }
     };

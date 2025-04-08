@@ -14,8 +14,8 @@ import {
   updateDeployment as dbUpdateDeployment,
   deleteDeployment as dbDeleteDeployment,
 } from '@/lib/db/deploymentDb';
-import { CICDService } from '@/lib/services/cicd/service';
 import { generateTriggerToken } from '@/lib/services/cicd/jenkinsPipeline';
+import { CICDService } from '@/lib/services/cicd/service';
 import {
   Deployment,
   DeploymentFormData,
@@ -24,7 +24,6 @@ import {
 } from '@/types/component/deploymentComponentType';
 import { CICDProviderConfig } from '@/types/service/cicdServiceTypes';
 import { AuthUser, User } from '@/types/service/userServiceType';
-import { CICDProviderFactory } from '@/lib/services/cicd/factory';
 
 // Initialize CICD service
 const cicdService = new CICDService();
@@ -363,93 +362,6 @@ export async function deleteDeployment(id: string): Promise<boolean> {
   } catch (error) {
     console.error('[@action:deployments:deleteDeployment] Error deleting deployment:', error);
     return false;
-  }
-}
-
-/**
- * Abort a running deployment
- * @param id Deployment ID
- * @returns Result with success status and error if applicable
- */
-export async function abortDeployment(id: string): Promise<{
-  success: boolean;
-  error?: string;
-}> {
-  try {
-    console.log(`[@action:deployments:abortDeployment] Aborting deployment with ID: ${id}`);
-
-    // Get cookie store
-    const cookieStore = await cookies();
-
-    // Update the deployment status to aborted
-    const updateData: Partial<Deployment> = {
-      status: 'cancelled' as DeploymentStatus,
-      completedAt: new Date().toISOString(),
-    };
-
-    // Update the deployment in the database
-    const result = await dbUpdateDeployment(id, updateData, cookieStore);
-
-    // Revalidate relevant paths
-    revalidatePath('/[locale]/[tenant]/deployment');
-
-    if (!result.success) {
-      const errorMessage = result.error || 'Failed to abort deployment';
-      console.error(`[@action:deployments:abortDeployment] Error: ${errorMessage}`);
-      return { success: false, error: errorMessage };
-    }
-
-    console.log(`[@action:deployments:abortDeployment] Successfully aborted deployment: ${id}`);
-    return { success: true };
-  } catch (error: any) {
-    console.error(`[@action:deployments:abortDeployment] Error aborting deployment ${id}:`, error);
-    return {
-      success: false,
-      error: error.message || 'Failed to abort deployment',
-    };
-  }
-}
-
-/**
- * Refresh a deployment's status
- * @param id Deployment ID
- * @returns Result with success status, deployment data, and error if applicable
- */
-export async function refreshDeployment(id: string): Promise<{
-  success: boolean;
-  deployment?: Deployment;
-  error?: string;
-}> {
-  try {
-    console.log(`[@action:deployments:refreshDeployment] Refreshing deployment with ID: ${id}`);
-
-    // Fetch updated deployment
-    const deployment = await getDeploymentById(id);
-
-    if (!deployment) {
-      console.error(`[@action:deployments:refreshDeployment] Deployment not found: ${id}`);
-      return {
-        success: false,
-        error: 'Deployment not found',
-      };
-    }
-
-    // Revalidate relevant paths
-    revalidatePath('/[locale]/[tenant]/deployment');
-
-    return {
-      success: true,
-      deployment,
-    };
-  } catch (error: any) {
-    console.error(
-      `[@action:deployments:refreshDeployment] Error refreshing deployment ${id}:`,
-      error,
-    );
-    return {
-      success: false,
-      error: error.message || 'Failed to refresh deployment',
-    };
   }
 }
 
@@ -803,31 +715,6 @@ export async function getDeploymentTriggerToken(
     return {
       success: false,
       error: error.message || 'Failed to generate trigger token',
-    };
-  }
-}
-
-/**
- * Clear deployment-related cache by revalidating paths
- */
-export async function clearDeploymentCache(): Promise<{
-  success: boolean;
-  message: string;
-}> {
-  try {
-    // Revalidate relevant paths
-    revalidatePath('/[locale]/[tenant]/deployment');
-
-    console.log('[@action:deployments:clearDeploymentCache] Cache cleared via path revalidation');
-    return {
-      success: true,
-      message: 'Cache cleared via path revalidation',
-    };
-  } catch (error: any) {
-    console.error('[@action:deployments:clearDeploymentCache] Error clearing cache:', error);
-    return {
-      success: false,
-      message: error.message || 'Unknown error occurred',
     };
   }
 }
