@@ -606,8 +606,20 @@ export async function runDeployment(
         // Create a provider instance directly
         const provider = CICDProviderFactory.createProvider(providerConfig);
         
-        // Trigger the job directly using the provider
-        const triggerResult = await provider.triggerJob(jobId, deploymentParameters);
+        // Get tenant name from user data
+        const tenantName = user.tenant_id || 'trial';
+        
+        // Get username from provider credentials or user data
+        const jenkinsUsername = providerConfig.credentials?.username || 
+                               (user.username || user.email?.split('@')[0]);
+        
+        // Create the Jenkins folder path
+        const jenkinsFolder = jenkinsUsername ? `${tenantName}/${jenkinsUsername}` : tenantName;
+        
+        console.log(`[@action:deployments:runDeployment] Using Jenkins folder path: ${jenkinsFolder}`);
+        
+        // Trigger the job directly using the provider with folder path
+        const triggerResult = await provider.triggerJob(jobId, deploymentParameters, jenkinsFolder);
 
         if (!triggerResult.success) {
           console.error(

@@ -218,9 +218,23 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
             }, 15000);
           });
 
+          // Get tenant name from user data
+          const tenantName = user.tenant_id || 'trial'; // Use tenant ID from user or default to 'trial'
+          
+          // Get username from provider credentials or user data
+          const jenkinsUsername = providerResult.data.credentials?.username || 
+                                 (user.username || user.email?.split('@')[0]);
+          
+          // Create the Jenkins folder path in the format 'tenantName/username'
+          const jenkinsFolder = jenkinsUsername ? `${tenantName}/${jenkinsUsername}` : tenantName;
+          
+          console.log(
+            `[@action:deploymentWizard:saveDeploymentConfiguration] Using Jenkins folder path: ${jenkinsFolder}`
+          );
+
           // Create the job with timeout - assign to the outer scope variable
           jobResult = await Promise.race([
-            provider.createJob(jobName, pipelineConfig),
+            provider.createJob(jobName, pipelineConfig, jenkinsFolder),
             timeoutPromise,
           ]);
 

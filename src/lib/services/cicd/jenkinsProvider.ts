@@ -380,12 +380,49 @@ export class JenkinsProvider implements CICDProvider {
   async triggerJob(
     jobId: string,
     parameters?: Record<string, any>,
+    folderPath?: string,
   ): Promise<CICDResponse<CICDBuild>> {
     try {
       console.log(`[@service:jenkins:triggerJob] Triggering job with ID: ${jobId}`);
       
-      // Prepare URL based on whether we have parameters
-      let url = `${this.baseUrl}job/${encodeURIComponent(jobId)}/`;
+      // Prepare URL based on whether we have folder path and parameters
+      let url = this.baseUrl;
+      
+      // If job ID contains slashes, it already includes the folder structure
+      // Otherwise, apply the folderPath parameter if provided
+      if (jobId.includes('/')) {
+        // Split the job ID into folder path and job name
+        const parts = jobId.split('/');
+        const actualJobId = parts.pop() || ''; // Last part is the job name
+        const actualFolderPath = parts.join('/'); // Rest is the folder path
+        
+        // Construct URL with the folder path structure
+        parts.forEach(part => {
+          url += `job/${encodeURIComponent(part)}/`;
+        });
+        
+        // Add the actual job ID
+        url += `job/${encodeURIComponent(actualJobId)}/`;
+        
+        console.log(`[@service:jenkins:triggerJob] Job ID contains folder path: ${actualFolderPath}, job name: ${actualJobId}`);
+      } else if (folderPath) {
+        // Add folder path to URL
+        if (folderPath.includes('/')) {
+          // Handle multi-level folder paths
+          const folderParts = folderPath.split('/');
+          folderParts.forEach(part => {
+            if (part) url += `job/${encodeURIComponent(part)}/`;
+          });
+        } else {
+          url += `job/${encodeURIComponent(folderPath)}/`;
+        }
+        
+        url += `job/${encodeURIComponent(jobId)}/`;
+        console.log(`[@service:jenkins:triggerJob] Using folder path: ${folderPath} for job: ${jobId}`);
+      } else {
+        // No folder structure, just use the job ID directly
+        url += `job/${encodeURIComponent(jobId)}/`;
+      }
 
       if (parameters && Object.keys(parameters).length > 0) {
         // Add parameters to URL for parameterized builds
@@ -610,8 +647,21 @@ export class JenkinsProvider implements CICDProvider {
 
       // Determine the URL (with folder support)
       let url = this.baseUrl;
+      
       if (folderPath) {
-        url += `job/${encodeURIComponent(folderPath)}/`;
+        // Handle multi-level folders
+        if (folderPath.includes('/')) {
+          const folderParts = folderPath.split('/');
+          folderParts.forEach(part => {
+            if (part.trim()) {
+              url += `job/${encodeURIComponent(part)}/`;
+            }
+          });
+        } else {
+          url += `job/${encodeURIComponent(folderPath)}/`;
+        }
+        
+        console.log(`[@service:jenkins:createJob] Using folder path: ${folderPath}`);
       }
 
       url += 'createItem?name=' + encodeURIComponent(jobName);
