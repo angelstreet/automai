@@ -259,10 +259,13 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
         const cicdJobData = {
           name: jobName,
           provider_id: providerResult.data.id,
-          job_path: jobName,
+          external_id: jobResult.data, // Store the Jenkins job ID in external_id
+          description: pipelineConfig.description || '',
           parameters: pipelineConfig, // Store pipeline config in parameters field
-          status: 'pending',
-          // Omit any fields not defined in the database table
+          team_id: teamId,
+          creator_id: user.id,
+          // Only using fields that exist in the actual database schema:
+          // id, provider_id, external_id, name, description, parameters, created_at, updated_at, creator_id, team_id
         };
         
         // Log the exact data we're sending to the database for debugging
@@ -275,10 +278,15 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
           const dbJobResult = await createCICDJob({ data: cicdJobData }, cookieStore);
           
           if (!dbJobResult.success) {
+            // Log more details about the error to help diagnose schema issues
             console.error(
               `[@action:deploymentWizard:saveDeploymentConfiguration] Failed to save CICD job to database: ${dbJobResult.error}`,
+              '\nJob data:', JSON.stringify(cicdJobData, null, 2)
             );
-            return { success: false, error: `Failed to save CICD job: ${dbJobResult.error}` };
+            return { 
+              success: false, 
+              error: `Failed to save CICD job to database: ${dbJobResult.error}` 
+            };
           }
           
           // Job was created successfully
