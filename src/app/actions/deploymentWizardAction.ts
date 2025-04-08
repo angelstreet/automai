@@ -9,14 +9,18 @@ import { getCICDProviders } from '@/app/actions/cicdAction';
 import { getHosts } from '@/app/actions/hostsAction';
 import { getRepositories } from '@/app/actions/repositoriesAction';
 import { getUser } from '@/app/actions/userAction';
-import { createDeployment as dbCreateDeployment } from '@/lib/db/deploymentDb';
+import { createDeployment as dbCreateDeployment, updateDeployment } from '@/lib/db/deploymentDb';
+import { CICDService } from '@/lib/services/cicd/service';
+import { DeploymentStatus, DeploymentData } from '@/types-new/deployment-types';
+import { CICDProvider, CICDProviderConfig } from '@/types-new/cicd-provider';
+import { CICDJob, CreateCICDJobParams } from '@/types-new/cicd-job';
+import { CICDProviderFactory } from '@/lib/services/cicd/factory';
 
 /**
  * Fetches all data needed for the deployment wizard
  */
 export const getDeploymentWizardData = cache(async () => {
   try {
-    // Fetch all required data in parallel
     const [repositoriesResult, hostsResult, cicdProvidersResult] = await Promise.all([
       getRepositories(),
       getHosts(),
@@ -46,380 +50,90 @@ export const getDeploymentWizardData = cache(async () => {
  */
 export async function saveDeploymentConfiguration(formData: DeploymentFormData) {
   try {
-    // Detailed debug of the FULL formData object
-    console.log(
-      '[@action:deploymentWizard:saveDeploymentConfiguration] FULL formData structure:',
-      JSON.stringify(formData, null, 2),
-    );
-
-    console.log(
-      '[@action:deploymentWizard:saveDeploymentConfiguration] Starting process with form data:',
-      {
-        name: formData.name,
-        repositoryId: formData.repositoryId,
-        cicdProviderId: formData.cicd_provider_id || formData.cicdProviderId,
-      },
-    );
-
-    // Validate required fields
-    if (!formData.name || !formData.repositoryId) {
-      console.error(
-        '[@action:deploymentWizard:saveDeploymentConfiguration] Missing required fields',
-      );
-      return {
-        success: false,
-        error: 'Missing required fields',
-      };
-    }
-
-    // Get the cookieStore
     const cookieStore = await cookies();
-
-    // Get current user
     const user = await getUser();
+
     if (!user) {
-      console.error(
-        '[@action:deploymentWizard:saveDeploymentConfiguration] User not authenticated',
-      );
-      return {
-        success: false,
-        error: 'User not authenticated',
-      };
+      return { success: false, error: 'User not authenticated' };
     }
 
-    // Import needed database functions
     const { getCICDProvider, createCICDJob, createDeploymentCICDMapping } = await import(
       '@/lib/db/cicdDb'
     );
-    const { PipelineGenerator } = await import('@/lib/services/cicd/pipelineGenerator');
-    const { CICDProviderFactory } = await import('@/lib/services/cicd/providerFactory');
 
     let cicdJobId = null;
+    const cicdProviderId = formData.cicd_provider_id || formData.cicdProviderId;
 
-    // Find the CICD provider ID (try all possible property names)
-    const cicdProviderId =
-      formData.cicd_provider_id || formData.cicdProviderId || formData.provider_id;
-
-    // Get the active team ID (moved up from below since we need it for CICD job creation)
-    const selectedTeamCookie = cookieStore.get(`selected_team_${user.id}`)?.value;
-    const teamId = selectedTeamCookie || user.teams?.[0]?.id;
-
-    // Step 1: Create CICD job if a provider is selected
     if (cicdProviderId) {
-      console.log(
-        `[@action:deploymentWizard:saveDeploymentConfiguration] Creating CICD job with provider: ${cicdProviderId}`,
-      );
-
-      try {
-        // Get provider details
-        const providerResult = await getCICDProvider(
-          {
-            where: { id: cicdProviderId },
-          },
-          cookieStore,
-        );
-
-        if (!providerResult.success || !providerResult.data) {
-          console.error(
-            `[@action:deploymentWizard:saveDeploymentConfiguration] Provider not found: ${cicdProviderId}`,
-          );
-          return { success: false, error: 'CICD Provider not found' };
-        }
-
-        // Log the provider configuration for debugging
-        console.log('[@action:deploymentWizard:saveDeploymentConfiguration] Provider config:', {
-          id: providerResult.data.id,
-          name: providerResult.data.name,
-          type: providerResult.data.type,
-          url: providerResult.data.url,
-          port: providerResult.data.port,
-          auth_type: providerResult.data.config?.auth_type,
-          hasCredentials: !!providerResult.data.config?.credentials,
-        });
-
-        // Ensure config is initialized
-        if (!providerResult.data.config) {
-          providerResult.data.config = {
-            auth_type: 'token',
-            credentials: {},
-          };
-        }
-
-        console.log(
-          '[@action:deploymentWizard:saveDeploymentConfiguration] Creating provider with config:',
-          JSON.stringify(providerResult.data, null, 2),
-        );
-
-        const provider = CICDProviderFactory.createProvider(providerResult.data);
-
-        if (!provider) {
-          console.error(
-            '[@action:deploymentWizard:saveDeploymentConfiguration] Failed to create provider instance',
-          );
-          return { success: false, error: 'Failed to create CICD provider instance' };
-        }
-
-        // Generate a unique job name
-        const jobName = formData.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
-
-        // Define pipeline config using PipelineGenerator
-        const pipelineConfig = PipelineGenerator.generatePipelineConfig(
-          jobName,
-          formData.repositoryId,
-          formData.description || '',
-        );
-
-        // Get the job config XML using the same pipeline config
-        const { jobConfigXml } = PipelineGenerator.generate('jenkins', {
-          repositoryUrl: formData.repository || '',
-          branch: formData.branch || 'main',
-          deploymentName: jobName,
-          deploymentId: '',
-          scripts: [],
-          hosts: [],
-          additionalParams: {
-            DEPLOYMENT_DESCRIPTION: formData.description,
-          },
-        });
-
-        console.log(
-          `[@action:deploymentWizard:saveDeploymentConfiguration] Creating Jenkins job with config:`,
-          JSON.stringify(pipelineConfig, null, 2),
-        );
-
-        // Log the full XML configuration for debugging
-        console.log(
-          `[@action:deploymentWizard:saveDeploymentConfiguration] Full Jenkins job XML config:`,
-          jobConfigXml,
-        );
-
-        // Declare jobResult in the outer scope so it's available outside the try block
-        let jobResult: any;
-
-        // Add timeout handling for Jenkins job creation
-        try {
-          // Create a promise that rejects after 15 seconds
-          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => {
-              reject(new Error('TIMEOUT: Jenkins job creation took too long (30s)'));
-            }, 30000);
-          });
-
-          // Use tenant_name from user data for Jenkins folder path
-          const tenantName = user.tenant_name || 'trial'; // Use tenant name (not ID)
-
-          // Get username from provider credentials or user data
-          const jenkinsUsername =
-            providerResult.data.credentials?.username || user.username || user.email?.split('@')[0];
-
-          // Create the Jenkins folder path in the format 'tenantName/username'
-          const jenkinsFolder = jenkinsUsername ? `${tenantName}/${jenkinsUsername}` : tenantName;
-
-          console.log(
-            `[@action:deploymentWizard:saveDeploymentConfiguration] Using Jenkins folder path: ${jenkinsFolder}`,
-          );
-
-          // Create the job with timeout - assign to the outer scope variable
-          jobResult = await Promise.race([
-            provider.createJob(
-              jobName,
-              pipelineConfig,
-              jenkinsFolder,
-              { jobConfigXml }, // Pass XML config as additional options
-            ),
-            timeoutPromise,
-          ]);
-
-          if (!jobResult.success) {
-            const error = jobResult.error || 'Unknown error occurred';
-            console.error(
-              `[@action:deploymentWizard:saveDeploymentConfiguration] Failed to create Jenkins job: ${error}`,
-            );
-            return { success: false, error: `Failed to create CICD job: ${error}` };
-          }
-
-          console.log(
-            `[@action:deploymentWizard:saveDeploymentConfiguration] Jenkins job created: ${jobResult.data}`,
-          );
-        } catch (error) {
-          // Check if this is a timeout error
-          if (error.message && error.message.includes('TIMEOUT')) {
-            console.error(
-              `[@action:deploymentWizard:saveDeploymentConfiguration] Jenkins job creation timed out after 15 seconds`,
-            );
-            return {
-              success: false,
-              error:
-                'Jenkins job creation timed out after 15 seconds. Please check your Jenkins server configuration or try again later.',
-            };
-          }
-
-          // Handle other errors
-          console.error(
-            `[@action:deploymentWizard:saveDeploymentConfiguration] Error creating Jenkins job: ${error.message}`,
-          );
-          return {
-            success: false,
-            error: `Error creating CICD job: ${error.message}`,
-          };
-        }
-
-        // Prepare CICD job data using existing values - keep it simple with only required fields
-        const cicdJobData = {
-          name: jobName,
-          provider_id: providerResult.data.id,
-          external_id: jobResult.data, // Store the Jenkins job ID in external_id
-          description: pipelineConfig.description || '',
-          parameters: pipelineConfig, // Store pipeline config in parameters field
-          team_id: teamId,
-          creator_id: user.id,
-          // Only using fields that exist in the actual database schema:
-          // id, provider_id, external_id, name, description, parameters, created_at, updated_at, creator_id, team_id
-        };
-
-        // Log the exact data we're sending to the database for debugging
-        console.log(
-          `[@action:deploymentWizard:saveDeploymentConfiguration] CICD job data for database:`,
-          JSON.stringify(cicdJobData, null, 2),
-        );
-
-        try {
-          const dbJobResult = await createCICDJob({ data: cicdJobData }, cookieStore);
-
-          if (!dbJobResult.success) {
-            console.error(
-              `[@action:deploymentWizard:saveDeploymentConfiguration] Failed to save CICD job to database: ${dbJobResult.error}`,
-            );
-            return {
-              success: false,
-              error: `Failed to save CICD job to database: ${dbJobResult.error}`,
-            };
-          }
-
-          // Job was created successfully
-          cicdJobId = dbJobResult.data.id;
-          console.log(
-            `[@action:deploymentWizard:saveDeploymentConfiguration] CICD job saved with ID: ${cicdJobId}`,
-          );
-        } catch (dbError: any) {
-          // Better error handling for database operations
-          console.error(
-            `[@action:deploymentWizard:saveDeploymentConfiguration] Exception saving CICD job to database:`,
-            dbError,
-          );
-          return {
-            success: false,
-            error: `Database error saving CICD job: ${dbError.message || 'Unknown error'}`,
-          };
-        }
-      } catch (providerError) {
-        console.error(
-          `[@action:deploymentWizard:saveDeploymentConfiguration] Error creating provider:`,
-          providerError,
-        );
-        return {
-          success: false,
-          error: `Error creating CICD provider: ${providerError.message}`,
-        };
+      const providerResult = await getCICDProvider({ where: { id: cicdProviderId } }, cookieStore);
+      if (!providerResult.success || !providerResult.data) {
+        return { success: false, error: 'CICD Provider not found' };
       }
+
+      const cicdService = new CICDService();
+      const jobResult = await cicdService.createJob({
+        name: formData.name,
+        description: formData.description || '',
+        repository: {
+          url: formData.repository || '',
+          branch: formData.branch || 'main',
+        },
+        providerId: providerResult.data.id,
+      });
+
+      if (!jobResult.success) {
+        return { success: false, error: jobResult.error };
+      }
+
+      cicdJobId = jobResult.data.id;
     }
 
-    // Step 2: Create the deployment
-    console.log(
-      `[@action:deploymentWizard:saveDeploymentConfiguration] Creating deployment record`,
-    );
-
-    // Extract data from configuration if available
-    const scriptIds = formData.configuration?.scriptIds || [];
-    const hostIds = formData.configuration?.hostIds || [];
-    // Convert script parameters to an array format if it's an object
-    const scriptParameters = Array.isArray(formData.configuration?.parameters)
-      ? formData.configuration?.parameters
-      : formData.parameters || [];
-
-    // Prepare deployment data (removing fields that don't exist in the table)
     const deploymentData = {
       name: formData.name,
       description: formData.description || '',
       repository_id: formData.repositoryId,
-      scripts_path: scriptIds, // Use the array of script IDs/paths
-      scripts_parameters: scriptParameters, // Use the array of script parameters
-      host_ids: hostIds, // Use host IDs
-      status: 'pending',
+      scripts_path: formData.configuration?.scriptIds || [],
+      scripts_parameters: formData.configuration?.parameters || [],
+      host_ids: formData.configuration?.hostIds || [],
+      status: DeploymentStatus.PENDING,
       scheduled_time: formData.scheduledTime
         ? new Date(formData.scheduledTime).toISOString()
-        : null, // Ensure proper ISO timestamp
+        : null,
       schedule_type: formData.configuration?.schedule || formData.schedule || 'now',
-      cron_expression: formData.cronExpression || formData.configuration?.cronExpression || null,
-      repeat_count: formData.repeatCount || formData.configuration?.repeatCount || null,
+      cron_expression: formData.cronExpression || null,
+      repeat_count: formData.repeatCount || null,
       tenant_id: user.tenant_id,
       user_id: user.id,
-      team_id: formData.team_id || teamId, // Use form data team_id first
-      creator_id: formData.creator_id || user.id, // Use form data creator_id first
-      cicd_provider_id: formData.cicd_provider_id || cicdProviderId || null, // Use form data cicd_provider_id first
+      team_id: user.teams?.[0]?.id, // Use first team if not specified
+      creator_id: user.id,
+      cicd_provider_id: cicdProviderId || null,
     };
 
-    console.log(
-      `[@action:deploymentWizard:saveDeploymentConfiguration] Deployment data: `,
-      JSON.stringify(deploymentData, null, 2),
-    );
-
-    // Create the deployment
     const result = await dbCreateDeployment(deploymentData, cookieStore);
 
-    if (!result.success) {
-      console.error(
-        `[@action:deploymentWizard:saveDeploymentConfiguration] Failed to create deployment: ${result.error}`,
-      );
-      return {
-        success: false,
-        error: result.error || 'Failed to create deployment',
-      };
+    if (!result.success || !result.data) {
+      return { success: false, error: result.error || 'Failed to create deployment' };
     }
 
-    const deploymentId = result.data.id;
-    console.log(
-      `[@action:deploymentWizard:saveDeploymentConfiguration] Deployment created with ID: ${deploymentId}`,
-    );
-
-    // Step 3: Create mapping between deployment and CICD job if applicable
     if (cicdJobId) {
-      console.log(
-        `[@action:deploymentWizard:saveDeploymentConfiguration] Creating deployment-CICD mapping`,
+      await createDeploymentCICDMapping(
+        {
+          deployment_id: result.data.id,
+          cicd_job_id: cicdJobId,
+          parameters: {},
+        },
+        cookieStore,
       );
-
-      const mappingData = {
-        deployment_id: deploymentId,
-        cicd_job_id: cicdJobId,
-        parameters: {},
-      };
-
-      const mappingResult = await createDeploymentCICDMapping(mappingData, cookieStore);
-
-      if (!mappingResult.success) {
-        console.error(
-          `[@action:deploymentWizard:saveDeploymentConfiguration] Failed to create mapping: ${mappingResult.error}`,
-        );
-        // We continue anyway since the deployment was created
-      } else {
-        console.log(
-          `[@action:deploymentWizard:saveDeploymentConfiguration] Mapping created with ID: ${mappingResult.data.id}`,
-        );
-      }
     }
 
-    // Revalidate relevant paths
     revalidatePath('/[locale]/[tenant]/deployment', 'page');
 
-    console.log(
-      `[@action:deploymentWizard:saveDeploymentConfiguration] Process completed successfully`,
-    );
     return {
       success: true,
       data: result.data,
     };
   } catch (error: any) {
-    console.error('[@action:deploymentWizard:saveDeploymentConfiguration] Error:', error);
+    console.error('Error saving deployment configuration:', error);
     return {
       success: false,
       error: error.message || 'Failed to save deployment configuration',
@@ -430,52 +144,66 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
 /**
  * Starts a deployment
  */
-export async function startDeployment(deploymentId: string) {
+export async function startDeployment(deploymentData: DeploymentData) {
   try {
-    // Get current user for auth checks
-    const user = await getUser();
-    if (!user) {
-      return {
-        success: false,
-        error: 'Unauthorized',
-      };
+    const { deployment, repository, host, script, config } = deploymentData;
+
+    // Get provider from factory
+    const provider = CICDProviderFactory.createProvider({
+      type: 'jenkins', // TODO: Make this dynamic based on configuration
+      baseUrl: process.env.JENKINS_URL || '',
+      username: process.env.JENKINS_USER || '',
+      token: process.env.JENKINS_TOKEN || '',
+    } as CICDProviderConfig);
+
+    if (!provider) {
+      throw new Error('Failed to create CICD provider');
     }
 
-    // Get cookieStore
-    const cookieStore = await cookies();
+    // Create CICD job
+    const jobParams: CreateCICDJobParams = {
+      name: deployment.name,
+      description: deployment.description || '',
+      provider_id: provider.id,
+      repository: {
+        url: repository.url,
+        branch: repository.default_branch,
+      },
+      hosts: [
+        {
+          name: host.name,
+          ip: host.ip,
+          username: host.username,
+          environment: host.environment,
+        },
+      ],
+      scripts: [
+        {
+          path: script.path,
+          type: script.type || 'shell',
+          parameters: script.parameters,
+        },
+      ],
+      timeout_seconds: config?.timeout_seconds || 3600,
+      retry_count: config?.retry_count || 0,
+      environment_variables: config?.environment_variables || {},
+    };
 
-    // Import the updateDeployment function
-    const { updateDeployment } = await import('@/lib/db/deploymentDb');
+    const job = await provider.createJob(jobParams);
 
     // Update deployment status
-    const result = await updateDeployment(
-      deploymentId,
-      {
-        status: 'running',
-        startedAt: new Date().toISOString(),
-      },
-      cookieStore,
-    );
+    await updateDeployment(deployment.id, {
+      status: DeploymentStatus.RUNNING,
+      startedAt: new Date().toISOString(),
+    });
 
-    if (!result.success) {
-      return {
-        success: false,
-        error: result.error || 'Failed to start deployment',
-      };
-    }
-
-    // Revalidate relevant paths
-    revalidatePath('/[locale]/[tenant]/deployment', 'page');
-
-    return {
-      success: true,
-      data: result.data,
-    };
-  } catch (error: any) {
-    console.error('Error starting deployment:', error);
-    return {
-      success: false,
-      error: error.message || 'Failed to start deployment',
-    };
+    return job;
+  } catch (error) {
+    console.error('Failed to start deployment:', error);
+    await updateDeployment(deployment.id, {
+      status: DeploymentStatus.FAILED,
+      endedAt: new Date().toISOString(),
+    });
+    throw error;
   }
 }

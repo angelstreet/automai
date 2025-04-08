@@ -53,7 +53,13 @@ export interface CICDJob {
 /**
  * CICD build status
  */
-export type CICDBuildStatus = 'pending' | 'running' | 'success' | 'failure' | 'cancelled' | 'unknown';
+export type CICDBuildStatus =
+  | 'pending'
+  | 'running'
+  | 'success'
+  | 'failure'
+  | 'cancelled'
+  | 'unknown';
 
 /**
  * CICD build definition

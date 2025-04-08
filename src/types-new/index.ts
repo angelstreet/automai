@@ -1,7 +1,7 @@
 /**
  * Main types export file
  * Re-exports commonly used types from their specific locations
- * 
+ *
  * IMPORTANT: For most cases, prefer importing directly from the specific type file
  * This file is primarily for convenience in cases where you need many entity types
  */
@@ -64,10 +64,14 @@ export * from './db-deployments';
  * // Prefer importing from specific files
  * import { Host, HostStatus } from '@/types-new/host-types';
  * import { CICDProvider } from '@/types-new/cicd-types';
- * 
+ *
  * // Use index imports only when needing multiple entity types
  * import { Host, Repository, Deployment } from '@/types-new';
- * 
+ *
  * // Always import context types directly
  * import { DashboardContext } from '@/types-new/dashboard-context';
  */
+
+export * from './cicd-provider';
+export * from './cicd-pipeline';
+export * from './cicd-job';
