@@ -5,6 +5,29 @@ import { cookies } from 'next/headers';
 import { CICDService } from '@/lib/services/cicd/service';
 import { CICDDeploymentFormData } from '@/types-new/deployment-types';
 
+/**
+ * Creates a mapping of script IDs to their details
+ */
+function createScriptMapping(scriptIds: string[], scripts: any[]) {
+  return scriptIds.reduce(
+    (mapping, scriptId) => {
+      const script = scripts.find((s) => s.id === scriptId);
+      if (script) {
+        mapping[scriptId] = {
+          path: script.path || script.filename || script.id,
+          type: script.type || 'shell',
+          parameters: script.parameters || {},
+        };
+      }
+      return mapping;
+    },
+    {} as Record<
+      string,
+      { path: string; type: 'shell' | 'python'; parameters: Record<string, any> }
+    >,
+  );
+}
+
 export async function createDeploymentWithCICD(formData: CICDDeploymentFormData) {
   // Initial data logging
   console.log('[@action:deploymentWizard:createDeploymentWithCICD] Starting with form data:', {

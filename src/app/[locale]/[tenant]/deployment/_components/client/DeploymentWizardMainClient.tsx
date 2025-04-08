@@ -1,34 +1,27 @@
 'use client';
 
+import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 
 // Constants for repository scanning
 const MAX_REPOSITORY_SCAN_DEPTH = 0;
 const MAX_FOLDERS_PER_LEVEL = 3;
 
-import {
-  saveDeploymentConfiguration,
-  startDeployment,
-  createDeploymentWithCICD,
-} from '@/app/actions/deploymentWizardAction';
+import { createDeploymentWithCICD } from '@/app/actions/deploymentWizardAction';
 import { toast } from '@/components/shadcn/use-toast';
-
-import { useQueryClient } from '@tanstack/react-query';
-
 import * as gitService from '@/lib/services/gitService';
 import { CICDProvider } from '@/types/component/cicdComponentType';
 import { DeploymentData } from '@/types/component/deploymentComponentType';
 import { Host as HostType, Host as SystemHost } from '@/types/component/hostComponentType';
 import { Repository } from '@/types/component/repositoryComponentType';
+import { CICDDeploymentFormData } from '@/types-new/deployment-types';
 
 import { DeploymentWizardStep1Client } from './DeploymentWizardStep1Client';
 import { DeploymentWizardStep2Client } from './DeploymentWizardStep2Client';
 import { DeploymentWizardStep3Client } from './DeploymentWizardStep3Client';
 import { DeploymentWizardStep4Client } from './DeploymentWizardStep4Client';
 import { DeploymentWizardStep5Client } from './DeploymentWizardStep5Client';
-
-// Add imports for gitService
 
 // Helper function to adapt system hosts to the format expected by the deployment module
 const adaptHostsForDeployment = (systemHosts: SystemHost[]): HostType[] => {
@@ -62,7 +55,7 @@ const initialDeploymentData: DeploymentData = {
   name: '',
   description: '',
   repositoryId: '',
-  selectedRepository: null,
+  selectedRepository: undefined,
   branch: '', // Empty string initially
   schedule: 'now',
   scheduledTime: '',
@@ -78,6 +71,7 @@ const initialDeploymentData: DeploymentData = {
   },
   autoStart: true,
   cicd_provider_id: '',
+  jenkinsConfig: undefined,
 };
 
 // Wrap DeploymentWizard in React.memo to prevent unnecessary re-renders
@@ -116,17 +110,23 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
     // Track permanent API failures to prevent retries
     const [hasApiPermissionError, setHasApiPermissionError] = useState(false);
 
-    // Set default CI/CD provider when available
-    useEffect(() => {
-      if (cicdProviders.length > 0 && !deploymentData.cicd_provider_id) {
-        setDeploymentData((prev) => ({
-          ...prev,
-          cicd_provider_id: cicdProviders[0].id,
-        }));
-      }
-    }, [cicdProviders, deploymentData.cicd_provider_id]);
+    // Get the selected CICD provider
+    const selectedProvider = useMemo(() => {
+      if (!deploymentData.cicd_provider_id || !cicdProviders) return undefined;
+      const provider = cicdProviders.find((p) => p.id === deploymentData.cicd_provider_id);
+      if (!provider) return undefined;
 
-    // Add a ref to track loading state outside of the effect dependency cycle
+      return {
+        type: provider.type,
+        config: {
+          url: provider.url,
+          username: provider.config?.credentials?.username || undefined,
+          token: provider.config?.credentials?.token || '',
+        },
+      };
+    }, [deploymentData.cicd_provider_id, cicdProviders]);
+
+    // Track if scripts are currently being loaded
     const isLoadingRef = useRef(false);
 
     // Modify the useEffect dependency array to remove isLoadingScripts
@@ -431,7 +431,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
         setDeploymentData((prev) => ({
           ...prev,
           repositoryId: value,
-          selectedRepository: null,
+          selectedRepository: undefined,
           branch: 'main', // Reset to default
         }));
 
@@ -543,18 +543,35 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           '[@component:DeploymentWizardMainClient:handleSubmit] Creating form data object',
         );
         const formData: CICDDeploymentFormData = {
-          name: deploymentData.name,
+          name: deploymentData.name || '',
           description: deploymentData.description,
-          repository_id: deploymentData.repositoryId,
+          repository_id: deploymentData.repositoryId || '',
+          host_id: deploymentData.hostIds[0] || '', // Use first host as primary
+          script_id: deploymentData.scriptIds[0] || '', // Use first script as primary
           team_id: teamId,
           creator_id: userId,
-          cicd_provider_id: deploymentData.cicd_provider_id,
-          provider: selectedProvider,
+          cicd_provider_id: deploymentData.cicd_provider_id || '',
+          provider: {
+            type: selectedProvider?.type || 'jenkins',
+            config: {
+              url: selectedProvider?.config?.url || '',
+              username: selectedProvider?.config?.username,
+              token: selectedProvider?.config?.token || '',
+            },
+          },
           configuration: {
+            name: deploymentData.name || '',
+            description: deploymentData.description,
             scriptIds: deploymentData.scriptIds,
             scriptMapping: createScriptMapping(deploymentData.scriptIds, repositoryScripts),
             hostIds: deploymentData.hostIds,
-            parameters: deploymentData.scriptParameters,
+            environmentVars: deploymentData.environmentVars.reduce(
+              (acc, curr) => {
+                acc[curr.key] = curr.value;
+                return acc;
+              },
+              {} as Record<string, string>,
+            ),
           },
           autoStart: deploymentData.schedule === 'now',
         };
@@ -762,7 +779,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           {/* Step 4: Schedule */}
           {step === 4 && (
             <DeploymentWizardStep4Client
-              schedule={deploymentData.schedule || 'now'}
+              schedule={deploymentData.schedule}
               scheduledTime={deploymentData.scheduledTime || ''}
               cronExpression={deploymentData.cronExpression || ''}
               repeatCount={deploymentData.repeatCount || 0}
@@ -773,7 +790,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               onNextStep={handleNextStep}
               isStepValid={
                 (deploymentData.schedule === 'now' ||
-                  (deploymentData.schedule === 'later' && deploymentData.scheduledTime !== '')) &&
+                  (deploymentData.schedule === 'later' && !!deploymentData.scheduledTime)) &&
                 !!deploymentData.cicd_provider_id
               }
             />

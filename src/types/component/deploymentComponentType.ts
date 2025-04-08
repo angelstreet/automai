@@ -25,10 +25,35 @@ export interface DeploymentHost extends Omit<Host, 'status'> {
   status: 'pending' | 'deploying' | 'success' | 'failed';
 }
 
+/**
+ * Complete deployment data with related entities
+ */
+export interface DeploymentData {
+  name: string;
+  description?: string;
+  repositoryId: string;
+  selectedRepository?: Repository & { url?: string };
+  branch?: string;
+  schedule: 'now' | 'later';
+  scheduledTime?: string;
+  scriptIds: string[];
+  scriptParameters: Record<string, Record<string, string>>;
+  hostIds: string[];
+  cronExpression?: string;
+  repeatCount?: number;
+  environmentVars: Array<{ key: string; value: string }>;
+  notifications: {
+    email: boolean;
+    slack: boolean;
+  };
+  autoStart: boolean;
+  cicd_provider_id: string;
+  jenkinsConfig?: any;
+}
+
 // Re-export types from deployment/types.ts
 export type {
   DeploymentScript,
   Deployment,
   DeploymentFormData,
-  DeploymentData,
 } from '@/app/[locale]/[tenant]/deployment/types';

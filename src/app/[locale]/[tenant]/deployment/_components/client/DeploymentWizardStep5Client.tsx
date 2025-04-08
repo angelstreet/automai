@@ -73,16 +73,8 @@ export function DeploymentWizardStep5Client({
 
   // Get provider type (jenkins, github, gitlab, circleci)
   const providerType = useMemo(() => {
-    if (!selectedProvider) return 'jenkins'; // Default fallback
-    const type = selectedProvider.type?.toLowerCase() || '';
-
-    // Map provider types to the ones supported by the pipeline generator
-    if (type.includes('jenkins')) return 'jenkins';
-    if (type.includes('github')) return 'github';
-    if (type.includes('gitlab')) return 'gitlab';
-    if (type.includes('circle')) return 'circleci';
-
-    return 'jenkins'; // Default fallback
+    if (!selectedProvider) return null;
+    return selectedProvider.type?.toLowerCase() || null;
   }, [selectedProvider]);
 
   // Extract CI/CD provider connection details
@@ -95,26 +87,16 @@ export function DeploymentWizardStep5Client({
 
     // If we have a port and the URL doesn't already include it, add it
     if (port && !url.includes(':' + port)) {
-      console.log(`[DeploymentWizardStep5] Adding port ${port} to URL ${url}`);
       url = `${url}:${port}`;
     }
 
-    const connection = {
+    return {
       url: url,
       token: (selectedProvider as any).token || '',
       username: (selectedProvider as any).username || '',
       password: (selectedProvider as any).password || '',
       authType: (selectedProvider as any).auth_type || 'token',
     };
-
-    console.log('[DeploymentWizardStep5] Provider connection:', {
-      ...connection,
-      // Don't log full credentials
-      token: connection.token ? '***' : undefined,
-      password: connection.password ? '***' : undefined,
-    });
-
-    return connection;
   }, [selectedProvider]);
 
   // Handle toggle for pipeline integration
@@ -129,8 +111,6 @@ export function DeploymentWizardStep5Client({
   const handleSubmit = (e: React.MouseEvent) => {
     e.preventDefault();
 
-    // Since we can't directly modify the DeploymentData structure,
-    // we'll ensure the cicd_provider_id is correctly set
     if (selectedProvider) {
       onUpdateData({
         cicd_provider_id: selectedProvider.id,
@@ -140,10 +120,8 @@ export function DeploymentWizardStep5Client({
     // Call the original submit function
     if (typeof onSubmit === 'function') {
       if ('length' in onSubmit && onSubmit.length === 0) {
-        // It's a () => void function
         (onSubmit as () => void)();
       } else {
-        // It's a FormEventHandler
         (onSubmit as React.FormEventHandler<HTMLFormElement>)(
           e as unknown as React.FormEvent<HTMLFormElement>,
         );
@@ -179,50 +157,12 @@ export function DeploymentWizardStep5Client({
         is_windows: (host as any).is_windows,
       }));
 
-    // Use actual repository URL if available or construct it from repositoryId
     const repoUrl =
       data.selectedRepository?.url ||
       (data.repositoryId ? `https://github.com/${data.repositoryId}.git` : '');
     const branch = data.branch || 'main';
 
-    // Create additionalParams with basic deployment info
-    const additionalParams: Record<string, any> = {
-      DEPLOYMENT_NAME: data.name || 'Deployment',
-      REPOSITORY_URL: repoUrl,
-      BRANCH: branch,
-      REPOSITORY: data.repositoryId || '',
-      DESCRIPTION: data.description || '',
-    };
-
-    // Add CI/CD provider connection details to additionalParams
-    if (providerConnection) {
-      additionalParams.CICD_PROVIDER_URL = providerConnection.url;
-      additionalParams.CICD_PROVIDER_TYPE = providerType;
-
-      // Add port explicitly if it's available
-      const port = (selectedProvider as any).port || (selectedProvider as any).config?.port;
-      if (port) {
-        additionalParams.CICD_PROVIDER_PORT = port;
-      }
-
-      // We'll need these for actual job creation in the server action
-      // But they won't be included in the displayed pipeline code
-      additionalParams.CICD_PROVIDER_ID = selectedProvider?.id;
-      additionalParams.CICD_PROVIDER_TOKEN = providerConnection.token;
-      additionalParams.CICD_PROVIDER_USERNAME = providerConnection.username;
-      additionalParams.CICD_PROVIDER_PASSWORD = providerConnection.password;
-      additionalParams.CICD_PROVIDER_AUTH_TYPE = providerConnection.authType;
-    }
-
-    // Log the provider info for debugging (will be removed in production)
-    console.log(
-      '[@component:DeploymentWizardStep5] Using provider:',
-      selectedProvider?.name,
-      'type:',
-      providerType,
-    );
-
-    // Generate pipeline using the provider type
+    // Generate pipeline using the service
     const result = generateJenkinsPipeline({
       name: data.name || 'Deployment',
       description: data.description,
@@ -232,32 +172,19 @@ export function DeploymentWizardStep5Client({
       },
       hosts: hostDetails,
       scripts: scriptDetails,
+      provider_id: selectedProvider?.id,
     });
 
-    // Return only the pipeline string for rendering
     return result.pipeline;
-  }, [data, repositoryScripts, availableHosts, providerType, providerConnection, selectedProvider]);
+  }, [data, repositoryScripts, availableHosts, selectedProvider]);
 
   // Render pipeline view
   const renderPipelineView = () => {
-    // Get display name for the provider type
-    const providerDisplayName =
-      selectedProvider?.name ||
-      (providerType === 'jenkins'
-        ? 'Jenkins'
-        : providerType === 'github'
-          ? 'GitHub Actions'
-          : providerType === 'gitlab'
-            ? 'GitLab CI'
-            : providerType === 'circleci'
-              ? 'CircleCI'
-              : 'CI/CD');
-
     return (
       <>
         <div className="mb-4">
           <h3 className="text-xl font-medium text-foreground mb-2">
-            {t('wizard_cicd_view') || `${providerDisplayName} Pipeline`}
+            {t('wizard_cicd_view') || `${selectedProvider?.name || 'CI/CD'} Pipeline`}
           </h3>
         </div>
 
