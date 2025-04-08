@@ -29,7 +29,7 @@ export function DeploymentWizardDialogClient({
   const { hosts, isLoading: isLoadingHosts } = useHost();
   const { providers: cicdProviders, isLoading: isLoadingCICD } = useCICD();
   const { activeTeam } = useTeam();
-  const { user } = useUser();
+  const { user } = useUser(null, 'DeploymentWizardDialogClient');
 
   // Only use the repository hook if no repositories were provided
   const { repositories: fetchedRepositories, isLoading: isLoadingRepositories } = useRepository({
