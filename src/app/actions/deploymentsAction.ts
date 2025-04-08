@@ -585,24 +585,60 @@ export async function runDeployment(
       const displayUrl = port && !baseUrl.includes(':' + port) 
         ? `${baseUrl}:${port}/job/${jobId}/build`
         : `${baseUrl}/job/${jobId}/build`;
+      
+      // Create a provider instance directly to have more control over the request
+      const { CICDProviderFactory } = await import('@/lib/services/cicd/providerFactory');
         
       console.log(
         `[@action:deployments:runDeployment] Full Jenkins URL that will be called: ${displayUrl}`,
       );
+      
+      // Log the exact config we're sending to the provider factory
+      console.log('[@action:deployments:runDeployment] Creating provider with config:', {
+        ...providerConfig,
+        credentials: {
+          username: providerConfig.credentials?.username,
+          hasToken: !!providerConfig.credentials?.token
+        }
+      });
+      
+      try {
+        // Create a provider instance directly
+        const provider = CICDProviderFactory.createProvider(providerConfig);
+        
+        // Trigger the job directly using the provider
+        const triggerResult = await provider.triggerJob(jobId, deploymentParameters);
 
-      const triggerResult = await cicdService.triggerJob(
-        deployment.cicd_provider_id,
-        jobId,
-        deploymentParameters,
-        cookieStore,
-      );
-
-      if (!triggerResult.success) {
-        console.error(
-          '[@action:deployments:runDeployment] Failed to trigger CICD job:',
-          triggerResult.error,
-        );
-        return { success: false, error: `Failed to trigger CICD job: ${triggerResult.error}` };
+        if (!triggerResult.success) {
+          console.error(
+            '[@action:deployments:runDeployment] Failed to trigger CICD job:',
+            triggerResult.error,
+          );
+          
+          // Check for common error types and provide more helpful messages
+          const errorMessage = triggerResult.error || 'Unknown error';
+          if (errorMessage.includes('403') || errorMessage.includes('Forbidden')) {
+            console.error('[@action:deployments:runDeployment] 403 Forbidden error detected');
+            return { 
+              success: false, 
+              error: `Authentication failed (403 Forbidden). Check Jenkins credentials and make sure the user has permission to trigger jobs.`
+            };
+          } else if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
+            console.error('[@action:deployments:runDeployment] 401 Unauthorized error detected');
+            return { 
+              success: false, 
+              error: `Authentication failed (401 Unauthorized). Invalid username or token/password.`
+            };
+          }
+          
+          return { success: false, error: `Failed to trigger CICD job: ${triggerResult.error}` };
+        }
+      } catch (error: any) {
+        console.error('[@action:deployments:runDeployment] Exception when triggering job:', error);
+        return { 
+          success: false, 
+          error: `Error triggering Jenkins job: ${error.message}` 
+        };
       }
     }
 

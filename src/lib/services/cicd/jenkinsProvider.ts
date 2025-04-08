@@ -382,6 +382,8 @@ export class JenkinsProvider implements CICDProvider {
     parameters?: Record<string, any>,
   ): Promise<CICDResponse<CICDBuild>> {
     try {
+      console.log(`[@service:jenkins:triggerJob] Triggering job with ID: ${jobId}`);
+      
       // Prepare URL based on whether we have parameters
       let url = `${this.baseUrl}job/${encodeURIComponent(jobId)}/`;
 
@@ -399,19 +401,74 @@ export class JenkinsProvider implements CICDProvider {
         // Trigger a simple build
         url += 'build';
       }
+      
+      console.log(`[@service:jenkins:triggerJob] Prepared URL: ${url}`);
+      console.log(`[@service:jenkins:triggerJob] Auth header type: ${this.authHeader.startsWith('Basic') ? 'Basic' : 'Other'}`);
+      
+      // Try to get CSRF crumb for Jenkins
+      let crumb = null;
+      let crumbRequestField = 'Jenkins-Crumb';
+      
+      try {
+        console.log(`[@service:jenkins:triggerJob] Trying to get CSRF crumb`);
+        const crumbResponse = await fetch(`${this.baseUrl}crumbIssuer/api/json`, {
+          headers: {
+            Authorization: this.authHeader,
+            Accept: 'application/json',
+          },
+        });
+        
+        if (crumbResponse.ok) {
+          const crumbData = await crumbResponse.json();
+          crumb = crumbData.crumb;
+          crumbRequestField = crumbData.crumbRequestField || 'Jenkins-Crumb';
+          console.log(`[@service:jenkins:triggerJob] Got CSRF crumb: ${crumbRequestField}=${crumb?.substring(0, 5)}...`);
+        } else {
+          console.log(`[@service:jenkins:triggerJob] Failed to get CSRF crumb: ${crumbResponse.status} ${crumbResponse.statusText}`);
+        }
+      } catch (crumbError) {
+        console.warn(`[@service:jenkins:triggerJob] Error getting CSRF crumb: ${crumbError.message}`);
+      }
+      
+      // Prepare headers
+      const headers: Record<string, string> = {
+        Authorization: this.authHeader,
+      };
+      
+      // Add CSRF crumb if available
+      if (crumb) {
+        headers[crumbRequestField] = crumb;
+      }
 
       // Jenkins requires a POST request to trigger builds
+      console.log(`[@service:jenkins:triggerJob] Sending POST request to trigger job`);
       const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          Authorization: this.authHeader,
-        },
+        headers: headers,
       });
 
       if (!response.ok) {
+        // Try to get more detailed error information
+        let errorDetail = '';
+        try {
+          const errorText = await response.text();
+          errorDetail = errorText.substring(0, 200);
+        } catch (e) {
+          errorDetail = 'Could not retrieve error details';
+        }
+        
+        console.error(`[@service:jenkins:triggerJob] Failed with status ${response.status}: ${errorDetail}`);
+        
+        if (response.status === 403) {
+          return {
+            success: false,
+            error: `Failed to trigger Jenkins job: 403 Forbidden. Check credentials and permissions. Details: ${errorDetail}`,
+          };
+        }
+        
         return {
           success: false,
-          error: `Failed to trigger Jenkins job: ${response.status} ${response.statusText}`,
+          error: `Failed to trigger Jenkins job: ${response.status} ${response.statusText}. Details: ${errorDetail}`,
         };
       }
 
