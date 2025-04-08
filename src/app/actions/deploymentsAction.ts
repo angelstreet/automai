@@ -460,6 +460,15 @@ export async function runDeployment(
 
     // Get cookie store
     const cookieStore = await cookies();
+    
+    // Get current user for tenant information
+    const user = await getUser();
+    if (!user) {
+      console.error('[@action:deployments:runDeployment] User not authenticated');
+      return { success: false, error: 'User not authenticated' };
+    }
+    
+    console.log(`[@action:deployments:runDeployment] Using tenant: ${user.tenant_name || 'unknown'}, user ID: ${user.id}`);
 
     // Get deployment details
     const deploymentResult = await dbGetDeploymentById(deploymentId, cookieStore);
@@ -606,15 +615,17 @@ export async function runDeployment(
         // Create a provider instance directly
         const provider = CICDProviderFactory.createProvider(providerConfig);
         
-        // Use tenant_name from user data for Jenkins folder path
-        const tenantName = user.tenant_name || 'trial'; // Use tenant name (not ID)
+        // Get tenant name from user data for Jenkins folder path
+        const tenantName = user.tenant_name || 'trial';
         
-        // Get username from provider credentials or user data
-        const jenkinsUsername = providerConfig.credentials?.username || 
-                               (user.username || user.email?.split('@')[0]);
+        // Get username from provider credentials
+        const jenkinsUsername = providerConfig.credentials?.username;
         
-        // Create the Jenkins folder path
+        // Create the Jenkins folder path, ensuring we have both parts
         const jenkinsFolder = jenkinsUsername ? `${tenantName}/${jenkinsUsername}` : tenantName;
+        
+        console.log(`[@action:deployments:runDeployment] Using tenant name: ${tenantName}, username: ${jenkinsUsername || 'not found'}`);
+        console.log(`[@action:deployments:runDeployment] Final Jenkins folder path: ${jenkinsFolder}`);
         
         console.log(`[@action:deployments:runDeployment] Using Jenkins folder path: ${jenkinsFolder}`);
         
