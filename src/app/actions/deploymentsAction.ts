@@ -15,7 +15,7 @@ import {
   deleteDeployment as dbDeleteDeployment,
 } from '@/lib/db/deploymentDb';
 import cicdService from '@/lib/services/cicdService';
-import { PipelineGenerator } from '@/lib/services/cicd/pipelineGenerator';
+import { generateTriggerToken } from '@/lib/services/cicd/jenkinsPipeline';
 import {
   Deployment,
   DeploymentFormData,
@@ -461,15 +461,17 @@ export async function runDeployment(
 
     // Get cookie store
     const cookieStore = await cookies();
-    
+
     // Get current user for tenant information
     const user = await getUser();
     if (!user) {
       console.error('[@action:deployments:runDeployment] User not authenticated');
       return { success: false, error: 'User not authenticated' };
     }
-    
-    console.log(`[@action:deployments:runDeployment] Using tenant: ${user.tenant_name || 'unknown'}, user ID: ${user.id}`);
+
+    console.log(
+      `[@action:deployments:runDeployment] Using tenant: ${user.tenant_name || 'unknown'}, user ID: ${user.id}`,
+    );
 
     // Get deployment details
     const deploymentResult = await dbGetDeploymentById(deploymentId, cookieStore);
@@ -493,27 +495,24 @@ export async function runDeployment(
         `[@action:deployments:runDeployment] CICD mapping result:`,
         JSON.stringify(mappingResult, null, 2),
       );
-      
+
       // Get the internal job ID from the mapping
       const internalJobId = mappingResult.data?.cicd_job_id;
-      
+
       // Now get the external job ID (actual Jenkins job name) from the CICD jobs table
-      const jobResult = await cicdDb.getCICDJob(
-        { where: { id: internalJobId } },
-        cookieStore
-      );
-      
+      const jobResult = await cicdDb.getCICDJob({ where: { id: internalJobId } }, cookieStore);
+
       if (!jobResult.success || !jobResult.data) {
         console.error('[@action:deployments:runDeployment] Failed to get CICD job details');
         return { success: false, error: 'Failed to get CICD job details' };
       }
-      
+
       console.log(`[@action:deployments:runDeployment] CICD job details:`, {
         id: jobResult.data.id,
         name: jobResult.data.name,
-        external_id: jobResult.data.external_id
+        external_id: jobResult.data.external_id,
       });
-      
+
       // Use the external_id which is the actual Jenkins job name
       const jobId = jobResult.data.external_id;
 
@@ -532,27 +531,28 @@ export async function runDeployment(
 
       // Get provider configuration
       let providerConfig = providerResult.data as unknown as CICDProviderConfig;
-      
+
       // Ensure port and credentials are included properly for Jenkins providers
       if (providerConfig.type.toLowerCase() === 'jenkins') {
         // Check if provider has a port configuration
-        const port = (providerResult.data as any).port || 
-                     (providerResult.data as any).config?.port || 
-                     8080; // Default to 8080 for Jenkins
-                     
+        const port =
+          (providerResult.data as any).port || (providerResult.data as any).config?.port || 8080; // Default to 8080 for Jenkins
+
         console.log(`[@action:deployments:runDeployment] Found port ${port} for Jenkins provider`);
-        
+
         // Extract credentials from provider
-        const username = (providerResult.data as any).username || 
-                         (providerResult.data as any).config?.credentials?.username ||
-                         (providerResult.data as any).credentials?.username ||
-                         'joachim_djibril'; // Default username from logs
-                         
-        const token = (providerResult.data as any).token || 
-                      (providerResult.data as any).config?.credentials?.token ||
-                      (providerResult.data as any).credentials?.token ||
-                      ''; // Token from provider
-        
+        const username =
+          (providerResult.data as any).username ||
+          (providerResult.data as any).config?.credentials?.username ||
+          (providerResult.data as any).credentials?.username ||
+          'joachim_djibril'; // Default username from logs
+
+        const token =
+          (providerResult.data as any).token ||
+          (providerResult.data as any).config?.credentials?.token ||
+          (providerResult.data as any).credentials?.token ||
+          ''; // Token from provider
+
         // Make sure providerConfig has all the necessary properties
         providerConfig = {
           ...providerConfig,
@@ -561,13 +561,13 @@ export async function runDeployment(
           credentials: {
             ...(providerConfig.credentials || {}),
             username: username,
-            token: token
-          }
+            token: token,
+          },
         };
-        
+
         console.log(`[@action:deployments:runDeployment] Extracted credentials:`, {
           username: username,
-          hasToken: !!token
+          hasToken: !!token,
         });
       }
 
@@ -578,9 +578,9 @@ export async function runDeployment(
         url: providerConfig.url,
         auth_type: providerConfig.auth_type,
         hasCredentials: !!providerConfig.credentials,
-        hasUsername: !!(providerConfig.credentials?.username),
-        hasToken: !!(providerConfig.credentials?.token),
-        port: (providerConfig as any).port
+        hasUsername: !!providerConfig.credentials?.username,
+        hasToken: !!providerConfig.credentials?.token,
+        port: (providerConfig as any).port,
       });
 
       // Extract deployment parameters from the deployment
@@ -588,48 +588,55 @@ export async function runDeployment(
 
       // Trigger the CICD job
       console.log(`[@action:deployments:runDeployment] Triggering job: ${jobId}`);
-      
+
       // Build full URL with port for logging (just for display purposes)
       const port = (providerConfig as any).port;
       const baseUrl = providerConfig.url;
-      const displayUrl = port && !baseUrl.includes(':' + port) 
-        ? `${baseUrl}:${port}/job/${jobId}/build`
-        : `${baseUrl}/job/${jobId}/build`;
-      
+      const displayUrl =
+        port && !baseUrl.includes(':' + port)
+          ? `${baseUrl}:${port}/job/${jobId}/build`
+          : `${baseUrl}/job/${jobId}/build`;
+
       // Create a provider instance directly to have more control over the request
       const { CICDProviderFactory } = await import('@/lib/services/cicd/providerFactory');
-        
+
       console.log(
         `[@action:deployments:runDeployment] Full Jenkins URL that will be called: ${displayUrl}`,
       );
-      
+
       // Log the exact config we're sending to the provider factory
       console.log('[@action:deployments:runDeployment] Creating provider with config:', {
         ...providerConfig,
         credentials: {
           username: providerConfig.credentials?.username,
-          hasToken: !!providerConfig.credentials?.token
-        }
+          hasToken: !!providerConfig.credentials?.token,
+        },
       });
-      
+
       try {
         // Create a provider instance directly
         const provider = CICDProviderFactory.createProvider(providerConfig);
-        
+
         // Get tenant name from user data for Jenkins folder path
         const tenantName = user.tenant_name || 'trial';
-        
+
         // Get username from provider credentials
         const jenkinsUsername = providerConfig.credentials?.username;
-        
+
         // Create the Jenkins folder path, ensuring we have both parts
         const jenkinsFolder = jenkinsUsername ? `${tenantName}/${jenkinsUsername}` : tenantName;
-        
-        console.log(`[@action:deployments:runDeployment] Using tenant name: ${tenantName}, username: ${jenkinsUsername || 'not found'}`);
-        console.log(`[@action:deployments:runDeployment] Final Jenkins folder path: ${jenkinsFolder}`);
-        
-        console.log(`[@action:deployments:runDeployment] Using Jenkins folder path: ${jenkinsFolder}`);
-        
+
+        console.log(
+          `[@action:deployments:runDeployment] Using tenant name: ${tenantName}, username: ${jenkinsUsername || 'not found'}`,
+        );
+        console.log(
+          `[@action:deployments:runDeployment] Final Jenkins folder path: ${jenkinsFolder}`,
+        );
+
+        console.log(
+          `[@action:deployments:runDeployment] Using Jenkins folder path: ${jenkinsFolder}`,
+        );
+
         // Trigger the job directly using the provider with folder path
         const triggerResult = await provider.triggerJob(jobId, deploymentParameters, jenkinsFolder);
 
@@ -638,30 +645,30 @@ export async function runDeployment(
             '[@action:deployments:runDeployment] Failed to trigger CICD job:',
             triggerResult.error,
           );
-          
+
           // Check for common error types and provide more helpful messages
           const errorMessage = triggerResult.error || 'Unknown error';
           if (errorMessage.includes('403') || errorMessage.includes('Forbidden')) {
             console.error('[@action:deployments:runDeployment] 403 Forbidden error detected');
-            return { 
-              success: false, 
-              error: `Authentication failed (403 Forbidden). Check Jenkins credentials and make sure the user has permission to trigger jobs.`
+            return {
+              success: false,
+              error: `Authentication failed (403 Forbidden). Check Jenkins credentials and make sure the user has permission to trigger jobs.`,
             };
           } else if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
             console.error('[@action:deployments:runDeployment] 401 Unauthorized error detected');
-            return { 
-              success: false, 
-              error: `Authentication failed (401 Unauthorized). Invalid username or token/password.`
+            return {
+              success: false,
+              error: `Authentication failed (401 Unauthorized). Invalid username or token/password.`,
             };
           }
-          
+
           return { success: false, error: `Failed to trigger CICD job: ${triggerResult.error}` };
         }
       } catch (error: any) {
         console.error('[@action:deployments:runDeployment] Exception when triggering job:', error);
-        return { 
-          success: false, 
-          error: `Error triggering Jenkins job: ${error.message}` 
+        return {
+          success: false,
+          error: `Error triggering Jenkins job: ${error.message}`,
         };
       }
     }
@@ -702,7 +709,7 @@ export async function runDeployment(
  */
 export async function getDeploymentTriggerToken(
   deploymentId: string,
-  deploymentName?: string
+  deploymentName?: string,
 ): Promise<{
   success: boolean;
   token?: string;
@@ -710,81 +717,88 @@ export async function getDeploymentTriggerToken(
   error?: string;
 }> {
   try {
-    console.log(`[@action:deployments:getDeploymentTriggerToken] Getting token for deployment: ${deploymentId}`);
-    
+    console.log(
+      `[@action:deployments:getDeploymentTriggerToken] Getting token for deployment: ${deploymentId}`,
+    );
+
     // Get cookie store
     const cookieStore = await cookies();
-    
+
     let name = deploymentName;
-    
+
     // If no name provided, try to get deployment details
     if (!name) {
       const deploymentResult = await dbGetDeploymentById(deploymentId, cookieStore);
       if (!deploymentResult.success || !deploymentResult.data) {
-        return { 
-          success: false, 
-          error: 'Deployment not found and no name provided' 
+        return {
+          success: false,
+          error: 'Deployment not found and no name provided',
         };
       }
       name = deploymentResult.data.name;
     }
-    
+
     // Use the PipelineGenerator utility to create a consistent token
-    const token = PipelineGenerator.generateTriggerToken(name);
-    
+    const token = generateTriggerToken(name);
+
     // Get CICD job mapping to construct the trigger URL
     const cicdJob = await cicdDb.getCICDJobForDeployment(deploymentId, cookieStore);
-    
+
     // Construct a basic trigger URL pattern (this is a template, actual URL depends on provider config)
     let triggerUrl = '';
-    
+
     if (cicdJob) {
       // Extract provider information
-      const deployment = await dbGetDeploymentById(deploymentId, cookieStore) as unknown as { data?: { cicd_provider_id?: string } };
+      const deployment = (await dbGetDeploymentById(deploymentId, cookieStore)) as unknown as {
+        data?: { cicd_provider_id?: string };
+      };
       if (deployment?.data?.cicd_provider_id) {
         const providerResult = await cicdDb.getCICDProvider(
           { where: { id: deployment.data.cicd_provider_id } },
-          cookieStore
+          cookieStore,
         );
-        
+
         if (providerResult.success && providerResult.data) {
           const baseUrl = providerResult.data.url;
           const port = (providerResult.data as any).port || '';
-          
+
           // Include port if specified and not already in URL
-          const baseUrlWithPort = port && !baseUrl.includes(':' + port) 
-            ? `${baseUrl}:${port}` 
-            : baseUrl;
-          
+          const baseUrlWithPort =
+            port && !baseUrl.includes(':' + port) ? `${baseUrl}:${port}` : baseUrl;
+
           // Get user information from the system
           const user = await getUser();
-          
+
           // Extract tenant name from user data
           const tenantName = user?.tenant_name || '';
-          
+
           // Extract username from provider credentials
-          const jenkinsUsername = providerResult.data?.credentials?.username || 
-                                (providerResult.data as any)?.config?.credentials?.username || '';
-          
+          const jenkinsUsername =
+            providerResult.data?.credentials?.username ||
+            (providerResult.data as any)?.config?.credentials?.username ||
+            '';
+
           // Build the trigger URL with the correct folder structure
           // Format: http://server:port/job/tenantName/job/username/job/jobName/build?token=token
           triggerUrl = `${baseUrlWithPort}/job/${tenantName}/job/${jenkinsUsername}/job/${cicdJob.cicd_job_id}/build?token=${token}`;
-          
-          console.log(`[@action:deployments:getDeploymentTriggerToken] Generated trigger URL: ${triggerUrl}`);
+
+          console.log(
+            `[@action:deployments:getDeploymentTriggerToken] Generated trigger URL: ${triggerUrl}`,
+          );
         }
       }
     }
-    
+
     return {
       success: true,
       token,
-      triggerUrl
+      triggerUrl,
     };
   } catch (error: any) {
     console.error('[@action:deployments:getDeploymentTriggerToken] Error:', error);
     return {
       success: false,
-      error: error.message || 'Failed to generate trigger token'
+      error: error.message || 'Failed to generate trigger token',
     };
   }
 }

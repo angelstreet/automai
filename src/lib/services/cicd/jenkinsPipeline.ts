@@ -1,6 +1,13 @@
 import { CICDJobConfig, CreateCICDJobParams } from '@/types-new';
 
 /**
+ * Generate a consistent trigger token for a deployment
+ */
+export function generateTriggerToken(name: string): string {
+  return `${name.toLowerCase().replace(/[^a-z0-9]/g, '_')}_trigger`;
+}
+
+/**
  * Generate Jenkins pipeline configuration
  */
 export function generateJenkinsPipeline(params: CreateCICDJobParams): CICDJobConfig {
@@ -95,7 +102,7 @@ export function generateJenkinsPipeline(params: CreateCICDJobParams): CICDJobCon
     ],
     triggers: {
       type: 'webhook',
-      token: `${params.name.toLowerCase().replace(/[^a-z0-9]/g, '_')}_trigger`,
+      token: generateTriggerToken(params.name),
     },
   };
 }

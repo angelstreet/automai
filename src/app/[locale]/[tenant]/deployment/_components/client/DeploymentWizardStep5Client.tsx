@@ -5,7 +5,7 @@ import React, { useState, useMemo } from 'react';
 
 import { Switch } from '@/components/shadcn/switch';
 import { useCICD } from '@/hooks';
-import { PipelineGenerator } from '@/lib/services/cicd/pipelineGenerator';
+import { generateJenkinsPipeline } from '@/lib/services/cicd/jenkinsPipeline';
 import { CICDProvider, CICDJob } from '@/types/component/cicdComponentType';
 import { DeploymentData } from '@/types/component/deploymentComponentType';
 import { Host } from '@/types/component/hostComponentType';
@@ -76,7 +76,7 @@ export function DeploymentWizardStep5Client({
     if (!selectedProvider) return 'jenkins'; // Default fallback
     const type = selectedProvider.type?.toLowerCase() || '';
 
-    // Map provider types to the ones supported by PipelineGenerator
+    // Map provider types to the ones supported by the pipeline generator
     if (type.includes('jenkins')) return 'jenkins';
     if (type.includes('github')) return 'github';
     if (type.includes('gitlab')) return 'gitlab';
@@ -216,23 +216,22 @@ export function DeploymentWizardStep5Client({
 
     // Log the provider info for debugging (will be removed in production)
     console.log(
-      '[PipelineGenerator] Using provider:',
+      '[@component:DeploymentWizardStep5] Using provider:',
       selectedProvider?.name,
       'type:',
       providerType,
     );
 
     // Generate pipeline using the provider type
-    const result = PipelineGenerator.generate(providerType, {
-      repositoryUrl: repoUrl,
-      branch: branch,
-      deploymentName: data.name || 'Deployment',
-      deploymentId: 'DEP-AUTO', // Placeholder that will be replaced by CI/CD system
-      scripts: scriptDetails,
+    const result = generateJenkinsPipeline({
+      name: data.name || 'Deployment',
+      description: data.description,
+      repository: {
+        url: repoUrl,
+        branch: branch,
+      },
       hosts: hostDetails,
-      schedule: data.schedule as any,
-      scheduledTime: data.scheduledTime,
-      additionalParams,
+      scripts: scriptDetails,
     });
 
     // Return only the pipeline string for rendering
