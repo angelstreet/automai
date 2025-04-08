@@ -9,6 +9,7 @@ const MAX_FOLDERS_PER_LEVEL = 3;
 
 import { saveDeploymentConfiguration, startDeployment } from '@/app/actions/deploymentWizardAction';
 import { toast } from '@/components/shadcn/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
 import * as gitService from '@/lib/services/gitService';
 import { CICDProvider } from '@/types/component/cicdComponentType';
 import { DeploymentData } from '@/types/component/deploymentComponentType';
@@ -494,7 +495,10 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
       setStep((prev) => prev - 1);
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    // Get the React Query client
+    const queryClient = useQueryClient();
+
+  const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       setIsCreating(true);
       setSubmissionError(null);
@@ -566,7 +570,10 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           // Reset the form
           setDeploymentData(initialDeploymentData);
           setStep(1);
-
+          
+          // Invalidate the deployments query to refresh the list
+          queryClient.invalidateQueries({ queryKey: ['deployments'] });
+          
           // Call the dedicated callback for deployment creation success
           if (onDeploymentCreated) {
             onDeploymentCreated();
