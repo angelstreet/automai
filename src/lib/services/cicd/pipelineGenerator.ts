@@ -162,14 +162,7 @@ export class PipelineGenerator {
     return `pipeline {
     agent any
     
-    // Add remote trigger capability with token authentication
-    // This job can be triggered via HTTP POST:
-    // curl -X POST "JENKINS_URL/job/JOB_NAME/build?token=TOKEN_VALUE"
     options {
-        // Add authentication token for remote triggering
-        authToken('${triggerToken}')
-        
-        // Keep build history to 10 builds
         buildDiscarder(logRotator(numToKeepStr: '10'))
     }
     

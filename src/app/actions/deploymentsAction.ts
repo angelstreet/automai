@@ -756,8 +756,21 @@ export async function getDeploymentTriggerToken(
             ? `${baseUrl}:${port}` 
             : baseUrl;
           
-          // Build the trigger URL (Jenkins specific)
-          triggerUrl = `${baseUrlWithPort}/job/${cicdJob.cicd_job_id}/buildWithParameters?token=${token}`;
+          // Get user information from the system
+          const user = await getUser();
+          
+          // Extract tenant name from user data
+          const tenantName = user?.tenant_name || '';
+          
+          // Extract username from provider credentials
+          const jenkinsUsername = providerResult.data?.credentials?.username || 
+                                (providerResult.data as any)?.config?.credentials?.username || '';
+          
+          // Build the trigger URL with the correct folder structure
+          // Format: http://server:port/job/tenantName/job/username/job/jobName/build?token=token
+          triggerUrl = `${baseUrlWithPort}/job/${tenantName}/job/${jenkinsUsername}/job/${cicdJob.cicd_job_id}/build?token=${token}`;
+          
+          console.log(`[@action:deployments:getDeploymentTriggerToken] Generated trigger URL: ${triggerUrl}`);
         }
       }
     }
