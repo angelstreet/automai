@@ -15,6 +15,7 @@ import {
   deleteDeployment as dbDeleteDeployment,
 } from '@/lib/db/deploymentDb';
 import cicdService from '@/lib/services/cicdService';
+import { PipelineGenerator } from '@/lib/services/cicd/pipelineGenerator';
 import {
   Deployment,
   DeploymentFormData,
@@ -691,6 +692,87 @@ export async function runDeployment(
   } catch (error: any) {
     console.error('[@action:deployments:runDeployment] Error running deployment:', error);
     return { success: false, error: error.message || 'Failed to run deployment' };
+  }
+}
+
+/**
+ * Get remote trigger token for a deployment
+ * @param deploymentId The ID of the deployment to get token for
+ * @param deploymentName The name of the deployment (required if deployment not found)
+ */
+export async function getDeploymentTriggerToken(
+  deploymentId: string,
+  deploymentName?: string
+): Promise<{
+  success: boolean;
+  token?: string;
+  triggerUrl?: string;
+  error?: string;
+}> {
+  try {
+    console.log(`[@action:deployments:getDeploymentTriggerToken] Getting token for deployment: ${deploymentId}`);
+    
+    // Get cookie store
+    const cookieStore = await cookies();
+    
+    let name = deploymentName;
+    
+    // If no name provided, try to get deployment details
+    if (!name) {
+      const deploymentResult = await dbGetDeploymentById(deploymentId, cookieStore);
+      if (!deploymentResult.success || !deploymentResult.data) {
+        return { 
+          success: false, 
+          error: 'Deployment not found and no name provided' 
+        };
+      }
+      name = deploymentResult.data.name;
+    }
+    
+    // Use the PipelineGenerator utility to create a consistent token
+    const token = PipelineGenerator.generateTriggerToken(name);
+    
+    // Get CICD job mapping to construct the trigger URL
+    const cicdJob = await cicdDb.getCICDJobForDeployment(deploymentId, cookieStore);
+    
+    // Construct a basic trigger URL pattern (this is a template, actual URL depends on provider config)
+    let triggerUrl = '';
+    
+    if (cicdJob) {
+      // Extract provider information
+      const deployment = await dbGetDeploymentById(deploymentId, cookieStore) as unknown as { data?: { cicd_provider_id?: string } };
+      if (deployment?.data?.cicd_provider_id) {
+        const providerResult = await cicdDb.getCICDProvider(
+          { where: { id: deployment.data.cicd_provider_id } },
+          cookieStore
+        );
+        
+        if (providerResult.success && providerResult.data) {
+          const baseUrl = providerResult.data.url;
+          const port = (providerResult.data as any).port || '';
+          
+          // Include port if specified and not already in URL
+          const baseUrlWithPort = port && !baseUrl.includes(':' + port) 
+            ? `${baseUrl}:${port}` 
+            : baseUrl;
+          
+          // Build the trigger URL (Jenkins specific)
+          triggerUrl = `${baseUrlWithPort}/job/${cicdJob.cicd_job_id}/buildWithParameters?token=${token}`;
+        }
+      }
+    }
+    
+    return {
+      success: true,
+      token,
+      triggerUrl
+    };
+  } catch (error: any) {
+    console.error('[@action:deployments:getDeploymentTriggerToken] Error:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to generate trigger token'
+    };
   }
 }
 

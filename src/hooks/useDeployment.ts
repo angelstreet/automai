@@ -9,6 +9,7 @@ import {
   updateDeployment,
   deleteDeployment,
   runDeployment,
+  getDeploymentTriggerToken,
 } from '@/app/actions/deploymentsAction';
 import { useToast } from '@/components/shadcn/use-toast';
 
@@ -178,6 +179,21 @@ export function useDeployment() {
       });
     },
   });
+  
+  // Get trigger token for remote API triggering
+  const getTriggerTokenMutation = useMutation({
+    mutationFn: async ({ id, name }: { id: string; name?: string }): Promise<ActionResult<{ token: string; triggerUrl?: string }>> => {
+      const result = await getDeploymentTriggerToken(id, name);
+      return {
+        success: result.success,
+        error: result.error,
+        data: result.success ? { 
+          token: result.token || '', 
+          triggerUrl: result.triggerUrl 
+        } : undefined,
+      };
+    },
+  });
 
   return {
     // Data
@@ -196,11 +212,13 @@ export function useDeployment() {
     updateDeployment: updateDeploymentMutation.mutateAsync,
     deleteDeployment: deleteDeploymentMutation.mutateAsync,
     runDeployment: runDeploymentMutation.mutateAsync,
+    getTriggerToken: getTriggerTokenMutation.mutateAsync,
 
     // Mutation status
     isCreating: createDeploymentMutation.isPending,
     isUpdating: updateDeploymentMutation.isPending,
     isDeleting: deleteDeploymentMutation.isPending,
     isRunning: runDeploymentMutation.isPending,
+    isGettingTriggerToken: getTriggerTokenMutation.isPending,
   };
 }

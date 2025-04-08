@@ -42,6 +42,24 @@ export interface PipelineGeneratorOptions {
 
 export class PipelineGenerator {
   /**
+   * Generates a predictable trigger token from a deployment name
+   * This token can be used for remote triggering of CI/CD jobs
+   * 
+   * @param deploymentName The name of the deployment to generate token for
+   * @returns A cleaned trigger token string
+   */
+  static generateTriggerToken(deploymentName: string): string {
+    // Clean the deployment name: lowercase, replace spaces/special chars with underscores
+    const baseTokenName = deploymentName
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '_')    // Replace non-alphanumeric with underscores
+      .replace(/_+/g, '_')           // Replace multiple underscores with a single one
+      .replace(/^_|_$/g, '');        // Remove leading/trailing underscores
+    
+    // Return token with standard suffix
+    return `${baseTokenName}_trigger`;
+  }
+  /**
    * Generate a pipeline configuration for a specific CI/CD provider
    * @param provider The CI/CD provider type
    * @param options Pipeline generation options
@@ -75,6 +93,9 @@ export class PipelineGenerator {
 
     // Get description from additionalParams if available
     const description = additionalParams?.DEPLOYMENT_DESCRIPTION || '';
+    
+    // Generate a trigger token based on deployment name
+    const triggerToken = additionalParams?.TRIGGER_TOKEN || this.generateTriggerToken(deploymentName);
 
     // Format hosts as JSON array for the pipeline
     const hostsJson = JSON.stringify(
@@ -137,9 +158,20 @@ export class PipelineGenerator {
       })
       .join('\n\n');
 
-    // Build simplified pipeline
+    // Build simplified pipeline with remote trigger
     return `pipeline {
     agent any
+    
+    // Add remote trigger capability with token authentication
+    // This job can be triggered via HTTP POST:
+    // curl -X POST "JENKINS_URL/job/JOB_NAME/build?token=TOKEN_VALUE"
+    options {
+        // Add authentication token for remote triggering
+        authToken('${triggerToken}')
+        
+        // Keep build history to 10 builds
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
     
     parameters {
         string(name: 'REPOSITORY_URL', defaultValue: '${repositoryUrl}', description: 'Repository URL')
