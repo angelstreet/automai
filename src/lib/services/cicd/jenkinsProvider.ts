@@ -398,7 +398,9 @@ export class JenkinsProvider implements CICDProvider {
         
         // Construct URL with the folder path structure
         parts.forEach(part => {
-          url += `job/${encodeURIComponent(part)}/`;
+          if (part.trim()) {
+            url += `job/${encodeURIComponent(part)}/`;
+          }
         });
         
         // Add the actual job ID
@@ -411,14 +413,20 @@ export class JenkinsProvider implements CICDProvider {
           // Handle multi-level folder paths
           const folderParts = folderPath.split('/');
           folderParts.forEach(part => {
-            if (part) url += `job/${encodeURIComponent(part)}/`;
+            if (part.trim()) {
+              url += `job/${encodeURIComponent(part)}/`;
+            }
           });
         } else {
           url += `job/${encodeURIComponent(folderPath)}/`;
         }
         
         url += `job/${encodeURIComponent(jobId)}/`;
+        
+        // Log detailed URL information for debugging
         console.log(`[@service:jenkins:triggerJob] Using folder path: ${folderPath} for job: ${jobId}`);
+        console.log(`[@service:jenkins:triggerJob] Folder parts: ${folderPath.split('/').filter(p => p.trim()).join(', ')}`);
+        console.log(`[@service:jenkins:triggerJob] Expected Jenkins full project name: ${folderPath}/${jobId}`);
       } else {
         // No folder structure, just use the job ID directly
         url += `job/${encodeURIComponent(jobId)}/`;
@@ -665,6 +673,12 @@ export class JenkinsProvider implements CICDProvider {
       }
 
       url += 'createItem?name=' + encodeURIComponent(jobName);
+      
+      // Log detailed URL information for debugging
+      if (folderPath) {
+        console.log(`[@service:jenkins:createJob] Folder parts: ${folderPath.split('/').filter(p => p.trim()).join(', ')}`);
+        console.log(`[@service:jenkins:createJob] Expected Jenkins full project name: ${folderPath}/${jobName}`);
+      }
 
       // Log the exact URL we're using
       console.log(`[@service:jenkins:createJob] Using URL: ${url}`);
