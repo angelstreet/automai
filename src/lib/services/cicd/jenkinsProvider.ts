@@ -8,6 +8,7 @@ import {
 export class JenkinsProvider implements CICDProvider {
   private baseUrl: string;
   private authHeader: string;
+  private crumb: { crumbRequestField?: string; crumb?: string } = {};
 
   constructor(config: CICDProviderConfig) {
     console.log(`[@service:jenkins:constructor] Initializing Jenkins provider: ${config.name}`);
@@ -18,11 +19,40 @@ export class JenkinsProvider implements CICDProvider {
 
     // Setup authentication
     if (config.auth_type === 'token') {
-      this.authHeader = `Bearer ${config.credentials.token}`;
+      this.authHeader = `Basic ${Buffer.from(`${config.credentials.username}:${config.credentials.token}`).toString('base64')}`;
     } else {
       const { username, password } = config.credentials;
       const base64Credentials = Buffer.from(`${username}:${password}`).toString('base64');
       this.authHeader = `Basic ${base64Credentials}`;
+    }
+  }
+
+  /**
+   * Get Jenkins crumb for CSRF protection
+   */
+  private async getCrumb(): Promise<void> {
+    try {
+      console.log(`[@service:jenkins:getCrumb] Fetching crumb`);
+      const response = await fetch(`${this.baseUrl}crumbIssuer/api/json`, {
+        headers: {
+          Authorization: this.authHeader,
+        },
+      });
+
+      if (!response.ok) {
+        console.log(`[@service:jenkins:getCrumb] Failed to get crumb: ${response.statusText}`);
+        return;
+      }
+
+      const crumbData = await response.json();
+      this.crumb = {
+        crumbRequestField: crumbData.crumbRequestField,
+        crumb: crumbData.crumb,
+      };
+      console.log(`[@service:jenkins:getCrumb] Successfully got crumb`);
+    } catch (error) {
+      console.log(`[@service:jenkins:getCrumb] Error getting crumb:`, error);
+      // Don't throw - some Jenkins instances don't use crumb
     }
   }
 
@@ -33,6 +63,9 @@ export class JenkinsProvider implements CICDProvider {
     try {
       console.log(`[@service:jenkins:createJob] Creating job: ${name}`);
 
+      // Get crumb first
+      await this.getCrumb();
+
       // Generate job configuration XML
       const jobConfig = this.generateJobConfig(config);
 
@@ -42,15 +75,32 @@ export class JenkinsProvider implements CICDProvider {
 
       // Create job with 30s timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 seconds timeout
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
 
       try {
+        // Prepare headers with crumb if available
+        const headers: Record<string, string> = {
+          Authorization: this.authHeader,
+          'Content-Type': 'application/xml',
+        };
+
+        if (this.crumb.crumbRequestField && this.crumb.crumb) {
+          headers[this.crumb.crumbRequestField] = this.crumb.crumb;
+        }
+
+        // Log the request details
+        console.log('[@service:jenkins:createJob] Sending request to Jenkins:', {
+          url: createUrl,
+          headers: {
+            ...headers,
+            Authorization: 'Basic ***** (redacted)', // Don't log actual auth
+          },
+          body: jobConfig,
+        });
+
         const response = await fetch(createUrl, {
           method: 'POST',
-          headers: {
-            Authorization: this.authHeader,
-            'Content-Type': 'application/xml',
-          },
+          headers,
           body: jobConfig,
           signal: controller.signal,
         });
@@ -58,7 +108,8 @@ export class JenkinsProvider implements CICDProvider {
         clearTimeout(timeoutId);
 
         if (!response.ok) {
-          throw new Error(`Failed to create job: ${response.statusText}`);
+          const errorText = await response.text();
+          throw new Error(`Failed to create job: ${response.statusText}. Details: ${errorText}`);
         }
 
         return {
