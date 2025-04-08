@@ -206,6 +206,9 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
           JSON.stringify(pipelineConfig, null, 2),
         );
 
+        // Declare jobResult in the outer scope so it's available outside the try block
+        let jobResult: any;
+        
         // Add timeout handling for Jenkins job creation
         try {
           // Create a promise that rejects after 15 seconds
@@ -215,8 +218,8 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
             }, 15000);
           });
 
-          // Create the job with timeout
-          const jobResult = await Promise.race([
+          // Create the job with timeout - assign to the outer scope variable
+          jobResult = await Promise.race([
             provider.createJob(jobName, pipelineConfig),
             timeoutPromise,
           ]);
@@ -278,10 +281,8 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
           const dbJobResult = await createCICDJob({ data: cicdJobData }, cookieStore);
           
           if (!dbJobResult.success) {
-            // Log more details about the error to help diagnose schema issues
             console.error(
-              `[@action:deploymentWizard:saveDeploymentConfiguration] Failed to save CICD job to database: ${dbJobResult.error}`,
-              '\nJob data:', JSON.stringify(cicdJobData, null, 2)
+              `[@action:deploymentWizard:saveDeploymentConfiguration] Failed to save CICD job to database: ${dbJobResult.error}`
             );
             return { 
               success: false, 
