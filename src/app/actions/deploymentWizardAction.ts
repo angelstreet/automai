@@ -99,7 +99,7 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
     // Find the CICD provider ID (try all possible property names)
     const cicdProviderId =
       formData.cicd_provider_id || formData.cicdProviderId || formData.provider_id;
-      
+
     // Get the active team ID (moved up from below since we need it for CICD job creation)
     const selectedTeamCookie = cookieStore.get(`selected_team_${user.id}`)?.value;
     const teamId = selectedTeamCookie || user.teams?.[0]?.id;
@@ -208,7 +208,7 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
 
         // Declare jobResult in the outer scope so it's available outside the try block
         let jobResult: any;
-        
+
         // Add timeout handling for Jenkins job creation
         try {
           // Create a promise that rejects after 15 seconds
@@ -220,16 +220,16 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
 
           // Use tenant_name from user data for Jenkins folder path
           const tenantName = user.tenant_name || 'trial'; // Use tenant name (not ID)
-          
+
           // Get username from provider credentials or user data
-          const jenkinsUsername = providerResult.data.credentials?.username || 
-                                 (user.username || user.email?.split('@')[0]);
-          
+          const jenkinsUsername =
+            providerResult.data.credentials?.username || user.username || user.email?.split('@')[0];
+
           // Create the Jenkins folder path in the format 'tenantName/username'
           const jenkinsFolder = jenkinsUsername ? `${tenantName}/${jenkinsUsername}` : tenantName;
-          
+
           console.log(
-            `[@action:deploymentWizard:saveDeploymentConfiguration] Using Jenkins folder path: ${jenkinsFolder}`
+            `[@action:deploymentWizard:saveDeploymentConfiguration] Using Jenkins folder path: ${jenkinsFolder}`,
           );
 
           // Create the job with timeout - assign to the outer scope variable
@@ -284,26 +284,26 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
           // Only using fields that exist in the actual database schema:
           // id, provider_id, external_id, name, description, parameters, created_at, updated_at, creator_id, team_id
         };
-        
+
         // Log the exact data we're sending to the database for debugging
         console.log(
           `[@action:deploymentWizard:saveDeploymentConfiguration] CICD job data for database:`,
-          JSON.stringify(cicdJobData, null, 2)
+          JSON.stringify(cicdJobData, null, 2),
         );
-        
+
         try {
           const dbJobResult = await createCICDJob({ data: cicdJobData }, cookieStore);
-          
+
           if (!dbJobResult.success) {
             console.error(
-              `[@action:deploymentWizard:saveDeploymentConfiguration] Failed to save CICD job to database: ${dbJobResult.error}`
+              `[@action:deploymentWizard:saveDeploymentConfiguration] Failed to save CICD job to database: ${dbJobResult.error}`,
             );
-            return { 
-              success: false, 
-              error: `Failed to save CICD job to database: ${dbJobResult.error}` 
+            return {
+              success: false,
+              error: `Failed to save CICD job to database: ${dbJobResult.error}`,
             };
           }
-          
+
           // Job was created successfully
           cicdJobId = dbJobResult.data.id;
           console.log(
@@ -313,11 +313,11 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
           // Better error handling for database operations
           console.error(
             `[@action:deploymentWizard:saveDeploymentConfiguration] Exception saving CICD job to database:`,
-            dbError
+            dbError,
           );
-          return { 
-            success: false, 
-            error: `Database error saving CICD job: ${dbError.message || 'Unknown error'}` 
+          return {
+            success: false,
+            error: `Database error saving CICD job: ${dbError.message || 'Unknown error'}`,
           };
         }
       } catch (providerError) {
