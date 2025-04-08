@@ -11,10 +11,16 @@ import { getRepositories } from '@/app/actions/repositoriesAction';
 import { getUser } from '@/app/actions/userAction';
 import { createDeployment as dbCreateDeployment, updateDeployment } from '@/lib/db/deploymentDb';
 import { CICDService } from '@/lib/services/cicd/service';
-import { DeploymentStatus, DeploymentData } from '@/types-new/deployment-types';
+import { DeploymentData } from '@/types-new/deployment-types';
 import { CICDProvider, CICDProviderConfig } from '@/types-new/cicd-provider';
 import { CICDJob, CreateCICDJobParams } from '@/types-new/cicd-job';
 import { CICDProviderFactory } from '@/lib/services/cicd/factory';
+import { CICDBuildStatus as DeploymentStatus } from '@/types-new/cicd-types';
+import { generateJenkinsPipeline } from '@/lib/services/cicd/jenkinsPipeline';
+import { cicdDb } from '@/lib/db/cicdDb';
+import { deploymentDb } from '@/lib/db/deploymentDb';
+import { CICDDeploymentFormData } from '@/types-new/deployment-types';
+import { DbResponse } from '@/lib/utils/commonUtils';
 
 /**
  * Fetches all data needed for the deployment wizard
@@ -205,5 +211,91 @@ export async function startDeployment(deploymentData: DeploymentData) {
       endedAt: new Date().toISOString(),
     });
     throw error;
+  }
+}
+
+export async function createDeploymentWithCICD(
+  data: CICDDeploymentFormData,
+  cookieStore: any,
+): Promise<DbResponse<any>> {
+  try {
+    console.log('[@action:deployment:createWithCICD] Creating deployment with CICD job');
+
+    // 1. Create Jenkins Job First
+    const cicdService = new CICDService();
+    cicdService.initialize(data.provider);
+
+    const jenkinsJobResult = await cicdService.createJob(data.name, {
+      name: data.name,
+      description: data.description,
+      pipeline: generateJenkinsPipeline({
+        name: data.name,
+        repository: data.repository,
+        scripts: data.configuration.scriptMapping,
+        hosts: data.configuration.hostIds,
+      }),
+    });
+
+    if (!jenkinsJobResult.success) {
+      throw new Error(`Failed to create Jenkins job: ${jenkinsJobResult.error}`);
+    }
+
+    // 2. Store Jenkins Job in DB
+    const cicdJob = await cicdDb.createCICDJob(
+      {
+        data: {
+          provider_id: data.cicd_provider_id,
+          external_id: jenkinsJobResult.data.id,
+          job_url: jenkinsJobResult.data.url,
+          name: data.name,
+          parameters: data.configuration.parameters,
+        },
+      },
+      cookieStore,
+    );
+
+    if (!cicdJob.success) {
+      throw new Error(`Failed to store CICD job: ${cicdJob.error}`);
+    }
+
+    // 3. Create Deployment
+    const deployment = await deploymentDb.createDeployment(
+      {
+        name: data.name,
+        description: data.description,
+        repository_id: data.repository_id,
+        team_id: data.team_id,
+        creator_id: data.creator_id,
+      },
+      cookieStore,
+    );
+
+    if (!deployment.success) {
+      throw new Error(`Failed to create deployment: ${deployment.error}`);
+    }
+
+    // 4. Create Mapping
+    const mapping = await cicdDb.createDeploymentCICDMapping(
+      {
+        deployment_id: deployment.data.id,
+        cicd_job_id: cicdJob.data.id,
+        parameters: data.configuration,
+      },
+      cookieStore,
+    );
+
+    if (!mapping.success) {
+      throw new Error(`Failed to create deployment-CICD mapping: ${mapping.error}`);
+    }
+
+    // 5. Auto-start if needed
+    if (data.autoStart) {
+      await cicdService.triggerJob(jenkinsJobResult.data.id, data.configuration.parameters);
+    }
+
+    return { success: true, data: deployment.data };
+  } catch (error: any) {
+    console.error('[@action:deployment:createWithCICD] Error:', error);
+    return { success: false, error: error.message };
   }
 }

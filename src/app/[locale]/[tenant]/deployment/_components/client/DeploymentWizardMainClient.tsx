@@ -7,7 +7,11 @@ import React, { useState, useEffect, useRef } from 'react';
 const MAX_REPOSITORY_SCAN_DEPTH = 0;
 const MAX_FOLDERS_PER_LEVEL = 3;
 
-import { saveDeploymentConfiguration, startDeployment } from '@/app/actions/deploymentWizardAction';
+import {
+  saveDeploymentConfiguration,
+  startDeployment,
+  createDeploymentWithCICD,
+} from '@/app/actions/deploymentWizardAction';
 import { toast } from '@/components/shadcn/use-toast';
 
 import { useQueryClient } from '@tanstack/react-query';
@@ -506,93 +510,45 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
       setSubmissionError(null);
 
       try {
-        // Check if we have providers
-        if (!cicdProviders || cicdProviders.length === 0) {
-          throw new Error('No CI/CD providers available');
-        }
-
-        // Create scriptMapping from repositoryScripts array
-        const scriptMapping: Record<string, { path: string; name: string; type: string }> = {};
-
-        // Populate scriptMapping for each selected script
-        deploymentData.scriptIds.forEach((scriptId) => {
-          const script = repositoryScripts.find((s: any) => s.id === scriptId);
-          if (script) {
-            scriptMapping[scriptId] = {
-              path: script.path,
-              name: script.name,
-              type: script.type || 'shell',
-            };
-          }
-        });
-
-        // Map to the expected format according to DeploymentFormData interface
-        const formData: any = {
+        const formData: CICDDeploymentFormData = {
           name: deploymentData.name,
           description: deploymentData.description,
-          repositoryId: deploymentData.repositoryId,
-          branch: deploymentData.branch || 'main',
-          targetHostId: deploymentData.hostIds[0],
+          repository_id: deploymentData.repositoryId,
           team_id: teamId,
           creator_id: userId,
-          cicd_provider_id: deploymentData.cicd_provider_id || cicdProviders[0].id,
+          cicd_provider_id: deploymentData.cicd_provider_id,
+          provider: selectedProvider,
           configuration: {
             scriptIds: deploymentData.scriptIds,
-            scriptMapping,
+            scriptMapping: createScriptMapping(deploymentData.scriptIds, repositoryScripts),
             hostIds: deploymentData.hostIds,
-            schedule: deploymentData.schedule,
-            scheduledTime: deploymentData.scheduledTime || '',
-            cronExpression: deploymentData.cronExpression || '',
-            repeatCount: deploymentData.repeatCount || 0,
-            environmentVars: deploymentData.environmentVars.filter((env) => env.key && env.value),
             parameters: deploymentData.scriptParameters,
-            notifications: deploymentData.notifications,
           },
-          scheduled: deploymentData.schedule !== 'now',
           autoStart: deploymentData.schedule === 'now',
         };
 
-        console.log('[DeploymentWizard] Submitting deployment with data:', formData);
+        const result = await createDeploymentWithCICD(formData);
 
-        // Submit using the server action
-        const result = await saveDeploymentConfiguration(formData);
-
-        if (result.success && result.data) {
-          // If auto-start is enabled, start the deployment
-          if (formData.autoStart) {
-            await startDeployment(result.data.id);
-          }
-
+        if (result.success) {
           toast({
             title: 'Deployment created',
             description: 'Your deployment has been created successfully.',
             variant: 'default',
           });
 
-          // Reset the form
+          // Reset form and notify parent
           setDeploymentData(initialDeploymentData);
           setStep(1);
-
-          // Invalidate the deployments query to refresh the list
           queryClient.invalidateQueries({ queryKey: ['deployments'] });
-
-          // Call the dedicated callback for deployment creation success
-          if (onDeploymentCreated) {
-            onDeploymentCreated();
-          }
+          onDeploymentCreated();
         } else {
-          setSubmissionError(result.error || 'Failed to create deployment');
-          toast({
-            title: 'Error creating deployment',
-            description: result.error || 'Something went wrong while creating your deployment.',
-            variant: 'destructive',
-          });
+          throw new Error(result.error);
         }
       } catch (error: any) {
-        setSubmissionError(error.message || 'Failed to create deployment');
+        setSubmissionError(error.message);
         toast({
           title: 'Error creating deployment',
-          description: error.message || 'Something went wrong while creating your deployment.',
+          description: error.message,
           variant: 'destructive',
         });
       } finally {

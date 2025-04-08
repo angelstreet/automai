@@ -14,7 +14,7 @@ import {
   updateDeployment as dbUpdateDeployment,
   deleteDeployment as dbDeleteDeployment,
 } from '@/lib/db/deploymentDb';
-import cicdService from '@/lib/services/cicdService';
+import { CICDService } from '@/lib/services/cicd/service';
 import { generateTriggerToken } from '@/lib/services/cicd/jenkinsPipeline';
 import {
   Deployment,
@@ -24,6 +24,10 @@ import {
 } from '@/types/component/deploymentComponentType';
 import { CICDProviderConfig } from '@/types/service/cicdServiceTypes';
 import { AuthUser, User } from '@/types/service/userServiceType';
+import { CICDProviderFactory } from '@/lib/services/cicd/factory';
+
+// Initialize CICD service
+const cicdService = new CICDService();
 
 /**
  * Get all deployments for the current user

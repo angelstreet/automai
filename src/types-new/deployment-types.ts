@@ -99,3 +99,24 @@ export interface DeploymentData {
   script: DeploymentScript;
   config?: DeploymentConfig;
 }
+
+/**
+ * Form data for CICD deployment creation
+ */
+export interface CICDDeploymentFormData extends DeploymentFormData {
+  cicd_provider_id: string;
+  provider: CICDProviderConfig;
+  configuration: {
+    scriptIds: string[];
+    scriptMapping: Record<
+      string,
+      {
+        path: string;
+        type: 'shell' | 'python';
+      }
+    >;
+    hostIds: string[];
+    parameters: Record<string, any>;
+  };
+  autoStart: boolean;
+}
