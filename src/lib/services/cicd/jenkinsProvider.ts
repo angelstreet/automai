@@ -488,12 +488,10 @@ export class JenkinsProvider implements CICDProvider {
       // Jenkins requires a POST request to trigger builds
       console.log(`[@service:jenkins:triggerJob] Sending POST request to trigger job`);
       
-      // Jenkins often requires a content body or parameters
-      // Add 'delay=0' parameter to satisfy Jenkins API requirement
-      if (!url.includes('?')) {
-        url = url + '?delay=0sec';
-        console.log(`[@service:jenkins:triggerJob] Added delay parameter to URL: ${url}`);
-      }
+      // Create empty form data body to satisfy Jenkins form submission requirement
+      const formData = new URLSearchParams();
+      // Add standard Jenkins parameter (optional)
+      formData.append('delay', '0sec');
       
       const response = await fetch(url, {
         method: 'POST',
@@ -501,6 +499,7 @@ export class JenkinsProvider implements CICDProvider {
           ...headers,
           'Content-Type': 'application/x-www-form-urlencoded'
         },
+        body: formData
       });
 
       if (!response.ok) {
