@@ -76,6 +76,9 @@ export interface CICDProvider {
     jobName: string,
     pipelineConfig: CICDPipelineConfig,
     folderPath?: string,
+    additionalConfig?: {
+      jobConfigXml?: string;
+    },
   ): Promise<CICDResponse<string>>;
 
   // Delete a job
@@ -95,6 +98,7 @@ export interface CICDPipelineConfig {
   stages: CICDStage[];
   parameters?: CICDParameter[];
   triggers?: CICDTrigger[];
+  triggerToken?: string; // Token for remote build triggers
 }
 
 export interface CICDStage {

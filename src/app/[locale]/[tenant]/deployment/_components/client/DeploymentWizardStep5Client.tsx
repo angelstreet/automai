@@ -223,7 +223,7 @@ export function DeploymentWizardStep5Client({
     );
 
     // Generate pipeline using the provider type
-    return PipelineGenerator.generate(providerType, {
+    const result = PipelineGenerator.generate(providerType, {
       repositoryUrl: repoUrl,
       branch: branch,
       deploymentName: data.name || 'Deployment',
@@ -234,6 +234,9 @@ export function DeploymentWizardStep5Client({
       scheduledTime: data.scheduledTime,
       additionalParams,
     });
+
+    // Return only the pipeline string for rendering
+    return result.pipeline;
   }, [data, repositoryScripts, availableHosts, providerType, providerConnection, selectedProvider]);
 
   // Render pipeline view

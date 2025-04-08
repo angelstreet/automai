@@ -384,10 +384,10 @@ export class JenkinsProvider implements CICDProvider {
   ): Promise<CICDResponse<CICDBuild>> {
     try {
       console.log(`[@service:jenkins:triggerJob] Triggering job with ID: ${jobId}`);
-      
+
       // Prepare URL based on whether we have folder path and parameters
       let url = this.baseUrl;
-      
+
       // If job ID contains slashes, it already includes the folder structure
       // Otherwise, apply the folderPath parameter if provided
       if (jobId.includes('/')) {
@@ -395,24 +395,26 @@ export class JenkinsProvider implements CICDProvider {
         const parts = jobId.split('/');
         const actualJobId = parts.pop() || ''; // Last part is the job name
         const actualFolderPath = parts.join('/'); // Rest is the folder path
-        
+
         // Construct URL with the folder path structure
-        parts.forEach(part => {
+        parts.forEach((part) => {
           if (part.trim()) {
             url += `job/${encodeURIComponent(part)}/`;
           }
         });
-        
+
         // Add the actual job ID
         url += `job/${encodeURIComponent(actualJobId)}/`;
-        
-        console.log(`[@service:jenkins:triggerJob] Job ID contains folder path: ${actualFolderPath}, job name: ${actualJobId}`);
+
+        console.log(
+          `[@service:jenkins:triggerJob] Job ID contains folder path: ${actualFolderPath}, job name: ${actualJobId}`,
+        );
       } else if (folderPath) {
         // Add folder path to URL
         if (folderPath.includes('/')) {
           // Handle multi-level folder paths
           const folderParts = folderPath.split('/');
-          folderParts.forEach(part => {
+          folderParts.forEach((part) => {
             if (part.trim()) {
               url += `job/${encodeURIComponent(part)}/`;
             }
@@ -420,13 +422,22 @@ export class JenkinsProvider implements CICDProvider {
         } else {
           url += `job/${encodeURIComponent(folderPath)}/`;
         }
-        
+
         url += `job/${encodeURIComponent(jobId)}/`;
-        
+
         // Log detailed URL information for debugging
-        console.log(`[@service:jenkins:triggerJob] Using folder path: ${folderPath} for job: ${jobId}`);
-        console.log(`[@service:jenkins:triggerJob] Folder parts: ${folderPath.split('/').filter(p => p.trim()).join(', ')}`);
-        console.log(`[@service:jenkins:triggerJob] Expected Jenkins full project name: ${folderPath}/${jobId}`);
+        console.log(
+          `[@service:jenkins:triggerJob] Using folder path: ${folderPath} for job: ${jobId}`,
+        );
+        console.log(
+          `[@service:jenkins:triggerJob] Folder parts: ${folderPath
+            .split('/')
+            .filter((p) => p.trim())
+            .join(', ')}`,
+        );
+        console.log(
+          `[@service:jenkins:triggerJob] Expected Jenkins full project name: ${folderPath}/${jobId}`,
+        );
       } else {
         // No folder structure, just use the job ID directly
         url += `job/${encodeURIComponent(jobId)}/`;
@@ -446,14 +457,16 @@ export class JenkinsProvider implements CICDProvider {
         // Trigger a simple build
         url += 'build';
       }
-      
+
       console.log(`[@service:jenkins:triggerJob] Prepared URL: ${url}`);
-      console.log(`[@service:jenkins:triggerJob] Auth header type: ${this.authHeader.startsWith('Basic') ? 'Basic' : 'Other'}`);
-      
+      console.log(
+        `[@service:jenkins:triggerJob] Auth header type: ${this.authHeader.startsWith('Basic') ? 'Basic' : 'Other'}`,
+      );
+
       // Try to get CSRF crumb for Jenkins
       let crumb = null;
       let crumbRequestField = 'Jenkins-Crumb';
-      
+
       try {
         console.log(`[@service:jenkins:triggerJob] Trying to get CSRF crumb`);
         const crumbResponse = await fetch(`${this.baseUrl}crumbIssuer/api/json`, {
@@ -462,24 +475,30 @@ export class JenkinsProvider implements CICDProvider {
             Accept: 'application/json',
           },
         });
-        
+
         if (crumbResponse.ok) {
           const crumbData = await crumbResponse.json();
           crumb = crumbData.crumb;
           crumbRequestField = crumbData.crumbRequestField || 'Jenkins-Crumb';
-          console.log(`[@service:jenkins:triggerJob] Got CSRF crumb: ${crumbRequestField}=${crumb?.substring(0, 5)}...`);
+          console.log(
+            `[@service:jenkins:triggerJob] Got CSRF crumb: ${crumbRequestField}=${crumb?.substring(0, 5)}...`,
+          );
         } else {
-          console.log(`[@service:jenkins:triggerJob] Failed to get CSRF crumb: ${crumbResponse.status} ${crumbResponse.statusText}`);
+          console.log(
+            `[@service:jenkins:triggerJob] Failed to get CSRF crumb: ${crumbResponse.status} ${crumbResponse.statusText}`,
+          );
         }
       } catch (crumbError) {
-        console.warn(`[@service:jenkins:triggerJob] Error getting CSRF crumb: ${crumbError.message}`);
+        console.warn(
+          `[@service:jenkins:triggerJob] Error getting CSRF crumb: ${crumbError.message}`,
+        );
       }
-      
+
       // Prepare headers
       const headers: Record<string, string> = {
         Authorization: this.authHeader,
       };
-      
+
       // Add CSRF crumb if available
       if (crumb) {
         headers[crumbRequestField] = crumb;
@@ -487,19 +506,19 @@ export class JenkinsProvider implements CICDProvider {
 
       // Jenkins requires a POST request to trigger builds
       console.log(`[@service:jenkins:triggerJob] Sending POST request to trigger job`);
-      
+
       // Create empty form data body to satisfy Jenkins form submission requirement
       const formData = new URLSearchParams();
       // Add standard Jenkins parameter (optional)
       formData.append('delay', '0sec');
-      
+
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           ...headers,
-          'Content-Type': 'application/x-www-form-urlencoded'
+          'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: formData
+        body: formData,
       });
 
       if (!response.ok) {
@@ -511,16 +530,18 @@ export class JenkinsProvider implements CICDProvider {
         } catch (e) {
           errorDetail = 'Could not retrieve error details';
         }
-        
-        console.error(`[@service:jenkins:triggerJob] Failed with status ${response.status}: ${errorDetail}`);
-        
+
+        console.error(
+          `[@service:jenkins:triggerJob] Failed with status ${response.status}: ${errorDetail}`,
+        );
+
         if (response.status === 403) {
           return {
             success: false,
             error: `Failed to trigger Jenkins job: 403 Forbidden. Check credentials and permissions. Details: ${errorDetail}`,
           };
         }
-        
+
         return {
           success: false,
           error: `Failed to trigger Jenkins job: ${response.status} ${response.statusText}. Details: ${errorDetail}`,
@@ -659,18 +680,19 @@ export class JenkinsProvider implements CICDProvider {
     jobName: string,
     pipelineConfig: CICDPipelineConfig,
     folderPath?: string,
+    additionalConfig?: { jobConfigXml?: string },
   ): Promise<CICDResponse<string>> {
     try {
       console.log(`[@service:jenkins:createJob] Creating new job: ${jobName}`);
 
       // Determine the URL (with folder support)
       let url = this.baseUrl;
-      
+
       if (folderPath) {
         // Handle multi-level folders
         if (folderPath.includes('/')) {
           const folderParts = folderPath.split('/');
-          folderParts.forEach(part => {
+          folderParts.forEach((part) => {
             if (part.trim()) {
               url += `job/${encodeURIComponent(part)}/`;
             }
@@ -678,23 +700,31 @@ export class JenkinsProvider implements CICDProvider {
         } else {
           url += `job/${encodeURIComponent(folderPath)}/`;
         }
-        
+
         console.log(`[@service:jenkins:createJob] Using folder path: ${folderPath}`);
       }
 
       url += 'createItem?name=' + encodeURIComponent(jobName);
-      
+
       // Log detailed URL information for debugging
       if (folderPath) {
-        console.log(`[@service:jenkins:createJob] Folder parts: ${folderPath.split('/').filter(p => p.trim()).join(', ')}`);
-        console.log(`[@service:jenkins:createJob] Expected Jenkins full project name: ${folderPath}/${jobName}`);
+        console.log(
+          `[@service:jenkins:createJob] Folder parts: ${folderPath
+            .split('/')
+            .filter((p) => p.trim())
+            .join(', ')}`,
+        );
+        console.log(
+          `[@service:jenkins:createJob] Expected Jenkins full project name: ${folderPath}/${jobName}`,
+        );
       }
 
       // Log the exact URL we're using
       console.log(`[@service:jenkins:createJob] Using URL: ${url}`);
 
       // Create a Jenkins pipeline job config XML
-      const jobConfigXml = this.createPipelineJobConfig(pipelineConfig);
+      const jobConfigXml =
+        additionalConfig?.jobConfigXml || this.createPipelineJobConfig(pipelineConfig);
 
       // Log the job config for debugging
       console.log(
@@ -773,14 +803,15 @@ export class JenkinsProvider implements CICDProvider {
           ? 'Basic ***CREDENTIALS***'
           : this.authHeader;
 
+      // Create the curl command with the full XML
       const curlCommand = `curl -X POST "${url}" \\
-        -H "Authorization: ${maskedAuth}" \\
-        -H "Content-Type: application/xml" \\
-        ${crumb ? `-H "${crumbRequestField}: ${crumb}" \\` : ''}
-        -d '${jobConfigXml.substring(0, 100)}...(truncated)...'`;
+  -H "Authorization: ${maskedAuth}" \\
+  -H "Content-Type: application/xml" \\
+  ${crumb ? `-H "${crumbRequestField}: ${crumb}" \\` : ''}
+  -d '${jobConfigXml}'`;
 
-      console.log(`[@service:jenkins:createJob] Curl equivalent: \n${curlCommand}`);
-
+      // Log both the full and truncated versions
+      console.log(`[@service:jenkins:createJob] Full curl command for testing:\n${curlCommand}`);
       // Step 3: Make the create job request
       console.log(`[@service:jenkins:createJob] Sending POST request to create job`);
       const response = await fetch(url, {
@@ -815,8 +846,8 @@ export class JenkinsProvider implements CICDProvider {
           };
         }
 
-    return {
-      success: false,
+        return {
+          success: false,
           error: `Failed to create Jenkins job: ${response.status} ${response.statusText}`,
         };
       }
@@ -865,8 +896,8 @@ export class JenkinsProvider implements CICDProvider {
       };
     } catch (error: any) {
       console.error(`[@service:jenkins:deleteJob] Error:`, error);
-    return {
-      success: false,
+      return {
+        success: false,
         error: error.message || `Failed to delete Jenkins job ${jobId}`,
       };
     }
@@ -879,23 +910,18 @@ export class JenkinsProvider implements CICDProvider {
     // Generate Jenkinsfile script from pipeline configuration
     const scriptContent = this.generateJenkinsfileScript(pipelineConfig);
 
-    return `<?xml version="1.0" encoding="UTF-8"?>
+    return `<?xml version="1.1" encoding="UTF-8"?>
 <flow-definition plugin="workflow-job">
   <description>${pipelineConfig.description || ''}</description>
-  <keepDependencies>false</keepDependencies>
-  <properties>
-    <hudson.model.ParametersDefinitionProperty>
-      <parameterDefinitions>
-        ${this.generateParameterDefinitions(pipelineConfig.parameters || [])}
-      </parameterDefinitions>
-    </hudson.model.ParametersDefinitionProperty>
-  </properties>
   <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps">
     <script>${scriptContent}</script>
     <sandbox>true</sandbox>
   </definition>
-  <triggers/>
-  <disabled>false</disabled>
+  <triggers>
+    <hudson.triggers.RemoteTrigger>
+      <token>${pipelineConfig.triggerToken || ''}</token>
+    </hudson.triggers.RemoteTrigger>
+  </triggers>
 </flow-definition>`;
   }
 

@@ -169,9 +169,28 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
           formData.description || '',
         );
 
+        // Get the job config XML using the same pipeline config
+        const { jobConfigXml } = PipelineGenerator.generate('jenkins', {
+          repositoryUrl: formData.repository || '',
+          branch: formData.branch || 'main',
+          deploymentName: jobName,
+          deploymentId: '',
+          scripts: [],
+          hosts: [],
+          additionalParams: {
+            DEPLOYMENT_DESCRIPTION: formData.description,
+          },
+        });
+
         console.log(
-          '[@action:deploymentWizard:saveDeploymentConfiguration] Creating Jenkins job with config:',
+          `[@action:deploymentWizard:saveDeploymentConfiguration] Creating Jenkins job with config:`,
           JSON.stringify(pipelineConfig, null, 2),
+        );
+
+        // Log the full XML configuration for debugging
+        console.log(
+          `[@action:deploymentWizard:saveDeploymentConfiguration] Full Jenkins job XML config:`,
+          jobConfigXml,
         );
 
         // Declare jobResult in the outer scope so it's available outside the try block
@@ -182,7 +201,7 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
           // Create a promise that rejects after 15 seconds
           const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => {
-              reject(new Error('TIMEOUT: Jenkins job creation took too long (15s)'));
+              reject(new Error('TIMEOUT: Jenkins job creation took too long (30s)'));
             }, 30000);
           });
 
@@ -202,7 +221,12 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
 
           // Create the job with timeout - assign to the outer scope variable
           jobResult = await Promise.race([
-            provider.createJob(jobName, pipelineConfig, jenkinsFolder),
+            provider.createJob(
+              jobName,
+              pipelineConfig,
+              jenkinsFolder,
+              { jobConfigXml }, // Pass XML config as additional options
+            ),
             timeoutPromise,
           ]);
 

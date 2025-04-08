@@ -62,6 +62,53 @@ export class PipelineGenerator {
     return `${baseTokenName}_trigger`;
   }
   /**
+   * Generates a pipeline configuration object that matches CICDPipelineConfig interface
+   */
+  static generatePipelineConfig(
+    jobName: string,
+    repositoryId: string,
+    description: string = '',
+  ): CICDPipelineConfig {
+    return {
+      name: jobName,
+      description: description,
+      repository: {
+        id: repositoryId,
+      },
+      stages: [
+        {
+          name: 'Checkout',
+          steps: [
+            {
+              type: 'shell',
+              command: 'echo "Checking out repository"',
+              script: 'checkout.sh',
+            },
+          ],
+        },
+        {
+          name: 'Deploy',
+          steps: [
+            {
+              type: 'shell',
+              command: 'echo "Deploying to hosts"',
+              script: 'deploy.sh',
+            },
+          ],
+        },
+      ],
+      parameters: [
+        {
+          name: 'DEPLOYMENT_NAME',
+          type: 'text' as const,
+          description: 'Deployment name',
+          defaultValue: jobName,
+        },
+      ],
+    };
+  }
+
+  /**
    * Generate a pipeline configuration for a specific CI/CD provider
    * @param provider The CI/CD provider type
    * @param options Pipeline generation options
@@ -70,16 +117,16 @@ export class PipelineGenerator {
   static generate(
     provider: 'jenkins' | 'github' | 'gitlab' | 'circleci',
     options: PipelineGeneratorOptions,
-  ): string {
+  ): { pipeline: string; jobConfigXml?: string } {
     switch (provider.toLowerCase()) {
       case 'jenkins':
         return this.generateJenkinsPipeline(options);
       case 'github':
-        return this.generateGitHubWorkflow(options);
+        return { pipeline: this.generateGitHubWorkflow(options) };
       case 'gitlab':
-        return this.generateGitLabCI(options);
+        return { pipeline: this.generateGitLabCI(options) };
       case 'circleci':
-        return this.generateCircleCI(options);
+        return { pipeline: this.generateCircleCI(options) };
       default:
         throw new Error(`Unsupported CI/CD provider type: ${provider}`);
     }
@@ -90,7 +137,10 @@ export class PipelineGenerator {
    * @param options Pipeline generation options
    * @returns Jenkins pipeline as a string
    */
-  private static generateJenkinsPipeline(options: PipelineGeneratorOptions): string {
+  private static generateJenkinsPipeline(options: PipelineGeneratorOptions): {
+    pipeline: string;
+    jobConfigXml: string;
+  } {
     const { repositoryUrl, branch, deploymentName, scripts, hosts, additionalParams } = options;
 
     // Get description from additionalParams if available
@@ -161,8 +211,9 @@ export class PipelineGenerator {
       })
       .join('\n\n');
 
-    // Build simplified pipeline with remote trigger
-    return `pipeline {
+    // Return both pipeline script and job config XML
+    const result = {
+      pipeline: `pipeline {
     agent any
     
     options {
@@ -220,7 +271,21 @@ ${hostConnectionConfigs}
             echo "Deployment failed"
         }
     }
-}`;
+}`,
+      jobConfigXml: `<triggers>
+    <hudson.triggers.RemoteTrigger>
+      <token>${triggerToken}</token>
+    </hudson.triggers.RemoteTrigger>
+  </triggers>`,
+    };
+
+    // Log the full configuration for debugging
+    console.log(`[@service:jenkins:generateJenkinsPipeline] Full pipeline configuration:`, {
+      pipeline: result.pipeline,
+      jobConfigXml: result.jobConfigXml,
+    });
+
+    return result;
   }
 
   /**
@@ -415,49 +480,26 @@ workflows:
   }
 
   /**
-   * Generates a pipeline configuration object that matches CICDPipelineConfig interface
+   * Generate provider-specific pipeline configuration
+   * @param provider The CI/CD provider type
+   * @param options Pipeline generation options
+   * @returns The provider-specific pipeline configuration
    */
-  static generatePipelineConfig(
-    jobName: string,
-    repositoryId: string,
-    description: string = '',
-  ): CICDPipelineConfig {
-    return {
-      name: jobName,
-      description: description,
-      repository: {
-        id: repositoryId,
-      },
-      stages: [
-        {
-          name: 'Checkout',
-          steps: [
-            {
-              type: 'shell',
-              command: 'echo "Checking out repository"',
-              script: 'checkout.sh',
-            },
-          ],
-        },
-        {
-          name: 'Deploy',
-          steps: [
-            {
-              type: 'shell',
-              command: 'echo "Deploying to hosts"',
-              script: 'deploy.sh',
-            },
-          ],
-        },
-      ],
-      parameters: [
-        {
-          name: 'DEPLOYMENT_NAME',
-          type: 'text' as const,
-          description: 'Deployment name',
-          defaultValue: jobName,
-        },
-      ],
-    };
+  static generateProviderConfig(
+    provider: 'jenkins' | 'github' | 'gitlab' | 'circleci',
+    options: PipelineGeneratorOptions,
+  ): { pipeline: string; jobConfigXml?: string } {
+    switch (provider.toLowerCase()) {
+      case 'jenkins':
+        return this.generateJenkinsPipeline(options);
+      case 'github':
+        return { pipeline: this.generateGitHubWorkflow(options) };
+      case 'gitlab':
+        return { pipeline: this.generateGitLabCI(options) };
+      case 'circleci':
+        return { pipeline: this.generateCircleCI(options) };
+      default:
+        throw new Error(`Unsupported CI/CD provider type: ${provider}`);
+    }
   }
 }
