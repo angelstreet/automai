@@ -1,3 +1,5 @@
+import { CICDPipelineConfig } from '@/types/service/cicdServiceTypes';
+
 /**
  * CI/CD Pipeline Generator
  * Generates CI/CD pipeline configurations for different providers
@@ -44,7 +46,7 @@ export class PipelineGenerator {
   /**
    * Generates a predictable trigger token from a deployment name
    * This token can be used for remote triggering of CI/CD jobs
-   * 
+   *
    * @param deploymentName The name of the deployment to generate token for
    * @returns A cleaned trigger token string
    */
@@ -52,10 +54,10 @@ export class PipelineGenerator {
     // Clean the deployment name: lowercase, replace spaces/special chars with underscores
     const baseTokenName = deploymentName
       .toLowerCase()
-      .replace(/[^a-z0-9]/g, '_')    // Replace non-alphanumeric with underscores
-      .replace(/_+/g, '_')           // Replace multiple underscores with a single one
-      .replace(/^_|_$/g, '');        // Remove leading/trailing underscores
-    
+      .replace(/[^a-z0-9]/g, '_') // Replace non-alphanumeric with underscores
+      .replace(/_+/g, '_') // Replace multiple underscores with a single one
+      .replace(/^_|_$/g, ''); // Remove leading/trailing underscores
+
     // Return token with standard suffix
     return `${baseTokenName}_trigger`;
   }
@@ -93,9 +95,10 @@ export class PipelineGenerator {
 
     // Get description from additionalParams if available
     const description = additionalParams?.DEPLOYMENT_DESCRIPTION || '';
-    
+
     // Generate a trigger token based on deployment name
-    const triggerToken = additionalParams?.TRIGGER_TOKEN || this.generateTriggerToken(deploymentName);
+    const triggerToken =
+      additionalParams?.TRIGGER_TOKEN || this.generateTriggerToken(deploymentName);
 
     // Format hosts as JSON array for the pipeline
     const hostsJson = JSON.stringify(
@@ -409,5 +412,52 @@ workflows:
                 - ${branch}`
           : ''
       }`;
+  }
+
+  /**
+   * Generates a pipeline configuration object that matches CICDPipelineConfig interface
+   */
+  static generatePipelineConfig(
+    jobName: string,
+    repositoryId: string,
+    description: string = '',
+  ): CICDPipelineConfig {
+    return {
+      name: jobName,
+      description: description,
+      repository: {
+        id: repositoryId,
+      },
+      stages: [
+        {
+          name: 'Checkout',
+          steps: [
+            {
+              type: 'shell',
+              command: 'echo "Checking out repository"',
+              script: 'checkout.sh',
+            },
+          ],
+        },
+        {
+          name: 'Deploy',
+          steps: [
+            {
+              type: 'shell',
+              command: 'echo "Deploying to hosts"',
+              script: 'deploy.sh',
+            },
+          ],
+        },
+      ],
+      parameters: [
+        {
+          name: 'DEPLOYMENT_NAME',
+          type: 'text' as const,
+          description: 'Deployment name',
+          defaultValue: jobName,
+        },
+      ],
+    };
   }
 }

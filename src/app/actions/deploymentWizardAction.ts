@@ -162,44 +162,12 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
         // Generate a unique job name
         const jobName = formData.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
 
-        // Define pipeline config
-        const pipelineConfig = {
-          name: jobName,
-          description: formData.description || '',
-          repository: {
-            id: formData.repositoryId,
-          },
-          stages: [
-            {
-              name: 'Checkout',
-              steps: [
-                {
-                  type: 'shell',
-                  command: 'echo "Checking out repository"',
-                  script: 'checkout.sh',
-                },
-              ],
-            },
-            {
-              name: 'Deploy',
-              steps: [
-                {
-                  type: 'shell',
-                  command: 'echo "Deploying to hosts"',
-                  script: 'deploy.sh',
-                },
-              ],
-            },
-          ],
-          parameters: [
-            {
-              name: 'DEPLOYMENT_NAME',
-              type: 'text' as const,
-              description: 'Deployment name',
-              defaultValue: formData.name,
-            },
-          ],
-        };
+        // Define pipeline config using PipelineGenerator
+        const pipelineConfig = PipelineGenerator.generatePipelineConfig(
+          jobName,
+          formData.repositoryId,
+          formData.description || '',
+        );
 
         console.log(
           '[@action:deploymentWizard:saveDeploymentConfiguration] Creating Jenkins job with config:',
@@ -215,7 +183,7 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
           const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => {
               reject(new Error('TIMEOUT: Jenkins job creation took too long (15s)'));
-            }, 15000);
+            }, 30000);
           });
 
           // Use tenant_name from user data for Jenkins folder path
