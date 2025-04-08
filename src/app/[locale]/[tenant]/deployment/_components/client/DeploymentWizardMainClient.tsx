@@ -8,10 +8,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 const MAX_REPOSITORY_SCAN_DEPTH = 0;
 const MAX_FOLDERS_PER_LEVEL = 3;
 
-import {
-  createDeploymentWithCICD,
-  createScriptMapping,
-} from '@/app/actions/deploymentWizardAction';
+import { createDeploymentWithCICD } from '@/app/actions/deploymentWizardAction';
 import { toast } from '@/components/shadcn/use-toast';
 import * as gitService from '@/lib/services/gitService';
 import { CICDProvider } from '@/types/component/cicdComponentType';
@@ -119,10 +116,14 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
       const provider = cicdProviders.find((p) => p.id === deploymentData.cicd_provider_id);
       if (!provider) return undefined;
 
+      // Get URL with port if available
+      const baseUrl = provider.url;
+      const fullUrl = provider.port ? `${baseUrl}:${provider.port}` : baseUrl;
+
       return {
         type: provider.type,
         config: {
-          url: provider.url,
+          url: fullUrl,
           username: provider.config?.credentials?.username || undefined,
           token: provider.config?.credentials?.token || '',
         },
@@ -514,33 +515,27 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
       setSubmissionError(null);
 
       try {
-        // Log all form data for debugging
-        console.log('[@component:DeploymentWizardMainClient:handleSubmit] Full deployment data:', {
-          basic_info: {
-            name: deploymentData.name,
-            description: deploymentData.description,
-            repository_id: deploymentData.repositoryId,
-            branch: deploymentData.branch,
+        // Create script mapping synchronously
+        const scriptMapping = deploymentData.scriptIds.reduce(
+          (mapping, scriptId) => {
+            const script = repositoryScripts.find((s) => s.id === scriptId);
+            if (script) {
+              const scriptParams = deploymentData.scriptParameters[scriptId] || {};
+              mapping[scriptId] = {
+                path: script.path,
+                type: script.type || 'shell',
+                parameters: {
+                  ...scriptParams,
+                },
+              };
+            }
+            return mapping;
           },
-          scripts: {
-            ids: deploymentData.scriptIds,
-            parameters: deploymentData.scriptParameters,
-            mapping: createScriptMapping(deploymentData.scriptIds, repositoryScripts),
-          },
-          hosts: {
-            ids: deploymentData.hostIds,
-            available_hosts: availableHosts?.length,
-          },
-          cicd: {
-            provider_id: deploymentData.cicd_provider_id,
-            available_providers: cicdProviders?.length,
-            selected_provider: selectedProvider,
-          },
-          scheduling: {
-            schedule: deploymentData.schedule,
-            autoStart: deploymentData.schedule === 'now',
-          },
-        });
+          {} as Record<
+            string,
+            { path: string; type: 'shell' | 'python'; parameters?: Record<string, string> }
+          >,
+        );
 
         console.log(
           '[@component:DeploymentWizardMainClient:handleSubmit] Creating form data object',
@@ -565,8 +560,9 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           configuration: {
             name: deploymentData.name || '',
             description: deploymentData.description,
+            branch: deploymentData.branch || 'main',
             scriptIds: deploymentData.scriptIds,
-            scriptMapping: createScriptMapping(deploymentData.scriptIds, repositoryScripts),
+            scriptMapping: scriptMapping,
             hostIds: deploymentData.hostIds,
             environmentVars: deploymentData.environmentVars.reduce(
               (acc, curr) => {
@@ -575,12 +571,23 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               },
               {} as Record<string, string>,
             ),
+            schedule: {
+              enabled: deploymentData.schedule !== 'now',
+              cronExpression: deploymentData.cronExpression,
+              repeatCount: deploymentData.repeatCount,
+            },
+            notifications: {
+              enabled: deploymentData.notifications.email || deploymentData.notifications.slack,
+              onSuccess: deploymentData.notifications.email,
+              onFailure: deploymentData.notifications.slack,
+            },
           },
           autoStart: deploymentData.schedule === 'now',
         };
 
         console.log(
-          '[@component:DeploymentWizardMainClient:handleSubmit] Calling createDeploymentWithCICD',
+          '[@component:DeploymentWizardMainClient:handleSubmit] Form data prepared:',
+          formData,
         );
         const result = await createDeploymentWithCICD(formData);
         console.log(

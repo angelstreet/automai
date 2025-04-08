@@ -62,18 +62,6 @@ export interface Deployment {
 }
 
 /**
- * Form data for deployment creation
- */
-export interface DeploymentFormData {
-  name: string;
-  description?: string;
-  repository_id: string;
-  host_id: string;
-  script_id: string;
-  parameters?: Record<string, string>;
-}
-
-/**
  * Deployment configuration
  */
 export interface DeploymentConfig {
@@ -123,7 +111,13 @@ export interface DeploymentData {
 /**
  * Form data for CICD deployment creation
  */
-export interface CICDDeploymentFormData extends DeploymentFormData {
+export interface CICDDeploymentFormData {
+  name: string;
+  description?: string;
+  repository_id: string;
+  host_id: string;
+  script_id: string;
+  parameters?: Record<string, string>;
   team_id: string;
   creator_id: string;
   cicd_provider_id: string;
@@ -138,15 +132,9 @@ export interface CICDDeploymentFormData extends DeploymentFormData {
   configuration: {
     name: string;
     description?: string;
+    branch: string;
     scriptIds: string[];
-    scriptMapping: Record<
-      string,
-      {
-        path: string;
-        type: 'shell' | 'python';
-        parameters?: Record<string, string>;
-      }
-    >;
+    parameters: Array<Record<string, string>>;
     hostIds: string[];
     environmentVars?: Record<string, string>;
     schedule?: {
