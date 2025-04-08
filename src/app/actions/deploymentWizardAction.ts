@@ -259,7 +259,8 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
         const cicdJobData = {
           name: jobName,
           provider_id: providerResult.data.id,
-          config: pipelineConfig,
+          parameters: pipelineConfig,  // Using parameters field instead of config
+          job_path: jobName,           // Required field according to interface
           status: 'pending',
           tenant_id: user.tenant_id,
           team_id: teamId || user.teams?.[0]?.id,
