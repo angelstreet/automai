@@ -255,31 +255,48 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
           };
         }
 
-        // Prepare CICD job data using existing values
+        // Prepare CICD job data using existing values - keep it simple with only required fields
         const cicdJobData = {
           name: jobName,
           provider_id: providerResult.data.id,
-          parameters: pipelineConfig,  // Using parameters field instead of config
-          job_path: jobName,           // Required field according to interface
+          job_path: jobName,
+          parameters: pipelineConfig, // Store pipeline config in parameters field
           status: 'pending',
-          tenant_id: user.tenant_id,
-          team_id: teamId || user.teams?.[0]?.id,
-          creator_id: user.id,
+          // Omit any fields not defined in the database table
         };
         
-        const dbJobResult = await createCICDJob({ data: cicdJobData }, cookieStore);
-
-        if (!dbJobResult.success) {
-          console.error(
-            `[@action:deploymentWizard:saveDeploymentConfiguration] Failed to save CICD job to database: ${dbJobResult.error}`,
-          );
-          return { success: false, error: `Failed to save CICD job: ${dbJobResult.error}` };
-        }
-
-        cicdJobId = dbJobResult.data.id;
+        // Log the exact data we're sending to the database for debugging
         console.log(
-          `[@action:deploymentWizard:saveDeploymentConfiguration] CICD job saved with ID: ${cicdJobId}`,
+          `[@action:deploymentWizard:saveDeploymentConfiguration] CICD job data for database:`,
+          JSON.stringify(cicdJobData, null, 2)
         );
+        
+        try {
+          const dbJobResult = await createCICDJob({ data: cicdJobData }, cookieStore);
+          
+          if (!dbJobResult.success) {
+            console.error(
+              `[@action:deploymentWizard:saveDeploymentConfiguration] Failed to save CICD job to database: ${dbJobResult.error}`,
+            );
+            return { success: false, error: `Failed to save CICD job: ${dbJobResult.error}` };
+          }
+          
+          // Job was created successfully
+          cicdJobId = dbJobResult.data.id;
+          console.log(
+            `[@action:deploymentWizard:saveDeploymentConfiguration] CICD job saved with ID: ${cicdJobId}`,
+          );
+        } catch (dbError: any) {
+          // Better error handling for database operations
+          console.error(
+            `[@action:deploymentWizard:saveDeploymentConfiguration] Exception saving CICD job to database:`,
+            dbError
+          );
+          return { 
+            success: false, 
+            error: `Database error saving CICD job: ${dbError.message || 'Unknown error'}` 
+          };
+        }
       } catch (providerError) {
         console.error(
           `[@action:deploymentWizard:saveDeploymentConfiguration] Error creating provider:`,
