@@ -385,8 +385,7 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
     }
 
     // Revalidate relevant paths
-    revalidatePath('/[locale]/[tenant]/deployment');
-    revalidatePath('/[locale]/[tenant]/dashboard');
+    revalidatePath('/[locale]/[tenant]/deployment', 'page');
 
     console.log(
       `[@action:deploymentWizard:saveDeploymentConfiguration] Process completed successfully`,
@@ -442,8 +441,7 @@ export async function startDeployment(deploymentId: string) {
     }
 
     // Revalidate relevant paths
-    revalidatePath('/[locale]/[tenant]/deployment');
-    revalidatePath(`/[locale]/[tenant]/deployment/${deploymentId}`);
+    revalidatePath('/[locale]/[tenant]/deployment', 'page');
 
     return {
       success: true,
