@@ -517,17 +517,21 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
       try {
         console.log(
           '[@component:DeploymentWizardMainClient:handleSubmit] Creating form data object',
+          {
+            userId,
+            teamId,
+          },
         );
 
         const formData: CICDDeploymentFormData = {
-          name: deploymentData.name || '',
+          name: deploymentData.name,
           description: deploymentData.description,
-          repository_id: deploymentData.repositoryId || '',
-          host_id: deploymentData.hostIds[0] || '', // Use first host as primary
-          script_id: deploymentData.scriptIds[0] || '', // Use first script as primary
+          repository_id: deploymentData.repositoryId,
+          host_id: deploymentData.hostIds[0],
+          script_id: deploymentData.scriptIds[0],
           team_id: teamId,
           creator_id: userId,
-          cicd_provider_id: deploymentData.cicd_provider_id || '',
+          cicd_provider_id: deploymentData.cicd_provider_id,
           provider: {
             type: selectedProvider?.type || 'jenkins',
             config: {
@@ -537,7 +541,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
             },
           },
           configuration: {
-            name: deploymentData.name || '',
+            name: deploymentData.name,
             description: deploymentData.description,
             branch: deploymentData.branch || 'main',
             scriptIds: deploymentData.scriptIds,
@@ -566,10 +570,30 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           autoStart: deploymentData.schedule === 'now',
         };
 
-        console.log(
-          '[@component:DeploymentWizardMainClient:handleSubmit] Form data prepared:',
-          formData,
-        );
+        // Detailed logging of the form data for debugging
+        console.log('[@component:DeploymentWizardMainClient:handleSubmit] Form data details:', {
+          basic: {
+            name: formData.name,
+            description: formData.description,
+            repository_id: formData.repository_id,
+            host_id: formData.host_id,
+            script_id: formData.script_id,
+          },
+          provider: {
+            id: formData.cicd_provider_id,
+            type: formData.provider.type,
+            url: formData.provider.config.url,
+          },
+          configuration: {
+            scripts: formData.configuration.scriptIds,
+            hosts: formData.configuration.hostIds,
+            branch: formData.configuration.branch,
+            schedule: formData.configuration.schedule,
+            notifications: formData.configuration.notifications,
+          },
+          autoStart: formData.autoStart,
+        });
+
         const result = await createDeploymentWithCICD(formData);
         console.log(
           '[@component:DeploymentWizardMainClient:handleSubmit] Server response:',

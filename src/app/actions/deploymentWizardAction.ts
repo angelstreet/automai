@@ -97,17 +97,34 @@ export async function createDeploymentWithCICD(formData: CICDDeploymentFormData)
 
         // Create Deployment
         console.log(
-          '[@action:deploymentWizard:createDeploymentWithCICD] Creating deployment record',
+          '[@action:deploymentWizard:createDeploymentWithCICD] Creating deployment record with data:',
+          {
+            name: formData.name,
+            repository_id: formData.repository_id,
+            team_id: formData.team_id,
+            creator_id: formData.creator_id,
+            cicd_provider_id: formData.cicd_provider_id,
+            host_ids: formData.configuration.hostIds,
+          },
         );
         const { createDeployment } = await import('@/lib/db/deploymentDb');
         const deployment = await createDeployment(
           {
             name: formData.name,
-            description: formData.description,
-            repository_id: formData.repository_id,
+            description: formData.description || '',
+            repository_id: formData.repository_id || null, // Make nullable
             team_id: formData.team_id,
             creator_id: formData.creator_id,
-          },
+            tenant_id: formData.team_id.split('_')[0],
+            status: 'pending',
+            scripts_path: formData.configuration.scriptIds,
+            host_ids:
+              formData.configuration.hostIds.length > 0 ? formData.configuration.hostIds : null, // Make nullable
+            environment_vars: formData.configuration.environmentVars || null,
+            cicd_provider_id: formData.cicd_provider_id,
+            schedule_type: 'now',
+            scripts_parameters: formData.configuration.parameters || [],
+          } as any,
           cookieStore,
         );
 
