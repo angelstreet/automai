@@ -99,6 +99,10 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
     // Find the CICD provider ID (try all possible property names)
     const cicdProviderId =
       formData.cicd_provider_id || formData.cicdProviderId || formData.provider_id;
+      
+    // Get the active team ID (moved up from below since we need it for CICD job creation)
+    const selectedTeamCookie = cookieStore.get(`selected_team_${user.id}`)?.value;
+    const teamId = selectedTeamCookie || user.teams?.[0]?.id;
 
     // Step 1: Create CICD job if a provider is selected
     if (cicdProviderId) {
@@ -202,36 +206,66 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
           JSON.stringify(pipelineConfig, null, 2),
         );
 
-        // Create the job in Jenkins
-        const jobResult = await provider.createJob(jobName, pipelineConfig);
+        // Add timeout handling for Jenkins job creation
+        try {
+          // Create a promise that rejects after 15 seconds
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => {
+              reject(new Error('TIMEOUT: Jenkins job creation took too long (15s)'));
+            }, 15000);
+          });
 
-        if (!jobResult || !jobResult.success) {
-          const error = jobResult?.error || 'Unknown error occurred';
-          console.error(
-            `[@action:deploymentWizard:saveDeploymentConfiguration] Failed to create Jenkins job: ${error}`,
+          // Create the job with timeout
+          const jobResult = await Promise.race([
+            provider.createJob(jobName, pipelineConfig),
+            timeoutPromise,
+          ]);
+
+          if (!jobResult.success) {
+            const error = jobResult.error || 'Unknown error occurred';
+            console.error(
+              `[@action:deploymentWizard:saveDeploymentConfiguration] Failed to create Jenkins job: ${error}`,
+            );
+            return { success: false, error: `Failed to create CICD job: ${error}` };
+          }
+
+          console.log(
+            `[@action:deploymentWizard:saveDeploymentConfiguration] Jenkins job created: ${jobResult.data}`,
           );
-          return { success: false, error: `Failed to create CICD job: ${error}` };
+        } catch (error) {
+          // Check if this is a timeout error
+          if (error.message && error.message.includes('TIMEOUT')) {
+            console.error(
+              `[@action:deploymentWizard:saveDeploymentConfiguration] Jenkins job creation timed out after 15 seconds`,
+            );
+            return {
+              success: false,
+              error:
+                'Jenkins job creation timed out after 15 seconds. Please check your Jenkins server configuration or try again later.',
+            };
+          }
+
+          // Handle other errors
+          console.error(
+            `[@action:deploymentWizard:saveDeploymentConfiguration] Error creating Jenkins job: ${error.message}`,
+          );
+          return {
+            success: false,
+            error: `Error creating CICD job: ${error.message}`,
+          };
         }
 
-        console.log(
-          `[@action:deploymentWizard:saveDeploymentConfiguration] Jenkins job created: ${jobResult.data}`,
-        );
-
-        // Save the job to the database
+        // Prepare CICD job data using existing values
         const cicdJobData = {
           name: jobName,
-          description: formData.description || '',
-          provider_id: cicdProviderId,
-          external_id: jobResult.data,
-          parameters: pipelineConfig,
-          team_id: user.teams?.[0]?.id,
+          provider_id: providerResult.data.id,
+          config: pipelineConfig,
+          status: 'pending',
+          tenant_id: user.tenant_id,
+          team_id: teamId || user.teams?.[0]?.id,
           creator_id: user.id,
         };
-
-        console.log(
-          `[@action:deploymentWizard:saveDeploymentConfiguration] Saving CICD job to database`,
-        );
-
+        
         const dbJobResult = await createCICDJob({ data: cicdJobData }, cookieStore);
 
         if (!dbJobResult.success) {
@@ -261,10 +295,6 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
     console.log(
       `[@action:deploymentWizard:saveDeploymentConfiguration] Creating deployment record`,
     );
-
-    // Get the active team ID
-    const selectedTeamCookie = cookieStore.get(`selected_team_${user.id}`)?.value;
-    const teamId = selectedTeamCookie || user.teams?.[0]?.id;
 
     // Extract data from configuration if available
     const scriptIds = formData.configuration?.scriptIds || [];
