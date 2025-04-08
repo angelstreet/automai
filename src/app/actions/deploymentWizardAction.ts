@@ -57,7 +57,7 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
       {
         name: formData.name,
         repositoryId: formData.repositoryId,
-        cicdProviderId: formData.cicdProviderId,
+        cicdProviderId: formData.cicd_provider_id || formData.cicdProviderId,
       },
     );
 
@@ -96,8 +96,9 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
 
     let cicdJobId = null;
 
-    // Find the CICD provider ID (try different possible property names)
-    const cicdProviderId = formData.cicdProviderId;
+    // Find the CICD provider ID (try all possible property names)
+    const cicdProviderId =
+      formData.cicd_provider_id || formData.cicdProviderId || formData.provider_id;
 
     // Step 1: Create CICD job if a provider is selected
     if (cicdProviderId) {
@@ -122,149 +123,137 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
         }
 
         // Log the provider configuration for debugging
-        const providerConfig = providerResult.data;
         console.log('[@action:deploymentWizard:saveDeploymentConfiguration] Provider config:', {
-          id: providerConfig.id,
-          name: providerConfig.name,
-          type: providerConfig.type,
-          url: providerConfig.url,
-          port: providerConfig.port,
-          auth_type: providerConfig.auth_type,
-          hasCredentials: !!providerConfig.credentials || !!providerConfig.config?.credentials,
+          id: providerResult.data.id,
+          name: providerResult.data.name,
+          type: providerResult.data.type,
+          url: providerResult.data.url,
+          port: providerResult.data.port,
+          auth_type: providerResult.data.config?.auth_type,
+          hasCredentials: !!providerResult.data.config?.credentials,
         });
 
-        // Ensure auth_type is set (fix for "Unsupported authentication type: undefined")
-        if (!providerConfig.auth_type && providerConfig.config?.auth_type) {
-          providerConfig.auth_type = providerConfig.config.auth_type;
-          console.log(
-            `[@action:deploymentWizard:saveDeploymentConfiguration] Using auth_type from config: ${providerConfig.auth_type}`,
-          );
-        }
-
-        // Fall back to token authentication if auth_type is still undefined
-        if (!providerConfig.auth_type) {
-          providerConfig.auth_type = 'token';
-          console.log(
-            `[@action:deploymentWizard:saveDeploymentConfiguration] Using fallback auth_type: token`,
-          );
-        }
-
-        // Ensure credentials are set
-        if (!providerConfig.credentials && providerConfig.config?.credentials) {
-          providerConfig.credentials = providerConfig.config.credentials;
-          console.log(
-            '[@action:deploymentWizard:saveDeploymentConfiguration] Using credentials from config',
-          );
-        }
-
-        // Create a provider instance
-        try {
-          const provider = CICDProviderFactory.createProvider(providerConfig);
-
-          // Generate a unique job name
-          const jobName = formData.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
-
-          // Define pipeline config
-          const pipelineConfig = {
-            name: jobName,
-            description: formData.description || '',
-            repository: {
-              id: formData.repositoryId,
-            },
-            stages: [
-              {
-                name: 'Checkout',
-                steps: [
-                  {
-                    type: 'shell',
-                    command: 'echo "Checking out repository"',
-                    script: 'checkout.sh',
-                  },
-                ],
-              },
-              {
-                name: 'Deploy',
-                steps: [
-                  {
-                    type: 'shell',
-                    command: 'echo "Deploying to hosts"',
-                    script: 'deploy.sh',
-                  },
-                ],
-              },
-            ],
-            parameters: [
-              {
-                name: 'DEPLOYMENT_NAME',
-                type: 'text',
-                description: 'Deployment name',
-                defaultValue: formData.name,
-              },
-            ],
-          };
-
-          console.log(
-            `[@action:deploymentWizard:saveDeploymentConfiguration] Calling Jenkins createJob API for ${jobName}`,
-          );
-
-          // Create the job in Jenkins
-          const jobResult = await provider.createJob(jobName, pipelineConfig);
-
-          if (!jobResult.success) {
-            console.error(
-              `[@action:deploymentWizard:saveDeploymentConfiguration] Failed to create Jenkins job: ${jobResult.error}`,
-            );
-            return { success: false, error: `Failed to create CICD job: ${jobResult.error}` };
-          }
-
-          console.log(
-            `[@action:deploymentWizard:saveDeploymentConfiguration] Jenkins job created: ${jobResult.data}`,
-          );
-
-          // Save the job to the database
-          const cicdJobData = {
-            name: jobName,
-            description: formData.description || '',
-            provider_id: cicdProviderId,
-            external_id: jobResult.data,
-            parameters: pipelineConfig,
-            team_id: user.teams?.[0]?.id,
-            creator_id: user.id,
-          };
-
-          console.log(
-            `[@action:deploymentWizard:saveDeploymentConfiguration] Saving CICD job to database`,
-          );
-
-          const dbJobResult = await createCICDJob({ data: cicdJobData }, cookieStore);
-
-          if (!dbJobResult.success) {
-            console.error(
-              `[@action:deploymentWizard:saveDeploymentConfiguration] Failed to save CICD job to database: ${dbJobResult.error}`,
-            );
-            return { success: false, error: `Failed to save CICD job: ${dbJobResult.error}` };
-          }
-
-          cicdJobId = dbJobResult.data.id;
-          console.log(
-            `[@action:deploymentWizard:saveDeploymentConfiguration] CICD job saved with ID: ${cicdJobId}`,
-          );
-        } catch (providerError) {
-          console.error(
-            `[@action:deploymentWizard:saveDeploymentConfiguration] Error creating provider:`,
-            providerError,
-          );
-          return {
-            success: false,
-            error: `Error creating CICD provider: ${providerError.message}`,
+        // Ensure config is initialized
+        if (!providerResult.data.config) {
+          providerResult.data.config = {
+            auth_type: 'token',
+            credentials: {},
           };
         }
-      } catch (error: any) {
-        console.error(
-          `[@action:deploymentWizard:saveDeploymentConfiguration] Error creating CICD job:`,
-          error,
+
+        console.log(
+          '[@action:deploymentWizard:saveDeploymentConfiguration] Creating provider with config:',
+          JSON.stringify(providerResult.data, null, 2),
         );
-        return { success: false, error: `Error creating CICD job: ${error.message}` };
+
+        const provider = CICDProviderFactory.createProvider(providerResult.data);
+
+        if (!provider) {
+          console.error(
+            '[@action:deploymentWizard:saveDeploymentConfiguration] Failed to create provider instance',
+          );
+          return { success: false, error: 'Failed to create CICD provider instance' };
+        }
+
+        // Generate a unique job name
+        const jobName = formData.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+
+        // Define pipeline config
+        const pipelineConfig = {
+          name: jobName,
+          description: formData.description || '',
+          repository: {
+            id: formData.repositoryId,
+          },
+          stages: [
+            {
+              name: 'Checkout',
+              steps: [
+                {
+                  type: 'shell',
+                  command: 'echo "Checking out repository"',
+                  script: 'checkout.sh',
+                },
+              ],
+            },
+            {
+              name: 'Deploy',
+              steps: [
+                {
+                  type: 'shell',
+                  command: 'echo "Deploying to hosts"',
+                  script: 'deploy.sh',
+                },
+              ],
+            },
+          ],
+          parameters: [
+            {
+              name: 'DEPLOYMENT_NAME',
+              type: 'text' as const,
+              description: 'Deployment name',
+              defaultValue: formData.name,
+            },
+          ],
+        };
+
+        console.log(
+          '[@action:deploymentWizard:saveDeploymentConfiguration] Creating Jenkins job with config:',
+          JSON.stringify(pipelineConfig, null, 2),
+        );
+
+        // Create the job in Jenkins
+        const jobResult = await provider.createJob(jobName, pipelineConfig);
+
+        if (!jobResult || !jobResult.success) {
+          const error = jobResult?.error || 'Unknown error occurred';
+          console.error(
+            `[@action:deploymentWizard:saveDeploymentConfiguration] Failed to create Jenkins job: ${error}`,
+          );
+          return { success: false, error: `Failed to create CICD job: ${error}` };
+        }
+
+        console.log(
+          `[@action:deploymentWizard:saveDeploymentConfiguration] Jenkins job created: ${jobResult.data}`,
+        );
+
+        // Save the job to the database
+        const cicdJobData = {
+          name: jobName,
+          description: formData.description || '',
+          provider_id: cicdProviderId,
+          external_id: jobResult.data,
+          parameters: pipelineConfig,
+          team_id: user.teams?.[0]?.id,
+          creator_id: user.id,
+        };
+
+        console.log(
+          `[@action:deploymentWizard:saveDeploymentConfiguration] Saving CICD job to database`,
+        );
+
+        const dbJobResult = await createCICDJob({ data: cicdJobData }, cookieStore);
+
+        if (!dbJobResult.success) {
+          console.error(
+            `[@action:deploymentWizard:saveDeploymentConfiguration] Failed to save CICD job to database: ${dbJobResult.error}`,
+          );
+          return { success: false, error: `Failed to save CICD job: ${dbJobResult.error}` };
+        }
+
+        cicdJobId = dbJobResult.data.id;
+        console.log(
+          `[@action:deploymentWizard:saveDeploymentConfiguration] CICD job saved with ID: ${cicdJobId}`,
+        );
+      } catch (providerError) {
+        console.error(
+          `[@action:deploymentWizard:saveDeploymentConfiguration] Error creating provider:`,
+          providerError,
+        );
+        return {
+          success: false,
+          error: `Error creating CICD provider: ${providerError.message}`,
+        };
       }
     }
 

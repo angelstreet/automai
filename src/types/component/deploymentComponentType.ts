@@ -72,16 +72,44 @@ export interface DeploymentFormData {
   name: string;
   description?: string;
   repository?: string;
-  tenant_id: string;
+  repositoryId?: string;
+  tenant_id?: string;
   provider_id?: string;
   selectedScripts?: string[];
   selectedHosts?: string[];
-  parameters?: { script_path: string; raw: string }[];
-  schedule?: string;
+  schedule?: 'now' | 'later' | 'cron';
+  schedule_type?: 'now' | 'later' | 'cron';
   scheduledTime?: string;
   cronExpression?: string;
   repeatCount?: number;
-  environmentVars?: { name: string; value: string }[];
+  environmentVars?: Array<{ key: string; value: string }>;
+  parameters?: Array<{ script_path: string; raw: string }>;
+  notifications?: {
+    email: boolean;
+    slack: boolean;
+  };
+  cicd_provider_id?: string;
+  cicdProviderId?: string;
+  targetHostId?: string;
+  branch?: string;
+  scheduled?: boolean;
+  autoStart?: boolean;
+  configuration?: {
+    scriptIds?: string[];
+    hostIds?: string[];
+    schedule?: 'now' | 'later' | 'cron';
+    scheduledTime?: string;
+    cronExpression?: string;
+    repeatCount?: number;
+    environmentVars?: any[];
+    parameters?: Record<string, any>;
+    notifications?: {
+      email: boolean;
+      slack: boolean;
+    };
+    scriptMapping?: Record<string, { path: string; name: string; type: string }>;
+  };
+  scriptMapping?: Record<string, { path: string; name: string; type: string }>;
 }
 
 /**
