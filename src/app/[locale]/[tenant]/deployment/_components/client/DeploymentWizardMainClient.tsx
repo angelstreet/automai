@@ -8,7 +8,10 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 const MAX_REPOSITORY_SCAN_DEPTH = 0;
 const MAX_FOLDERS_PER_LEVEL = 3;
 
-import { createDeploymentWithCICD } from '@/app/actions/deploymentWizardAction';
+import {
+  createDeploymentWithCICD,
+  createScriptMapping,
+} from '@/app/actions/deploymentWizardAction';
 import { toast } from '@/components/shadcn/use-toast';
 import * as gitService from '@/lib/services/gitService';
 import { CICDProvider } from '@/types/component/cicdComponentType';
@@ -733,10 +736,10 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           {/* Step 1: Basic Deployment Information */}
           {step === 1 && (
             <DeploymentWizardStep1Client
-              name={deploymentData.name}
-              description={deploymentData.description}
-              repositoryId={deploymentData.repositoryId}
-              branch={deploymentData.branch}
+              name={deploymentData.name || ''}
+              description={deploymentData.description || ''}
+              repositoryId={deploymentData.repositoryId || ''}
+              branch={deploymentData.branch || ''}
               repositories={repositories || []}
               repositoryError={null}
               onInputChange={handleInputChange}
