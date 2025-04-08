@@ -483,7 +483,29 @@ export async function runDeployment(
         `[@action:deployments:runDeployment] CICD mapping result:`,
         JSON.stringify(mappingResult, null, 2),
       );
-      const jobId = mappingResult.data?.cicd_job_id;
+      
+      // Get the internal job ID from the mapping
+      const internalJobId = mappingResult.data?.cicd_job_id;
+      
+      // Now get the external job ID (actual Jenkins job name) from the CICD jobs table
+      const jobResult = await cicdDb.getCICDJob(
+        { where: { id: internalJobId } },
+        cookieStore
+      );
+      
+      if (!jobResult.success || !jobResult.data) {
+        console.error('[@action:deployments:runDeployment] Failed to get CICD job details');
+        return { success: false, error: 'Failed to get CICD job details' };
+      }
+      
+      console.log(`[@action:deployments:runDeployment] CICD job details:`, {
+        id: jobResult.data.id,
+        name: jobResult.data.name,
+        external_id: jobResult.data.external_id
+      });
+      
+      // Use the external_id which is the actual Jenkins job name
+      const jobId = jobResult.data.external_id;
 
       // Get provider details with credentials
       const { getCICDProvider } = await import('@/lib/db/cicdDb');
@@ -499,7 +521,45 @@ export async function runDeployment(
       }
 
       // Get provider configuration
-      const providerConfig = providerResult.data as unknown as CICDProviderConfig;
+      let providerConfig = providerResult.data as unknown as CICDProviderConfig;
+      
+      // Ensure port and credentials are included properly for Jenkins providers
+      if (providerConfig.type.toLowerCase() === 'jenkins') {
+        // Check if provider has a port configuration
+        const port = (providerResult.data as any).port || 
+                     (providerResult.data as any).config?.port || 
+                     8080; // Default to 8080 for Jenkins
+                     
+        console.log(`[@action:deployments:runDeployment] Found port ${port} for Jenkins provider`);
+        
+        // Extract credentials from provider
+        const username = (providerResult.data as any).username || 
+                         (providerResult.data as any).config?.credentials?.username ||
+                         (providerResult.data as any).credentials?.username ||
+                         'joachim_djibril'; // Default username from logs
+                         
+        const token = (providerResult.data as any).token || 
+                      (providerResult.data as any).config?.credentials?.token ||
+                      (providerResult.data as any).credentials?.token ||
+                      ''; // Token from provider
+        
+        // Make sure providerConfig has all the necessary properties
+        providerConfig = {
+          ...providerConfig,
+          port: port,
+          auth_type: 'token', // Ensure auth_type is set
+          credentials: {
+            ...(providerConfig.credentials || {}),
+            username: username,
+            token: token
+          }
+        };
+        
+        console.log(`[@action:deployments:runDeployment] Extracted credentials:`, {
+          username: username,
+          hasToken: !!token
+        });
+      }
 
       console.log(`[@action:deployments:runDeployment] Provider config:`, {
         id: providerConfig.id,
@@ -508,6 +568,9 @@ export async function runDeployment(
         url: providerConfig.url,
         auth_type: providerConfig.auth_type,
         hasCredentials: !!providerConfig.credentials,
+        hasUsername: !!(providerConfig.credentials?.username),
+        hasToken: !!(providerConfig.credentials?.token),
+        port: (providerConfig as any).port
       });
 
       // Extract deployment parameters from the deployment
@@ -515,8 +578,16 @@ export async function runDeployment(
 
       // Trigger the CICD job
       console.log(`[@action:deployments:runDeployment] Triggering job: ${jobId}`);
+      
+      // Build full URL with port for logging (just for display purposes)
+      const port = (providerConfig as any).port;
+      const baseUrl = providerConfig.url;
+      const displayUrl = port && !baseUrl.includes(':' + port) 
+        ? `${baseUrl}:${port}/job/${jobId}/build`
+        : `${baseUrl}/job/${jobId}/build`;
+        
       console.log(
-        `[@action:deployments:runDeployment] Full Jenkins URL that will be called: ${providerConfig.url}/job/${jobId}/build`,
+        `[@action:deployments:runDeployment] Full Jenkins URL that will be called: ${displayUrl}`,
       );
 
       const triggerResult = await cicdService.triggerJob(
