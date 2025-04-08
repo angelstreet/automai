@@ -2,453 +2,357 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import * as parser from '@babel/parser';
-import traverse from '@babel/traverse';
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Directories to ignore
-const IGNORE_DIRS = ['node_modules', '.git', '.next', 'dist', 'build', '.cursor'];
-// Files to ignore
-const IGNORE_FILES = ['.DS_Store', 'tsconfig.tsbuildinfo'];
+// Configuration
+const MAX_DEPTH = 5;
+const IMPORTANT_DIRS = ['db', 'client', 'components', 'api'];
+const OUTPUT_FILE = 'codebase-structure.md';
+const SOURCE_DIR = 'src';
 
-// Key directory types for providing contextual understanding
-const DIRECTORY_TYPES = {
-  components: 'UI components',
-  hooks: 'React hooks for state management and logic',
-  context: 'React context providers',
-  providers: 'Service providers',
-  utils: 'Utility functions',
-  lib: 'Library code and services',
-  actions: 'Server actions',
-  api: 'API endpoints',
-  types: 'TypeScript type definitions',
-  _components: 'UI components specific to the parent feature',
-  client: 'Client-side components',
-};
-
-// Architecture patterns to detect
-const PATTERNS = {
-  serverComponent: (content) =>
-    !content.includes("'use client'") && content.includes('export default'),
-  clientComponent: (content) => content.includes("'use client'"),
-  serverAction: (content) => content.includes("'use server'"),
-  hook: (content) => content.match(/function\s+use[A-Z][a-zA-Z0-9]*\(/),
-  contextProvider: (content) => content.includes('createContext') && content.includes('Provider'),
-  typeDefinition: (content) =>
-    content.includes('interface') || content.includes('type ') || content.includes('enum '),
-};
-
-async function extractFileInfo(filePath) {
+// Function to get package information
+async function getPackageInfo() {
   try {
-    const content = await fs.readFile(filePath, 'utf8');
-    const ext = path.extname(filePath).toLowerCase();
-
-    // Extract file purpose
-    let purpose = '';
-    let pattern = '';
-    for (const [patternName, detector] of Object.entries(PATTERNS)) {
-      if (detector(content)) {
-        pattern = patternName;
-        break;
-      }
-    }
-
-    // Extract exports
-    let exports = [];
-    if (['.ts', '.tsx', '.js', '.jsx'].includes(ext)) {
-      try {
-        const ast = parser.parse(content, {
-          sourceType: 'module',
-          plugins: ['jsx', 'typescript'],
-        });
-
-        traverse.default(ast, {
-          ExportNamedDeclaration(path) {
-            if (path.node.declaration && path.node.declaration.id) {
-              exports.push(path.node.declaration.id.name);
-            }
-          },
-          ExportDefaultDeclaration(path) {
-            exports.push('default');
-          },
-        });
-      } catch (e) {
-        // Parsing error - simplified export detection
-        const exportMatches =
-          content.match(
-            /export\s+(const|function|class|interface|type|default)\s+([a-zA-Z0-9_]+)/g,
-          ) || [];
-        exports = exportMatches.map((match) => match.split(/\s+/).pop());
-      }
-    }
-
-    // Get component/function name
-    let name = path.basename(filePath, ext);
-
-    // Extract imports
-    const importMatches = content.match(/import\s+.+\s+from\s+['"]([@\./a-zA-Z0-9_-]+)['"]/g) || [];
-    const imports = importMatches.map((match) => {
-      const importPath = match.match(/from\s+['"]([^'"]+)['"]/)[1];
-      return importPath;
-    });
-
-    // Extract JSDoc comments
-    const jsdocComments = content.match(/\/\*\*\s*\n([^\*]|\*[^\/])*\*\//g) || [];
-    const docSummary =
-      jsdocComments.length > 0
-        ? jsdocComments[0]
-            .replace(/\/\*\*|\*\//g, '')
-            .replace(/\s*\*\s*/g, ' ')
-            .trim()
-        : '';
-
+    const packageJson = JSON.parse(await fs.readFile(path.join(process.cwd(), 'package.json'), 'utf8'));
     return {
-      pattern,
-      exports: exports.length > 0 ? exports : undefined,
-      imports: imports.length > 0 ? imports : undefined,
-      summary: docSummary || undefined,
+      name: packageJson.name || 'Unknown',
+      description: packageJson.description || 'No description provided',
+      dependencies: packageJson.dependencies || {},
+      devDependencies: packageJson.devDependencies || {}
     };
   } catch (error) {
-    return { error: error.message };
+    console.error('Error reading package.json:', error.message);
+    return {
+      name: 'Unknown',
+      description: 'Could not read package.json',
+      dependencies: {},
+      devDependencies: {}
+    };
   }
 }
 
-async function getFileType(filePath, content) {
-  const ext = path.extname(filePath).toLowerCase();
+// Scan directory recursively to build structure
+async function scanDirectory(dirPath, depth = 0, maxDepth = MAX_DEPTH) {
+  // For important directories, allow deeper scanning
+  const dirName = path.basename(dirPath);
+  const isImportantDir = IMPORTANT_DIRS.some(important => 
+    dirPath.includes(`/${important}/`) || dirName === important);
+  const effectiveMaxDepth = isImportantDir ? Math.max(maxDepth, 6) : maxDepth;
+  
+  if (depth > effectiveMaxDepth) {
+    return { 
+      name: path.basename(dirPath), 
+      type: 'directory', 
+      children: [],
+      isMaxDepth: true
+    };
+  }
+  
+  try {
+    const entries = await fs.readdir(dirPath, { withFileTypes: true });
+    const result = {
+      name: path.basename(dirPath),
+      type: 'directory',
+      description: getDirectoryDescription(dirPath),
+      children: []
+    };
+    
+    // Process directories first
+    const dirs = entries.filter(entry => entry.isDirectory() && !shouldIgnore(entry.name));
+    for (const dir of dirs) {
+      const childPath = path.join(dirPath, dir.name);
+      const childResult = await scanDirectory(childPath, depth + 1, effectiveMaxDepth);
+      result.children.push(childResult);
+    }
+    
+    // Then process key files
+    const files = entries.filter(entry => entry.isFile() && isKeyFile(entry.name));
+    for (const file of files) {
+      const filePath = path.join(dirPath, file.name);
+      result.children.push({
+        name: file.name,
+        type: 'file',
+        fileType: getFileType(filePath)
+      });
+    }
+    
+    return result;
+  } catch (error) {
+    console.error(`Error scanning directory ${dirPath}:`, error.message);
+    return {
+      name: path.basename(dirPath),
+      type: 'directory',
+      error: error.message,
+      children: []
+    };
+  }
+}
 
+// Determine if a file or directory should be ignored
+function shouldIgnore(name) {
+  const IGNORE_DIRS = ['node_modules', '.git', '.next', 'dist', 'build', '.cursor', '.github'];
+  const IGNORE_FILES = ['.DS_Store', 'tsconfig.tsbuildinfo'];
+  
+  return IGNORE_DIRS.includes(name) || IGNORE_FILES.includes(name);
+}
+
+// Check if a file is a key file we want to include
+function isKeyFile(fileName) {
+  if (fileName.startsWith('.')) return false;
+  
+  const ext = path.extname(fileName).toLowerCase();
+  
+  // Include more file types for better coverage
+  if (!['.ts', '.tsx', '.js', '.jsx', '.md', '.prisma', '.sql'].includes(ext)) return false;
+  
+  // Show more file types in important directories
+  if (ext === '.tsx' || ext === '.jsx') return true; // Always show React components
+  if (ext === '.prisma' || ext === '.sql') return true; // Always show database files
+  
+  // Include index files, config files, README files, types, and models
+  return fileName === 'index.ts' || 
+         fileName === 'index.js' || 
+         fileName === 'README.md' || 
+         fileName.includes('config') ||
+         fileName.includes('type') ||
+         fileName.includes('model') ||
+         fileName.includes('schema') ||
+         fileName.includes('client');
+}
+
+// Get a description for a directory based on its name
+function getDirectoryDescription(dirPath) {
+  const name = path.basename(dirPath);
+  
+  const DIRECTORY_TYPES = {
+    components: 'UI components',
+    hooks: 'React hooks for state management and logic',
+    context: 'React context providers',
+    providers: 'Service providers',
+    utils: 'Utility functions',
+    lib: 'Library code and services',
+    actions: 'Server actions',
+    api: 'API endpoints',
+    types: 'TypeScript type definitions',
+    _components: 'UI components specific to the parent feature',
+    client: 'Client-side components',
+  };
+  
+  return DIRECTORY_TYPES[name] || '';
+}
+
+// Determine file type based on name and path
+function getFileType(filePath) {
+  const ext = path.extname(filePath).toLowerCase();
+  const fileName = path.basename(filePath);
+  
+  if (ext === '.md') return 'documentation';
+  
   if (['.ts', '.tsx'].includes(ext)) {
     if (filePath.includes('/components/')) return 'component';
     if (filePath.includes('/hooks/')) return 'hook';
     if (filePath.includes('/context/')) return 'context';
-    if (filePath.includes('/types/')) return 'type definition';
-    if (filePath.includes('/utils/')) return 'utility';
-    if (filePath.includes('/api/')) return 'api';
     if (filePath.includes('/actions/')) return 'server action';
-    if (filePath.includes('/lib/db/')) return 'database';
+    if (filePath.includes('/api/')) return 'api';
+    if (filePath.includes('/types/')) return 'type definition';
     return 'typescript';
   }
-
+  
   if (['.js', '.jsx'].includes(ext)) return 'javascript';
-  if (ext === '.json') return 'configuration';
-  if (ext === '.md') return 'documentation';
-  if (['.css', '.scss'].includes(ext)) return 'styles';
-  if (ext === '.html') return 'html';
-
+  
   return 'other';
 }
 
-async function generateStructure(dir, baseDir, relationships = {}, depth = 0) {
-  const items = await fs.readdir(dir);
-  const structure = {
-    path: path.relative(baseDir, dir),
-    type: 'directory',
-    description: DIRECTORY_TYPES[path.basename(dir)] || '',
-    children: [],
+// Extract key features from the structure
+function extractFeatures(structure) {
+  const features = {
+    mainFolders: [],
+    components: [],
+    apiRoutes: [],
+    dataStores: [],
+    serverActions: []
   };
-
-  // Get directory-level package.json if it exists for context
-  try {
-    const pkgPath = path.join(dir, 'package.json');
-    const pkgStat = await fs.stat(pkgPath).catch(() => null);
-    if (pkgStat && pkgStat.isFile()) {
-      const pkgContent = JSON.parse(await fs.readFile(pkgPath, 'utf8'));
-      structure.packageInfo = {
-        name: pkgContent.name,
-        description: pkgContent.description,
-        dependencies: pkgContent.dependencies,
-      };
-    }
-  } catch {}
-
-  // Get index.ts/js file first if it exists for module context
-  const indexFile = items.find((item) =>
-    ['index.ts', 'index.js', 'index.tsx', 'index.jsx'].includes(item),
-  );
-  if (indexFile) {
-    const indexPath = path.join(dir, indexFile);
-    const indexInfo = await extractFileInfo(indexPath);
-    if (indexInfo.exports && indexInfo.exports.length > 0) {
-      structure.exports = indexInfo.exports;
-    }
-  }
-
-  // Process all items
-  for (const item of items) {
-    if (IGNORE_DIRS.includes(item) || IGNORE_FILES.includes(item)) continue;
-
-    const fullPath = path.join(dir, item);
-    const itemStat = await fs.stat(fullPath);
-    const relativePath = path.relative(baseDir, fullPath);
-
-    if (itemStat.isDirectory()) {
-      if (depth < 5) {
-        // Limit recursion depth for large codebases
-        const childStructure = await generateStructure(fullPath, baseDir, relationships, depth + 1);
-        structure.children.push(childStructure);
-      } else {
-        structure.children.push({
-          path: relativePath,
-          type: 'directory',
-          description: `Directory (depth limit reached)`,
+  
+  function traverse(node, path = '') {
+    const currentPath = path ? `${path}/${node.name}` : node.name;
+    
+    if (node.type === 'directory') {
+      // Top-level directories are main folders
+      if (!path) {
+        features.mainFolders.push({
+          path: node.name,
+          description: node.description
         });
       }
-    } else {
-      // Skip processing for non-code files to improve performance
-      const ext = path.extname(item).toLowerCase();
-      const isCodeFile = ['.ts', '.tsx', '.js', '.jsx'].includes(ext);
-
-      if (isCodeFile) {
-        try {
-          const content = await fs.readFile(fullPath, 'utf8');
-          const fileType = await getFileType(fullPath, content);
-          const fileInfo = await extractFileInfo(fullPath);
-
-          // Build relationships between files
-          if (fileInfo.imports) {
-            relationships[relativePath] = relationships[relativePath] || { imports: [] };
-            relationships[relativePath].imports = fileInfo.imports;
-          }
-
-          structure.children.push({
-            path: relativePath,
-            type: 'file',
-            fileType,
-            pattern: fileInfo.pattern,
-            exports: fileInfo.exports,
-            summary: fileInfo.summary,
-          });
-        } catch (error) {
-          structure.children.push({
-            path: relativePath,
-            type: 'file',
-            error: error.message,
-          });
+      
+      // Identify feature directories
+      if (node.name === 'components' || currentPath.includes('/components')) {
+        features.components.push(currentPath);
+      }
+      
+      if (node.name === 'api' || currentPath.includes('/api')) {
+        features.apiRoutes.push(currentPath);
+      }
+      
+      if (['context', 'store', 'providers'].includes(node.name) || 
+          currentPath.includes('/context/') || 
+          currentPath.includes('/store/') || 
+          currentPath.includes('/providers/')) {
+        features.dataStores.push(currentPath);
+      }
+      
+      if (node.name === 'actions' || currentPath.includes('/actions')) {
+        features.serverActions.push(currentPath);
+      }
+      
+      // Traverse children
+      if (node.children) {
+        for (const child of node.children) {
+          traverse(child, currentPath);
         }
-      } else {
-        structure.children.push({
-          path: relativePath,
-          type: 'file',
-          fileType: path.extname(item).substring(1),
-        });
       }
     }
   }
-
-  return structure;
+  
+  traverse(structure);
+  return features;
 }
 
-function findArchitecturalPatterns(structure, relationships) {
-  const patterns = {
-    serverComponents: [],
-    clientComponents: [],
-    hooks: [],
-    contextProviders: [],
-    serverActions: [],
-    dataFlows: [],
-    apiEndpoints: [],
+// Detect technologies used in the project
+function detectTechnologies(packageInfo) {
+  const allDeps = { ...packageInfo.dependencies, ...packageInfo.devDependencies };
+  
+  return {
+    react: { used: !!allDeps.react, version: allDeps.react || '-' },
+    nextjs: { used: !!allDeps.next, version: allDeps.next || '-' },
+    typescript: { used: !!allDeps.typescript, version: allDeps.typescript || '-' },
+    tailwind: { used: !!allDeps.tailwindcss, version: allDeps.tailwindcss || '-' },
+    supabase: { used: !!allDeps['@supabase/supabase-js'], version: allDeps['@supabase/supabase-js'] || '-' },
+    prisma: { used: !!allDeps.prisma, version: allDeps.prisma || '-' },
+    trpc: { used: !!allDeps['@trpc/server'], version: allDeps['@trpc/server'] || '-' }
   };
-
-  // Extract patterns from structure
-  function traverseForPatterns(node) {
-    if (node.type === 'file') {
-      if (node.pattern === 'serverComponent') patterns.serverComponents.push(node.path);
-      if (node.pattern === 'clientComponent') patterns.clientComponents.push(node.path);
-      if (node.pattern === 'hook') patterns.hooks.push(node.path);
-      if (node.pattern === 'contextProvider') patterns.contextProviders.push(node.path);
-      if (node.pattern === 'serverAction') patterns.serverActions.push(node.path);
-      if (node.path.includes('/api/') && node.path.includes('route.'))
-        patterns.apiEndpoints.push(node.path);
-    }
-
-    if (node.children) {
-      node.children.forEach(traverseForPatterns);
-    }
-  }
-
-  traverseForPatterns(structure);
-
-  // Analyze data flows using relationships
-  Object.keys(relationships).forEach((source) => {
-    const imports = relationships[source].imports || [];
-    imports.forEach((importPath) => {
-      // Find potential data flow patterns
-      if (importPath.includes('./hooks') || importPath.includes('@/hooks')) {
-        patterns.dataFlows.push({
-          from: importPath,
-          to: source,
-          type: 'hook usage',
-        });
-      }
-      if (importPath.includes('./context') || importPath.includes('@/context')) {
-        patterns.dataFlows.push({
-          from: importPath,
-          to: source,
-          type: 'context usage',
-        });
-      }
-      if (importPath.includes('./actions') || importPath.includes('@/actions')) {
-        patterns.dataFlows.push({
-          from: importPath,
-          to: source,
-          type: 'server action call',
-        });
-      }
-    });
-  });
-
-  return patterns;
 }
 
+// Generate markdown for directory structure
+function formatDirectoryStructure(structure, indent = '') {
+  let output = '';
+  
+  if (structure.type === 'directory') {
+    const description = structure.description ? ` - ${structure.description}` : '';
+    output += `${indent}📁 ${structure.name}${description}\n`;
+    
+    if (structure.children && structure.children.length > 0) {
+      // First list subdirectories
+      for (const child of structure.children) {
+        if (child.type === 'directory') {
+          output += formatDirectoryStructure(child, indent + '  ');
+        }
+      }
+      
+      // Then list files
+      for (const child of structure.children) {
+        if (child.type === 'file') {
+          output += `${indent}  📄 ${child.name} (${child.fileType})\n`;
+        }
+      }
+    }
+  }
+  
+  return output;
+}
+
+// Main function
 async function main() {
+  console.log('Generating codebase structure documentation...');
+  
   try {
-    const projectRoot = process.cwd();
-    const packageJson = JSON.parse(
-      await fs.readFile(path.join(projectRoot, 'package.json'), 'utf8'),
-    );
-
-    // Prepare output content
-    let content = `# Codebase Structure for ${packageJson.name}\n\n`;
-    content += `## Project Overview\n\n`;
-    content += `- **Name:** ${packageJson.name}\n`;
-    content += `- **Version:** ${packageJson.version}\n`;
-    content += `- **Description:** ${packageJson.description || 'No description provided'}\n\n`;
-
-    // Add dependencies summary (as this is valuable context for AI)
-    content += `## Core Dependencies\n\n`;
-    content += `\`\`\`json\n${JSON.stringify(packageJson.dependencies, null, 2)}\n\`\`\`\n\n`;
-
-    // Directory structure with relationships
-    const relationships = {};
-    const srcStructure = await generateStructure(
-      path.join(projectRoot, 'src'),
-      projectRoot,
-      relationships,
-    );
-    const appStructure = await generateStructure(
-      path.join(projectRoot, 'app'),
-      projectRoot,
-      relationships,
-    ).catch(() => null);
-    const pagesStructure = await generateStructure(
-      path.join(projectRoot, 'pages'),
-      projectRoot,
-      relationships,
-    ).catch(() => null);
-
-    const projectStructure = {
-      path: '/',
-      type: 'directory',
-      children: [srcStructure],
-    };
-
-    if (appStructure) projectStructure.children.push(appStructure);
-    if (pagesStructure) projectStructure.children.push(pagesStructure);
-
-    // Find architectural patterns
-    const patterns = findArchitecturalPatterns(projectStructure, relationships);
-
-    // Add architecture section
-    content += `## Architectural Patterns\n\n`;
-
-    if (patterns.serverComponents.length > 0) {
-      content += `### Server Components (${patterns.serverComponents.length})\n\n`;
-      content += patterns.serverComponents
-        .slice(0, 10)
-        .map((p) => `- \`${p}\``)
-        .join('\n');
-      if (patterns.serverComponents.length > 10)
-        content += `\n- ... and ${patterns.serverComponents.length - 10} more`;
-      content += '\n\n';
+    // Get package info
+    const packageInfo = await getPackageInfo();
+    
+    // Scan the source directory
+    const srcDir = path.join(process.cwd(), SOURCE_DIR);
+    const structure = await scanDirectory(srcDir);
+    
+    // Extract features
+    const features = extractFeatures(structure);
+    
+    // Detect technologies
+    const technologies = detectTechnologies(packageInfo);
+    
+    // Generate markdown content
+    let markdown = `# Codebase Structure Reference\n\n`;
+    
+    // Add technologies section
+    markdown += `## Project Technologies\n\n`;
+    markdown += `| Technology | Used | Version |\n`;
+    markdown += `|------------|------|--------|\n`;
+    
+    for (const [tech, info] of Object.entries(technologies)) {
+      markdown += `| ${tech} | ${info.used ? '✅' : '❌'} | ${info.version} |\n`;
     }
-
-    if (patterns.clientComponents.length > 0) {
-      content += `### Client Components (${patterns.clientComponents.length})\n\n`;
-      content += patterns.clientComponents
-        .slice(0, 10)
-        .map((p) => `- \`${p}\``)
-        .join('\n');
-      if (patterns.clientComponents.length > 10)
-        content += `\n- ... and ${patterns.clientComponents.length - 10} more`;
-      content += '\n\n';
+    
+    // Add main features section
+    markdown += `\n## Key Project Areas\n\n`;
+    
+    if (features.mainFolders.length > 0) {
+      markdown += `### Main Folders\n\n`;
+      for (const folder of features.mainFolders) {
+        markdown += `- \`${folder.path}\`: ${folder.description || 'Main project folder'}\n`;
+      }
+      markdown += '\n';
     }
-
-    if (patterns.hooks.length > 0) {
-      content += `### Hooks (${patterns.hooks.length})\n\n`;
-      content += patterns.hooks
-        .slice(0, 10)
-        .map((p) => `- \`${p}\``)
-        .join('\n');
-      if (patterns.hooks.length > 10) content += `\n- ... and ${patterns.hooks.length - 10} more`;
-      content += '\n\n';
+    
+    if (features.components.length > 0) {
+      markdown += `### UI Components\n\n`;
+      for (const component of features.components) {
+        markdown += `- \`${component}\`\n`;
+      }
+      markdown += '\n';
     }
-
-    if (patterns.contextProviders.length > 0) {
-      content += `### Context Providers (${patterns.contextProviders.length})\n\n`;
-      content += patterns.contextProviders.map((p) => `- \`${p}\``).join('\n');
-      content += '\n\n';
+    
+    if (features.apiRoutes.length > 0) {
+      markdown += `### API Routes\n\n`;
+      for (const route of features.apiRoutes) {
+        markdown += `- \`${route}\`\n`;
+      }
+      markdown += '\n';
     }
-
-    if (patterns.serverActions.length > 0) {
-      content += `### Server Actions (${patterns.serverActions.length})\n\n`;
-      content += patterns.serverActions
-        .slice(0, 10)
-        .map((p) => `- \`${p}\``)
-        .join('\n');
-      if (patterns.serverActions.length > 10)
-        content += `\n- ... and ${patterns.serverActions.length - 10} more`;
-      content += '\n\n';
+    
+    if (features.dataStores.length > 0) {
+      markdown += `### Data Stores\n\n`;
+      for (const store of features.dataStores) {
+        markdown += `- \`${store}\`\n`;
+      }
+      markdown += '\n';
     }
-
-    if (patterns.apiEndpoints.length > 0) {
-      content += `### API Endpoints (${patterns.apiEndpoints.length})\n\n`;
-      content += patterns.apiEndpoints.map((p) => `- \`${p}\``).join('\n');
-      content += '\n\n';
+    
+    if (features.serverActions.length > 0) {
+      markdown += `### Server Actions\n\n`;
+      for (const action of features.serverActions) {
+        markdown += `- \`${action}\`\n`;
+      }
+      markdown += '\n';
     }
-
-    // Add directory structure in machine-readable format
-    content += `## Directory Structure\n\n`;
-    content += `\`\`\`json\n${JSON.stringify(projectStructure, null, 2)}\n\`\`\`\n\n`;
-
-    // Add data flow information (most relevant for AI)
-    content += `## Data Flow Patterns\n\n`;
-    content += `\`\`\`json\n${JSON.stringify(patterns.dataFlows, null, 2)}\n\`\`\`\n\n`;
-
-    // Add relationship graph information
-    content += `## Key File Relationships\n\n`;
-    content += `The following files have the most dependencies or are most depended upon:\n\n`;
-
-    // Find key files with highest connectivity
-    const fileConnectivity = {};
-    Object.keys(relationships).forEach((file) => {
-      fileConnectivity[file] = fileConnectivity[file] || 0;
-      const imports = relationships[file].imports || [];
-      imports.forEach((imp) => {
-        fileConnectivity[imp] = (fileConnectivity[imp] || 0) + 1;
-      });
-      fileConnectivity[file] += imports.length;
-    });
-
-    // Sort by connectivity
-    const keyFiles = Object.entries(fileConnectivity)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 20)
-      .map(([file, count]) => ({ file, connections: count }));
-
-    content += `\`\`\`json\n${JSON.stringify(keyFiles, null, 2)}\n\`\`\`\n\n`;
-
-    // Finalize and save
-    const docsDir = path.join(projectRoot, '.cursor/rules');
-    await fs.mkdir(docsDir, { recursive: true });
-
-    const outputPath = path.join(docsDir, 'codebase-structure.mdc');
-    await fs.writeFile(outputPath, content, 'utf8');
-    console.log(`✅ AI-friendly codebase documentation generated at: ${outputPath}`);
+    
+    // Add directory structure section
+    markdown += `## Directory Structure\n\n\`\`\`\n`;
+    markdown += formatDirectoryStructure(structure);
+    markdown += `\`\`\`\n`;
+    
+    // Write the output file
+    const outputPath = path.join(process.cwd(), 'docs', OUTPUT_FILE);
+    const outputDir = path.dirname(outputPath);
+    
+    await fs.mkdir(outputDir, { recursive: true });
+    await fs.writeFile(outputPath, markdown);
+    
+    console.log(`Documentation generated successfully at ${outputPath}`);
   } catch (error) {
-    console.error('Error generating codebase structure:', error);
+    console.error('Error generating documentation:', error);
     process.exit(1);
   }
 }
 
+// Run the main function
 main();
