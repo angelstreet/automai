@@ -134,7 +134,7 @@ export interface CICDDeploymentFormData {
     description?: string;
     branch: string;
     scriptIds: string[];
-    parameters: Array<Record<string, string>>;
+    parameters: string[];
     hostIds: string[];
     environmentVars?: Record<string, string>;
     schedule?: {

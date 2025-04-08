@@ -515,31 +515,10 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
       setSubmissionError(null);
 
       try {
-        // Create script mapping synchronously
-        const scriptMapping = deploymentData.scriptIds.reduce(
-          (mapping, scriptId) => {
-            const script = repositoryScripts.find((s) => s.id === scriptId);
-            if (script) {
-              const scriptParams = deploymentData.scriptParameters[scriptId] || {};
-              mapping[scriptId] = {
-                path: script.path,
-                type: script.type || 'shell',
-                parameters: {
-                  ...scriptParams,
-                },
-              };
-            }
-            return mapping;
-          },
-          {} as Record<
-            string,
-            { path: string; type: 'shell' | 'python'; parameters?: Record<string, string> }
-          >,
-        );
-
         console.log(
           '[@component:DeploymentWizardMainClient:handleSubmit] Creating form data object',
         );
+
         const formData: CICDDeploymentFormData = {
           name: deploymentData.name || '',
           description: deploymentData.description,
@@ -562,7 +541,9 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
             description: deploymentData.description,
             branch: deploymentData.branch || 'main',
             scriptIds: deploymentData.scriptIds,
-            scriptMapping: scriptMapping,
+            parameters: deploymentData.scriptIds.map((scriptId) =>
+              JSON.stringify(deploymentData.scriptParameters[scriptId] || {}),
+            ),
             hostIds: deploymentData.hostIds,
             environmentVars: deploymentData.environmentVars.reduce(
               (acc, curr) => {

@@ -7,29 +7,6 @@ import { CreateCICDJobParams } from '@/types-new/cicd-job';
 import { CICDProviderType } from '@/types-new/cicd-types';
 import { CICDDeploymentFormData } from '@/types-new/deployment-types';
 
-/**
- * Creates a mapping of script IDs to their details
- */
-export async function createScriptMapping(scriptIds: string[], scripts: any[]) {
-  return scriptIds.reduce(
-    (mapping, scriptId) => {
-      const script = scripts.find((s) => s.id === scriptId);
-      if (script) {
-        mapping[scriptId] = {
-          path: script.path || script.filename || script.id,
-          type: script.type || 'shell',
-          parameters: script.parameters || {},
-        };
-      }
-      return mapping;
-    },
-    {} as Record<
-      string,
-      { path: string; type: 'shell' | 'python'; parameters: Record<string, any> }
-    >,
-  );
-}
-
 export async function createDeploymentWithCICD(formData: CICDDeploymentFormData) {
   // Initial data logging
   console.log('[@action:deploymentWizard:createDeploymentWithCICD] Starting with form data:', {
@@ -44,7 +21,7 @@ export async function createDeploymentWithCICD(formData: CICDDeploymentFormData)
     configuration: {
       scriptIds: formData.configuration.scriptIds,
       hostIds: formData.configuration.hostIds,
-      hasScriptMapping: !!formData.configuration.scriptMapping,
+      hasParameters: formData.configuration.parameters.length > 0,
       hasEnvironmentVars: !!formData.configuration.environmentVars,
     },
   });
@@ -75,13 +52,13 @@ export async function createDeploymentWithCICD(formData: CICDDeploymentFormData)
       provider_id: formData.cicd_provider_id,
       repository: {
         url: formData.repository_id,
-        branch: formData.repository.branch || 'main',
+        branch: formData.configuration.branch,
       },
-      scripts: Object.entries(formData.configuration.scriptMapping).map(([id, script]) => ({
-        path: script.path,
-        type: script.type,
-        parameters: script.parameters
-          ? Object.entries(script.parameters).map(([key, value]) => `${key}=${value}`)
+      scripts: formData.configuration.scriptIds.map((_, index) => ({
+        path: formData.configuration.scriptIds[index],
+        type: 'shell',
+        parameters: formData.configuration.parameters[index]
+          ? [formData.configuration.parameters[index]]
           : undefined,
       })),
       hosts: formData.configuration.hostIds.map((id) => ({
