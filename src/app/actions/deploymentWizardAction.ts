@@ -3,7 +3,8 @@
 import { cookies } from 'next/headers';
 
 import { CICDService } from '@/lib/services/cicd/service';
-import { CICDProviderType, CICDProviderConfig } from '@/types-new/cicd-provider';
+import { CreateCICDJobParams } from '@/types-new/cicd-job';
+import { CICDProviderType } from '@/types-new/cicd-types';
 import { CICDDeploymentFormData } from '@/types-new/deployment-types';
 
 /**
@@ -51,13 +52,11 @@ export async function createDeploymentWithCICD(formData: CICDDeploymentFormData)
   try {
     const cookieStore = await cookies();
 
-    // 1. Create Jenkins Job First
-    console.log('[@action:deploymentWizard:createDeploymentWithCICD] Initializing CICD service');
-    const cicdService = new CICDService();
-    const providerConfig: CICDProviderConfig = {
+    // Initialize CICD service with provider config
+    const providerConfig = {
       id: formData.cicd_provider_id,
       type: formData.provider.type as CICDProviderType,
-      name: formData.name,
+      name: formData.configuration.name,
       url: formData.provider.config.url,
       auth_type: 'token',
       credentials: {
@@ -65,48 +64,47 @@ export async function createDeploymentWithCICD(formData: CICDDeploymentFormData)
         username: formData.provider.config.username,
       },
     };
-    cicdService.initialize(providerConfig);
 
-    // Log job creation parameters
-    console.log('[@action:deploymentWizard:createDeploymentWithCICD] Creating Jenkins job with:', {
-      name: formData.name,
-      scripts_count: Object.keys(formData.configuration.scriptMapping || {}).length,
-      hosts_count: formData.configuration.hostIds?.length,
-      provider_type: formData.provider.type,
-    });
+    const cicdService = new CICDService();
+    await cicdService.initialize(providerConfig);
 
-    const jenkinsJobResult = await cicdService.createJob({
-      name: formData.name,
-      description: formData.description,
+    // Create Jenkins job
+    const jobParams: CreateCICDJobParams = {
+      name: formData.configuration.name,
+      description: formData.configuration.description,
       provider_id: formData.cicd_provider_id,
       repository: {
         url: formData.repository_id,
-        branch: 'main',
+        branch: formData.repository.branch || 'main',
       },
-      scripts: Object.values(formData.configuration.scriptMapping || {}).map((script) => ({
+      scripts: Object.entries(formData.configuration.scriptMapping).map(([id, script]) => ({
         path: script.path,
         type: script.type,
-        parameters: script.parameters || {},
+        parameters: script.parameters
+          ? Object.entries(script.parameters).map(([key, value]) => `${key}=${value}`)
+          : undefined,
       })),
-      hosts: formData.configuration.hostIds.map((hostId) => ({
-        name: hostId,
-        ip: hostId,
-        username: 'deployment',
+      hosts: formData.configuration.hostIds.map((id) => ({
+        name: id,
+        ip: '', // Will be resolved by the provider
+        username: '', // Will be resolved by the provider
         environment: 'production',
       })),
-    });
+    };
+
+    const jobResult = await cicdService.createJob(jobParams);
 
     console.log(
       '[@action:deploymentWizard:createDeploymentWithCICD] Jenkins job creation result:',
       {
-        success: jenkinsJobResult.success,
-        error: jenkinsJobResult.error,
-        job_id: jenkinsJobResult.data?.id,
+        success: jobResult.success,
+        error: jobResult.error,
+        job_id: jobResult.data?.id,
       },
     );
 
-    if (!jenkinsJobResult.success) {
-      throw new Error(`Failed to create Jenkins job: ${jenkinsJobResult.error}`);
+    if (!jobResult.success) {
+      throw new Error(`Failed to create Jenkins job: ${jobResult.error}`);
     }
 
     // 2. Store Jenkins Job in DB
@@ -116,9 +114,9 @@ export async function createDeploymentWithCICD(formData: CICDDeploymentFormData)
       {
         data: {
           provider_id: formData.cicd_provider_id,
-          external_id: jenkinsJobResult.data?.id,
+          external_id: jobResult.data?.id,
           name: formData.name,
-          parameters: formData.configuration.parameters,
+          parameters: formData.configuration,
         },
       },
       cookieStore,
@@ -182,9 +180,9 @@ export async function createDeploymentWithCICD(formData: CICDDeploymentFormData)
     }
 
     // 5. Auto-start if needed
-    if (formData.autoStart && jenkinsJobResult.data?.id) {
+    if (formData.autoStart && jobResult.data?.id) {
       console.log('[@action:deploymentWizard:createDeploymentWithCICD] Auto-starting job');
-      await cicdService.triggerJob(jenkinsJobResult.data.id, formData.configuration.parameters);
+      await cicdService.triggerJob(jobResult.data.id, formData.configuration.parameters);
     }
 
     console.log('[@action:deploymentWizard:createDeploymentWithCICD] Successfully completed');
