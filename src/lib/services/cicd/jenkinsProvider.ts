@@ -9,6 +9,7 @@ export class JenkinsProvider implements CICDProvider {
   private baseUrl: string;
   private authHeader: string;
   private crumb: { crumbRequestField?: string; crumb?: string } = {};
+  private tenantName?: string;
 
   constructor(config: CICDProviderConfig) {
     console.log(`[@service:jenkins:constructor] Initializing Jenkins provider: ${config.name}`);
@@ -16,6 +17,7 @@ export class JenkinsProvider implements CICDProvider {
     // Setup base URL with port if provided
     this.baseUrl = config.port ? `${config.url}:${config.port}` : config.url;
     this.baseUrl = this.baseUrl.endsWith('/') ? this.baseUrl : `${this.baseUrl}/`;
+    this.tenantName = config.tenant_name;
 
     // Setup authentication
     if (config.auth_type === 'token') {
@@ -59,7 +61,7 @@ export class JenkinsProvider implements CICDProvider {
   /**
    * Create a new Jenkins pipeline job
    */
-  async createJob(name: string, config: CICDJobConfig, folder?: string): Promise<CICDResponse> {
+  async createJob(name: string, config: CICDJobConfig): Promise<CICDResponse> {
     try {
       console.log(`[@service:jenkins:createJob] Creating job: ${name}`);
 
@@ -69,8 +71,8 @@ export class JenkinsProvider implements CICDProvider {
       // Generate job configuration XML
       const jobConfig = this.generateJobConfig(config);
 
-      // Construct job URL with folder support
-      const jobPath = folder ? `job/${folder}/job/${name}` : `job/${name}`;
+      // Use tenant_name from config for folder structure if available
+      const folderPath = this.tenantName ? `job/${this.tenantName}/job/${name}` : `job/${name}`;
       const createUrl = `${this.baseUrl}createItem?name=${encodeURIComponent(name)}`;
 
       // Create job with 30s timeout
@@ -117,7 +119,7 @@ export class JenkinsProvider implements CICDProvider {
           data: {
             id: name,
             name,
-            url: `${this.baseUrl}${jobPath}`,
+            url: `${this.baseUrl}${folderPath}`,
           },
         };
       } catch (error: any) {

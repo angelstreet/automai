@@ -127,6 +127,7 @@ export interface CICDDeploymentFormData {
       url: string;
       username?: string;
       token: string;
+      tenant_name?: string;
     };
   };
   configuration: {

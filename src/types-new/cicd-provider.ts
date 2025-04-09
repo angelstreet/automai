@@ -3,11 +3,12 @@
  */
 export interface CICDProviderConfig {
   id: string;
-  type: 'jenkins' | 'github' | 'gitlab' | 'circleci';
+  tenant_name?: string;
+  type: 'jenkins' | 'github' | 'gitlab' | 'circleci' | 'azure' | 'custom';
   name: string;
   url: string;
   port?: number;
-  auth_type: 'token' | 'basic';
+  auth_type: 'token' | 'basic_auth' | 'oauth';
   credentials: {
     token?: string;
     username?: string;

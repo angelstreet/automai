@@ -81,6 +81,7 @@ export interface CICDBuild {
  */
 export interface CICDProviderConfig {
   id: string;
+  tenant_name?: string;
   url: string;
   auth_type: CICDAuthType;
   credentials: CICDCredentials;

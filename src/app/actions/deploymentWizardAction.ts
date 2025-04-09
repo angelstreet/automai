@@ -2,9 +2,10 @@
 
 import { cookies } from 'next/headers';
 
+import { CICDProviderFactory } from '@/lib/services/cicd';
 import { CICDService } from '@/lib/services/cicd/service';
 import { CreateCICDJobParams } from '@/types-new/cicd-job';
-import { CICDProviderConfig } from '@/types-new/cicd-provider';
+import { CICDProviderConfig, CICDProviderType, CICDAuthType } from '@/types-new/cicd-types';
 import { CICDDeploymentFormData } from '@/types-new/deployment-types';
 
 export async function createDeploymentWithCICD(formData: CICDDeploymentFormData) {
@@ -21,10 +22,11 @@ export async function createDeploymentWithCICD(formData: CICDDeploymentFormData)
         // Initialize CICD service with provider config
         const providerConfig: CICDProviderConfig = {
           id: formData.cicd_provider_id,
-          type: 'jenkins', // We know it's Jenkins in this case
+          tenant_name: formData.provider.config.tenant_name,
+          type: formData.provider.type as CICDProviderType,
           name: formData.configuration.name,
           url: formData.provider.config.url,
-          auth_type: 'token',
+          auth_type: 'basic_auth' as CICDAuthType,
           credentials: {
             token: formData.provider.config.token,
             username: formData.provider.config.username,
@@ -32,6 +34,13 @@ export async function createDeploymentWithCICD(formData: CICDDeploymentFormData)
         };
 
         const cicdService = new CICDService();
+
+        // Use the factory to create the appropriate provider
+        const provider = CICDProviderFactory.createProvider(providerConfig);
+        if (!provider) {
+          throw new Error(`Unsupported CICD provider type: ${formData.provider.type}`);
+        }
+
         await cicdService.initialize(providerConfig);
 
         // Create Jenkins job
@@ -82,10 +91,20 @@ export async function createDeploymentWithCICD(formData: CICDDeploymentFormData)
         const cicdJob = await createCICDJob(
           {
             data: {
+              // Required fields
               provider_id: formData.cicd_provider_id,
               external_id: jobResult.data?.id,
               name: formData.name,
-              parameters: formData.configuration,
+              team_id: formData.team_id,
+              creator_id: formData.creator_id,
+
+              // Optional fields
+              description: formData.description || null,
+              parameters: formData.configuration || null,
+
+              // Timestamps
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
             },
           },
           cookieStore,
@@ -97,33 +116,38 @@ export async function createDeploymentWithCICD(formData: CICDDeploymentFormData)
 
         // Create Deployment
         console.log(
-          '[@action:deploymentWizard:createDeploymentWithCICD] Creating deployment record with data:',
-          {
-            name: formData.name,
-            repository_id: formData.repository_id,
-            team_id: formData.team_id,
-            creator_id: formData.creator_id,
-            cicd_provider_id: formData.cicd_provider_id,
-            host_ids: formData.configuration.hostIds,
-          },
+          '[@action:deploymentWizard:createDeploymentWithCICD] Creating deployment record',
         );
         const { createDeployment } = await import('@/lib/db/deploymentDb');
         const deployment = await createDeployment(
           {
+            // Required fields
             name: formData.name,
-            description: formData.description || '',
-            repository_id: formData.repository_id || null, // Make nullable
+            tenant_id: formData.team_id.split('_')[0],
             team_id: formData.team_id,
             creator_id: formData.creator_id,
-            tenant_id: formData.team_id.split('_')[0],
             status: 'pending',
-            scripts_path: formData.configuration.scriptIds,
-            host_ids:
-              formData.configuration.hostIds.length > 0 ? formData.configuration.hostIds : null, // Make nullable
+
+            // Optional fields with proper defaults/nulls
+            description: formData.description || null,
+            repository_id: formData.repository_id || null,
+            schedule_type: formData.configuration?.schedule?.enabled ? 'cron' : 'now',
+            scheduled_time: null,
+            scripts_path: formData.configuration.scriptIds || null,
+            host_ids: formData.configuration.hostIds || null,
             environment_vars: formData.configuration.environmentVars || null,
-            cicd_provider_id: formData.cicd_provider_id,
-            schedule_type: 'now',
-            scripts_parameters: formData.configuration.parameters || [],
+            scripts_parameters: formData.configuration.parameters || null,
+            cicd_provider_id: formData.cicd_provider_id || null,
+
+            // Schedule related fields
+            cron_expression: formData.configuration?.schedule?.cronExpression || null,
+            repeat_count: formData.configuration?.schedule?.repeatCount || null,
+
+            // Timestamps
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            started_at: null,
+            completed_at: null,
           } as any,
           cookieStore,
         );
@@ -136,9 +160,18 @@ export async function createDeploymentWithCICD(formData: CICDDeploymentFormData)
         const { createDeploymentCICDMapping } = await import('@/lib/db/cicdDb');
         const mapping = await createDeploymentCICDMapping(
           {
+            // Required references
             deployment_id: deployment.data?.id,
             cicd_job_id: cicdJob.data?.id,
+
+            // Job details
             parameters: formData.configuration,
+            build_number: null, // Will be set when the job runs
+            build_url: null, // Will be set when the job runs
+
+            // Timestamps
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
           },
           cookieStore,
         );
