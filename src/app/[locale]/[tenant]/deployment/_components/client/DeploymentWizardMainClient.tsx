@@ -2,7 +2,8 @@
 
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useContext } from 'react';
+import { UserContext } from '@/context/UserContext';
 
 // Constants for repository scanning
 const MAX_REPOSITORY_SCAN_DEPTH = 0;
@@ -49,7 +50,7 @@ interface DeploymentWizardProps {
   cicdProviders?: CICDProvider[];
   teamId: string;
   userId: string;
-  tenantName?: string; // Add tenantName prop
+  tenantName?: string; // Keep the prop for fallback
 }
 
 const initialDeploymentData: DeploymentData = {
@@ -89,6 +90,18 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
   }) => {
     // Log tenant name from prop for debugging
     console.log('[DeploymentWizardMainClient] Using tenant name from prop:', tenantName);
+
+    // Get user directly from context (more reliable than the hook)
+    const { user } = useContext(UserContext);
+
+    // For debugging only
+    useEffect(() => {
+      console.log('[DeploymentWizardMainClient] User data from context:', {
+        contextUserExists: !!user,
+        contextUserTenantName: user?.tenant_name,
+        prop_tenant_name: tenantName,
+      });
+    }, [user, tenantName]);
 
     // Log repositories and their default branches for debugging
     console.log(
@@ -544,7 +557,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               url: selectedProvider?.config?.url || '',
               username: selectedProvider?.config?.username,
               token: selectedProvider?.config?.token || '',
-              tenant_name: tenantName, // Direct from prop
+              tenant_name: user?.tenant_name || tenantName || '', // Use context with prop fallback
             },
           },
           configuration: {

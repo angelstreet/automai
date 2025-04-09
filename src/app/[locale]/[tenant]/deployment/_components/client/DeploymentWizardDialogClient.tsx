@@ -1,8 +1,10 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import React, { useEffect, useContext } from 'react';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
+import { UserContext } from '@/context/UserContext';
 import { useHost, useCICD } from '@/hooks';
 import { useRepository } from '@/hooks/useRepository';
 import { useTeam } from '@/hooks/useTeam';
@@ -27,7 +29,9 @@ export function DeploymentWizardDialogClient({
 }: DeploymentWizardDialogClientProps) {
   const t = useTranslations('deployment');
   const { hosts, isLoading: isLoadingHosts } = useHost('DeploymentWizardDialogClient');
-  const { providers: cicdProviders, isLoading: isLoadingCICD } = useCICD('DeploymentWizardDialogClient');
+  const { providers: cicdProviders, isLoading: isLoadingCICD } = useCICD(
+    'DeploymentWizardDialogClient',
+  );
   const { activeTeam } = useTeam('DeploymentWizardDialogClient');
   const { user } = useUser(null, 'DeploymentWizardDialogClient');
 
@@ -58,6 +62,26 @@ export function DeploymentWizardDialogClient({
     }
   };
 
+  // Get user directly from context (more reliable method)
+  const { user: contextUser } = useContext(UserContext);
+  
+  // Add an effect to log both user sources when dialog opens
+  useEffect(() => {
+    if (open) {
+      console.log('[DeploymentWizardDialogClient] Dialog opened - User data comparison:', {
+        isOpen: open,
+        // Hook data
+        hookUserExists: !!user,
+        hookUserId: user?.id,
+        hookTenantName: user?.tenant_name,
+        // Context data (should be more reliable)
+        contextUserExists: !!contextUser,
+        contextUserId: contextUser?.id,
+        contextTenantName: contextUser?.tenant_name
+      });
+    }
+  }, [open, user, contextUser]);
+
   return (
     <Dialog
       open={open}
@@ -79,7 +103,7 @@ export function DeploymentWizardDialogClient({
             cicdProviders={cicdProviders || []}
             teamId={activeTeam?.id || ''}
             userId={user?.id || ''}
-            tenantName={user?.tenant_name || ''}
+            tenantName={contextUser?.tenant_name || user?.tenant_name || ''}
           />
         )}
 

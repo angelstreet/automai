@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/shadcn/button';
 import { useHost, useCICD } from '@/hooks';
 import { useRepository } from '@/hooks/useRepository';
+import { useUser } from '@/hooks/useUser';
 import { Repository } from '@/types/component/repositoryComponentType';
 
 import { DeploymentEvents } from './DeploymentEventListener';
@@ -23,9 +24,10 @@ export function DeploymentActionsClient({
 }: DeploymentActionsClientProps) {
   const t = useTranslations('deployment');
   const c = useTranslations('common');
-  const { refetchHosts } = useHost();
-  const { refetchProviders } = useCICD();
-  const { refetchRepositories } = useRepository();
+  const { refetchHosts } = useHost('DeploymentActionsClient');
+  const { refetchProviders } = useCICD('DeploymentActionsClient');
+  const { refetchRepositories } = useRepository('DeploymentActionsClient');
+  const { user } = useUser(null, 'DeploymentActionsClient');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
   const [currentDeploymentCount, setCurrentDeploymentCount] = useState(initialDeploymentCount);
@@ -113,7 +115,17 @@ export function DeploymentActionsClient({
           </Button>
         )}
         <Button
-          onClick={() => setShowWizard(true)}
+          onClick={() => {
+            // Log user data when button is clicked to verify it's loaded
+            console.log('[DeploymentActions] Add button clicked - Current user data:', {
+              userExists: !!user,
+              userId: user?.id,
+              userEmail: user?.email,
+              tenantName: user?.tenant_name,
+              teamCount: user?.teams?.length
+            });
+            setShowWizard(true);
+          }}
           id="add-deployment-button"
           size="sm"
           className="h-8 gap-1"
