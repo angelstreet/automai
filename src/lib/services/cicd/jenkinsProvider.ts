@@ -122,7 +122,6 @@ export class JenkinsProvider implements CICDProvider {
       const createUrl = `${this.baseUrl}job/${encodeURIComponent(tenant)}/job/${encodeURIComponent(this.username)}/createItem?name=${encodeURIComponent(name)}`;
 
       console.log(`[@service:jenkins:createJob] Creating job in folder: ${folder}`);
-
       console.log(`[@service:jenkins:createJob] Final URL: ${createUrl}`);
 
       // Create job with 30s timeout

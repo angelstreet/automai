@@ -5,6 +5,7 @@ import React, { useState, useMemo } from 'react';
 
 import { Switch } from '@/components/shadcn/switch';
 import { useCICD } from '@/hooks';
+// Using the same pipeline generation but only for display purposes
 import { generateJenkinsPipeline } from '@/lib/services/cicd/jenkinsPipeline';
 import { CICDProvider, CICDJob } from '@/types/component/cicdComponentType';
 import { DeploymentData } from '@/types/component/deploymentComponentType';
@@ -129,53 +130,61 @@ export function DeploymentWizardStep5Client({
     }
   };
 
-  // Generate pipeline code based on provider type
+  // Generate pipeline code based on provider type - only for preview purposes
   const pipelineCode = useMemo(() => {
-    if (!data) return '';
+    if (!data || !selectedProvider) return '';
 
-    // Get scripts details from the scriptIds
-    const scriptDetails = repositoryScripts
-      .filter((s) => data.scriptIds.includes(s.id))
-      .map((script) => ({
-        id: script.id,
-        path: script.path || script.filename || script.id,
-        type: script.type || 'shell',
-        parameters: script.parameters || '',
-      }));
+    try {
+      console.log('[DeploymentWizardStep5] Generating preview pipeline');
+      
+      // Get scripts details from the scriptIds
+      const scriptDetails = repositoryScripts
+        .filter((s) => data.scriptIds.includes(s.id))
+        .map((script) => ({
+          id: script.id,
+          path: script.path || script.filename || script.id,
+          type: script.type || 'shell',
+          parameters: script.parameters || '',
+        }));
 
-    // Get host details from the hostIds
-    const hostDetails = availableHosts
-      .filter((h) => data.hostIds.includes(h.id))
-      .map((host) => ({
-        id: host.id,
-        name: host.name,
-        ip: host.ip,
-        environment: host.environment || 'Production',
-        username: (host as any).username,
-        password: (host as any).password,
-        key: (host as any).key,
-        is_windows: (host as any).is_windows,
-      }));
+      // Get host details from the hostIds
+      const hostDetails = availableHosts
+        .filter((h) => data.hostIds.includes(h.id))
+        .map((host) => ({
+          id: host.id,
+          name: host.name,
+          ip: host.ip,
+          environment: host.environment || 'Production',
+          username: (host as any).username || 'user',
+          password: (host as any).password || '',
+          key: (host as any).key || '',
+          is_windows: (host as any).is_windows || false,
+        }));
 
-    const repoUrl =
-      data.selectedRepository?.url ||
-      (data.repositoryId ? `https://github.com/${data.repositoryId}.git` : '');
-    const branch = data.branch || 'main';
+      const repoUrl =
+        data.selectedRepository?.url ||
+        (data.repositoryId ? `https://github.com/${data.repositoryId}.git` : '');
+      const branch = data.branch || 'main';
 
-    // Generate pipeline using the service
-    const result = generateJenkinsPipeline({
-      name: data.name || 'Deployment',
-      description: data.description,
-      repository: {
-        url: repoUrl,
-        branch: branch,
-      },
-      hosts: hostDetails,
-      scripts: scriptDetails,
-      provider_id: selectedProvider?.id,
-    });
-
-    return result.pipeline;
+      // Generate pipeline using the same method the service uses, but only for display
+      const result = generateJenkinsPipeline({
+        name: data.name || 'Deployment',
+        description: data.description,
+        repository: {
+          url: repoUrl,
+          branch: branch,
+        },
+        hosts: hostDetails,
+        scripts: scriptDetails,
+        provider_id: selectedProvider?.id,
+      });
+      
+      console.log('[DeploymentWizardStep5] Successfully generated preview pipeline');
+      return result.pipeline;
+    } catch (error) {
+      console.error('[DeploymentWizardStep5] Failed to generate pipeline preview:', error);
+      return '// Failed to generate pipeline preview. This will not affect the actual deployment.';
+    }
   }, [data, repositoryScripts, availableHosts, selectedProvider]);
 
   // Render pipeline view
