@@ -102,7 +102,7 @@ export function DeploymentWizardDialogClient({
             hosts={hosts || []}
             cicdProviders={cicdProviders || []}
             teamId={activeTeam?.id || ''}
-            userId={user?.id || ''}
+            userId={contextUser?.id || user?.id || ''}
             tenantName={contextUser?.tenant_name || user?.tenant_name || ''}
           />
         )}

@@ -98,10 +98,12 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
     useEffect(() => {
       console.log('[DeploymentWizardMainClient] User data from context:', {
         contextUserExists: !!user,
+        contextUserId: user?.id,
         contextUserTenantName: user?.tenant_name,
+        prop_userId: userId,
         prop_tenant_name: tenantName,
       });
-    }, [user, tenantName]);
+    }, [user, userId, tenantName]);
 
     // Log repositories and their default branches for debugging
     console.log(
@@ -536,9 +538,9 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
         console.log(
           '[@component:DeploymentWizardMainClient:handleSubmit] Creating form data object',
           {
-            userId,
+            userId: user?.id || userId,
             teamId,
-            tenantName,
+            tenantName: user?.tenant_name || tenantName,
           },
         );
 
@@ -549,7 +551,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           host_id: deploymentData.hostIds[0],
           script_id: deploymentData.scriptIds[0],
           team_id: teamId,
-          creator_id: userId,
+          creator_id: user?.id || userId,
           cicd_provider_id: deploymentData.cicd_provider_id,
           provider: {
             type: selectedProvider?.type || 'jenkins',
