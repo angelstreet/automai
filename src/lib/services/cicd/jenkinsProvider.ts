@@ -10,6 +10,7 @@ export class JenkinsProvider implements CICDProvider {
   private authHeader: string;
   private crumb: { crumbRequestField?: string; crumb?: string } = {};
   private tenantName?: string;
+  private username: string;
 
   constructor(config: CICDProviderConfig) {
     console.log(`[@service:jenkins:constructor] Initializing Jenkins provider: ${config.name}`);
@@ -23,6 +24,9 @@ export class JenkinsProvider implements CICDProvider {
     // Jenkins API tokens should be used as passwords in Basic Auth
     const username = config.credentials.username;
     const token = config.credentials.token;
+
+    // Store username for folder path construction
+    this.username = username;
 
     // Log the username being used
     console.log(
@@ -111,9 +115,18 @@ export class JenkinsProvider implements CICDProvider {
       // Generate job configuration XML
       const jobConfig = this.generateJobConfig(config);
 
-      // Use tenant_name from config for folder structure if available
-      const folderPath = this.tenantName ? `job/${this.tenantName}/job/${name}` : `job/${name}`;
-      const createUrl = `${this.baseUrl}createItem?name=${encodeURIComponent(name)}`;
+      // Create job in folder: tenant_name/username - no fallbacks
+      // If tenantName is missing, we'll use a default
+      const tenant = this.tenantName || 'default';
+      const folder = `${tenant}/${this.username}`;
+      const folderPath = `job/${tenant}/job/${this.username}/job/${name}`;
+      
+      // Always create the job in the tenant_name/username folder
+      const createUrl = `${this.baseUrl}job/${encodeURIComponent(tenant)}/job/${encodeURIComponent(this.username)}/createItem?name=${encodeURIComponent(name)}`;
+      
+      console.log(`[@service:jenkins:createJob] Creating job in folder: ${folder}`);
+      
+      console.log(`[@service:jenkins:createJob] Final URL: ${createUrl}`);
 
       // Create job with 30s timeout
       const controller = new AbortController();
@@ -139,6 +152,9 @@ export class JenkinsProvider implements CICDProvider {
           },
           body: jobConfig,
         });
+        
+        // Add a very clear log of the exact URL being used
+        console.log(`[@service:jenkins:createJob] FINAL URL FOR JOB CREATION: ${createUrl}`);
 
         const response = await fetch(createUrl, {
           method: 'POST',
@@ -154,12 +170,17 @@ export class JenkinsProvider implements CICDProvider {
           throw new Error(`Failed to create job: ${response.statusText}. Details: ${errorText}`);
         }
 
+        // Generate token for this job
+        const jobToken = this.generateAuthToken(name);
+
         return {
           success: true,
           data: {
             id: name,
             name,
             url: `${this.baseUrl}${folderPath}`,
+            token: jobToken,
+            folder_path: folderPath,
           },
         };
       } catch (error: any) {
@@ -182,9 +203,32 @@ export class JenkinsProvider implements CICDProvider {
     try {
       console.log(`[@service:jenkins:triggerJob] Triggering job: ${jobId}`);
 
-      const triggerUrl = params
-        ? `${this.baseUrl}job/${jobId}/buildWithParameters`
-        : `${this.baseUrl}job/${jobId}/build`;
+      // Generate authentication token for remote triggering
+      const authToken = this.generateAuthToken(jobId);
+      console.log(`[@service:jenkins:triggerJob] Using auth token: ${authToken}`);
+
+      // Determine the base URL for triggering
+      let triggerUrl: string;
+      let jobPath: string;
+
+      // Always use tenant_name/username folder structure - no fallbacks
+      // If tenantName is missing, use a default
+      const tenant = this.tenantName || 'default';
+      jobPath = `job/${tenant}/job/${this.username}/job/${jobId}`;
+      console.log(`[@service:jenkins:triggerJob] Using folder: ${tenant}/${this.username}`);
+
+      if (params) {
+        // Add the auth token to the parameters
+        params = { ...params, token: authToken };
+        triggerUrl = `${this.baseUrl}${jobPath}/buildWithParameters`;
+        console.log(`[@service:jenkins:triggerJob] Triggering with parameters at: ${triggerUrl}`);
+      } else {
+        // For builds without parameters, include token in URL
+        triggerUrl = `${this.baseUrl}${jobPath}/build?token=${authToken}`;
+        console.log(
+          `[@service:jenkins:triggerJob] Triggering without parameters at: ${triggerUrl}`,
+        );
+      }
 
       const response = await fetch(triggerUrl, {
         method: 'POST',
