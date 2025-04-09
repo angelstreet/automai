@@ -23,17 +23,21 @@ export class JenkinsProvider implements CICDProvider {
     // Jenkins API tokens should be used as passwords in Basic Auth
     const username = config.credentials.username;
     const token = config.credentials.token;
-    
+
     // Log the username being used
-    console.log(`[@service:jenkins:constructor] Using Jenkins API token auth with username: ${username}`);
-    
+    console.log(
+      `[@service:jenkins:constructor] Using Jenkins API token auth with username: ${username}`,
+    );
+
     // Username:token string format for Basic Auth
     const authString = `${username}:${token}`;
     this.authHeader = `Basic ${Buffer.from(authString).toString('base64')}`;
-    
+
     // For debugging, log first few chars of the encoded credentials (safely)
     const encodedValue = Buffer.from(authString).toString('base64');
-    console.log(`[@service:jenkins:constructor] Auth string format (username:token) encoded to: ${encodedValue.substring(0, 5)}...`);
+    console.log(
+      `[@service:jenkins:constructor] Auth string format (username:token) encoded to: ${encodedValue.substring(0, 5)}...`,
+    );
 
     // Log configuration (without sensitive data)
     console.log(`[@service:jenkins:constructor] Configuration:`, {
@@ -56,7 +60,7 @@ export class JenkinsProvider implements CICDProvider {
       // Use the correct crumb issuer endpoint
       const crumbUrl = `${this.baseUrl}crumbIssuer/api/json`;
       console.log(`[@service:jenkins:getCrumb] Crumb URL: ${crumbUrl}`);
-      
+
       // Try to directly access the crumbIssuer page first to debug authentication
       console.log(`[@service:jenkins:getCrumb] Testing direct access to crumbIssuer...`);
 
@@ -279,9 +283,27 @@ export class JenkinsProvider implements CICDProvider {
   }
 
   /**
+   * Generate a consistent authentication token for remote triggering
+   */
+  private generateAuthToken(jobName: string): string {
+    // Use tenant name if available, otherwise use a default
+    const prefix = this.tenantName || 'default';
+
+    // Create a predictable but unique token
+    // Format: tenant_jobname_token
+    const token = `${prefix}_${jobName}_token`.replace(/[^a-zA-Z0-9_]/g, '_');
+
+    console.log(`[@service:jenkins:generateAuthToken] Generated token: ${token}`);
+    return token;
+  }
+
+  /**
    * Generate Jenkins job configuration XML
    */
   private generateJobConfig(config: CICDJobConfig): string {
+    // Generate auth token for remote triggering
+    const authToken = this.generateAuthToken(config.name);
+
     return `<?xml version="1.1" encoding="UTF-8"?>
 <flow-definition plugin="workflow-job">
   <description>${config.description || ''}</description>
@@ -289,6 +311,11 @@ export class JenkinsProvider implements CICDProvider {
     <script>${config.pipeline}</script>
     <sandbox>true</sandbox>
   </definition>
+  <triggers>
+    <hudson.triggers.RemoteTrigger>
+      <token>${authToken}</token>
+    </hudson.triggers.RemoteTrigger>
+  </triggers>
 </flow-definition>`;
   }
 }
