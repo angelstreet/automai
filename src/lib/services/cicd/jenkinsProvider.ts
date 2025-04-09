@@ -21,12 +21,29 @@ export class JenkinsProvider implements CICDProvider {
 
     // Setup authentication
     if (config.auth_type === 'token') {
-      this.authHeader = `Basic ${Buffer.from(`${config.credentials.username}:${config.credentials.token}`).toString('base64')}`;
+      // For token auth, use username:token format
+      const authString = `${config.credentials.username}:${config.credentials.token}`;
+      console.log(
+        `[@service:jenkins:constructor] Using token auth with username: ${config.credentials.username}`,
+      );
+      this.authHeader = `Basic ${Buffer.from(authString).toString('base64')}`;
     } else {
+      // For basic auth, use username:password format
       const { username, password } = config.credentials;
-      const base64Credentials = Buffer.from(`${username}:${password}`).toString('base64');
-      this.authHeader = `Basic ${base64Credentials}`;
+      const authString = `${username}:${password}`;
+      console.log(`[@service:jenkins:constructor] Using basic auth with username: ${username}`);
+      this.authHeader = `Basic ${Buffer.from(authString).toString('base64')}`;
     }
+
+    // Log configuration (without sensitive data)
+    console.log(`[@service:jenkins:constructor] Configuration:`, {
+      baseUrl: this.baseUrl,
+      tenantName: this.tenantName,
+      authType: config.auth_type,
+      hasUsername: !!config.credentials.username,
+      hasToken: !!config.credentials.token,
+      hasPassword: !!config.credentials.password,
+    });
   }
 
   /**
@@ -35,18 +52,34 @@ export class JenkinsProvider implements CICDProvider {
   private async getCrumb(): Promise<void> {
     try {
       console.log(`[@service:jenkins:getCrumb] Fetching crumb`);
-      const response = await fetch(`${this.baseUrl}crumbIssuer/api/json`, {
+
+      // Use the correct crumb issuer endpoint
+      const crumbUrl = `${this.baseUrl}crumbIssuer/api/json`;
+      console.log(`[@service:jenkins:getCrumb] Crumb URL: ${crumbUrl}`);
+
+      const response = await fetch(crumbUrl, {
+        method: 'GET',
         headers: {
           Authorization: this.authHeader,
+          Accept: 'application/json',
         },
       });
 
       if (!response.ok) {
         console.log(`[@service:jenkins:getCrumb] Failed to get crumb: ${response.statusText}`);
+        console.log(`[@service:jenkins:getCrumb] Response status: ${response.status}`);
+        // Log more details about the error
+        const errorText = await response.text();
+        console.log(`[@service:jenkins:getCrumb] Error details:`, errorText);
         return;
       }
 
       const crumbData = await response.json();
+      console.log(`[@service:jenkins:getCrumb] Crumb data:`, {
+        crumbRequestField: crumbData.crumbRequestField,
+        hasCrumb: !!crumbData.crumb,
+      });
+
       this.crumb = {
         crumbRequestField: crumbData.crumbRequestField,
         crumb: crumbData.crumb,
