@@ -2,7 +2,6 @@
 
 import { cookies } from 'next/headers';
 
-import { CICDProviderFactory } from '@/lib/services/cicd';
 import { CICDService } from '@/lib/services/cicd/service';
 import { CreateCICDJobParams } from '@/types-new/cicd-job';
 import { CICDProviderConfig, CICDProviderType, CICDAuthType } from '@/types-new/cicd-types';
@@ -18,6 +17,12 @@ export async function createDeploymentWithCICD(formData: CICDDeploymentFormData)
     const result = await Promise.race([
       (async () => {
         const cookieStore = await cookies();
+
+        // Log tenant_name
+        console.log(
+          '[@action:deploymentWizard] tenant_name:',
+          formData.provider.config.tenant_name,
+        );
 
         // Initialize CICD service with provider config
         const providerConfig: CICDProviderConfig = {

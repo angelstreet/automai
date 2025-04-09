@@ -79,9 +79,6 @@ export class JenkinsProvider implements CICDProvider {
       if (!response.ok) {
         console.log(`[@service:jenkins:getCrumb] Failed to get crumb: ${response.statusText}`);
         console.log(`[@service:jenkins:getCrumb] Response status: ${response.status}`);
-        // Log more details about the error
-        const errorText = await response.text();
-        console.log(`[@service:jenkins:getCrumb] Error details:`, errorText);
         return;
       }
 
@@ -120,12 +117,12 @@ export class JenkinsProvider implements CICDProvider {
       const tenant = this.tenantName || 'default';
       const folder = `${tenant}/${this.username}`;
       const folderPath = `job/${tenant}/job/${this.username}/job/${name}`;
-      
+
       // Always create the job in the tenant_name/username folder
       const createUrl = `${this.baseUrl}job/${encodeURIComponent(tenant)}/job/${encodeURIComponent(this.username)}/createItem?name=${encodeURIComponent(name)}`;
-      
+
       console.log(`[@service:jenkins:createJob] Creating job in folder: ${folder}`);
-      
+
       console.log(`[@service:jenkins:createJob] Final URL: ${createUrl}`);
 
       // Create job with 30s timeout
@@ -152,7 +149,7 @@ export class JenkinsProvider implements CICDProvider {
           },
           body: jobConfig,
         });
-        
+
         // Add a very clear log of the exact URL being used
         console.log(`[@service:jenkins:createJob] FINAL URL FOR JOB CREATION: ${createUrl}`);
 
@@ -166,8 +163,7 @@ export class JenkinsProvider implements CICDProvider {
         clearTimeout(timeoutId);
 
         if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Failed to create job: ${response.statusText}. Details: ${errorText}`);
+          throw new Error(`Failed to create job: ${response.statusText}`);
         }
 
         // Generate token for this job
@@ -213,7 +209,7 @@ export class JenkinsProvider implements CICDProvider {
 
       // Always use tenant_name/username folder structure - no fallbacks
       // If tenantName is missing, use a default
-      const tenant = this.tenantName || 'default';
+      const tenant = this.tenantName || 'trial';
       jobPath = `job/${tenant}/job/${this.username}/job/${jobId}`;
       console.log(`[@service:jenkins:triggerJob] Using folder: ${tenant}/${this.username}`);
 

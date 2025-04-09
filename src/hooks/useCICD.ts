@@ -1,7 +1,6 @@
 'use client';
 
-import { useQueryClient } from '@tanstack/react-query';
-import { useFetchQuery, useDataMutation } from '@/hooks/useQueryHelpers';
+import { useRef, useEffect } from 'react';
 
 import {
   getCICDProviders,
@@ -13,8 +12,11 @@ import {
   runCICDJob,
 } from '@/app/actions/cicdAction';
 import { useToast } from '@/components/shadcn/use-toast';
-
+import { useFetchQuery, useDataMutation } from '@/hooks/useQueryHelpers';
 import type { CICDProviderPayload } from '@/types/component/cicdComponentType';
+
+// Generate a unique ID for each hook instance
+let hookInstanceCounter = 0;
 
 /**
  * Hook for managing CICD functionality
@@ -22,8 +24,28 @@ import type { CICDProviderPayload } from '@/types/component/cicdComponentType';
  * Provides functions for fetching, creating, updating, deleting, and testing CICD providers
  * Uses React Query for data fetching and caching
  */
-export function useCICD() {
+export function useCICD(componentName = 'unknown') {
   const { toast } = useToast();
+  const instanceId = useRef(++hookInstanceCounter);
+  const isMounted = useRef(false);
+
+  // Log mount/unmount for debugging
+  useEffect(() => {
+    const currentInstanceId = instanceId.current;
+
+    if (!isMounted.current) {
+      console.log(
+        `[@hook:useCICD:useCICD] Hook mounted #${currentInstanceId} in component: ${componentName}`,
+      );
+      isMounted.current = true;
+    }
+
+    return () => {
+      console.log(
+        `[@hook:useCICD:useCICD] Hook unmounted #${currentInstanceId} from component: ${componentName}`,
+      );
+    };
+  }, [componentName]);
 
   // Get all CICD providers
   const {

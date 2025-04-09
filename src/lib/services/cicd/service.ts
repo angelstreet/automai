@@ -1,10 +1,11 @@
+import { CICDJob, CreateCICDJobParams } from '@/types-new/cicd-job';
 import {
   CICDProvider,
   CICDProviderConfig,
   CICDResponse,
   CICDJobConfig,
 } from '@/types-new/cicd-provider';
-import { CICDJob, CreateCICDJobParams } from '@/types-new/cicd-job';
+
 import { CICDProviderFactory } from './factory';
 
 /**

@@ -26,9 +26,9 @@ export function DeploymentWizardDialogClient({
   repositories: initialRepositories,
 }: DeploymentWizardDialogClientProps) {
   const t = useTranslations('deployment');
-  const { hosts, isLoading: isLoadingHosts } = useHost();
-  const { providers: cicdProviders, isLoading: isLoadingCICD } = useCICD();
-  const { activeTeam } = useTeam();
+  const { hosts, isLoading: isLoadingHosts } = useHost('DeploymentWizardDialogClient');
+  const { providers: cicdProviders, isLoading: isLoadingCICD } = useCICD('DeploymentWizardDialogClient');
+  const { activeTeam } = useTeam('DeploymentWizardDialogClient');
   const { user } = useUser(null, 'DeploymentWizardDialogClient');
 
   // Only use the repository hook if no repositories were provided
@@ -79,6 +79,7 @@ export function DeploymentWizardDialogClient({
             cicdProviders={cicdProviders || []}
             teamId={activeTeam?.id || ''}
             userId={user?.id || ''}
+            tenantName={user?.tenant_name || ''}
           />
         )}
 

@@ -49,6 +49,7 @@ interface DeploymentWizardProps {
   cicdProviders?: CICDProvider[];
   teamId: string;
   userId: string;
+  tenantName?: string; // Add tenantName prop
 }
 
 const initialDeploymentData: DeploymentData = {
@@ -84,10 +85,14 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
     cicdProviders = [],
     teamId,
     userId,
+    tenantName,
   }) => {
+    // Log tenant name from prop for debugging
+    console.log('[DeploymentWizardMainClient] Using tenant name from prop:', tenantName);
+
     // Log repositories and their default branches for debugging
     console.log(
-      '[DeploymentWizard] Repository list with default branches:',
+      '[DeploymentWizardMainClient] Repository list with default branches:',
       repositories.map((repo) => ({
         id: repo.id,
         name: repo.name,
@@ -520,6 +525,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           {
             userId,
             teamId,
+            tenantName,
           },
         );
 
@@ -538,6 +544,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               url: selectedProvider?.config?.url || '',
               username: selectedProvider?.config?.username,
               token: selectedProvider?.config?.token || '',
+              tenant_name: tenantName, // Direct from prop
             },
           },
           configuration: {
