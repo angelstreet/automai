@@ -19,21 +19,21 @@ export class JenkinsProvider implements CICDProvider {
     this.baseUrl = this.baseUrl.endsWith('/') ? this.baseUrl : `${this.baseUrl}/`;
     this.tenantName = config.tenant_name;
 
-    // Setup authentication
-    if (config.auth_type === 'token') {
-      // For token auth, use username:token format
-      const authString = `${config.credentials.username}:${config.credentials.token}`;
-      console.log(
-        `[@service:jenkins:constructor] Using token auth with username: ${config.credentials.username}`,
-      );
-      this.authHeader = `Basic ${Buffer.from(authString).toString('base64')}`;
-    } else {
-      // For basic auth, use username:password format
-      const { username, password } = config.credentials;
-      const authString = `${username}:${password}`;
-      console.log(`[@service:jenkins:constructor] Using basic auth with username: ${username}`);
-      this.authHeader = `Basic ${Buffer.from(authString).toString('base64')}`;
-    }
+    // Always use token-based authentication for Jenkins
+    // Jenkins API tokens should be used as passwords in Basic Auth
+    const username = config.credentials.username;
+    const token = config.credentials.token;
+    
+    // Log the username being used
+    console.log(`[@service:jenkins:constructor] Using Jenkins API token auth with username: ${username}`);
+    
+    // Username:token string format for Basic Auth
+    const authString = `${username}:${token}`;
+    this.authHeader = `Basic ${Buffer.from(authString).toString('base64')}`;
+    
+    // For debugging, log first few chars of the encoded credentials (safely)
+    const encodedValue = Buffer.from(authString).toString('base64');
+    console.log(`[@service:jenkins:constructor] Auth string format (username:token) encoded to: ${encodedValue.substring(0, 5)}...`);
 
     // Log configuration (without sensitive data)
     console.log(`[@service:jenkins:constructor] Configuration:`, {
@@ -56,6 +56,9 @@ export class JenkinsProvider implements CICDProvider {
       // Use the correct crumb issuer endpoint
       const crumbUrl = `${this.baseUrl}crumbIssuer/api/json`;
       console.log(`[@service:jenkins:getCrumb] Crumb URL: ${crumbUrl}`);
+      
+      // Try to directly access the crumbIssuer page first to debug authentication
+      console.log(`[@service:jenkins:getCrumb] Testing direct access to crumbIssuer...`);
 
       const response = await fetch(crumbUrl, {
         method: 'GET',
