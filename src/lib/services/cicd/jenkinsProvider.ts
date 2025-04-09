@@ -124,9 +124,12 @@ export class JenkinsProvider implements CICDProvider {
       console.log(`[@service:jenkins:createJob] Creating job in folder: ${folder}`);
       console.log(`[@service:jenkins:createJob] Final URL: ${createUrl}`);
 
-      // Create job with 30s timeout
+      // Create job with 15s timeout - shorter timeout to fail fast
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      const timeoutId = setTimeout(() => {
+        console.log(`[@service:jenkins:createJob] Job creation timed out after 15 seconds. Aborting request.`);
+        controller.abort();
+      }, 15000);
 
       try {
         // Prepare headers with crumb if available
@@ -181,8 +184,10 @@ export class JenkinsProvider implements CICDProvider {
       } catch (error: any) {
         clearTimeout(timeoutId);
         if (error.name === 'AbortError') {
-          throw new Error('Jenkins job creation timed out after 30 seconds');
+          console.error('[@service:jenkins:createJob] Request aborted due to timeout');
+          throw new Error('Jenkins job creation timed out after 15 seconds. The server is not responding.');
         }
+        console.error('[@service:jenkins:createJob] Error during fetch:', error);
         throw error;
       }
     } catch (error: any) {
