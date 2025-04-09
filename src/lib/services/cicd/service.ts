@@ -43,15 +43,13 @@ export class CICDService {
     try {
       console.log(`[@service:cicd:service] Creating job: ${params.name}`);
 
-      // Generate the Jenkins pipeline using the generator
+      // Generate the pipeline using the factory
       let pipelineScript = '';
       
       try {
-        // Import and use the pipeline generator if this is a Jenkins provider
-        if (this.provider instanceof (await import('./jenkinsProvider')).JenkinsProvider) {
-          console.log(`[@service:cicd:service] Generating Jenkins pipeline for job: ${params.name}`);
-          const { generateJenkinsPipeline } = await import('./jenkinsPipeline');
-          const pipelineConfig = generateJenkinsPipeline(params);
+        if (this.provider) {
+          console.log(`[@service:cicd:service] Generating pipeline for job: ${params.name} using provider type: ${this.provider.type}`);
+          const pipelineConfig = await CICDProviderFactory.generatePipeline(this.provider.type, params);
           pipelineScript = pipelineConfig.pipeline;
           
           console.log(`[@service:cicd:service] Successfully generated pipeline script (${pipelineScript.length} chars)`);
