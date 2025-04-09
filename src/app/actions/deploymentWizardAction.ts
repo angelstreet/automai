@@ -35,12 +35,6 @@ export async function createDeploymentWithCICD(formData: CICDDeploymentFormData)
 
         const cicdService = new CICDService();
 
-        // Use the factory to create the appropriate provider
-        const provider = CICDProviderFactory.createProvider(providerConfig);
-        if (!provider) {
-          throw new Error(`Unsupported CICD provider type: ${formData.provider.type}`);
-        }
-
         await cicdService.initialize(providerConfig);
 
         // Create Jenkins job
