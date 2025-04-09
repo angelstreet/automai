@@ -44,3 +44,136 @@ export const ERROR_MESSAGES = {
 
 // CICD Module Constants
 // These are temporary during migration and will be removed after React Query implementation
+
+import {
+  CICDProviderType,
+  CICDProviderTypeConfig,
+  CICDProviderPayload,
+} from '@/types-new/cicd-types';
+
+export const CICD_PROVIDER_CONFIGS: Record<CICDProviderType, CICDProviderTypeConfig> = {
+  gitlab: {
+    fields: {
+      url: {
+        show: false,
+        disabled: true,
+        value: 'https://gitlab.com',
+      },
+      port: {
+        show: false,
+        disabled: true,
+        value: '443',
+      },
+      name: {
+        show: true,
+        required: true,
+      },
+      owner: {
+        show: true,
+        required: true,
+        placeholder: 'Enter GitLab owner or group name',
+      },
+      repository: {
+        show: true,
+        required: true,
+        placeholder: 'Enter repository name',
+      },
+      repository_url: {
+        show: false,
+      },
+    },
+    transformPayload: (data): CICDProviderPayload => ({
+      name: data.name,
+      type: 'gitlab',
+      url: 'https://gitlab.com',
+      auth_type: 'token',
+      credentials: {
+        owner: data.owner,
+        repository: data.repository,
+        token: data.token,
+      },
+    }),
+  },
+  github: {
+    fields: {
+      url: {
+        show: false,
+        disabled: true,
+        value: 'https://api.github.com',
+      },
+      port: {
+        show: false,
+        disabled: true,
+        value: '443',
+      },
+      name: {
+        show: true,
+        required: true,
+      },
+      owner: {
+        show: false,
+      },
+      repository: {
+        show: false,
+      },
+      repository_url: {
+        show: true,
+        required: true,
+        placeholder: 'https://github.com/owner/repository',
+      },
+    },
+    transformPayload: (data): CICDProviderPayload => {
+      // Extract owner and repo from repository URL
+      const repoUrl = new URL(data.repository_url);
+      const [owner, repository] = repoUrl.pathname.split('/').filter(Boolean);
+
+      return {
+        name: data.name,
+        type: 'github',
+        url: 'https://api.github.com',
+        auth_type: 'token',
+        credentials: {
+          owner,
+          repository,
+          token: data.token,
+        },
+      };
+    },
+  },
+  jenkins: {
+    fields: {
+      url: {
+        show: true,
+        required: true,
+        placeholder: 'https://jenkins.example.com',
+      },
+      port: {
+        show: true,
+        required: true,
+        placeholder: '8080',
+      },
+      name: {
+        show: true,
+        required: true,
+      },
+      owner: {
+        show: false,
+      },
+      repository: {
+        show: false,
+      },
+      repository_url: {
+        show: false,
+      },
+    },
+    transformPayload: (data): CICDProviderPayload => ({
+      name: data.name,
+      type: 'jenkins',
+      url: data.url,
+      auth_type: 'token',
+      credentials: {
+        token: data.token,
+      },
+    }),
+  },
+};

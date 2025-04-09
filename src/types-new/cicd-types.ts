@@ -6,7 +6,7 @@
 /**
  * CICD provider type
  */
-export type CICDProviderType = 'jenkins' | 'github' | 'gitlab' | 'azure' | 'custom';
+export type CICDProviderType = 'gitlab' | 'github' | 'jenkins';
 
 /**
  * CICD authentication type
@@ -167,4 +167,26 @@ export interface CICDParameter {
 export interface CICDTrigger {
   type: 'webhook' | 'schedule' | 'manual';
   config?: Record<string, any>;
+}
+
+export interface CICDProviderFieldConfig {
+  show: boolean;
+  disabled?: boolean;
+  value?: string;
+  required?: boolean;
+  placeholder?: string;
+}
+
+export interface CICDProviderFields {
+  url: CICDProviderFieldConfig;
+  port: CICDProviderFieldConfig;
+  name: CICDProviderFieldConfig;
+  owner: CICDProviderFieldConfig;
+  repository: CICDProviderFieldConfig;
+  repository_url: CICDProviderFieldConfig;
+}
+
+export interface CICDProviderTypeConfig {
+  fields: CICDProviderFields;
+  transformPayload: (data: any) => CICDProviderPayload;
 }
