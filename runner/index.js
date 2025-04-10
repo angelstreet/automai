@@ -27,23 +27,26 @@ async function processJob() {
   if (!job) return;
 
   const { config_id, input_overrides } = JSON.parse(job);
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('configs')
     .select('config_json')
     .eq('id', config_id)
     .single();
-  if (!data) return;
+  if (error || !data) {
+    console.error(`Failed to fetch config ${config_id}: ${error?.message}`);
+    return;
+  }
 
   const config = data.config_json;
-  const hosts = config.hosts;
-  const scripts = config.scripts
+  const hosts = config.hosts || [];
+  const scripts = (config.scripts || [])
     .map((script) => `${script.path} ${script.parameters}`)
     .join(' && ');
 
   for (const host of hosts) {
-    let sshKeyOrPass = host.key || host.password; // Handle key or password
-    if (host.authType === 'privateKey' && sshKeyOrPass.includes(':')) {
-      sshKeyOrPass = decrypt(sshKeyOrPass, process.env.ENCRYPTION_KEY); // Decrypt if encrypted
+    let sshKeyOrPass = host.key || host.password;
+    if (host.authType === 'privateKey' && sshKeyOrPass?.includes(':')) {
+      sshKeyOrPass = decrypt(sshKeyOrPass, process.env.ENCRYPTION_KEY);
     }
 
     const script = host.os === 'windows' ? `cmd.exe /c "${scripts}"` : scripts;
@@ -75,7 +78,7 @@ async function processJob() {
       })
       .connect({
         host: host.ip,
-        port: host.port,
+        port: host.port || 22,
         username: host.username,
         [host.authType === 'privateKey' ? 'privateKey' : 'password']: sshKeyOrPass,
       });
@@ -83,18 +86,29 @@ async function processJob() {
 }
 
 async function setupSchedules() {
-  const { data } = await supabase.from('configs').select('id, config_json');
+  const { data, error } = await supabase.from('configs').select('id, config_json');
+  if (error) {
+    console.error(`Failed to fetch configs for scheduling: ${error.message}`);
+    return;
+  }
+  if (!data || data.length === 0) {
+    console.log('No configs found for scheduling.');
+    return;
+  }
+
   data.forEach(({ id, config_json }) => {
     if (config_json.schedule && config_json.schedule !== 'now') {
       cron.schedule(config_json.schedule, async () => {
         await redis.lpush('jobs_queue', JSON.stringify({ config_id: id, input_overrides: {} }));
+        console.log(`Scheduled job queued for config ${id}`);
       });
     } else if (config_json.schedule === 'now') {
       redis.lpush('jobs_queue', JSON.stringify({ config_id: id, input_overrides: {} }));
+      console.log(`Immediate job queued for config ${id}`);
     }
   });
 }
 
 setInterval(processJob, 5000);
-setupSchedules();
+setupSchedules().catch((err) => console.error('Setup schedules failed:', err));
 console.log('Worker running...');
