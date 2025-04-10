@@ -27,7 +27,7 @@ const REQUEST_THROTTLE_MS = 1000;
 export interface FormData {
   name: string;
   description: string;
-  type: 'ssh' | 'docker' | 'custom';
+  type: 'ssh';
   ip: string;
   port: string;
   username: string;
@@ -46,9 +46,7 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
   const t = useTranslations('hosts');
   const c = useTranslations('common');
 
-  const [_connectionType, setConnectionType] = useState<'ssh' | 'docker' | 'custom'>(
-    formData.type as 'ssh' | 'docker' | 'custom',
-  );
+  const [_connectionType, setConnectionType] = useState<'ssh'>('ssh');
 
   // State variables for testing status
   const [testing, setTesting] = useState(false);
@@ -62,12 +60,12 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
   const [lastTestResult, setLastTestResult] = useState<any>(null);
 
   const handleTypeChange = (value: string) => {
-    setConnectionType(value as 'ssh' | 'docker' | 'custom');
+    setConnectionType('ssh');
 
-    const defaultPort = value === 'ssh' ? '22' : value === 'docker' ? '2375' : '9000';
+    const defaultPort = '22';
     onChange({
       ...formData,
-      type: value as 'ssh' | 'docker' | 'custom',
+      type: 'ssh',
       port: defaultPort,
     });
   };
@@ -269,8 +267,6 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ssh">{t('ssh')}</SelectItem>
-            <SelectItem value="docker">{t('docker')}</SelectItem>
-            <SelectItem value="custom">{c('custom')}</SelectItem>
           </SelectContent>
         </Select>
       </div>
