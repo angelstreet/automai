@@ -16,8 +16,6 @@ export { UserProvider, SidebarProvider, TeamProvider, PermissionProvider } from 
 export { useTeam } from '@/hooks/useTeam';
 export { usePermission } from '@/hooks/usePermission';
 export { useHost } from '@/hooks/useHost';
-export { useCICD } from '@/hooks/useCICD';
-export { useDeployment } from '@/hooks/useDeployment';
 export { useRepository } from '@/hooks/useRepository';
 export { useSidebar } from '@/hooks/useSidebar';
 export { useUser } from '@/hooks/useUser';
@@ -71,8 +69,6 @@ export const userSelectors = {
  *    - useResourceLimit
  *    - usePermission
  *    - useHost
- *    - useCICD
- *    - useDeployment
  *    - useRepository
  *    - useSidebar
  *    - useUser

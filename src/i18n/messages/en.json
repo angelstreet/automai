@@ -382,6 +382,7 @@
   },
   "deployment": {
     "new_button": "New Deployment",
+    "wizard_job_view": "Job View",
     "refresh_error": "Failed to refresh deployments",
     "created": "Deployment has been created successfully",
     "none_title": "No deployments found",

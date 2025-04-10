@@ -16,4 +16,3 @@ export * from './useTeamMemberManagement';
 export * from './useTeamResources';
 export * from './useUser';
 export * from './useHost';
-export * from './useDeployment';

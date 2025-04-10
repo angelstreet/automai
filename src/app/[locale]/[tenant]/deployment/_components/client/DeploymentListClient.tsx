@@ -22,7 +22,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
 import { useToast } from '@/components/shadcn/use-toast';
-import { useDeployment } from '@/hooks';
 import { getFormattedTime } from '@/lib/utils/deploymentUtils';
 import { Deployment } from '@/types/component/deploymentComponentType';
 import { Repository } from '@/types/component/repositoryComponentType';
@@ -43,12 +42,6 @@ export function DeploymentListClient({
   onViewDeployment,
 }: DeploymentListProps) {
   // Use the deployment hook to get data (initially using initialDeployments/initialRepositories)
-  const {
-    deployments,
-    isLoading: _isLoadingData,
-    deleteDeployment,
-    runDeployment,
-  } = useDeployment();
 
   const { toast } = useToast();
   const router = useRouter();

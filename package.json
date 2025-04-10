@@ -67,6 +67,7 @@
     "@types/js-cookie": "^3.0.6",
     "@types/jsonwebtoken": "^9.0.9",
     "@types/uuid": "10.0.0",
+    "@upstash/redis": "1.34.7",
     "@xterm/addon-attach": "^0.12.0-beta.98",
     "@xterm/addon-fit": "^0.11.0-beta.98",
     "@xterm/addon-search": "^0.16.0-beta.98",

@@ -5,7 +5,7 @@ import React, { useEffect, useContext } from 'react';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
 import { UserContext } from '@/context/UserContext';
-import { useHost, useCICD } from '@/hooks';
+import { useHost } from '@/hooks';
 import { useRepository } from '@/hooks/useRepository';
 import { useTeam } from '@/hooks/useTeam';
 import { useUser } from '@/hooks/useUser';
@@ -33,12 +33,15 @@ export function DeploymentWizardDialogClient({
   const { user } = useUser(null, 'DeploymentWizardDialogClient');
 
   // Only use the repository hook if no repositories were provided
-  const { repositories: fetchedRepositories, isLoading: isLoadingRepositories } = useRepository({
-    enabled: !initialRepositories || initialRepositories.length === 0,
-  });
+  const { repositories: fetchedRepositories, isLoadingRepositories } = useRepository(
+    'DeploymentWizardDialogClient',
+  );
 
   // Use the provided repositories if available, otherwise use the fetched ones
   const repositories = initialRepositories || fetchedRepositories || [];
+
+  // Define the combined loading state
+  const isLoading = isLoadingHosts || isLoadingRepositories;
 
   const handleDeploymentCreated = () => {
     // Close the dialog
@@ -58,7 +61,7 @@ export function DeploymentWizardDialogClient({
 
   // Get user directly from context (more reliable method)
   const { user: contextUser } = useContext(UserContext);
-  
+
   // Add an effect to log both user sources when dialog opens
   useEffect(() => {
     if (open) {
@@ -71,7 +74,7 @@ export function DeploymentWizardDialogClient({
         // Context data (should be more reliable)
         contextUserExists: !!contextUser,
         contextUserId: contextUser?.id,
-        contextTenantName: contextUser?.tenant_name
+        contextTenantName: contextUser?.tenant_name,
       });
     }
   }, [open, user, contextUser]);
