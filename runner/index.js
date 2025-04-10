@@ -26,7 +26,7 @@ async function processJob() {
   const job = await redis.rpop('jobs_queue');
   if (!job) return;
 
-  const { config_id, input_overrides } = JSON.parse(job);
+  const { config_id, input_overrides: _input_overrides } = JSON.parse(job);
   const { data, error } = await supabase
     .from('jobs_configuration')
     .select('config_json')
@@ -57,9 +57,11 @@ async function processJob() {
           if (err) {
             await supabase.from('jobs_run').insert({
               config_id,
-              user_id: config.user_id,
               status: 'failed',
               output: { stderr: err.message },
+              created_at: new Date().toISOString(),
+              started_at: new Date().toISOString(),
+              completed_at: new Date().toISOString(),
             });
             conn.end();
             return;
@@ -69,9 +71,14 @@ async function processJob() {
             .on('data', (data) => (output.stdout += data))
             .stderr.on('data', (data) => (output.stderr += data))
             .on('close', async () => {
-              await supabase
-                .from('jobs_run')
-                .insert({ config_id, user_id: config.user_id, status: 'success', output });
+              await supabase.from('jobs_run').insert({
+                config_id,
+                status: 'success',
+                output,
+                created_at: new Date().toISOString(),
+                started_at: new Date().toISOString(),
+                completed_at: new Date().toISOString(),
+              });
               conn.end();
             });
         });
@@ -86,7 +93,7 @@ async function processJob() {
 }
 
 async function setupSchedules() {
-  const { data, error } = await supabase.from('jobs_configuration').select('id, config_json');
+  const { data, error } = await supabase.from('jobs_configuration').select('id, config');
   if (error) {
     console.error(`Failed to fetch configs for scheduling: ${error.message}`);
     return;
