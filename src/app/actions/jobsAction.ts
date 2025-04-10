@@ -375,24 +375,44 @@ export async function startJob(
  */
 export async function deleteJob(id: string) {
   try {
-    console.log(`[@action:jobsAction:deleteJob] Deleting job: ${id}`);
+    console.log(`[@action:jobsAction:deleteJob] START Deleting job with ID: "${id}"`);
+
+    if (!id) {
+      console.error('[@action:jobsAction:deleteJob] ERROR: No ID provided for deletion');
+      return {
+        success: false,
+        error: 'No job ID provided for deletion',
+      };
+    }
+
+    console.log(`[@action:jobsAction:deleteJob] Getting cookies for auth context`);
     const cookieStore = await cookies();
 
+    console.log(`[@action:jobsAction:deleteJob] Importing deleteJobConfiguration function`);
     const { deleteJobConfiguration } = await import('@/lib/db/jobsConfigurationDb');
+
+    console.log(`[@action:jobsAction:deleteJob] Calling deleteJobConfiguration with ID: "${id}"`);
     const result = await deleteJobConfiguration(id, cookieStore);
+    console.log(`[@action:jobsAction:deleteJob] deleteJobConfiguration result:`, result);
 
     if (!result.success) {
+      console.error(
+        `[@action:jobsAction:deleteJob] ERROR: Delete operation failed: ${result.error}`,
+      );
       throw new Error(`Failed to delete job: ${result.error}`);
     }
 
-    console.log(`[@action:jobsAction:deleteJob] Job deleted successfully: ${id}`);
+    console.log(
+      `[@action:jobsAction:deleteJob] SUCCESS: Job deleted successfully with ID: "${id}"`,
+    );
 
     return {
       success: true,
       message: 'Job deleted successfully',
     };
   } catch (error: any) {
-    console.error('[@action:jobsAction:deleteJob] Error:', {
+    console.error('[@action:jobsAction:deleteJob] CAUGHT ERROR:', {
+      id: id,
       message: error.message,
       stack: error.stack,
     });
@@ -469,53 +489,65 @@ export async function getAllJobs() {
     }
 
     const teamId = activeTeamResult.id;
-    
+
     // Import getJobConfigsByTeamId only when needed
     const { getJobConfigsByTeamId } = await import('@/lib/db/jobsConfigurationDb');
-    
+
     // Fetch job configurations from the database
     const result = await getJobConfigsByTeamId(teamId, cookieStore);
 
     if (!result.success) {
-      console.error('[@action:jobsAction:getAllJobs] Error fetching job configurations:', result.error);
+      console.error(
+        '[@action:jobsAction:getAllJobs] Error fetching job configurations:',
+        result.error,
+      );
       return { success: false, error: result.error, data: [] };
     }
 
-    console.log('[@action:jobsAction:getAllJobs] Fetched configurations count:', result.data?.length || 0);
-    
+    console.log(
+      '[@action:jobsAction:getAllJobs] Fetched configurations count:',
+      result.data?.length || 0,
+    );
+
     // Transform job configuration data to match expected deployment format with camelCase fields
-    const transformedData = result.data?.map(config => {
-      // Get the latest run to determine status
-      const latestRun = config.jobs_run && config.jobs_run.length > 0
-        ? config.jobs_run.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
-        : null;
-      
-      return {
-        id: config.id,
-        name: config.name,
-        description: config.description,
-        repositoryId: config.repository_id || '',
-        teamId: config.team_id,
-        tenantId: config.tenant_id,
-        status: latestRun?.status || 'pending',
-        userId: config.creator_id,
-        // Convert snake_case to camelCase for dates
-        createdAt: config.created_at,
-        updatedAt: config.updated_at,
-        startedAt: latestRun?.started_at || null,
-        completedAt: latestRun?.completed_at || null,
-        scheduledTime: config.scheduled_time || null,
-        scheduleType: config.schedule_type || 'now',
-        // Additional fields if needed
-        scriptsPath: Array.isArray(config.scripts_path) ? config.scripts_path : [],
-        scriptsParameters: Array.isArray(config.scripts_parameters) ? config.scripts_parameters : [],
-        hostIds: Array.isArray(config.host_ids) ? config.host_ids : [],
-        cronExpression: config.cron_expression,
-        repeatCount: config.repeat_count,
-        environmentVars: config.environment_vars || []
-      };
-    }) || [];
-    
+    const transformedData =
+      result.data?.map((config) => {
+        // Get the latest run to determine status
+        const latestRun =
+          config.jobs_run && config.jobs_run.length > 0
+            ? config.jobs_run.sort(
+                (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+              )[0]
+            : null;
+
+        return {
+          id: config.id,
+          name: config.name,
+          description: config.description,
+          repositoryId: config.repository_id || '',
+          teamId: config.team_id,
+          tenantId: config.tenant_id,
+          status: latestRun?.status || 'pending',
+          userId: config.creator_id,
+          // Convert snake_case to camelCase for dates
+          createdAt: config.created_at,
+          updatedAt: config.updated_at,
+          startedAt: latestRun?.started_at || null,
+          completedAt: latestRun?.completed_at || null,
+          scheduledTime: config.scheduled_time || null,
+          scheduleType: config.schedule_type || 'now',
+          // Additional fields if needed
+          scriptsPath: Array.isArray(config.scripts_path) ? config.scripts_path : [],
+          scriptsParameters: Array.isArray(config.scripts_parameters)
+            ? config.scripts_parameters
+            : [],
+          hostIds: Array.isArray(config.host_ids) ? config.host_ids : [],
+          cronExpression: config.cron_expression,
+          repeatCount: config.repeat_count,
+          environmentVars: config.environment_vars || [],
+        };
+      }) || [];
+
     return { success: true, data: transformedData };
   } catch (error: any) {
     console.error('[@action:jobsAction:getAllJobs] Error:', error);

@@ -25,17 +25,37 @@ const adaptHostsForDeployment = (systemHosts: SystemHost[]): HostType[] => {
   if (!systemHosts || !Array.isArray(systemHosts)) {
     return [];
   }
-  return systemHosts.map((host) => ({
-    id: host.id,
-    name: host.name,
-    environment: host.is_windows ? 'Windows' : 'Linux', // Use OS type as environment
-    status: (host.status === 'connected' ? 'online' : 'offline') as any, // Type assertion
-    ip: host.ip,
-    type: host.type || 'ssh',
-    created_at: host.created_at || new Date().toISOString(),
-    updated_at: host.updated_at || new Date().toISOString(),
-    is_windows: host.is_windows || false,
-  }));
+  
+  return systemHosts.map((host) => {
+    // Base host object with essential properties
+    const adaptedHost: any = {
+      id: host.id,
+      name: host.name,
+      environment: host.is_windows ? 'Windows' : 'Linux', // Use OS type as environment
+      status: (host.status === 'connected' ? 'online' : 'offline') as any, // Type assertion
+      ip: host.ip,
+      type: host.type || 'ssh',
+      created_at: host.created_at || new Date().toISOString(),
+      updated_at: host.updated_at || new Date().toISOString(),
+      is_windows: host.is_windows || false,
+      
+      // Authentication properties
+      username: host.user || host.username || 'user',
+      port: host.port || 22,
+      auth_type: host.auth_type || 'password'
+    };
+    
+    // Add authentication details based on auth_type
+    if (host.auth_type === 'password' && host.password) {
+      adaptedHost.password = host.password;
+    } else if (host.auth_type === 'privateKey' && host.private_key) {
+      adaptedHost.private_key = host.private_key;
+    }
+    
+    console.log(`[adaptHostsForDeployment] Adapted host ${host.id} (${host.name}), auth_type: ${adaptedHost.auth_type}, has_password: ${!!adaptedHost.password}, has_key: ${!!adaptedHost.private_key}`);
+    
+    return adaptedHost;
+  });
 };
 
 interface DeploymentWizardProps {
@@ -568,14 +588,24 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
             }),
             hosts: deploymentData.hostIds.map((hostId) => {
               const host = availableHosts.find((h) => h.id === hostId);
-              return {
+              const hostConfig = {
                 id: hostId,
                 name: host?.name || 'Unknown',
                 ip: host?.ip || '',
-                username: (host as any)?.username || 'user',
+                username: (host as any)?.username || (host as any)?.user || 'user',
                 port: (host as any)?.port || 22,
                 os: (host as any)?.is_windows ? 'windows' : 'linux',
+                authType: (host as any)?.auth_type || 'password'
               };
+              
+              // Include auth credentials based on auth type
+              if ((host as any)?.auth_type === 'password' && (host as any)?.password) {
+                hostConfig['password'] = (host as any).password;
+              } else if ((host as any)?.auth_type === 'privateKey' && (host as any)?.private_key) {
+                hostConfig['key'] = (host as any).private_key;
+              }
+              
+              return hostConfig;
             }),
             env: deploymentData.environmentVars.reduce(
               (acc, curr) => {

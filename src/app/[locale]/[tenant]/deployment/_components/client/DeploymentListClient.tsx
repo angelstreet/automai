@@ -110,17 +110,41 @@ export function DeploymentListClient({
 
   const handleDeleteClick = (deployment: Deployment, e: React.MouseEvent) => {
     e.stopPropagation();
+    console.log('[DeploymentListClient:handleDeleteClick] Selected deployment for deletion:', {
+      id: deployment.id,
+      name: deployment.name,
+    });
     setSelectedDeployment(deployment);
     setIsDeleteDialogOpen(true);
   };
 
   const handleConfirmDelete = async () => {
-    if (!selectedDeployment) return;
+    if (!selectedDeployment) {
+      console.error(
+        '[DeploymentListClient:handleConfirmDelete] No deployment selected for deletion',
+      );
+      return;
+    }
+
+    console.log('[DeploymentListClient:handleConfirmDelete] Confirming deletion of deployment:', {
+      id: selectedDeployment.id,
+      name: selectedDeployment.name,
+    });
+
     try {
       setActionInProgress(selectedDeployment.id);
+      console.log(
+        '[DeploymentListClient:handleConfirmDelete] Calling deleteJob with ID:',
+        selectedDeployment.id,
+      );
       const result = await deleteJob(selectedDeployment.id);
+      console.log('[DeploymentListClient:handleConfirmDelete] Delete result:', result);
 
       if (result && result.success) {
+        console.log(
+          '[DeploymentListClient:handleConfirmDelete] Delete successful for ID:',
+          selectedDeployment.id,
+        );
         toast({
           title: 'Deployment Deleted',
           description: 'Successfully deleted.',
@@ -133,6 +157,10 @@ export function DeploymentListClient({
         // Dispatch a single refresh event
         window.dispatchEvent(new Event(DeploymentEvents.REFRESH_DEPLOYMENTS));
       } else {
+        console.error('[DeploymentListClient:handleConfirmDelete] Delete failed:', {
+          id: selectedDeployment.id,
+          error: result?.error || 'Unknown error',
+        });
         toast({
           title: 'Error',
           description: result?.error || 'Failed to delete',
