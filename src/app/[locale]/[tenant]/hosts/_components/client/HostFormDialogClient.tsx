@@ -44,7 +44,7 @@ interface HostFormDialogClientProps {
 }
 
 export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormDialogClientProps) {
-  const { createHost, testConnection } = useHost();
+  const { createHost, testConnection, testDirectConnection } = useHost();
   const t = useTranslations('hosts');
   const c = useTranslations('common');
 
@@ -138,8 +138,9 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
         },
       );
 
-      // Actually test the connection using testConnection from useHost hook
-      const result = await testConnection(testData);
+      // For new hosts, we need to test the connection directly without a host ID
+      // We'll use the direct test function from the hook
+      const result = await testDirectConnection(testData);
 
       // Store the result for later use
       setLastTestResult(result);
@@ -162,14 +163,14 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
         }
       } else {
         // Handle error response
-        setTestError(result.error || c('errors.testFailed'));
+        setTestError(result.error || c('error_test_failed'));
       }
     } catch (error) {
       console.error(
         '[@client:hosts:HostFormDialogClient:testHostConnection] Error testing connection:',
         error,
       );
-      setTestError(error instanceof Error ? error.message : c('errors.testFailed'));
+      setTestError(error instanceof Error ? error.message : c('error_test_failed'));
     } finally {
       setTesting(false);
     }
@@ -444,7 +445,7 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
         {testError && (
           <Alert variant="destructive" className="py-1">
             <AlertCircle className="h-3 w-3" />
-            <AlertTitle className="text-sm">{c('connectionFailed')}</AlertTitle>
+            <AlertTitle className="text-sm">{c('connection_failed')}</AlertTitle>
             <AlertDescription className="text-xs">{testError}</AlertDescription>
           </Alert>
         )}

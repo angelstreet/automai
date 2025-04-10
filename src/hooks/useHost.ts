@@ -10,6 +10,7 @@ import {
   deleteHost,
   testHostConnection,
   getHostById,
+  testConnection,
 } from '@/app/actions/hostsAction';
 import { useToast } from '@/components/shadcn/use-toast';
 import { HostInput } from '@/types/context/hostContextType';
@@ -206,6 +207,52 @@ export function useHost(componentName = 'unknown') {
     },
   });
 
+  // Test direct connection mutation - for testing new host configurations
+  const testDirectConnectionMutation = useMutation({
+    mutationFn: (data: {
+      type: string;
+      ip: string;
+      port?: number;
+      username?: string;
+      authType?: 'password' | 'privateKey';
+      password?: string;
+      privateKey?: string;
+    }) => {
+      console.log('[@hook:useHost:testDirectConnection] Testing connection with config:', {
+        type: data.type,
+        ip: data.ip,
+        port: data.port,
+        username: data.username,
+        authType: data.authType,
+        hasPassword: !!data.password,
+        hasPrivateKey: !!data.privateKey,
+      });
+      return testConnection(data);
+    },
+    onSuccess: (response: {
+      success: boolean;
+      error?: string;
+      message?: string;
+      is_windows?: boolean;
+    }) => {
+      // Don't show success toast to avoid UI clutter, but log the result
+      console.log('[@hook:useHost:testDirectConnection] Test result:', {
+        success: response.success,
+        error: response.error,
+        is_windows: response.is_windows,
+      });
+      return response;
+    },
+    onError: (error: any) => {
+      console.error('[@hook:useHost:testDirectConnection] Error:', error);
+      // Don't show error toast - let the UI handle error display
+      return {
+        success: false,
+        error: error.message || 'Failed to test connection',
+      };
+    },
+  });
+
   return {
     // Data
     hosts: hostsResponse?.data || [],
@@ -223,11 +270,12 @@ export function useHost(componentName = 'unknown') {
     updateHost: updateHostMutation.mutateAsync,
     deleteHost: deleteHostMutation.mutateAsync,
     testConnection: testConnectionMutation.mutateAsync,
+    testDirectConnection: testDirectConnectionMutation.mutateAsync,
 
     // Mutation status
     isCreating: createHostMutation.isPending,
     isUpdating: updateHostMutation.isPending,
     isDeleting: deleteHostMutation.isPending,
-    isTesting: testConnectionMutation.isPending,
+    isTesting: testConnectionMutation.isPending || testDirectConnectionMutation.isPending,
   };
 }
