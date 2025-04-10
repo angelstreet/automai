@@ -17,9 +17,6 @@ export * from './sshService';
 export * from './repositoryService';
 export * from './gitService';
 
-// CICD services
-export * from './cicdService';
-
 // HTTP and websocket services
 export * from './terminalService';
 export * from './websocketService';

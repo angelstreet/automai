@@ -47,7 +47,6 @@ export interface DeploymentData {
     slack: boolean;
   };
   autoStart: boolean;
-  cicd_provider_id: string;
   jenkinsConfig?: any;
 }
 

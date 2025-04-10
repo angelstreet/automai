@@ -17,4 +17,3 @@ export * from './useTeamResources';
 export * from './useUser';
 export * from './useHost';
 export * from './useDeployment';
-export * from './useCICD';

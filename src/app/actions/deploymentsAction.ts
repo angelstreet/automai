@@ -6,7 +6,6 @@ import { cache } from 'react';
 
 import { getUserActiveTeam } from '@/app/actions/teamAction';
 import { getUser } from '@/app/actions/userAction';
-import cicdDb from '@/lib/db/cicdDb';
 import {
   getDeployments as dbGetDeployments,
   getDeploymentById as dbGetDeploymentById,
@@ -14,17 +13,12 @@ import {
   updateDeployment as dbUpdateDeployment,
   deleteDeployment as dbDeleteDeployment,
 } from '@/lib/db/deploymentDb';
-import { CICDService } from '@/lib/services/cicd/service';
 import {
   Deployment,
   DeploymentFormData,
   DeploymentStatus,
 } from '@/types/component/deploymentComponentType';
 import { AuthUser, User } from '@/types/service/userServiceType';
-
-// Initialize CICD service
-const cicdService = new CICDService();
-
 /**
  * Get all deployments for the current user
  */

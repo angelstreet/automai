@@ -21,7 +21,6 @@ export const NAVIGATION = {
   dashboard: '/dashboard',
   repositories: '/repositories',
   deployments: '/deployment',
-  cicd: '/cicd',
   hosts: '/hosts',
   team: '/team',
   settings: '/settings',

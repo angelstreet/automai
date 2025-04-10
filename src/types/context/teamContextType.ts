@@ -86,7 +86,6 @@ export interface TeamDetails {
   resourceCounts: {
     repositories: number;
     hosts: number;
-    cicd: number;
     deployments: number;
   };
 }
@@ -145,8 +144,6 @@ export interface ResourcePermissions {
   hosts: MemberPermission;
   repositories: MemberPermission;
   deployments: MemberPermission;
-  cicd_providers: MemberPermission;
-  cicd_jobs: MemberPermission;
 }
 
 export interface RoleTemplate {
@@ -194,24 +191,6 @@ export const ROLE_TEMPLATES: Record<string, ResourcePermissions> = {
       delete_own: true,
       execute: true,
     },
-    cicd_providers: {
-      select: true,
-      insert: true,
-      update: true,
-      delete: true,
-      update_own: true,
-      delete_own: true,
-      execute: true,
-    },
-    cicd_jobs: {
-      select: true,
-      insert: true,
-      update: true,
-      delete: true,
-      update_own: true,
-      delete_own: true,
-      execute: true,
-    },
   },
   developer: {
     hosts: {
@@ -233,24 +212,6 @@ export const ROLE_TEMPLATES: Record<string, ResourcePermissions> = {
       execute: true,
     },
     deployments: {
-      select: true,
-      insert: true,
-      update: true,
-      delete: false,
-      update_own: true,
-      delete_own: false,
-      execute: true,
-    },
-    cicd_providers: {
-      select: true,
-      insert: true,
-      update: true,
-      delete: false,
-      update_own: true,
-      delete_own: false,
-      execute: true,
-    },
-    cicd_jobs: {
       select: true,
       insert: true,
       update: true,
@@ -288,24 +249,6 @@ export const ROLE_TEMPLATES: Record<string, ResourcePermissions> = {
       delete_own: true,
       execute: true,
     },
-    cicd_providers: {
-      select: true,
-      insert: false,
-      update: false,
-      delete: false,
-      update_own: true,
-      delete_own: false,
-      execute: false,
-    },
-    cicd_jobs: {
-      select: true,
-      insert: false,
-      update: false,
-      delete: false,
-      update_own: true,
-      delete_own: false,
-      execute: true,
-    },
   },
   viewer: {
     hosts: {
@@ -327,24 +270,6 @@ export const ROLE_TEMPLATES: Record<string, ResourcePermissions> = {
       execute: false,
     },
     deployments: {
-      select: true,
-      insert: false,
-      update: false,
-      delete: false,
-      update_own: false,
-      delete_own: false,
-      execute: false,
-    },
-    cicd_providers: {
-      select: true,
-      insert: false,
-      update: false,
-      delete: false,
-      update_own: false,
-      delete_own: false,
-      execute: false,
-    },
-    cicd_jobs: {
       select: true,
       insert: false,
       update: false,
@@ -382,24 +307,6 @@ export const ROLE_TEMPLATES: Record<string, ResourcePermissions> = {
       delete_own: true,
       execute: true,
     },
-    cicd_providers: {
-      select: true,
-      insert: false,
-      update: false,
-      delete: false,
-      update_own: false,
-      delete_own: false,
-      execute: false,
-    },
-    cicd_jobs: {
-      select: true,
-      insert: true,
-      update: false,
-      delete: false,
-      update_own: true,
-      delete_own: true,
-      execute: true,
-    },
   },
 };
 
@@ -407,8 +314,6 @@ export const RESOURCE_LABELS: Record<ResourceType | string, string> = {
   hosts: 'Hosts',
   repositories: 'Repositories',
   deployments: 'Deployments',
-  cicd_providers: 'CI/CD Providers',
-  cicd_jobs: 'CI/CD Jobs',
 };
 
 export const PERMISSION_LABELS: Record<keyof MemberPermission, string> = {

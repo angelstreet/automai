@@ -27,12 +27,8 @@ export default function TeamOverview({ team }: TeamOverviewProps) {
   const resourceCounts = team?.resourceCounts || {
     repositories: 0,
     hosts: 0,
-    cicd: 0,
     deployments: 0,
   };
-
-  // Check for both cicd and cicdProviders fields to handle different data structures
-  const cicdCount = resourceCounts.cicd || w0;
 
   // Create resource cards for the overview
   const resourceCards = [
@@ -45,11 +41,6 @@ export default function TeamOverview({ team }: TeamOverviewProps) {
       type: 'host',
       name: t('resources_hosts'),
       count: resourceCounts.hosts,
-    },
-    {
-      type: 'cicd',
-      name: t('resources_cicd'),
-      count: cicdCount, // Use the cicdCount variable
     },
     {
       type: 'deployment',
@@ -98,7 +89,6 @@ export default function TeamOverview({ team }: TeamOverviewProps) {
             <p className="text-xl font-semibold">
               {resourceCounts.repositories +
                 resourceCounts.hosts +
-                cicdCount + // Use the cicdCount variable
                 resourceCounts.deployments}
             </p>
           </div>

@@ -40,17 +40,6 @@ export {
 } from './component/deploymentComponentType';
 
 export {
-  CICDProvider,
-  CICDJob,
-  CICDBuild,
-  CICDProviderType,
-  CICDAuthType,
-  CICDCredentials,
-  CICDProviderConfig,
-  CICDProviderPayload,
-} from './component/cicdComponentType';
-
-export {
   User,
   Role,
   UserTeam,

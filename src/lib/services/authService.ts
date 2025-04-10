@@ -4,8 +4,6 @@
  */
 import userDb from '@/lib/db/userDb';
 import { createClient } from '@/lib/supabase/server';
-
-// Types
 import { AuthResult } from '@/types/service/sessionServiceType';
 import { User } from '@/types/service/userServiceType';
 

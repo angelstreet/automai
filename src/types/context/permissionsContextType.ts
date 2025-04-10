@@ -1,9 +1,4 @@
-export type ResourceType =
-  | 'hosts'
-  | 'repositories'
-  | 'deployments'
-  | 'cicd_providers'
-  | 'cicd_jobs';
+export type ResourceType = 'hosts' | 'repositories' | 'deployments';
 export type Operation = 'select' | 'insert' | 'update' | 'delete' | 'execute';
 
 export interface PermissionMatrix {

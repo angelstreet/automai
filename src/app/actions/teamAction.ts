@@ -4,6 +4,9 @@ import { cookies } from 'next/headers';
 import { cache } from 'react';
 
 import { getUser } from '@/app/actions/userAction';
+import deploymentDb from '@/lib/db/deploymentDb';
+import hostDb from '@/lib/db/hostDb';
+import repositoryDb from '@/lib/db/repositoryDb';
 import {
   getUserTeams as dbGetUserTeams,
   getTeamById as dbGetTeamById,
@@ -17,7 +20,8 @@ import {
 } from '@/lib/db/teamDb';
 import teamMemberDb from '@/lib/db/teamMemberDb';
 import { createClient } from '@/lib/supabase/server';
-import type { ActionResult } from '@/types/context/cicdContextType';
+import type { Deployment } from '@/types/component/deploymentComponentType';
+import type { Host } from '@/types/component/hostComponentType';
 import { TeamMember } from '@/types/context/teamContextType';
 import type {
   TeamCreateInput,
@@ -26,6 +30,20 @@ import type {
   ResourceLimit,
 } from '@/types/context/teamContextType';
 import { User } from '@/types/service/userServiceType';
+
+// Add ActionResult type
+export type ActionResult<T> = {
+  success: boolean;
+  data?: T;
+  error?: string;
+};
+
+// Update the resource counts type and use it
+export type ResourceCounts = {
+  repositories: number;
+  hosts: number;
+  deployments: number;
+};
 
 /**
  * Get teams that a user belongs to
@@ -325,7 +343,7 @@ export const removeTeamMember = cache(async (teamId: string, profileId: string):
 
 /**
  * Check if a resource limit is reached for the current tenant
- * @param resourceType Type of resource to check (hosts, repositories, deployments, cicd_providers)
+ * @param resourceType Type of resource to check (hosts, repositories, deployments)
  * @param providedUser Optional user object to avoid redundant getUser calls
  * @returns Resource limit information
  */
@@ -378,7 +396,6 @@ export const getTeamDetails = cache(async () => {
             resourceCounts: {
               repositories: 0,
               deployments: 0,
-              cicdProviders: 0,
             },
           },
         };
@@ -394,7 +411,6 @@ export const getTeamDetails = cache(async () => {
           resourceCounts: {
             repositories: 0,
             deployments: 0,
-            cicdProviders: 0,
           },
         },
       };
@@ -416,7 +432,6 @@ export const getTeamDetails = cache(async () => {
             resourceCounts: {
               repositories: 0,
               deployments: 0,
-              cicdProviders: 0,
             },
           },
         };
@@ -432,7 +447,6 @@ export const getTeamDetails = cache(async () => {
           resourceCounts: {
             repositories: 0,
             deployments: 0,
-            cicdProviders: 0,
           },
         },
       };
@@ -474,7 +488,6 @@ export const getTeamDetails = cache(async () => {
     let resourceCounts = {
       repositories: 0,
       deployments: 0,
-      cicdProviders: 0,
     };
     try {
       const countsResult = await getTenantResourceCounts(activeTeam.tenant_id);
@@ -545,32 +558,31 @@ export const assignResourceToTeam = cache(
         throw new Error('User not authenticated');
       }
 
-      // TODO: Implement this in DB layer when available
       const cookieStore = await cookies();
-      const supabase = await createClient(cookieStore);
-
-      // Basic implementation: update the team_id field of the resource
-      // This needs to be adapted based on the actual table names and structures
       let result;
 
+      // Use the proper database layer functions with correct types
       if (resourceType === 'repository') {
-        result = await supabase
-          .from('repositories')
-          .update({ team_id: teamId })
-          .eq('id', resourceId);
+        result = await repositoryDb.updateRepository(
+          resourceId,
+          { team_id: teamId },
+          user.id,
+          cookieStore,
+        );
       } else if (resourceType === 'host') {
-        result = await supabase.from('hosts').update({ team_id: teamId }).eq('id', resourceId);
+        result = await hostDb.updateHost(resourceId, { team_id: teamId } as Partial<Host>);
       } else if (resourceType === 'deployment') {
-        result = await supabase
-          .from('Deployments')
-          .update({ team_id: teamId })
-          .eq('id', resourceId);
+        result = await deploymentDb.updateDeployment(
+          resourceId,
+          { team_id: teamId } as Partial<Deployment>,
+          cookieStore,
+        );
       } else {
         throw new Error(`Unsupported resource type: ${resourceType}`);
       }
 
-      if (result?.error) {
-        throw new Error(result.error.message);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to assign resource to team');
       }
 
       console.info('[@action:team:assignResourceToTeam] Resource assigned to team', {
@@ -608,21 +620,14 @@ export const getTenantResourceCounts = cache(async (tenantId: string) => {
       .select('id', { count: 'exact', head: true })
       .eq('tenant_id', tenantId);
 
-    // Get cicd provider count
-    const { count: cicdProviders } = await supabase
-      .from('cicd_providers')
-      .select('id', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId);
-
     const counts = {
       repositories: repositories || 0,
       deployments: deployments || 0,
-      cicdProviders: cicdProviders || 0,
     };
 
     console.log(`[@action:team:getTenantResourceCounts] Successfully got resource counts`);
     console.log(
-      `[@action:team:getTenantResourceCounts] Counts: repos=${counts.repositories}, deployments=${counts.deployments}, cicd=${counts.cicdProviders}`,
+      `[@action:team:getTenantResourceCounts] Counts: repos=${counts.repositories}, deployments=${counts.deployments}`,
     );
 
     return {
@@ -666,17 +671,11 @@ export const getTeamResourceCounts = cache(async (teamId: string) => {
       .select('id', { count: 'exact', head: true })
       .eq('team_id', teamId);
 
-    // Get cicd provider count
-    const { count: cicdProviders } = await supabase
-      .from('cicd_providers')
-      .select('id', { count: 'exact', head: true })
-      .eq('team_id', teamId);
-
     console.log(
       `[@action:team:getTeamResourceCounts] Successfully got resource counts for team ${teamId}`,
     );
     console.log(
-      `[@action:team:getTeamResourceCounts] Counts: repos=${repositories || 0}, hosts=${hosts || 0}, cicd=${cicdProviders || 0}, deployments=${deployments || 0}`,
+      `[@action:team:getTeamResourceCounts] Counts: repos=${repositories || 0}, hosts=${hosts || 0}, deployments=${deployments || 0}`,
     );
 
     return {
@@ -684,7 +683,6 @@ export const getTeamResourceCounts = cache(async (teamId: string) => {
       data: {
         repositories: repositories || 0,
         hosts: hosts || 0,
-        cicdProviders: cicdProviders || 0,
         deployments: deployments || 0,
       },
     };
@@ -705,7 +703,7 @@ export const getTeamPageData = cache(async () => {
   try {
     const start = Date.now();
     console.log(`[@action:team:getTeamPageData] Starting team page data fetch`);
-    
+
     // Get the user
     const user = await getUser();
     if (!user) {
@@ -721,7 +719,6 @@ export const getTeamPageData = cache(async () => {
             resourceCounts: {
               repositories: 0,
               hosts: 0,
-              cicd: 0,
               deployments: 0,
             },
           },
@@ -729,10 +726,9 @@ export const getTeamPageData = cache(async () => {
         },
       };
     }
-    
+
     const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
-    
+
     // Get user's teams
     const teamsResult = await dbGetUserTeams(user.id, cookieStore);
     if (!teamsResult.success || !teamsResult.data || teamsResult.data.length === 0) {
@@ -748,7 +744,6 @@ export const getTeamPageData = cache(async () => {
             resourceCounts: {
               repositories: 0,
               hosts: 0,
-              cicd: 0,
               deployments: 0,
             },
           },
@@ -756,37 +751,38 @@ export const getTeamPageData = cache(async () => {
         },
       };
     }
-    
+
     // Get active team
     const activeTeamResult = await dbGetUserActiveTeam(user.id, cookieStore, teamsResult.data);
-    const activeTeam = activeTeamResult.success && activeTeamResult.data 
-      ? activeTeamResult.data 
-      : teamsResult.data[0]; // Default to first team
-    
+    const activeTeam =
+      activeTeamResult.success && activeTeamResult.data
+        ? activeTeamResult.data
+        : teamsResult.data[0]; // Default to first team
+
     // Get team members
     const membersResult = await teamMemberDb.getTeamMembers(activeTeam.id, cookieStore);
     const members = membersResult.success && membersResult.data ? membersResult.data : [];
     const userMember = members.find((m) => m.profile_id === user.id);
     const userRole = userMember ? userMember.role : null;
-    
-    // Get all resource counts in parallel with a single database connection
-    const [repoCount, hostCount, deploymentCount, cicdCount] = await Promise.all([
-      supabase.from('repositories').select('id', { count: 'exact', head: true }).eq('team_id', activeTeam.id),
-      supabase.from('hosts').select('id', { count: 'exact', head: true }).eq('team_id', activeTeam.id),
-      supabase.from('Deployments').select('id', { count: 'exact', head: true }).eq('team_id', activeTeam.id),
-      supabase.from('cicd_providers').select('id', { count: 'exact', head: true }).eq('team_id', activeTeam.id)
+
+    // Get all resource counts in parallel using the proper database layers
+    const [repoResult, hostResult, deploymentResult] = await Promise.all([
+      repositoryDb.getRepositories(cookieStore, activeTeam.id),
+      hostDb.getHosts(activeTeam.id),
+      deploymentDb.getDeployments(activeTeam.id, cookieStore),
     ]);
-    
+
     const resourceCounts = {
-      repositories: repoCount.count || 0,
-      hosts: hostCount.count || 0,
-      deployments: deploymentCount.count || 0,
-      cicd: cicdCount.count || 0,
+      repositories: repoResult.success ? repoResult.data?.length || 0 : 0,
+      hosts: hostResult.success ? hostResult.data?.length || 0 : 0,
+      deployments: deploymentResult.success ? deploymentResult.data?.length || 0 : 0,
     };
-    
+
     const end = Date.now();
-    console.log(`[@action:team:getTeamPageData] Completed team page data fetch in ${end - start}ms`);
-    
+    console.log(
+      `[@action:team:getTeamPageData] Completed team page data fetch in ${end - start}ms`,
+    );
+
     return {
       success: true,
       data: {

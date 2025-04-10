@@ -4,10 +4,6 @@ import { useTranslations } from 'next-intl';
 import React, { useState, useMemo } from 'react';
 
 import { Switch } from '@/components/shadcn/switch';
-import { useCICD } from '@/hooks';
-// Using the factory to generate the appropriate pipeline for display
-import { CICDProviderFactory } from '@/lib/services/cicd/factory';
-import { CICDProvider, CICDJob } from '@/types/component/cicdComponentType';
 import { DeploymentData } from '@/types/component/deploymentComponentType';
 import { Host } from '@/types/component/hostComponentType';
 
@@ -19,7 +15,6 @@ interface DeploymentWizardStep5ClientProps {
   _onCancel: () => void;
   onSubmit: React.FormEventHandler<HTMLFormElement> | (() => void);
   isPending: boolean;
-  cicdProviders: CICDProvider[];
   availableHosts?: Host[];
   repositoryScripts?: any[];
 }
@@ -100,23 +95,9 @@ export function DeploymentWizardStep5Client({
     };
   }, [selectedProvider]);
 
-  // Handle toggle for pipeline integration
-  const handlePipelineToggle = (checked: boolean) => {
-    onUpdateData({
-      cicd_provider_id: checked ? data.cicd_provider_id || cicdProviders[0]?.id || '' : '',
-      jenkinsConfig: checked ? data.jenkinsConfig : undefined,
-    });
-  };
-
   // Update provider details before submission
   const handleSubmit = (e: React.MouseEvent) => {
     e.preventDefault();
-
-    if (selectedProvider) {
-      onUpdateData({
-        cicd_provider_id: selectedProvider.id,
-      });
-    }
 
     // Call the original submit function
     if (typeof onSubmit === 'function') {

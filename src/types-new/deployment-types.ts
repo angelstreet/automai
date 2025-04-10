@@ -104,7 +104,6 @@ export interface DeploymentData {
     slack: boolean;
   };
   autoStart: boolean;
-  cicd_provider_id: string;
   jenkinsConfig?: any;
 }
 
@@ -120,7 +119,6 @@ export interface CICDDeploymentFormData {
   parameters?: Record<string, string>;
   team_id: string;
   creator_id: string;
-  cicd_provider_id: string;
   provider: {
     type: string;
     config: {

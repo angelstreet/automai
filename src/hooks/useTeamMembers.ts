@@ -3,7 +3,6 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { getTeamMembers } from '@/app/actions/teamMemberAction';
-import type { ActionResult } from '@/types/context/cicdContextType';
 import type { TeamMember } from '@/types/context/teamContextType';
 
 /**

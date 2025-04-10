@@ -96,12 +96,6 @@ export const sidebarData: SidebarData = {
       title: 'Environment',
       items: [
         {
-          title: 'CI/CD',
-          href: '/cicd',
-          icon: GitBranch,
-          roles: ['admin', 'developer'],
-        },
-        {
           title: 'Hosts',
           href: '/hosts',
           icon: Server,

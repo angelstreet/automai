@@ -2,7 +2,6 @@ export * from './hostsAction';
 export * from './repositoriesAction';
 export * from './userAction';
 export * from './dashboardAction';
-export * from './cicdAction';
 export * from './deploymentsAction';
 export * from './terminalsAction';
 export * from './authAction';

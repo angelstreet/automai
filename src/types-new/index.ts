@@ -30,9 +30,6 @@ export * from './repository-types';
 // Deployment types
 export * from './deployment-types';
 
-// CICD types
-export * from './cicd-types';
-
 // User types
 export * from './user-types';
 
@@ -56,14 +53,12 @@ export * from './db-hosts';
 export * from './db-auth';
 export * from './db-git';
 export * from './db-teams';
-export * from './db-cicd';
 export * from './db-deployments';
 
 /**
  * @example
  * // Prefer importing from specific files
  * import { Host, HostStatus } from '@/types-new/host-types';
- * import { CICDProvider } from '@/types-new/cicd-types';
  *
  * // Use index imports only when needing multiple entity types
  * import { Host, Repository, Deployment } from '@/types-new';
@@ -71,7 +66,3 @@ export * from './db-deployments';
  * // Always import context types directly
  * import { DashboardContext } from '@/types-new/dashboard-context';
  */
-
-export * from './cicd-provider';
-export * from './cicd-pipeline';
-export * from './cicd-job';

@@ -25,34 +25,27 @@ export interface Database {
       tenants: TenantsTable;
       teams: TeamsTable;
       team_members: TeamMembersTable;
-      
+
       // Permission and access control tables
       permission_matrix: PermissionMatrixTable;
       role_templates: RoleTemplatesTable;
-      
+
       // Resource tables
       hosts: HostsTable;
       host_logs: HostLogsTable;
       host_analytics: HostAnalyticsTable;
       host_events: HostEventsTable;
       host_metrics: HostMetricsTable;
-      
+
       // Git and repository tables
       git_providers: GitProvidersTable;
       repositories: RepositoriesTable;
       repository_files: RepositoryFilesTable;
       profile_repository_pins: ProfileRepositoryPinsTable;
-      
-      // CICD tables
-      cicd_providers: CICDProvidersTable;
-      cicd_jobs: CICDJobsTable;
-      cicd_builds: CICDBuildsTable;
-      
+
       // Deployment tables
       deployments: DeploymentsTable;
       deployment_logs: DeploymentLogsTable;
-      deployment_cicd_mappings: DeploymentCICDMappingsTable;
-      
       // Subscription and resource management
       subscription_tiers: SubscriptionTiersTable;
       resource_limits: ResourceLimitsTable;

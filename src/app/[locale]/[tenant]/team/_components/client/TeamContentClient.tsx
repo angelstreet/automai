@@ -21,7 +21,6 @@ interface TeamTabContainerProps {
     resourceCounts: {
       repositories: number;
       hosts: number;
-      cicd: number;
       deployments: number;
     };
   } | null;
@@ -59,7 +58,6 @@ export default function TeamContentClient({ user, teamDetails, teamMembers = [] 
     resourceCounts: teamDetails.resourceCounts || {
       repositories: 0,
       hosts: 0,
-      cicd: 0,
       deployments: 0,
     },
   };

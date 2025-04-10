@@ -8,13 +8,11 @@ export * from './db/permissionDb';
 export * from './db/repositoryDb';
 export * from './db/deploymentDb';
 export * from './db/hostDb';
-export * from './db/cicdDb';
 
 // Service layer exports
 export * from './services/teamService';
 export * from './services/hostService';
 export * from './services/sshService';
-export * from './services/cicdService';
 export * from './services/repositoryService';
 export * from './services/authService';
 

@@ -19,8 +19,6 @@ export function ResourceCard({ resource }: { resource: ResourceProps }) {
         return <Code className="h-5 w-5" />;
       case 'host':
         return <Server className="h-5 w-5" />;
-      case 'cicd':
-        return <GitBranch className="h-5 w-5" />;
       case 'deployment':
         return <Rocket className="h-5 w-5" />;
       default:

@@ -27,7 +27,6 @@ export interface DeploymentsTable {
     scripts_parameters: string[] | null;
     team_id: string;
     creator_id: string;
-    cicd_provider_id: string | null;
   };
   Insert: {
     id?: string;
@@ -51,7 +50,6 @@ export interface DeploymentsTable {
     scripts_parameters?: string[] | null;
     team_id: string;
     creator_id: string;
-    cicd_provider_id?: string | null;
   };
   Update: {
     id?: string;
@@ -75,7 +73,6 @@ export interface DeploymentsTable {
     scripts_parameters?: string[] | null;
     team_id?: string;
     creator_id?: string;
-    cicd_provider_id?: string | null;
   };
   Relationships: [
     {
@@ -113,13 +110,6 @@ export interface DeploymentsTable {
       referencedRelation: 'profiles';
       referencedColumns: ['id'];
     },
-    {
-      foreignKeyName: 'deployments_cicd_provider_id_fkey';
-      columns: ['cicd_provider_id'];
-      isOneToOne: false;
-      referencedRelation: 'cicd_providers';
-      referencedColumns: ['id'];
-    }
   ];
 }
 
@@ -168,55 +158,6 @@ export interface DeploymentLogsTable {
       isOneToOne: false;
       referencedRelation: 'hosts';
       referencedColumns: ['id'];
-    }
-  ];
-}
-
-/**
- * Deployment CICD mappings table schema
- */
-export interface DeploymentCICDMappingsTable {
-  Row: BaseRow & {
-    deployment_id: string | null;
-    cicd_job_id: string | null;
-    parameters: Json | null;
-    build_number: string | null;
-    build_url: string | null;
-  };
-  Insert: {
-    id?: string;
-    deployment_id?: string | null;
-    cicd_job_id?: string | null;
-    parameters?: Json | null;
-    build_number?: string | null;
-    build_url?: string | null;
-    created_at?: string;
-    updated_at?: string;
-  };
-  Update: {
-    id?: string;
-    deployment_id?: string | null;
-    cicd_job_id?: string | null;
-    parameters?: Json | null;
-    build_number?: string | null;
-    build_url?: string | null;
-    created_at?: string;
-    updated_at?: string;
-  };
-  Relationships: [
-    {
-      foreignKeyName: 'deployment_cicd_mappings_cicd_job_id_fkey';
-      columns: ['cicd_job_id'];
-      isOneToOne: false;
-      referencedRelation: 'cicd_jobs';
-      referencedColumns: ['id'];
     },
-    {
-      foreignKeyName: 'deployment_cicd_mappings_deployment_id_fkey';
-      columns: ['deployment_id'];
-      isOneToOne: false;
-      referencedRelation: 'deployments';
-      referencedColumns: ['id'];
-    }
   ];
 }

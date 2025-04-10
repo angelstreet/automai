@@ -3,7 +3,6 @@
  */
 
 // Import component types
-import { Host } from '@/types/component/hostComponentType';
 import {
   DeploymentStatus,
   LogEntry,
@@ -14,9 +13,9 @@ import {
   DeploymentConfig,
   DeploymentData,
 } from '@/types/component/deploymentComponentType';
+import { Host } from '@/types/component/hostComponentType';
 
 // Import CICD types
-import { CICDProvider, CICDJob } from '@/types/component/cicdComponentType';
 
 // Re-export core types for convenience
 export type {
@@ -28,7 +27,7 @@ export type {
   DeploymentFormData,
   DeploymentConfig,
   DeploymentData,
-  Host
+  Host,
 };
 
 /**
@@ -41,8 +40,6 @@ export interface DeploymentContextData {
   selectedDeployment: Deployment | null;
   hosts: Host[];
   repositories: any[]; // Using any to avoid import errors
-  cicdProviders: CICDProvider[];
-  cicdJobs: CICDJob[];
 }
 
 /**

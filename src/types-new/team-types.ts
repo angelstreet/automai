@@ -111,7 +111,7 @@ export interface TeamPermission {
 export interface TeamResource {
   id: string;
   team_id: string;
-  type: 'repository' | 'host' | 'deployment' | 'cicd';
+  type: 'repository' | 'host' | 'deployment';
   resource_id: string;
   created_at: string;
   updated_at: string;

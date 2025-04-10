@@ -148,8 +148,6 @@ export interface DeploymentFormData {
     slack: boolean;
   };
   provider_id?: string;
-  cicd_provider_id?: string;
-  cicdProviderId?: string;
   targetHostId?: string;
   branch?: string;
   scheduled?: boolean;
