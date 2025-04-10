@@ -21,7 +21,7 @@ interface DeploymentWizardStep5ClientProps {
 
 export function DeploymentWizardStep5Client({
   data,
-  _onUpdateData,
+  onUpdateData: _onUpdateData,
   onBack,
   _onCancel,
   onSubmit,
@@ -67,12 +67,15 @@ export function DeploymentWizardStep5Client({
       // Get scripts details from the scriptIds
       const scriptDetails = repositoryScripts
         .filter((s) => data.scriptIds.includes(s.id))
-        .map((script) => ({
-          id: script.id,
-          path: script.path || script.filename || script.id,
-          type: script.type || 'shell',
-          parameters: script.parameters || '',
-        }));
+        .map((script) => {
+          const params = data.scriptParameters[script.id]?.['raw'] || '';
+          return {
+            id: script.id,
+            path: script.path || script.filename || script.id,
+            type: script.type || 'shell',
+            parameters: params,
+          };
+        });
 
       // Get host details from the hostIds
       const hostDetails = availableHosts
@@ -97,7 +100,10 @@ export function DeploymentWizardStep5Client({
         description: data.description,
         repository: repoUrl,
         branch: branch,
-        scripts: scriptDetails.map((script) => script.path),
+        scripts: scriptDetails.map((script) => ({
+          path: script.path,
+          parameters: script.parameters,
+        })),
         hosts: hostDetails.map((host) => ({
           name: host.name,
           username: host.username,

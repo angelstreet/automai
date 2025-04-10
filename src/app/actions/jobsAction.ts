@@ -24,7 +24,6 @@ export interface JobFormData {
   branch?: string;
   team_id: string;
   creator_id: string;
-  tenant_id: string;
   scripts_path: string[];
   parameters?: string[];
   host_ids: string[];
@@ -147,7 +146,6 @@ export async function createJob(formData: JobFormData, hostDetails?: any[]) {
       description: formData.description || null,
       team_id: formData.team_id,
       creator_id: formData.creator_id,
-      tenant_id: formData.tenant_id,
       repository_id: formData.repository_id || null,
       branch: formData.branch || null,
 
@@ -301,17 +299,11 @@ export async function updateJob(id: string, formData: Partial<JobFormData>, host
         branch: formData.branch || existingJobConfig.data.branch || undefined,
         team_id: formData.team_id || existingJobConfig.data.team_id || '',
         creator_id: existingJobConfig.data.creator_id || '',
-        tenant_id: existingJobConfig.data.tenant_id || '',
-
-        // Ensure arrays are properly handled
         scripts_path: Array.isArray(formData.scripts_path)
           ? formData.scripts_path
           : existingScriptsPath,
-
         parameters: formData.parameters || existingJobConfig.data.scripts_parameters || undefined,
-
         host_ids: Array.isArray(formData.host_ids) ? formData.host_ids : existingHostIds,
-
         environmentVars:
           formData.environmentVars || existingJobConfig.data.environment_vars || undefined,
         schedule: {
@@ -452,7 +444,6 @@ function prepareJobForQueue(
     job_id: jobConfig.id,
     config_id: jobConfig.id,
     team_id: jobConfig.team_id,
-    tenant_id: jobConfig.tenant_id,
 
     // Job configuration (the detailed config we created)
     config: jobConfig.config,
