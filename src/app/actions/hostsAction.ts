@@ -99,7 +99,17 @@ export async function createHost(
   try {
     // Get current user and team
     const user = await getUser();
+    console.log('[@action:hosts:createHost] Current user:', {
+      id: user?.id,
+      email: user?.email,
+    });
+
     const activeTeam = await getUserActiveTeam(user?.id ?? '');
+    console.log('[@action:hosts:createHost] Active team:', {
+      id: activeTeam?.id,
+      name: activeTeam?.name,
+    });
+
     if (!activeTeam?.id) {
       return { success: false, error: 'No active team found' };
     }
@@ -140,6 +150,20 @@ export async function createHost(
       creator_id: user?.id ?? '',
     };
 
+    // Log a sanitized version of the host data for debugging
+    console.log('[@action:hosts:createHost] Host data being sent to database:', {
+      ...hostData,
+      password: hostData.password ? '[ENCRYPTED DATA]' : null,
+      private_key: hostData.private_key ? '[ENCRYPTED DATA]' : null,
+      // Add relevant checks that the RLS policy looks for
+      hasUser: !!hostData.user,
+      userLength: hostData.user?.length || 0,
+      hasPassword: !!hostData.password,
+      hasPrivateKey: !!hostData.private_key,
+      teamId: hostData.team_id,
+      authType: hostData.auth_type,
+    });
+
     // Basic validation for SSH connections based on auth type
     if (data.type === 'ssh') {
       if (hostData.auth_type === 'password' && (!hostData.user || !hostData.password)) {
@@ -152,10 +176,23 @@ export async function createHost(
           error: 'SSH with key authentication requires username and private key',
         };
       }
+
+      // Validate that either password or private_key is provided
+      if (!hostData.password && !hostData.private_key) {
+        return { success: false, error: 'SSH connections require either password or private key' };
+      }
     }
 
     // Create the host
     const result = await hostDb.createHost(hostData);
+
+    // Log the result
+    console.log('[@action:hosts:createHost] Database result:', {
+      success: result.success,
+      error: result.error || null,
+      hasData: !!result.data,
+    });
+
     if (!result.success || !result.data) {
       return { success: false, error: result.error || 'Failed to add host' };
     }

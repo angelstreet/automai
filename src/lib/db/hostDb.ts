@@ -57,16 +57,41 @@ export async function getHostById(id: string): Promise<DbResponse<Host>> {
  */
 export async function createHost(host: Partial<Host>): Promise<DbResponse<Host>> {
   try {
+    console.log('[@db:hostDb:createHost] Creating host, data check:', {
+      hasUser: !!host.user,
+      userLength: host.user?.length || 0,
+      hasPassword: !!host.password,
+      hasPrivateKey: !!host.private_key,
+      hasTeamId: !!host.team_id,
+      authType: host.auth_type,
+      type: host.type,
+    });
+
     const supabase = await createClient();
 
-    const { data, error } = await supabase.from('hosts').insert([host]).select().single();
+    // First try with auth_type and private_key fields
+    try {
+      const { data, error } = await supabase.from('hosts').insert([host]).select().single();
 
-    if (error) {
-      return { success: false, error: error.message };
+      if (error) {
+        // Log the detailed error
+        console.error('[@db:hostDb:createHost] Error inserting host:', {
+          code: error.code,
+          message: error.message,
+          hint: error.hint,
+          details: error.details,
+        });
+        return { success: false, error: error.message };
+      }
+
+      console.log('[@db:hostDb:createHost] Host created successfully with ID:', data.id);
+      return { success: true, data };
+    } catch (error: any) {
+      console.error('[@db:hostDb:createHost] Exception during host creation:', error);
+      return { success: false, error: error.message || 'Failed to create host' };
     }
-
-    return { success: true, data };
   } catch (error: any) {
+    console.error('[@db:hostDb:createHost] Outer exception:', error);
     return { success: false, error: error.message || 'Failed to create host' };
   }
 }

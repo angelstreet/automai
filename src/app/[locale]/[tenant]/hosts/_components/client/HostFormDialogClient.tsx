@@ -44,7 +44,7 @@ interface HostFormDialogClientProps {
 }
 
 export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormDialogClientProps) {
-  const { createHost } = useHost();
+  const { createHost, testConnection } = useHost();
   const t = useTranslations('hosts');
   const c = useTranslations('common');
 
@@ -138,23 +138,23 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
         },
       );
 
-      // Simulating a test connection response
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      const result = { success: true, is_windows: false };
+      // Actually test the connection using testConnection from useHost hook
+      const result = await testConnection(testData);
 
       // Store the result for later use
       setLastTestResult(result);
 
       console.log('[@client:hosts:HostFormDialogClient:testHostConnection] Test result:', {
         success: result.success,
-        isWindows: 'is_windows' in result ? result.is_windows : undefined,
+        error: result.error,
+        isWindows: result.is_windows,
       });
 
       if (result.success) {
         setTestSuccess(true);
 
         // Check if Windows was detected
-        if ('is_windows' in result && result.is_windows !== undefined) {
+        if (result.is_windows !== undefined) {
           console.log(
             '[@client:hosts:HostFormDialogClient:testHostConnection] Windows OS detected:',
             result.is_windows,
@@ -162,8 +162,7 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
         }
       } else {
         // Handle error response
-        const errorMessage = 'error' in result ? result.error : c('errors.testFailed');
-        setTestError(errorMessage || c('errors.testFailed'));
+        setTestError(result.error || c('errors.testFailed'));
       }
     } catch (error) {
       console.error(

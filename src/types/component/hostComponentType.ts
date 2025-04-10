@@ -32,6 +32,8 @@ export interface Host {
   // Authentication details
   user?: string;
   password?: string;
+  auth_type?: 'password' | 'privateKey'; // Authentication method
+  private_key?: string; // SSH private key
 
   // Status fields
   status: HostStatus;
@@ -42,6 +44,10 @@ export interface Host {
 
   // System properties
   is_windows: boolean;
+
+  // Ownership and permissions
+  team_id?: string; // The team that owns this host
+  creator_id?: string; // The user that created this host
 
   // Additional metadata
   os_type?: string;
