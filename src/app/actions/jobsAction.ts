@@ -35,8 +35,6 @@ export interface JobFormData {
     repeatCount?: number;
   };
   is_active?: boolean;
-  job_type: string;
-  config?: Record<string, any>;
   autoStart?: boolean;
 }
 
@@ -50,7 +48,6 @@ function generateJobConfigJson(formData: JobFormData, hostDetails?: any[]): Reco
   // Create the base configuration
   const config: Record<string, any> = {
     name: formData.name,
-    job_type: formData.job_type,
     repository_id: formData.repository_id || null,
     branch: formData.branch || 'main',
 
@@ -112,51 +109,41 @@ export async function createJob(formData: JobFormData, hostDetails?: any[]) {
   try {
     console.log('[@action:jobsAction:createJob] Creating job with name:', formData.name);
 
-    // Ensure formData fields have valid defaults to prevent undefined errors
-    const safeFormData = {
-      ...formData,
-      name: formData.name || 'Unnamed Job',
-      team_id: formData.team_id || '',
-      creator_id: formData.creator_id || '',
-      tenant_id: formData.tenant_id || '',
-      scripts_path: Array.isArray(formData.scripts_path) ? formData.scripts_path : [],
-      host_ids: Array.isArray(formData.host_ids) ? formData.host_ids : [],
-      job_type: formData.job_type || 'deployment',
-    };
+    // Log the full form data for debugging
+    console.log('[@action:jobsAction:createJob] Form data:', formData);
 
     const cookieStore = await cookies();
 
     // Generate the job configuration JSON
-    const configJson = generateJobConfigJson(safeFormData, hostDetails);
+    const configJson = generateJobConfigJson(formData, hostDetails);
 
     // Prepare job configuration data
     const jobConfig: Partial<JobConfiguration> = {
-      name: safeFormData.name,
-      description: safeFormData.description || null,
-      team_id: safeFormData.team_id,
-      creator_id: safeFormData.creator_id,
-      tenant_id: safeFormData.tenant_id,
-      repository_id: safeFormData.repository_id || null,
-      branch: safeFormData.branch || null,
+      name: formData.name,
+      description: formData.description || null,
+      team_id: formData.team_id,
+      creator_id: formData.creator_id,
+      tenant_id: formData.tenant_id,
+      repository_id: formData.repository_id || null,
+      branch: formData.branch || null,
 
       // Scripts and hosts
-      scripts_path: safeFormData.scripts_path,
-      scripts_parameters: safeFormData.parameters || [],
-      host_ids: safeFormData.host_ids,
+      scripts_path: formData.scripts_path || [],
+      scripts_parameters: formData.parameters || [],
+      host_ids: formData.host_ids || [],
 
       // Environment variables
-      environment_vars: safeFormData.environmentVars || {},
+      environment_vars: formData.environmentVars || {},
 
       // Schedule
-      schedule_type: safeFormData.schedule?.type || null,
-      cron_expression: safeFormData.schedule?.cronExpression || null,
-      repeat_count: safeFormData.schedule?.repeatCount || null,
+      schedule_type: formData.schedule?.type || null,
+      cron_expression: formData.schedule?.cronExpression || null,
+      repeat_count: formData.schedule?.repeatCount || null,
 
       // Status
-      is_active: safeFormData.is_active !== undefined ? safeFormData.is_active : true,
+      is_active: formData.is_active !== undefined ? formData.is_active : true,
 
-      // Job type and config
-      job_type: safeFormData.job_type,
+      // Config
       config: configJson, // Use the generated JSON configuration
 
       // Creation timestamp
@@ -271,8 +258,7 @@ export async function updateJob(id: string, formData: Partial<JobFormData>, host
       formData.parameters !== undefined ||
       formData.host_ids !== undefined ||
       formData.environmentVars !== undefined ||
-      formData.schedule !== undefined ||
-      formData.job_type !== undefined
+      formData.schedule !== undefined
     ) {
       // Safely get existing values
       const existingScriptsPath = Array.isArray(existingJobConfig.data.scripts_path)
@@ -315,7 +301,6 @@ export async function updateJob(id: string, formData: Partial<JobFormData>, host
         },
         is_active:
           formData.is_active !== undefined ? formData.is_active : existingJobConfig.data.is_active,
-        job_type: formData.job_type || existingJobConfig.data.job_type || 'deployment',
       };
 
       // Generate the updated config JSON

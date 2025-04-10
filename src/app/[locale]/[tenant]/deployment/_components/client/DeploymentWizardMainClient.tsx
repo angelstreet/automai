@@ -522,17 +522,17 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           name: deploymentData.name,
           description: deploymentData.description,
           repository_id: deploymentData.repositoryId,
-          repository_url: deploymentData.selectedRepository?.url || '',
           branch: deploymentData.branch || 'main',
           team_id: teamId,
           creator_id: user?.id || userId,
+          tenant_id: user?.tenant_name || tenantName || '',
 
-          // Scripts, hosts, and parameters
-          scriptIds: deploymentData.scriptIds,
+          // Scripts, hosts, and parameters - note the changed field names
+          scripts_path: deploymentData.scriptIds, // Changed from scriptIds
           parameters: deploymentData.scriptIds.map((scriptId) =>
             JSON.stringify(deploymentData.scriptParameters[scriptId] || {}),
           ),
-          hostIds: deploymentData.hostIds,
+          host_ids: deploymentData.hostIds, // Changed from hostIds
 
           // Environment variables
           environmentVars: deploymentData.environmentVars.reduce(
@@ -545,46 +545,34 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
 
           // Schedule
           schedule: {
-            enabled: deploymentData.schedule !== 'now',
+            type: deploymentData.schedule === 'now' ? 'once' : 'cron',
             cronExpression: deploymentData.cronExpression,
             repeatCount: deploymentData.repeatCount,
           },
 
-          // Notifications
-          notifications: {
-            enabled: deploymentData.notifications.email || deploymentData.notifications.slack,
-            onSuccess: deploymentData.notifications.email,
-            onFailure: deploymentData.notifications.slack,
-          },
+          // Status
+          is_active: true,
 
-          // Auto-start and job type
+          // Auto-start
           autoStart: deploymentData.schedule === 'now',
-          job_type: 'deployment',
-
-          // Optional config with tenant name for backward compatibility
-          config: {
-            tenant_name: user?.tenant_name || tenantName || '',
-          },
         };
 
         // Detailed logging of the form data for debugging
-        console.log('[@component:DeploymentWizardMainClient:handleSubmit] Form data details:', {
-          basic: {
-            name: formData.name,
-            description: formData.description,
-            repository_id: formData.repository_id,
-            repository_url: formData.repository_url,
+        console.log(
+          '[@component:DeploymentWizardMainClient:handleSubmit] FULL Form data:',
+          formData,
+        );
+        console.log(
+          '[@component:DeploymentWizardMainClient:handleSubmit] Critical form data check:',
+          {
+            scripts_path_type: Array.isArray(formData.scripts_path)
+              ? 'array'
+              : typeof formData.scripts_path,
+            scripts_path_value: formData.scripts_path,
+            host_ids_type: Array.isArray(formData.host_ids) ? 'array' : typeof formData.host_ids,
+            host_ids_value: formData.host_ids,
           },
-          execution: {
-            scripts: formData.scriptIds,
-            hosts: formData.hostIds,
-            branch: formData.branch,
-          },
-          scheduling: {
-            schedule: formData.schedule,
-            autoStart: formData.autoStart,
-          },
-        });
+        );
 
         // Use the new createJob action directly
         const result = await createJob(formData);
