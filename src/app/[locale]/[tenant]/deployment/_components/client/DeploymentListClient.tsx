@@ -4,6 +4,7 @@ import { Search, Clock, Play, Eye, PlayCircle, Trash2, MoreHorizontal } from 'lu
 import { useRouter } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
 
+import { deleteJob, startJob } from '@/app/actions/jobsAction';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,9 +58,23 @@ export function DeploymentListClient({
   const [isRefreshing, _setIsRefreshing] = useState(false);
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState<string | null>(null);
+  const [deployments, setDeployments] = useState<Deployment[]>(initialDeployments);
+
+  // Listen for refresh events
+  useEffect(() => {
+    const handleRefresh = () => {
+      // You would typically fetch data here
+      console.log('[DeploymentList] Refresh event received');
+    };
+
+    window.addEventListener(DeploymentEvents.REFRESH_DEPLOYMENTS, handleRefresh);
+    return () => {
+      window.removeEventListener(DeploymentEvents.REFRESH_DEPLOYMENTS, handleRefresh);
+    };
+  }, []);
 
   // Use initial deployments for first render, then update with data from React Query
-  const displayDeploymentData = deployments.length > 0 ? deployments : initialDeployments;
+  const displayDeploymentData = deployments;
   const displayRepositoryData = initialRepositories;
 
   useEffect(() => {
@@ -103,7 +118,7 @@ export function DeploymentListClient({
     if (!selectedDeployment) return;
     try {
       setActionInProgress(selectedDeployment.id);
-      const result = await deleteDeployment(selectedDeployment.id);
+      const result = await deleteJob(selectedDeployment.id);
 
       if (result && result.success) {
         toast({
@@ -111,6 +126,9 @@ export function DeploymentListClient({
           description: 'Successfully deleted.',
           variant: 'default',
         });
+
+        // Update the local state to remove the deleted deployment
+        setDeployments((current) => current.filter((d) => d.id !== selectedDeployment.id));
 
         // Dispatch a single refresh event
         window.dispatchEvent(new Event(DeploymentEvents.REFRESH_DEPLOYMENTS));
@@ -149,7 +167,12 @@ export function DeploymentListClient({
       )
         return false;
       if (activeTab === 'pending' && deployment.status !== 'pending') return false;
-      if (activeTab === 'active' && deployment.status !== 'running') return false;
+      if (
+        activeTab === 'active' &&
+        deployment.status !== 'pending' &&
+        deployment.status !== 'in_progress'
+      )
+        return false;
       if (
         activeTab === 'completed' &&
         deployment.status !== 'success' &&
@@ -208,7 +231,7 @@ export function DeploymentListClient({
 
     setIsRunning(deployment.id);
     try {
-      const result = await runDeployment(deployment.id);
+      const result = await startJob(deployment.id, '');
 
       if (result && result.success) {
         toast({
