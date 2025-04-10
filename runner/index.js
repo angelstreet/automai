@@ -25,16 +25,18 @@ function decrypt(encryptedData, keyBase64) {
 async function processJob() {
   let job;
   try {
-    // Log queue length before processing
     const queueLength = await redis.llen('jobs_queue');
     console.log(`[@runner:processJob] Current queue length: ${queueLength} jobs`);
 
     job = await redis.rpop('jobs_queue');
-    if (!job) return;
+    if (!job) {
+      console.log(`[@runner:processJob] Queue is empty, skipping...`);
+      return;
+    }
 
     console.log(`[@runner:processJob] Processing job, ${queueLength - 1} jobs remaining in queue`);
-
-    const { config_id, input_overrides: _input_overrides } = JSON.parse(job);
+    console.log(`[@runner:processJob] Raw job data: ${job}`); // Debug raw job
+    const { config_id, timestamp, requested_by } = JSON.parse(job); // Match your JSON structure
     const { data, error } = await supabase
       .from('jobs_configuration')
       .select('config')
@@ -70,6 +72,7 @@ async function processJob() {
                 created_at: new Date().toISOString(),
                 started_at: new Date().toISOString(),
                 completed_at: new Date().toISOString(),
+                requested_by, // Include if column exists
               });
               conn.end();
               return;
@@ -86,6 +89,7 @@ async function processJob() {
                   created_at: new Date().toISOString(),
                   started_at: new Date().toISOString(),
                   completed_at: new Date().toISOString(),
+                  requested_by, // Include if column exists
                 });
                 conn.end();
               });
@@ -115,24 +119,27 @@ async function setupSchedules() {
   }
 
   data.forEach(({ id, config }) => {
-    // Changed config to config
     if (!config) {
       console.warn(`Config ${id} has no config data`);
       return;
     }
+    const job = JSON.stringify({
+      config_id: id,
+      timestamp: new Date().toISOString(),
+      requested_by: 'system',
+    });
     if (config.schedule && config.schedule !== 'now') {
       cron.schedule(config.schedule, async () => {
-        await redis.lpush('jobs_queue', JSON.stringify({ config_id: id, input_overrides: {} }));
+        await redis.lpush('jobs_queue', job);
         console.log(`Scheduled job queued for config ${id}`);
       });
     } else if (config.schedule === 'now') {
-      redis.lpush('jobs_queue', JSON.stringify({ config_id: id, input_overrides: {} }));
+      redis.lpush('jobs_queue', job);
       console.log(`Immediate job queued for config ${id}`);
     }
   });
 }
 
-// Add periodic queue status check
 async function logQueueStatus() {
   try {
     const queueLength = await redis.llen('jobs_queue');
@@ -143,6 +150,6 @@ async function logQueueStatus() {
 }
 
 setInterval(processJob, 5000);
-setInterval(logQueueStatus, 60000); // Log queue status every minute
+setInterval(logQueueStatus, 60000);
 setupSchedules().catch((err) => console.error('Setup schedules failed:', err));
 console.log('Worker running...');
