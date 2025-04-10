@@ -12,7 +12,7 @@ import { useUser } from '@/hooks/useUser';
 import { Deployment } from '@/types/component/deploymentComponentType';
 import { Repository } from '@/types/component/repositoryComponentType';
 
-import { DeploymentWizardMainClient } from './DeploymentWizardMainClient';
+import DeploymentWizardMainClient from './DeploymentWizardMainClient';
 
 interface DeploymentWizardDialogClientProps {
   open: boolean;
