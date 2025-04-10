@@ -28,7 +28,7 @@ async function processJob() {
 
   const { config_id, input_overrides } = JSON.parse(job);
   const { data, error } = await supabase
-    .from('configs')
+    .from('Jobs_configuration')
     .select('config_json')
     .eq('id', config_id)
     .single();
@@ -55,7 +55,7 @@ async function processJob() {
       .on('ready', () => {
         conn.exec(script, async (err, stream) => {
           if (err) {
-            await supabase.from('jobs').insert({
+            await supabase.from('Jobs_run').insert({
               config_id,
               user_id: config.user_id,
               status: 'failed',
@@ -70,7 +70,7 @@ async function processJob() {
             .stderr.on('data', (data) => (output.stderr += data))
             .on('close', async () => {
               await supabase
-                .from('jobs')
+                .from('Jobs_run')
                 .insert({ config_id, user_id: config.user_id, status: 'success', output });
               conn.end();
             });
@@ -86,7 +86,7 @@ async function processJob() {
 }
 
 async function setupSchedules() {
-  const { data, error } = await supabase.from('configs').select('id, config_json');
+  const { data, error } = await supabase.from('Jobs_configuration').select('id, config_json');
   if (error) {
     console.error(`Failed to fetch configs for scheduling: ${error.message}`);
     return;
