@@ -13,11 +13,7 @@ import {
   updateDeployment as dbUpdateDeployment,
   deleteDeployment as dbDeleteDeployment,
 } from '@/lib/db/deploymentDb';
-import {
-  Deployment,
-  DeploymentFormData,
-  DeploymentStatus,
-} from '@/types/component/deploymentComponentType';
+import { Deployment, DeploymentFormData } from '@/types/component/deploymentComponentType';
 import { AuthUser, User } from '@/types/service/userServiceType';
 /**
  * Get all deployments for the current user
@@ -160,34 +156,22 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
         return scriptParam?.raw || '';
       }) || [];
 
-    // Import dependencies
-    const { getCICDProvider } = await import('@/lib/db/cicdDb');
-
-    // Get CICD provider if specified
-    let providerResult = null;
-    if (formData.provider_id) {
-      providerResult = await getCICDProvider({ where: { id: formData.provider_id } }, cookieStore);
-    }
-
     // Create deployment data
-    const deploymentData = {
+    const deploymentData: Partial<Deployment> = {
       name: formData.name,
       description: formData.description || '',
-      repository_id: formData.repository,
-      scripts_path: formData.selectedScripts || [],
-      scripts_parameters: rawParameters,
-      host_ids: formData.selectedHosts || [],
-      status:
-        !providerResult || !providerResult.success ? 'failed' : ('pending' as DeploymentStatus),
-      team_id: teamId,
-      creator_id: user.id,
-      user_id: user.id,
-      tenant_id: user.tenant_id,
-      schedule_type: formData.schedule || 'now',
-      scheduled_time: formData.scheduledTime || null,
-      cron_expression: formData.cronExpression || null,
-      repeat_count: formData.repeatCount || 0,
-      environment_vars: formData.environmentVars || [],
+      repositoryId: formData.repository,
+      scriptsPath: formData.selectedScripts || [],
+      scriptsParameters: rawParameters,
+      hostIds: formData.selectedHosts || [],
+      status: 'pending',
+      userId: user.id,
+      tenantId: user.tenant_id,
+      scheduleType: formData.schedule || 'now',
+      scheduledTime: formData.scheduledTime || undefined,
+      cronExpression: formData.cronExpression || undefined,
+      repeatCount: formData.repeatCount || 0,
+      environmentVars: formData.environmentVars || [],
     };
 
     console.log(
@@ -306,33 +290,6 @@ export async function deleteDeployment(id: string): Promise<boolean> {
     if (!deploymentResult.success || !deploymentResult.data) {
       console.error('[@action:deployments:deleteDeployment] Deployment not found');
       return false;
-    }
-
-    // Extract just the CICD provider ID from the deployment data
-    const deployment = deploymentResult.data as { cicd_provider_id?: string };
-
-    // If deployment has a CICD provider, try to delete the Jenkins job
-    if (deployment.cicd_provider_id) {
-      // Get CICD job mapping
-      const cicdJob = await cicdDb.getCICDJobForDeployment(id, cookieStore);
-
-      if (cicdJob) {
-        // Delete the Jenkins job first
-        const deleteResult = await cicdService.deleteProviderJob(
-          deployment.cicd_provider_id,
-          cicdJob.cicd_job_id,
-          cookieStore,
-        );
-
-        if (!deleteResult.success) {
-          console.error(
-            '[@action:deployments:deleteDeployment] Failed to delete Jenkins job:',
-            deleteResult.error,
-          );
-          // We continue with deployment deletion even if Jenkins job deletion fails
-          // This is because the database cascade will clean up the mappings
-        }
-      }
     }
 
     // Delete the deployment from the database

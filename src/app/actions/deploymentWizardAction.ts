@@ -2,115 +2,16 @@
 
 import { cookies } from 'next/headers';
 
-import { CICDService } from '@/lib/services/cicd/service';
-import { CreateCICDJobParams } from '@/types-new/cicd-job';
-import { CICDProviderConfig, CICDProviderType, CICDAuthType } from '@/types-new/cicd-types';
-import { CICDDeploymentFormData } from '@/types-new/deployment-types';
-
 export async function createDeploymentWithCICD(formData: CICDDeploymentFormData) {
   try {
     // We no longer use a global timeout - we rely on the Jenkins provider's timeout mechanisms
     const cookieStore = await cookies();
 
     // Log tenant_name
-    console.log(
-      '[@action:deploymentWizard] tenant_name:',
-      formData.provider.config.tenant_name,
-    );
-
-    // Initialize CICD service with provider config
-    const providerConfig: CICDProviderConfig = {
-      id: formData.cicd_provider_id,
-      tenant_name: formData.provider.config.tenant_name,
-      type: formData.provider.type as CICDProviderType,
-      name: formData.configuration.name,
-      url: formData.provider.config.url,
-      auth_type: 'basic_auth' as CICDAuthType,
-      credentials: {
-        token: formData.provider.config.token,
-        username: formData.provider.config.username,
-      },
-    };
-
-    const cicdService = new CICDService();
-
-    await cicdService.initialize(providerConfig);
-
-    // Create Jenkins job
-    const jobParams: CreateCICDJobParams = {
-      name: formData.configuration.name,
-      description: formData.configuration.description,
-      provider_id: formData.cicd_provider_id,
-      repository: {
-        url: formData.repository_id,
-        branch: formData.configuration.branch,
-      },
-      scripts: formData.configuration.scriptIds.map((scriptId, index) => ({
-        path: scriptId,
-        type: 'shell',
-        parameters: formData.configuration.parameters[index]
-          ? [formData.configuration.parameters[index]]
-          : undefined,
-      })),
-      hosts: formData.configuration.hostIds.map((id) => ({
-        name: id,
-        ip: '',
-        username: '',
-        environment: 'production',
-      })),
-    };
-
-    const jobResult = await cicdService.createJob(jobParams);
-
-    console.log(
-      '[@action:deploymentWizard:createDeploymentWithCICD] Jenkins job creation result:',
-      {
-        success: jobResult.success,
-        error: jobResult.error,
-        job_id: jobResult.data?.id,
-      },
-    );
-
-    if (!jobResult.success) {
-      const errorMessage = jobResult.error?.includes('timed out')
-        ? 'Jenkins job creation timed out. The server might be busy or unavailable.'
-        : `Failed to create Jenkins job: ${jobResult.error}`;
-      throw new Error(errorMessage);
-    }
-
-    // Store Jenkins Job in DB
-    console.log('[@action:deploymentWizard:createDeploymentWithCICD] Storing job in database');
-    const { createCICDJob } = await import('@/lib/db/cicdDb');
-    const cicdJob = await createCICDJob(
-      {
-        data: {
-          // Required fields
-          provider_id: formData.cicd_provider_id,
-          external_id: jobResult.data?.id,
-          name: formData.name,
-          team_id: formData.team_id,
-          creator_id: formData.creator_id,
-
-          // Optional fields
-          description: formData.description || null,
-          parameters: formData.configuration || null,
-
-          // Timestamps
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-      },
-      cookieStore,
-    );
-
-    if (!cicdJob.success) {
-      throw new Error(`Failed to store CICD job: ${cicdJob.error}`);
-    }
+    console.log('[@action:deploymentWizard] tenant_name:', formData.provider.config.tenant_name);
 
     // Create Deployment
-    console.log(
-      '[@action:deploymentWizard:createDeploymentWithCICD] Creating deployment record',
-    );
+    console.log('[@action:deploymentWizard:createDeploymentWithCICD] Creating deployment record');
     const { createDeployment } = await import('@/lib/db/deploymentDb');
     const deployment = await createDeployment(
       {
@@ -130,8 +31,6 @@ export async function createDeploymentWithCICD(formData: CICDDeploymentFormData)
         host_ids: formData.configuration.hostIds || null,
         environment_vars: formData.configuration.environmentVars || null,
         scripts_parameters: formData.configuration.parameters || null,
-        cicd_provider_id: formData.cicd_provider_id || null,
-
         // Schedule related fields
         cron_expression: formData.configuration?.schedule?.cronExpression || null,
         repeat_count: formData.configuration?.schedule?.repeatCount || null,
@@ -149,35 +48,6 @@ export async function createDeploymentWithCICD(formData: CICDDeploymentFormData)
       throw new Error(`Failed to create deployment: ${deployment.error}`);
     }
 
-    // Create Mapping
-    const { createDeploymentCICDMapping } = await import('@/lib/db/cicdDb');
-    const mapping = await createDeploymentCICDMapping(
-      {
-        // Required references
-        deployment_id: deployment.data?.id,
-        cicd_job_id: cicdJob.data?.id,
-
-        // Job details
-        parameters: formData.configuration,
-        build_number: null, // Will be set when the job runs
-        build_url: null, // Will be set when the job runs
-
-        // Timestamps
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-      cookieStore,
-    );
-
-    if (!mapping.success) {
-      throw new Error(`Failed to create deployment-CICD mapping: ${mapping.error}`);
-    }
-
-    // Auto-start if needed
-    if (formData.autoStart && jobResult.data?.id) {
-      await cicdService.triggerJob(jobResult.data.id, formData.configuration.parameters);
-    }
-
     // Return the success response with the deployment data
     return { success: true, data: deployment.data };
   } catch (error: any) {
@@ -185,13 +55,14 @@ export async function createDeploymentWithCICD(formData: CICDDeploymentFormData)
       message: error.message,
       stack: error.stack,
     });
-    
+
     // Provide a clearer error message for Jenkins-specific errors
     let errorMessage = error.message;
     if (error.message.includes('timed out')) {
-      errorMessage = 'Jenkins job creation timed out after 15 seconds. Please check your Jenkins server or try again later.';
+      errorMessage =
+        'Jenkins job creation timed out after 15 seconds. Please check your Jenkins server or try again later.';
     }
-    
+
     return { success: false, error: errorMessage };
   }
 }

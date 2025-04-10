@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRef, useEffect } from 'react';
 
 import {
   getDeployments,
@@ -11,7 +12,7 @@ import {
 } from '@/app/actions/deploymentsAction';
 import { useToast } from '@/components/shadcn/use-toast';
 import type { DeploymentFormData } from '@/types/component/deploymentComponentType';
-
+let hookInstanceCounter = 0;
 // Define proper return types for server actions
 interface ActionResult<T = any> {
   success: boolean;
@@ -25,10 +26,28 @@ interface ActionResult<T = any> {
  * Provides functions for fetching, creating, updating, deleting, and running deployments
  * Uses React Query for data fetching and caching
  */
-export function useDeployment() {
+export function useDeployment(componentName = 'unknown') {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const instanceId = useRef(++hookInstanceCounter);
+  const isMounted = useRef(false);
+  // Log mount/unmount for debugging
+  useEffect(() => {
+    const currentInstanceId = instanceId.current;
 
+    if (!isMounted.current) {
+      console.log(
+        `[@hook:useCICD:useCICD] Hook mounted #${currentInstanceId} in component: ${componentName}`,
+      );
+      isMounted.current = true;
+    }
+
+    return () => {
+      console.log(
+        `[@hook:useCICD:useCICD] Hook unmounted #${currentInstanceId} from component: ${componentName}`,
+      );
+    };
+  }, [componentName]);
   // Get all deployments
   const {
     data: deploymentsResponse,

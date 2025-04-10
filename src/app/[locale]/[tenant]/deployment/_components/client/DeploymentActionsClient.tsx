@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import React, { useState, useEffect } from 'react';
 
 import { Button } from '@/components/shadcn/button';
-import { useHost, useCICD } from '@/hooks';
+import { useHost } from '@/hooks';
 import { useRepository } from '@/hooks/useRepository';
 import { useUser } from '@/hooks/useUser';
 import { Repository } from '@/types/component/repositoryComponentType';
@@ -25,7 +25,6 @@ export function DeploymentActionsClient({
   const t = useTranslations('deployment');
   const c = useTranslations('common');
   const { refetchHosts } = useHost('DeploymentActionsClient');
-  const { refetchProviders } = useCICD('DeploymentActionsClient');
   const { refetchRepositories } = useRepository('DeploymentActionsClient');
   const { user } = useUser(null, 'DeploymentActionsClient');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -93,7 +92,7 @@ export function DeploymentActionsClient({
 
     try {
       // Use hooks to refresh all related data in parallel
-      await Promise.all([refetchHosts(), refetchProviders(), refetchRepositories()]);
+      await Promise.all([refetchHosts(), refetchRepositories()]);
     } catch (error) {
       console.error('Error refreshing data:', error);
     }
@@ -122,7 +121,7 @@ export function DeploymentActionsClient({
               userId: user?.id,
               userEmail: user?.email,
               tenantName: user?.tenant_name,
-              teamCount: user?.teams?.length
+              teamCount: user?.teams?.length,
             });
             setShowWizard(true);
           }}

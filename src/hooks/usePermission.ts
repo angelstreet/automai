@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useContext } from 'react';
+import { useCallback, useContext, useRef, useEffect } from 'react';
 
 import { checkPermission, getUserPermissions } from '@/app/actions/permissionAction';
 import { PermissionContext } from '@/context/PermissionContext';
@@ -14,12 +14,33 @@ import type {
   Operation,
   PermissionsResult,
 } from '@/types/context/permissionsContextType';
-
+let hookInstanceCounter = 0;
 /**
  * Access the permission context
  * This is a simple hook that just provides access to the context
  */
-export function usePermissionContext() {
+export function usePermissionContext(componentName = 'unknown') {
+  // Log mount/unmount for debugging
+  const instanceId = useRef(++hookInstanceCounter);
+  const isMounted = useRef(false);
+
+  useEffect(() => {
+    const currentInstanceId = instanceId.current;
+
+    if (!isMounted.current) {
+      console.log(
+        `[@hook:useCICD:useCICD] Hook mounted #${currentInstanceId} in component: ${componentName}`,
+      );
+      isMounted.current = true;
+    }
+
+    return () => {
+      console.log(
+        `[@hook:useCICD:useCICD] Hook unmounted #${currentInstanceId} from component: ${componentName}`,
+      );
+    };
+  }, [componentName]);
+
   const context = useContext(PermissionContext);
   if (!context) {
     throw new Error('usePermissionContext must be used within a PermissionProvider');

@@ -26,7 +26,6 @@ export function DeploymentWizardStep5Client({
   _onCancel,
   onSubmit,
   isPending,
-  cicdProviders,
   availableHosts = [],
   repositoryScripts = [],
 }: DeploymentWizardStep5ClientProps) {

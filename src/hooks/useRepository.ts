@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRef, useEffect } from 'react';
 
 import {
   getRepositories,
@@ -12,15 +13,33 @@ import {
 import { useToast } from '@/components/shadcn/use-toast';
 import * as gitService from '@/lib/services/gitService';
 import type { TestRepositoryInput } from '@/types/context/repositoryContextType';
-
+let hookInstanceCounter = 0;
 /**
  * Hook for managing repositories
  * Simplified to include only essential functionality
  */
-export function useRepository() {
+export function useRepository(componentName = 'unknown') {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const instanceId = useRef(++hookInstanceCounter);
+  const isMounted = useRef(false);
+  // Log mount/unmount for debugging
+  useEffect(() => {
+    const currentInstanceId = instanceId.current;
 
+    if (!isMounted.current) {
+      console.log(
+        `[@hook:useCICD:useCICD] Hook mounted #${currentInstanceId} in component: ${componentName}`,
+      );
+      isMounted.current = true;
+    }
+
+    return () => {
+      console.log(
+        `[@hook:useCICD:useCICD] Hook unmounted #${currentInstanceId} from component: ${componentName}`,
+      );
+    };
+  }, [componentName]);
   // Get all repositories
   const {
     data: repositoriesResponse,
