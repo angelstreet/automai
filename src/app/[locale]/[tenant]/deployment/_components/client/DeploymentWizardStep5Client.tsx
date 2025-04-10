@@ -80,7 +80,10 @@ export function DeploymentWizardStep5Client({
           name: host.name,
           ip: host.ip,
           port: (host as any).port || 22,
-          username: (host as any).username || 'user',
+          username: (host as any).username || (host as any).user || 'user',
+          password: (host as any).password,
+          privateKey: (host as any).private_key,
+          authType: (host as any).auth_type || 'password',
           os: (host as any).is_windows ? 'windows' : 'linux',
         }));
 
@@ -99,13 +102,25 @@ export function DeploymentWizardStep5Client({
           path: script.path,
           parameters: script.parameters,
         })),
-        hosts: hostDetails.map((host) => ({
-          name: host.name,
-          username: host.username,
-          ip: host.ip || 'No IP',
-          port: host.port,
-          os: host.os,
-        })),
+        hosts: hostDetails.map((host) => {
+          const hostConfig = {
+            name: host.name,
+            username: host.username,
+            ip: host.ip || 'No IP',
+            port: host.port,
+            os: host.os,
+            authType: host.authType
+          };
+          
+          // Only include the relevant authentication based on authType
+          if (host.authType === 'password' && host.password) {
+            hostConfig['password'] = host.password;
+          } else if (host.authType === 'privateKey' && host.privateKey) {
+            hostConfig['key'] = host.privateKey;
+          }
+          
+          return hostConfig;
+        }),
         schedule:
           data.schedule === 'now'
             ? 'now'
