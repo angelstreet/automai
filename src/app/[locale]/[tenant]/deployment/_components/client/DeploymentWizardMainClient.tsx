@@ -4,14 +4,13 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
 import React, { useState, useEffect, useRef, useContext } from 'react';
 
-import { createDeploymentWithQueue } from '@/app/actions/deploymentWizardAction';
+import { createJob, JobFormData } from '@/app/actions/jobsAction';
 import { toast } from '@/components/shadcn/use-toast';
 import { UserContext } from '@/context/UserContext';
 import * as gitService from '@/lib/services/gitService';
 import { DeploymentData } from '@/types/component/deploymentComponentType';
 import { Host as HostType, Host as SystemHost } from '@/types/component/hostComponentType';
 import { Repository } from '@/types/component/repositoryComponentType';
-import { QueuedDeploymentFormData } from '@/types-new/deployment-types';
 
 import { DeploymentWizardStep1Client } from './DeploymentWizardStep1Client';
 import { DeploymentWizardStep2Client } from './DeploymentWizardStep2Client';
@@ -518,50 +517,54 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           },
         );
 
-        const formData: QueuedDeploymentFormData = {
+        // Convert deployment data to job form data
+        const formData: JobFormData = {
           name: deploymentData.name,
           description: deploymentData.description,
           repository_id: deploymentData.repositoryId,
-          host_id: deploymentData.hostIds[0],
-          script_id: deploymentData.scriptIds[0],
+          repository_url: deploymentData.selectedRepository?.url || '',
+          branch: deploymentData.branch || 'main',
           team_id: teamId,
           creator_id: user?.id || userId,
-          provider: {
-            type: 'github', // Default to github or get from repository if available
-            config: {
-              url: deploymentData.selectedRepository?.url || '',
-              token: '', // This would be from secure storage
-              tenant_name: user?.tenant_name || tenantName || '',
+
+          // Scripts, hosts, and parameters
+          scriptIds: deploymentData.scriptIds,
+          parameters: deploymentData.scriptIds.map((scriptId) =>
+            JSON.stringify(deploymentData.scriptParameters[scriptId] || {}),
+          ),
+          hostIds: deploymentData.hostIds,
+
+          // Environment variables
+          environmentVars: deploymentData.environmentVars.reduce(
+            (acc, curr) => {
+              acc[curr.key] = curr.value;
+              return acc;
             },
+            {} as Record<string, string>,
+          ),
+
+          // Schedule
+          schedule: {
+            enabled: deploymentData.schedule !== 'now',
+            cronExpression: deploymentData.cronExpression,
+            repeatCount: deploymentData.repeatCount,
           },
-          configuration: {
-            name: deploymentData.name,
-            description: deploymentData.description,
-            branch: deploymentData.branch || 'main',
-            scriptIds: deploymentData.scriptIds,
-            parameters: deploymentData.scriptIds.map((scriptId) =>
-              JSON.stringify(deploymentData.scriptParameters[scriptId] || {}),
-            ),
-            hostIds: deploymentData.hostIds,
-            environmentVars: deploymentData.environmentVars.reduce(
-              (acc, curr) => {
-                acc[curr.key] = curr.value;
-                return acc;
-              },
-              {} as Record<string, string>,
-            ),
-            schedule: {
-              enabled: deploymentData.schedule !== 'now',
-              cronExpression: deploymentData.cronExpression,
-              repeatCount: deploymentData.repeatCount,
-            },
-            notifications: {
-              enabled: deploymentData.notifications.email || deploymentData.notifications.slack,
-              onSuccess: deploymentData.notifications.email,
-              onFailure: deploymentData.notifications.slack,
-            },
+
+          // Notifications
+          notifications: {
+            enabled: deploymentData.notifications.email || deploymentData.notifications.slack,
+            onSuccess: deploymentData.notifications.email,
+            onFailure: deploymentData.notifications.slack,
           },
+
+          // Auto-start and job type
           autoStart: deploymentData.schedule === 'now',
+          job_type: 'deployment',
+
+          // Optional config with tenant name for backward compatibility
+          config: {
+            tenant_name: user?.tenant_name || tenantName || '',
+          },
         };
 
         // Detailed logging of the form data for debugging
@@ -570,20 +573,21 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
             name: formData.name,
             description: formData.description,
             repository_id: formData.repository_id,
-            host_id: formData.host_id,
-            script_id: formData.script_id,
+            repository_url: formData.repository_url,
           },
-          configuration: {
-            scripts: formData.configuration.scriptIds,
-            hosts: formData.configuration.hostIds,
-            branch: formData.configuration.branch,
-            schedule: formData.configuration.schedule,
-            notifications: formData.configuration.notifications,
+          execution: {
+            scripts: formData.scriptIds,
+            hosts: formData.hostIds,
+            branch: formData.branch,
           },
-          autoStart: formData.autoStart,
+          scheduling: {
+            schedule: formData.schedule,
+            autoStart: formData.autoStart,
+          },
         });
 
-        const result = await createDeploymentWithQueue(formData);
+        // Use the new createJob action directly
+        const result = await createJob(formData);
         console.log(
           '[@component:DeploymentWizardMainClient:handleSubmit] Server response:',
           result,
@@ -591,18 +595,26 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
 
         if (result.success) {
           console.log(
-            '[@component:DeploymentWizardMainClient:handleSubmit] Deployment created successfully',
+            '[@component:DeploymentWizardMainClient:handleSubmit] Job created successfully',
           );
           toast({
-            title: 'Deployment created',
-            description: 'Your deployment has been created successfully.',
+            title: 'Job created',
+            description: 'Your job has been created successfully.',
             variant: 'default',
           });
 
           // Reset form and notify parent
           setDeploymentData(initialDeploymentData);
           setStep(1);
+
+          // Invalidate both jobs and deployments queries for backward compatibility
+          queryClient.invalidateQueries({ queryKey: ['jobs'] });
           queryClient.invalidateQueries({ queryKey: ['deployments'] });
+
+          // Dispatch events to refresh both jobs and deployments views
+          window.dispatchEvent(new CustomEvent('refresh-jobs'));
+          window.dispatchEvent(new CustomEvent('refresh-deployments'));
+
           onDeploymentCreated();
         } else {
           console.error(
@@ -612,17 +624,14 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           throw new Error(result.error);
         }
       } catch (error: any) {
-        console.error(
-          '[@component:DeploymentWizardMainClient:handleSubmit] Error creating deployment:',
-          {
-            message: error.message,
-            stack: error.stack,
-            formData: deploymentData,
-          },
-        );
+        console.error('[@component:DeploymentWizardMainClient:handleSubmit] Error creating job:', {
+          message: error.message,
+          stack: error.stack,
+          formData: deploymentData,
+        });
         setSubmissionError(error.message);
         toast({
-          title: 'Error creating deployment',
+          title: 'Error creating job',
           description: error.message.includes('timed out')
             ? 'The job submission timed out. Please try again or contact support if the issue persists.'
             : error.message,
@@ -713,7 +722,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               >
                 4
               </div>
-              <div className="text-xs mt-1">Schedule</div>
+              <div className="text-xs mt-1">Review</div>
             </div>
 
             <div className="flex-1 flex items-center">
@@ -730,97 +739,65 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               >
                 5
               </div>
-              <div className="text-xs mt-1">Review</div>
+              <div className="text-xs mt-1">Deploy</div>
             </div>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          {/* Step 1: Basic Deployment Information */}
-          {step === 1 && (
-            <DeploymentWizardStep1Client
-              name={deploymentData.name || ''}
-              description={deploymentData.description || ''}
-              repositoryId={deploymentData.repositoryId || ''}
-              branch={deploymentData.branch || ''}
-              repositories={repositories || []}
-              repositoryError={null}
-              onInputChange={handleInputChange}
-              onNextStep={handleNextStep}
-              isStepValid={!!deploymentData.name && !!deploymentData.repositoryId}
-            />
-          )}
-
-          {/* Step 2: Select Scripts with Parameters */}
-          {step === 2 && (
-            <DeploymentWizardStep2Client
-              selectedRepository={deploymentData.selectedRepository || null}
-              scriptIds={deploymentData.scriptIds}
-              repositoryScripts={repositoryScripts}
-              isLoadingScripts={isLoadingScripts}
-              scriptsError={scriptsError}
-              scriptParameters={deploymentData.scriptParameters}
-              onScriptsChange={handleScriptsChange}
-              onScriptParameterChange={handleScriptParameterChange}
-              onPrevStep={handlePrevStep}
-              onNextStep={handleNextStep}
-              isStepValid={deploymentData.scriptIds.length > 0}
-            />
-          )}
-
-          {/* Step 3: Select Target Hosts */}
-          {step === 3 && (
-            <DeploymentWizardStep3Client
-              hostIds={deploymentData.hostIds}
-              availableHosts={availableHosts}
-              isLoadingHosts={false}
-              hostsError={null} // Server will handle timeouts
-              onHostToggle={handleHostsChange}
-              onPrevStep={handlePrevStep}
-              onNextStep={handleNextStep}
-              isStepValid={deploymentData.hostIds.length > 0}
-            />
-          )}
-
-          {/* Step 4: Schedule */}
-          {step === 4 && (
-            <DeploymentWizardStep4Client
-              schedule={deploymentData.schedule}
-              scheduledTime={deploymentData.scheduledTime || ''}
-              cronExpression={deploymentData.cronExpression || ''}
-              repeatCount={deploymentData.repeatCount || 0}
-              onInputChange={handleInputChange}
-              onPrevStep={handlePrevStep}
-              onNextStep={handleNextStep}
-              isStepValid={
-                deploymentData.schedule === 'now' ||
-                (deploymentData.schedule === 'later' && !!deploymentData.scheduledTime)
-              }
-            />
-          )}
-
-          {/* Step 5: Review */}
-          {step === 5 && (
-            <DeploymentWizardStep5Client
-              data={deploymentData}
-              onUpdateData={(partialData) => {
-                setDeploymentData((prev) => ({ ...prev, ...partialData }));
-              }}
-              onNext={() => {}} // Step 5 doesn't have a next step
-              onBack={handlePrevStep}
-              _onCancel={onCancel}
-              onSubmit={handleSubmit}
-              isPending={isCreating}
-              availableHosts={availableHosts}
-              repositoryScripts={repositoryScripts}
-            />
-          )}
-        </form>
+        {/* Content of the wizard */}
+        {step === 1 && (
+          <DeploymentWizardStep1Client
+            deploymentData={deploymentData}
+            onInputChange={handleInputChange}
+            onNextStep={handleNextStep}
+            onPrevStep={handlePrevStep}
+          />
+        )}
+        {step === 2 && (
+          <DeploymentWizardStep2Client
+            deploymentData={deploymentData}
+            onInputChange={handleInputChange}
+            onNextStep={handleNextStep}
+            onPrevStep={handlePrevStep}
+            repositoryScripts={repositoryScripts}
+            isLoadingScripts={isLoadingScripts}
+            scriptsError={scriptsError}
+            onScriptsChange={handleScriptsChange}
+            onScriptParameterChange={handleScriptParameterChange}
+          />
+        )}
+        {step === 3 && (
+          <DeploymentWizardStep3Client
+            deploymentData={deploymentData}
+            onInputChange={handleInputChange}
+            onNextStep={handleNextStep}
+            onPrevStep={handlePrevStep}
+            availableHosts={availableHosts}
+            onHostsChange={handleHostsChange}
+          />
+        )}
+        {step === 4 && (
+          <DeploymentWizardStep4Client
+            deploymentData={deploymentData}
+            onInputChange={handleInputChange}
+            onNextStep={handleNextStep}
+            onPrevStep={handlePrevStep}
+          />
+        )}
+        {step === 5 && (
+          <DeploymentWizardStep5Client
+            deploymentData={deploymentData}
+            onInputChange={handleInputChange}
+            onNextStep={handleNextStep}
+            onPrevStep={handlePrevStep}
+            onSubmit={handleSubmit}
+            isCreating={isCreating}
+            submissionError={_submissionError}
+          />
+        )}
       </div>
     );
   },
 );
 
-DeploymentWizardMainClient.displayName = 'DeploymentWizard';
-
-export { DeploymentWizardMainClient };
+export default DeploymentWizardMainClient;
