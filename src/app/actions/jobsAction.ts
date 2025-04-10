@@ -332,6 +332,7 @@ export async function updateJob(id: string, formData: Partial<JobFormData>, host
 
 /**
  * Runs a job by its configuration ID
+ * This only queues the job for execution and doesn't create a new job configuration
  */
 export async function startJob(
   configId: string,
@@ -339,18 +340,55 @@ export async function startJob(
   overrideParameters?: Record<string, any>,
 ) {
   try {
-    console.log(`[@action:jobsAction:startJob] Starting job with config ID: ${configId}`);
+    console.log(`[@action:jobsAction:startJob] Starting existing job with config ID: "${configId}"`);
+    
+    if (!configId) {
+      console.error('[@action:jobsAction:startJob] ERROR: No config ID provided');
+      return {
+        success: false,
+        error: 'No job configuration ID provided'
+      };
+    }
+    
+    if (!userId) {
+      console.error('[@action:jobsAction:startJob] ERROR: No user ID provided');
+      return {
+        success: false,
+        error: 'No user ID provided'
+      };
+    }
+    
     const cookieStore = await cookies();
+    
+    // First verify the job configuration exists
+    const { getJobConfigById } = await import('@/lib/db/jobsConfigurationDb');
+    const jobConfigResult = await getJobConfigById(configId, cookieStore);
+    
+    if (!jobConfigResult.success || !jobConfigResult.data) {
+      console.error('[@action:jobsAction:startJob] ERROR: Job configuration not found:', configId);
+      return {
+        success: false,
+        error: `Job configuration not found: ${jobConfigResult.error || ''}`
+      };
+    }
+    
+    console.log(`[@action:jobsAction:startJob] Found valid job configuration: ${configId}, now queueing for execution`);
 
     // Queue the job for execution
     const result = await queueJobForExecution(configId, userId, overrideParameters, cookieStore);
 
     if (!result.success) {
+      console.error('[@action:jobsAction:startJob] ERROR: Failed to queue job:', result.error);
       throw new Error(`Failed to start job: ${result.error}`);
     }
 
+    // Revalidate paths to refresh UI
+    console.log(`[@action:jobsAction:startJob] Revalidating paths`);
+    revalidatePath('/[locale]/[tenant]/deployment');
+    revalidatePath('/deployment');
+
     console.log(
-      `[@action:jobsAction:startJob] Job started successfully: ${result.data.job_run_id}`,
+      `[@action:jobsAction:startJob] Job queued successfully: ${result.data.job_run_id}`,
     );
 
     return {
@@ -359,7 +397,9 @@ export async function startJob(
       message: 'Job queued successfully',
     };
   } catch (error: any) {
-    console.error('[@action:jobsAction:startJob] Error:', {
+    console.error('[@action:jobsAction:startJob] CAUGHT ERROR:', {
+      id: configId,
+      userId,
       message: error.message,
       stack: error.stack,
     });
@@ -568,23 +608,39 @@ export async function queueJobForExecution(
   cookieStore?: any,
 ) {
   try {
-    console.log(`[@action:jobsAction:queueJobForExecution] Queueing job: ${configId}`);
+    console.log(`[@action:jobsAction:queueJobForExecution] Queueing job with config ID: "${configId}", userId: "${userId}"`);
+
+    if (!configId) {
+      console.error('[@action:jobsAction:queueJobForExecution] ERROR: No config ID provided');
+      return { success: false, error: 'No job configuration ID provided' };
+    }
+
+    if (!userId) {
+      console.error('[@action:jobsAction:queueJobForExecution] ERROR: No user ID provided');
+      return { success: false, error: 'No user ID provided' };
+    }
 
     // First, get the job configuration
     const { getJobConfigById } = await import('@/lib/db/jobsConfigurationDb');
     const configResult = await getJobConfigById(configId, cookieStore);
 
-    if (!configResult.success) {
+    if (!configResult.success || !configResult.data) {
+      console.error('[@action:jobsAction:queueJobForExecution] ERROR: Failed to get job configuration:', configResult.error);
       return { success: false, error: `Failed to get job configuration: ${configResult.error}` };
     }
 
-    // Get the job run that we'll update with queued status
+    console.log(`[@action:jobsAction:queueJobForExecution] Found valid job configuration: ${configId}`);
+
+    // Create a new job run record
     const { runJob } = await import('@/lib/db/jobsRunDb');
     const jobRunResult = await runJob(configId, userId, cookieStore);
 
-    if (!jobRunResult.success) {
+    if (!jobRunResult.success || !jobRunResult.data) {
+      console.error('[@action:jobsAction:queueJobForExecution] ERROR: Failed to create job run:', jobRunResult.error);
       return { success: false, error: `Failed to create job run: ${jobRunResult.error}` };
     }
+
+    console.log(`[@action:jobsAction:queueJobForExecution] Created job run: ${jobRunResult.data.id}`);
 
     // Prepare the job payload for Redis
     const queuePayload = prepareJobForQueue(configResult.data, overrideParameters);
@@ -612,6 +668,7 @@ export async function queueJobForExecution(
         jobRunResult.data.id,
         {
           queued_at: new Date().toISOString(),
+          status: 'pending', // Update status to pending
           execution_parameters: {
             queue: JOBS_QUEUE,
             priority: queuePayload.priority,
@@ -621,10 +678,13 @@ export async function queueJobForExecution(
         cookieStore,
       );
 
+      console.log(`[@action:jobsAction:queueJobForExecution] Job successfully queued and run record updated: ${jobRunResult.data.id}`);
+
       return {
         success: true,
         data: {
           job_run_id: jobRunResult.data.id,
+          config_id: configId,
           queue_payload: queuePayload,
         },
         message: 'Job queued successfully',
@@ -640,13 +700,16 @@ export async function queueJobForExecution(
         success: true,
         data: {
           job_run_id: jobRunResult.data.id,
+          config_id: configId,
           queue_error: redisError.message,
         },
         message: 'Job run created but failed to queue in Redis',
       };
     }
   } catch (error: any) {
-    console.error('[@action:jobsAction:queueJobForExecution] Error:', {
+    console.error('[@action:jobsAction:queueJobForExecution] CAUGHT ERROR:', {
+      configId,
+      userId,
       message: error.message,
       stack: error.stack,
     });

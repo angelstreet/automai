@@ -279,7 +279,17 @@ export function DeploymentListClient({
 
     setIsRunning(deployment.id);
     try {
-      const result = await startJob(deployment.id, '');
+      // Get user ID for the job run
+      const { getUser } = await import('@/app/actions/userAction');
+      const user = await getUser();
+      
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+      
+      console.log('[DeploymentListClient:handleRunDeployment] Running job with ID:', deployment.id);
+      const result = await startJob(deployment.id, user.id);
+      console.log('[DeploymentListClient:handleRunDeployment] Run result:', JSON.stringify(result));
 
       if (result && result.success) {
         toast({
@@ -290,6 +300,11 @@ export function DeploymentListClient({
 
         // Dispatch a single refresh event
         window.dispatchEvent(new Event(DeploymentEvents.REFRESH_DEPLOYMENTS));
+        
+        // Refresh the page after a short delay to show updated status
+        setTimeout(() => {
+          router.refresh();
+        }, 500);
       } else {
         toast({
           title: 'Error',

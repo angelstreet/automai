@@ -37,7 +37,7 @@ async function processJob() {
     const { config_id, input_overrides: _input_overrides } = JSON.parse(job);
     const { data, error } = await supabase
       .from('jobs_configuration')
-      .select('config_json')
+      .select('config')
       .eq('id', config_id)
       .single();
     if (error || !data) {
@@ -45,7 +45,7 @@ async function processJob() {
       return;
     }
 
-    const config = data.config_json;
+    const config = data.config;
     const hosts = config.hosts || [];
     const scripts = (config.scripts || [])
       .map((script) => `${script.path} ${script.parameters}`)
@@ -114,13 +114,18 @@ async function setupSchedules() {
     return;
   }
 
-  data.forEach(({ id, config_json }) => {
-    if (config_json.schedule && config_json.schedule !== 'now') {
-      cron.schedule(config_json.schedule, async () => {
+  data.forEach(({ id, config }) => {
+    // Changed config to config
+    if (!config) {
+      console.warn(`Config ${id} has no config data`);
+      return;
+    }
+    if (config.schedule && config.schedule !== 'now') {
+      cron.schedule(config.schedule, async () => {
         await redis.lpush('jobs_queue', JSON.stringify({ config_id: id, input_overrides: {} }));
         console.log(`Scheduled job queued for config ${id}`);
       });
-    } else if (config_json.schedule === 'now') {
+    } else if (config.schedule === 'now') {
       redis.lpush('jobs_queue', JSON.stringify({ config_id: id, input_overrides: {} }));
       console.log(`Immediate job queued for config ${id}`);
     }
