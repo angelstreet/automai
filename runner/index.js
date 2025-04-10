@@ -23,72 +23,83 @@ function decrypt(encryptedData, keyBase64) {
 }
 
 async function processJob() {
-  const job = await redis.rpop('jobs_queue');
-  if (!job) return;
+  let job;
+  try {
+    // Log queue length before processing
+    const queueLength = await redis.llen('jobs_queue');
+    console.log(`[@runner:processJob] Current queue length: ${queueLength} jobs`);
 
-  const { config_id, input_overrides: _input_overrides } = JSON.parse(job);
-  const { data, error } = await supabase
-    .from('jobs_configuration')
-    .select('config_json')
-    .eq('id', config_id)
-    .single();
-  if (error || !data) {
-    console.error(`Failed to fetch config ${config_id}: ${error?.message}`);
-    return;
-  }
+    job = await redis.rpop('jobs_queue');
+    if (!job) return;
 
-  const config = data.config_json;
-  const hosts = config.hosts || [];
-  const scripts = (config.scripts || [])
-    .map((script) => `${script.path} ${script.parameters}`)
-    .join(' && ');
+    console.log(`[@runner:processJob] Processing job, ${queueLength - 1} jobs remaining in queue`);
 
-  for (const host of hosts) {
-    let sshKeyOrPass = host.key || host.password;
-    if (host.authType === 'privateKey' && sshKeyOrPass?.includes(':')) {
-      sshKeyOrPass = decrypt(sshKeyOrPass, process.env.ENCRYPTION_KEY);
+    const { config_id, input_overrides: _input_overrides } = JSON.parse(job);
+    const { data, error } = await supabase
+      .from('jobs_configuration')
+      .select('config_json')
+      .eq('id', config_id)
+      .single();
+    if (error || !data) {
+      console.error(`Failed to fetch config ${config_id}: ${error?.message}`);
+      return;
     }
 
-    const script = host.os === 'windows' ? `cmd.exe /c "${scripts}"` : scripts;
-    const conn = new Client();
-    conn
-      .on('ready', () => {
-        conn.exec(script, async (err, stream) => {
-          if (err) {
-            await supabase.from('jobs_run').insert({
-              config_id,
-              status: 'failed',
-              output: { stderr: err.message },
-              created_at: new Date().toISOString(),
-              started_at: new Date().toISOString(),
-              completed_at: new Date().toISOString(),
-            });
-            conn.end();
-            return;
-          }
-          let output = { stdout: '', stderr: '' };
-          stream
-            .on('data', (data) => (output.stdout += data))
-            .stderr.on('data', (data) => (output.stderr += data))
-            .on('close', async () => {
+    const config = data.config_json;
+    const hosts = config.hosts || [];
+    const scripts = (config.scripts || [])
+      .map((script) => `${script.path} ${script.parameters}`)
+      .join(' && ');
+
+    for (const host of hosts) {
+      let sshKeyOrPass = host.key || host.password;
+      if (host.authType === 'privateKey' && sshKeyOrPass?.includes(':')) {
+        sshKeyOrPass = decrypt(sshKeyOrPass, process.env.ENCRYPTION_KEY);
+      }
+
+      const script = host.os === 'windows' ? `cmd.exe /c "${scripts}"` : scripts;
+      const conn = new Client();
+      conn
+        .on('ready', () => {
+          conn.exec(script, async (err, stream) => {
+            if (err) {
               await supabase.from('jobs_run').insert({
                 config_id,
-                status: 'success',
-                output,
+                status: 'failed',
+                output: { stderr: err.message },
                 created_at: new Date().toISOString(),
                 started_at: new Date().toISOString(),
                 completed_at: new Date().toISOString(),
               });
               conn.end();
-            });
+              return;
+            }
+            let output = { stdout: '', stderr: '' };
+            stream
+              .on('data', (data) => (output.stdout += data))
+              .stderr.on('data', (data) => (output.stderr += data))
+              .on('close', async () => {
+                await supabase.from('jobs_run').insert({
+                  config_id,
+                  status: 'success',
+                  output,
+                  created_at: new Date().toISOString(),
+                  started_at: new Date().toISOString(),
+                  completed_at: new Date().toISOString(),
+                });
+                conn.end();
+              });
+          });
+        })
+        .connect({
+          host: host.ip,
+          port: host.port || 22,
+          username: host.username,
+          [host.authType === 'privateKey' ? 'privateKey' : 'password']: sshKeyOrPass,
         });
-      })
-      .connect({
-        host: host.ip,
-        port: host.port || 22,
-        username: host.username,
-        [host.authType === 'privateKey' ? 'privateKey' : 'password']: sshKeyOrPass,
-      });
+    }
+  } catch (error) {
+    console.error('[@runner:processJob] Error processing job:', error);
   }
 }
 
@@ -116,6 +127,17 @@ async function setupSchedules() {
   });
 }
 
+// Add periodic queue status check
+async function logQueueStatus() {
+  try {
+    const queueLength = await redis.llen('jobs_queue');
+    console.log(`[@runner:queueStatus] Jobs in queue: ${queueLength}`);
+  } catch (error) {
+    console.error('[@runner:queueStatus] Error checking queue length:', error);
+  }
+}
+
 setInterval(processJob, 5000);
+setInterval(logQueueStatus, 60000); // Log queue status every minute
 setupSchedules().catch((err) => console.error('Setup schedules failed:', err));
 console.log('Worker running...');
