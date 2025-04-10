@@ -132,19 +132,28 @@ export function DeploymentListClient({
     });
 
     try {
-      setActionInProgress(selectedDeployment.id);
+      // Save ID to a local variable to use in case of state updates
+      const idToDelete = selectedDeployment.id;
+      
+      setActionInProgress(idToDelete);
       console.log(
         '[DeploymentListClient:handleConfirmDelete] Calling deleteJob with ID:',
-        selectedDeployment.id,
+        idToDelete,
       );
-      const result = await deleteJob(selectedDeployment.id);
-      console.log('[DeploymentListClient:handleConfirmDelete] Delete result:', result);
+      
+      // Make sure we're calling the server action with a direct string argument
+      const result = await deleteJob(String(idToDelete));
+      console.log('[DeploymentListClient:handleConfirmDelete] Delete result:', JSON.stringify(result));
 
       if (result && result.success) {
         console.log(
           '[DeploymentListClient:handleConfirmDelete] Delete successful for ID:',
-          selectedDeployment.id,
+          idToDelete,
         );
+        
+        // Close the dialog first
+        setIsDeleteDialogOpen(false);
+        
         toast({
           title: 'Deployment Deleted',
           description: 'Successfully deleted.',
@@ -152,10 +161,15 @@ export function DeploymentListClient({
         });
 
         // Update the local state to remove the deleted deployment
-        setDeployments((current) => current.filter((d) => d.id !== selectedDeployment.id));
+        setDeployments((current) => current.filter((d) => d.id !== idToDelete));
 
         // Dispatch a single refresh event
         window.dispatchEvent(new Event(DeploymentEvents.REFRESH_DEPLOYMENTS));
+        
+        // Refresh the page after a short delay to ensure server state is updated
+        setTimeout(() => {
+          router.refresh();
+        }, 500);
       } else {
         console.error('[DeploymentListClient:handleConfirmDelete] Delete failed:', {
           id: selectedDeployment.id,
@@ -168,9 +182,15 @@ export function DeploymentListClient({
         });
       }
     } catch (error: any) {
+      console.error('[DeploymentListClient:handleConfirmDelete] Exception during delete:', {
+        id: selectedDeployment?.id,
+        error: error.message || 'Unknown error',
+        stack: error.stack
+      });
+      
       toast({
         title: 'Error',
-        description: error.message || 'Unexpected error',
+        description: error.message || 'Unexpected error during deletion',
         variant: 'destructive',
       });
     } finally {

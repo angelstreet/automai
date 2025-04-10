@@ -2,6 +2,7 @@
 
 import { Redis } from '@upstash/redis';
 import { cookies } from 'next/headers';
+import { revalidatePath } from 'next/cache';
 
 import { createJobConfiguration } from '@/lib/db/jobsConfigurationDb';
 import { JobConfiguration } from '@/types/component/jobConfigurationComponentType';
@@ -401,6 +402,11 @@ export async function deleteJob(id: string) {
       );
       throw new Error(`Failed to delete job: ${result.error}`);
     }
+
+    // Revalidate deployment-related paths
+    console.log(`[@action:jobsAction:deleteJob] Revalidating paths`);
+    revalidatePath('/[locale]/[tenant]/deployment');
+    revalidatePath('/deployment');
 
     console.log(
       `[@action:jobsAction:deleteJob] SUCCESS: Job deleted successfully with ID: "${id}"`,
