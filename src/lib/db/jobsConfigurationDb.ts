@@ -158,18 +158,24 @@ export async function deleteJobConfiguration(
   cookieStore?: any,
 ): Promise<DbResponse<null>> {
   try {
-    console.log(`[@db:jobsConfigurationDb:deleteJobConfiguration] START: Deleting job config with ID: "${id}"`);
-    
+    console.log(
+      `[@db:jobsConfigurationDb:deleteJobConfiguration] START: Deleting job config with ID: "${id}"`,
+    );
+
     if (!id) {
-      console.error('[@db:jobsConfigurationDb:deleteJobConfiguration] ERROR: Empty ID provided for deletion');
+      console.error(
+        '[@db:jobsConfigurationDb:deleteJobConfiguration] ERROR: Empty ID provided for deletion',
+      );
       return { success: false, error: 'No job configuration ID provided' };
     }
-    
+
     console.log(`[@db:jobsConfigurationDb:deleteJobConfiguration] Creating Supabase client`);
     const supabase = await createClient(cookieStore);
 
     // First, check if the job configuration exists
-    console.log(`[@db:jobsConfigurationDb:deleteJobConfiguration] Checking if job configuration exists: "${id}"`);
+    console.log(
+      `[@db:jobsConfigurationDb:deleteJobConfiguration] Checking if job configuration exists: "${id}"`,
+    );
     const { data: configData, error: configError } = await supabase
       .from('jobs_configuration')
       .select('id')
@@ -180,72 +186,58 @@ export async function deleteJobConfiguration(
       // If we get a 'not found' error, we still want to proceed with deleting job runs
       // in case there are orphaned runs without a job config
       if (configError.code === 'PGRST116') {
-        console.warn(`[@db:jobsConfigurationDb:deleteJobConfiguration] Job configuration not found, but will continue to delete any runs: "${id}"`);
+        console.warn(
+          `[@db:jobsConfigurationDb:deleteJobConfiguration] Job configuration not found, but will continue to delete any runs: "${id}"`,
+        );
       } else {
-        console.error(`[@db:jobsConfigurationDb:deleteJobConfiguration] ERROR: Problem retrieving job configuration: "${id}", error: ${configError.message}`);
-        return { success: false, error: `Problem retrieving job configuration: ${configError.message}` };
+        console.error(
+          `[@db:jobsConfigurationDb:deleteJobConfiguration] ERROR: Problem retrieving job configuration: "${id}", error: ${configError.message}`,
+        );
+        return {
+          success: false,
+          error: `Problem retrieving job configuration: ${configError.message}`,
+        };
       }
     }
 
     if (configData) {
-      console.log(`[@db:jobsConfigurationDb:deleteJobConfiguration] Job configuration exists, ID: "${configData.id}"`);
-    }
-
-    // Check for associated job runs
-    console.log(`[@db:jobsConfigurationDb:deleteJobConfiguration] Checking for related job runs for config: "${id}"`);
-    const { data: runsData, error: runsCheckError } = await supabase
-      .from('jobs_run')
-      .select('id')
-      .eq('config_id', id);
-
-    if (runsCheckError) {
-      console.error(`[@db:jobsConfigurationDb:deleteJobConfiguration] ERROR checking job runs: ${runsCheckError.message}`);
-      return { success: false, error: `Failed to check associated job runs: ${runsCheckError.message}` };
-    }
-
-    console.log(`[@db:jobsConfigurationDb:deleteJobConfiguration] Found ${runsData.length} job runs to delete for config: "${id}"`);
-
-    // Delete all associated job runs if any exist
-    if (runsData.length > 0) {
-      console.log(`[@db:jobsConfigurationDb:deleteJobConfiguration] Deleting ${runsData.length} job runs for config: "${id}"`);
-      const { error: runsDeleteError } = await supabase
-        .from('jobs_run')
-        .delete()
-        .eq('config_id', id);
-
-      if (runsDeleteError) {
-        console.error(`[@db:jobsConfigurationDb:deleteJobConfiguration] ERROR deleting job runs: ${runsDeleteError.message}`);
-        return { success: false, error: `Failed to delete associated job runs: ${runsDeleteError.message}` };
-      }
-      
-      console.log(`[@db:jobsConfigurationDb:deleteJobConfiguration] Successfully deleted ${runsData.length} job runs for config: "${id}"`);
+      console.log(
+        `[@db:jobsConfigurationDb:deleteJobConfiguration] Job configuration exists, ID: "${configData.id}"`,
+      );
     }
 
     // Only try to delete the job configuration if we confirmed it exists
+    // Relying on ON DELETE CASCADE for jobs_run deletion
     if (configData) {
-      console.log(`[@db:jobsConfigurationDb:deleteJobConfiguration] Now deleting job configuration: "${id}"`);
+      console.log(
+        `[@db:jobsConfigurationDb:deleteJobConfiguration] Now deleting job configuration: "${id}"`,
+      );
       const { error: configDeleteError } = await supabase
         .from('jobs_configuration')
         .delete()
         .eq('id', id);
 
       if (configDeleteError) {
-        console.error(`[@db:jobsConfigurationDb:deleteJobConfiguration] ERROR deleting job config: ${configDeleteError.message}`);
+        console.error(
+          `[@db:jobsConfigurationDb:deleteJobConfiguration] ERROR deleting job config: ${configDeleteError.message}`,
+        );
         // Don't return error yet - if we deleted job runs but config delete failed,
         // still consider this partial success
-        console.warn(`[@db:jobsConfigurationDb:deleteJobConfiguration] Failed to delete config but job runs were removed`);
+        console.warn(
+          `[@db:jobsConfigurationDb:deleteJobConfiguration] Failed to delete config but job runs were removed`,
+        );
       }
     }
 
     console.log(
-      `[@db:jobsConfigurationDb:deleteJobConfiguration] SUCCESS: Successfully deleted job config and runs: "${id}"`,
+      `[@db:jobsConfigurationDb:deleteJobConfiguration] SUCCESS: Successfully deleted job config \"${id}\" (runs deleted via CASCADE)`,
     );
     return { success: true };
   } catch (error: any) {
-    console.error(`[@db:jobsConfigurationDb:deleteJobConfiguration] CAUGHT ERROR:`, { 
+    console.error(`[@db:jobsConfigurationDb:deleteJobConfiguration] CAUGHT ERROR:`, {
       id: id,
       message: error.message,
-      stack: error.stack
+      stack: error.stack,
     });
     return { success: false, error: error.message || 'Failed to delete job configuration' };
   }
