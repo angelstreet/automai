@@ -283,32 +283,31 @@ export function DeploymentListClient({
       const { getUser } = await import('@/app/actions/userAction');
       const user = await getUser();
       
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
+      // Use a user ID if available, otherwise just use a placeholder
+      const userId = user?.id || 'system';
       
-      console.log('[DeploymentListClient:handleRunDeployment] Running job with ID:', deployment.id);
-      const result = await startJob(deployment.id, user.id);
-      console.log('[DeploymentListClient:handleRunDeployment] Run result:', JSON.stringify(result));
+      console.log('[DeploymentListClient:handleRunDeployment] Queuing job with ID:', deployment.id);
+      const result = await startJob(deployment.id, userId);
+      console.log('[DeploymentListClient:handleRunDeployment] Queue result:', JSON.stringify(result));
 
       if (result && result.success) {
         toast({
           title: 'Success',
-          description: 'Deployment started successfully',
+          description: 'Deployment queued for execution',
           variant: 'default',
         });
 
-        // Dispatch a single refresh event
+        // Dispatch a single refresh event to update other components
         window.dispatchEvent(new Event(DeploymentEvents.REFRESH_DEPLOYMENTS));
         
-        // Refresh the page after a short delay to show updated status
+        // Refresh the page after a short delay
         setTimeout(() => {
           router.refresh();
         }, 500);
       } else {
         toast({
           title: 'Error',
-          description: result?.error || 'Failed to start deployment',
+          description: result?.error || 'Failed to queue deployment',
           variant: 'destructive',
         });
       }

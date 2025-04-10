@@ -332,7 +332,7 @@ export async function updateJob(id: string, formData: Partial<JobFormData>, host
 
 /**
  * Runs a job by its configuration ID
- * This only queues the job for execution and doesn't create a new job configuration
+ * This simply pushes the job ID to Redis queue for the runner to process
  */
 export async function startJob(
   configId: string,
@@ -340,7 +340,7 @@ export async function startJob(
   overrideParameters?: Record<string, any>,
 ) {
   try {
-    console.log(`[@action:jobsAction:startJob] Starting existing job with config ID: "${configId}"`);
+    console.log(`[@action:jobsAction:startJob] Queueing job with config ID: "${configId}"`);
     
     if (!configId) {
       console.error('[@action:jobsAction:startJob] ERROR: No config ID provided');
@@ -350,17 +350,8 @@ export async function startJob(
       };
     }
     
-    if (!userId) {
-      console.error('[@action:jobsAction:startJob] ERROR: No user ID provided');
-      return {
-        success: false,
-        error: 'No user ID provided'
-      };
-    }
-    
-    const cookieStore = await cookies();
-    
     // First verify the job configuration exists
+    const cookieStore = await cookies();
     const { getJobConfigById } = await import('@/lib/db/jobsConfigurationDb');
     const jobConfigResult = await getJobConfigById(configId, cookieStore);
     
@@ -372,28 +363,33 @@ export async function startJob(
       };
     }
     
-    console.log(`[@action:jobsAction:startJob] Found valid job configuration: ${configId}, now queueing for execution`);
+    console.log(`[@action:jobsAction:startJob] Found valid job configuration: ${configId}, pushing to queue`);
 
-    // Queue the job for execution
-    const result = await queueJobForExecution(configId, userId, overrideParameters, cookieStore);
+    // Simple job payload for the queue
+    const queuePayload = {
+      config_id: configId,
+      timestamp: new Date().toISOString(),
+      requested_by: userId || 'unknown'
+    };
 
-    if (!result.success) {
-      console.error('[@action:jobsAction:startJob] ERROR: Failed to queue job:', result.error);
-      throw new Error(`Failed to start job: ${result.error}`);
-    }
+    // Convert payload to JSON string for Redis
+    const payloadString = JSON.stringify(queuePayload);
+
+    // Push to Redis queue
+    const redisResult = await redis.lpush(JOBS_QUEUE, payloadString);
+    console.log(`[@action:jobsAction:startJob] Redis push result:`, redisResult);
 
     // Revalidate paths to refresh UI
     console.log(`[@action:jobsAction:startJob] Revalidating paths`);
     revalidatePath('/[locale]/[tenant]/deployment');
     revalidatePath('/deployment');
 
-    console.log(
-      `[@action:jobsAction:startJob] Job queued successfully: ${result.data.job_run_id}`,
-    );
-
     return {
       success: true,
-      data: result.data,
+      data: {
+        config_id: configId,
+        queued: true
+      },
       message: 'Job queued successfully',
     };
   } catch (error: any) {
@@ -406,7 +402,7 @@ export async function startJob(
 
     return {
       success: false,
-      error: error.message || 'Failed to start job',
+      error: error.message || 'Failed to queue job',
     };
   }
 }
