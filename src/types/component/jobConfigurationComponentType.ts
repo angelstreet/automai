@@ -7,30 +7,28 @@ export interface JobConfiguration {
   name: string;
   description: string | null;
   team_id: string;
-  user_id: string;
+  creator_id: string;
+  tenant_id: string;
 
   // Repository information
   repository_id: string | null;
-  repository_url: string | null;
   branch: string | null;
 
   // Scripts and hosts
-  scripts: string[];
+  scripts_path: string[];
   scripts_parameters: string[] | Record<string, any>[];
-  hosts: string[];
+  host_ids: string[];
 
   // Environment variables
   environment_vars: Record<string, string>;
 
   // Schedule
-  schedule_enabled: boolean;
+  schedule_type?: string | null;
   cron_expression: string | null;
   repeat_count: number | null;
 
-  // Notifications
-  notifications_enabled: boolean;
-  notification_on_success: boolean;
-  notification_on_failure: boolean;
+  // Status field from database
+  is_active: boolean;
 
   // Job type (e.g., 'deployment', 'test', 'backup', etc.)
   job_type: string;
@@ -56,12 +54,20 @@ export enum JobRunStatus {
 export interface JobRun {
   id: string;
   config_id: string;
-  user_id: string;
+  team_id: string;
+  tenant_id: string;
   status: JobRunStatus;
-  results: Record<string, any> | null;
-  logs: string[] | null;
-  created_at: string;
-  started_at: string | null;
-  completed_at: string | null;
+  output: Record<string, any> | null;
+  logs: Record<string, any> | null;
   error?: string | null;
+  created_at: string;
+  updated_at?: string;
+  queued_at?: string;
+  started_at?: string;
+  completed_at?: string;
+  execution_parameters?: Record<string, any>;
+  scheduled_time?: string;
+  worker_id?: string;
+  execution_attempt?: number;
+  execution_number?: number;
 }

@@ -4,7 +4,7 @@
  */
 import { createClient } from '@/lib/supabase/server';
 import { DbResponse } from '@/lib/utils/commonUtils';
-import { JobRun, JobRunStatus } from '@/types/component/jobRunComponentType';
+import { JobRun, JobRunStatus } from '@/types/component/jobConfigurationComponentType';
 import { getJobConfigById } from './jobsConfigurationDb';
 
 /**
@@ -221,49 +221,61 @@ export async function deleteJobRun(id: string, cookieStore?: any): Promise<DbRes
 }
 
 /**
- * Run a job based on job configuration
+ * Runs a job based on job configuration
  */
 export async function runJob(
   configId: string,
-  userId: string,
+  userId: string, // Keep for audit purposes, but we'll use team_id and tenant_id from config
   cookieStore?: any,
 ): Promise<DbResponse<JobRun>> {
   try {
-    console.log(`[@db:jobsRunDb:runJob] Running job for config: ${configId}`);
+    console.log(`[@db:jobsRunDb:runJob] Starting job run for config: ${configId}`);
 
-    // First, get the job configuration to ensure it exists
+    // First, get the job configuration
+    const { getJobConfigById } = await import('./jobsConfigurationDb');
     const configResult = await getJobConfigById(configId, cookieStore);
 
     if (!configResult.success) {
-      return { success: false, error: `Job configuration not found: ${configResult.error}` };
+      return { success: false, error: `Failed to get job configuration: ${configResult.error}` };
     }
+
+    const config = configResult.data;
 
     // Create a job run record
-    const jobRun = {
+    const jobRun: Partial<JobRun> = {
       config_id: configId,
-      user_id: userId,
-      status: 'queued' as JobRunStatus,
-      results: {},
-      logs: [],
+      team_id: config.team_id,
+      tenant_id: config.tenant_id,
+      status: JobRunStatus.PENDING,
+      created_at: new Date().toISOString(),
+      output: null,
+      logs: null,
+      execution_parameters: {
+        triggered_by_user_id: userId, // Store the user who triggered the job
+      },
     };
 
-    const result = await createJobRun(jobRun, cookieStore);
-
-    if (!result.success) {
-      return { success: false, error: `Failed to create job run: ${result.error}` };
+    // First, create the job run
+    const createResult = await createJobRun(jobRun, cookieStore);
+    if (!createResult.success) {
+      return { success: false, error: `Failed to create job run: ${createResult.error}` };
     }
 
-    // Update the status to running
-    const updateResult = await updateJobRunStatus(result.data.id, 'running', cookieStore);
+    // Get the created job run
+    const jobRunId = createResult.data.id;
+
+    // Update the job run status to RUNNING
+    const updateResult = await updateJobRunStatus(jobRunId, JobRunStatus.RUNNING, cookieStore);
 
     if (!updateResult.success) {
-      return { success: false, error: `Failed to update job run status: ${updateResult.error}` };
+      console.error(
+        `[@db:jobsRunDb:runJob] Failed to update job run status: ${updateResult.error}`,
+      );
+      // Don't fail the operation, just log the error
     }
 
-    console.log(
-      `[@db:jobsRunDb:runJob] Successfully created and started job run: ${result.data.id}`,
-    );
-    return { success: true, data: updateResult.data };
+    // Return the created job run
+    return { success: true, data: createResult.data };
   } catch (error: any) {
     console.error(`[@db:jobsRunDb:runJob] Error: ${error.message}`);
     return { success: false, error: error.message || 'Failed to run job' };

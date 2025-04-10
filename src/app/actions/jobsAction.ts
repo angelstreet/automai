@@ -1,77 +1,146 @@
 'use server';
 
 import { cookies } from 'next/headers';
+import { Redis } from '@upstash/redis';
 
 import { createJobConfiguration } from '@/lib/db/jobsConfigurationDb';
 import { runJob } from '@/lib/db/jobsRunDb';
 import { JobConfiguration } from '@/types/component/jobConfigurationComponentType';
 
+// Initialize Redis client using environment variables
+// Works both in Vercel and locally when .env.local has the credentials
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL || '',
+  token: process.env.UPSTASH_REDIS_REST_TOKEN || '',
+});
+
+// Queue name for jobs
+const JOBS_QUEUE = 'jobs_queue';
+
 export interface JobFormData {
   name: string;
   description?: string;
   repository_id?: string;
-  repository_url?: string;
   branch?: string;
   team_id: string;
   creator_id: string;
-  scriptIds: string[];
+  tenant_id: string;
+  scripts_path: string[];
   parameters?: string[];
-  hostIds: string[];
+  host_ids: string[];
   environmentVars?: Record<string, string>;
   schedule?: {
-    enabled: boolean;
+    type?: string;
     cronExpression?: string;
     repeatCount?: number;
   };
-  notifications?: {
-    enabled: boolean;
-    onSuccess: boolean;
-    onFailure: boolean;
-  };
-  autoStart?: boolean;
+  is_active?: boolean;
   job_type: string;
   config?: Record<string, any>;
+  autoStart?: boolean;
+}
+
+/**
+ * Generate the job configuration JSON from form data
+ * This creates a standardized format for the worker to execute
+ */
+function generateJobConfigJson(formData: JobFormData, hostDetails?: any[]): Record<string, any> {
+  console.log('[@action:jobsAction:generateJobConfigJson] Generating job config JSON');
+
+  // Create the base configuration
+  const config: Record<string, any> = {
+    name: formData.name,
+    job_type: formData.job_type,
+    repository_id: formData.repository_id || null,
+    branch: formData.branch || 'main',
+
+    // Steps to execute (based on scripts_path)
+    steps: formData.scripts_path.map((script, index) => {
+      const parameters = formData.parameters?.[index] || '';
+      return {
+        run: `${script} ${parameters}`.trim(),
+      };
+    }),
+
+    // Environment variables
+    env: formData.environmentVars || {},
+
+    // Inputs (for variable substitution)
+    inputs: {},
+
+    // Schedule information
+    schedule: formData.schedule?.cronExpression || null,
+
+    // Host information
+    hosts: formData.host_ids.map((hostId) => {
+      // If we have host details, include them
+      const hostDetail = hostDetails?.find((h) => h.id === hostId);
+
+      return {
+        id: hostId,
+        name: hostDetail?.name || 'Unknown Host',
+        ip: hostDetail?.ip || '',
+        os: hostDetail?.os || 'linux',
+      };
+    }),
+
+    // Execution configuration
+    execution: {
+      parallel: false, // Default to sequential execution
+      timeout: 3600, // Default timeout in seconds (1 hour)
+      retry: {
+        attempts: 0,
+        delay: 60, // Delay between retries in seconds
+      },
+    },
+
+    // Created timestamp for reference
+    created_at: new Date().toISOString(),
+  };
+
+  return config;
 }
 
 /**
  * Creates a job configuration and optionally runs the job
  */
-export async function createJob(formData: JobFormData) {
+export async function createJob(formData: JobFormData, hostDetails?: any[]) {
   try {
     console.log('[@action:jobsAction:createJob] Creating job with name:', formData.name);
     const cookieStore = await cookies();
+
+    // Generate the job configuration JSON
+    const configJson = generateJobConfigJson(formData, hostDetails);
 
     // Prepare job configuration data
     const jobConfig: Partial<JobConfiguration> = {
       name: formData.name,
       description: formData.description || null,
       team_id: formData.team_id,
-      user_id: formData.creator_id,
+      creator_id: formData.creator_id,
+      tenant_id: formData.tenant_id,
       repository_id: formData.repository_id || null,
-      repository_url: formData.repository_url || null,
-      branch: formData.branch || 'main',
+      branch: formData.branch || null,
 
       // Scripts and hosts
-      scripts: formData.scriptIds || [],
+      scripts_path: formData.scripts_path || [],
       scripts_parameters: formData.parameters || [],
-      hosts: formData.hostIds || [],
+      host_ids: formData.host_ids || [],
 
       // Environment variables
       environment_vars: formData.environmentVars || {},
 
       // Schedule
-      schedule_enabled: formData.schedule?.enabled || false,
+      schedule_type: formData.schedule?.type || null,
       cron_expression: formData.schedule?.cronExpression || null,
       repeat_count: formData.schedule?.repeatCount || null,
 
-      // Notifications
-      notifications_enabled: formData.notifications?.enabled || false,
-      notification_on_success: formData.notifications?.onSuccess || false,
-      notification_on_failure: formData.notifications?.onFailure || false,
+      // Status
+      is_active: formData.is_active !== undefined ? formData.is_active : true,
 
       // Job type and config
       job_type: formData.job_type || 'deployment',
-      config: formData.config || {},
+      config: configJson, // Use the generated JSON configuration
 
       // Creation timestamp
       created_at: new Date().toISOString(),
@@ -90,21 +159,26 @@ export async function createJob(formData: JobFormData) {
       jobConfigResult.data.id,
     );
 
-    // If autoStart is true, run the job
+    // If autoStart is true, queue the job for execution
     if (formData.autoStart) {
       console.log('[@action:jobsAction:createJob] Auto-starting job run');
-      const jobRunResult = await runJob(jobConfigResult.data.id, formData.creator_id, cookieStore);
+      const jobRunResult = await queueJobForExecution(
+        jobConfigResult.data.id,
+        formData.creator_id,
+        null, // No override parameters for auto-start
+        cookieStore,
+      );
 
       if (!jobRunResult.success) {
         console.error(
-          '[@action:jobsAction:createJob] Failed to start job run:',
+          '[@action:jobsAction:createJob] Failed to queue job run:',
           jobRunResult.error,
         );
         // Don't throw an error here, just log it. The configuration was created successfully.
       } else {
         console.log(
-          '[@action:jobsAction:createJob] Job run started successfully:',
-          jobRunResult.data.id,
+          '[@action:jobsAction:createJob] Job queued successfully:',
+          jobRunResult.data.job_run_id,
         );
       }
     }
@@ -131,12 +205,20 @@ export async function createJob(formData: JobFormData) {
 /**
  * Updates an existing job configuration
  */
-export async function updateJob(id: string, formData: Partial<JobFormData>) {
+export async function updateJob(id: string, formData: Partial<JobFormData>, hostDetails?: any[]) {
   try {
     console.log(`[@action:jobsAction:updateJob] Updating job: ${id}`);
     const cookieStore = await cookies();
 
-    const { updateJobConfiguration } = await import('@/lib/db/jobsConfigurationDb');
+    const { updateJobConfiguration, getJobConfigById } = await import(
+      '@/lib/db/jobsConfigurationDb'
+    );
+
+    // First, get the existing job config
+    const existingJobConfig = await getJobConfigById(id, cookieStore);
+    if (!existingJobConfig.success) {
+      throw new Error(`Failed to get existing job config: ${existingJobConfig.error}`);
+    }
 
     // Prepare job configuration update data
     const jobConfig: Partial<JobConfiguration> = {};
@@ -145,30 +227,67 @@ export async function updateJob(id: string, formData: Partial<JobFormData>) {
     if (formData.name !== undefined) jobConfig.name = formData.name;
     if (formData.description !== undefined) jobConfig.description = formData.description;
     if (formData.repository_id !== undefined) jobConfig.repository_id = formData.repository_id;
-    if (formData.repository_url !== undefined) jobConfig.repository_url = formData.repository_url;
     if (formData.branch !== undefined) jobConfig.branch = formData.branch;
-    if (formData.scriptIds !== undefined) jobConfig.scripts = formData.scriptIds;
+    if (formData.team_id !== undefined) jobConfig.team_id = formData.team_id;
+    if (formData.scripts_path !== undefined) jobConfig.scripts_path = formData.scripts_path;
     if (formData.parameters !== undefined) jobConfig.scripts_parameters = formData.parameters;
-    if (formData.hostIds !== undefined) jobConfig.hosts = formData.hostIds;
+    if (formData.host_ids !== undefined) jobConfig.host_ids = formData.host_ids;
     if (formData.environmentVars !== undefined)
       jobConfig.environment_vars = formData.environmentVars;
 
     // Schedule
     if (formData.schedule !== undefined) {
-      jobConfig.schedule_enabled = formData.schedule.enabled;
+      if (formData.schedule.type !== undefined) jobConfig.schedule_type = formData.schedule.type;
       jobConfig.cron_expression = formData.schedule.cronExpression || null;
       jobConfig.repeat_count = formData.schedule.repeatCount || null;
     }
 
-    // Notifications
-    if (formData.notifications !== undefined) {
-      jobConfig.notifications_enabled = formData.notifications.enabled;
-      jobConfig.notification_on_success = formData.notifications.onSuccess;
-      jobConfig.notification_on_failure = formData.notifications.onFailure;
-    }
+    // Status
+    if (formData.is_active !== undefined) jobConfig.is_active = formData.is_active;
 
-    // Config
-    if (formData.config !== undefined) jobConfig.config = formData.config;
+    // Generate updated config JSON if any relevant fields changed
+    if (
+      formData.name !== undefined ||
+      formData.repository_id !== undefined ||
+      formData.branch !== undefined ||
+      formData.scripts_path !== undefined ||
+      formData.parameters !== undefined ||
+      formData.host_ids !== undefined ||
+      formData.environmentVars !== undefined ||
+      formData.schedule !== undefined ||
+      formData.job_type !== undefined
+    ) {
+      // Merge with existing data to create a complete form data object
+      const completeFormData: JobFormData = {
+        name: formData.name || existingJobConfig.data.name,
+        description: formData.description || existingJobConfig.data.description || undefined,
+        repository_id: formData.repository_id || existingJobConfig.data.repository_id || undefined,
+        branch: formData.branch || existingJobConfig.data.branch || undefined,
+        team_id: formData.team_id || existingJobConfig.data.team_id,
+        creator_id: existingJobConfig.data.creator_id,
+        tenant_id: existingJobConfig.data.tenant_id,
+        scripts_path: formData.scripts_path || existingJobConfig.data.scripts_path || [],
+        parameters: formData.parameters || existingJobConfig.data.scripts_parameters || undefined,
+        host_ids: formData.host_ids || existingJobConfig.data.host_ids || [],
+        environmentVars:
+          formData.environmentVars || existingJobConfig.data.environment_vars || undefined,
+        schedule: {
+          type: formData.schedule?.type || existingJobConfig.data.schedule_type || undefined,
+          cronExpression:
+            formData.schedule?.cronExpression ||
+            existingJobConfig.data.cron_expression ||
+            undefined,
+          repeatCount:
+            formData.schedule?.repeatCount || existingJobConfig.data.repeat_count || undefined,
+        },
+        is_active:
+          formData.is_active !== undefined ? formData.is_active : existingJobConfig.data.is_active,
+        job_type: formData.job_type || existingJobConfig.data.job_type,
+      };
+
+      // Generate the updated config JSON
+      jobConfig.config = generateJobConfigJson(completeFormData, hostDetails);
+    }
 
     // Update timestamp
     jobConfig.updated_at = new Date().toISOString();
@@ -203,24 +322,30 @@ export async function updateJob(id: string, formData: Partial<JobFormData>) {
 /**
  * Runs a job by its configuration ID
  */
-export async function startJob(configId: string, userId: string) {
+export async function startJob(
+  configId: string,
+  userId: string,
+  overrideParameters?: Record<string, any>,
+) {
   try {
     console.log(`[@action:jobsAction:startJob] Starting job with config ID: ${configId}`);
     const cookieStore = await cookies();
 
-    // Run the job
-    const result = await runJob(configId, userId, cookieStore);
+    // Queue the job for execution
+    const result = await queueJobForExecution(configId, userId, overrideParameters, cookieStore);
 
     if (!result.success) {
       throw new Error(`Failed to start job: ${result.error}`);
     }
 
-    console.log(`[@action:jobsAction:startJob] Job started successfully: ${result.data.id}`);
+    console.log(
+      `[@action:jobsAction:startJob] Job started successfully: ${result.data.job_run_id}`,
+    );
 
     return {
       success: true,
       data: result.data,
-      message: 'Job started successfully',
+      message: 'Job queued successfully',
     };
   } catch (error: any) {
     console.error('[@action:jobsAction:startJob] Error:', {
@@ -265,6 +390,138 @@ export async function deleteJob(id: string) {
     return {
       success: false,
       error: error.message || 'Failed to delete job',
+    };
+  }
+}
+
+/**
+ * Prepare a job configuration for pushing to Redis queue
+ * This creates a standardized format for the worker to consume
+ */
+function prepareJobForQueue(
+  jobConfig: JobConfiguration,
+  overrideParameters?: Record<string, any>,
+): Record<string, any> {
+  console.log('[@action:jobsAction:prepareJobForQueue] Preparing job for queue');
+
+  // Create the Redis job payload
+  const queuePayload = {
+    // Job identification
+    job_id: jobConfig.id,
+    config_id: jobConfig.id,
+    team_id: jobConfig.team_id,
+    tenant_id: jobConfig.tenant_id,
+
+    // Job configuration (the detailed config we created)
+    config: jobConfig.config,
+
+    // Override parameters (useful for manual runs with different parameters)
+    overrideParameters: overrideParameters || {},
+
+    // Timestamps
+    queued_at: new Date().toISOString(),
+    priority: 1, // Default priority (1 = normal)
+  };
+
+  return queuePayload;
+}
+
+/**
+ * Queue a job for execution by pushing to Redis
+ */
+export async function queueJobForExecution(
+  configId: string,
+  userId: string,
+  overrideParameters?: Record<string, any>,
+  cookieStore?: any,
+) {
+  try {
+    console.log(`[@action:jobsAction:queueJobForExecution] Queueing job: ${configId}`);
+
+    // First, get the job configuration
+    const { getJobConfigById } = await import('@/lib/db/jobsConfigurationDb');
+    const configResult = await getJobConfigById(configId, cookieStore);
+
+    if (!configResult.success) {
+      return { success: false, error: `Failed to get job configuration: ${configResult.error}` };
+    }
+
+    // Get the job run that we'll update with queued status
+    const { runJob } = await import('@/lib/db/jobsRunDb');
+    const jobRunResult = await runJob(configId, userId, cookieStore);
+
+    if (!jobRunResult.success) {
+      return { success: false, error: `Failed to create job run: ${jobRunResult.error}` };
+    }
+
+    // Prepare the job payload for Redis
+    const queuePayload = prepareJobForQueue(configResult.data, overrideParameters);
+
+    // Add job run ID to the payload
+    queuePayload.job_run_id = jobRunResult.data.id;
+
+    try {
+      // Push to Redis queue using LPUSH (adds to the left/beginning of the list)
+      console.log(
+        `[@action:jobsAction:queueJobForExecution] Pushing to Redis queue: ${JOBS_QUEUE}`,
+      );
+
+      // Convert payload to JSON string for Redis
+      const payloadString = JSON.stringify(queuePayload);
+
+      // Push to Redis queue
+      const redisResult = await redis.lpush(JOBS_QUEUE, payloadString);
+
+      console.log(`[@action:jobsAction:queueJobForExecution] Redis push result:`, redisResult);
+
+      // Update job run with queue information
+      const { updateJobRun } = await import('@/lib/db/jobsRunDb');
+      await updateJobRun(
+        jobRunResult.data.id,
+        {
+          queued_at: new Date().toISOString(),
+          execution_parameters: {
+            queue: JOBS_QUEUE,
+            priority: queuePayload.priority,
+            override_parameters: overrideParameters || null,
+          },
+        },
+        cookieStore,
+      );
+
+      return {
+        success: true,
+        data: {
+          job_run_id: jobRunResult.data.id,
+          queue_payload: queuePayload,
+        },
+        message: 'Job queued successfully',
+      };
+    } catch (redisError: any) {
+      console.error('[@action:jobsAction:queueJobForExecution] Redis error:', {
+        message: redisError.message,
+        stack: redisError.stack,
+      });
+
+      // Even if Redis fails, we want to return the job run we created
+      return {
+        success: true,
+        data: {
+          job_run_id: jobRunResult.data.id,
+          queue_error: redisError.message,
+        },
+        message: 'Job run created but failed to queue in Redis',
+      };
+    }
+  } catch (error: any) {
+    console.error('[@action:jobsAction:queueJobForExecution] Error:', {
+      message: error.message,
+      stack: error.stack,
+    });
+
+    return {
+      success: false,
+      error: error.message || 'Failed to queue job',
     };
   }
 }

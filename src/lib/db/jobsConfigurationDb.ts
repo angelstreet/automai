@@ -83,9 +83,15 @@ export async function createJobConfiguration(
     );
     const supabase = await createClient(cookieStore);
 
+    // Make sure we're using the correct column names that match the database
+    const dbJobConfig = {
+      ...jobConfig,
+      // No need to map fields as we've already updated our types to match the database column names
+    };
+
     const { data, error } = await supabase
       .from('jobs_configuration')
-      .insert([jobConfig])
+      .insert([dbJobConfig])
       .select()
       .single();
 
@@ -116,9 +122,15 @@ export async function updateJobConfiguration(
     console.log(`[@db:jobsConfigurationDb:updateJobConfiguration] Updating job config: ${id}`);
     const supabase = await createClient(cookieStore);
 
+    // Make sure we're using the correct column names that match the database
+    const dbJobConfig = {
+      ...jobConfig,
+      // No need to map fields as we've already updated our types to match the database column names
+    };
+
     const { data, error } = await supabase
       .from('jobs_configuration')
-      .update(jobConfig)
+      .update(dbJobConfig)
       .eq('id', id)
       .select()
       .single();

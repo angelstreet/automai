@@ -722,7 +722,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               >
                 4
               </div>
-              <div className="text-xs mt-1">Review</div>
+              <div className="text-xs mt-1">Schedule</div>
             </div>
 
             <div className="flex-1 flex items-center">
@@ -739,65 +739,96 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               >
                 5
               </div>
-              <div className="text-xs mt-1">Deploy</div>
+              <div className="text-xs mt-1">Review</div>
             </div>
           </div>
         </div>
 
-        {/* Content of the wizard */}
-        {step === 1 && (
-          <DeploymentWizardStep1Client
-            deploymentData={deploymentData}
-            onInputChange={handleInputChange}
-            onNextStep={handleNextStep}
-            onPrevStep={handlePrevStep}
-          />
-        )}
-        {step === 2 && (
-          <DeploymentWizardStep2Client
-            deploymentData={deploymentData}
-            onInputChange={handleInputChange}
-            onNextStep={handleNextStep}
-            onPrevStep={handlePrevStep}
-            repositoryScripts={repositoryScripts}
-            isLoadingScripts={isLoadingScripts}
-            scriptsError={scriptsError}
-            onScriptsChange={handleScriptsChange}
-            onScriptParameterChange={handleScriptParameterChange}
-          />
-        )}
-        {step === 3 && (
-          <DeploymentWizardStep3Client
-            deploymentData={deploymentData}
-            onInputChange={handleInputChange}
-            onNextStep={handleNextStep}
-            onPrevStep={handlePrevStep}
-            availableHosts={availableHosts}
-            onHostsChange={handleHostsChange}
-          />
-        )}
-        {step === 4 && (
-          <DeploymentWizardStep4Client
-            deploymentData={deploymentData}
-            onInputChange={handleInputChange}
-            onNextStep={handleNextStep}
-            onPrevStep={handlePrevStep}
-          />
-        )}
-        {step === 5 && (
-          <DeploymentWizardStep5Client
-            deploymentData={deploymentData}
-            onInputChange={handleInputChange}
-            onNextStep={handleNextStep}
-            onPrevStep={handlePrevStep}
-            onSubmit={handleSubmit}
-            isCreating={isCreating}
-            submissionError={_submissionError}
-          />
-        )}
+        <form onSubmit={handleSubmit}>
+          {/* Step 1: Basic Deployment Information */}
+          {step === 1 && (
+            <DeploymentWizardStep1Client
+              name={deploymentData.name || ''}
+              description={deploymentData.description || ''}
+              repositoryId={deploymentData.repositoryId || ''}
+              branch={deploymentData.branch || ''}
+              repositories={repositories || []}
+              repositoryError={null}
+              onInputChange={handleInputChange}
+              onNextStep={handleNextStep}
+              isStepValid={!!deploymentData.name && !!deploymentData.repositoryId}
+            />
+          )}
+
+          {/* Step 2: Select Scripts with Parameters */}
+          {step === 2 && (
+            <DeploymentWizardStep2Client
+              selectedRepository={deploymentData.selectedRepository || null}
+              scriptIds={deploymentData.scriptIds}
+              repositoryScripts={repositoryScripts}
+              isLoadingScripts={isLoadingScripts}
+              scriptsError={scriptsError}
+              scriptParameters={deploymentData.scriptParameters}
+              onScriptsChange={handleScriptsChange}
+              onScriptParameterChange={handleScriptParameterChange}
+              onPrevStep={handlePrevStep}
+              onNextStep={handleNextStep}
+              isStepValid={deploymentData.scriptIds.length > 0}
+            />
+          )}
+
+          {/* Step 3: Select Target Hosts */}
+          {step === 3 && (
+            <DeploymentWizardStep3Client
+              hostIds={deploymentData.hostIds}
+              availableHosts={availableHosts}
+              isLoadingHosts={false}
+              hostsError={null} // Server will handle timeouts
+              onHostToggle={handleHostsChange}
+              onPrevStep={handlePrevStep}
+              onNextStep={handleNextStep}
+              isStepValid={deploymentData.hostIds.length > 0}
+            />
+          )}
+
+          {/* Step 4: Schedule */}
+          {step === 4 && (
+            <DeploymentWizardStep4Client
+              schedule={deploymentData.schedule}
+              scheduledTime={deploymentData.scheduledTime || ''}
+              cronExpression={deploymentData.cronExpression || ''}
+              repeatCount={deploymentData.repeatCount || 0}
+              onInputChange={handleInputChange}
+              onPrevStep={handlePrevStep}
+              onNextStep={handleNextStep}
+              isStepValid={
+                deploymentData.schedule === 'now' ||
+                (deploymentData.schedule === 'later' && !!deploymentData.scheduledTime)
+              }
+            />
+          )}
+
+          {/* Step 5: Review */}
+          {step === 5 && (
+            <DeploymentWizardStep5Client
+              data={deploymentData}
+              onUpdateData={(partialData) => {
+                setDeploymentData((prev) => ({ ...prev, ...partialData }));
+              }}
+              onNext={() => {}} // Step 5 doesn't have a next step
+              onBack={handlePrevStep}
+              _onCancel={onCancel}
+              onSubmit={handleSubmit}
+              isPending={isCreating}
+              availableHosts={availableHosts}
+              repositoryScripts={repositoryScripts}
+            />
+          )}
+        </form>
       </div>
     );
   },
 );
 
+export { DeploymentWizardMainClient };
 export default DeploymentWizardMainClient;
