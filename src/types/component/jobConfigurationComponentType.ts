@@ -30,9 +30,6 @@ export interface JobConfiguration {
   // Status field from database
   is_active: boolean;
 
-  // Job type (e.g., 'deployment', 'test', 'backup', etc.)
-  job_type: string;
-
   // Additional configuration (JSON)
   config: Record<string, any>;
 

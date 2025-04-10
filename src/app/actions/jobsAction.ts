@@ -55,12 +55,14 @@ function generateJobConfigJson(formData: JobFormData, hostDetails?: any[]): Reco
     branch: formData.branch || 'main',
 
     // Steps to execute (based on scripts_path)
-    steps: formData.scripts_path.map((script, index) => {
-      const parameters = formData.parameters?.[index] || '';
-      return {
-        run: `${script} ${parameters}`.trim(),
-      };
-    }),
+    steps: Array.isArray(formData.scripts_path)
+      ? formData.scripts_path.map((script, index) => {
+          const parameters = formData.parameters?.[index] || '';
+          return {
+            run: `${script} ${parameters}`.trim(),
+          };
+        })
+      : [],
 
     // Environment variables
     env: formData.environmentVars || {},
@@ -72,17 +74,19 @@ function generateJobConfigJson(formData: JobFormData, hostDetails?: any[]): Reco
     schedule: formData.schedule?.cronExpression || null,
 
     // Host information
-    hosts: formData.host_ids.map((hostId) => {
-      // If we have host details, include them
-      const hostDetail = hostDetails?.find((h) => h.id === hostId);
+    hosts: Array.isArray(formData.host_ids)
+      ? formData.host_ids.map((hostId) => {
+          // If we have host details, include them
+          const hostDetail = hostDetails?.find((h) => h.id === hostId);
 
-      return {
-        id: hostId,
-        name: hostDetail?.name || 'Unknown Host',
-        ip: hostDetail?.ip || '',
-        os: hostDetail?.os || 'linux',
-      };
-    }),
+          return {
+            id: hostId,
+            name: hostDetail?.name || 'Unknown Host',
+            ip: hostDetail?.ip || '',
+            os: hostDetail?.os || 'linux',
+          };
+        })
+      : [],
 
     // Execution configuration
     execution: {
@@ -107,39 +111,52 @@ function generateJobConfigJson(formData: JobFormData, hostDetails?: any[]): Reco
 export async function createJob(formData: JobFormData, hostDetails?: any[]) {
   try {
     console.log('[@action:jobsAction:createJob] Creating job with name:', formData.name);
+
+    // Ensure formData fields have valid defaults to prevent undefined errors
+    const safeFormData = {
+      ...formData,
+      name: formData.name || 'Unnamed Job',
+      team_id: formData.team_id || '',
+      creator_id: formData.creator_id || '',
+      tenant_id: formData.tenant_id || '',
+      scripts_path: Array.isArray(formData.scripts_path) ? formData.scripts_path : [],
+      host_ids: Array.isArray(formData.host_ids) ? formData.host_ids : [],
+      job_type: formData.job_type || 'deployment',
+    };
+
     const cookieStore = await cookies();
 
     // Generate the job configuration JSON
-    const configJson = generateJobConfigJson(formData, hostDetails);
+    const configJson = generateJobConfigJson(safeFormData, hostDetails);
 
     // Prepare job configuration data
     const jobConfig: Partial<JobConfiguration> = {
-      name: formData.name,
-      description: formData.description || null,
-      team_id: formData.team_id,
-      creator_id: formData.creator_id,
-      tenant_id: formData.tenant_id,
-      repository_id: formData.repository_id || null,
-      branch: formData.branch || null,
+      name: safeFormData.name,
+      description: safeFormData.description || null,
+      team_id: safeFormData.team_id,
+      creator_id: safeFormData.creator_id,
+      tenant_id: safeFormData.tenant_id,
+      repository_id: safeFormData.repository_id || null,
+      branch: safeFormData.branch || null,
 
       // Scripts and hosts
-      scripts_path: formData.scripts_path || [],
-      scripts_parameters: formData.parameters || [],
-      host_ids: formData.host_ids || [],
+      scripts_path: safeFormData.scripts_path,
+      scripts_parameters: safeFormData.parameters || [],
+      host_ids: safeFormData.host_ids,
 
       // Environment variables
-      environment_vars: formData.environmentVars || {},
+      environment_vars: safeFormData.environmentVars || {},
 
       // Schedule
-      schedule_type: formData.schedule?.type || null,
-      cron_expression: formData.schedule?.cronExpression || null,
-      repeat_count: formData.schedule?.repeatCount || null,
+      schedule_type: safeFormData.schedule?.type || null,
+      cron_expression: safeFormData.schedule?.cronExpression || null,
+      repeat_count: safeFormData.schedule?.repeatCount || null,
 
       // Status
-      is_active: formData.is_active !== undefined ? formData.is_active : true,
+      is_active: safeFormData.is_active !== undefined ? safeFormData.is_active : true,
 
       // Job type and config
-      job_type: formData.job_type || 'deployment',
+      job_type: safeFormData.job_type,
       config: configJson, // Use the generated JSON configuration
 
       // Creation timestamp
@@ -257,18 +274,34 @@ export async function updateJob(id: string, formData: Partial<JobFormData>, host
       formData.schedule !== undefined ||
       formData.job_type !== undefined
     ) {
+      // Safely get existing values
+      const existingScriptsPath = Array.isArray(existingJobConfig.data.scripts_path)
+        ? existingJobConfig.data.scripts_path
+        : [];
+
+      const existingHostIds = Array.isArray(existingJobConfig.data.host_ids)
+        ? existingJobConfig.data.host_ids
+        : [];
+
       // Merge with existing data to create a complete form data object
       const completeFormData: JobFormData = {
-        name: formData.name || existingJobConfig.data.name,
+        name: formData.name || existingJobConfig.data.name || 'Unnamed Job',
         description: formData.description || existingJobConfig.data.description || undefined,
         repository_id: formData.repository_id || existingJobConfig.data.repository_id || undefined,
         branch: formData.branch || existingJobConfig.data.branch || undefined,
-        team_id: formData.team_id || existingJobConfig.data.team_id,
-        creator_id: existingJobConfig.data.creator_id,
-        tenant_id: existingJobConfig.data.tenant_id,
-        scripts_path: formData.scripts_path || existingJobConfig.data.scripts_path || [],
+        team_id: formData.team_id || existingJobConfig.data.team_id || '',
+        creator_id: existingJobConfig.data.creator_id || '',
+        tenant_id: existingJobConfig.data.tenant_id || '',
+
+        // Ensure arrays are properly handled
+        scripts_path: Array.isArray(formData.scripts_path)
+          ? formData.scripts_path
+          : existingScriptsPath,
+
         parameters: formData.parameters || existingJobConfig.data.scripts_parameters || undefined,
-        host_ids: formData.host_ids || existingJobConfig.data.host_ids || [],
+
+        host_ids: Array.isArray(formData.host_ids) ? formData.host_ids : existingHostIds,
+
         environmentVars:
           formData.environmentVars || existingJobConfig.data.environment_vars || undefined,
         schedule: {
@@ -282,7 +315,7 @@ export async function updateJob(id: string, formData: Partial<JobFormData>, host
         },
         is_active:
           formData.is_active !== undefined ? formData.is_active : existingJobConfig.data.is_active,
-        job_type: formData.job_type || existingJobConfig.data.job_type,
+        job_type: formData.job_type || existingJobConfig.data.job_type || 'deployment',
       };
 
       // Generate the updated config JSON
