@@ -44,7 +44,7 @@ interface HostFormDialogClientProps {
 }
 
 export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormDialogClientProps) {
-  const { createHost, testConnection, testDirectConnection } = useHost();
+  const { createHost, testDirectConnection } = useHost();
   const t = useTranslations('hosts');
   const c = useTranslations('common');
 

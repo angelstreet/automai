@@ -18,15 +18,22 @@ export async function testHostConnection(data: {
   port?: number;
   username?: string;
   password?: string;
+  privateKey?: string;
+  authType?: 'password' | 'privateKey';
   hostId?: string;
 }): Promise<ConnectionResponse> {
   console.log('\n====== SERVER-SIDE HOST CONNECTION TEST STARTED ======');
   console.log(`Testing host connection at ${new Date().toISOString()}`);
   console.log(`Host: ${data.ip}:${data.port || '(default port)'} (${data.type})`);
+  console.log(`Auth Type: ${data.authType || 'password'}`);
   console.log(`Host ID: ${data.hostId || 'New host (not in database)'}`);
   console.log('============================================\n');
 
-  console.info('Testing host connection', { ip: data.ip, username: data.username });
+  console.info('Testing host connection', {
+    ip: data.ip,
+    username: data.username,
+    authType: data.authType,
+  });
 
   let result: ConnectionResponse = {
     success: false,
@@ -44,32 +51,18 @@ export async function testHostConnection(data: {
       try {
         // Create debug handler for connection monitoring
         const debugHandler = (message: string) => {
-          //console.log(`[Windows Detection] Debug message: ${message}`);
-
           // Look for OpenSSH for Windows in the remote ident
           if (message.includes('Remote ident:') && message.includes('OpenSSH_for_Windows')) {
-            //console.log(`[Windows Detection] Remote ident from ${data.ip}: ${message}`);
-            //console.log(
-            //  `[Windows Detection] 🪟 WINDOWS DETECTED from remote ident from ${data.ip}`,
-            //);
             detectedWindows = true;
             console.info('Windows detected from remote ident', { ip: data.ip });
           }
           // Also check for Windows in the message
           else if (message.toLowerCase().includes('windows') && !detectedWindows) {
-            console.log(`[Windows Detection] Windows string detected from ${data.ip}: ${message}`);
-            console.log(
-              `[Windows Detection] 🪟 WINDOWS DETECTED from string match from ${data.ip}`,
-            );
             detectedWindows = true;
             console.info('Windows detected from debug message', { ip: data.ip });
           }
           // Also check for OpenSSH which often indicates Windows
           else if (message.includes('OpenSSH') && !detectedWindows) {
-            //console.log(`[Windows Detection] OpenSSH detected from ${data.ip}: ${message}`);
-            //console.log(
-            //  `[Windows Detection] 🪟 WINDOWS LIKELY from OpenSSH detection from ${data.ip}`,
-            //);
             detectedWindows = true;
             console.info('Windows likely detected from OpenSSH', { ip: data.ip });
           }
@@ -89,18 +82,24 @@ export async function testHostConnection(data: {
             reject(err);
           });
 
-          // Connect with a timeout
-          ssh.connect({
+          // Prepare connection config based on auth type
+          const connectionConfig: any = {
             host: data.ip,
             port: data.port || 22,
             username: data.username,
-            password: data.password,
-            readyTimeout: 10000, // 10 seconds timeout
-            debug: (message: string) => {
-              //console.log(`SSH Debug: ${message}`);
-              debugHandler(message); // Pass message to our debug handler for Windows detection
-            },
-          });
+            readyTimeout: 10000,
+            debug: (message: string) => debugHandler(message),
+          };
+
+          // Add authentication based on type
+          if (data.authType === 'privateKey' && data.privateKey) {
+            connectionConfig.privateKey = data.privateKey;
+          } else {
+            connectionConfig.password = data.password;
+          }
+
+          // Connect with config
+          ssh.connect(connectionConfig);
         });
 
         // Add a small delay to ensure Windows detection can complete
@@ -119,6 +118,7 @@ export async function testHostConnection(data: {
         console.error('SSH connection test failed', {
           error: result.message,
           ip: data.ip,
+          authType: data.authType,
         });
       }
     }
