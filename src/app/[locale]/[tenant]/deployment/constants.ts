@@ -2,6 +2,7 @@
 
 // Status configuration for the StatusBadge component
 export const STATUS_CONFIG = {
+  // Original deployment statuses
   success: {
     color: 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400',
     icon: 'CheckCircle',
@@ -23,6 +24,20 @@ export const STATUS_CONFIG = {
     icon: 'Calendar',
   },
   warning: {
+    color: 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400',
+    icon: 'AlertTriangle',
+  },
+  
+  // New job system statuses
+  running: {
+    color: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400',
+    icon: 'Play',
+  },
+  completed: {
+    color: 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400',
+    icon: 'CheckCircle',
+  },
+  cancelled: {
     color: 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400',
     icon: 'AlertTriangle',
   },

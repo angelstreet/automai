@@ -442,6 +442,87 @@ function prepareJobForQueue(
 /**
  * Queue a job for execution by pushing to Redis
  */
+
+/**
+ * Get all job configurations (replacements for deployments)
+ */
+export async function getAllJobs() {
+  try {
+    console.log('[@action:jobsAction:getAllJobs] Getting all job configurations');
+    const cookieStore = await cookies();
+
+    // Get current user
+    const { getUser } = await import('@/app/actions/userAction');
+    const user = await getUser();
+
+    if (!user) {
+      console.error('[@action:jobsAction:getAllJobs] User not authenticated');
+      return { success: false, error: 'User not authenticated', data: [] };
+    }
+
+    // Get the user's active team ID
+    const { getUserActiveTeam } = await import('@/app/actions/teamAction');
+    const activeTeamResult = await getUserActiveTeam(user.id);
+    if (!activeTeamResult || !activeTeamResult.id) {
+      console.error('[@action:jobsAction:getAllJobs] No active team found for user');
+      return { success: false, error: 'No active team found', data: [] };
+    }
+
+    const teamId = activeTeamResult.id;
+    
+    // Import getJobConfigsByTeamId only when needed
+    const { getJobConfigsByTeamId } = await import('@/lib/db/jobsConfigurationDb');
+    
+    // Fetch job configurations from the database
+    const result = await getJobConfigsByTeamId(teamId, cookieStore);
+
+    if (!result.success) {
+      console.error('[@action:jobsAction:getAllJobs] Error fetching job configurations:', result.error);
+      return { success: false, error: result.error, data: [] };
+    }
+
+    console.log('[@action:jobsAction:getAllJobs] Fetched configurations count:', result.data?.length || 0);
+    
+    // Transform job configuration data to match expected deployment format with camelCase fields
+    const transformedData = result.data?.map(config => {
+      // Get the latest run to determine status
+      const latestRun = config.jobs_run && config.jobs_run.length > 0
+        ? config.jobs_run.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
+        : null;
+      
+      return {
+        id: config.id,
+        name: config.name,
+        description: config.description,
+        repositoryId: config.repository_id || '',
+        teamId: config.team_id,
+        tenantId: config.tenant_id,
+        status: latestRun?.status || 'pending',
+        userId: config.creator_id,
+        // Convert snake_case to camelCase for dates
+        createdAt: config.created_at,
+        updatedAt: config.updated_at,
+        startedAt: latestRun?.started_at || null,
+        completedAt: latestRun?.completed_at || null,
+        scheduledTime: config.scheduled_time || null,
+        scheduleType: config.schedule_type || 'now',
+        // Additional fields if needed
+        scriptsPath: Array.isArray(config.scripts_path) ? config.scripts_path : [],
+        scriptsParameters: Array.isArray(config.scripts_parameters) ? config.scripts_parameters : [],
+        hostIds: Array.isArray(config.host_ids) ? config.host_ids : [],
+        cronExpression: config.cron_expression,
+        repeatCount: config.repeat_count,
+        environmentVars: config.environment_vars || []
+      };
+    }) || [];
+    
+    return { success: true, data: transformedData };
+  } catch (error: any) {
+    console.error('[@action:jobsAction:getAllJobs] Error:', error);
+    return { success: false, error: error.message, data: [] };
+  }
+}
+
 export async function queueJobForExecution(
   configId: string,
   userId: string,

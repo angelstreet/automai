@@ -1,4 +1,4 @@
-import { getDeployments } from '@/app/actions/deploymentsAction';
+import { getAllJobs as getDeployments } from '@/app/actions/jobsAction';
 import { getRepositories } from '@/app/actions/repositoriesAction';
 
 // Import with direct relative paths

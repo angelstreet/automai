@@ -21,7 +21,7 @@ export async function getJobConfigsByTeamId(
 
     const { data, error } = await supabase
       .from('jobs_configuration')
-      .select('*')
+      .select('*, jobs_run(status, started_at, completed_at)')
       .eq('team_id', teamId)
       .order('created_at', { ascending: false });
 
@@ -53,7 +53,7 @@ export async function getJobConfigById(
 
     const { data, error } = await supabase
       .from('jobs_configuration')
-      .select('*')
+      .select('*, jobs_run(status, started_at, completed_at)')
       .eq('id', id)
       .single();
 

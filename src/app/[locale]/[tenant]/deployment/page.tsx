@@ -1,7 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
-import { getDeployments } from '@/app/actions/deploymentsAction';
+import { getAllJobs as getDeployments } from '@/app/actions/jobsAction';
 import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 
 import { DeploymentContent } from './_components/DeploymentContent';

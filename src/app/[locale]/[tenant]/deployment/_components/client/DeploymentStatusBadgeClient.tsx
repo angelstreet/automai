@@ -11,7 +11,9 @@ interface StatusBadgeProps {
 }
 
 // Define the type for STATUS_CONFIG keys
-type StatusType = 'success' | 'failed' | 'in_progress' | 'pending' | 'scheduled' | 'warning';
+type StatusType = 
+  | 'success' | 'failed' | 'in_progress' | 'pending' | 'scheduled' | 'warning' 
+  | 'running' | 'completed' | 'cancelled';
 
 /**
  * StatusBadge component for displaying deployment and script statuses
@@ -43,13 +45,22 @@ const DeploymentStatusBadgeClient: React.FC<StatusBadgeProps> = ({ status, class
     icon: 'Clock',
   };
 
+  // Format the status text safely, handling null or undefined
+  const formatStatus = () => {
+    if (!status) return 'Unknown';
+    
+    // Replace underscores with spaces and capitalize first letter
+    const formattedStatus = String(status).replace(/_/g, ' ');
+    return formattedStatus.charAt(0).toUpperCase() + formattedStatus.slice(1);
+  };
+
   return (
     <span
       className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${config.color} ${className}`}
     >
       {getStatusIcon(config.icon)}
       <span className="truncate">
-        {status.replace('_', ' ').charAt(0).toUpperCase() + status.replace('_', ' ').slice(1)}
+        {formatStatus()}
       </span>
     </span>
   );
