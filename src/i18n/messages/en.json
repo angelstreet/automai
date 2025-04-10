@@ -200,7 +200,13 @@
     "error_test_failed": "Connection test failed",
     "success_created": "Connection created",
     "success_connected": "Connected successfully to {{name}}",
-    "success_ready_to_connect": "Successfully connected to the remote host"
+    "success_ready_to_connect": "Successfully connected to the remote host",
+    "authType": "Auth Type",
+    "form_auth_placeholder": "Select authentication method",
+    "auth_password": "Password",
+    "auth_ssh_key": "SSH Key",
+    "private_key": "Private Key",
+    "private_key_placeholder": "Paste your SSH private key here"
   },
   "dashboard": {
     "title": "Dashboard",

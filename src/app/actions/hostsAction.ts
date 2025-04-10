@@ -8,6 +8,7 @@ import { getUser } from '@/app/actions/userAction';
 import hostDb from '@/lib/db/hostDb';
 import hostService from '@/lib/services/hostService';
 import { Host, HostStatus } from '@/types/context/hostContextType';
+import { encryptValue, decryptValue } from '@/lib/utils/encryption';
 
 export interface HostFilter {
   status?: string;
@@ -103,6 +104,23 @@ export async function createHost(
       return { success: false, error: 'No active team found' };
     }
 
+    // Process authentication data based on authType
+    let password = null;
+    let private_key = null;
+
+    // Log the auth type for debugging
+    console.log('[@action:hosts:createHost] Processing auth type:', (data as any).authType);
+
+    if ((data as any).authType === 'password' && data.password) {
+      // Encrypt password
+      password = encryptValue(data.password);
+      console.log('[@action:hosts:createHost] Password encrypted successfully');
+    } else if ((data as any).authType === 'privateKey' && (data as any).privateKey) {
+      // Encrypt private key
+      private_key = encryptValue((data as any).privateKey);
+      console.log('[@action:hosts:createHost] Private key encrypted successfully');
+    }
+
     // Prepare host data
     const hostData = {
       name: data.name,
@@ -111,7 +129,9 @@ export async function createHost(
       ip: data.ip,
       port: data.port || (data.type === 'ssh' ? 22 : data.type === 'docker' ? 2375 : 9000),
       user: data.user || (data as any).username || '', // Handle username/user field variation
-      password: data.password,
+      password: password,
+      private_key: private_key,
+      auth_type: (data as any).authType || 'password',
       status: data.status || 'connected',
       is_windows: data.is_windows ?? false,
       created_at: new Date().toISOString(),
@@ -120,9 +140,18 @@ export async function createHost(
       creator_id: user?.id ?? '',
     };
 
-    // Basic validation for SSH connections
-    if (data.type === 'ssh' && (!hostData.user || !hostData.password)) {
-      return { success: false, error: 'SSH connections require both username and password' };
+    // Basic validation for SSH connections based on auth type
+    if (data.type === 'ssh') {
+      if (hostData.auth_type === 'password' && (!hostData.user || !hostData.password)) {
+        return { success: false, error: 'SSH with password requires username and password' };
+      }
+
+      if (hostData.auth_type === 'privateKey' && (!hostData.user || !hostData.private_key)) {
+        return {
+          success: false,
+          error: 'SSH with key authentication requires username and private key',
+        };
+      }
     }
 
     // Create the host
@@ -136,6 +165,7 @@ export async function createHost(
 
     return { success: true, data: result.data };
   } catch (error: any) {
+    console.error('[@action:hosts:createHost] Error:', error);
     return { success: false, error: error.message || 'Failed to add host' };
   }
 }
@@ -152,8 +182,36 @@ export async function updateHost(
       return { success: false, error: 'Host ID is required' };
     }
 
+    // Process sensitive data for update
+    const updatedData = { ...updates };
+
+    // Handle auth type changes
+    if ((updates as any).authType) {
+      updatedData.auth_type = (updates as any).authType;
+      delete (updatedData as any).authType;
+    }
+
+    // Handle password update if provided
+    if (
+      updatedData.password &&
+      ((updatedData as any).auth_type === 'password' || updates.auth_type === 'password')
+    ) {
+      updatedData.password = encryptValue(updatedData.password);
+      console.log('[@action:hosts:updateHost] Password encrypted for update');
+    }
+
+    // Handle private key update if provided
+    if (
+      (updatedData as any).privateKey &&
+      ((updatedData as any).auth_type === 'privateKey' || updates.auth_type === 'privateKey')
+    ) {
+      updatedData.private_key = encryptValue((updatedData as any).privateKey);
+      delete (updatedData as any).privateKey;
+      console.log('[@action:hosts:updateHost] Private key encrypted for update');
+    }
+
     // Call hostDb.updateHost with id and updates
-    const result = await hostDb.updateHost(id, updates);
+    const result = await hostDb.updateHost(id, updatedData);
     if (!result.success || !result.data) {
       return { success: false, error: result.error || 'Host not found or update failed' };
     }
@@ -163,6 +221,7 @@ export async function updateHost(
 
     return { success: true, data: result.data };
   } catch (error: any) {
+    console.error('[@action:hosts:updateHost] Error:', error);
     return { success: false, error: error.message || 'Failed to update host' };
   }
 }
@@ -205,12 +264,22 @@ export async function testConnection(data: {
   ip: string;
   port?: number;
   username?: string;
+  authType?: 'password' | 'privateKey';
   password?: string;
+  privateKey?: string;
   hostId?: string;
 }): Promise<{ success: boolean; error?: string; message?: string; is_windows?: boolean }> {
   try {
+    console.log('[@action:hosts:testConnection] Testing connection with auth type:', data.authType);
+
+    // Test the connection with either password or private key
+    const connectionData = {
+      ...data,
+      // Don't convert to database field names here - hostService handles that
+    };
+
     // Test the connection
-    const result = await hostService.testHostConnection(data);
+    const result = await hostService.testHostConnection(connectionData);
 
     // Format the response
     const response = {
@@ -224,6 +293,7 @@ export async function testConnection(data: {
 
     return response;
   } catch (error: any) {
+    console.error('[@action:hosts:testConnection] Error:', error);
     return {
       success: false,
       error: error.message || 'Failed to test connection',
@@ -236,7 +306,8 @@ export async function testConnection(data: {
  */
 export async function testHostConnection(
   id: string,
-): Promise<{ success: boolean; error?: string; message?: string }> {
+  options?: { skipRevalidation?: boolean },
+): Promise<{ success: boolean; error?: string; message?: string; is_windows?: boolean }> {
   try {
     if (!id) {
       return { success: false, error: 'Host ID is required' };
@@ -254,45 +325,75 @@ export async function testHostConnection(
     await updateHost(id, { status: 'testing' });
 
     try {
+      // Determine which credentials to use based on auth_type
+      let credentials;
+      if (host.auth_type === 'privateKey' && host.private_key) {
+        // For SSH key authentication
+        console.log('[@action:hosts:testHostConnection] Testing connection with SSH key auth');
+
+        // Decrypt the private key
+        const decryptedKey = decryptValue(host.private_key);
+        credentials = {
+          type: host.type,
+          ip: host.ip,
+          port: host.port,
+          username: host.user,
+          authType: 'privateKey',
+          privateKey: decryptedKey,
+          hostId: id,
+        };
+      } else {
+        // Default to password authentication or when auth_type is not set
+        console.log('[@action:hosts:testHostConnection] Testing connection with password auth');
+
+        // Decrypt the password if it exists
+        const decryptedPassword = host.password ? decryptValue(host.password) : '';
+        credentials = {
+          type: host.type,
+          ip: host.ip,
+          port: host.port,
+          username: host.user,
+          authType: 'password',
+          password: decryptedPassword,
+          hostId: id,
+        };
+      }
+
       // Test the connection
-      const testData = {
-        type: host.type,
-        ip: host.ip,
-        port: host.port,
-        username: host.user,
-        password: host.password,
-        hostId: id,
-      };
+      const testResult = await testConnection(credentials);
 
-      const testResult = await testConnection(testData);
-
-      // Update the host status based on the test result
-      await updateHost(id, {
-        status: testResult.success ? 'connected' : 'failed',
-        updated_at: new Date().toISOString(),
-        is_windows: testResult.is_windows || host.is_windows,
-      });
-
-      // No revalidation - let the UI handle state updates
+      // Only update host status if skipRevalidation is not true
+      if (!options?.skipRevalidation) {
+        await updateHost(id, {
+          status: testResult.success ? 'connected' : 'failed',
+          updated_at: new Date().toISOString(),
+          is_windows: testResult.is_windows || host.is_windows,
+        });
+      }
 
       return {
         success: testResult.success,
         error: testResult.error,
         message: testResult.message,
+        is_windows: testResult.is_windows,
       };
     } catch (error: any) {
-      // Update the host status to failed if there was an error
-      await updateHost(id, {
-        status: 'failed',
-        updated_at: new Date().toISOString(),
-      });
+      // Update the host status to failed if there was an error and skipRevalidation is not true
+      if (!options?.skipRevalidation) {
+        await updateHost(id, {
+          status: 'failed',
+          updated_at: new Date().toISOString(),
+        });
+      }
 
+      console.error('[@action:hosts:testHostConnection] Error:', error);
       return {
         success: false,
         error: error.message || 'Failed to test connection',
       };
     }
   } catch (error: any) {
+    console.error('[@action:hosts:testHostConnection] Error:', error);
     return {
       success: false,
       error: error.message || 'Failed to test host connection',
@@ -332,4 +433,34 @@ export async function setHostStatus(
  */
 export async function revalidateHosts(): Promise<void> {
   revalidatePath('/[locale]/[tenant]/hosts', 'page');
+}
+
+/**
+ * Get a specific host by ID with decrypted credentials
+ */
+export async function getHostWithDecryptedCredentials(
+  id: string,
+): Promise<{ success: boolean; error?: string; data?: Host }> {
+  try {
+    const result = await getHostById(id);
+    if (!result.success || !result.data) {
+      return result;
+    }
+
+    // Decrypt credentials for use
+    const host = { ...result.data };
+
+    if (host.password && host.auth_type === 'password') {
+      host.password = decryptValue(host.password);
+    }
+
+    if (host.private_key && host.auth_type === 'privateKey') {
+      (host as any).privateKey = decryptValue(host.private_key);
+    }
+
+    return { success: true, data: host };
+  } catch (error: any) {
+    console.error('[@action:hosts:getHostWithDecryptedCredentials] Error:', error);
+    return { success: false, error: error.message || 'Failed to decrypt host credentials' };
+  }
 }

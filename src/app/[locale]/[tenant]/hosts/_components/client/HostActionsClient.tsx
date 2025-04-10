@@ -19,7 +19,12 @@ interface HostActionsClientProps {
 export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActionsClientProps) {
   const t = useTranslations('hosts');
   const c = useTranslations('common');
-  const { hosts, isLoading: isRefetching, refetchHosts, testConnection } = useHost();
+  const {
+    hosts,
+    isLoading: isRefetching,
+    refetchHosts,
+    testConnection: _testConnection,
+  } = useHost();
 
   // Get view mode state from Zustand store
   const { viewMode, toggleViewMode } = useHostViewStore();
@@ -35,7 +40,9 @@ export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActio
     ip: '',
     port: '22',
     username: '',
+    authType: 'password',
     password: '',
+    privateKey: '',
   });
 
   // Derive host count from React Query's hosts data, falling back to the prop
@@ -196,7 +203,9 @@ export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActio
       ip: '',
       port: '22',
       username: '',
+      authType: 'password',
       password: '',
+      privateKey: '',
     });
     // Refresh hosts list after dialog closes (in case a host was created)
     refetchHosts();

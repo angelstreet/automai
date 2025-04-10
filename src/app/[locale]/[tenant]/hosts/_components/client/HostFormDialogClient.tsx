@@ -31,7 +31,9 @@ export interface FormData {
   ip: string;
   port: string;
   username: string;
+  authType: 'password' | 'privateKey';
   password: string;
+  privateKey: string;
   is_windows?: boolean;
 }
 
@@ -70,6 +72,13 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
     });
   };
 
+  const handleAuthTypeChange = (value: string) => {
+    onChange({
+      ...formData,
+      authType: value as 'password' | 'privateKey',
+    });
+  };
+
   const handleInputChange = (field: string, value: string) => {
     const updatedFormData = {
       ...formData,
@@ -77,7 +86,7 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
     };
 
     // Log changes when username or password field is modified
-    if (field === 'username' || field === 'password') {
+    if (field === 'username' || field === 'password' || field === 'privateKey') {
       console.log(
         `[@client:hosts:HostFormDialogClient:handleInputChange] Field '${field}' updated:`,
         {
@@ -111,7 +120,9 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
         ip: formData.ip,
         port: parseInt(formData.port),
         username: formData.username,
-        password: formData.password,
+        authType: formData.authType,
+        password: formData.authType === 'password' ? formData.password : undefined,
+        privateKey: formData.authType === 'privateKey' ? formData.privateKey : undefined,
       };
 
       console.log(
@@ -119,9 +130,11 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
         {
           ...testData,
           password: testData.password ? '********' : null,
+          privateKey: testData.privateKey ? '[PRIVATE KEY CONTENT]' : null,
           hasUsername: !!testData.username,
           usernameLength: testData.username?.length || 0,
           hasPassword: !!testData.password,
+          hasPrivateKey: !!testData.privateKey,
         },
       );
 
@@ -180,10 +193,11 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
         type: formData.type,
         ip: formData.ip,
         port: parseInt(formData.port),
-        // Map username to user for the server
         user: formData.username,
         username: formData.username,
-        password: formData.password,
+        authType: formData.authType,
+        password: formData.authType === 'password' ? formData.password : undefined,
+        privateKey: formData.authType === 'privateKey' ? formData.privateKey : undefined,
         status: 'connected' as const,
         is_windows: lastTestResult?.is_windows || false,
       };
@@ -193,7 +207,9 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
         {
           hasUsername: !!formData.username,
           usernameLength: formData.username?.length || 0,
-          hasPassword: !!formData.password,
+          authType: formData.authType,
+          hasPassword: formData.authType === 'password' ? !!formData.password : false,
+          hasPrivateKey: formData.authType === 'privateKey' ? !!formData.privateKey : false,
           userField: !!hostData.user,
           usernameField: !!hostData.username,
         },
@@ -210,7 +226,8 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
         '[@client:hosts:HostFormDialogClient:createHostDirectly] Creating host with data:',
         {
           ...hostData,
-          password: '[REDACTED]',
+          password: hostData.password ? '[REDACTED]' : undefined,
+          privateKey: hostData.privateKey ? '[PRIVATE KEY CONTENT]' : undefined,
         },
       );
 
@@ -296,38 +313,67 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
         </div>
       </div>
 
-      {formData.type === 'ssh' && (
-        <>
-          <div className="grid grid-cols-4 items-center gap-2">
-            <Label htmlFor="username" className="text-right">
-              {c('username')}
-            </Label>
-            <Input
-              id="username"
-              name="new-username"
-              placeholder={c('username')}
-              value={formData.username}
-              onChange={(e) => handleInputChange('username', e.target.value)}
-              className="col-span-3 h-8"
-              autoComplete="off"
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-2">
-            <Label htmlFor="password" className="text-right">
-              {c('password')}
-            </Label>
-            <Input
-              id="password"
-              name="new-password"
-              type="password"
-              placeholder={c('password')}
-              value={formData.password}
-              onChange={(e) => handleInputChange('password', e.target.value)}
-              className="col-span-3 h-8"
-              autoComplete="new-password"
-            />
-          </div>
-        </>
+      <div className="grid grid-cols-4 items-center gap-2">
+        <Label htmlFor="username" className="text-right">
+          {c('username')}
+        </Label>
+        <Input
+          id="username"
+          name="new-username"
+          placeholder={c('username')}
+          value={formData.username}
+          onChange={(e) => handleInputChange('username', e.target.value)}
+          className="col-span-3 h-8"
+          autoComplete="off"
+        />
+      </div>
+
+      <div className="grid grid-cols-4 items-center gap-2">
+        <Label className="text-right">{t('authType')}</Label>
+        <div className="col-span-3">
+          <Select value={formData.authType} onValueChange={handleAuthTypeChange}>
+            <SelectTrigger className="h-8">
+              <SelectValue placeholder={t('form_auth_placeholder')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="password">{t('auth_password')}</SelectItem>
+              <SelectItem value="privateKey">{t('auth_ssh_key')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {formData.authType === 'password' && (
+        <div className="grid grid-cols-4 items-center gap-2">
+          <Label htmlFor="password" className="text-right">
+            {c('password')}
+          </Label>
+          <Input
+            id="password"
+            name="new-password"
+            type="password"
+            placeholder={c('password')}
+            value={formData.password}
+            onChange={(e) => handleInputChange('password', e.target.value)}
+            className="col-span-3 h-8"
+            autoComplete="new-password"
+          />
+        </div>
+      )}
+
+      {formData.authType === 'privateKey' && (
+        <div className="grid grid-cols-4 items-center gap-2">
+          <Label htmlFor="privateKey" className="text-right">
+            {t('private_key')}
+          </Label>
+          <Textarea
+            id="privateKey"
+            placeholder={t('private_key_placeholder')}
+            value={formData.privateKey}
+            onChange={(e) => handleInputChange('privateKey', e.target.value)}
+            className="col-span-3 min-h-[100px] py-1 font-mono text-xs"
+          />
+        </div>
       )}
 
       <div className="grid grid-cols-4 items-center gap-2">
@@ -352,7 +398,9 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
             testing ||
             !formData.name.trim() ||
             !formData.ip.trim() ||
-            (formData.type === 'ssh' && (!formData.username.trim() || !formData.password.trim()))
+            !formData.username.trim() ||
+            (formData.authType === 'password' && !formData.password.trim()) ||
+            (formData.authType === 'privateKey' && !formData.privateKey.trim())
           }
           className="h-8 px-3 text-sm"
         >
