@@ -2,21 +2,16 @@
 
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
-import React, { useState, useEffect, useRef, useMemo, useContext } from 'react';
-import { UserContext } from '@/context/UserContext';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 
-// Constants for repository scanning
-const MAX_REPOSITORY_SCAN_DEPTH = 0;
-const MAX_FOLDERS_PER_LEVEL = 3;
-
-import { createDeploymentWithCICD } from '@/app/actions/deploymentWizardAction';
+import { createDeploymentWithQueue } from '@/app/actions/deploymentWizardAction';
 import { toast } from '@/components/shadcn/use-toast';
+import { UserContext } from '@/context/UserContext';
 import * as gitService from '@/lib/services/gitService';
-import { CICDProvider } from '@/types/component/cicdComponentType';
 import { DeploymentData } from '@/types/component/deploymentComponentType';
 import { Host as HostType, Host as SystemHost } from '@/types/component/hostComponentType';
 import { Repository } from '@/types/component/repositoryComponentType';
-import { CICDDeploymentFormData } from '@/types-new/deployment-types';
+import { QueuedDeploymentFormData } from '@/types-new/deployment-types';
 
 import { DeploymentWizardStep1Client } from './DeploymentWizardStep1Client';
 import { DeploymentWizardStep2Client } from './DeploymentWizardStep2Client';
@@ -24,6 +19,8 @@ import { DeploymentWizardStep3Client } from './DeploymentWizardStep3Client';
 import { DeploymentWizardStep4Client } from './DeploymentWizardStep4Client';
 import { DeploymentWizardStep5Client } from './DeploymentWizardStep5Client';
 
+const MAX_REPOSITORY_SCAN_DEPTH = 0;
+const MAX_FOLDERS_PER_LEVEL = 3;
 // Helper function to adapt system hosts to the format expected by the deployment module
 const adaptHostsForDeployment = (systemHosts: SystemHost[]): HostType[] => {
   if (!systemHosts || !Array.isArray(systemHosts)) {
@@ -47,7 +44,7 @@ interface DeploymentWizardProps {
   onDeploymentCreated: () => void;
   repositories?: Repository[];
   hosts?: SystemHost[];
-  cicdProviders?: CICDProvider[];
+
   teamId: string;
   userId: string;
   tenantName?: string; // Keep the prop for fallback
@@ -72,8 +69,6 @@ const initialDeploymentData: DeploymentData = {
     slack: false,
   },
   autoStart: true,
-  cicd_provider_id: '',
-  jenkinsConfig: undefined,
 };
 
 // Wrap DeploymentWizard in React.memo to prevent unnecessary re-renders
@@ -83,7 +78,6 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
     onDeploymentCreated,
     repositories = [],
     hosts = [],
-    cicdProviders = [],
     teamId,
     userId,
     tenantName,
@@ -129,26 +123,6 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
     const [scriptsError, setScriptsError] = useState<string | null>(null);
     // Track permanent API failures to prevent retries
     const [hasApiPermissionError, setHasApiPermissionError] = useState(false);
-
-    // Get the selected CICD provider
-    const selectedProvider = useMemo(() => {
-      if (!deploymentData.cicd_provider_id || !cicdProviders) return undefined;
-      const provider = cicdProviders.find((p) => p.id === deploymentData.cicd_provider_id);
-      if (!provider) return undefined;
-
-      // Get URL with port if available
-      const baseUrl = provider.url;
-      const fullUrl = provider.port ? `${baseUrl}:${provider.port}` : baseUrl;
-
-      return {
-        type: provider.type,
-        config: {
-          url: fullUrl,
-          username: provider.config?.credentials?.username || undefined,
-          token: provider.config?.credentials?.token || '',
-        },
-      };
-    }, [deploymentData.cicd_provider_id, cicdProviders]);
 
     // Track if scripts are currently being loaded
     const isLoadingRef = useRef(false);
@@ -544,7 +518,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           },
         );
 
-        const formData: CICDDeploymentFormData = {
+        const formData: QueuedDeploymentFormData = {
           name: deploymentData.name,
           description: deploymentData.description,
           repository_id: deploymentData.repositoryId,
@@ -552,14 +526,12 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           script_id: deploymentData.scriptIds[0],
           team_id: teamId,
           creator_id: user?.id || userId,
-          cicd_provider_id: deploymentData.cicd_provider_id,
           provider: {
-            type: selectedProvider?.type || 'jenkins',
+            type: 'github', // Default to github or get from repository if available
             config: {
-              url: selectedProvider?.config?.url || '',
-              username: selectedProvider?.config?.username,
-              token: selectedProvider?.config?.token || '',
-              tenant_name: user?.tenant_name || tenantName || '', // Use context with prop fallback
+              url: deploymentData.selectedRepository?.url || '',
+              token: '', // This would be from secure storage
+              tenant_name: user?.tenant_name || tenantName || '',
             },
           },
           configuration: {
@@ -601,11 +573,6 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
             host_id: formData.host_id,
             script_id: formData.script_id,
           },
-          provider: {
-            id: formData.cicd_provider_id,
-            type: formData.provider.type,
-            url: formData.provider.config.url,
-          },
           configuration: {
             scripts: formData.configuration.scriptIds,
             hosts: formData.configuration.hostIds,
@@ -616,7 +583,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           autoStart: formData.autoStart,
         });
 
-        const result = await createDeploymentWithCICD(formData);
+        const result = await createDeploymentWithQueue(formData);
         console.log(
           '[@component:DeploymentWizardMainClient:handleSubmit] Server response:',
           result,
@@ -657,7 +624,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
         toast({
           title: 'Error creating deployment',
           description: error.message.includes('timed out')
-            ? 'The Jenkins server is taking too long to respond. Please try again or contact support if the issue persists.'
+            ? 'The job submission timed out. Please try again or contact support if the issue persists.'
             : error.message,
           variant: 'destructive',
         });
@@ -822,15 +789,12 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               scheduledTime={deploymentData.scheduledTime || ''}
               cronExpression={deploymentData.cronExpression || ''}
               repeatCount={deploymentData.repeatCount || 0}
-              cicd_provider_id={deploymentData.cicd_provider_id || ''}
-              cicdProviders={cicdProviders}
               onInputChange={handleInputChange}
               onPrevStep={handlePrevStep}
               onNextStep={handleNextStep}
               isStepValid={
-                (deploymentData.schedule === 'now' ||
-                  (deploymentData.schedule === 'later' && !!deploymentData.scheduledTime)) &&
-                !!deploymentData.cicd_provider_id
+                deploymentData.schedule === 'now' ||
+                (deploymentData.schedule === 'later' && !!deploymentData.scheduledTime)
               }
             />
           )}
@@ -847,7 +811,6 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               _onCancel={onCancel}
               onSubmit={handleSubmit}
               isPending={isCreating}
-              cicdProviders={cicdProviders}
               availableHosts={availableHosts}
               repositoryScripts={repositoryScripts}
             />

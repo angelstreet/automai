@@ -21,7 +21,7 @@ interface DeploymentWizardStep5ClientProps {
 
 export function DeploymentWizardStep5Client({
   data,
-  onUpdateData,
+  _onUpdateData,
   onBack,
   _onCancel,
   onSubmit,
@@ -35,64 +35,11 @@ export function DeploymentWizardStep5Client({
   // State for views and config
   const [showPipelineView, setShowPipelineView] = useState(false); // Always default to summary view
 
-  // CI/CD functionality from the hook
-  const {
-    providers: _providers,
-    getJobs: _getJobs,
-    error: _cicdError,
-    isLoading: _isLoadingCICD,
-  } = useCICD();
-
-  // State for CI/CD data
-  const [_jobs, _setJobs] = useState<CICDJob[]>([]);
-  const [_isLoadingJobs, _setIsLoadingJobs] = useState(false);
-  const [_jobsError, _setJobsError] = useState<string | null>(null);
-
-  const [_jobDetails, _setJobDetails] = useState<any>(null);
-  const [_isLoadingJobDetails, _setIsLoadingJobDetails] = useState(false);
-  const [_jobDetailsError, _setJobDetailsError] = useState<string | null>(null);
-
-  // Get the selected CI/CD provider
-  const selectedProvider = useMemo(() => {
-    // Add debugging to trace why provider might be null
-    console.log('[DeploymentWizardStep5] cicd_provider_id:', data.cicd_provider_id);
-    console.log('[DeploymentWizardStep5] cicdProviders:', cicdProviders);
-
-    if (!data.cicd_provider_id || !cicdProviders.length) return null;
-
-    const provider = cicdProviders.find((p) => p.id === data.cicd_provider_id) || null;
-    console.log('[DeploymentWizardStep5] found provider:', provider);
-
-    return provider;
-  }, [data.cicd_provider_id, cicdProviders]);
-
-  // Get provider type (jenkins, github, gitlab, circleci)
-  const providerType = useMemo(() => {
-    if (!selectedProvider) return null;
-    return selectedProvider.type?.toLowerCase() || null;
-  }, [selectedProvider]);
-
-  // Extract CI/CD provider connection details
-  const providerConnection = useMemo(() => {
-    if (!selectedProvider) return null;
-
-    // Get proper URL with port if available
-    let url = (selectedProvider as any).url || '';
-    const port = (selectedProvider as any).port || (selectedProvider as any).config?.port;
-
-    // If we have a port and the URL doesn't already include it, add it
-    if (port && !url.includes(':' + port)) {
-      url = `${url}:${port}`;
-    }
-
-    return {
-      url: url,
-      token: (selectedProvider as any).token || '',
-      username: (selectedProvider as any).username || '',
-      password: (selectedProvider as any).password || '',
-      authType: (selectedProvider as any).auth_type || 'token',
-    };
-  }, [selectedProvider]);
+  // Handle view toggle
+  const handlePipelineToggle = (_checked: boolean) => {
+    // For analytics or future state changes
+    console.log('[DeploymentWizardStep5] Toggled pipeline view:', _checked);
+  };
 
   // Update provider details before submission
   const handleSubmit = (e: React.MouseEvent) => {
@@ -110,9 +57,9 @@ export function DeploymentWizardStep5Client({
     }
   };
 
-  // Generate pipeline code based on provider type - only for preview purposes
+  // Generate job code based on config - only for preview purposes
   const pipelineCode = useMemo(() => {
-    if (!data || !selectedProvider) return '';
+    if (!data) return '';
 
     try {
       console.log('[DeploymentWizardStep5] Generating preview pipeline');
@@ -136,7 +83,6 @@ export function DeploymentWizardStep5Client({
           ip: host.ip,
           environment: host.environment || 'Production',
           username: (host as any).username || 'user',
-          password: (host as any).password || '',
           key: (host as any).key || '',
           is_windows: (host as any).is_windows || false,
         }));
@@ -146,55 +92,37 @@ export function DeploymentWizardStep5Client({
         (data.repositoryId ? `https://github.com/${data.repositoryId}.git` : '');
       const branch = data.branch || 'main';
 
-      // Generate pipeline using the factory to get the appropriate generator for the provider type
-      // This is a synchronous adaptation of the async factory pattern, used only for preview
-      // In a production app, we would use useEffect and useState for this async operation
-      const params = {
-        name: data.name || 'Deployment',
+      // Format pipeline preview (simple job config example)
+      const jobConfig = {
+        name: data.name,
         description: data.description,
-        repository: {
-          url: repoUrl,
-          branch: branch,
-        },
-        hosts: hostDetails,
-        scripts: scriptDetails,
-        provider_id: selectedProvider?.id,
+        repository: repoUrl,
+        branch: branch,
+        scripts: scriptDetails.map((script) => script.path),
+        hosts: hostDetails.map((host) => `${host.name} (${host.ip || 'No IP'})`),
+        schedule:
+          data.schedule === 'now'
+            ? 'immediate'
+            : data.schedule === 'later'
+              ? `at ${data.scheduledTime}`
+              : `cron: ${data.cronExpression}`,
       };
-      
-      // Call factory manually with await - not ideal in a React component but workable for preview
-      // We're using a workaround since useMemo doesn't support async functions
-      let result;
-      CICDProviderFactory.generatePipeline(selectedProvider.type, params)
-        .then(pipelineConfig => {
-          // This won't update the UI immediately but will be available on next render
-          // Not ideal but acceptable for preview purposes
-          result = pipelineConfig;
-        })
-        .catch(error => {
-          console.error('[DeploymentWizardStep5] Pipeline generation failed:', error);
-        });
-        
-      // Default to empty result if async operation hasn't completed yet
-      result = result || { pipeline: '// Generating pipeline...' };
 
-      console.log('[DeploymentWizardStep5] Successfully generated preview pipeline');
+      // Convert to pretty JSON
+      const result = { pipeline: JSON.stringify(jobConfig, null, 2) };
+
+      console.log('[DeploymentWizardStep5] Successfully generated preview job config');
       return result.pipeline;
     } catch (error) {
-      console.error('[DeploymentWizardStep5] Failed to generate pipeline preview:', error);
-      return '// Failed to generate pipeline preview. This will not affect the actual deployment.';
+      console.error('[DeploymentWizardStep5] Failed to generate job preview:', error);
+      return '// Failed to generate job preview. This will not affect the actual deployment.';
     }
-  }, [data, repositoryScripts, availableHosts, selectedProvider]);
+  }, [data, repositoryScripts, availableHosts]);
 
   // Render pipeline view
   const renderPipelineView = () => {
     return (
       <>
-        <div className="mb-4">
-          <h3 className="text-xl font-medium text-foreground mb-2">
-            {t('wizard_cicd_view') || `${selectedProvider?.name || 'CI/CD'} Pipeline`}
-          </h3>
-        </div>
-
         <div className="bg-gray-900 rounded-md shadow-sm border border-gray-700 h-[400px] overflow-hidden">
           <pre className="p-4 text-sm text-gray-200 whitespace-pre font-mono h-full overflow-auto">
             {pipelineCode}
@@ -225,7 +153,7 @@ export function DeploymentWizardStep5Client({
                 handlePipelineToggle(checked);
               }}
             />
-            <span className="text-xs text-gray-500">{t('wizard_cicd_view')}</span>
+            <span className="text-xs text-gray-500">{t('wizard_job_view') || 'Job Config'}</span>
           </div>
         </div>
 
@@ -426,41 +354,6 @@ export function DeploymentWizardStep5Client({
                   </div>
                 </div>
               </div>
-
-              {/* CI/CD Provider */}
-              {selectedProvider && (
-                <div>
-                  <h5 className="text-sm font-medium text-foreground mb-2">
-                    {t('wizard_cicd_provider') || 'CI/CD Provider'}
-                  </h5>
-                  <div className="bg-background rounded-md p-3 border border-gray-200 dark:border-gray-700">
-                    <div className="text-xs text-foreground">
-                      <div className="space-y-1">
-                        <div className="flex items-start">
-                          <span className="font-medium mr-2">{c('name') || 'Name'}:</span>
-                          <span>{selectedProvider.name}</span>
-                        </div>
-
-                        <div className="flex items-start">
-                          <span className="font-medium mr-2">{c('type') || 'Type'}:</span>
-                          <span>
-                            {providerType.charAt(0).toUpperCase() + providerType.slice(1)}
-                          </span>
-                        </div>
-
-                        {providerConnection?.url && (
-                          <div className="flex items-start">
-                            <span className="font-medium mr-2">{c('url') || 'URL'}:</span>
-                            <span className="text-gray-600 dark:text-gray-400 break-all">
-                              {providerConnection.url}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>

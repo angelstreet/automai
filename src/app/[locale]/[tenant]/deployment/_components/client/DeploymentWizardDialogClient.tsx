@@ -29,9 +29,6 @@ export function DeploymentWizardDialogClient({
 }: DeploymentWizardDialogClientProps) {
   const t = useTranslations('deployment');
   const { hosts, isLoading: isLoadingHosts } = useHost('DeploymentWizardDialogClient');
-  const { providers: cicdProviders, isLoading: isLoadingCICD } = useCICD(
-    'DeploymentWizardDialogClient',
-  );
   const { activeTeam } = useTeam('DeploymentWizardDialogClient');
   const { user } = useUser(null, 'DeploymentWizardDialogClient');
 
@@ -42,9 +39,6 @@ export function DeploymentWizardDialogClient({
 
   // Use the provided repositories if available, otherwise use the fetched ones
   const repositories = initialRepositories || fetchedRepositories || [];
-
-  const isLoading =
-    isLoadingHosts || isLoadingCICD || (!initialRepositories && isLoadingRepositories);
 
   const handleDeploymentCreated = () => {
     // Close the dialog
@@ -100,7 +94,6 @@ export function DeploymentWizardDialogClient({
             onDeploymentCreated={handleDeploymentCreated}
             repositories={repositories}
             hosts={hosts || []}
-            cicdProviders={cicdProviders || []}
             teamId={activeTeam?.id || ''}
             userId={contextUser?.id || user?.id || ''}
             tenantName={contextUser?.tenant_name || user?.tenant_name || ''}

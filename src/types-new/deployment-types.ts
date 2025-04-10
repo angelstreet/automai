@@ -108,9 +108,9 @@ export interface DeploymentData {
 }
 
 /**
- * Form data for CICD deployment creation
+ * Form data for queued deployment creation
  */
-export interface CICDDeploymentFormData {
+export interface QueuedDeploymentFormData {
   name: string;
   description?: string;
   repository_id: string;
@@ -150,3 +150,6 @@ export interface CICDDeploymentFormData {
   };
   autoStart: boolean;
 }
+
+// For backward compatibility during transition
+export type CICDDeploymentFormData = QueuedDeploymentFormData;

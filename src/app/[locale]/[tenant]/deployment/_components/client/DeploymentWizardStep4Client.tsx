@@ -8,8 +8,7 @@ interface DeploymentWizardStep4Props {
   scheduledTime: string;
   cronExpression: string;
   repeatCount: number;
-  cicd_provider_id: string;
-  cicdProviders: Array<{ id: string; name: string; type: string }>;
+
   onInputChange: (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
   ) => void;
@@ -23,8 +22,6 @@ const DeploymentWizardStep4Client: React.FC<DeploymentWizardStep4Props> = ({
   scheduledTime,
   cronExpression,
   repeatCount,
-  cicd_provider_id,
-  cicdProviders = [],
   onInputChange,
   onPrevStep,
   onNextStep,
@@ -156,43 +153,6 @@ const DeploymentWizardStep4Client: React.FC<DeploymentWizardStep4Props> = ({
             </div>
           </div>
         )}
-      </div>
-
-      {/* CI/CD Provider Selection */}
-      <div className="mb-3 mt-6">
-        <label className="block text-sm font-medium text-foreground mb-2">
-          {t('wizard_cicd_provider') || 'CI/CD Provider'}
-        </label>
-        <div className="space-y-3">
-          <div>
-            <label
-              htmlFor="cicd_provider_id"
-              className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
-            >
-              {t('wizard_select_cicd_provider') || 'Select CI/CD Provider'}
-            </label>
-            <select
-              id="cicd_provider_id"
-              name="cicd_provider_id"
-              value={cicd_provider_id || (cicdProviders.length > 0 ? cicdProviders[0].id : '')}
-              onChange={onInputChange}
-              className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-            >
-              {cicdProviders.length === 0 ? (
-                <option value="">{t('wizard_select_provider') || 'Select provider'}</option>
-              ) : null}
-              {cicdProviders.map((provider) => (
-                <option key={provider.id} value={provider.id}>
-                  {provider.name} ({provider.type})
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              {t('wizard_cicd_provider_help') ||
-                'Select a CI/CD provider for your deployment pipeline'}
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   );

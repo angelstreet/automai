@@ -2,7 +2,9 @@
 
 import { cookies } from 'next/headers';
 
-export async function createDeploymentWithCICD(formData: CICDDeploymentFormData) {
+import { CICDDeploymentFormData, QueuedDeploymentFormData } from '@/types-new/deployment-types';
+
+export async function createDeploymentWithQueue(formData: QueuedDeploymentFormData) {
   try {
     // We no longer use a global timeout - we rely on the Jenkins provider's timeout mechanisms
     const cookieStore = await cookies();
@@ -11,7 +13,7 @@ export async function createDeploymentWithCICD(formData: CICDDeploymentFormData)
     console.log('[@action:deploymentWizard] tenant_name:', formData.provider.config.tenant_name);
 
     // Create Deployment
-    console.log('[@action:deploymentWizard:createDeploymentWithCICD] Creating deployment record');
+    console.log('[@action:deploymentWizard] Creating deployment record');
     const { createDeployment } = await import('@/lib/db/deploymentDb');
     const deployment = await createDeployment(
       {
@@ -48,21 +50,23 @@ export async function createDeploymentWithCICD(formData: CICDDeploymentFormData)
       throw new Error(`Failed to create deployment: ${deployment.error}`);
     }
 
+    // TODO: Push job to Upstash Redis queue for execution
+    // This will be implemented as part of the new architecture
+    console.log('[@action:deploymentWizard] Job will be queued for execution by worker');
+
     // Return the success response with the deployment data
     return { success: true, data: deployment.data };
   } catch (error: any) {
-    console.error('[@action:deploymentWizard:createDeploymentWithCICD] Error:', {
+    console.error('[@action:deploymentWizard] Error:', {
       message: error.message,
       stack: error.stack,
     });
 
-    // Provide a clearer error message for Jenkins-specific errors
-    let errorMessage = error.message;
-    if (error.message.includes('timed out')) {
-      errorMessage =
-        'Jenkins job creation timed out after 15 seconds. Please check your Jenkins server or try again later.';
-    }
-
-    return { success: false, error: errorMessage };
+    return { success: false, error: error.message };
   }
+}
+
+// Keep the old function for backward compatibility during transition
+export async function createDeploymentWithCICD(formData: CICDDeploymentFormData) {
+  return createDeploymentWithQueue(formData);
 }
