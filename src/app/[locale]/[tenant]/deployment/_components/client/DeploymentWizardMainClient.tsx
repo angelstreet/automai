@@ -522,20 +522,22 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           name: deploymentData.name,
           description: deploymentData.description,
           repository_id: deploymentData.repositoryId,
-          repository_url: deploymentData.selectedRepository?.url || '',
           branch: deploymentData.branch || 'main',
           team_id: teamId,
           creator_id: user?.id || userId,
 
-          // Scripts, hosts, and parameters
-          scriptIds: deploymentData.scriptIds,
-          parameters: deploymentData.scriptIds.map((scriptId) =>
+          // Scripts, hosts, and parameters with proper naming
+          scripts_path: deploymentData.scriptIds.map((id) => {
+            const script = repositoryScripts.find((s) => s.id === id);
+            return script?.path || '';
+          }),
+          scripts_parameters: deploymentData.scriptIds.map((scriptId) =>
             JSON.stringify(deploymentData.scriptParameters[scriptId] || {}),
           ),
-          hostIds: deploymentData.hostIds,
+          host_ids: deploymentData.hostIds,
 
           // Environment variables
-          environmentVars: deploymentData.environmentVars.reduce(
+          environment_vars: deploymentData.environmentVars.reduce(
             (acc, curr) => {
               acc[curr.key] = curr.value;
               return acc;
@@ -543,28 +545,55 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
             {} as Record<string, string>,
           ),
 
-          // Schedule
-          schedule: {
-            enabled: deploymentData.schedule !== 'now',
-            cronExpression: deploymentData.cronExpression,
-            repeatCount: deploymentData.repeatCount,
-          },
+          // Schedule with proper field names - no schedule_type
+          cron_expression:
+            deploymentData.schedule !== 'now' ? deploymentData.cronExpression : undefined,
+          repeat_count: deploymentData.schedule !== 'now' ? deploymentData.repeatCount : undefined,
 
-          // Notifications
-          notifications: {
-            enabled: deploymentData.notifications.email || deploymentData.notifications.slack,
-            onSuccess: deploymentData.notifications.email,
-            onFailure: deploymentData.notifications.slack,
-          },
+          // Status
+          is_active: deploymentData.schedule === 'now',
 
-          // Auto-start and job type
-          autoStart: deploymentData.schedule === 'now',
-          job_type: 'deployment',
-
-          // Optional config with tenant name for backward compatibility
+          // Config contains only runner-specific configuration
           config: {
-            tenant_name: user?.tenant_name || tenantName || '',
+            name: deploymentData.name,
+            repository: deploymentData.selectedRepository?.url || '',
+            branch: deploymentData.branch || 'main',
+            scripts: deploymentData.scriptIds.map((scriptId) => {
+              const script = repositoryScripts.find((s) => s.id === scriptId);
+              const params = deploymentData.scriptParameters[scriptId]?.['raw'] || '';
+              return {
+                path: script?.path || '',
+                parameters: params,
+              };
+            }),
+            hosts: deploymentData.hostIds.map((hostId) => {
+              const host = availableHosts.find((h) => h.id === hostId);
+              return {
+                id: hostId,
+                name: host?.name || 'Unknown',
+                ip: host?.ip || '',
+                username: (host as any)?.username || 'user',
+                port: (host as any)?.port || 22,
+                os: (host as any)?.is_windows ? 'windows' : 'linux',
+              };
+            }),
+            env: deploymentData.environmentVars.reduce(
+              (acc, curr) => {
+                acc[curr.key] = curr.value;
+                return acc;
+              },
+              {} as Record<string, string>,
+            ),
+            schedule: deploymentData.schedule === 'now' ? 'now' : deploymentData.cronExpression,
+            execution: {
+              parallel: false,
+              timeout: 3600,
+            },
+            created_at: new Date().toISOString(),
           },
+
+          // Creation timestamp
+          created_at: new Date().toISOString(),
         };
 
         // Detailed logging of the form data for debugging
@@ -573,16 +602,15 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
             name: formData.name,
             description: formData.description,
             repository_id: formData.repository_id,
-            repository_url: formData.repository_url,
-          },
-          execution: {
-            scripts: formData.scriptIds,
-            hosts: formData.hostIds,
             branch: formData.branch,
           },
+          execution: {
+            scripts_path: formData.scripts_path,
+            host_ids: formData.host_ids,
+          },
           scheduling: {
-            schedule: formData.schedule,
-            autoStart: formData.autoStart,
+            cron_expression: formData.cron_expression,
+            is_active: formData.is_active,
           },
         });
 
@@ -812,12 +840,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           {step === 5 && (
             <DeploymentWizardStep5Client
               data={deploymentData}
-              onUpdateData={(partialData) => {
-                setDeploymentData((prev) => ({ ...prev, ...partialData }));
-              }}
-              onNext={() => {}} // Step 5 doesn't have a next step
               onBack={handlePrevStep}
-              _onCancel={onCancel}
               onSubmit={handleSubmit}
               isPending={isCreating}
               availableHosts={availableHosts}

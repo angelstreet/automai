@@ -1,10 +1,9 @@
 'use server';
 
-import { cookies } from 'next/headers';
 import { Redis } from '@upstash/redis';
+import { cookies } from 'next/headers';
 
 import { createJobConfiguration } from '@/lib/db/jobsConfigurationDb';
-import { runJob } from '@/lib/db/jobsRunDb';
 import { JobConfiguration } from '@/types/component/jobConfigurationComponentType';
 
 // Initialize Redis client using environment variables
@@ -25,16 +24,14 @@ export interface JobFormData {
   team_id: string;
   creator_id: string;
   scripts_path: string[];
-  parameters?: string[];
+  scripts_parameters?: string[];
   host_ids: string[];
-  environmentVars?: Record<string, string>;
-  schedule?: {
-    type?: string;
-    cronExpression?: string;
-    repeatCount?: number;
-  };
+  environment_vars?: Record<string, string>;
+  cron_expression?: string;
+  repeat_count?: number;
   is_active?: boolean;
-  autoStart?: boolean;
+  config: Record<string, any>;
+  created_at?: string;
 }
 
 /**
@@ -53,7 +50,7 @@ function generateJobConfigJson(formData: JobFormData, hostDetails?: any[]): Reco
     // Steps to execute (based on scripts_path)
     scripts: Array.isArray(formData.scripts_path)
       ? formData.scripts_path.map((script, index) => {
-          const parameters = formData.parameters?.[index] || '';
+          const parameters = formData.scripts_parameters?.[index] || '';
           return {
             run: `${script} ${parameters}`.trim(),
           };
@@ -61,15 +58,15 @@ function generateJobConfigJson(formData: JobFormData, hostDetails?: any[]): Reco
       : [],
 
     // Environment variables
-    env: formData.environmentVars || {},
+    env: formData.environment_vars || {},
 
     // Inputs (for variable substitution)
     inputs: {},
 
     // Schedule information - Change "immediate" to "now"
-    schedule: formData.schedule?.cronExpression
-      ? formData.schedule.cronExpression
-      : formData.autoStart
+    schedule: formData.cron_expression
+      ? formData.cron_expression
+      : formData.is_active
         ? 'now'
         : null,
 
@@ -119,7 +116,7 @@ function generateJobConfigJson(formData: JobFormData, hostDetails?: any[]): Reco
     },
 
     // Created timestamp for reference
-    created_at: new Date().toISOString(),
+    created_at: formData.created_at || new Date().toISOString(),
   };
 
   return config;
@@ -137,8 +134,8 @@ export async function createJob(formData: JobFormData, hostDetails?: any[]) {
 
     const cookieStore = await cookies();
 
-    // Generate the job configuration JSON
-    const configJson = generateJobConfigJson(formData, hostDetails);
+    // Use the config field directly from formData if provided, otherwise generate it
+    const configJson = formData.config || generateJobConfigJson(formData, hostDetails);
 
     // Prepare job configuration data
     const jobConfig: Partial<JobConfiguration> = {
@@ -151,32 +148,31 @@ export async function createJob(formData: JobFormData, hostDetails?: any[]) {
 
       // Scripts and hosts
       scripts_path: formData.scripts_path || [],
-      scripts_parameters: formData.parameters || [],
+      scripts_parameters: formData.scripts_parameters || [],
       host_ids: formData.host_ids || [],
 
       // Environment variables
-      environment_vars: formData.environmentVars || {},
+      environment_vars: formData.environment_vars || {},
 
       // Schedule
-      schedule_type: formData.schedule?.type || null,
-      cron_expression: formData.schedule?.cronExpression || null,
-      repeat_count: formData.schedule?.repeatCount || null,
+      cron_expression: formData.cron_expression || null,
+      repeat_count: formData.repeat_count || null,
 
       // Status
       is_active: formData.is_active !== undefined ? formData.is_active : true,
 
       // Config
-      config: configJson, // Use the generated JSON configuration
+      config: configJson,
 
       // Creation timestamp
-      created_at: new Date().toISOString(),
+      created_at: formData.created_at || new Date().toISOString(),
     };
 
     // Create the job configuration
     console.log('[@action:jobsAction:createJob] Creating job configuration in database');
     const jobConfigResult = await createJobConfiguration(jobConfig, cookieStore);
 
-    if (!jobConfigResult.success) {
+    if (!jobConfigResult.success || !jobConfigResult.data) {
       throw new Error(`Failed to create job configuration: ${jobConfigResult.error}`);
     }
 
@@ -185,42 +181,39 @@ export async function createJob(formData: JobFormData, hostDetails?: any[]) {
       jobConfigResult.data.id,
     );
 
-    // If autoStart is true, queue the job for execution
-    if (formData.autoStart) {
+    // If is_active is true, queue the job for execution
+    if (formData.is_active) {
       console.log('[@action:jobsAction:createJob] Auto-starting job run');
       const jobRunResult = await queueJobForExecution(
         jobConfigResult.data.id,
         formData.creator_id,
-        null, // No override parameters for auto-start
+        {}, // Empty object instead of null for override parameters
         cookieStore,
       );
 
       if (!jobRunResult.success) {
-        console.error(
-          '[@action:jobsAction:createJob] Failed to queue job run:',
-          jobRunResult.error,
-        );
-        // Don't throw an error here, just log it. The configuration was created successfully.
-      } else {
-        console.log(
-          '[@action:jobsAction:createJob] Job queued successfully:',
-          jobRunResult.data.job_run_id,
-        );
+        console.error('[@action:jobsAction:createJob] Failed to queue job:', jobRunResult.error);
+        return {
+          success: true,
+          data: jobConfigResult.data,
+          queueError: jobRunResult.error,
+        };
       }
+
+      return {
+        success: true,
+        data: jobConfigResult.data,
+        jobRun: jobRunResult.data,
+      };
     }
 
     // Return success with the job configuration data
     return {
       success: true,
       data: jobConfigResult.data,
-      message: 'Job created successfully',
     };
   } catch (error: any) {
-    console.error('[@action:jobsAction:createJob] Error:', {
-      message: error.message,
-      stack: error.stack,
-    });
-
+    console.error('[@action:jobsAction:createJob] Error:', error.message);
     return {
       success: false,
       error: error.message || 'Failed to create job',
@@ -242,7 +235,7 @@ export async function updateJob(id: string, formData: Partial<JobFormData>, host
 
     // First, get the existing job config
     const existingJobConfig = await getJobConfigById(id, cookieStore);
-    if (!existingJobConfig.success) {
+    if (!existingJobConfig.success || !existingJobConfig.data) {
       throw new Error(`Failed to get existing job config: ${existingJobConfig.error}`);
     }
 
@@ -256,72 +249,55 @@ export async function updateJob(id: string, formData: Partial<JobFormData>, host
     if (formData.branch !== undefined) jobConfig.branch = formData.branch;
     if (formData.team_id !== undefined) jobConfig.team_id = formData.team_id;
     if (formData.scripts_path !== undefined) jobConfig.scripts_path = formData.scripts_path;
-    if (formData.parameters !== undefined) jobConfig.scripts_parameters = formData.parameters;
+    if (formData.scripts_parameters !== undefined)
+      jobConfig.scripts_parameters = formData.scripts_parameters;
     if (formData.host_ids !== undefined) jobConfig.host_ids = formData.host_ids;
-    if (formData.environmentVars !== undefined)
-      jobConfig.environment_vars = formData.environmentVars;
+    if (formData.environment_vars !== undefined)
+      jobConfig.environment_vars = formData.environment_vars;
 
     // Schedule
-    if (formData.schedule !== undefined) {
-      if (formData.schedule.type !== undefined) jobConfig.schedule_type = formData.schedule.type;
-      jobConfig.cron_expression = formData.schedule.cronExpression || null;
-      jobConfig.repeat_count = formData.schedule.repeatCount || null;
-    }
+    if (formData.cron_expression !== undefined)
+      jobConfig.cron_expression = formData.cron_expression;
+    if (formData.repeat_count !== undefined) jobConfig.repeat_count = formData.repeat_count;
 
     // Status
     if (formData.is_active !== undefined) jobConfig.is_active = formData.is_active;
 
-    // Generate updated config JSON if any relevant fields changed
-    if (
-      formData.name !== undefined ||
-      formData.repository_id !== undefined ||
-      formData.branch !== undefined ||
-      formData.scripts_path !== undefined ||
-      formData.parameters !== undefined ||
-      formData.host_ids !== undefined ||
-      formData.environmentVars !== undefined ||
-      formData.schedule !== undefined
-    ) {
-      // Safely get existing values
-      const existingScriptsPath = Array.isArray(existingJobConfig.data.scripts_path)
-        ? existingJobConfig.data.scripts_path
-        : [];
+    // Safely get existing values
+    const existingScriptsPath = Array.isArray(existingJobConfig.data.scripts_path)
+      ? existingJobConfig.data.scripts_path
+      : [];
 
-      const existingHostIds = Array.isArray(existingJobConfig.data.host_ids)
-        ? existingJobConfig.data.host_ids
-        : [];
+    const existingHostIds = Array.isArray(existingJobConfig.data.host_ids)
+      ? existingJobConfig.data.host_ids
+      : [];
 
-      // Merge with existing data to create a complete form data object
-      const completeFormData: JobFormData = {
-        name: formData.name || existingJobConfig.data.name || 'Unnamed Job',
-        description: formData.description || existingJobConfig.data.description || undefined,
-        repository_id: formData.repository_id || existingJobConfig.data.repository_id || undefined,
-        branch: formData.branch || existingJobConfig.data.branch || undefined,
-        team_id: formData.team_id || existingJobConfig.data.team_id || '',
-        creator_id: existingJobConfig.data.creator_id || '',
-        scripts_path: Array.isArray(formData.scripts_path)
-          ? formData.scripts_path
-          : existingScriptsPath,
-        parameters: formData.parameters || existingJobConfig.data.scripts_parameters || undefined,
-        host_ids: Array.isArray(formData.host_ids) ? formData.host_ids : existingHostIds,
-        environmentVars:
-          formData.environmentVars || existingJobConfig.data.environment_vars || undefined,
-        schedule: {
-          type: formData.schedule?.type || existingJobConfig.data.schedule_type || undefined,
-          cronExpression:
-            formData.schedule?.cronExpression ||
-            existingJobConfig.data.cron_expression ||
-            undefined,
-          repeatCount:
-            formData.schedule?.repeatCount || existingJobConfig.data.repeat_count || undefined,
-        },
-        is_active:
-          formData.is_active !== undefined ? formData.is_active : existingJobConfig.data.is_active,
-      };
+    // Merge with existing data to create a complete form data object
+    const completeFormData: JobFormData = {
+      name: formData.name || existingJobConfig.data.name || 'Unnamed Job',
+      description: formData.description || existingJobConfig.data.description || undefined,
+      repository_id: formData.repository_id || existingJobConfig.data.repository_id || undefined,
+      branch: formData.branch || existingJobConfig.data.branch || undefined,
+      team_id: formData.team_id || existingJobConfig.data.team_id || '',
+      creator_id: existingJobConfig.data.creator_id || '',
+      scripts_path: Array.isArray(formData.scripts_path)
+        ? formData.scripts_path
+        : existingScriptsPath,
+      scripts_parameters:
+        formData.scripts_parameters || existingJobConfig.data.scripts_parameters || [],
+      host_ids: Array.isArray(formData.host_ids) ? formData.host_ids : existingHostIds,
+      environment_vars: formData.environment_vars || existingJobConfig.data.environment_vars || {},
+      cron_expression:
+        formData.cron_expression || existingJobConfig.data.cron_expression || undefined,
+      repeat_count: formData.repeat_count || existingJobConfig.data.repeat_count || undefined,
+      is_active:
+        formData.is_active !== undefined ? formData.is_active : existingJobConfig.data.is_active,
+      config: generateJobConfigJson(completeFormData, hostDetails),
+      created_at: existingJobConfig.data.created_at || new Date().toISOString(),
+    };
 
-      // Generate the updated config JSON
-      jobConfig.config = generateJobConfigJson(completeFormData, hostDetails);
-    }
+    // Generate the updated config JSON
+    jobConfig.config = generateJobConfigJson(completeFormData, hostDetails);
 
     // Update timestamp
     jobConfig.updated_at = new Date().toISOString();
@@ -433,10 +409,14 @@ export async function deleteJob(id: string) {
  * This creates a standardized format for the worker to consume
  */
 function prepareJobForQueue(
-  jobConfig: JobConfiguration,
+  jobConfig: JobConfiguration | null | undefined,
   overrideParameters?: Record<string, any>,
 ): Record<string, any> {
   console.log('[@action:jobsAction:prepareJobForQueue] Preparing job for queue');
+
+  if (!jobConfig) {
+    throw new Error('Cannot prepare queue payload: Job configuration is missing');
+  }
 
   // Create the Redis job payload
   const queuePayload = {

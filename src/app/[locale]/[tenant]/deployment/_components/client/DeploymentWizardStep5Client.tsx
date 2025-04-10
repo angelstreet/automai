@@ -9,10 +9,7 @@ import { Host } from '@/types/component/hostComponentType';
 
 interface DeploymentWizardStep5ClientProps {
   data: DeploymentData;
-  onUpdateData: (data: Partial<DeploymentData>) => void;
-  onNext: () => void;
   onBack: () => void;
-  _onCancel: () => void;
   onSubmit: React.FormEventHandler<HTMLFormElement> | (() => void);
   isPending: boolean;
   availableHosts?: Host[];
@@ -21,9 +18,7 @@ interface DeploymentWizardStep5ClientProps {
 
 export function DeploymentWizardStep5Client({
   data,
-  onUpdateData: _onUpdateData,
   onBack,
-  _onCancel,
   onSubmit,
   isPending,
   availableHosts = [],
