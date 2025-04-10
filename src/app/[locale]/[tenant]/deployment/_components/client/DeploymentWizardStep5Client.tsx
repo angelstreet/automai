@@ -81,10 +81,9 @@ export function DeploymentWizardStep5Client({
           id: host.id,
           name: host.name,
           ip: host.ip,
-          environment: host.environment || 'Production',
+          port: (host as any).port || 22,
           username: (host as any).username || 'user',
-          key: (host as any).key || '',
-          is_windows: (host as any).is_windows || false,
+          os: (host as any).is_windows ? 'windows' : 'linux',
         }));
 
       const repoUrl =
@@ -99,10 +98,16 @@ export function DeploymentWizardStep5Client({
         repository: repoUrl,
         branch: branch,
         scripts: scriptDetails.map((script) => script.path),
-        hosts: hostDetails.map((host) => `${host.name} (${host.ip || 'No IP'})`),
+        hosts: hostDetails.map((host) => ({
+          name: host.name,
+          username: host.username,
+          ip: host.ip || 'No IP',
+          port: host.port,
+          os: host.os,
+        })),
         schedule:
           data.schedule === 'now'
-            ? 'immediate'
+            ? 'now'
             : data.schedule === 'later'
               ? `at ${data.scheduledTime}`
               : `cron: ${data.cronExpression}`,

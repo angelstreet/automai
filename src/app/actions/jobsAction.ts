@@ -52,7 +52,7 @@ function generateJobConfigJson(formData: JobFormData, hostDetails?: any[]): Reco
     branch: formData.branch || 'main',
 
     // Steps to execute (based on scripts_path)
-    steps: Array.isArray(formData.scripts_path)
+    scripts: Array.isArray(formData.scripts_path)
       ? formData.scripts_path.map((script, index) => {
           const parameters = formData.parameters?.[index] || '';
           return {
@@ -67,19 +67,43 @@ function generateJobConfigJson(formData: JobFormData, hostDetails?: any[]): Reco
     // Inputs (for variable substitution)
     inputs: {},
 
-    // Schedule information
-    schedule: formData.schedule?.cronExpression || null,
+    // Schedule information - Change "immediate" to "now"
+    schedule: formData.schedule?.cronExpression
+      ? formData.schedule.cronExpression
+      : formData.autoStart
+        ? 'now'
+        : null,
 
-    // Host information
+    // Host information - Enhanced format with username, IP, and port separately
     hosts: Array.isArray(formData.host_ids)
       ? formData.host_ids.map((hostId) => {
           // If we have host details, include them
           const hostDetail = hostDetails?.find((h) => h.id === hostId);
 
+          // Parse host details to get username and IP separately
+          let username = 'root';
+          let ip = '';
+          let port = 22;
+          let name = hostDetail?.name || 'Unknown Host';
+
+          if (hostDetail?.ip) {
+            ip = hostDetail.ip;
+          }
+
+          if (hostDetail?.username) {
+            username = hostDetail.username;
+          }
+
+          if (hostDetail?.port) {
+            port = parseInt(hostDetail.port) || 22;
+          }
+
           return {
             id: hostId,
-            name: hostDetail?.name || 'Unknown Host',
-            ip: hostDetail?.ip || '',
+            name: name,
+            username: username,
+            ip: ip,
+            port: port,
             os: hostDetail?.os || 'linux',
           };
         })
