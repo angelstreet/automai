@@ -188,6 +188,6 @@ async function setupSchedules() {
 }
 
 // Poll queue every 5 seconds
-setInterval(processJob, 10000);
+//setInterval(processJob, 10000);
 //setupSchedules().catch((err) => console.error('Setup schedules failed:', err));
 console.log('Worker running...');
