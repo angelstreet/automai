@@ -56,14 +56,7 @@ async function processJob() {
     const hosts = config.hosts || [];
     const repoUrl = config.repository;
     const repoName = repoUrl.split('/').pop().replace('.git', '');
-    //const scripts = (config.scripts || [])
-    //  .map((script) => {
-    //    const ext = script.path.split('.').pop().toLowerCase();
-    //    const command = ext === 'py' ? 'python' : ext === 'sh' ? './' : '';
-    //    return `${command}${script.path} ${script.parameters || ''}`.trim();
-    //  })
-    //  .join(' && ');
-    //console.log(`[@runner:processJob] Scripts to execute: ${scripts}`);
+
     for (const host of hosts) {
       console.log(
         `[@runner:processJob] Host: ${host.ip}, OS: ${host.os}, Username: ${host.username}`,
@@ -187,7 +180,7 @@ async function setupSchedules() {
   });
 }
 
-// Poll queue every 10 seconds
+// Poll queue every 5 seconds
 setInterval(processJob, 10000);
 setupSchedules().catch((err) => console.error('Setup schedules failed:', err));
 console.log('Worker running...');
