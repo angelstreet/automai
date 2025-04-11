@@ -11,10 +11,10 @@ const redis = new Redis({
 });
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-const ALGORITHM = 'aes-256-gcm'; // Match your encryption utils
+const ALGORITHM = 'aes-256-gcm';
 function decrypt(encryptedData, keyBase64) {
   const key = Buffer.from(keyBase64, 'base64');
-  const [ivHex, authTagHex, encrypted] = encryptedData.split(':'); // Match GCM format
+  const [ivHex, authTagHex, encrypted] = encryptedData.split(':');
   const iv = Buffer.from(ivHex, 'hex');
   const authTag = Buffer.from(authTagHex, 'hex');
   const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
@@ -24,7 +24,67 @@ function decrypt(encryptedData, keyBase64) {
   return decrypted;
 }
 
+/**
+ * Get the next execution number for a job configuration
+ */
+async function getNextExecutionNumber(configId) {
+  try {
+    const { data, error } = await supabase
+      .from('jobs_run')
+      .select('execution_number')
+      .eq('config_id', configId)
+      .order('execution_number', { ascending: false })
+      .limit(1);
+    
+    if (error || !data || data.length === 0) {
+      return 1; // First execution
+    }
+    
+    return (data[0].execution_number || 0) + 1;
+  } catch (error) {
+    console.error(`[@runner:getNextExecutionNumber] Error: ${error.message}`);
+    return 1; // Default to 1 if there's an error
+  }
+}
+
+/**
+ * Update job run status with optional additional data
+ */
+async function updateJobRunStatus(id, status, additionalData = {}) {
+  try {
+    if (!id) return;
+    
+    const updates = { 
+      status, 
+      updated_at: new Date().toISOString(),
+      ...additionalData
+    };
+    
+    // Set timestamp based on status
+    if (status === 'running') {
+      updates.started_at = new Date().toISOString();
+    } else if (['completed', 'failed', 'cancelled'].includes(status)) {
+      updates.completed_at = new Date().toISOString();
+    }
+    
+    const { error } = await supabase
+      .from('jobs_run')
+      .update(updates)
+      .eq('id', id);
+      
+    if (error) {
+      console.error(`[@runner:updateJobRunStatus] Error updating job run ${id}: ${error.message}`);
+    } else {
+      console.log(`[@runner:updateJobRunStatus] Updated job run ${id} status to ${status}`);
+    }
+  } catch (error) {
+    console.error(`[@runner:updateJobRunStatus] Error: ${error.message}`);
+  }
+}
+
 async function processJob() {
+  let jobRunId = null;
+  let startTime = new Date().toISOString();
   try {
     const queueLength = await redis.llen('jobs_queue');
     console.log(`[@runner:processJob] Current queue length: ${queueLength} jobs`);
@@ -43,6 +103,40 @@ async function processJob() {
     console.log(`[@runner:processJob] Raw job data: ${JSON.stringify(job)}`);
     const { config_id, timestamp, requested_by } = typeof job === 'string' ? JSON.parse(job) : job;
 
+    // Create a job run record with status 'pending'
+    const { data: jobRun, error: jobRunError } = await supabase
+      .from('jobs_run')
+      .insert({
+        config_id,
+        status: 'pending',
+        created_at: startTime,
+        queued_at: timestamp || startTime,
+        execution_parameters: { requested_by },
+        worker_id: process.env.WORKER_ID || `worker-${Math.random().toString(36).substring(2, 9)}`,
+        execution_attempt: 1,
+        // Get execution_number as max + 1
+        execution_number: await getNextExecutionNumber(config_id)
+      })
+      .select()
+      .single();
+
+    if (jobRunError) {
+      console.error(`[@runner:processJob] Failed to create job run: ${jobRunError.message}`);
+      return;
+    }
+
+    jobRunId = jobRun.id;
+    console.log(`[@runner:processJob] Created job run: ${jobRunId}`);
+
+    // Update job run to 'running'
+    await supabase
+      .from('jobs_run')
+      .update({
+        status: 'running',
+        started_at: new Date().toISOString()
+      })
+      .eq('id', jobRunId);
+
     const { data, error } = await supabase
       .from('jobs_configuration')
       .select('config')
@@ -50,12 +144,19 @@ async function processJob() {
       .single();
     if (error || !data) {
       console.error(`[@runner:processJob] Failed to fetch config ${config_id}: ${error?.message}`);
+      await updateJobRunStatus(jobRunId, 'failed', {
+        error: `Failed to fetch config: ${error?.message || 'Unknown error'}`,
+        logs: { error: `Failed to fetch config: ${error?.message || 'Unknown error'}` }
+      });
       return;
     }
 
     const config = data.config;
     console.log(`[@runner:processJob] Config fetched: ${JSON.stringify(config)}`);
     const hosts = config.hosts || [];
+    const repoUrl = config.repository;
+    const branch = config.branch || 'main'; // Default to 'main' if not specified
+    const repoName = repoUrl.split('/').pop().replace('.git', ''); // e.g., 'automai'
     const scripts = (config.scripts || [])
       .map((script) => `${script.path} ${script.parameters}`)
       .join(' && ');
@@ -67,15 +168,12 @@ async function processJob() {
       );
       let sshKeyOrPass = host.key || host.password;
       if (!sshKeyOrPass) {
-        console.error(`[@runner:processJob] No key or password provided for host ${host.ip}`);
-        await supabase.from('jobs_run').insert({
-          config_id,
-          status: 'failed',
-          output: { stderr: 'No authentication credentials provided' },
-          created_at: new Date().toISOString(),
-          started_at: new Date().toISOString(),
-          completed_at: new Date().toISOString(),
-          requested_by,
+        const errorMsg = `No authentication credentials provided for host ${host.ip}`;
+        console.error(`[@runner:processJob] ${errorMsg}`);
+        await updateJobRunStatus(jobRunId, 'failed', {
+          error: errorMsg,
+          output: { stderr: errorMsg },
+          logs: { error: errorMsg }
         });
         continue;
       }
@@ -87,8 +185,14 @@ async function processJob() {
             `[@runner:processJob] Decrypted key preview: ${sshKeyOrPass.slice(0, 50)}...`,
           );
         } catch (decryptError) {
-          console.error(`[@runner:processJob] Decryption failed: ${decryptError.message}`);
-          return;
+          const errorMsg = `Decryption failed: ${decryptError.message}`;
+          console.error(`[@runner:processJob] ${errorMsg}`);
+          await updateJobRunStatus(jobRunId, 'failed', {
+            error: errorMsg,
+            output: { stderr: errorMsg },
+            logs: { error: errorMsg }
+          });
+          continue;
         }
       } else {
         console.log(
@@ -96,22 +200,28 @@ async function processJob() {
         );
       }
 
-      const script = host.os === 'windows' ? `cmd.exe /c "${scripts}"` : scripts;
+      // Construct script with clone, cd, checkout branch, and execute scripts
+      const cloneCommand = `git clone ${repoUrl} ${repoName} || true`; // '|| true' to avoid failure if dir exists
+      const cdCommand = `cd ${repoName}`;
+      const checkoutCommand = `git checkout ${branch}`;
+      const fullScript =
+        host.os === 'windows'
+          ? `cmd.exe /c "${cloneCommand} && ${cdCommand} && ${checkoutCommand} && ${scripts}"`
+          : `${cloneCommand} && ${cdCommand} && ${checkoutCommand} && ${scripts}`;
+      console.log(`[@runner:processJob] Full SSH command: ${fullScript}`);
+
       const conn = new Client();
       conn
         .on('ready', () => {
           console.log(`[@runner:processJob] SSH connected to ${host.ip}`);
-          conn.exec(script, async (err, stream) => {
+          conn.exec(fullScript, async (err, stream) => {
             if (err) {
-              console.error(`[@runner:processJob] SSH exec error: ${err.message}`);
-              await supabase.from('jobs_run').insert({
-                config_id,
-                status: 'failed',
-                output: { stderr: err.message },
-                created_at: new Date().toISOString(),
-                started_at: new Date().toISOString(),
-                completed_at: new Date().toISOString(),
-                requested_by,
+              const errorMsg = `SSH exec error: ${err.message}`;
+              console.error(`[@runner:processJob] ${errorMsg}`);
+              await updateJobRunStatus(jobRunId, 'failed', {
+                error: errorMsg,
+                output: { stderr: errorMsg },
+                logs: { error: errorMsg }
               });
               conn.end();
               return;
@@ -126,31 +236,28 @@ async function processJob() {
                 output.stderr += data;
                 console.log(`[@runner:processJob] SSH stderr: ${data}`);
               })
-              .on('close', async () => {
-                console.log(`[@runner:processJob] SSH stream closed`);
-                await supabase.from('jobs_run').insert({
-                  config_id,
-                  status: 'success',
+              .on('close', async (code, signal) => {
+                console.log(`[@runner:processJob] SSH stream closed with code ${code}`);
+                const successful = code === 0;
+                
+                // Update the job run with the final status and output
+                await updateJobRunStatus(jobRunId, successful ? 'completed' : 'failed', {
                   output,
-                  created_at: new Date().toISOString(),
-                  started_at: new Date().toISOString(),
-                  completed_at: new Date().toISOString(),
-                  requested_by,
+                  logs: output,
+                  error: !successful ? `Command exited with code ${code}` : null
                 });
+                
                 conn.end();
               });
           });
         })
         .on('error', async (err) => {
-          console.error(`[@runner:processJob] SSH error: ${err.message}`);
-          await supabase.from('jobs_run').insert({
-            config_id,
-            status: 'failed',
-            output: { stderr: err.message },
-            created_at: new Date().toISOString(),
-            started_at: new Date().toISOString(),
-            completed_at: new Date().toISOString(),
-            requested_by,
+          const errorMsg = `SSH connection error: ${err.message}`;
+          console.error(`[@runner:processJob] ${errorMsg}`);
+          await updateJobRunStatus(jobRunId, 'failed', {
+            error: errorMsg,
+            output: { stderr: errorMsg },
+            logs: { error: errorMsg }
           });
           conn.end();
         })
@@ -164,6 +271,14 @@ async function processJob() {
     }
   } catch (error) {
     console.error('[@runner:processJob] Error processing job:', error);
+    
+    // Update job run if we have an ID
+    if (jobRunId) {
+      await updateJobRunStatus(jobRunId, 'failed', {
+        error: `Unexpected error: ${error.message || 'Unknown error'}`,
+        logs: { error: error.stack || error.message || 'Unknown error' }
+      });
+    }
   }
 }
 
