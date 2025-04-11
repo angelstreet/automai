@@ -15,3 +15,4 @@ public/test-auth.html
 .cursor/mcp.json
 # Ignore shadcn components
 src/components/shadcn/*
+runner/.env
