@@ -25,7 +25,7 @@ const adaptHostsForDeployment = (systemHosts: SystemHost[]): HostType[] => {
   if (!systemHosts || !Array.isArray(systemHosts)) {
     return [];
   }
-  
+
   return systemHosts.map((host) => {
     // Base host object with essential properties
     const adaptedHost: any = {
@@ -38,22 +38,24 @@ const adaptHostsForDeployment = (systemHosts: SystemHost[]): HostType[] => {
       created_at: host.created_at || new Date().toISOString(),
       updated_at: host.updated_at || new Date().toISOString(),
       is_windows: host.is_windows || false,
-      
+
       // Authentication properties
       username: host.user || host.username || 'user',
       port: host.port || 22,
-      auth_type: host.auth_type || 'password'
+      auth_type: host.auth_type || 'password',
     };
-    
+
     // Add authentication details based on auth_type
     if (host.auth_type === 'password' && host.password) {
       adaptedHost.password = host.password;
     } else if (host.auth_type === 'privateKey' && host.private_key) {
       adaptedHost.private_key = host.private_key;
     }
-    
-    console.log(`[adaptHostsForDeployment] Adapted host ${host.id} (${host.name}), auth_type: ${adaptedHost.auth_type}, has_password: ${!!adaptedHost.password}, has_key: ${!!adaptedHost.private_key}`);
-    
+
+    console.log(
+      `[adaptHostsForDeployment] Adapted host ${host.id} (${host.name}), auth_type: ${adaptedHost.auth_type}, has_password: ${!!adaptedHost.password}, has_key: ${!!adaptedHost.private_key}`,
+    );
+
     return adaptedHost;
   });
 };
@@ -179,21 +181,6 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               url?: string;
               provider_id?: string;
             };
-
-            if (!selectedRepo) {
-              throw new Error('No repository selected');
-            }
-
-            // Use either providerId or provider_id from the repository
-            const providerId = selectedRepo.provider_id;
-
-            if (!providerId) {
-              throw new Error('Missing provider ID for the selected repository');
-            }
-
-            if (!selectedRepo.url) {
-              throw new Error('Missing repository URL');
-            }
 
             console.log(`[DeploymentWizard] Getting files directly using gitService`);
 
@@ -595,16 +582,16 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
                 username: (host as any)?.username || (host as any)?.user || 'user',
                 port: (host as any)?.port || 22,
                 os: (host as any)?.is_windows ? 'windows' : 'linux',
-                authType: (host as any)?.auth_type || 'password'
+                authType: (host as any)?.auth_type || 'password',
               };
-              
+
               // Include auth credentials based on auth type
               if ((host as any)?.auth_type === 'password' && (host as any)?.password) {
                 hostConfig['password'] = (host as any).password;
               } else if ((host as any)?.auth_type === 'privateKey' && (host as any)?.private_key) {
                 hostConfig['key'] = (host as any).private_key;
               }
-              
+
               return hostConfig;
             }),
             env: deploymentData.environmentVars.reduce(

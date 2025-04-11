@@ -46,7 +46,7 @@ export async function getById(
       throw error;
     }
 
-    return { success: true, data, error: null };
+    return { success: true, data, error: undefined };
   } catch (error: unknown) {
     const err = error instanceof Error ? error : new Error(String(error));
     console.error(`[@db:repositoryDb:getById] Error: ${err.message}`);
@@ -97,7 +97,7 @@ export async function getRepositories(
  */
 export async function getRepository(
   id: string,
-  userId?: string,
+  _: string | undefined,
   cookieStore?: ReadonlyRequestCookies,
 ): Promise<DbResponse<any>> {
   try {
@@ -124,7 +124,6 @@ export async function createRepository(
   repositoryData: {
     name: string;
     description?: string | null;
-    provider_id?: string;
     provider_type?: string;
     url: string;
     default_branch?: string;
@@ -133,7 +132,7 @@ export async function createRepository(
     team_id?: string;
     creator_id: string;
   },
-  userId: string,
+  _: string,
   cookieStore?: ReadonlyRequestCookies,
 ): Promise<DbResponse<any>> {
   try {
@@ -172,7 +171,7 @@ export async function createRepository(
 export async function updateRepository(
   id: string,
   updates: any,
-  userId: string,
+  _: string,
   cookieStore?: ReadonlyRequestCookies,
 ): Promise<DbResponse<any>> {
   try {
@@ -185,7 +184,7 @@ export async function updateRepository(
     };
 
     // First get the repository to check if it exists
-    const { data: repo, error: getError } = await supabase
+    const { error: getError } = await supabase
       .from('repositories')
       .select('*')
       .eq('id', id)
@@ -224,14 +223,14 @@ export async function updateRepository(
  */
 export async function deleteRepository(
   id: string,
-  userId: string,
+  _: string,
   cookieStore?: ReadonlyRequestCookies,
 ): Promise<DbResponse<null>> {
   try {
     const supabase = await createClient(cookieStore);
 
     // First get the repository to check if it exists and belongs to user's team
-    const { data: repo, error: getError } = await supabase
+    const { error: getError } = await supabase
       .from('repositories')
       .select('team_id')
       .eq('id', id)
@@ -263,8 +262,14 @@ export async function deleteRepository(
  * Create a repository from a URL
  */
 export async function createRepositoryFromUrl(
-  data: { url: string; is_private?: boolean; description?: string | null; team_id?: string },
-  userId: string,
+  data: {
+    url: string;
+    is_private?: boolean;
+    description?: string | null;
+    team_id?: string;
+    default_branch?: string;
+  },
+  creator_id: string,
   cookieStore?: ReadonlyRequestCookies,
 ): Promise<DbResponse<any>> {
   try {
@@ -284,29 +289,6 @@ export async function createRepositoryFromUrl(
       providerType = 'gitlab';
     } else if (url.hostname.includes('bitbucket.org')) {
       providerType = 'bitbucket';
-    }
-
-    // Check for Gitea instances by looking for matching server URLs in providers
-    let detectedGiteaProviderId = null;
-    try {
-      const serverUrl = `${url.protocol}//${url.host}`;
-      const { data: giteaProviders } = await supabase
-        .from('git_providers')
-        .select('id, type, server_url')
-        .eq('type', 'gitea')
-        .ilike('server_url', serverUrl);
-
-      if (giteaProviders && giteaProviders.length > 0) {
-        providerType = 'gitea';
-        detectedGiteaProviderId = giteaProviders[0].id;
-        console.log(
-          `[@db:repositoryDb:createRepositoryFromUrl] Detected Gitea instance at ${serverUrl} with provider ID: ${detectedGiteaProviderId}`,
-        );
-      }
-    } catch (err) {
-      console.error(
-        `[@db:repositoryDb:createRepositoryFromUrl] Error checking for Gitea providers: ${err}`,
-      );
     }
 
     // Parse the path to get owner and repo name
@@ -330,79 +312,18 @@ export async function createRepositoryFromUrl(
       `[@db:repositoryDb:createRepositoryFromUrl] Extracted info: provider=${providerType}, owner=${owner}, repo=${repoName}`,
     );
 
-    // Look up a default provider ID or create a placeholder one
-    let providerId = '';
-    try {
-      // If we detected a Gitea provider earlier, use it
-      if (detectedGiteaProviderId) {
-        providerId = detectedGiteaProviderId;
-        console.log(
-          `[@db:repositoryDb:createRepositoryFromUrl] Using detected Gitea provider: ${providerId}`,
-        );
-      } else {
-        // Try to find an existing provider of the same type
-        const { data: providers } = await supabase
-          .from('git_providers')
-          .select('id')
-          .eq('type', providerType)
-          .limit(1);
-
-        if (providers && providers.length > 0) {
-          providerId = providers[0].id;
-          console.log(
-            `[@db:repositoryDb:createRepositoryFromUrl] Found existing provider: ${providerId}`,
-          );
-        } else {
-          // Create a default provider if none exists
-          const { data: newProvider, error: providerError } = await supabase
-            .from('git_providers')
-            .insert({
-              name: `Default ${providerType} provider`,
-              type: providerType,
-              auth_type: 'token',
-              creator_id: userId,
-              team_id: data.team_id,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            })
-            .select()
-            .single();
-
-          if (providerError) {
-            console.log(
-              `[@db:repositoryDb:createRepositoryFromUrl] Error creating provider: ${providerError.message}`,
-            );
-            // Use a placeholder - this is better than failing altogether
-            providerId = '00000000-0000-0000-0000-000000000000';
-          } else {
-            providerId = newProvider.id;
-            console.log(
-              `[@db:repositoryDb:createRepositoryFromUrl] Created new provider: ${providerId}`,
-            );
-          }
-        }
-      }
-    } catch (providerErr) {
-      console.error(
-        `[@db:repositoryDb:createRepositoryFromUrl] Error getting/creating provider: ${providerErr}`,
-      );
-      // Last resort placeholder
-      providerId = '00000000-0000-0000-0000-000000000000';
-    }
-
     // Prepare repository data
     const repositoryData = {
       name: repoName,
       description: data.description || null,
-      provider_id: providerId, // Use the properly detected or created provider ID
       provider_type: providerType,
       url: data.url,
-      default_branch: data.default_branch || 'main', // Use provided default branch or fallback
+      default_branch: data.default_branch || 'main',
       is_private: data.is_private || false,
       owner: owner || null,
       team_id: data.team_id,
       sync_status: 'IDLE',
-      creator_id: userId,
+      creator_id,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -412,7 +333,6 @@ export async function createRepositoryFromUrl(
       owner: repositoryData.owner,
       provider_type: repositoryData.provider_type,
       team_id: repositoryData.team_id,
-      provider_id: providerId,
     });
 
     const { data: result, error } = await supabase
@@ -451,7 +371,7 @@ export async function getAllGitProviders(
       throw error;
     }
 
-    return { success: true, data, error: null };
+    return { success: true, data, error: undefined };
   } catch (error: unknown) {
     const err = error instanceof Error ? error : new Error(String(error));
     console.error(`[@db:repositoryDb:getAllGitProviders] Error: ${err.message}`);

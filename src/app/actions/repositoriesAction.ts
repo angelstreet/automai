@@ -7,7 +7,24 @@ import { cache } from 'react';
 import { getUserActiveTeam } from '@/app/actions/teamAction';
 import { getUser } from '@/app/actions/userAction';
 import repositoryDb from '@/lib/db/repositoryDb';
-import { Repository, RepositoryFilter } from '@/types/context/repositoryContextType';
+
+// Define a simplified Repository type directly here to avoid import issues
+interface Repository {
+  id?: string;
+  name?: string;
+  description?: string | null;
+  providerType?: string;
+  url?: string;
+  defaultBranch?: string;
+  isPrivate?: boolean;
+  owner?: string;
+}
+
+// Define the filter type directly
+interface RepositoryFilter {
+  name?: string;
+  provider?: string;
+}
 
 /**
  * Get all repositories with optional filtering
@@ -138,7 +155,7 @@ export async function connectRepository(
     const teamId = activeTeamResult.id;
 
     // If this is a quick clone (just URL provided)
-    if (data.url && !data.provider_id) {
+    if (data.url) {
       console.log('[@action:repositories:connectRepository] Quick clone using URL', {
         url: data.url,
       });
@@ -174,50 +191,8 @@ export async function connectRepository(
       return { success: true, data: result.data };
     }
 
-    // Otherwise, this is a standard repository connection
-    // Prepare data for the repository module with the correct structure
-    const repositoryData = {
-      name: data.name || '',
-      description: data.description || null,
-      provider_id: data.provider_id || '',
-      provider_type: data.providerType || 'github',
-      url: data.url || '',
-      default_branch: data.defaultBranch || 'main',
-      is_private: data.isPrivate || false,
-      owner: data.owner || null,
-      team_id: teamId,
-      creator_id: currentUser.id,
-    };
-
-    console.log('[@action:repositories:connectRepository] Creating repository with data:', {
-      name: repositoryData.name,
-      provider_id: repositoryData.provider_id,
-      provider_type: repositoryData.provider_type,
-      team_id: repositoryData.team_id,
-    });
-
-    // Call the repository module
-    const result = await repositoryDb.createRepository(repositoryData, currentUser.id, cookieStore);
-
-    if (!result.success || !result.data) {
-      console.log('[@action:repositories:connectRepository] Failed to connect repository', {
-        error: result.error,
-      });
-      return {
-        success: false,
-        error: result.error || 'Failed to connect repository',
-      };
-    }
-
-    // Revalidate repository paths
-    revalidatePath('/[locale]/[tenant]/repositories', 'page');
-
-    console.log('[@action:repositories:connectRepository] Successfully connected repository', {
-      id: result.data.id,
-      name: result.data.name,
-    });
-
-    return { success: true, data: result.data };
+    // This should never happen as we always have a URL now
+    return { success: false, error: 'Repository URL is required' };
   } catch (error: any) {
     console.log('[@action:repositories:connectRepository] Error connecting repository', {
       error: error.message,
