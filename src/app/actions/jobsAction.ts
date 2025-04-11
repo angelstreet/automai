@@ -1,8 +1,8 @@
 'use server';
 
 import { Redis } from '@upstash/redis';
-import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
+import { cookies } from 'next/headers';
 
 import { createJobConfiguration } from '@/lib/db/jobsConfigurationDb';
 import { JobConfiguration } from '@/types/component/jobConfigurationComponentType';
@@ -341,54 +341,60 @@ export async function startJob(
 ) {
   try {
     console.log(`[@action:jobsAction:startJob] Queueing job with config ID: "${configId}"`);
-    
+
     if (!configId) {
       console.error('[@action:jobsAction:startJob] ERROR: No config ID provided');
       return {
         success: false,
-        error: 'No job configuration ID provided'
+        error: 'No job configuration ID provided',
       };
     }
-    
+
     // First verify the job configuration exists
     const cookieStore = await cookies();
     const { getJobConfigById } = await import('@/lib/db/jobsConfigurationDb');
     const jobConfigResult = await getJobConfigById(configId, cookieStore);
-    
+
     if (!jobConfigResult.success || !jobConfigResult.data) {
       console.error('[@action:jobsAction:startJob] ERROR: Job configuration not found:', configId);
       return {
         success: false,
-        error: `Job configuration not found: ${jobConfigResult.error || ''}`
+        error: `Job configuration not found: ${jobConfigResult.error || ''}`,
       };
     }
-    
-    console.log(`[@action:jobsAction:startJob] Found valid job configuration: ${configId}, pushing to queue`);
+
+    console.log(
+      `[@action:jobsAction:startJob] Found valid job configuration: ${configId}, pushing to queue`,
+    );
 
     // Simple job payload for the queue
     const queuePayload = {
       config_id: configId,
       timestamp: new Date().toISOString(),
-      requested_by: userId || 'unknown'
+      requested_by: userId || 'unknown',
     };
 
     // Convert payload to JSON string for Redis
     const payloadString = JSON.stringify(queuePayload);
 
     // Push to Redis queue
+    console.log(`[@action:jobsAction:startJob] About to push job to Redis queue:`, {
+      queue: JOBS_QUEUE,
+      config_id: configId,
+      payload_size: payloadString.length,
+    });
     const redisResult = await redis.lpush(JOBS_QUEUE, payloadString);
     console.log(`[@action:jobsAction:startJob] Redis push result:`, redisResult);
 
     // Revalidate paths to refresh UI
     console.log(`[@action:jobsAction:startJob] Revalidating paths`);
-    revalidatePath('/[locale]/[tenant]/deployment');
-    revalidatePath('/deployment');
+    revalidatePath('/[locale]/[tenant]/deployment', 'page');
 
     return {
       success: true,
       data: {
         config_id: configId,
-        queued: true
+        queued: true,
       },
       message: 'Job queued successfully',
     };
@@ -441,8 +447,7 @@ export async function deleteJob(id: string) {
 
     // Revalidate deployment-related paths
     console.log(`[@action:jobsAction:deleteJob] Revalidating paths`);
-    revalidatePath('/[locale]/[tenant]/deployment');
-    revalidatePath('/deployment');
+    revalidatePath('/[locale]/[tenant]/deployment', 'page');
 
     console.log(
       `[@action:jobsAction:deleteJob] SUCCESS: Job deleted successfully with ID: "${id}"`,
@@ -604,7 +609,9 @@ export async function queueJobForExecution(
   cookieStore?: any,
 ) {
   try {
-    console.log(`[@action:jobsAction:queueJobForExecution] Queueing job with config ID: "${configId}", userId: "${userId}"`);
+    console.log(
+      `[@action:jobsAction:queueJobForExecution] Queueing job with config ID: "${configId}", userId: "${userId}"`,
+    );
 
     if (!configId) {
       console.error('[@action:jobsAction:queueJobForExecution] ERROR: No config ID provided');
@@ -621,22 +628,32 @@ export async function queueJobForExecution(
     const configResult = await getJobConfigById(configId, cookieStore);
 
     if (!configResult.success || !configResult.data) {
-      console.error('[@action:jobsAction:queueJobForExecution] ERROR: Failed to get job configuration:', configResult.error);
+      console.error(
+        '[@action:jobsAction:queueJobForExecution] ERROR: Failed to get job configuration:',
+        configResult.error,
+      );
       return { success: false, error: `Failed to get job configuration: ${configResult.error}` };
     }
 
-    console.log(`[@action:jobsAction:queueJobForExecution] Found valid job configuration: ${configId}`);
+    console.log(
+      `[@action:jobsAction:queueJobForExecution] Found valid job configuration: ${configId}`,
+    );
 
     // Create a new job run record
     const { runJob } = await import('@/lib/db/jobsRunDb');
     const jobRunResult = await runJob(configId, userId, cookieStore);
 
     if (!jobRunResult.success || !jobRunResult.data) {
-      console.error('[@action:jobsAction:queueJobForExecution] ERROR: Failed to create job run:', jobRunResult.error);
+      console.error(
+        '[@action:jobsAction:queueJobForExecution] ERROR: Failed to create job run:',
+        jobRunResult.error,
+      );
       return { success: false, error: `Failed to create job run: ${jobRunResult.error}` };
     }
 
-    console.log(`[@action:jobsAction:queueJobForExecution] Created job run: ${jobRunResult.data.id}`);
+    console.log(
+      `[@action:jobsAction:queueJobForExecution] Created job run: ${jobRunResult.data.id}`,
+    );
 
     // Prepare the job payload for Redis
     const queuePayload = prepareJobForQueue(configResult.data, overrideParameters);
@@ -646,9 +663,12 @@ export async function queueJobForExecution(
 
     try {
       // Push to Redis queue using LPUSH (adds to the left/beginning of the list)
-      console.log(
-        `[@action:jobsAction:queueJobForExecution] Pushing to Redis queue: ${JOBS_QUEUE}`,
-      );
+      console.log(`[@action:jobsAction:queueJobForExecution] About to push job to Redis queue:`, {
+        queue: JOBS_QUEUE,
+        config_id: configId,
+        job_run_id: jobRunResult.data.id,
+        payload_size: payloadString.length,
+      });
 
       // Convert payload to JSON string for Redis
       const payloadString = JSON.stringify(queuePayload);
@@ -674,7 +694,9 @@ export async function queueJobForExecution(
         cookieStore,
       );
 
-      console.log(`[@action:jobsAction:queueJobForExecution] Job successfully queued and run record updated: ${jobRunResult.data.id}`);
+      console.log(
+        `[@action:jobsAction:queueJobForExecution] Job successfully queued and run record updated: ${jobRunResult.data.id}`,
+      );
 
       return {
         success: true,

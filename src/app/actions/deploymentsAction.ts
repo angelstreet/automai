@@ -191,7 +191,7 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
     }
 
     // Revalidate relevant paths
-    revalidatePath('/[locale]/[tenant]/deployment');
+    revalidatePath('/[locale]/[tenant]/deployment', 'page');
 
     console.log(
       '[@action:deployments:createDeployment] Successfully created deployment:',

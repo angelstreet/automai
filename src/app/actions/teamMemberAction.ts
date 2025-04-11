@@ -7,9 +7,9 @@ import { cache } from 'react';
 import { getUser } from '@/app/actions/userAction';
 import permissionDb from '@/lib/db/permissionDb';
 import teamMemberDb from '@/lib/db/teamMemberDb';
+import { createClient } from '@/lib/supabase/server';
 import type { ResourceType } from '@/types/context/permissionsContextType';
 import { ResourcePermissions } from '@/types/context/teamContextType';
-import { createClient } from '@/lib/supabase/server';
 
 /**
  * Get team members for a specific team
@@ -94,7 +94,7 @@ export const updateTeamMemberRole = cache(
       }
 
       // Revalidate team-related paths
-      revalidatePath('/[locale]/[tenant]/team');
+      revalidatePath('/[locale]/[tenant]/team', 'page');
 
       return { success: true, data: result.data };
     } catch (error) {
@@ -163,7 +163,7 @@ export const addTeamMember = cache(async (teamId: string, email: string, role: s
     }
 
     // Revalidate team-related paths
-    revalidatePath('/[locale]/[tenant]/team');
+    revalidatePath('/[locale]/[tenant]/team', 'page');
 
     return {
       success: true,
@@ -245,7 +245,7 @@ export const addMultipleTeamMembers = cache(
       }
 
       // Revalidate team-related paths
-      revalidatePath('/[locale]/[tenant]/team');
+      revalidatePath('/[locale]/[tenant]/team', 'page');
 
       return {
         success: true,
@@ -305,7 +305,7 @@ export const updateMemberPermissions = cache(
       }
 
       // Revalidate team-related paths
-      revalidatePath('/[locale]/[tenant]/team');
+      revalidatePath('/[locale]/[tenant]/team', 'page');
 
       if (failedUpdates > 0) {
         return {
@@ -374,7 +374,7 @@ export const removeTeamMember = cache(async (teamId: string, profileId: string) 
     }
 
     // Revalidate team-related paths
-    revalidatePath('/[locale]/[tenant]/team');
+    revalidatePath('/[locale]/[tenant]/team', 'page');
 
     return { success: true };
   } catch (error) {
@@ -476,7 +476,7 @@ export const applyRolePermissionTemplate = cache(
       }
 
       // Revalidate team-related paths
-      revalidatePath('/[locale]/[tenant]/team');
+      revalidatePath('/[locale]/[tenant]/team', 'page');
 
       return { success: true };
     } catch (error) {

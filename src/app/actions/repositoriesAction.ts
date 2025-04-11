@@ -169,7 +169,7 @@ export async function connectRepository(
       }
 
       // Revalidate repository paths
-      revalidatePath('/[locale]/[tenant]/repositories');
+      revalidatePath('/[locale]/[tenant]/repositories', 'page');
 
       return { success: true, data: result.data };
     }
@@ -210,7 +210,7 @@ export async function connectRepository(
     }
 
     // Revalidate repository paths
-    revalidatePath('/[locale]/[tenant]/repositories');
+    revalidatePath('/[locale]/[tenant]/repositories', 'page');
 
     console.log('[@action:repositories:connectRepository] Successfully connected repository', {
       id: result.data.id,
@@ -277,7 +277,7 @@ export async function disconnectRepository(
     }
 
     // Revalidate repository paths
-    revalidatePath('/[locale]/[tenant]/repositories');
+    revalidatePath('/[locale]/[tenant]/repositories', 'page');
 
     console.log(
       '[@action:repositories:disconnectRepository] Successfully disconnected repository',

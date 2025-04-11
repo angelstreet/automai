@@ -7,8 +7,8 @@ import { getUserActiveTeam } from '@/app/actions/teamAction';
 import { getUser } from '@/app/actions/userAction';
 import hostDb from '@/lib/db/hostDb';
 import hostService from '@/lib/services/hostService';
-import { Host, HostStatus } from '@/types/context/hostContextType';
 import { encryptValue, decryptValue } from '@/lib/utils/encryption';
+import { Host, HostStatus } from '@/types/context/hostContextType';
 
 export interface HostFilter {
   status?: string;
@@ -463,13 +463,6 @@ export async function setHostStatus(
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to update host status' };
   }
-}
-
-/**
- * Revalidate hosts page
- */
-export async function revalidateHosts(): Promise<void> {
-  revalidatePath('/[locale]/[tenant]/hosts', 'page');
 }
 
 /**
