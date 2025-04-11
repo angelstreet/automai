@@ -38,7 +38,7 @@ async function processJob() {
 
     console.log(`[@runner:processJob] Processing job, ${queueLength - 1} jobs remaining in queue`);
     console.log(`[@runner:processJob] Raw job data (typeof): ${typeof job}`);
-    console.log(`[@runner:processJob] Raw job data: ${JSON.stringify(job)}`); // Stringify for clarity
+    console.log(`[@runner:processJob] Raw job data: ${JSON.stringify(job)}`);
     const { config_id, timestamp, requested_by } = typeof job === 'string' ? JSON.parse(job) : job;
 
     const { data, error } = await supabase
@@ -47,28 +47,37 @@ async function processJob() {
       .eq('id', config_id)
       .single();
     if (error || !data) {
-      console.error(`Failed to fetch config ${config_id}: ${error?.message}`);
+      console.error(`[@runner:processJob] Failed to fetch config ${config_id}: ${error?.message}`);
       return;
     }
 
     const config = data.config;
+    console.log(`[@runner:processJob] Config fetched: ${JSON.stringify(config)}`);
     const hosts = config.hosts || [];
     const scripts = (config.scripts || [])
       .map((script) => `${script.path} ${script.parameters}`)
       .join(' && ');
+    console.log(`[@runner:processJob] Scripts to execute: ${scripts}`);
 
     for (const host of hosts) {
+      console.log(
+        `[@runner:processJob] Processing host: ${host.ip}, OS: ${host.os}, Username: ${host.username}, AuthType: ${host.authType}`,
+      );
       let sshKeyOrPass = host.key || host.password;
       if (host.authType === 'privateKey' && sshKeyOrPass?.includes(':')) {
         try {
           sshKeyOrPass = decrypt(sshKeyOrPass, process.env.ENCRYPTION_KEY);
           console.log(
             `[@runner:processJob] Decrypted key preview: ${sshKeyOrPass.slice(0, 50)}...`,
-          ); // Debug key
+          );
         } catch (decryptError) {
           console.error(`[@runner:processJob] Decryption failed: ${decryptError.message}`);
           return;
         }
+      } else {
+        console.log(
+          `[@runner:processJob] Using plain key/password: ${sshKeyOrPass?.slice(0, 50)}...`,
+        );
       }
 
       const script = host.os === 'windows' ? `cmd.exe /c "${scripts}"` : scripts;
@@ -78,6 +87,7 @@ async function processJob() {
           console.log(`[@runner:processJob] SSH connected to ${host.ip}`);
           conn.exec(script, async (err, stream) => {
             if (err) {
+              console.error(`[@runner:processJob] SSH exec error: ${err.message}`);
               await supabase.from('jobs_run').insert({
                 config_id,
                 status: 'failed',
@@ -92,9 +102,16 @@ async function processJob() {
             }
             let output = { stdout: '', stderr: '' };
             stream
-              .on('data', (data) => (output.stdout += data))
-              .stderr.on('data', (data) => (output.stderr += data))
+              .on('data', (data) => {
+                output.stdout += data;
+                console.log(`[@runner:processJob] SSH stdout: ${data}`);
+              })
+              .stderr.on('data', (data) => {
+                output.stderr += data;
+                console.log(`[@runner:processJob] SSH stderr: ${data}`);
+              })
               .on('close', async () => {
+                console.log(`[@runner:processJob] SSH stream closed`);
                 await supabase.from('jobs_run').insert({
                   config_id,
                   status: 'success',
@@ -126,12 +143,15 @@ async function processJob() {
           port: host.port || 22,
           username: host.username,
           [host.authType === 'privateKey' ? 'privateKey' : 'password']: sshKeyOrPass,
+          debug: (msg) => console.log(`[@runner:sshDebug] ${msg}`), // SSH debug logs
         });
     }
   } catch (error) {
     console.error('[@runner:processJob] Error processing job:', error);
   }
 }
+
+// ... rest of your code (setupSchedules, logQueueStatus, setInterval) unchanged
 
 async function setupSchedules() {
   const { data, error } = await supabase.from('jobs_configuration').select('id, config');
