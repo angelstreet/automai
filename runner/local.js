@@ -50,14 +50,12 @@ async function processJob() {
       console.error(`[@runner:processJob] Failed to fetch config ${config_id}: ${error?.message}`);
       return;
     }
-
     const config = data.config;
     console.log(`[@runner:processJob] Config: ${JSON.stringify(config)}`);
 
     const hosts = config.hosts || [];
     const repoUrl = config.repository;
     const repoName = repoUrl.split('/').pop().replace('.git', '');
-
     // Define env vars in Render (not repo)
     const envVars = {
       FTP_SERVER: process.env.FTP_SERVER,
@@ -71,7 +69,7 @@ async function processJob() {
     const scripts = (config.scripts || [])
       .map((script) => {
         const ext = script.path.split('.').pop().toLowerCase();
-        const command = ext === 'py' ? 'python' : ext === 'sh' ? './' : '';
+        const command = ext === 'py' ? 'python3' : ext === 'sh' ? './' : '';
         return `${command} ${script.path} ${script.parameters || ''} 2>&1`.trim();
       })
       .join(' && ');
@@ -100,12 +98,12 @@ async function processJob() {
 
       const cleanupCommand = `if exist ${repoName} rmdir /s /q ${repoName}`;
       const cloneCommand = `git clone ${repoUrl} ${repoName} 2>&1`;
-      const cdCommand = `cd ${repoName}`;
+      const cdCommand = `cd ${repoName} 2>&1`;
       const dirCommand = `dir`;
       const scriptCommand = `${scripts}`;
       const fullScript =
         host.os === 'windows'
-          ? `cmd.exe /c ${cdCommand} && ${dirCommand} && ${scriptCommand}}`
+          ? `cmd.exe /c ${envPrefix} && ${cdCommand} && ${dirCommand} && ${scriptCommand}}`
           : `${cleanupCommand} && ${cloneCommand} && ${cdCommand} && ${scriptCommand}`;
       console.log(`[@runner:processJob] SSH command: ${fullScript}`);
       const conn = new Client();
