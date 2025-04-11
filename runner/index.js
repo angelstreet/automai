@@ -37,10 +37,11 @@ async function processJob() {
       console.log(`[@runner:processJob] Queue is empty, skipping...`);
       return;
     }
-
     console.log(`[@runner:processJob] Processing job, ${queueLength - 1} jobs remaining in queue`);
-    console.log(`[@runner:processJob] Raw job data: ${job}`);
-    const { config_id, timestamp, requested_by } = JSON.parse(job);
+    console.log(`[@runner:processJob] Raw job data (typeof): ${typeof job}`); // Debug type
+    console.log(`[@runner:processJob] Raw job data: ${job}`); // Log as-is
+    const parsedJob = typeof job === 'string' ? JSON.parse(job) : job; // Handle if already parsed
+    const { config_id, timestamp, requested_by } = parsedJob;
     const { data, error } = await supabase
       .from('jobs_configuration')
       .select('config')
