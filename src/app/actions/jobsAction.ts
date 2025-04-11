@@ -602,6 +602,82 @@ export async function getAllJobs() {
   }
 }
 
+/**
+ * Get job runs for a specific job configuration
+ */
+export async function getJobRunsForConfig(configId: string) {
+  try {
+    console.log(`[@action:jobsAction:getJobRunsForConfig] Getting job runs for config: ${configId}`);
+    
+    if (!configId) {
+      console.error('[@action:jobsAction:getJobRunsForConfig] ERROR: No config ID provided');
+      return { success: false, error: 'No job configuration ID provided', data: [] };
+    }
+    
+    const cookieStore = await cookies();
+    
+    // Get the job configuration to ensure it exists and to get details
+    const { getJobConfigById } = await import('@/lib/db/jobsConfigurationDb');
+    const configResult = await getJobConfigById(configId, cookieStore);
+    
+    if (!configResult.success) {
+      console.error('[@action:jobsAction:getJobRunsForConfig] ERROR: Failed to get job configuration:', configResult.error);
+      return { success: false, error: `Failed to get job configuration: ${configResult.error}`, data: [] };
+    }
+    
+    // Get all job runs for this configuration
+    const { getJobRunsByConfigId } = await import('@/lib/db/jobsRunDb');
+    const jobRunsResult = await getJobRunsByConfigId(configId, cookieStore);
+    
+    if (!jobRunsResult.success) {
+      console.error('[@action:jobsAction:getJobRunsForConfig] ERROR: Failed to get job runs:', jobRunsResult.error);
+      return { success: false, error: `Failed to get job runs: ${jobRunsResult.error}`, data: [] };
+    }
+    
+    // Transform job runs to desired format if needed
+    const transformedJobRuns = jobRunsResult.data.map(run => ({
+      id: run.id,
+      configId: run.config_id,
+      status: run.status,
+      output: run.output,
+      logs: run.logs,
+      error: run.error,
+      createdAt: run.created_at,
+      updatedAt: run.updated_at,
+      queuedAt: run.queued_at,
+      startedAt: run.started_at,
+      completedAt: run.completed_at,
+      executionParameters: run.execution_parameters,
+      scheduledTime: run.scheduled_time,
+      workerId: run.worker_id,
+      executionAttempt: run.execution_attempt,
+      executionNumber: run.execution_number,
+      // Add the config name for reference
+      configName: configResult.data.name
+    }));
+    
+    console.log(`[@action:jobsAction:getJobRunsForConfig] Successfully fetched ${transformedJobRuns.length} job runs`);
+    
+    return { 
+      success: true, 
+      data: transformedJobRuns,
+      configName: configResult.data.name
+    };
+  } catch (error: any) {
+    console.error('[@action:jobsAction:getJobRunsForConfig] CAUGHT ERROR:', {
+      configId,
+      message: error.message,
+      stack: error.stack,
+    });
+    
+    return {
+      success: false,
+      error: error.message || 'Failed to get job runs',
+      data: []
+    };
+  }
+}
+
 export async function queueJobForExecution(
   configId: string,
   userId: string,
@@ -662,6 +738,9 @@ export async function queueJobForExecution(
     queuePayload.job_run_id = jobRunResult.data.id;
 
     try {
+      // Convert payload to JSON string for Redis
+      const payloadString = JSON.stringify(queuePayload);
+      
       // Push to Redis queue using LPUSH (adds to the left/beginning of the list)
       console.log(`[@action:jobsAction:queueJobForExecution] About to push job to Redis queue:`, {
         queue: JOBS_QUEUE,
@@ -669,9 +748,6 @@ export async function queueJobForExecution(
         job_run_id: jobRunResult.data.id,
         payload_size: payloadString.length,
       });
-
-      // Convert payload to JSON string for Redis
-      const payloadString = JSON.stringify(queuePayload);
 
       // Push to Redis queue
       const redisResult = await redis.lpush(JOBS_QUEUE, payloadString);

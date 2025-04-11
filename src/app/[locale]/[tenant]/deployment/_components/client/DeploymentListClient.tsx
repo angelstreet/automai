@@ -101,11 +101,9 @@ export function DeploymentListClient({
 
   const handleViewDeployment = (deployment: Deployment, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    if (onViewDeployment) {
-      onViewDeployment(deployment.id);
-    } else {
-      router.push(`/deployment/${deployment.id}`);
-    }
+    
+    // Navigate to the job runs page for this configuration
+    router.push(`/deployment/job-runs/${deployment.id}`);
   };
 
   const handleDeleteClick = (deployment: Deployment, e: React.MouseEvent) => {
