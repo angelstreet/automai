@@ -11,12 +11,14 @@ const redis = new Redis({
 });
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-const ALGORITHM = 'aes-256-cbc';
+const ALGORITHM = 'aes-256-gcm'; // Match your encryption utils
 function decrypt(encryptedData, keyBase64) {
   const key = Buffer.from(keyBase64, 'base64');
-  const [ivHex, encrypted] = encryptedData.split(':');
+  const [ivHex, authTagHex, encrypted] = encryptedData.split(':'); // Match GCM format
   const iv = Buffer.from(ivHex, 'hex');
+  const authTag = Buffer.from(authTagHex, 'hex');
   const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+  decipher.setAuthTag(authTag);
   let decrypted = decipher.update(encrypted, 'hex', 'utf8');
   decrypted += decipher.final('utf8');
   return decrypted;
@@ -61,10 +63,24 @@ async function processJob() {
 
     for (const host of hosts) {
       console.log(
-        `[@runner:processJob] Processing host: ${host.ip}, OS: ${host.os}, Username: ${host.username}, AuthType: ${host.authType}`,
+        `[@runner:processJob] Processing host: ${host.ip}, OS: ${host.os}, Username: ${host.username}, AuthType: ${host.authType || 'not specified'}`,
       );
       let sshKeyOrPass = host.key || host.password;
-      if (host.authType === 'privateKey' && sshKeyOrPass?.includes(':')) {
+      if (!sshKeyOrPass) {
+        console.error(`[@runner:processJob] No key or password provided for host ${host.ip}`);
+        await supabase.from('jobs_run').insert({
+          config_id,
+          status: 'failed',
+          output: { stderr: 'No authentication credentials provided' },
+          created_at: new Date().toISOString(),
+          started_at: new Date().toISOString(),
+          completed_at: new Date().toISOString(),
+          requested_by,
+        });
+        continue;
+      }
+
+      if (host.authType === 'privateKey' && sshKeyOrPass.includes(':')) {
         try {
           sshKeyOrPass = decrypt(sshKeyOrPass, process.env.ENCRYPTION_KEY);
           console.log(
@@ -76,7 +92,7 @@ async function processJob() {
         }
       } else {
         console.log(
-          `[@runner:processJob] Using plain key/password: ${sshKeyOrPass?.slice(0, 50)}...`,
+          `[@runner:processJob] Using plain key/password: ${sshKeyOrPass.slice(0, 50)}...`,
         );
       }
 
@@ -143,15 +159,13 @@ async function processJob() {
           port: host.port || 22,
           username: host.username,
           [host.authType === 'privateKey' ? 'privateKey' : 'password']: sshKeyOrPass,
-          debug: (msg) => console.log(`[@runner:sshDebug] ${msg}`), // SSH debug logs
+          debug: (msg) => console.log(`[@runner:sshDebug] ${msg}`),
         });
     }
   } catch (error) {
     console.error('[@runner:processJob] Error processing job:', error);
   }
 }
-
-// ... rest of your code (setupSchedules, logQueueStatus, setInterval) unchanged
 
 async function setupSchedules() {
   const { data, error } = await supabase.from('jobs_configuration').select('id, config');
