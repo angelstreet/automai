@@ -4,7 +4,6 @@ import { Redis } from '@upstash/redis';
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 
-import { createJobConfiguration } from '@/lib/db/jobsConfigurationDb';
 import { JobConfiguration } from '@/types/component/jobConfigurationComponentType';
 
 // Initialize Redis client using environment variables
@@ -121,105 +120,6 @@ function generateJobConfigJson(formData: JobFormData, hostDetails?: any[]): Reco
   };
 
   return config;
-}
-
-/**
- * Creates a job configuration and optionally runs the job
- */
-export async function createJob(formData: JobFormData, hostDetails?: any[]) {
-  try {
-    console.log('[@action:jobsAction:createJob] Creating job with name:', formData.name);
-
-    // Log the full form data for debugging
-    console.log('[@action:jobsAction:createJob] Form data:', formData);
-
-    const cookieStore = await cookies();
-
-    // Use the config field directly from formData if provided, otherwise generate it
-    const configJson = formData.config || generateJobConfigJson(formData, hostDetails);
-
-    // Prepare job configuration data
-    const jobConfig: Partial<JobConfiguration> = {
-      name: formData.name,
-      description: formData.description || null,
-      team_id: formData.team_id,
-      creator_id: formData.creator_id,
-      repository_id: formData.repository_id || null,
-      branch: formData.branch || null,
-
-      // Scripts and hosts
-      scripts_path: formData.scripts_path || [],
-      scripts_parameters: formData.scripts_parameters || [],
-      host_ids: formData.host_ids || [],
-
-      // Environment variables
-      environment_vars: formData.environment_vars || {},
-
-      // Schedule
-      cron_expression: formData.cron_expression || null,
-      repeat_count: formData.repeat_count || null,
-
-      // Status
-      is_active: formData.is_active !== undefined ? formData.is_active : true,
-
-      // Config
-      config: configJson,
-
-      // Creation timestamp
-      created_at: formData.created_at || new Date().toISOString(),
-    };
-
-    // Create the job configuration
-    console.log('[@action:jobsAction:createJob] Creating job configuration in database');
-    const jobConfigResult = await createJobConfiguration(jobConfig, cookieStore);
-
-    if (!jobConfigResult.success || !jobConfigResult.data) {
-      throw new Error(`Failed to create job configuration: ${jobConfigResult.error}`);
-    }
-
-    console.log(
-      '[@action:jobsAction:createJob] Job configuration created successfully:',
-      jobConfigResult.data.id,
-    );
-
-    // If is_active is true, queue the job for execution
-    if (formData.is_active) {
-      console.log('[@action:jobsAction:createJob] Auto-starting job run');
-      const jobRunResult = await queueJobForExecution(
-        jobConfigResult.data.id,
-        formData.creator_id,
-        {}, // Empty object instead of null for override parameters
-        cookieStore,
-      );
-
-      if (!jobRunResult.success) {
-        console.error('[@action:jobsAction:createJob] Failed to queue job:', jobRunResult.error);
-        return {
-          success: true,
-          data: jobConfigResult.data,
-          queueError: jobRunResult.error,
-        };
-      }
-
-      return {
-        success: true,
-        data: jobConfigResult.data,
-        jobRun: jobRunResult.data,
-      };
-    }
-
-    // Return success with the job configuration data
-    return {
-      success: true,
-      data: jobConfigResult.data,
-    };
-  } catch (error: any) {
-    console.error('[@action:jobsAction:createJob] Error:', error.message);
-    return {
-      success: false,
-      error: error.message || 'Failed to create job',
-    };
-  }
 }
 
 /**
@@ -418,10 +318,12 @@ export async function startJob(
  */
 export async function deleteJob(id: string) {
   try {
-    console.log(`[@action:jobsAction:deleteJob] START Deleting job with ID: "${id}"`);
+    console.log('\n--------------------- DELETE JOB START ---------------------');
+    console.log(`[@action:jobsAction:deleteJob] Deleting job with ID: "${id}"`);
 
     if (!id) {
       console.error('[@action:jobsAction:deleteJob] ERROR: No ID provided for deletion');
+      console.log('--------------------- DELETE JOB END ---------------------\n');
       return {
         success: false,
         error: 'No job ID provided for deletion',
@@ -434,14 +336,20 @@ export async function deleteJob(id: string) {
     console.log(`[@action:jobsAction:deleteJob] Importing deleteJobConfiguration function`);
     const { deleteJobConfiguration } = await import('@/lib/db/jobsConfigurationDb');
 
+    console.log('\n--------------------- DATABASE OPERATION ---------------------');
     console.log(`[@action:jobsAction:deleteJob] Calling deleteJobConfiguration with ID: "${id}"`);
     const result = await deleteJobConfiguration(id, cookieStore);
-    console.log(`[@action:jobsAction:deleteJob] deleteJobConfiguration result:`, result);
+    console.log(
+      '[@action:jobsAction:deleteJob] Database Response:',
+      JSON.stringify(result, null, 2),
+    );
+    console.log('--------------------- DATABASE OPERATION END ---------------------\n');
 
     if (!result.success) {
       console.error(
         `[@action:jobsAction:deleteJob] ERROR: Delete operation failed: ${result.error}`,
       );
+      console.log('--------------------- DELETE JOB END ---------------------\n');
       throw new Error(`Failed to delete job: ${result.error}`);
     }
 
@@ -452,17 +360,20 @@ export async function deleteJob(id: string) {
     console.log(
       `[@action:jobsAction:deleteJob] SUCCESS: Job deleted successfully with ID: "${id}"`,
     );
+    console.log('--------------------- DELETE JOB END ---------------------\n');
 
     return {
       success: true,
       message: 'Job deleted successfully',
     };
   } catch (error: any) {
+    console.error('\n--------------------- DELETE JOB ERROR ---------------------');
     console.error('[@action:jobsAction:deleteJob] CAUGHT ERROR:', {
       id: id,
       message: error.message,
       stack: error.stack,
     });
+    console.error('--------------------- DELETE JOB ERROR END ---------------------\n');
 
     return {
       success: false,
@@ -599,142 +510,5 @@ export async function getAllJobs() {
   } catch (error: any) {
     console.error('[@action:jobsAction:getAllJobs] Error:', error);
     return { success: false, error: error.message, data: [] };
-  }
-}
-
-export async function queueJobForExecution(
-  configId: string,
-  userId: string,
-  overrideParameters?: Record<string, any>,
-  cookieStore?: any,
-) {
-  try {
-    console.log(
-      `[@action:jobsAction:queueJobForExecution] Queueing job with config ID: "${configId}", userId: "${userId}"`,
-    );
-
-    if (!configId) {
-      console.error('[@action:jobsAction:queueJobForExecution] ERROR: No config ID provided');
-      return { success: false, error: 'No job configuration ID provided' };
-    }
-
-    if (!userId) {
-      console.error('[@action:jobsAction:queueJobForExecution] ERROR: No user ID provided');
-      return { success: false, error: 'No user ID provided' };
-    }
-
-    // First, get the job configuration
-    const { getJobConfigById } = await import('@/lib/db/jobsConfigurationDb');
-    const configResult = await getJobConfigById(configId, cookieStore);
-
-    if (!configResult.success || !configResult.data) {
-      console.error(
-        '[@action:jobsAction:queueJobForExecution] ERROR: Failed to get job configuration:',
-        configResult.error,
-      );
-      return { success: false, error: `Failed to get job configuration: ${configResult.error}` };
-    }
-
-    console.log(
-      `[@action:jobsAction:queueJobForExecution] Found valid job configuration: ${configId}`,
-    );
-
-    // Create a new job run record
-    const { runJob } = await import('@/lib/db/jobsRunDb');
-    const jobRunResult = await runJob(configId, userId, cookieStore);
-
-    if (!jobRunResult.success || !jobRunResult.data) {
-      console.error(
-        '[@action:jobsAction:queueJobForExecution] ERROR: Failed to create job run:',
-        jobRunResult.error,
-      );
-      return { success: false, error: `Failed to create job run: ${jobRunResult.error}` };
-    }
-
-    console.log(
-      `[@action:jobsAction:queueJobForExecution] Created job run: ${jobRunResult.data.id}`,
-    );
-
-    // Prepare the job payload for Redis
-    const queuePayload = prepareJobForQueue(configResult.data, overrideParameters);
-
-    // Add job run ID to the payload
-    queuePayload.job_run_id = jobRunResult.data.id;
-
-    try {
-      // Push to Redis queue using LPUSH (adds to the left/beginning of the list)
-      console.log(`[@action:jobsAction:queueJobForExecution] About to push job to Redis queue:`, {
-        queue: JOBS_QUEUE,
-        config_id: configId,
-        job_run_id: jobRunResult.data.id,
-        payload_size: payloadString.length,
-      });
-
-      // Convert payload to JSON string for Redis
-      const payloadString = JSON.stringify(queuePayload);
-
-      // Push to Redis queue
-      const redisResult = await redis.lpush(JOBS_QUEUE, payloadString);
-
-      console.log(`[@action:jobsAction:queueJobForExecution] Redis push result:`, redisResult);
-
-      // Update job run with queue information
-      const { updateJobRun } = await import('@/lib/db/jobsRunDb');
-      await updateJobRun(
-        jobRunResult.data.id,
-        {
-          queued_at: new Date().toISOString(),
-          status: 'pending', // Update status to pending
-          execution_parameters: {
-            queue: JOBS_QUEUE,
-            priority: queuePayload.priority,
-            override_parameters: overrideParameters || null,
-          },
-        },
-        cookieStore,
-      );
-
-      console.log(
-        `[@action:jobsAction:queueJobForExecution] Job successfully queued and run record updated: ${jobRunResult.data.id}`,
-      );
-
-      return {
-        success: true,
-        data: {
-          job_run_id: jobRunResult.data.id,
-          config_id: configId,
-          queue_payload: queuePayload,
-        },
-        message: 'Job queued successfully',
-      };
-    } catch (redisError: any) {
-      console.error('[@action:jobsAction:queueJobForExecution] Redis error:', {
-        message: redisError.message,
-        stack: redisError.stack,
-      });
-
-      // Even if Redis fails, we want to return the job run we created
-      return {
-        success: true,
-        data: {
-          job_run_id: jobRunResult.data.id,
-          config_id: configId,
-          queue_error: redisError.message,
-        },
-        message: 'Job run created but failed to queue in Redis',
-      };
-    }
-  } catch (error: any) {
-    console.error('[@action:jobsAction:queueJobForExecution] CAUGHT ERROR:', {
-      configId,
-      userId,
-      message: error.message,
-      stack: error.stack,
-    });
-
-    return {
-      success: false,
-      error: error.message || 'Failed to queue job',
-    };
   }
 }

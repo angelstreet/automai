@@ -28,6 +28,10 @@ async function processJob() {
     const queueLength = await redis.llen('jobs_queue');
     console.log(`[@runner:processJob] Current queue length: ${queueLength} jobs`);
 
+    // Print entire queue before processing
+    const queueContents = await redis.lrange('jobs_queue', 0, -1);
+    console.log(`[@runner:processJob] Full queue contents: ${JSON.stringify(queueContents)}`);
+
     job = await redis.rpop('jobs_queue');
     if (!job) {
       console.log(`[@runner:processJob] Queue is empty, skipping...`);
@@ -35,8 +39,8 @@ async function processJob() {
     }
 
     console.log(`[@runner:processJob] Processing job, ${queueLength - 1} jobs remaining in queue`);
-    console.log(`[@runner:processJob] Raw job data: ${job}`); // Debug raw job
-    const { config_id, timestamp, requested_by } = JSON.parse(job); // Match your JSON structure
+    console.log(`[@runner:processJob] Raw job data: ${job}`);
+    const { config_id, timestamp, requested_by } = JSON.parse(job);
     const { data, error } = await supabase
       .from('jobs_configuration')
       .select('config')
@@ -72,7 +76,7 @@ async function processJob() {
                 created_at: new Date().toISOString(),
                 started_at: new Date().toISOString(),
                 completed_at: new Date().toISOString(),
-                requested_by, // Include if column exists
+                requested_by,
               });
               conn.end();
               return;
@@ -89,7 +93,7 @@ async function processJob() {
                   created_at: new Date().toISOString(),
                   started_at: new Date().toISOString(),
                   completed_at: new Date().toISOString(),
-                  requested_by, // Include if column exists
+                  requested_by,
                 });
                 conn.end();
               });
