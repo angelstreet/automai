@@ -185,7 +185,7 @@ export async function createJob(formData: JobFormData, hostDetails?: any[]) {
     // If is_active is true, queue the job for execution
     if (formData.is_active) {
       console.log('[@action:jobsAction:createJob] Auto-starting job run');
-      const jobRunResult = await queueJobForExecution(
+      const jobRunResult = await startJob(
         jobConfigResult.data.id,
         formData.creator_id,
         {}, // Empty object instead of null for override parameters
@@ -218,114 +218,6 @@ export async function createJob(formData: JobFormData, hostDetails?: any[]) {
     return {
       success: false,
       error: error.message || 'Failed to create job',
-    };
-  }
-}
-
-/**
- * Updates an existing job configuration
- */
-export async function updateJob(id: string, formData: Partial<JobFormData>, hostDetails?: any[]) {
-  try {
-    console.log(`[@action:jobsAction:updateJob] Updating job: ${id}`);
-    const cookieStore = await cookies();
-
-    const { updateJobConfiguration, getJobConfigById } = await import(
-      '@/lib/db/jobsConfigurationDb'
-    );
-
-    // First, get the existing job config
-    const existingJobConfig = await getJobConfigById(id, cookieStore);
-    if (!existingJobConfig.success || !existingJobConfig.data) {
-      throw new Error(`Failed to get existing job config: ${existingJobConfig.error}`);
-    }
-
-    // Prepare job configuration update data
-    const jobConfig: Partial<JobConfiguration> = {};
-
-    // Only include fields that are provided in the formData
-    if (formData.name !== undefined) jobConfig.name = formData.name;
-    if (formData.description !== undefined) jobConfig.description = formData.description;
-    if (formData.repository_id !== undefined) jobConfig.repository_id = formData.repository_id;
-    if (formData.branch !== undefined) jobConfig.branch = formData.branch;
-    if (formData.team_id !== undefined) jobConfig.team_id = formData.team_id;
-    if (formData.scripts_path !== undefined) jobConfig.scripts_path = formData.scripts_path;
-    if (formData.scripts_parameters !== undefined)
-      jobConfig.scripts_parameters = formData.scripts_parameters;
-    if (formData.host_ids !== undefined) jobConfig.host_ids = formData.host_ids;
-    if (formData.environment_vars !== undefined)
-      jobConfig.environment_vars = formData.environment_vars;
-
-    // Schedule
-    if (formData.cron_expression !== undefined)
-      jobConfig.cron_expression = formData.cron_expression;
-    if (formData.repeat_count !== undefined) jobConfig.repeat_count = formData.repeat_count;
-
-    // Status
-    if (formData.is_active !== undefined) jobConfig.is_active = formData.is_active;
-
-    // Safely get existing values
-    const existingScriptsPath = Array.isArray(existingJobConfig.data.scripts_path)
-      ? existingJobConfig.data.scripts_path
-      : [];
-
-    const existingHostIds = Array.isArray(existingJobConfig.data.host_ids)
-      ? existingJobConfig.data.host_ids
-      : [];
-
-    // Merge with existing data to create a complete form data object
-    const completeFormData: JobFormData = {
-      name: formData.name || existingJobConfig.data.name || 'Unnamed Job',
-      description: formData.description || existingJobConfig.data.description || undefined,
-      repository_id: formData.repository_id || existingJobConfig.data.repository_id || undefined,
-      branch: formData.branch || existingJobConfig.data.branch || undefined,
-      team_id: formData.team_id || existingJobConfig.data.team_id || '',
-      creator_id: existingJobConfig.data.creator_id || '',
-      scripts_path: Array.isArray(formData.scripts_path)
-        ? formData.scripts_path
-        : existingScriptsPath,
-      scripts_parameters:
-        formData.scripts_parameters || existingJobConfig.data.scripts_parameters || [],
-      host_ids: Array.isArray(formData.host_ids) ? formData.host_ids : existingHostIds,
-      environment_vars: formData.environment_vars || existingJobConfig.data.environment_vars || {},
-      cron_expression:
-        formData.cron_expression || existingJobConfig.data.cron_expression || undefined,
-      repeat_count: formData.repeat_count || existingJobConfig.data.repeat_count || undefined,
-      is_active:
-        formData.is_active !== undefined ? formData.is_active : existingJobConfig.data.is_active,
-      config: generateJobConfigJson(completeFormData, hostDetails),
-      created_at: existingJobConfig.data.created_at || new Date().toISOString(),
-    };
-
-    // Generate the updated config JSON
-    jobConfig.config = generateJobConfigJson(completeFormData, hostDetails);
-
-    // Update timestamp
-    jobConfig.updated_at = new Date().toISOString();
-
-    // Update the job configuration
-    const result = await updateJobConfiguration(id, jobConfig, cookieStore);
-
-    if (!result.success) {
-      throw new Error(`Failed to update job: ${result.error}`);
-    }
-
-    console.log(`[@action:jobsAction:updateJob] Job updated successfully: ${id}`);
-
-    return {
-      success: true,
-      data: result.data,
-      message: 'Job updated successfully',
-    };
-  } catch (error: any) {
-    console.error('[@action:jobsAction:updateJob] Error:', {
-      message: error.message,
-      stack: error.stack,
-    });
-
-    return {
-      success: false,
-      error: error.message || 'Failed to update job',
     };
   }
 }
@@ -472,45 +364,6 @@ export async function deleteJob(id: string) {
 }
 
 /**
- * Prepare a job configuration for pushing to Redis queue
- * This creates a standardized format for the worker to consume
- */
-function prepareJobForQueue(
-  jobConfig: JobConfiguration | null | undefined,
-  overrideParameters?: Record<string, any>,
-): Record<string, any> {
-  console.log('[@action:jobsAction:prepareJobForQueue] Preparing job for queue');
-
-  if (!jobConfig) {
-    throw new Error('Cannot prepare queue payload: Job configuration is missing');
-  }
-
-  // Create the Redis job payload
-  const queuePayload = {
-    // Job identification
-    job_id: jobConfig.id,
-    config_id: jobConfig.id,
-    team_id: jobConfig.team_id,
-
-    // Job configuration (the detailed config we created)
-    config: jobConfig.config,
-
-    // Override parameters (useful for manual runs with different parameters)
-    overrideParameters: overrideParameters || {},
-
-    // Timestamps
-    queued_at: new Date().toISOString(),
-    priority: 1, // Default priority (1 = normal)
-  };
-
-  return queuePayload;
-}
-
-/**
- * Queue a job for execution by pushing to Redis
- */
-
-/**
  * Get all job configurations (replacements for deployments)
  */
 export async function getAllJobs() {
@@ -607,35 +460,47 @@ export async function getAllJobs() {
  */
 export async function getJobRunsForConfig(configId: string) {
   try {
-    console.log(`[@action:jobsAction:getJobRunsForConfig] Getting job runs for config: ${configId}`);
-    
+    console.log(
+      `[@action:jobsAction:getJobRunsForConfig] Getting job runs for config: ${configId}`,
+    );
+
     if (!configId) {
       console.error('[@action:jobsAction:getJobRunsForConfig] ERROR: No config ID provided');
       return { success: false, error: 'No job configuration ID provided', data: [] };
     }
-    
+
     const cookieStore = await cookies();
-    
+
     // Get the job configuration to ensure it exists and to get details
     const { getJobConfigById } = await import('@/lib/db/jobsConfigurationDb');
     const configResult = await getJobConfigById(configId, cookieStore);
-    
+
     if (!configResult.success) {
-      console.error('[@action:jobsAction:getJobRunsForConfig] ERROR: Failed to get job configuration:', configResult.error);
-      return { success: false, error: `Failed to get job configuration: ${configResult.error}`, data: [] };
+      console.error(
+        '[@action:jobsAction:getJobRunsForConfig] ERROR: Failed to get job configuration:',
+        configResult.error,
+      );
+      return {
+        success: false,
+        error: `Failed to get job configuration: ${configResult.error}`,
+        data: [],
+      };
     }
-    
+
     // Get all job runs for this configuration
     const { getJobRunsByConfigId } = await import('@/lib/db/jobsRunDb');
     const jobRunsResult = await getJobRunsByConfigId(configId, cookieStore);
-    
+
     if (!jobRunsResult.success) {
-      console.error('[@action:jobsAction:getJobRunsForConfig] ERROR: Failed to get job runs:', jobRunsResult.error);
+      console.error(
+        '[@action:jobsAction:getJobRunsForConfig] ERROR: Failed to get job runs:',
+        jobRunsResult.error,
+      );
       return { success: false, error: `Failed to get job runs: ${jobRunsResult.error}`, data: [] };
     }
-    
+
     // Transform job runs to desired format if needed
-    const transformedJobRuns = jobRunsResult.data.map(run => ({
+    const transformedJobRuns = jobRunsResult.data.map((run) => ({
       id: run.id,
       configId: run.config_id,
       status: run.status,
@@ -653,15 +518,17 @@ export async function getJobRunsForConfig(configId: string) {
       executionAttempt: run.execution_attempt,
       executionNumber: run.execution_number,
       // Add the config name for reference
-      configName: configResult.data.name
+      configName: configResult.data.name,
     }));
-    
-    console.log(`[@action:jobsAction:getJobRunsForConfig] Successfully fetched ${transformedJobRuns.length} job runs`);
-    
-    return { 
-      success: true, 
+
+    console.log(
+      `[@action:jobsAction:getJobRunsForConfig] Successfully fetched ${transformedJobRuns.length} job runs`,
+    );
+
+    return {
+      success: true,
       data: transformedJobRuns,
-      configName: configResult.data.name
+      configName: configResult.data.name,
     };
   } catch (error: any) {
     console.error('[@action:jobsAction:getJobRunsForConfig] CAUGHT ERROR:', {
@@ -669,148 +536,11 @@ export async function getJobRunsForConfig(configId: string) {
       message: error.message,
       stack: error.stack,
     });
-    
+
     return {
       success: false,
       error: error.message || 'Failed to get job runs',
-      data: []
-    };
-  }
-}
-
-export async function queueJobForExecution(
-  configId: string,
-  userId: string,
-  overrideParameters?: Record<string, any>,
-  cookieStore?: any,
-) {
-  try {
-    console.log(
-      `[@action:jobsAction:queueJobForExecution] Queueing job with config ID: "${configId}", userId: "${userId}"`,
-    );
-
-    if (!configId) {
-      console.error('[@action:jobsAction:queueJobForExecution] ERROR: No config ID provided');
-      return { success: false, error: 'No job configuration ID provided' };
-    }
-
-    if (!userId) {
-      console.error('[@action:jobsAction:queueJobForExecution] ERROR: No user ID provided');
-      return { success: false, error: 'No user ID provided' };
-    }
-
-    // First, get the job configuration
-    const { getJobConfigById } = await import('@/lib/db/jobsConfigurationDb');
-    const configResult = await getJobConfigById(configId, cookieStore);
-
-    if (!configResult.success || !configResult.data) {
-      console.error(
-        '[@action:jobsAction:queueJobForExecution] ERROR: Failed to get job configuration:',
-        configResult.error,
-      );
-      return { success: false, error: `Failed to get job configuration: ${configResult.error}` };
-    }
-
-    console.log(
-      `[@action:jobsAction:queueJobForExecution] Found valid job configuration: ${configId}`,
-    );
-
-    // Create a new job run record
-    const { runJob } = await import('@/lib/db/jobsRunDb');
-    const jobRunResult = await runJob(configId, userId, cookieStore);
-
-    if (!jobRunResult.success || !jobRunResult.data) {
-      console.error(
-        '[@action:jobsAction:queueJobForExecution] ERROR: Failed to create job run:',
-        jobRunResult.error,
-      );
-      return { success: false, error: `Failed to create job run: ${jobRunResult.error}` };
-    }
-
-    console.log(
-      `[@action:jobsAction:queueJobForExecution] Created job run: ${jobRunResult.data.id}`,
-    );
-
-    // Prepare the job payload for Redis
-    const queuePayload = prepareJobForQueue(configResult.data, overrideParameters);
-
-    // Add job run ID to the payload
-    queuePayload.job_run_id = jobRunResult.data.id;
-
-    try {
-      // Convert payload to JSON string for Redis
-      const payloadString = JSON.stringify(queuePayload);
-      
-      // Push to Redis queue using LPUSH (adds to the left/beginning of the list)
-      console.log(`[@action:jobsAction:queueJobForExecution] About to push job to Redis queue:`, {
-        queue: JOBS_QUEUE,
-        config_id: configId,
-        job_run_id: jobRunResult.data.id,
-        payload_size: payloadString.length,
-      });
-
-      // Push to Redis queue
-      const redisResult = await redis.lpush(JOBS_QUEUE, payloadString);
-
-      console.log(`[@action:jobsAction:queueJobForExecution] Redis push result:`, redisResult);
-
-      // Update job run with queue information
-      const { updateJobRun } = await import('@/lib/db/jobsRunDb');
-      await updateJobRun(
-        jobRunResult.data.id,
-        {
-          queued_at: new Date().toISOString(),
-          status: 'pending', // Update status to pending
-          execution_parameters: {
-            queue: JOBS_QUEUE,
-            priority: queuePayload.priority,
-            override_parameters: overrideParameters || null,
-          },
-        },
-        cookieStore,
-      );
-
-      console.log(
-        `[@action:jobsAction:queueJobForExecution] Job successfully queued and run record updated: ${jobRunResult.data.id}`,
-      );
-
-      return {
-        success: true,
-        data: {
-          job_run_id: jobRunResult.data.id,
-          config_id: configId,
-          queue_payload: queuePayload,
-        },
-        message: 'Job queued successfully',
-      };
-    } catch (redisError: any) {
-      console.error('[@action:jobsAction:queueJobForExecution] Redis error:', {
-        message: redisError.message,
-        stack: redisError.stack,
-      });
-
-      // Even if Redis fails, we want to return the job run we created
-      return {
-        success: true,
-        data: {
-          job_run_id: jobRunResult.data.id,
-          config_id: configId,
-          queue_error: redisError.message,
-        },
-        message: 'Job run created but failed to queue in Redis',
-      };
-    }
-  } catch (error: any) {
-    console.error('[@action:jobsAction:queueJobForExecution] CAUGHT ERROR:', {
-      configId,
-      userId,
-      message: error.message,
-      stack: error.stack,
-    });
-
-    return {
-      success: false,
-      error: error.message || 'Failed to queue job',
+      data: [],
     };
   }
 }
