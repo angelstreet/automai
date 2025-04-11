@@ -135,5 +135,5 @@ async function processJob() {
 }
 
 // Poll queue every 5 seconds
-setInterval(processJob, 5000);
+//setInterval(processJob, 5000);
 console.log('Worker running...');
