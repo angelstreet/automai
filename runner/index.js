@@ -55,6 +55,14 @@ async function processJob() {
     const hosts = config.hosts || [];
     const repoUrl = config.repository;
     const repoName = repoUrl.split('/').pop().replace('.git', '');
+    const scripts = (config.scripts || [])
+      .map((script) => {
+        const ext = script.path.split('.').pop().toLowerCase();
+        const command = ext === 'py' ? 'python' : ext === 'sh' ? './' : '';
+        return `${command} ${script.path} ${script.parameters || ''}`.trim();
+      })
+      .join(' && ');
+    console.log(`[@runner:processJob] Scripts: ${scripts}`);
 
     for (const host of hosts) {
       console.log(
@@ -82,10 +90,10 @@ async function processJob() {
       const cloneCommand = `git clone ${repoUrl} ${repoName}`;
       const cdCommand = `cd ${repoName}`;
       const dirCommand = `dir`;
-      const scriptCommand = `python script.py`;
+      const scriptCommand = `${scripts}`;
       const fullScript =
         host.os === 'windows'
-          ? `cmd.exe /c ${cleanupCommand} && ${cloneCommand} && ${cdCommand} && ${dirCommand} && ${scriptCommand}`
+          ? `cmd.exe /c dir && ${cleanupCommand} && ${cloneCommand} && ${cdCommand} && ${dirCommand} && ${scriptCommand}`
           : `${cleanupCommand} && ${cloneCommand} && ${cdCommand} && ${dirCommand} && ${scriptCommand}`;
       console.log(`[@runner:processJob] SSH command: ${fullScript}`);
 
@@ -180,6 +188,6 @@ async function setupSchedules() {
 }
 
 // Poll queue every 5 seconds
-//setInterval(processJob, 10000);
+setInterval(processJob, 10000);
 //setupSchedules().catch((err) => console.error('Setup schedules failed:', err));
 console.log('Worker running...');
