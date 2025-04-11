@@ -28,11 +28,12 @@ async function processJob() {
     const queueLength = await redis.llen('jobs_queue');
     console.log(`[@runner:processJob] Queue length: ${queueLength} jobs`);
 
-    const job = await redis.rpop('jobs_queue');
-    if (!job) {
+    const jobs = await redis.lrange('jobs_queue', -1, -1); // Get last job (right end)
+    if (!jobs || jobs.length === 0) {
       console.log(`[@runner:processJob] Queue is empty`);
       return;
     }
+    const job = jobs[0]; // First item from the range (last job in queue)
 
     console.log(`[@runner:processJob] Processing job: ${JSON.stringify(job)}`);
     const { config_id } = typeof job === 'string' ? JSON.parse(job) : job;
@@ -134,7 +135,3 @@ async function processJob() {
 
 // Run once for local testing
 processJob().then(() => console.log('Test complete'));
-
-
-cmd.exe /c if exist sunri rmdir /s /q sunri && git clone http://77.56.53.130/sunri/sunri.git sunri && cd sunri && dir && python script.py
-cmd.exe /c "(if exist sunri rmdir /s /q sunri && git clone http://77.56.53.130/sunri/sunri.git sunri && cd sunri && dir && python script.py) || echo Command failed"

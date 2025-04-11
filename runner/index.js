@@ -29,11 +29,12 @@ async function processJob() {
     const queueLength = await redis.llen('jobs_queue');
     console.log(`[@runner:processJob] Queue length: ${queueLength} jobs`);
 
-    const job = await redis.rpop('jobs_queue');
-    if (!job) {
+    const jobs = await redis.lrange('jobs_queue', -1, -1); // Get last job (right end)
+    if (!jobs || jobs.length === 0) {
       console.log(`[@runner:processJob] Queue is empty`);
       return;
     }
+    const job = jobs[0]; // First item from the range (last job in queue)
 
     console.log(`[@runner:processJob] Processing job: ${job}`);
     const { config_id } = typeof job === 'string' ? JSON.parse(job) : job;
@@ -93,17 +94,9 @@ async function processJob() {
       conn
         .on('ready', () => {
           console.log(`[@runner:processJob] Connected to ${host.ip}`);
-          conn.exec(fullScript, async (err, stream) => {
+          conn.exec(fullScript, (err, stream) => {
             if (err) {
               console.error(`[@runner:processJob] Exec error: ${err.message}`);
-              await supabase.from('jobs_run').insert({
-                config_id,
-                status: 'failed',
-                output: { stderr: err.message },
-                created_at: new Date().toISOString(),
-                started_at: new Date().toISOString(),
-                completed_at: new Date().toISOString(),
-              });
               conn.end();
               return;
             }
@@ -121,14 +114,6 @@ async function processJob() {
                 console.log(`[@runner:processJob] Stream closed, code: ${code}, signal: ${signal}`);
                 console.log(`[@runner:processJob] Final stdout: ${output.stdout}`);
                 console.log(`[@runner:processJob] Final stderr: ${output.stderr}`);
-                await supabase.from('jobs_run').insert({
-                  config_id,
-                  status: code === 0 ? 'success' : 'failed',
-                  output,
-                  created_at: new Date().toISOString(),
-                  started_at: new Date().toISOString(),
-                  completed_at: new Date().toISOString(),
-                });
                 conn.end();
               });
           });
@@ -149,37 +134,6 @@ async function processJob() {
   }
 }
 
-async function setupSchedules() {
-  const { data, error } = await supabase.from('jobs_configuration').select('id, config');
-  if (error) {
-    console.error(`Failed to fetch configs for scheduling: ${error.message}`);
-    return;
-  }
-  if (!data || data.length === 0) {
-    console.log('No configs found for scheduling.');
-    return;
-  }
-
-  data.forEach(({ id, config }) => {
-    if (!config || !config.schedule) return;
-    const job = JSON.stringify({
-      config_id: id,
-      timestamp: new Date().toISOString(),
-      requested_by: 'system',
-    });
-    if (config.schedule !== 'now') {
-      cron.schedule(config.schedule, async () => {
-        await redis.lpush('jobs_queue', job);
-        console.log(`Scheduled job queued for config ${id}`);
-      });
-    } else {
-      redis.lpush('jobs_queue', job);
-      console.log(`Immediate job queued for config ${id}`);
-    }
-  });
-}
-
 // Poll queue every 5 seconds
 setInterval(processJob, 5000);
-setupSchedules().catch((err) => console.error('Setup schedules failed:', err));
 console.log('Worker running...');
