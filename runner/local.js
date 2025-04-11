@@ -62,6 +62,7 @@ async function processJob() {
       FTP_USER: process.env.FTP_USER,
       FTP_PASS: process.env.FTP_PASS,
       FTP_DIRECTORY: process.env.FTP_DIRECTORY,
+      DEVICE_IP: process.env.DEVICE_IP,
     };
     const envPrefix = Object.entries(envVars)
       .map(([key, value]) => `set ${key}=${value}`)
@@ -69,7 +70,7 @@ async function processJob() {
     const scripts = (config.scripts || [])
       .map((script) => {
         const ext = script.path.split('.').pop().toLowerCase();
-        const command = ext === 'py' ? 'python3' : ext === 'sh' ? './' : '';
+        const command = ext === 'py' ? 'python' : ext === 'sh' ? './' : '';
         return `${command} ${script.path} ${script.parameters || ''} 2>&1`.trim();
       })
       .join(' && ');
@@ -103,7 +104,7 @@ async function processJob() {
       const scriptCommand = `${scripts}`;
       const fullScript =
         host.os === 'windows'
-          ? `cmd.exe /c ${envPrefix} && ${cdCommand} && ${dirCommand} && ${scriptCommand}}`
+          ? `cmd.exe /c  && ${cleanupCommand} && ${cloneCommand} && ${cdCommand} && ${dirCommand} && ${envPrefix} && ${scriptCommand}}`
           : `${cleanupCommand} && ${cloneCommand} && ${cdCommand} && ${scriptCommand}`;
       console.log(`[@runner:processJob] SSH command: ${fullScript}`);
       const conn = new Client();
