@@ -29,14 +29,13 @@ async function processJob() {
     const queueLength = await redis.llen('jobs_queue');
     console.log(`[@runner:processJob] Queue length: ${queueLength} jobs`);
 
-    const jobs = await redis.lrange('jobs_queue', -1, -1); // Get last job (right end)
-    if (!jobs || jobs.length === 0) {
+    const job = await redis.rpop('jobs_queue');
+    if (!job) {
       console.log(`[@runner:processJob] Queue is empty`);
       return;
     }
-    const job = jobs[0]; // First item from the range (last job in queue)
 
-    console.log(`[@runner:processJob] Processing job: ${JSON.stringify(job)}`);
+    console.log(`[@runner:processJob] Processing job: ${job}`);
     const { config_id } = typeof job === 'string' ? JSON.parse(job) : job;
 
     // Fetch config from Supabase
@@ -181,6 +180,6 @@ async function setupSchedules() {
 }
 
 // Poll queue every 5 seconds
-setInterval(processJob, 10000);
+setInterval(processJob, 5000);
 setupSchedules().catch((err) => console.error('Setup schedules failed:', err));
 console.log('Worker running...');
