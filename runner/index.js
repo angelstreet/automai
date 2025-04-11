@@ -133,7 +133,12 @@ async function processJob() {
       .from('jobs_run')
       .update({
         status: 'running',
-        started_at: new Date().toISOString()
+        started_at: new Date().toISOString(),
+        // Store execution parameters in the logs field (JSON)
+        execution_parameters: { 
+          requested_by,
+          timestamp
+        }
       })
       .eq('id', jobRunId);
 
@@ -204,24 +209,29 @@ async function processJob() {
       let fullScript;
       
       if (host.os === 'windows') {
-        // Windows-specific command formatting
-        const cleanupCommand = `if exist ${repoName} rmdir /s /q ${repoName}`;
-        const cloneCommand = `git clone ${repoUrl} ${repoName}`;
-        const cdCommand = `cd ${repoName}`;
-        const checkoutCommand = `git checkout ${branch}`;
+        // Windows-specific command formatting with echo statements for debugging
+        const cleanupCommand = `echo "Cleaning up repository" && if exist ${repoName} (echo "Removing existing directory" && rmdir /s /q ${repoName}) else echo "Directory not found, skipping cleanup"`;
+        const cloneCommand = `echo "Cloning repository from ${repoUrl}" && git clone ${repoUrl} ${repoName}`;
+        const cdCommand = `echo "Changing to directory ${repoName}" && cd ${repoName}`;
+        const checkoutCommand = `echo "Checking out branch ${branch}" && git checkout ${branch}`;
+        const scriptsCommand = `echo "Running scripts: ${scripts}" && ${scripts}`;
         
-        // For Windows, we'll use an explicit, properly escaped command
-        fullScript = `${cleanupCommand} && ${cloneCommand} && ${cdCommand} && ${checkoutCommand} && ${scripts}`;
+        // For Windows, we'll use an explicit, properly escaped command with error checking
+        fullScript = `${cleanupCommand} && ${cloneCommand} && ${cdCommand} && ${checkoutCommand} && ${scriptsCommand} && echo "Command execution complete"`;
         
         console.log(`[@runner:processJob] Windows command: ${fullScript}`);
       } else {
-        // Unix/Linux command
-        const cleanupCommand = `rm -rf ${repoName}`;
-        const cloneCommand = `git clone ${repoUrl} ${repoName}`;
-        const cdCommand = `cd ${repoName}`;
-        const checkoutCommand = `git checkout ${branch}`;
+        // Unix/Linux command with echo statements for debugging
+        const cleanupCommand = `echo "Cleaning up repository" && rm -rf ${repoName}`;
+        const cloneCommand = `echo "Cloning repository from ${repoUrl}" && git clone ${repoUrl} ${repoName}`;
+        const cdCommand = `echo "Changing to directory ${repoName}" && cd ${repoName}`;
+        const checkoutCommand = `echo "Checking out branch ${branch}" && git checkout ${branch}`;
+        const scriptsCommand = `echo "Running scripts: ${scripts}" && ${scripts}`;
         
-        fullScript = `${cleanupCommand} && ${cloneCommand} && ${cdCommand} && ${checkoutCommand} && ${scripts}`;
+        // Add debugging output and error handling
+        fullScript = `${cleanupCommand} && ${cloneCommand} && ${cdCommand} && ${checkoutCommand} && ${scriptsCommand} && echo "Command execution complete"`;
+        
+        console.log(`[@runner:processJob] Unix command: ${fullScript}`);
       }
       console.log(`[@runner:processJob] Full SSH command: ${fullScript}`);
 
@@ -252,40 +262,150 @@ async function processJob() {
             : fullScript;
           
           console.log(`[@runner:processJob] Running command: ${execCommand}`);
+          
+          // Set a command execution timeout - if the command takes too long, abort it
+          const execTimeout = setTimeout(() => {
+            console.error(`[@runner:processJob] Command execution timeout after 10 minutes on ${host.ip}`);
+            try {
+              conn.end();
+            } catch (e) {
+              console.error(`[@runner:processJob] Error ending connection: ${e.message}`);
+            }
+            
+            // Update job run to failed status
+            updateJobRunStatus(jobRunId, 'failed', {
+              error: `Command execution timeout after 10 minutes on ${host.ip}`,
+              output: { 
+                stderr: `Command execution timeout after 10 minutes on ${host.ip}`,
+                stdout: `Command was: ${execCommand}`
+              },
+              logs: { 
+                error: `Command execution timeout after 10 minutes on ${host.ip}`,
+                command: execCommand,
+                host: {
+                  ip: host.ip,
+                  port: host.port || 22,
+                  username: host.username,
+                  os: host.os
+                },
+                duration: 10 * 60 * 1000 // 10 minutes in milliseconds
+              }
+            });
+          }, 10 * 60 * 1000); // 10 minutes timeout
+          
           conn.exec(execCommand, async (err, stream) => {
+            // We'll clear the exec timeout when the stream closes
             if (err) {
+              clearTimeout(execTimeout); // Clear the exec timeout on error
+              
               const errorMsg = `SSH exec error: ${err.message}`;
               console.error(`[@runner:processJob] ${errorMsg}`);
               await updateJobRunStatus(jobRunId, 'failed', {
                 error: errorMsg,
                 output: { stderr: errorMsg },
-                logs: { error: errorMsg }
+                logs: { 
+                  error: errorMsg,
+                  command: execCommand,
+                  host: {
+                    ip: host.ip,
+                    port: host.port || 22,
+                    username: host.username,
+                    os: host.os
+                  }
+                }
               });
               conn.end();
               return;
             }
             let output = { stdout: '', stderr: '' };
+            
+            // Flag to track if we've received any data
+            let receivedData = false;
+            let stdoutTimeout, stderrTimeout;
+            
+            // Set up a timeout check to log if no data is received
+            const noDataTimeout = setTimeout(() => {
+              if (!receivedData) {
+                console.log(`[@runner:processJob] WARNING: No data received after 10 seconds`);
+              }
+            }, 10000);
+            
+            console.log(`[@runner:processJob] Stream setup complete, waiting for data...`);
+            
+            // Attach listeners with extra debug info
             stream
               .on('data', (data) => {
-                const dataStr = data.toString('utf8');
-                output.stdout += dataStr;
-                console.log(`[@runner:processJob] SSH stdout: ${dataStr}`);
+                receivedData = true;
+                clearTimeout(noDataTimeout);
+                
+                // Clear any existing timeout for this stream
+                if (stdoutTimeout) clearTimeout(stdoutTimeout);
+                
+                const dataStr = data.toString('utf8').trim();
+                if (dataStr) {
+                  output.stdout += dataStr + '\n';
+                  console.log(`[@runner:processJob] SSH stdout (${new Date().toISOString()}): ${dataStr}`);
+                }
+                
+                // Set a timeout to log if no more data is received
+                stdoutTimeout = setTimeout(() => {
+                  console.log(`[@runner:processJob] No more stdout data received for 5 seconds`);
+                }, 5000);
               })
               .stderr.on('data', (data) => {
-                const dataStr = data.toString('utf8');
-                output.stderr += dataStr;
-                console.log(`[@runner:processJob] SSH stderr: ${dataStr}`);
+                receivedData = true;
+                clearTimeout(noDataTimeout);
+                
+                // Clear any existing timeout for this stream
+                if (stderrTimeout) clearTimeout(stderrTimeout);
+                
+                const dataStr = data.toString('utf8').trim();
+                if (dataStr) {
+                  output.stderr += dataStr + '\n';
+                  console.log(`[@runner:processJob] SSH stderr (${new Date().toISOString()}): ${dataStr}`);
+                }
+                
+                // Set a timeout to log if no more data is received
+                stderrTimeout = setTimeout(() => {
+                  console.log(`[@runner:processJob] No more stderr data received for 5 seconds`);
+                }, 5000);
+              })
+              .on('exit', (code, signal) => {
+                console.log(`[@runner:processJob] SSH exit event with code ${code}, signal: ${signal}`);
               })
               .on('close', async (code, signal) => {
+                // Clear all timeouts
+                clearTimeout(noDataTimeout);
+                clearTimeout(execTimeout);
+                if (stdoutTimeout) clearTimeout(stdoutTimeout);
+                if (stderrTimeout) clearTimeout(stderrTimeout);
+                
                 console.log(`[@runner:processJob] SSH stream closed with code ${code}, signal: ${signal}`);
-                console.log(`[@runner:processJob] Final stdout: ${output.stdout}`);
-                console.log(`[@runner:processJob] Final stderr: ${output.stderr}`);
+                console.log(`[@runner:processJob] Final stdout (${output.stdout.length} chars): ${output.stdout.substring(0, 500)}${output.stdout.length > 500 ? '...(truncated)' : ''}`);
+                console.log(`[@runner:processJob] Final stderr (${output.stderr.length} chars): ${output.stderr.substring(0, 500)}${output.stderr.length > 500 ? '...(truncated)' : ''}`);
+                
+                if (!receivedData) {
+                  console.log(`[@runner:processJob] WARNING: No data was received from the SSH connection`);
+                }
+                
                 const successful = code === 0;
                 
                 // Update the job run with the final status and output
                 await updateJobRunStatus(jobRunId, successful ? 'completed' : 'failed', {
                   output,
-                  logs: output,
+                  logs: {
+                    ...output,
+                    command: execCommand,
+                    host: {
+                      ip: host.ip,
+                      port: host.port || 22,
+                      username: host.username,
+                      os: host.os
+                    },
+                    exitCode: code,
+                    exitSignal: signal,
+                    duration: Date.now() - new Date(startTime).getTime()
+                  },
                   error: !successful ? `Command exited with code ${code}` : null
                 });
                 
@@ -294,14 +414,31 @@ async function processJob() {
           });
         })
         .on('error', async (err) => {
+          // Clear the connection timeout on error
+          clearTimeout(connectionTimeout);
+          
           const errorMsg = `SSH connection error: ${err.message}`;
           console.error(`[@runner:processJob] ${errorMsg}`);
           await updateJobRunStatus(jobRunId, 'failed', {
             error: errorMsg,
             output: { stderr: errorMsg },
-            logs: { error: errorMsg }
+            logs: { 
+              error: errorMsg,
+              connectionAttempt: {
+                host: host.ip,
+                port: host.port || 22,
+                username: host.username,
+                os: host.os
+              },
+              fullScript: fullScript
+            }
           });
-          conn.end();
+          
+          try {
+            conn.end();
+          } catch (e) {
+            console.error(`[@runner:processJob] Error ending connection: ${e.message}`);
+          }
         })
         .connect({
           host: host.ip,
