@@ -7,7 +7,7 @@ import { getUserActiveTeam } from '@/app/actions/teamAction';
 import { getUser } from '@/app/actions/userAction';
 import hostDb from '@/lib/db/hostDb';
 import hostService from '@/lib/services/hostService';
-import { encryptValue, decryptValue } from '@/lib/utils/encryption';
+import { encryptValue, decryptValue } from '@/lib/utils/encryptionUtils';
 import { Host, HostStatus } from '@/types/context/hostContextType';
 
 export interface HostFilter {
