@@ -27,19 +27,21 @@ function decrypt(encryptedData, keyBase64) {
 async function processJob() {
   try {
     const queueLength = await redis.llen('jobs_queue');
-    console.log(`[@runner:processJob] Queue length: ${queueLength} jobs`);
+    console.log(`[@runner:processJob] Current queue length: ${queueLength} jobs`);
 
-    const jobs = await redis.lrange('jobs_queue', -1, -1); // Get last job (right end)
-    if (!jobs || jobs.length === 0) {
-      console.log(`[@runner:processJob] Queue is empty`);
+    const queueContents = await redis.lrange('jobs_queue', 0, -1);
+    console.log(`[@runner:processJob] Full queue contents: ${JSON.stringify(queueContents)}`);
+
+    const job = await redis.rpop('jobs_queue');
+    if (!job) {
+      console.log(`[@runner:processJob] Queue is empty, skipping...`);
       return;
     }
-    const job = jobs[0]; // First item from the range (last job in queue)
 
-    console.log(`[@runner:processJob] Processing job: ${JSON.stringify(job)}`);
-    const { config_id } = typeof job === 'string' ? JSON.parse(job) : job;
+    console.log(`[@runner:processJob] Processing job, ${queueLength - 1} jobs remaining in queue`);
+    console.log(`[@runner:processJob] Raw job data: ${JSON.stringify(job)}`);
+    const { config_id, timestamp, requested_by } = typeof job === 'string' ? JSON.parse(job) : job;
 
-    // Fetch config from Supabase
     const { data, error } = await supabase
       .from('jobs_configuration')
       .select('config')
@@ -51,52 +53,69 @@ async function processJob() {
     }
 
     const config = data.config;
-    console.log(`[@runner:processJob] Config: ${JSON.stringify(config)}`);
-
+    console.log(`[@runner:processJob] Config fetched: ${JSON.stringify(config)}`);
     const hosts = config.hosts || [];
     const repoUrl = config.repository;
+    const branch = config.branch || 'main';
     const repoName = repoUrl.split('/').pop().replace('.git', '');
+    const scripts = (config.scripts || [])
+      .map((script) => `${script.path} ${script.parameters}`)
+      .join(' && ');
+    console.log(`[@runner:processJob] Scripts to execute: ${scripts}`);
 
     for (const host of hosts) {
       console.log(
-        `[@runner:processJob] Host: ${host.ip}, OS: ${host.os}, Username: ${host.username}`,
+        `[@runner:processJob] Processing host: ${host.ip}, OS: ${host.os}, Username: ${host.username}, AuthType: ${host.authType || 'not specified'}`,
       );
       let sshKeyOrPass = host.key || host.password;
       if (!sshKeyOrPass) {
-        console.error(`[@runner:processJob] No key/password for ${host.ip}`);
-        return;
+        console.error(`[@runner:processJob] No key or password provided for host ${host.ip}`);
+        await supabase.from('jobs_run').insert({
+          config_id,
+          status: 'failed',
+          output: { stderr: 'No authentication credentials provided' },
+          created_at: new Date().toISOString(),
+          started_at: new Date().toISOString(),
+          completed_at: new Date().toISOString(),
+          requested_by,
+        });
+        continue;
       }
 
       if (host.authType === 'privateKey' && sshKeyOrPass.includes(':')) {
         try {
           sshKeyOrPass = decrypt(sshKeyOrPass, process.env.ENCRYPTION_KEY);
-          console.log(`[@runner:processJob] Decrypted key: ${sshKeyOrPass.slice(0, 50)}...`);
+          console.log(
+            `[@runner:processJob] Decrypted key preview: ${sshKeyOrPass.slice(0, 50)}...`,
+          );
         } catch (decryptError) {
           console.error(`[@runner:processJob] Decryption failed: ${decryptError.message}`);
           return;
         }
       } else {
-        console.log(`[@runner:processJob] Plain key/password: ${sshKeyOrPass.slice(0, 50)}...`);
+        console.log(
+          `[@runner:processJob] Using plain key/password: ${sshKeyOrPass.slice(0, 50)}...`,
+        );
       }
 
-      const cleanupCommand = `if exist ${repoName} rmdir /s /q ${repoName}`;
-      const cloneCommand = `git clone ${repoUrl} ${repoName}`;
+      const cleanupCommand = `if exist ${repoName} (echo Removing existing directory && rmdir /s /q ${repoName}) else echo Directory not found, skipping cleanup`;
+      const cloneCommand = `echo Cloning repository from ${repoUrl} && git clone ${repoUrl} ${repoName}`;
       const cdCommand = `cd ${repoName}`;
-      const dirCommand = `dir`;
-      const scriptCommand = `python script.py`;
+      const checkoutCommand = `echo Checking out branch ${branch} && git checkout ${branch}`;
+      const runScriptsCommand = `echo Running scripts: ${scripts} && ${scripts}`;
       const fullScript =
         host.os === 'windows'
-          ? `cmd.exe /c "(${cleanupCommand} && ${cloneCommand} && ${cdCommand} && ${dirCommand} && ${scriptCommand}) || echo Command failed"`
-          : `${cleanupCommand} && ${cloneCommand} && ${cdCommand} && ${dirCommand} && ${scriptCommand}`;
-      console.log(`[@runner:processJob] SSH command: ${fullScript}`);
+          ? `cmd.exe /c "(${cleanupCommand} && ${cloneCommand} && ${cdCommand} && ${checkoutCommand} && ${runScriptsCommand}) || (echo Command failed && exit /b 1)"`
+          : `${cleanupCommand} && ${cloneCommand} && ${cdCommand} && ${checkoutCommand} && ${runScriptsCommand}`;
+      console.log(`[@runner:processJob] Full SSH command: ${fullScript}`);
 
       const conn = new Client();
       conn
         .on('ready', () => {
-          console.log(`[@runner:processJob] Connected to ${host.ip}`);
+          console.log(`[@runner:processJob] SSH connected to ${host.ip}`);
           conn.exec(fullScript, async (err, stream) => {
             if (err) {
-              console.error(`[@runner:processJob] Exec error: ${err.message}`);
+              console.error(`[@runner:processJob] SSH exec error: ${err.message}`);
               await supabase.from('jobs_run').insert({
                 config_id,
                 status: 'failed',
@@ -104,6 +123,7 @@ async function processJob() {
                 created_at: new Date().toISOString(),
                 started_at: new Date().toISOString(),
                 completed_at: new Date().toISOString(),
+                requested_by,
               });
               conn.end();
               return;
@@ -112,30 +132,45 @@ async function processJob() {
             stream
               .on('data', (data) => {
                 output.stdout += data;
-                console.log(`[@runner:processJob] Stdout: ${data}`);
+                console.log(`[@runner:processJob] SSH stdout: ${data}`);
               })
               .stderr.on('data', (data) => {
                 output.stderr += data;
-                console.log(`[@runner:processJob] Stderr: ${data}`);
+                console.log(`[@runner:processJob] SSH stderr: ${data}`);
               })
-              .on('close', async (code, signal) => {
-                console.log(`[@runner:processJob] Stream closed, code: ${code}, signal: ${signal}`);
+              .on('close', (code, signal) => {
+                console.log(
+                  `[@runner:processJob] SSH stream closed with code ${code}, signal: ${signal}`,
+                );
                 console.log(`[@runner:processJob] Final stdout: ${output.stdout}`);
                 console.log(`[@runner:processJob] Final stderr: ${output.stderr}`);
-                await supabase.from('jobs_run').insert({
-                  config_id,
-                  status: code === 0 ? 'success' : 'failed',
-                  output,
-                  created_at: new Date().toISOString(),
-                  started_at: new Date().toISOString(),
-                  completed_at: new Date().toISOString(),
-                });
-                conn.end();
+                const status = code === 0 ? 'success' : 'failed';
+                supabase
+                  .from('jobs_run')
+                  .insert({
+                    config_id,
+                    status,
+                    output,
+                    created_at: new Date().toISOString(),
+                    started_at: new Date().toISOString(),
+                    completed_at: new Date().toISOString(),
+                    requested_by,
+                  })
+                  .then(() => conn.end());
               });
           });
         })
-        .on('error', (err) => {
+        .on('error', async (err) => {
           console.error(`[@runner:processJob] SSH error: ${err.message}`);
+          await supabase.from('jobs_run').insert({
+            config_id,
+            status: 'failed',
+            output: { stderr: err.message },
+            created_at: new Date().toISOString(),
+            started_at: new Date().toISOString(),
+            completed_at: new Date().toISOString(),
+            requested_by,
+          });
           conn.end();
         })
         .connect({
@@ -143,10 +178,11 @@ async function processJob() {
           port: host.port || 22,
           username: host.username,
           [host.authType === 'privateKey' ? 'privateKey' : 'password']: sshKeyOrPass,
+          // Removed debug to filter handshake logs
         });
     }
   } catch (error) {
-    console.error(`[@runner:processJob] Error: ${error.message}`);
+    console.error('[@runner:processJob] Error processing job:', error);
   }
 }
 
@@ -162,25 +198,37 @@ async function setupSchedules() {
   }
 
   data.forEach(({ id, config }) => {
-    if (!config || !config.schedule) return;
+    if (!config) {
+      console.warn(`Config ${id} has no config data`);
+      return;
+    }
     const job = JSON.stringify({
       config_id: id,
       timestamp: new Date().toISOString(),
       requested_by: 'system',
     });
-    if (config.schedule !== 'now') {
+    if (config.schedule && config.schedule !== 'now') {
       cron.schedule(config.schedule, async () => {
         await redis.lpush('jobs_queue', job);
         console.log(`Scheduled job queued for config ${id}`);
       });
-    } else {
+    } else if (config.schedule === 'now') {
       redis.lpush('jobs_queue', job);
       console.log(`Immediate job queued for config ${id}`);
     }
   });
 }
 
-// Poll queue every 5 seconds
+async function logQueueStatus() {
+  try {
+    const queueLength = await redis.llen('jobs_queue');
+    console.log(`[@runner:queueStatus] Jobs in queue: ${queueLength}`);
+  } catch (error) {
+    console.error('[@runner:queueStatus] Error checking queue length:', error);
+  }
+}
+
 setInterval(processJob, 5000);
+setInterval(logQueueStatus, 60000);
 setupSchedules().catch((err) => console.error('Setup schedules failed:', err));
 console.log('Worker running...');
