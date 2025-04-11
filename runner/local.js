@@ -57,11 +57,22 @@ async function processJob() {
     const hosts = config.hosts || [];
     const repoUrl = config.repository;
     const repoName = repoUrl.split('/').pop().replace('.git', '');
+
+    // Define env vars in Render (not repo)
+    const envVars = {
+      FTP_SERVER: process.env.FTP_SERVER,
+      FTP_USER: process.env.FTP_USER,
+      FTP_PASS: process.env.FTP_PASS,
+      FTP_DIRECTORY: process.env.FTP_DIRECTORY,
+    };
+    const envPrefix = Object.entries(envVars)
+      .map(([key, value]) => `set ${key}=${value}`)
+      .join(' && ');
     const scripts = (config.scripts || [])
       .map((script) => {
         const ext = script.path.split('.').pop().toLowerCase();
         const command = ext === 'py' ? 'python' : ext === 'sh' ? './' : '';
-        return `${command} ${script.path} ${script.parameters || ''}`.trim();
+        return `${command} ${script.path} ${script.parameters || ''} 2>&1`.trim();
       })
       .join(' && ');
     console.log(`[@runner:processJob] Scripts: ${scripts}`);
@@ -88,21 +99,20 @@ async function processJob() {
       }
 
       const cleanupCommand = `if exist ${repoName} rmdir /s /q ${repoName}`;
-      const cloneCommand = `git clone ${repoUrl} ${repoName}`;
+      const cloneCommand = `git clone ${repoUrl} ${repoName} 2>&1`;
       const cdCommand = `cd ${repoName}`;
       const dirCommand = `dir`;
       const scriptCommand = `${scripts}`;
       const fullScript =
         host.os === 'windows'
-          ? `cmd.exe /c dir && ${cleanupCommand} && ${cloneCommand} && ${cdCommand} && ${dirCommand} && ${scriptCommand}`
-          : `${cleanupCommand} && ${cloneCommand} && ${cdCommand} && ${dirCommand} && ${scriptCommand}`;
+          ? `cmd.exe /c ${cdCommand} && ${dirCommand} && ${scriptCommand}}`
+          : `${cleanupCommand} && ${cloneCommand} && ${cdCommand} && ${scriptCommand}`;
       console.log(`[@runner:processJob] SSH command: ${fullScript}`);
       const conn = new Client();
-      const test = 'echo Hello, world!';
       conn
         .on('ready', () => {
           console.log(`[@runner:processJob] Connected to ${host.ip}`);
-          conn.exec(test, (err, stream) => {
+          conn.exec(fullScript, (err, stream) => {
             if (err) {
               console.error(`[@runner:processJob] Exec error: ${err.message}`);
               conn.end();

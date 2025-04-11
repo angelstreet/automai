@@ -93,7 +93,7 @@ async function processJob() {
       const scriptCommand = `${scripts}`;
       const fullScript =
         host.os === 'windows'
-          ? `cmd.exe /c dir && ${cleanupCommand} && ${cloneCommand} && ${cdCommand} && ${dirCommand} && ${scriptCommand}`
+          ? `cmd.exe /c ${envPrefix} && ${cleanupCommand} && ${cloneCommand} && ${cdCommand} && ${dirCommand} && ${scriptCommand}`
           : `${cleanupCommand} && ${cloneCommand} && ${cdCommand} && ${dirCommand} && ${scriptCommand}`;
       console.log(`[@runner:processJob] SSH command: ${fullScript}`);
 
