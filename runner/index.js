@@ -23,25 +23,24 @@ function decrypt(encryptedData, keyBase64) {
 }
 
 async function processJob() {
-  let job;
   try {
     const queueLength = await redis.llen('jobs_queue');
     console.log(`[@runner:processJob] Current queue length: ${queueLength} jobs`);
 
-    // Print entire queue before processing
     const queueContents = await redis.lrange('jobs_queue', 0, -1);
     console.log(`[@runner:processJob] Full queue contents: ${JSON.stringify(queueContents)}`);
 
-    job = await redis.rpop('jobs_queue');
+    const job = await redis.rpop('jobs_queue');
     if (!job) {
       console.log(`[@runner:processJob] Queue is empty, skipping...`);
       return;
     }
+
     console.log(`[@runner:processJob] Processing job, ${queueLength - 1} jobs remaining in queue`);
-    console.log(`[@runner:processJob] Raw job data (typeof): ${typeof job}`); // Debug type
-    console.log(`[@runner:processJob] Raw job data: ${job}`); // Log as-is
-    const parsedJob = typeof job === 'string' ? JSON.parse(job) : job; // Handle if already parsed
-    const { config_id, timestamp, requested_by } = parsedJob;
+    console.log(`[@runner:processJob] Raw job data (typeof): ${typeof job}`);
+    console.log(`[@runner:processJob] Raw job data: ${JSON.stringify(job)}`); // Stringify for clarity
+    const { config_id, timestamp, requested_by } = typeof job === 'string' ? JSON.parse(job) : job;
+
     const { data, error } = await supabase
       .from('jobs_configuration')
       .select('config')
@@ -61,13 +60,22 @@ async function processJob() {
     for (const host of hosts) {
       let sshKeyOrPass = host.key || host.password;
       if (host.authType === 'privateKey' && sshKeyOrPass?.includes(':')) {
-        sshKeyOrPass = decrypt(sshKeyOrPass, process.env.ENCRYPTION_KEY);
+        try {
+          sshKeyOrPass = decrypt(sshKeyOrPass, process.env.ENCRYPTION_KEY);
+          console.log(
+            `[@runner:processJob] Decrypted key preview: ${sshKeyOrPass.slice(0, 50)}...`,
+          ); // Debug key
+        } catch (decryptError) {
+          console.error(`[@runner:processJob] Decryption failed: ${decryptError.message}`);
+          return;
+        }
       }
 
       const script = host.os === 'windows' ? `cmd.exe /c "${scripts}"` : scripts;
       const conn = new Client();
       conn
         .on('ready', () => {
+          console.log(`[@runner:processJob] SSH connected to ${host.ip}`);
           conn.exec(script, async (err, stream) => {
             if (err) {
               await supabase.from('jobs_run').insert({
@@ -99,6 +107,19 @@ async function processJob() {
                 conn.end();
               });
           });
+        })
+        .on('error', async (err) => {
+          console.error(`[@runner:processJob] SSH error: ${err.message}`);
+          await supabase.from('jobs_run').insert({
+            config_id,
+            status: 'failed',
+            output: { stderr: err.message },
+            created_at: new Date().toISOString(),
+            started_at: new Date().toISOString(),
+            completed_at: new Date().toISOString(),
+            requested_by,
+          });
+          conn.end();
         })
         .connect({
           host: host.ip,
