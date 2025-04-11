@@ -35,7 +35,7 @@ async function processJob() {
       return;
     }
 
-    console.log(`[@runner:processJob] Processing job: ${job}`);
+    console.log(`[@runner:processJob] Processing job: ${JSON.stringify(job)}`);
     const { config_id } = typeof job === 'string' ? JSON.parse(job) : job;
 
     // Fetch config from Supabase
