@@ -200,14 +200,20 @@ async function processJob() {
         );
       }
 
-      // Construct script with clone, cd, checkout branch, and execute scripts
-      const cloneCommand = `git clone ${repoUrl} ${repoName} || true`; // '|| true' to avoid failure if dir exists
+      // Construct script with repo cleanup, clone, cd, checkout branch, and execute scripts
+      // First check if repo exists and remove it to ensure a clean environment
+      const cleanupCommand = host.os === 'windows' 
+        ? `if exist ${repoName} rmdir /s /q ${repoName}`
+        : `rm -rf ${repoName}`;
+      
+      const cloneCommand = `git clone ${repoUrl} ${repoName}`;
       const cdCommand = `cd ${repoName}`;
       const checkoutCommand = `git checkout ${branch}`;
+      
       const fullScript =
         host.os === 'windows'
-          ? `cmd.exe /c "${cloneCommand} && ${cdCommand} && ${checkoutCommand} && ${scripts}"`
-          : `${cloneCommand} && ${cdCommand} && ${checkoutCommand} && ${scripts}`;
+          ? `cmd.exe /c "${cleanupCommand} && ${cloneCommand} && ${cdCommand} && ${checkoutCommand} && ${scripts}"`
+          : `${cleanupCommand} && ${cloneCommand} && ${cdCommand} && ${checkoutCommand} && ${scripts}`;
       console.log(`[@runner:processJob] Full SSH command: ${fullScript}`);
 
       const conn = new Client();
