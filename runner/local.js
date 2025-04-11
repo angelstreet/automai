@@ -39,7 +39,7 @@ async function processJob() {
 
     // Hardcode config for local testing (replace with your actual config)
     const config = {
-      repository: 'https://github.com/angelstreet/automai.git',
+      repository: 'http://77.56.53.130/sunri/sunri.git',
       hosts: [
         {
           ip: '77.56.53.130',
@@ -82,12 +82,12 @@ async function processJob() {
       const cloneCommand = `git clone ${repoUrl} ${repoName}`;
       const cdCommand = `cd ${repoName}`;
       const dirCommand = `dir`;
+      const scriptCommand = `python script.py`;
       const fullScript =
         host.os === 'windows'
-          ? `cmd.exe /c "(${cleanupCommand} && ${cloneCommand} && ${cdCommand} && ${dirCommand}) || echo Command failed"`
-          : `${cleanupCommand} && ${cloneCommand} && ${cdCommand} && ${dirCommand}`;
+          ? `cmd.exe /c "(${cleanupCommand} && ${cloneCommand} && ${cdCommand} && ${dirCommand} && ${scriptCommand}) || echo Command failed"`
+          : `${cleanupCommand} && ${cloneCommand} && ${cdCommand} && ${dirCommand} && ${scriptCommand}`;
       console.log(`[@runner:processJob] SSH command: ${fullScript}`);
-
       const conn = new Client();
       conn
         .on('ready', () => {
