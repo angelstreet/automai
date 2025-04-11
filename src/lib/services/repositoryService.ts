@@ -13,18 +13,18 @@ import { Repository } from '@/types/component/repositoryComponentType';
  * Get provider client based on repository type
  */
 function getProviderClient(repository: Repository) {
-  if (!repository.credentials?.token) {
+  if (!repository.token) {
     throw new Error('Repository credentials not found');
   }
 
   switch (repository.provider_type) {
     case 'github':
       return githubApi.createGitHubApiClient({
-        accessToken: repository.credentials.token,
+        accessToken: repository.token,
       });
     case 'gitlab':
       return gitlabApi.createGitLabApiClient({
-        accessToken: repository.credentials.token,
+        accessToken: repository.token,
         baseUrl: repository.provider_url || 'https://gitlab.com/api/v4',
       });
     case 'gitea':
@@ -32,7 +32,7 @@ function getProviderClient(repository: Repository) {
         throw new Error('Gitea server URL is required');
       }
       return giteaApi.createGiteaApiClient({
-        accessToken: repository.credentials.token,
+        accessToken: repository.token,
         baseUrl: repository.provider_url,
       });
     default:
@@ -104,7 +104,7 @@ export async function listRepositoryBranches(
     console.info('Listing repository branches', { repositoryId });
 
     // Get the repository from the database
-    const repositoryResult = await repositoryDb.getRepositoryById(repositoryId);
+    const repositoryResult = await repositoryDb.getById(repositoryId);
 
     if (!repositoryResult.success || !repositoryResult.data) {
       return {
@@ -136,7 +136,7 @@ export async function listRepositoryBranches(
         result = await client.listBranches(owner, repo);
         break;
       case 'gitlab':
-        result = await client.listBranches(repo);
+        result = await client.listBranches(owner, repo, '');
         break;
       case 'gitea':
         result = await client.listBranches(owner, repo);
@@ -154,7 +154,7 @@ export async function listRepositoryBranches(
 
     // Normalize branch data
     const branches =
-      result.data?.map((branch) => ({
+      result.data?.map((branch: { name: string; commit: any }) => ({
         name: branch.name,
         commit: branch.commit,
       })) || [];
@@ -245,7 +245,7 @@ export async function listRepositoryFiles(
     console.info('Listing repository files', { repositoryId, path, branch });
 
     // Get the repository from the database
-    const repositoryResult = await repositoryDb.getRepositoryById(repositoryId);
+    const repositoryResult = await repositoryDb.getById(repositoryId);
 
     if (!repositoryResult.success || !repositoryResult.data) {
       return {
@@ -274,13 +274,34 @@ export async function listRepositoryFiles(
 
     switch (repository.provider_type) {
       case 'github':
-        result = await client.listContents(owner, repo, path, branch);
+        if ('listContents' in client) {
+          result = await client.listContents(owner, repo, path, branch);
+        } else {
+          return {
+            success: false,
+            error: 'listContents method not available for this client',
+          };
+        }
         break;
       case 'gitlab':
-        result = await client.listDirectory(repo, path, branch);
+        if ('listDirectory' in client) {
+          result = await client.listDirectory(repo, path, branch);
+        } else {
+          return {
+            success: false,
+            error: 'listDirectory method not available for this client',
+          };
+        }
         break;
       case 'gitea':
-        result = await client.listContents(owner, repo, path, branch);
+        if ('listContents' in client) {
+          result = await client.listContents(owner, repo, path, branch);
+        } else {
+          return {
+            success: false,
+            error: 'listContents method not available for this client',
+          };
+        }
         break;
       default:
         return {
@@ -295,7 +316,7 @@ export async function listRepositoryFiles(
 
     // Normalize file data
     const files =
-      result.data?.map((file) => ({
+      result.data?.map((file: any) => ({
         name: file.name || file.file_name,
         path: file.path || file.file_path,
         type: file.type || (file.type === 'dir' ? 'dir' : 'file'),
@@ -331,7 +352,7 @@ export async function getRepositoryFileContent(
     console.info('Getting repository file content', { repositoryId, path, branch });
 
     // Get the repository from the database
-    const repositoryResult = await repositoryDb.getRepositoryById(repositoryId);
+    const repositoryResult = await repositoryDb.getById(repositoryId);
 
     if (!repositoryResult.success || !repositoryResult.data) {
       return {

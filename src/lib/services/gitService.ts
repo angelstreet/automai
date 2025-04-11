@@ -865,17 +865,28 @@ export async function navigateRepository(
   error?: string;
 }> {
   try {
-    console.log(`[GitService] Navigating repository - path: ${path}, isDirectory: ${isDirectory}`);
+    console.log(`[GitService:navigateRepository] Starting navigation with params:`, {
+      repositoryUrl,
+      owner,
+      repo,
+      path,
+      branch,
+      providerType,
+      isDirectory,
+    });
 
     // Use appropriate branch based on provider if default branch ('main') is provided
     let branchToUse = branch;
     if (branch === 'main' && providerType === 'gitlab') {
       branchToUse = 'master'; // Use 'master' for GitLab when 'main' is specified
-      console.log(`[GitService] Adjusted branch from 'main' to 'master' for GitLab provider`);
+      console.log(
+        `[GitService:navigateRepository] Adjusted branch from 'main' to 'master' for GitLab provider`,
+      );
     }
 
     if (isDirectory) {
       // Navigate to directory - fetch contents
+      console.log(`[GitService:navigateRepository] Fetching directory contents`);
       const files = await fetchRepositoryContents(
         repositoryUrl,
         owner,
@@ -884,9 +895,11 @@ export async function navigateRepository(
         branchToUse,
         providerType,
       );
+      console.log(`[GitService:navigateRepository] Successfully fetched ${files.length} files`);
       return { files };
     } else {
       // Navigate to file - fetch content
+      console.log(`[GitService:navigateRepository] Fetching file content`);
       const content = await fetchFileContent(
         repositoryUrl,
         owner,
@@ -895,10 +908,18 @@ export async function navigateRepository(
         branchToUse,
         providerType,
       );
+      console.log(
+        `[GitService:navigateRepository] Successfully fetched file content (${content.length} bytes)`,
+      );
       return { fileContent: content };
     }
   } catch (error: any) {
-    console.error('[GitService] Error navigating repository:', error);
+    console.error('[GitService:navigateRepository] Error navigating repository:', error);
+    console.error('[GitService:navigateRepository] Error details:', {
+      message: error.message,
+      stack: error.stack,
+      urlParams: { repositoryUrl, owner, repo, path },
+    });
     return {
       error:
         error.message ||
@@ -923,46 +944,115 @@ export async function loadRepositoryStructure(
   error?: string;
 }> {
   try {
-    console.log(`[GitService] Loading repository structure - path: ${currentPath.join('/')}`);
+    console.log(`[GitService:loadRepositoryStructure] Starting with params:`, {
+      repositoryUrl,
+      currentPath: currentPath.join('/'),
+      branch,
+    });
+
+    // Safety check for empty URL
+    if (!repositoryUrl) {
+      console.error('[GitService:loadRepositoryStructure] Missing repository URL');
+      return {
+        files: [],
+        error: 'Repository URL is required',
+      };
+    }
 
     // Detect provider and parse repository info
     const providerType = detectProviderFromUrl(repositoryUrl);
+    console.log(`[GitService:loadRepositoryStructure] Detected provider type: ${providerType}`);
+
     const { owner, repo } = parseRepositoryUrl(repositoryUrl, providerType);
+    console.log(`[GitService:loadRepositoryStructure] Parsed repository info:`, {
+      owner,
+      repo,
+      providerType,
+    });
 
     if (!owner || !repo) {
-      throw new Error('Could not determine repository owner and name from URL');
+      console.error('[GitService:loadRepositoryStructure] Failed to parse repository URL');
+      return {
+        files: [],
+        error: 'Could not determine repository owner and name from URL',
+      };
     }
-
-    console.log(`[GitService] Using provider: ${providerType}, owner: ${owner}, repo: ${repo}`);
 
     // Use appropriate branch based on provider if default branch ('main') is provided
     let branchToUse = branch;
     if (branch === 'main' && providerType === 'gitlab') {
       branchToUse = 'master'; // Use 'master' for GitLab when 'main' is specified
-      console.log(`[GitService] Adjusted branch from 'main' to 'master' for GitLab provider`);
+      console.log(
+        `[GitService:loadRepositoryStructure] Adjusted branch from 'main' to 'master' for GitLab provider`,
+      );
     }
 
     // Fetch repository contents
     const pathString = currentPath.join('/');
-    const files = await fetchRepositoryContents(
-      repositoryUrl,
-      owner,
-      repo,
-      pathString,
-      branchToUse,
-      providerType,
-    );
+    console.log(`[GitService:loadRepositoryStructure] Fetching contents for path: "${pathString}"`);
 
-    // Sort files: directories first, then files alphabetically
-    const sortedFiles = [...files].sort((a, b) => {
-      if (a.type === 'dir' && b.type !== 'dir') return -1;
-      if (a.type !== 'dir' && b.type === 'dir') return 1;
-      return a.name.localeCompare(b.name);
-    });
+    try {
+      // Store owner/repo globally for other functions to use
+      if (typeof window !== 'undefined') {
+        (window as any).gitPathParams = { owner, repo };
+        (window as any).gitRepoUrl = repositoryUrl;
+        console.log('[GitService:loadRepositoryStructure] Stored git params in window object');
+      } else if (typeof global !== 'undefined') {
+        (global as any).gitPathParams = { owner, repo };
+        (global as any).gitRepoUrl = repositoryUrl;
+        console.log('[GitService:loadRepositoryStructure] Stored git params in global object');
+      }
 
-    return { files: sortedFiles };
+      const files = await fetchRepositoryContents(
+        repositoryUrl,
+        owner,
+        repo,
+        pathString,
+        branchToUse,
+        providerType,
+      );
+
+      console.log(
+        `[GitService:loadRepositoryStructure] Successfully fetched ${files.length} files`,
+      );
+
+      if (files.length > 0) {
+        console.log('[GitService:loadRepositoryStructure] First file sample:', files[0]);
+      }
+
+      // Sort files: directories first, then files alphabetically
+      const sortedFiles = [...files].sort((a, b) => {
+        if (a.type === 'dir' && b.type !== 'dir') return -1;
+        if (a.type !== 'dir' && b.type === 'dir') return 1;
+        return a.name.localeCompare(b.name);
+      });
+
+      return { files: sortedFiles };
+    } catch (fetchError: any) {
+      console.error(
+        '[GitService:loadRepositoryStructure] Error in fetchRepositoryContents:',
+        fetchError,
+      );
+      console.error('[GitService:loadRepositoryStructure] Error details:', {
+        message: fetchError.message,
+        stack: fetchError.stack,
+        params: { repositoryUrl, owner, repo, path: pathString, branch: branchToUse },
+      });
+      return {
+        files: [],
+        error: `Error fetching repository contents: ${fetchError.message}`,
+      };
+    }
   } catch (error: any) {
-    console.error('[GitService] Error loading repository structure:', error);
+    console.error(
+      '[GitService:loadRepositoryStructure] Error loading repository structure:',
+      error,
+    );
+    console.error('[GitService:loadRepositoryStructure] Error context:', {
+      url: repositoryUrl,
+      path: currentPath.join('/'),
+      branch,
+    });
     return {
       files: [],
       error: error.message || 'Failed to load repository structure',

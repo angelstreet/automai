@@ -50,18 +50,13 @@ export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplo
 
   // Helper function to get the default branch regardless of property name
   const getDefaultBranch = useCallback(() => {
-    // Try both TypeScript interface property and actual database column
-    return (repository as any).default_branch || repository.defaultBranch || 'main';
+    // Only use the snake_case property name
+    return repository.default_branch || 'main';
   }, [repository]);
 
   // Validate repository has required properties
   const isValidRepository =
-    repository &&
-    repository.id &&
-    repository.provider_id &&
-    repository.url &&
-    repository.name &&
-    repository.owner;
+    repository && repository.id && repository.url && repository.name && repository.owner;
 
   // Add debugging - log the repository object
   useEffect(() => {
@@ -71,10 +66,8 @@ export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplo
         name: repository.name,
         owner: repository.owner,
         url: repository.url,
-        provider_id: repository.provider_id,
-        providerType: repository.providerType,
-        default_branch: (repository as any).default_branch,
-        defaultBranch: repository.defaultBranch,
+        provider_type: repository.provider_type,
+        default_branch: repository.default_branch,
         effectiveBranch: getDefaultBranch(),
         isValid: isValidRepository,
       });
@@ -119,7 +112,7 @@ export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplo
 
         // Use gitService for navigation
         const providerType =
-          repository.providerType || gitService.detectProviderFromUrl(repository.url || '');
+          repository.provider_type || gitService.detectProviderFromUrl(repository.url || '');
         const { owner, repo } = gitService.parseRepositoryUrl(repository.url || '', providerType);
 
         if (!owner || !repo) {
@@ -172,12 +165,25 @@ export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplo
         const branch = getDefaultBranch(); // Use helper
         console.log(`[RepositoryExplorer] Using branch: ${branch}`);
 
+        console.log('[RepositoryExplorer] Starting to load repository structure', {
+          url: repository.url,
+          currentPath,
+          branch,
+          provider_type: repository.provider_type,
+        });
+
         // Use the new service function to load repository structure
         const result = await gitService.loadRepositoryStructure(
           repository.url || '',
           currentPath,
           branch,
         );
+
+        console.log('[RepositoryExplorer] Repository structure loading result:', {
+          success: !result.error,
+          error: result.error || 'none',
+          filesCount: result.files?.length || 0,
+        });
 
         if (result.error) {
           throw new Error(result.error);
@@ -187,6 +193,9 @@ export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplo
           console.log('[RepositoryExplorer] No files found in this directory');
           setFiles([]);
         } else {
+          // Log first file as a sample
+          console.log('[RepositoryExplorer] First file sample:', result.files[0]);
+
           // Convert to RepositoryFile type
           const filesData = result.files.map((item) => ({
             name: item.name,
@@ -205,6 +214,10 @@ export function RepositoryExplorerClient({ repository, onBack }: RepositoryExplo
         }
       } catch (error: any) {
         console.error('[RepositoryExplorer] Error fetching repository files:', error);
+        console.error('[RepositoryExplorer] Error details:', {
+          message: error.message,
+          stack: error.stack,
+        });
         setError(
           error.message ||
             `Failed to fetch repository files. The repository may not be accessible or the "${getDefaultBranch()}" branch may not exist.`,
