@@ -201,26 +201,58 @@ async function processJob() {
       }
 
       // Construct script with repo cleanup, clone, cd, checkout branch, and execute scripts
-      // First check if repo exists and remove it to ensure a clean environment
-      const cleanupCommand = host.os === 'windows' 
-        ? `if exist ${repoName} rmdir /s /q ${repoName}`
-        : `rm -rf ${repoName}`;
+      let fullScript;
       
-      const cloneCommand = `git clone ${repoUrl} ${repoName}`;
-      const cdCommand = `cd ${repoName}`;
-      const checkoutCommand = `git checkout ${branch}`;
-      
-      const fullScript =
-        host.os === 'windows'
-          ? `cmd.exe /c "${cleanupCommand} && ${cloneCommand} && ${cdCommand} && ${checkoutCommand} && ${scripts}"`
-          : `${cleanupCommand} && ${cloneCommand} && ${cdCommand} && ${checkoutCommand} && ${scripts}`;
+      if (host.os === 'windows') {
+        // Windows-specific command formatting
+        const cleanupCommand = `if exist ${repoName} rmdir /s /q ${repoName}`;
+        const cloneCommand = `git clone ${repoUrl} ${repoName}`;
+        const cdCommand = `cd ${repoName}`;
+        const checkoutCommand = `git checkout ${branch}`;
+        
+        // For Windows, we'll use an explicit, properly escaped command
+        fullScript = `${cleanupCommand} && ${cloneCommand} && ${cdCommand} && ${checkoutCommand} && ${scripts}`;
+        
+        console.log(`[@runner:processJob] Windows command: ${fullScript}`);
+      } else {
+        // Unix/Linux command
+        const cleanupCommand = `rm -rf ${repoName}`;
+        const cloneCommand = `git clone ${repoUrl} ${repoName}`;
+        const cdCommand = `cd ${repoName}`;
+        const checkoutCommand = `git checkout ${branch}`;
+        
+        fullScript = `${cleanupCommand} && ${cloneCommand} && ${cdCommand} && ${checkoutCommand} && ${scripts}`;
+      }
       console.log(`[@runner:processJob] Full SSH command: ${fullScript}`);
 
+      console.log(`[@runner:processJob] Connecting to SSH host ${host.ip}:${host.port || 22} with username ${host.username}`);
+
       const conn = new Client();
+      // Set a connection timeout
+      const connectionTimeout = setTimeout(() => {
+        console.error(`[@runner:processJob] Connection timeout to ${host.ip}`);
+        conn.end();
+        // Update job run to failed status
+        updateJobRunStatus(jobRunId, 'failed', {
+          error: `Connection timeout to ${host.ip}`,
+          output: { stderr: `Connection timeout to ${host.ip}` },
+          logs: { error: `Connection timeout to ${host.ip}` }
+        });
+      }, 30000); // 30 seconds timeout
+      
       conn
         .on('ready', () => {
+          // Clear timeout on successful connection
+          clearTimeout(connectionTimeout);
           console.log(`[@runner:processJob] SSH connected to ${host.ip}`);
-          conn.exec(fullScript, async (err, stream) => {
+          
+          // For Windows hosts, wrap in cmd.exe
+          const execCommand = host.os === 'windows' 
+            ? `cmd.exe /c "${fullScript}"` 
+            : fullScript;
+          
+          console.log(`[@runner:processJob] Running command: ${execCommand}`);
+          conn.exec(execCommand, async (err, stream) => {
             if (err) {
               const errorMsg = `SSH exec error: ${err.message}`;
               console.error(`[@runner:processJob] ${errorMsg}`);
@@ -235,15 +267,19 @@ async function processJob() {
             let output = { stdout: '', stderr: '' };
             stream
               .on('data', (data) => {
-                output.stdout += data;
-                console.log(`[@runner:processJob] SSH stdout: ${data}`);
+                const dataStr = data.toString('utf8');
+                output.stdout += dataStr;
+                console.log(`[@runner:processJob] SSH stdout: ${dataStr}`);
               })
               .stderr.on('data', (data) => {
-                output.stderr += data;
-                console.log(`[@runner:processJob] SSH stderr: ${data}`);
+                const dataStr = data.toString('utf8');
+                output.stderr += dataStr;
+                console.log(`[@runner:processJob] SSH stderr: ${dataStr}`);
               })
               .on('close', async (code, signal) => {
-                console.log(`[@runner:processJob] SSH stream closed with code ${code}`);
+                console.log(`[@runner:processJob] SSH stream closed with code ${code}, signal: ${signal}`);
+                console.log(`[@runner:processJob] Final stdout: ${output.stdout}`);
+                console.log(`[@runner:processJob] Final stderr: ${output.stderr}`);
                 const successful = code === 0;
                 
                 // Update the job run with the final status and output
@@ -330,7 +366,30 @@ async function logQueueStatus() {
   }
 }
 
-setInterval(processJob, 5000);
-setInterval(logQueueStatus, 60000);
-setupSchedules().catch((err) => console.error('Setup schedules failed:', err));
-console.log('Worker running...');
+async function startProcessing() {
+  console.log('[@runner:startProcessing] Starting job processing');
+  
+  // Process jobs at regular intervals
+  setInterval(processJob, 5000);
+  
+  // Log queue status at regular intervals
+  setInterval(logQueueStatus, 60000);
+  
+  // Setup scheduled jobs
+  try {
+    await setupSchedules();
+    console.log('[@runner:startProcessing] Schedules setup complete');
+  } catch (err) {
+    console.error('[@runner:startProcessing] Setup schedules failed:', err);
+  }
+  
+  console.log('[@runner:startProcessing] Worker running...');
+  
+  // Initial job processing on startup
+  await processJob();
+}
+
+// Start processing jobs
+startProcessing().catch(err => {
+  console.error('[@runner:startProcessing] Failed to start job processing:', err);
+});
