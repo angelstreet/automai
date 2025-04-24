@@ -13,7 +13,7 @@ import { Skeleton } from '@/components/shadcn/skeleton';
 
 export function ProfileSkeleton() {
   const t = useTranslations('profile');
-
+  const c = useTranslations('common');
   return (
     <div className="container mx-auto py-4 px-4 space-y-6">
       <div className="space-y-6">
@@ -22,7 +22,7 @@ export function ProfileSkeleton() {
           <Card>
             <CardHeader>
               <CardTitle>{t('personal_info_title')}</CardTitle>
-              <CardDescription>{t('edit_button')}</CardDescription>
+              <CardDescription>{c('edit')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">

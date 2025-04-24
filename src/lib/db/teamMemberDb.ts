@@ -25,7 +25,7 @@ export async function getTeamMembers(
         role,
         created_at,
         updated_at,
-        profiles:profiles(id, tenant_id, tenant_name, role),
+        profiles:profiles(id,active_team, role),
         teams:team_id(id, name)
       `,
       )
@@ -56,7 +56,6 @@ export async function getTeamMembers(
 
       // Map user profiles to team members
       data.forEach((member) => {
-        const profile = member.profiles as any;
         const team = member.teams as any;
         const userProfile = userProfiles?.find((p) => p.id === member.profile_id);
 
@@ -75,7 +74,7 @@ export async function getTeamMembers(
 
         member.user = {
           id: member.profile_id,
-          name: userProfile?.full_name || profile?.tenant_name || 'User',
+          name: userProfile?.full_name || 'User',
           email: userProfile?.email || 'Email unavailable',
           avatar_url: avatarUrl || null,
         };
@@ -367,7 +366,7 @@ export async function getAvailableTenantProfilesForTeam(
         email: userProfile?.email || null,
         user: {
           id: profile.id,
-          name: userProfile?.full_name || profile?.tenant_name || 'User',
+          name: userProfile?.full_name || profile?.name || 'User',
           email: userProfile?.email || 'Email unavailable',
           avatar_url: avatarUrl || null,
         },

@@ -39,7 +39,7 @@ export function ProfileContent({
   const updateProfile = propUpdateProfile || contextUpdateProfile;
   const refreshUser = propRefreshUser || contextRefreshUser;
 
-  const t = useTranslations('auth');
+  const t = useTranslations('profile');
   const c = useTranslations('common');
   const params = useParams();
   const locale = params.locale as string;
@@ -102,7 +102,7 @@ export function ProfileContent({
           <Card>
             <CardHeader>
               <CardTitle>{t('personal_info_title')}</CardTitle>
-              <CardDescription>{t('edit_button')}</CardDescription>
+              <CardDescription>{c('edit')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
