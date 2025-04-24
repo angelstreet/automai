@@ -112,5 +112,5 @@ export default function TeamOverview({ team }: TeamOverviewProps) {
         </CardContent>
       </Card>
     </div>
-  );  
+  );
 }
