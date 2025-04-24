@@ -57,10 +57,7 @@ export default function AuthRedirectPage() {
   // Handle the authentication process
   useEffect(() => {
     // Skip if we've already processed or there's no code
-    if (hasRedirected || !code) {
-      setIsProcessing(false);
-      return;
-    }
+    console.log('🔐 AUTH REDIRECT: Handle auth redirect', { hasRedirected, code });
 
     // Handle email authentication
     if (authMethod === 'email' && !hasRedirected) {
@@ -126,6 +123,10 @@ export default function AuthRedirectPage() {
       return;
     }
 
+    if (hasRedirected || !code) {
+      setIsProcessing(false);
+      return;
+    }
     // Handle OAuth authentication
     async function processAuth() {
       try {
