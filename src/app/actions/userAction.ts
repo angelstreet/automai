@@ -44,7 +44,7 @@ export const getUser = cache(async (): Promise<User | null> => {
     // Get profile data
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('role, tenant_id, tenant_name, avatar_url')
+      .select('role, tenant_id, active_team, avatar_url')
       .eq('id', authUser.id)
       .single();
 
@@ -70,9 +70,8 @@ export const getUser = cache(async (): Promise<User | null> => {
           }))
         : [];
 
-    // Get selected team from cookie - properly awaited
-    const selectedTeamCookie = await cookieStore.get(`selected_team_${authUser.id}`);
-    const selectedTeamId = selectedTeamCookie?.value;
+    // Get selected team
+    const selectedTeamId = profile.active_team;
 
     // Construct user object
     return {
@@ -81,7 +80,6 @@ export const getUser = cache(async (): Promise<User | null> => {
       name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Guest',
       role: profile.role,
       tenant_id: profile.tenant_id,
-      tenant_name: profile.tenant_name,
       avatar_url: authUser.user_metadata?.avatar_url || profile.avatar_url || '',
       user_metadata: authUser.user_metadata,
       teams: userTeams,

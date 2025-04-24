@@ -25,7 +25,6 @@ export interface User {
   name: string;
   role: Role;
   tenant_id: string;
-  tenant_name: string;
   avatar_url: string;
   user_metadata?: {
     avatar_url?: string;
