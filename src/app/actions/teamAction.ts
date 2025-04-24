@@ -4,7 +4,6 @@ import { cookies } from 'next/headers';
 import { cache } from 'react';
 
 import { getUser } from '@/app/actions/userAction';
-import deploymentDb from '@/lib/db/deploymentDb';
 import hostDb from '@/lib/db/hostDb';
 import repositoryDb from '@/lib/db/repositoryDb';
 import {
