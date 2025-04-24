@@ -87,9 +87,7 @@ export default function TeamOverview({ team }: TeamOverviewProps) {
           <div>
             <p className="text-sm font-medium">Resources</p>
             <p className="text-xl font-semibold">
-              {resourceCounts.repositories +
-                resourceCounts.hosts +
-                resourceCounts.deployments}
+              {resourceCounts.repositories + resourceCounts.hosts + resourceCounts.deployments}
             </p>
           </div>
 
@@ -106,7 +104,7 @@ export default function TeamOverview({ team }: TeamOverviewProps) {
       {/* Resources Card */}
       <Card>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
             {resourceCards.map((resource) => (
               <ResourceCard key={resource.type} resource={resource} />
             ))}
@@ -114,5 +112,5 @@ export default function TeamOverview({ team }: TeamOverviewProps) {
         </CardContent>
       </Card>
     </div>
-  );
+  );  
 }
