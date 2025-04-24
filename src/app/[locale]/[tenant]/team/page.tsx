@@ -15,16 +15,18 @@ export default async function TeamPage() {
 
   // Get all team page data in a single optimized server action
   const pageData = await getTeamPageData();
-  
+
   if (!pageData.success) {
     console.error('Failed to load team page data:', pageData.error);
   }
-  
-  const { user, teamDetails, teamMembers } = pageData.success ? pageData.data : { 
-    user: null, 
-    teamDetails: null, 
-    teamMembers: [] 
-  };
+
+  const { user, teamDetails, teamMembers } = pageData.success
+    ? pageData.data
+    : {
+        user: null,
+        teamDetails: null,
+        teamMembers: [],
+      };
 
   // Using FeaturePageContainer directly like repositories page
   return (
@@ -37,11 +39,7 @@ export default async function TeamPage() {
         {/* TeamHeader gets details from TeamContext */}
         <TeamHeader />
         <Suspense fallback={<TeamOverviewSkeleton />}>
-          <TeamContentClient 
-            user={user} 
-            teamDetails={teamDetails} 
-            teamMembers={teamMembers} 
-          />
+          <TeamContentClient user={user} teamDetails={teamDetails} teamMembers={teamMembers} />
         </Suspense>
       </Suspense>
     </FeaturePageContainer>
