@@ -6,13 +6,6 @@ import { cache } from 'react';
 
 import { getUserActiveTeam } from '@/app/actions/teamAction';
 import { getUser } from '@/app/actions/userAction';
-import {
-  getDeployments as dbGetDeployments,
-  getDeploymentById as dbGetDeploymentById,
-  createDeployment as dbCreateDeployment,
-  updateDeployment as dbUpdateDeployment,
-  deleteDeployment as dbDeleteDeployment,
-} from '@/lib/db/deploymentDb';
 import { Deployment, DeploymentFormData } from '@/types/component/deploymentComponentType';
 import { AuthUser, User } from '@/types/service/userServiceType';
 /**

@@ -5,6 +5,7 @@ import { cache } from 'react';
 
 import { getUser } from '@/app/actions/userAction';
 import hostDb from '@/lib/db/hostDb';
+import jobConfigurationDb from '@/lib/db/jobsConfigurationDb';
 import repositoryDb from '@/lib/db/repositoryDb';
 import {
   getUserTeams as dbGetUserTeams,
@@ -19,7 +20,6 @@ import {
 } from '@/lib/db/teamDb';
 import teamMemberDb from '@/lib/db/teamMemberDb';
 import { createClient } from '@/lib/supabase/server';
-import type { Deployment } from '@/types/component/deploymentComponentType';
 import type { Host } from '@/types/component/hostComponentType';
 import { TeamMember } from '@/types/context/teamContextType';
 import type {
@@ -570,12 +570,6 @@ export const assignResourceToTeam = cache(
         );
       } else if (resourceType === 'host') {
         result = await hostDb.updateHost(resourceId, { team_id: teamId } as Partial<Host>);
-      } else if (resourceType === 'deployment') {
-        result = await deploymentDb.updateDeployment(
-          resourceId,
-          { team_id: teamId } as Partial<Deployment>,
-          cookieStore,
-        );
       } else {
         throw new Error(`Unsupported resource type: ${resourceType}`);
       }
@@ -768,7 +762,7 @@ export const getTeamPageData = cache(async () => {
     const [repoResult, hostResult, deploymentResult] = await Promise.all([
       repositoryDb.getRepositories(cookieStore, activeTeam.id),
       hostDb.getHosts(activeTeam.id),
-      deploymentDb.getDeployments(activeTeam.id, cookieStore),
+      jobConfigurationDb.getJobConfigsByTeamId(activeTeam.id, cookieStore),
     ]);
 
     const resourceCounts = {
