@@ -7,6 +7,7 @@ import { setUserActiveTeam } from '@/app/actions/teamAction';
 import { Button } from '@/components/shadcn/button';
 import { Command, CommandGroup } from '@/components/shadcn/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/shadcn/popover';
+import { useSidebar } from '@/hooks';
 import { cn } from '@/lib/utils';
 import { Team } from '@/types/context/teamContextType';
 import { User } from '@/types/service/userServiceType';
@@ -25,6 +26,8 @@ export function TeamSelectorClient({
   onTeamSelect,
 }: TeamSelectorClientProps) {
   const [open, setOpen] = useState(false);
+  const sidebar = useSidebar('TeamSelectorClient');
+  const isCollapsed = sidebar?.state === 'collapsed';
 
   // Only show when user exists and there are multiple teams
   if (!user || teams.length <= 1) {
@@ -61,15 +64,20 @@ export function TeamSelectorClient({
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="justify-between w-full pl-1.5"
+            className={cn(
+              'justify-between w-full pl-1.5',
+              isCollapsed && 'px-0 py-2 justify-center',
+            )}
           >
             <div className="flex items-center">
-              <Handshake className="mr-2 h-4 w-4" />
-              <span className="truncate">
-                {selectedTeam ? selectedTeam.name : 'Select team...'}
-              </span>
+              <Handshake className={cn('h-4 w-4', isCollapsed ? 'mx-auto' : 'mr-2')} />
+              {!isCollapsed && (
+                <span className="truncate">
+                  {selectedTeam ? selectedTeam.name : 'Select team...'}
+                </span>
+              )}
             </div>
-            <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+            {!isCollapsed && <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="p-0 w-[240px]">
