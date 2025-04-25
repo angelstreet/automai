@@ -1,10 +1,9 @@
 import { Building2 } from 'lucide-react';
 import { Suspense } from 'react';
 
+import TeamSwitcherClient from '@/components/team/TeamSwitcherClient';
 import type { Team } from '@/types/context/teamContextType';
 import { User } from '@/types/service/userServiceType';
-
-import TeamSwitcherClient from '@/components/team/TeamSwitcherClient';
 
 interface TeamSwitcherProps {
   defaultCollapsed?: boolean;
