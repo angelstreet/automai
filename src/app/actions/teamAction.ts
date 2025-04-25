@@ -377,15 +377,15 @@ export const checkResourceLimit = cache(
 /**
  * Get details for a team including member count, user role, and resource counts
  */
-export const getTeamDetails = cache(async () => {
+export const getActiveTeamDetails = cache(async () => {
   try {
-    //console.log(`[@action:team:getTeamDetails] Getting team details`);
+    //console.log(`[@action:team:getActiveTeamDetails] Getting active team details`);
 
     let user;
     try {
       user = await getUser();
       if (!user) {
-        console.log(`[@action:team:getTeamDetails] No user found, returning default data`);
+        console.log(`[@action:team:getActiveTeamDetails] No user found, returning default data`);
         return {
           success: true,
           data: {
@@ -400,7 +400,7 @@ export const getTeamDetails = cache(async () => {
         };
       }
     } catch (userError) {
-      console.error(`[@action:team:getTeamDetails] Error getting user:`, userError);
+      console.error(`[@action:team:getActiveTeamDetails] Error getting user:`, userError);
       return {
         success: true,
         data: {
@@ -421,7 +421,7 @@ export const getTeamDetails = cache(async () => {
       const cookieStore = await cookies();
       teams = await dbGetUserTeams(user.id, cookieStore);
       if (!teams.success || !teams.data || teams.data.length === 0) {
-        console.log(`[@action:team:getTeamDetails] No teams found for user: ${user.id}`);
+        console.log(`[@action:team:getActiveTeamDetails] No teams found for user: ${user.id}`);
         return {
           success: true,
           data: {
@@ -436,7 +436,7 @@ export const getTeamDetails = cache(async () => {
         };
       }
     } catch (teamsError) {
-      console.error(`[@action:team:getTeamDetails] Error getting user teams:`, teamsError);
+      console.error(`[@action:team:getActiveTeamDetails] Error getting user teams:`, teamsError);
       return {
         success: true,
         data: {
@@ -463,7 +463,10 @@ export const getTeamDetails = cache(async () => {
         activeTeam = teams.data[0]; // Default to first team
       }
     } catch (activeTeamError) {
-      console.error(`[@action:team:getTeamDetails] Error getting active team:`, activeTeamError);
+      console.error(
+        `[@action:team:getActiveTeamDetails] Error getting active team:`,
+        activeTeamError,
+      );
       activeTeam = teams.data[0]; // Default to first team
     }
 
@@ -480,7 +483,10 @@ export const getTeamDetails = cache(async () => {
         userRole = userMember ? userMember.role : null;
       }
     } catch (membersError) {
-      console.error(`[@action:team:getTeamDetails] Error getting team members:`, membersError);
+      console.error(
+        `[@action:team:getActiveTeamDetails] Error getting team members:`,
+        membersError,
+      );
     }
 
     // Get resource counts
@@ -494,10 +500,13 @@ export const getTeamDetails = cache(async () => {
         resourceCounts = countsResult.data;
       }
     } catch (countsError) {
-      console.error(`[@action:team:getTeamDetails] Error getting resource counts:`, countsError);
+      console.error(
+        `[@action:team:getActiveTeamDetails] Error getting resource counts:`,
+        countsError,
+      );
     }
 
-    console.log(`[@action:team:getTeamDetails] Successfully retrieved team details`);
+    console.log(`[@action:team:getActiveTeamDetails] Successfully retrieved team details`);
     return {
       success: true,
       data: {
@@ -508,10 +517,118 @@ export const getTeamDetails = cache(async () => {
       },
     };
   } catch (error: any) {
-    console.error(`[@action:team:getTeamDetails] Error:`, error);
+    console.error(`[@action:team:getActiveTeamDetails] Error:`, error);
     return {
       success: false,
       error: error.message || 'Failed to get team details',
+    };
+  }
+});
+
+/**
+ * Get details for all teams the current user belongs to
+ */
+export const getTeamsDetails = cache(async () => {
+  try {
+    console.log(`[@action:team:getTeamsDetails] Getting all teams details`);
+
+    let user;
+    try {
+      user = await getUser();
+      if (!user) {
+        console.log(`[@action:team:getTeamsDetails] No user found, returning empty data`);
+        return {
+          success: true,
+          data: {
+            teams: [],
+            activeTeam: null,
+            resourceCounts: {
+              repositories: 0,
+              deployments: 0,
+            },
+          },
+        };
+      }
+    } catch (userError) {
+      console.error(`[@action:team:getTeamsDetails] Error getting user:`, userError);
+      return {
+        success: false,
+        error: 'Failed to authenticate user',
+      };
+    }
+
+    // Get user's teams
+    let teams;
+    try {
+      const cookieStore = await cookies();
+      const teamsResult = await dbGetUserTeams(user.id, cookieStore);
+      if (!teamsResult.success || !teamsResult.data || teamsResult.data.length === 0) {
+        console.log(`[@action:team:getTeamsDetails] No teams found for user: ${user.id}`);
+        return {
+          success: true,
+          data: {
+            teams: [],
+            activeTeam: null,
+            resourceCounts: {
+              repositories: 0,
+              deployments: 0,
+            },
+          },
+        };
+      }
+      teams = teamsResult.data;
+    } catch (teamsError) {
+      console.error(`[@action:team:getTeamsDetails] Error getting user teams:`, teamsError);
+      return {
+        success: false,
+        error: 'Failed to retrieve teams',
+      };
+    }
+
+    // Get active team
+    let activeTeam;
+    try {
+      const cookieStore = await cookies();
+      // Pass the already retrieved teams to avoid duplicate getUserTeams calls
+      const activeTeamResult = await dbGetUserActiveTeam(user.id, cookieStore, teams);
+      if (activeTeamResult.success && activeTeamResult.data) {
+        activeTeam = activeTeamResult.data;
+      } else {
+        activeTeam = teams[0]; // Default to first team
+      }
+    } catch (activeTeamError) {
+      console.error(`[@action:team:getTeamsDetails] Error getting active team:`, activeTeamError);
+      activeTeam = teams[0]; // Default to first team
+    }
+
+    // Get resource counts for the active team
+    let resourceCounts = {
+      repositories: 0,
+      deployments: 0,
+    };
+    try {
+      const countsResult = await getTenantResourceCounts(activeTeam.tenant_id);
+      if (countsResult.success && countsResult.data) {
+        resourceCounts = countsResult.data;
+      }
+    } catch (countsError) {
+      console.error(`[@action:team:getTeamsDetails] Error getting resource counts:`, countsError);
+    }
+
+    console.log(`[@action:team:getTeamsDetails] Successfully retrieved all teams details`);
+    return {
+      success: true,
+      data: {
+        teams,
+        activeTeam,
+        resourceCounts,
+      },
+    };
+  } catch (error: any) {
+    console.error(`[@action:team:getTeamsDetails] Error:`, error);
+    return {
+      success: false,
+      error: error.message || 'Failed to get teams details',
     };
   }
 });

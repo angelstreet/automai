@@ -1,5 +1,5 @@
 import { getUserPermissions } from '@/app/actions/permissionAction';
-import { getTeamDetails } from '@/app/actions/teamAction';
+import { getActiveTeamDetails } from '@/app/actions/teamAction';
 import { getUser } from '@/app/actions/userAction';
 import { TooltipProvider } from '@/components/shadcn/tooltip';
 
@@ -19,7 +19,7 @@ export default async function Layout({
   let teamDetails = null;
   let teamResourceCounts = null;
   if (user) {
-    const teamResponse = await getTeamDetails();
+    const teamResponse = await getActiveTeamDetails();
     if (teamResponse.success && teamResponse.data) {
       if (teamResponse.data.team) {
         teamDetails = teamResponse.data.team;

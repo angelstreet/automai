@@ -364,6 +364,24 @@ export async function setUserActiveTeam(
       return { success: false, error: 'User is not a member of this team', data: null };
     }
 
+    // Create Supabase client
+    const supabase = await createClient(cookieStore);
+
+    // Update the user's active_team in the profiles table
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ active_team: teamId })
+      .eq('id', userId);
+
+    if (updateError) {
+      console.error(`[@db:teamDb:setUserActiveTeam] Error updating profile:`, updateError);
+      return {
+        success: false,
+        error: 'Failed to update active team in profile',
+        data: null,
+      };
+    }
+
     console.log(
       `[@db:teamDb:setUserActiveTeam] Successfully set active team: ${teamId} for user: ${userId}`,
     );

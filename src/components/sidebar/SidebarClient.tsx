@@ -102,9 +102,7 @@ const SidebarClient = React.memo(function SidebarClient({
         <div className="sidebar-header-content flex flex-col gap-2">
           {/* Display the ActiveTeam component to show the current team */}
           <ActiveTeam defaultCollapsed={!open} user={user} teams={teams} activeTeam={activeTeam} />
-
-          {/* Display the TeamSelector component if there are multiple teams */}
-          {teams.length > 1 && <TeamSelector user={user} teams={teams} activeTeam={activeTeam} />}
+          <TeamSelector user={user} teams={teams} activeTeam={activeTeam} />
         </div>
       </SidebarHeader>
       <SidebarContent className={cn('pt-2', !open && 'pt-4')}>
