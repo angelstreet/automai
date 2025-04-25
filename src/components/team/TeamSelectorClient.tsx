@@ -61,7 +61,7 @@ export function TeamSelectorClient({
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="justify-between w-full"
+            className="justify-between w-full pl-1.5"
           >
             <div className="flex items-center">
               <Handshake className="mr-2 h-4 w-4" />
