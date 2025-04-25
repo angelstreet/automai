@@ -6,11 +6,14 @@ export interface Team {
   name: string;
   description?: string;
   tenant_id: string;
-  do;
   created_by?: string;
   is_default: boolean;
   created_at: string;
   updated_at: string;
+  subscription_tier: string;
+  role?: string;
+  ownerId: string | null;
+  ownerEmail: string | null;
 }
 
 export interface TeamCreateInput {

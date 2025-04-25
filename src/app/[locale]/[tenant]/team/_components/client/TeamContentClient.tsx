@@ -3,6 +3,7 @@
 import { useSearchParams } from 'next/navigation';
 
 import { TeamMemberDialogProvider } from '@/app/providers/TeamMemberDialogProvider';
+import { useTeam } from '@/hooks/useTeam';
 import { TeamDetails, TeamMember } from '@/types/context/teamContextType';
 import { User } from '@/types/service/userServiceType';
 
@@ -35,6 +36,9 @@ export default function TeamContentClient({
   const searchParams = useSearchParams();
   const activeTab = searchParams.get('tab') || 'overview';
 
+  const { activeTeam } = useTeam('TeamContentClient');
+  const subscriptionTier = activeTeam?.subscription_tier || 'pro';
+
   // Show skeleton when team data is not available
   if (!teamDetails || !teamDetails.team) {
     return (
@@ -42,27 +46,15 @@ export default function TeamContentClient({
     );
   }
 
-  const activeTeam = teamDetails.team;
-
-  // Extract the actual subscription tier with better defaults
-  const subscriptionTier =
-    ('subscription_tier' in activeTeam ? (activeTeam.subscription_tier as string) : null) ||
-    ('tenant_name' in activeTeam ? (activeTeam.tenant_name as string) : null) ||
-    'pro'; // Default to 'pro' for testing
-
-  // Convert to TeamDetails format for the overview
   const formattedTeamDetails: TeamDetails = {
-    id: activeTeam.id || null,
-    name: activeTeam.name || 'Team',
-    subscription_tier: subscriptionTier,
-    memberCount: teamDetails.memberCount || 0,
-    role:
-      teamDetails.userRole ||
-      user?.role ||
-      ('role' in activeTeam ? (activeTeam.role as string) : null),
-    ownerId: 'ownerId' in activeTeam ? (activeTeam.ownerId as string) : null,
-    ownerEmail: 'ownerEmail' in activeTeam ? (activeTeam.ownerEmail as string) : null,
-    resourceCounts: teamDetails.resourceCounts || {
+    id: activeTeam?.id || null,
+    name: activeTeam?.name || 'Team',
+    subscription_tier: activeTeam?.subscription_tier || 'pro',
+    memberCount: teamDetails?.memberCount || 0,
+    role: teamDetails?.userRole || user?.role || (activeTeam?.role ? activeTeam.role : undefined),
+    ownerId: activeTeam?.ownerId || null,
+    ownerEmail: activeTeam?.ownerEmail || null,
+    resourceCounts: teamDetails?.resourceCounts || {
       repositories: 0,
       hosts: 0,
       deployments: 0,

@@ -1,7 +1,7 @@
 import { PostgrestError } from '@supabase/supabase-js';
 
 import { createClient } from '@/lib/supabase/server';
-import { type DbResponse } from '@/lib/utils/dbUtils';
+import { type DbResponse } from '@/lib/utils/commonUtils';
 
 export interface Team {
   id: string;
@@ -254,32 +254,32 @@ export async function getUserActiveTeam(
   try {
     let userTeams: Team[] = [];
 
-    // Use provided teams if available, otherwise fetch them
     if (teams && teams.length > 0) {
-      //console.log(`[@db:teamDb:getUserActiveTeam] Using pre-fetched teams for user: ${userId}`);
       userTeams = teams;
     } else {
-      // Get the user's teams if not provided
       const result = await getUserTeams(userId, cookieStore);
       if (!result.success || !result.data || result.data.length === 0) {
-        console.error(`[@db:teamDb:getUserActiveTeam] No teams found for user: ${userId}`);
-        return {
-          success: false,
-          error: 'No teams found for user',
-        };
+        return { success: false, error: 'No teams found for user' };
       }
       userTeams = result.data;
     }
 
-    // Extract the first team
-    const plainTeam = userTeams[0];
+    const plainTeam = userTeams[0]; // Default to first team
+    const supabase = await createClient(cookieStore);
+    const { data: enhancedTeam, error } = await supabase
+      .from('teams')
+      .select('*, tenants(*)') // Join with tenants to get subscription_tier
+      .eq('id', plainTeam.id)
+      .single();
 
-    console.log(`[@db:teamDb:getUserActiveTeam] Retrieved active team for user: ${userId}`);
+    if (error) throw error;
 
-    return {
-      success: true,
-      data: plainTeam,
+    const teamWithSubscription: Team = {
+      ...enhancedTeam,
+      subscription_tier: enhancedTeam.tenants?.subscription_tier_id, // Extract from joined data
     };
+
+    return { success: true, data: teamWithSubscription };
   } catch (error) {
     console.error(`[@db:teamDb:getUserActiveTeam] Error fetching user active team:`, error);
     return {
@@ -317,7 +317,7 @@ export async function setUserActiveTeam(
       return { success: false, error: 'Failed to get user teams', data: null };
     }
 
-    const isMember = teamsResult.data.some((team) => team.id === teamId);
+    const isMember = teamsResult.data.some((team: Team) => team.id === teamId);
     if (!isMember) {
       console.error(`[@db:teamDb:setUserActiveTeam] User is not a member of team: ${teamId}`);
       return { success: false, error: 'User is not a member of this team', data: null };
