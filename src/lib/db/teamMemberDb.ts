@@ -56,11 +56,29 @@ export async function getTeamMembers(
 
       // Map user profiles to team members
       data.forEach((member) => {
-        const team = member.teams as any;
-        const userProfile = userProfiles?.find((p) => p.id === member.profile_id);
+        // Cast member to TeamMemberDetails to allow for adding properties
+        const memberDetails = member as unknown as {
+          team_id: string;
+          profile_id: string;
+          role: string;
+          created_at: string;
+          updated_at: string;
+          profiles: any;
+          teams: any;
+          team_name?: string;
+          user?: {
+            id: string;
+            name?: string;
+            email?: string;
+            avatar_url?: string | null;
+          };
+        };
+
+        const team = memberDetails.teams as any;
+        const userProfile = userProfiles?.find((p) => p.id === memberDetails.profile_id);
 
         // Add team name to member
-        member.team_name = team?.name || 'Unknown Team';
+        memberDetails.team_name = team?.name || 'Unknown Team';
 
         // Get avatar with fallbacks, checking metadata if it exists
         let avatarUrl = userProfile?.avatar_url;
@@ -72,9 +90,15 @@ export async function getTeamMembers(
             null;
         }
 
-        member.user = {
-          id: member.profile_id,
-          name: userProfile?.full_name || 'User',
+        // Get name from raw_user_meta_data.name instead of full_name
+        let name = 'User';
+        if (userProfile?.raw_user_meta_data) {
+          name = userProfile.raw_user_meta_data.name || 'User';
+        }
+
+        memberDetails.user = {
+          id: memberDetails.profile_id,
+          name: name,
           email: userProfile?.email || 'Email unavailable',
           avatar_url: avatarUrl || null,
         };
@@ -263,13 +287,13 @@ export async function removeTeamMember(
 
 /**
  * Get available tenant profiles that can be added to a team
- * @param tenantId The tenant ID
+ * @param _tenantId The tenant ID (currently unused)
  * @param teamId The team ID
  * @param cookieStore Cookie store for authentication
  * @returns Profiles from the tenant that are not already team members
  */
 export async function getAvailableTenantProfilesForTeam(
-  tenantId: string,
+  _tenantId: string,
   teamId: string,
   cookieStore?: any,
 ): Promise<DbResponse<any[]>> {
@@ -365,7 +389,7 @@ export async function getAvailableTenantProfilesForTeam(
         email: userProfile?.email || null,
         user: {
           id: profile.id,
-          name: userProfile?.full_name || profile?.name || 'User',
+          name: userProfile?.raw_user_meta_data?.name || 'User',
           email: userProfile?.email || 'Email unavailable',
           avatar_url: avatarUrl || null,
         },
