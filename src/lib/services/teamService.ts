@@ -2,14 +2,7 @@ import { DbResponse } from '@/lib/utils/commonUtils';
 import { ResourceType, Operation } from '@/types/context/permissionsContextType';
 
 import { getUserPermissions, checkPermission } from '../db/permissionDb';
-import {
-  getTeams,
-  getUserTeams,
-  getTeamById,
-  createTeam,
-  updateTeam,
-  deleteTeam,
-} from '../db/teamDb';
+import { getUserTeams, getTeamById, createTeam, updateTeam, deleteTeam } from '../db/teamDb';
 import {
   getTeamMembers,
   addTeamMember,
@@ -21,26 +14,6 @@ import {
  * Team Service
  */
 export const teamService = {
-  /**
-   * Get all teams for a tenant
-   */
-  async getTeams(tenantId: string, cookieStore?: any): Promise<DbResponse<any[]>> {
-    try {
-      const result = await getTeams(tenantId, cookieStore);
-      return {
-        success: result.success,
-        data: result.data,
-        error: result.error,
-      };
-    } catch (error) {
-      console.error('[@service:teamService:getTeams] Error:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error fetching teams',
-      };
-    }
-  },
-
   /**
    * Get teams that a user belongs to
    */

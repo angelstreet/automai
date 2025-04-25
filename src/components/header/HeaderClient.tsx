@@ -10,6 +10,7 @@ import { Separator } from '@/components/shadcn/separator';
 import { SidebarTrigger } from '@/components/sidebar';
 import { ThemeToggleStatic } from '@/components/theme';
 import { Search } from '@/components/ui/Search';
+import { useTeam } from '@/hooks';
 import { cn } from '@/lib/utils';
 import { useHeaderStore } from '@/store/headerStore';
 import { Team } from '@/types/context/teamContextType';
@@ -32,6 +33,9 @@ export function HeaderClient({
 }: HeaderClientProps) {
   // Get header visibility state from Zustand store
   const { isVisible, toggleVisibility } = useHeaderStore();
+
+  // Access teams from context
+  const { teams } = useTeam('HeaderClient');
 
   // Function to toggle header visibility
   const handleToggleHeader = () => {
@@ -75,11 +79,11 @@ export function HeaderClient({
               </div>
             </div>
 
-            {/* Center section - can be used for tabs or other content */}
-            <div className="flex-1" />
+            {/* Center section - now contains Team Selector */}
+            <div className="flex items-center mx-4 min-w-[32rem]"></div>
 
             {/* Right section */}
-            <div className="flex items-center gap-4 px-4 h-full pr-14">
+            <div className="flex-1 flex items-center gap-4 px-4 h-full pr-14 justify-end">
               <div className="flex-none w-36 mr-4">
                 {user ? (
                   <RoleSwitcher

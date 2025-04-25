@@ -12,7 +12,6 @@ import {
   APP_SIDEBAR_WIDTH_ICON,
   sidebarNavigationData,
 } from '@/components/sidebar/constants';
-import { ActiveTeam } from '@/components/team/ActiveTeam';
 import TeamSelector from '@/components/team/TeamSelector';
 import { useSidebar } from '@/hooks';
 import { cn } from '@/lib/utils';
@@ -100,8 +99,6 @@ const SidebarClient = React.memo(function SidebarClient({
     >
       <SidebarHeader className="p-1.5">
         <div className="sidebar-header-content flex flex-col gap-2">
-          {/* Display the ActiveTeam component to show the current team */}
-          <ActiveTeam defaultCollapsed={!open} user={user} teams={teams} activeTeam={activeTeam} />
           <TeamSelector user={user} teams={teams} activeTeam={activeTeam} />
         </div>
       </SidebarHeader>

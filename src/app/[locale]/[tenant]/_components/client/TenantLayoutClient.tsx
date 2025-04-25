@@ -25,16 +25,18 @@ export default function TenantLayoutClient({
   user,
   teamDetails,
   teamResourceCounts,
+  allTeams = [],
   permissions,
 }: {
   children: ReactNode;
   user: User | null;
   teamDetails: Team | null;
   teamResourceCounts?: any;
+  allTeams?: Team[];
   permissions?: any;
 }) {
-  // Use teamDetails for now - this will be enhanced to include all teams
-  const teams = teamDetails ? [teamDetails] : [];
+  // Use allTeams if provided, otherwise fallback to single team array
+  const teams = allTeams && allTeams.length > 0 ? allTeams : teamDetails ? [teamDetails] : [];
 
   // Log teams data to debug
   console.log('[@component:TenantLayoutClient] Teams data:', {

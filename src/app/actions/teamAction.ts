@@ -10,7 +10,6 @@ import repositoryDb from '@/lib/db/repositoryDb';
 import {
   getUserTeams as dbGetUserTeams,
   getTeamById as dbGetTeamById,
-  getTeams as dbGetTeams,
   createTeam as dbCreateTeam,
   updateTeam as dbUpdateTeam,
   deleteTeam as dbDeleteTeam,
@@ -124,43 +123,6 @@ export const setUserActiveTeam = cache(async (userId: string, teamId: string): P
   } catch (e) {
     console.error('[@action:team:setUserActiveTeam] Error:', e);
     throw e;
-  }
-});
-
-/**
- * Get all teams for the current user's tenant
- * @param providedUser Optional user object to avoid redundant getUser calls
- * @returns Action result containing teams or error
- */
-export const getTeams = cache(async (providedUser?: User | null): Promise<ActionResult<Team[]>> => {
-  try {
-    const user = providedUser || (await getUser());
-    if (!user || !user.tenant_id) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
-    console.log(`[@action:team:getTeams] Getting teams for tenant: ${user.tenant_id}`);
-    const cookieStore = await cookies();
-    const result = await dbGetTeams(user.tenant_id, cookieStore);
-    console.log(`[@action:team:getTeams] Found ${result.data?.length || 0} teams`);
-
-    if (!result.success || !result.data) {
-      return {
-        success: false,
-        error: result.error || 'No teams found for tenant',
-      };
-    }
-
-    return {
-      success: true,
-      data: result.data,
-    };
-  } catch (error: any) {
-    console.error(`[@action:team:getTeams] Error getting teams:`, error);
-    return {
-      success: false,
-      error: error.message || 'Failed to fetch teams',
-    };
   }
 });
 

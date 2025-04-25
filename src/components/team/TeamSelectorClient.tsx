@@ -1,17 +1,11 @@
 'use client';
 
-import { Check, ChevronsUpDown, Users } from 'lucide-react';
+import { Building2, Check, ChevronsUpDown } from 'lucide-react';
 import { useState } from 'react';
 
 import { setUserActiveTeam } from '@/app/actions/teamAction';
 import { Button } from '@/components/shadcn/button';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from '@/components/shadcn/command';
+import { Command, CommandGroup, CommandItem } from '@/components/shadcn/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/shadcn/popover';
 import { cn } from '@/lib/utils';
 import { Team } from '@/types/context/teamContextType';
@@ -62,7 +56,7 @@ export function TeamSelectorClient({
   };
 
   return (
-    <div className="mt-2">
+    <div className="">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -72,19 +66,17 @@ export function TeamSelectorClient({
             className="justify-between w-full"
             disabled={isLoading}
           >
-            <div className="flex items-center">
-              <Users className="mr-2 h-4 w-4" />
+            <div className="flex items-center justify-center">
+              <Building2 className="mr-2 h-4 w-4" />
               <span className="truncate">
                 {selectedTeam ? selectedTeam.name : 'Select team...'}
               </span>
             </div>
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="p-0 w-[200px]">
+        <PopoverContent className="p-0 w-[240px]">
           <Command>
-            <CommandInput placeholder="Search team..." />
-            <CommandEmpty>No team found.</CommandEmpty>
             <CommandGroup>
               {teams.map((team) => (
                 <CommandItem
@@ -93,13 +85,13 @@ export function TeamSelectorClient({
                   onSelect={() => handleTeamSelect(team.id)}
                   disabled={isLoading}
                 >
+                  {team.name}
                   <Check
                     className={cn(
-                      'mr-2 h-4 w-4',
+                      'ml-2 h-4 w-4',
                       selectedTeam?.id === team.id ? 'opacity-100' : 'opacity-0',
                     )}
                   />
-                  {team.name}
                 </CommandItem>
               ))}
             </CommandGroup>

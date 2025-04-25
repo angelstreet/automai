@@ -69,48 +69,6 @@ export async function createTeam(
 }
 
 /**
- * Get all teams for a tenant
- */
-export async function getTeams(tenantId: string, cookieStore?: any): Promise<DbResponse<Team[]>> {
-  try {
-    const supabase = await createClient(cookieStore);
-    const { data, error } = await supabase
-      .from('teams')
-      .select('*')
-      .eq('tenant_id', tenantId)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-
-    // If no data, return early
-    if (!data || data.length === 0) {
-      return {
-        success: true,
-        data: [],
-      };
-    }
-
-    // Create an array of plain serializable objects
-    const plainTeams = data.map((rawTeam) => createSerializableTeam(rawTeam));
-
-    console.log(
-      `[@db:teamDb:getTeams] Retrieved ${plainTeams.length} teams for tenant: ${tenantId}`,
-    );
-
-    return {
-      success: true,
-      data: plainTeams,
-    };
-  } catch (error) {
-    console.error('[@db:teamDb:getTeams] Error fetching teams:', error);
-    return {
-      success: false,
-      error: (error as PostgrestError).message || 'Failed to fetch teams',
-    };
-  }
-}
-
-/**
  * Get teams that a user belongs to
  */
 export async function getUserTeams(
