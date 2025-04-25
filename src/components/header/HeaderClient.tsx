@@ -10,7 +10,6 @@ import { Separator } from '@/components/shadcn/separator';
 import { SidebarTrigger } from '@/components/sidebar';
 import { ThemeToggleStatic } from '@/components/theme';
 import { Search } from '@/components/ui/Search';
-import { useTeam } from '@/hooks';
 import { cn } from '@/lib/utils';
 import { useHeaderStore } from '@/store/headerStore';
 import { Team } from '@/types/context/teamContextType';
@@ -34,8 +33,8 @@ export function HeaderClient({
   // Get header visibility state from Zustand store
   const { isVisible, toggleVisibility } = useHeaderStore();
 
-  // Access teams from context
-  const { teams } = useTeam('HeaderClient');
+  // Use provided team or fallback to context
+  const currentTeam = activeTeam;
 
   // Function to toggle header visibility
   const handleToggleHeader = () => {
@@ -79,8 +78,12 @@ export function HeaderClient({
               </div>
             </div>
 
-            {/* Center section - now contains Team Selector */}
-            <div className="flex items-center mx-4 min-w-[32rem]"></div>
+            {/* Center section - Display tenant name */}
+            <div className="flex items-center mx-4 min-w-[32rem]">
+              {currentTeam?.tenant_name && (
+                <div className="text-lg font-semibold">{currentTeam.tenant_name}</div>
+              )}
+            </div>
 
             {/* Right section */}
             <div className="flex-1 flex items-center gap-4 px-4 h-full pr-14 justify-end">
@@ -106,7 +109,7 @@ export function HeaderClient({
                 <Suspense
                   fallback={<div className="h-8 w-8 bg-muted/30 rounded-full animate-pulse" />}
                 >
-                  <ProfileDropDown user={user} activeTeam={activeTeam} />
+                  <ProfileDropDown user={user} activeTeam={currentTeam} />
                 </Suspense>
                 <Separator orientation="vertical" className="h-8 opacity-30" />
               </div>

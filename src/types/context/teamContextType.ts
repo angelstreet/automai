@@ -6,6 +6,7 @@ export interface Team {
   name: string;
   description?: string;
   tenant_id: string;
+  tenant_name?: string;
   created_by?: string;
   is_default: boolean;
   created_at: string;

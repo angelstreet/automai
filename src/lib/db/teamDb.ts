@@ -7,6 +7,7 @@ export interface Team {
   id: string;
   name: string;
   tenant_id: string;
+  tenant_name?: string;
   subscription_tier: string;
   organization_id?: string;
   is_default: boolean;
@@ -27,6 +28,7 @@ function createSerializableTeam(rawTeam: any): Team {
     id: rawTeam?.id || '',
     name: rawTeam?.name || '',
     tenant_id: rawTeam?.tenant_id || '',
+    tenant_name: rawTeam?.tenants?.name || '',
     subscription_tier: rawTeam?.subscription_tier || '',
     organization_id: rawTeam?.organization_id || null,
     is_default: Boolean(rawTeam?.is_default),
@@ -80,7 +82,13 @@ export async function getUserTeams(
 
     const { data, error } = await supabase
       .from('teams')
-      .select('*, team_members!inner(profile_id)')
+      .select(
+        `
+        *,
+        team_members!inner(profile_id),
+        tenants:tenant_id(name)
+      `,
+      )
       .eq('team_members.profile_id', profileId);
 
     if (error) throw error;
@@ -121,7 +129,16 @@ export async function getTeamById(teamId: string, cookieStore?: any): Promise<Db
   try {
     const supabase = await createClient(cookieStore);
 
-    const { data, error } = await supabase.from('teams').select('*').eq('id', teamId).single();
+    const { data, error } = await supabase
+      .from('teams')
+      .select(
+        `
+        *,
+        tenants:tenant_id(name)
+      `,
+      )
+      .eq('id', teamId)
+      .single();
 
     if (error) throw error;
 
@@ -264,21 +281,28 @@ export async function getUserActiveTeam(
       return { success: false, error: 'No active team found for user' };
     }
 
-    // Now fetch the team with additional details like subscription tier
+    // Now fetch the team with additional details like subscription tier and tenant name
     const { data: enhancedTeam, error } = await supabase
       .from('teams')
-      .select('*, tenants(*)') // Join with tenants to get subscription_tier
+      .select(
+        `
+        *,
+        tenants:tenant_id(name, subscription_tier_id)
+      `,
+      )
       .eq('id', teamToUse.id)
       .single();
 
     if (error) throw error;
 
-    const teamWithSubscription: Team = {
+    // Create a serializable team object with tenant name
+    const teamWithDetails: Team = {
       ...enhancedTeam,
-      subscription_tier: enhancedTeam.tenants?.subscription_tier_id, // Extract from joined data
+      subscription_tier: enhancedTeam.tenants?.subscription_tier_id,
+      tenant_name: enhancedTeam.tenants?.name || '',
     };
 
-    return { success: true, data: teamWithSubscription };
+    return { success: true, data: teamWithDetails };
   } catch (error) {
     console.error(`[@db:teamDb:getUserActiveTeam] Error fetching user active team:`, error);
     return {
