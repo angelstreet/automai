@@ -302,12 +302,11 @@ export async function getAvailableTenantProfilesForTeam(
         `
         id, 
         avatar_url,
-        tenant_id,
+        active_team,
         role,
-        tenant_name
       `,
       )
-      .eq('tenant_id', tenantId);
+      .eq('active_team', teamId);
 
     // Filter out existing team members if any
     if (currentMemberIds.length > 0) {
