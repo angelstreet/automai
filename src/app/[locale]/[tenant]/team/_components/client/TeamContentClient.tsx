@@ -27,7 +27,11 @@ interface TeamTabContainerProps {
   teamMembers?: TeamMember[];
 }
 
-export default function TeamContentClient({ user, teamDetails, teamMembers = [] }: TeamTabContainerProps) {
+export default function TeamContentClient({
+  user,
+  teamDetails,
+  teamMembers = [],
+}: TeamTabContainerProps) {
   const searchParams = useSearchParams();
   const activeTab = searchParams.get('tab') || 'overview';
 
@@ -37,22 +41,25 @@ export default function TeamContentClient({ user, teamDetails, teamMembers = [] 
       <div className="space-y-6">{activeTab === 'overview' ? <OverviewTabSkeleton /> : null}</div>
     );
   }
-  
+
   const activeTeam = teamDetails.team;
-  
+
   // Extract the actual subscription tier with better defaults
   const subscriptionTier =
     ('subscription_tier' in activeTeam ? (activeTeam.subscription_tier as string) : null) ||
     ('tenant_name' in activeTeam ? (activeTeam.tenant_name as string) : null) ||
     'pro'; // Default to 'pro' for testing
-  
+
   // Convert to TeamDetails format for the overview
   const formattedTeamDetails: TeamDetails = {
     id: activeTeam.id || null,
     name: activeTeam.name || 'Team',
     subscription_tier: subscriptionTier,
     memberCount: teamDetails.memberCount || 0,
-    role: teamDetails.userRole || user?.role || ('role' in activeTeam ? (activeTeam.role as string) : null),
+    role:
+      teamDetails.userRole ||
+      user?.role ||
+      ('role' in activeTeam ? (activeTeam.role as string) : null),
     ownerId: 'ownerId' in activeTeam ? (activeTeam.ownerId as string) : null,
     ownerEmail: 'ownerEmail' in activeTeam ? (activeTeam.ownerEmail as string) : null,
     resourceCounts: teamDetails.resourceCounts || {
