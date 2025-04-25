@@ -54,7 +54,7 @@ export function TeamSelectorClient({
   };
 
   return (
-    <div className="">
+    <div className="p-0">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
