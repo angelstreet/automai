@@ -1,4 +1,4 @@
-import { ProfileContent as ClientProfileContent } from './client/ProfileContent';
+import { ProfileContentClient  } from './client/ProfileContentClient';
 
 /**
  * Server component wrapper for ProfileContent
@@ -9,5 +9,5 @@ interface ProfileContentProps {
 }
 
 export function ProfileContent({ user }: ProfileContentProps) {
-  return <ClientProfileContent user={user} />;
+  return <ProfileContentClient user={user} />;
 }
