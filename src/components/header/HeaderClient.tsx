@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { Building2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Suspense, useEffect } from 'react';
 
 import { RoleSwitcher } from '@/components/layout/RoleSwitcher';
@@ -81,7 +81,10 @@ export function HeaderClient({
             {/* Center section - Display tenant name */}
             <div className="flex items-center justify-start mx-10 min-w-[30rem]">
               {currentTeam?.tenant_name && (
-                <div className="text-lg font-semibold ml-4">{currentTeam.tenant_name}</div>
+                <div className="text-lg font-semibold ml-4 flex items-center">
+                  <Building2 className="mr-2 h-5 w-5" />
+                  {currentTeam.tenant_name}
+                </div>
               )}
             </div>
 

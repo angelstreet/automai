@@ -1,6 +1,6 @@
 'use client';
 
-import { Building2, Check, ChevronsUpDown } from 'lucide-react';
+import { Handshake, Check, ChevronsUpDown } from 'lucide-react';
 import { useState } from 'react';
 
 import { setUserActiveTeam } from '@/app/actions/teamAction';
@@ -63,8 +63,8 @@ export function TeamSelectorClient({
             aria-expanded={open}
             className="justify-between w-full"
           >
-            <div className="flex items-center justify-center">
-              <Building2 className="mr-2 h-4 w-4" />
+            <div className="flex items-center">
+              <Handshake className="mr-2 h-4 w-4" />
               <span className="truncate">
                 {selectedTeam ? selectedTeam.name : 'Select team...'}
               </span>
