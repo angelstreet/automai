@@ -23,7 +23,6 @@ interface SidebarClientProps {
   user?: User | null;
   teams?: Team[];
   activeTeam?: Team | null;
-  setSelectedTeam?: (teamId: string) => Promise<void>;
 }
 
 // Wrap the component with React.memo to prevent unnecessary re-renders
@@ -31,7 +30,6 @@ const SidebarClient = React.memo(function SidebarClient({
   user,
   teams = [],
   activeTeam = null,
-  setSelectedTeam,
 }: SidebarClientProps) {
   const sidebarContext = useSidebar('SidebarClient');
   const state = sidebarContext?.state || 'expanded';
@@ -103,23 +101,10 @@ const SidebarClient = React.memo(function SidebarClient({
       <SidebarHeader className="p-1.5">
         <div className="sidebar-header-content flex flex-col gap-2">
           {/* Display the ActiveTeam component to show the current team */}
-          <ActiveTeam
-            defaultCollapsed={!open}
-            user={user}
-            teams={teams}
-            activeTeam={activeTeam}
-            setSelectedTeam={setSelectedTeam}
-          />
+          <ActiveTeam defaultCollapsed={!open} user={user} teams={teams} activeTeam={activeTeam} />
 
           {/* Display the TeamSelector component if there are multiple teams */}
-          {teams.length > 1 && (
-            <TeamSelector
-              user={user}
-              teams={teams}
-              activeTeam={activeTeam}
-              setSelectedTeam={setSelectedTeam}
-            />
-          )}
+          {teams.length > 1 && <TeamSelector user={user} teams={teams} activeTeam={activeTeam} />}
         </div>
       </SidebarHeader>
       <SidebarContent className={cn('pt-2', !open && 'pt-4')}>

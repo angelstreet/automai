@@ -10,7 +10,6 @@ interface ActiveTeamProps {
   teams?: Team[];
   user?: User | null;
   activeTeam?: Team | null;
-  setSelectedTeam?: (teamId: string) => Promise<void>;
 }
 
 export function ActiveTeam({
@@ -18,7 +17,6 @@ export function ActiveTeam({
   user,
   teams = [],
   activeTeam = null,
-  setSelectedTeam,
 }: ActiveTeamProps) {
   return (
     <Suspense
@@ -35,7 +33,6 @@ export function ActiveTeam({
         user={user || null}
         teams={teams}
         selectedTeam={activeTeam}
-        onTeamSelect={setSelectedTeam}
       />
     </Suspense>
   );

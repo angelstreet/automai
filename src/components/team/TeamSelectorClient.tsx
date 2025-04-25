@@ -3,6 +3,7 @@
 import { Check, ChevronsUpDown, Users } from 'lucide-react';
 import { useState } from 'react';
 
+import { setUserActiveTeam } from '@/app/actions/teamAction';
 import { Button } from '@/components/shadcn/button';
 import {
   Command,
@@ -20,7 +21,7 @@ interface TeamSelectorClientProps {
   user: User | null;
   teams?: Team[];
   selectedTeam?: Team | null;
-  onTeamSelect?: (teamId: string) => Promise<void>;
+  onTeamSelect?: (teamId: string) => Promise<void>; // Optional callback for after team selection
 }
 
 export function TeamSelectorClient({
@@ -30,6 +31,7 @@ export function TeamSelectorClient({
   onTeamSelect,
 }: TeamSelectorClientProps) {
   const [open, setOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Only show when user exists and there are multiple teams
   if (!user || teams.length <= 1) {
@@ -37,51 +39,73 @@ export function TeamSelectorClient({
   }
 
   const handleTeamSelect = async (teamId: string) => {
-    if (onTeamSelect) {
-      await onTeamSelect(teamId);
+    if (!user.id) return;
+
+    setIsLoading(true);
+    try {
+      // Directly call the server action to change the active team
+      await setUserActiveTeam(user.id, teamId);
+
+      // Optionally call the provided callback
+      if (onTeamSelect) {
+        await onTeamSelect(teamId);
+      } else {
+        // If no callback is provided, refresh the page to show the new team
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('[@component:TeamSelectorClient] Failed to set active team:', error);
+    } finally {
+      setIsLoading(false);
+      setOpen(false);
     }
-    setOpen(false);
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="justify-between w-full"
-        >
-          <div className="flex items-center">
-            <Users className="mr-2 h-4 w-4" />
-            <span className="truncate">{selectedTeam ? selectedTeam.name : 'Select team...'}</span>
-          </div>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="p-0 w-[200px]">
-        <Command>
-          <CommandInput placeholder="Search team..." />
-          <CommandEmpty>No team found.</CommandEmpty>
-          <CommandGroup>
-            {teams.map((team) => (
-              <CommandItem
-                key={team.id}
-                value={team.name}
-                onSelect={() => handleTeamSelect(team.id)}
-              >
-                <Check
-                  className={cn(
-                    'mr-2 h-4 w-4',
-                    selectedTeam?.id === team.id ? 'opacity-100' : 'opacity-0',
-                  )}
-                />
-                {team.name}
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        </Command>
-      </PopoverContent>
-    </Popover>
+    <div className="mt-2">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="justify-between w-full"
+            disabled={isLoading}
+          >
+            <div className="flex items-center">
+              <Users className="mr-2 h-4 w-4" />
+              <span className="truncate">
+                {selectedTeam ? selectedTeam.name : 'Select team...'}
+              </span>
+            </div>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="p-0 w-[200px]">
+          <Command>
+            <CommandInput placeholder="Search team..." />
+            <CommandEmpty>No team found.</CommandEmpty>
+            <CommandGroup>
+              {teams.map((team) => (
+                <CommandItem
+                  key={team.id}
+                  value={team.name}
+                  onSelect={() => handleTeamSelect(team.id)}
+                  disabled={isLoading}
+                >
+                  <Check
+                    className={cn(
+                      'mr-2 h-4 w-4',
+                      selectedTeam?.id === team.id ? 'opacity-100' : 'opacity-0',
+                    )}
+                  />
+                  {team.name}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
   );
 }

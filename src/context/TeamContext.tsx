@@ -12,7 +12,8 @@ import type { Team } from '@/types/context/teamContextType';
 export interface TeamContextState {
   teams: Team[];
   activeTeam: Team | null;
-  setSelectedTeam?: (teamId: string) => Promise<void>;
+  resourceCounts?: any;
+  loading?: boolean;
 }
 
 /**
@@ -23,5 +24,6 @@ export interface TeamContextState {
 export const TeamContext = createContext<TeamContextState>({
   teams: [],
   activeTeam: null,
-  setSelectedTeam: undefined,
+  resourceCounts: null,
+  loading: false,
 });

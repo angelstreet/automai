@@ -11,7 +11,6 @@ interface TeamProviderProps {
   activeTeam: Team | null;
   resourceCounts?: any;
   initialLoading?: boolean;
-  setSelectedTeam?: (teamId: string) => Promise<void>;
 }
 
 /**
@@ -24,7 +23,6 @@ export function TeamProvider({
   activeTeam,
   resourceCounts = null,
   initialLoading = false,
-  setSelectedTeam,
 }: TeamProviderProps) {
   const [loading, _setLoading] = React.useState(initialLoading);
 
@@ -35,7 +33,6 @@ export function TeamProvider({
         activeTeam,
         resourceCounts,
         loading,
-        setSelectedTeam,
       }}
     >
       {children}

@@ -19,7 +19,6 @@ interface ActiveTeamClientProps {
   user: User | null;
   teams?: Team[];
   selectedTeam?: Team | null;
-  onTeamSelect?: (teamId: string) => Promise<void>;
 }
 
 // Icons mapping for different subscription tiers
@@ -34,7 +33,6 @@ export default function ActiveTeamClient({
   user,
   teams = [],
   selectedTeam = null,
-  onTeamSelect: _onTeamSelect, // Rename to avoid unused parameter warning
 }: ActiveTeamClientProps) {
   // If no user data yet, show a minimal loading state
   if (!user) {

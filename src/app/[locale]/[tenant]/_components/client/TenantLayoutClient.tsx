@@ -1,9 +1,8 @@
 'use client';
 
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
-import { ReactNode, Suspense, useCallback } from 'react';
+import { ReactNode, Suspense } from 'react';
 
-import { setUserActiveTeam } from '@/app/actions/teamAction';
 import { TeamProvider, UserProvider, SidebarProvider, PermissionProvider } from '@/app/providers';
 import { HeaderClient, HeaderSkeleton } from '@/components/header';
 import HeaderEventListener from '@/components/header/HeaderEventListener';
@@ -34,16 +33,14 @@ export default function TenantLayoutClient({
   teamResourceCounts?: any;
   permissions?: any;
 }) {
+  // Use teamDetails for now - this will be enhanced to include all teams
   const teams = teamDetails ? [teamDetails] : [];
 
-  // Create a setSelectedTeam function that calls the server action
-  const setSelectedTeam = useCallback(
-    async (teamId: string) => {
-      if (!user?.id) return;
-      return setUserActiveTeam(user.id, teamId);
-    },
-    [user?.id],
-  );
+  // Log teams data to debug
+  console.log('[@component:TenantLayoutClient] Teams data:', {
+    teamsCount: teams.length,
+    activeTeam: teamDetails?.name || 'None',
+  });
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -52,7 +49,6 @@ export default function TenantLayoutClient({
           teams={teams}
           activeTeam={teamDetails}
           resourceCounts={teamResourceCounts}
-          setSelectedTeam={setSelectedTeam}
           initialLoading={false}
         >
           <PermissionProvider initialPermissions={permissions}>
@@ -61,12 +57,7 @@ export default function TenantLayoutClient({
               <div className="flex">
                 <Suspense fallback={<SidebarSkeleton />}>
                   <aside>
-                    <SidebarClient
-                      user={user}
-                      teams={teams}
-                      activeTeam={teamDetails}
-                      setSelectedTeam={setSelectedTeam}
-                    />
+                    <SidebarClient user={user} teams={teams} activeTeam={teamDetails} />
                   </aside>
                 </Suspense>
 
