@@ -99,7 +99,7 @@ const SidebarClient = React.memo(function SidebarClient({
     >
       <SidebarHeader className="p-1.5">
         <div className="sidebar-header-content flex flex-col gap-2">
-          <TeamSelector user={user} teams={teams} activeTeam={activeTeam} />
+          {teams.length > 1 && <TeamSelector user={user} teams={teams} activeTeam={activeTeam} />}
         </div>
       </SidebarHeader>
       <SidebarContent className={cn('pt-2', !open && 'pt-4')}>
