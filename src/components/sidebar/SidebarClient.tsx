@@ -12,8 +12,8 @@ import {
   APP_SIDEBAR_WIDTH_ICON,
   sidebarNavigationData,
 } from '@/components/sidebar/constants';
+import { ActiveTeam } from '@/components/team/ActiveTeam';
 import TeamSelector from '@/components/team/TeamSelector';
-import { TeamSwitcher } from '@/components/team/TeamSwitcher';
 import { useSidebar } from '@/hooks';
 import { cn } from '@/lib/utils';
 import { Team } from '@/types/context/teamContextType';
@@ -33,7 +33,9 @@ const SidebarClient = React.memo(function SidebarClient({
   activeTeam = null,
   setSelectedTeam,
 }: SidebarClientProps) {
-  const { open, state } = useSidebar('SidebarClient');
+  const sidebarContext = useSidebar('SidebarClient');
+  const state = sidebarContext?.state || 'expanded';
+  const open = sidebarContext?.open || true;
 
   // Track role changes with local state
   const [currentRole, setCurrentRole] = React.useState(user?.role || 'viewer');
@@ -57,6 +59,17 @@ const SidebarClient = React.memo(function SidebarClient({
       window.removeEventListener('debug-role-change', handleRoleChange as EventListener);
     };
   }, []);
+
+  // Log debug information
+  React.useEffect(() => {
+    console.log('[@component:SidebarClient] Rendering with:', {
+      user: user ? 'User data available' : 'No user data',
+      teamsCount: teams.length,
+      activeTeam: activeTeam?.name || 'No active team',
+      open,
+      state,
+    });
+  }, [user, teams, activeTeam, open, state]);
 
   // Extract navigation data from constants
   const navGroups = sidebarNavigationData.groups;
@@ -89,19 +102,24 @@ const SidebarClient = React.memo(function SidebarClient({
     >
       <SidebarHeader className="p-1.5">
         <div className="sidebar-header-content flex flex-col gap-2">
-          <TeamSwitcher
+          {/* Display the ActiveTeam component to show the current team */}
+          <ActiveTeam
             defaultCollapsed={!open}
             user={user}
             teams={teams}
             activeTeam={activeTeam}
             setSelectedTeam={setSelectedTeam}
           />
-          <TeamSelector
-            user={user}
-            teams={teams}
-            activeTeam={activeTeam}
-            setSelectedTeam={setSelectedTeam}
-          />
+
+          {/* Display the TeamSelector component if there are multiple teams */}
+          {teams.length > 1 && (
+            <TeamSelector
+              user={user}
+              teams={teams}
+              activeTeam={activeTeam}
+              setSelectedTeam={setSelectedTeam}
+            />
+          )}
         </div>
       </SidebarHeader>
       <SidebarContent className={cn('pt-2', !open && 'pt-4')}>

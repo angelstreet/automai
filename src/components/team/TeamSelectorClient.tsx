@@ -31,8 +31,8 @@ export function TeamSelectorClient({
 }: TeamSelectorClientProps) {
   const [open, setOpen] = useState(false);
 
-  // Only show for enterprise users with multiple teams
-  if (!user || user.tenant_name !== 'enterprise' || teams.length <= 1) {
+  // Only show when user exists and there are multiple teams
+  if (!user || teams.length <= 1) {
     return null;
   }
 

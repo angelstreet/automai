@@ -1,11 +1,11 @@
 import { Building2 } from 'lucide-react';
 import { Suspense } from 'react';
 
-import TeamSwitcherClient from '@/components/team/TeamSwitcherClient';
+import ActiveTeamClient from '@/components/team/ActiveTeamClient';
 import type { Team } from '@/types/context/teamContextType';
 import { User } from '@/types/service/userServiceType';
 
-interface TeamSwitcherProps {
+interface ActiveTeamProps {
   defaultCollapsed?: boolean;
   teams?: Team[];
   user?: User | null;
@@ -13,13 +13,13 @@ interface TeamSwitcherProps {
   setSelectedTeam?: (teamId: string) => Promise<void>;
 }
 
-export function TeamSwitcher({
+export function ActiveTeam({
   defaultCollapsed = false,
   user,
   teams = [],
   activeTeam = null,
   setSelectedTeam,
-}: TeamSwitcherProps) {
+}: ActiveTeamProps) {
   return (
     <Suspense
       fallback={
@@ -30,9 +30,9 @@ export function TeamSwitcher({
         </div>
       }
     >
-      <TeamSwitcherClient
+      <ActiveTeamClient
         defaultCollapsed={defaultCollapsed}
-        user={user}
+        user={user || null}
         teams={teams}
         selectedTeam={activeTeam}
         onTeamSelect={setSelectedTeam}
