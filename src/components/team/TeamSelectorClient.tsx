@@ -5,7 +5,7 @@ import { useState } from 'react';
 
 import { setUserActiveTeam } from '@/app/actions/teamAction';
 import { Button } from '@/components/shadcn/button';
-import { Command, CommandGroup, CommandItem } from '@/components/shadcn/command';
+import { Command, CommandGroup } from '@/components/shadcn/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/shadcn/popover';
 import { cn } from '@/lib/utils';
 import { Team } from '@/types/context/teamContextType';
@@ -25,7 +25,6 @@ export function TeamSelectorClient({
   onTeamSelect,
 }: TeamSelectorClientProps) {
   const [open, setOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
 
   // Only show when user exists and there are multiple teams
   if (!user || teams.length <= 1) {
@@ -35,8 +34,8 @@ export function TeamSelectorClient({
   const handleTeamSelect = async (teamId: string) => {
     if (!user.id) return;
 
-    setIsLoading(true);
     try {
+      console.log(`[@component:TeamSelectorClient] Selecting team: ${teamId}`);
       // Directly call the server action to change the active team
       await setUserActiveTeam(user.id, teamId);
 
@@ -50,7 +49,6 @@ export function TeamSelectorClient({
     } catch (error) {
       console.error('[@component:TeamSelectorClient] Failed to set active team:', error);
     } finally {
-      setIsLoading(false);
       setOpen(false);
     }
   };
@@ -64,7 +62,6 @@ export function TeamSelectorClient({
             role="combobox"
             aria-expanded={open}
             className="justify-between w-full"
-            disabled={isLoading}
           >
             <div className="flex items-center justify-center">
               <Building2 className="mr-2 h-4 w-4" />
@@ -79,11 +76,10 @@ export function TeamSelectorClient({
           <Command>
             <CommandGroup>
               {teams.map((team) => (
-                <CommandItem
+                <div
                   key={team.id}
-                  value={team.name}
-                  onSelect={() => handleTeamSelect(team.id)}
-                  disabled={isLoading}
+                  className="flex items-center justify-between px-2 py-1.5 text-sm rounded-sm cursor-pointer hover:bg-accent hover:text-accent-foreground"
+                  onClick={() => handleTeamSelect(team.id)}
                 >
                   {team.name}
                   <Check
@@ -92,7 +88,7 @@ export function TeamSelectorClient({
                       selectedTeam?.id === team.id ? 'opacity-100' : 'opacity-0',
                     )}
                   />
-                </CommandItem>
+                </div>
               ))}
             </CommandGroup>
           </Command>
