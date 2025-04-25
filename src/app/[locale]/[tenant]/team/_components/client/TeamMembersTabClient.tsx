@@ -254,63 +254,60 @@ function MembersTabContent({
 }
 
 // Main exported component that provides the dialog context
-export function MembersTab({ 
-  teamId, 
+export function MembersTab({
+  teamId,
   subscriptionTier: _subscriptionTier,
-  initialMembers = []
+  initialMembers = [],
 }: MembersTabProps & { initialMembers?: TeamMember[] }) {
+  // Only fetch if we don't have initial data or when we explicitly need to
   const teamMembersQuery = useTeamMembers(teamId);
-  const [members, setMembers] = useState<TeamMemberDetails[]>(initialMembers as TeamMemberDetails[]);
-  const [isLoading, setIsLoading] = useState(initialMembers.length === 0);
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Use our new React Query hook for removing team members
+  const { openAddDialog } = useContext(TeamMemberDialogContext) || {};
   const removeTeamMemberMutation = useRemoveTeamMember();
 
+  // State to track whether we're using initial data
+  const [usingInitialData, setUsingInitialData] = useState(initialMembers.length > 0);
+
+  // Members state to display in the UI
+  const [members, setMembers] = useState<TeamMemberDetails[]>(
+    initialMembers.length > 0 ? (initialMembers as TeamMemberDetails[]) : [],
+  );
+
+  // Handle data from query only if we're not using initial data
   useEffect(() => {
-    // If we have initial members, don't fetch again on mount
-    if (initialMembers.length > 0 && !teamMembersQuery.isLoading) {
-      setIsLoading(false);
-      return;
+    // Only update from query if:
+    // 1. We don't have initial data OR
+    // 2. Initial data was empty but query returned results
+    if (!usingInitialData || (usingInitialData && members.length === 0)) {
+      if (teamMembersQuery.data?.success && teamMembersQuery.data?.data) {
+        console.log(
+          '[@component:TeamMembersTab] Using query data:',
+          teamMembersQuery.data.data.length,
+        );
+        setMembers(teamMembersQuery.data.data as TeamMemberDetails[]);
+      }
+    } else {
+      // We have initial data, log it
+      console.log('[@component:TeamMembersTab] Using initial server data:', members.length);
     }
-    
-    const fetchMembers = async () => {
-      if (!teamId) {
-        setMembers([]);
-        setIsLoading(false);
-        return;
-      }
+  }, [teamMembersQuery.data, usingInitialData, members.length]);
 
-      try {
-        setIsLoading(true);
-        // Use the data from the useTeamMembers hook
-        const queryData = teamMembersQuery.data;
-        if (
-          queryData &&
-          'success' in queryData &&
-          queryData.success &&
-          'data' in queryData &&
-          queryData.data
-        ) {
-          setMembers(queryData.data as TeamMemberDetails[]);
-        } else {
-          setMembers([]);
-        }
-      } catch (error) {
-        console.error('Failed to fetch team members:', error);
-        setMembers([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  // Handle errors
+  useEffect(() => {
+    if (teamMembersQuery.isError) {
+      console.error(
+        '[@component:TeamMembersTab] Error fetching team members:',
+        teamMembersQuery.error,
+      );
+    }
+  }, [teamMembersQuery.isError, teamMembersQuery.error]);
 
-    fetchMembers();
-  }, [teamId, teamMembersQuery.data, initialMembers, teamMembersQuery.isLoading]);
-
-  // Listen for refresh events from outside components (like TeamActionsClient)
+  // Listen for manual refresh events
   useEffect(() => {
     const handleRefresh = () => {
-      teamMembersQuery.refetch();
+      console.log('[@component:TeamMembersTab] Manual refresh triggered');
+      setUsingInitialData(false); // Stop using initial data
+      teamMembersQuery.refetch(); // Force refetch
     };
 
     window.addEventListener('refresh-team-members', handleRefresh);
@@ -335,13 +332,18 @@ export function MembersTab({
       // Use the mutation hook instead of direct action call
       await removeTeamMemberMutation.mutateAsync({ teamId, profileId });
 
-      // The mutation will handle invalidation through its onSuccess callback
-      // But we still update the local state for immediate UI feedback
+      // Immediately update local state for user feedback
       setMembers((current) => current.filter((member) => member.profile_id !== profileId));
+
+      // After remove, set using initial data to false and refetch
+      setUsingInitialData(false);
     } catch (error) {
       console.error('Error removing team member:', error);
     }
   };
+
+  // Only show loading when we have no data at all and are fetching
+  const isLoading = members.length === 0 && teamMembersQuery.isLoading;
 
   return (
     <MembersTabContent

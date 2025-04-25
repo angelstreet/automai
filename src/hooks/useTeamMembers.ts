@@ -5,12 +5,19 @@ import { useQuery } from '@tanstack/react-query';
 import { getTeamMembers } from '@/app/actions/teamMemberAction';
 import type { TeamMember } from '@/types/context/teamContextType';
 
+// Define the return type for better type safety
+interface TeamMembersResponse {
+  success: boolean;
+  error: string | null;
+  data: TeamMember[];
+}
+
 /**
  * Hook for accessing team members
  * @param teamId The team ID to fetch members for
  */
 export function useTeamMembers(teamId: string | null) {
-  return useQuery({
+  return useQuery<TeamMembersResponse, Error>({
     queryKey: ['teamMembers', teamId],
     queryFn: async () => {
       try {
@@ -19,6 +26,8 @@ export function useTeamMembers(teamId: string | null) {
           console.log('[@hook:useTeamMembers] No team ID provided, returning empty result');
           return { success: false, error: 'No team ID provided', data: [] };
         }
+
+        console.log('[@hook:useTeamMembers] Fetching team members for teamId:', teamId);
 
         // Call the server action with proper error handling
         const result = await getTeamMembers(teamId).catch((error) => {
@@ -43,6 +52,8 @@ export function useTeamMembers(teamId: string | null) {
           };
         }
 
+        console.log(`[@hook:useTeamMembers] Retrieved ${result.data?.length || 0} team members`);
+
         // Return the result with validation to ensure expected structure
         return {
           success: result.success === true,
@@ -61,10 +72,12 @@ export function useTeamMembers(teamId: string | null) {
     },
     // Only run the query if teamId exists
     enabled: !!teamId,
-    // Don't refetch on window focus
+    // Don't refetch on window focus since this data rarely changes
     refetchOnWindowFocus: false,
-    // Keep data fresh for 5 minutes
-    staleTime: 5 * 60 * 1000,
+    // Long stale time since team members don't change often - 1 hour
+    staleTime: 60 * 60 * 1000,
+    // Retry only once to avoid excessive requests
+    retry: 1,
   });
 }
 
@@ -72,7 +85,7 @@ export function useTeamMembers(teamId: string | null) {
  * Type-safe accessor for team member data
  * @param result The result from useTeamMembers
  */
-export function getTeamMembersData(result: ActionResult<TeamMember[]> | undefined): TeamMember[] {
+export function getTeamMembersData(result: TeamMembersResponse | undefined): TeamMember[] {
   if (!result || !result.success || !result.data) {
     return [];
   }
