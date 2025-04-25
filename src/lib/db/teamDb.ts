@@ -252,8 +252,23 @@ export async function getUserActiveTeam(
   teams?: Team[],
 ): Promise<DbResponse<Team>> {
   try {
-    let userTeams: Team[] = [];
+    const supabase = await createClient(cookieStore);
 
+    // First check if the user has an active_team set in their profile
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('active_team')
+      .eq('id', userId)
+      .single();
+
+    if (profileError) {
+      console.error(`[@db:teamDb:getUserActiveTeam] Error fetching user profile:`, profileError);
+    }
+
+    const activeTeamId = profile?.active_team;
+
+    // Get user's teams
+    let userTeams: Team[] = [];
     if (teams && teams.length > 0) {
       userTeams = teams;
     } else {
@@ -264,12 +279,38 @@ export async function getUserActiveTeam(
       userTeams = result.data;
     }
 
-    const plainTeam = userTeams[0]; // Default to first team
-    const supabase = await createClient(cookieStore);
+    // If active_team is set and it exists in the user's teams, use it
+    let teamToUse: Team | undefined;
+
+    if (activeTeamId) {
+      teamToUse = userTeams.find((team) => team.id === activeTeamId);
+
+      if (teamToUse) {
+        console.log(
+          `[@db:teamDb:getUserActiveTeam] Using active_team from profile: ${activeTeamId}`,
+        );
+      } else {
+        console.log(
+          `[@db:teamDb:getUserActiveTeam] Active team ${activeTeamId} from profile not found in user's teams, using first available team`,
+        );
+      }
+    }
+
+    // Fall back to first team if active_team not set or not found
+    if (!teamToUse && userTeams.length > 0) {
+      teamToUse = userTeams[0];
+      console.log(`[@db:teamDb:getUserActiveTeam] Using first team as fallback: ${teamToUse.id}`);
+    }
+
+    if (!teamToUse) {
+      return { success: false, error: 'No active team found for user' };
+    }
+
+    // Now fetch the team with additional details like subscription tier
     const { data: enhancedTeam, error } = await supabase
       .from('teams')
       .select('*, tenants(*)') // Join with tenants to get subscription_tier
-      .eq('id', plainTeam.id)
+      .eq('id', teamToUse.id)
       .single();
 
     if (error) throw error;
