@@ -86,6 +86,7 @@ export interface Deployment {
   scriptsParameters: string[];
   hostIds: string[];
   environmentVars?: any[];
+  config?: Record<string, any>;
 }
 
 export interface DeploymentConfig {

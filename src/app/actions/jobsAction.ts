@@ -551,7 +551,14 @@ export async function getJobRunsForConfig(configId: string) {
  * @param data Partial job data to update
  * @returns Success status and updated job data or error
  */
-export async function updateJob(id: string, data: Partial<{ name: string; description: string }>) {
+export async function updateJob(
+  id: string,
+  data: Partial<{
+    name: string;
+    description: string;
+    config: Record<string, any>;
+  }>,
+) {
   try {
     console.log(`[@action:jobsAction:updateJob] Updating job with ID: "${id}"`);
 
@@ -586,7 +593,15 @@ export async function updateJob(id: string, data: Partial<{ name: string; descri
     const updateData: Partial<JobConfiguration> = {
       ...(data.name !== undefined && { name: data.name }),
       ...(data.description !== undefined && { description: data.description }),
+      ...(data.config !== undefined && { config: data.config }),
     };
+
+    // Log the update data
+    console.log(`[@action:jobsAction:updateJob] Update data:`, {
+      id,
+      fields: Object.keys(updateData),
+      hasConfig: !!data.config,
+    });
 
     // Update the job configuration
     console.log(`[@action:jobsAction:updateJob] Updating job configuration: ${id}`);

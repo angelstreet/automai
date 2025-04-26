@@ -51,6 +51,7 @@
     "manage": "Manage",
     "insert": "Create",
     "update": "Update",
+    "updating": "Updating...",
     "update_own": "Edit Own",
     "delete_own": "Delete Own",
     "execute": "Execute",
@@ -78,7 +79,8 @@
     "connection": "Connection",
     "ip": "IP",
     "custom": "Custom",
-    "url": "URL"
+    "url": "URL",
+    "config": "Configuration"
   },
   "auth": {
     "signin_title": "Sign In",

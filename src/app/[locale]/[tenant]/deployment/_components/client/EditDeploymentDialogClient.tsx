@@ -1,13 +1,20 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { updateJob } from '@/app/actions/jobsAction';
 import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel } from '@/components/shadcn/form';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/shadcn/form';
 import { Input } from '@/components/shadcn/input';
 import { Textarea } from '@/components/shadcn/textarea';
 import { useToast } from '@/components/shadcn/use-toast';
@@ -21,7 +28,7 @@ interface EditDeploymentDialogClientProps {
 
 interface FormValues {
   name: string;
-  description: string;
+  config: string;
 }
 
 export function EditDeploymentDialogClient({
@@ -33,23 +40,71 @@ export function EditDeploymentDialogClient({
   const c = useTranslations('common');
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [jsonError, setJsonError] = useState<string | null>(null);
+
+  // Get the config as a formatted JSON string for editing
+  const getFormattedConfig = (deployment: Deployment | null) => {
+    if (!deployment || !deployment.config) return '{}';
+    try {
+      return JSON.stringify(deployment.config, null, 2);
+    } catch (error) {
+      console.error('[@component:EditDeploymentDialogClient] Error formatting config:', error);
+      return '{}';
+    }
+  };
 
   const form = useForm<FormValues>({
     defaultValues: {
       name: deployment?.name || '',
-      description: deployment?.description || '',
+      config: getFormattedConfig(deployment),
     },
   });
 
   // Reset form when deployment changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (deployment) {
       form.reset({
         name: deployment.name || '',
-        description: deployment.description || '',
+        config: getFormattedConfig(deployment),
       });
+      setJsonError(null);
     }
   }, [deployment, form]);
+
+  // Fetch and preload the configuration data when the dialog opens
+  useEffect(() => {
+    if (open && deployment?.id) {
+      console.log(
+        `[@component:EditDeploymentDialogClient] Loading configuration for deployment: ${deployment.id}`,
+      );
+
+      // If the config is not already loaded, we could fetch it specifically here
+      if (!deployment.config) {
+        // We could implement a specific fetch here if needed
+        console.log(
+          '[@component:EditDeploymentDialogClient] No config data available, could fetch it separately',
+        );
+      }
+    }
+  }, [open, deployment]);
+
+  // Validate JSON as user types
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'config') {
+        try {
+          if (value.config && value.config.trim() !== '') {
+            JSON.parse(value.config as string);
+            setJsonError(null);
+          }
+        } catch (error: any) {
+          setJsonError(error.message);
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [form]);
 
   const onSubmit = async (data: FormValues) => {
     if (!deployment?.id) {
@@ -57,8 +112,23 @@ export function EditDeploymentDialogClient({
         '[@component:EditDeploymentDialogClient] No deployment ID available for update',
       );
       toast({
-        title: 'Error',
+        title: c('error'),
         description: 'Cannot update deployment: missing ID',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Parse config from string to object
+    let configObject;
+    try {
+      configObject = JSON.parse(data.config);
+    } catch (error: any) {
+      console.error('[@component:EditDeploymentDialogClient] Invalid JSON config:', error);
+      setJsonError(error.message);
+      toast({
+        title: c('error'),
+        description: `Invalid JSON configuration: ${error.message}`,
         variant: 'destructive',
       });
       return;
@@ -70,7 +140,7 @@ export function EditDeploymentDialogClient({
 
       const result = await updateJob(deployment.id, {
         name: data.name,
-        description: data.description,
+        config: configObject,
       });
 
       if (result.success) {
@@ -102,7 +172,7 @@ export function EditDeploymentDialogClient({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[700px]">
         <DialogHeader>
           <DialogTitle>{t('edit_deployment')}</DialogTitle>
         </DialogHeader>
@@ -114,7 +184,7 @@ export function EditDeploymentDialogClient({
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('name')}</FormLabel>
+                  <FormLabel>{c('name')}</FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>
@@ -124,13 +194,20 @@ export function EditDeploymentDialogClient({
 
             <FormField
               control={form.control}
-              name="description"
+              name="config"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('description')}</FormLabel>
+                  <FormLabel>{c('config')}</FormLabel>
                   <FormControl>
-                    <Textarea {...field} />
+                    <Textarea
+                      {...field}
+                      className={`font-mono text-sm h-[300px] ${jsonError ? 'border-red-500' : ''}`}
+                      spellCheck="false"
+                    />
                   </FormControl>
+                  {jsonError && (
+                    <FormMessage className="text-red-500 text-xs">{jsonError}</FormMessage>
+                  )}
                 </FormItem>
               )}
             />
@@ -144,7 +221,7 @@ export function EditDeploymentDialogClient({
               >
                 {c('cancel')}
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting || !!jsonError}>
                 {isSubmitting ? c('updating') : c('update')}
               </Button>
             </div>
