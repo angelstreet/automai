@@ -283,7 +283,7 @@ export async function startJob(
 
     // Revalidate paths to refresh UI
     console.log(`[@action:jobsAction:startJob] Revalidating paths`);
-    revalidatePath('/[locale]/[tenant]/deployment', 'page');
+    revalidatePath('/[locale]/[tenant]/deployment');
 
     return {
       success: true,
@@ -343,7 +343,7 @@ export async function deleteJob(id: string) {
     console.log(`[@action:jobsAction:deleteJob] Job deletion successful: ${id}`);
 
     // Revalidate the deployment pages after a successful deletion
-    revalidatePath('/[locale]/[tenant]/deployment');
+    revalidatePath('/[locale]/[tenant]/deployment', 'page');
 
     return {
       success: true,
@@ -563,8 +563,6 @@ export async function updateJob(
 
       // Revalidate the deployment pages after a successful update
       revalidatePath('/[locale]/[tenant]/deployment');
-      // Also revalidate any specific job run pages
-      revalidatePath(`/[locale]/[tenant]/deployment/job-runs/${id}`);
     } else {
       console.error(`[@action:jobsAction:updateJob] Failed to update job: ${result.error}`);
     }

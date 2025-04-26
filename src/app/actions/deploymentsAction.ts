@@ -158,7 +158,7 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
     console.log('[@action:deployments:createDeployment] Database layer not implemented yet');
 
     // Revalidate relevant paths
-    revalidatePath('/[locale]/[tenant]/deployment', 'page');
+    revalidatePath('/[locale]/[tenant]/deployment');
 
     return {
       success: false,
@@ -259,12 +259,23 @@ export async function deleteDeployment(id: string): Promise<boolean> {
  * This is called from client components to invalidate the deployment pages cache
  */
 export async function refreshDeployments() {
-  console.log('[@action:deployments:refreshDeployments] Revalidating deployment pages');
+  console.log('[@action:deployments:refreshDeployments] START - Revalidating deployment pages');
 
-  // Revalidate the main deployments page
-  revalidatePath('/[locale]/[tenant]/deployment');
+  try {
+    // Revalidate the main deployments page
+    console.log(
+      '[@action:deployments:refreshDeployments] Calling revalidatePath for /[locale]/[tenant]/deployment',
+    );
+    revalidatePath('/[locale]/[tenant]/deployment');
+    console.log('[@action:deployments:refreshDeployments] revalidatePath completed successfully');
 
-  return { success: true };
+    // Force browser refresh - this is a workaround since revalidatePath doesn't automatically refresh the page
+    console.log('[@action:deployments:refreshDeployments] SUCCESS - Revalidation complete');
+    return { success: true };
+  } catch (error) {
+    console.error('[@action:deployments:refreshDeployments] ERROR during revalidation:', error);
+    return { success: false, error: String(error) };
+  }
 }
 
 /**

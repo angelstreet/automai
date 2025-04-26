@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
@@ -41,6 +42,7 @@ export function EditDeploymentDialogClient({
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [jsonError, setJsonError] = useState<string | null>(null);
+  const router = useRouter();
 
   // Get the config as a formatted JSON string for editing
   const getFormattedConfig = (deployment: Deployment | null) => {
@@ -136,25 +138,29 @@ export function EditDeploymentDialogClient({
 
     setIsSubmitting(true);
     try {
-      console.log(`[@component:EditDeploymentDialogClient] Updating deployment: ${deployment.id}`);
-
-      // Use the server action which handles revalidation internally
-      const result = await updateJob(deployment.id, {
-        name: data.name,
-        config: configObject,
-      });
-
+      console.log(
+        `[@component:EditDeploymentDialogClient] Starting update for deployment: ${deployment?.id} at ${new Date().toISOString()}`,
+      );
+      const result = await updateJob(deployment.id, { name: data.name, config: configObject });
       if (result.success) {
-        console.log(`[@component:EditDeploymentDialogClient] Update successful`);
+        console.log(
+          `[@component:EditDeploymentDialogClient] Update successful for deployment: ${deployment?.id} at ${new Date().toISOString()}`,
+        );
         toast({
           title: c('success'),
           description: t('update_success'),
         });
 
-        // Just close the dialog - no need for manual refresh as revalidatePath is called in the server action
+        router.refresh(); // Force client-side refresh
+        console.log(
+          `[@component:EditDeploymentDialogClient] Router refresh attempted at ${new Date().toISOString()}`,
+        );
+
         onOpenChange(false);
       } else {
-        console.error(`[@component:EditDeploymentDialogClient] Update failed: ${result.error}`);
+        console.error(
+          `[@component:EditDeploymentDialogClient] Update failed for deployment: ${deployment?.id} at ${new Date().toISOString()}: ${result.error}`,
+        );
         toast({
           title: c('error'),
           description: result.error || t('update_error'),
@@ -162,7 +168,9 @@ export function EditDeploymentDialogClient({
         });
       }
     } catch (error: any) {
-      console.error('[@component:EditDeploymentDialogClient] Error updating deployment:', error);
+      console.error(
+        `[@component:EditDeploymentDialogClient] Error during update at ${new Date().toISOString()}: ${error.message}`,
+      );
       toast({
         title: c('error'),
         description: error.message || t('update_error'),

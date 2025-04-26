@@ -74,6 +74,14 @@ export function DeploymentListClient({
     };
   }, []);
 
+  // Update deployments when initialDeployments prop changes
+  useEffect(() => {
+    console.log('[DeploymentList] Updating deployments from new props', {
+      count: initialDeployments.length,
+    });
+    setDeployments(initialDeployments);
+  }, [initialDeployments]);
+
   // Use initial deployments for first render, then update with data from React Query
   const displayDeploymentData = deployments;
   const displayRepositoryData = initialRepositories;
