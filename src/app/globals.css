@@ -192,7 +192,7 @@
     --sidebar-width-icon: 2.6rem;
 
     /* Spacing variables */
-    --sidebar-spacing: 1rem; /* Space between sidebar and main content */
+    --sidebar-spacing: 1.5rem; /* Space between sidebar and main content - increased from 1rem */
     --content-padding: 1rem; /* Default padding inside content areas */
 
     /* Dynamic offset - set via JS in SidebarClient.tsx useEffect */

@@ -23,7 +23,7 @@ export const SIDEBAR_COOKIE_NAME = 'automai_sidebar_state';
 export const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
 // Current values - MUST match the CSS variables in globals.css
-export const APP_SIDEBAR_WIDTH = '14,5rem';
+export const APP_SIDEBAR_WIDTH = '15rem';
 export const APP_SIDEBAR_WIDTH_ICON = '3rem';
 
 export const SIDEBAR_WIDTH_MOBILE = '16rem';
