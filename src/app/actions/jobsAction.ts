@@ -439,6 +439,8 @@ export async function getAllJobs() {
           cronExpression: config.cron_expression,
           repeatCount: config.repeat_count,
           environmentVars: config.environment_vars || [],
+          // Add config field
+          config: config.config || {},
         };
       }) || [];
 
