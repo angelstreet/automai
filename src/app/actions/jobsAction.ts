@@ -544,3 +544,75 @@ export async function getJobRunsForConfig(configId: string) {
     };
   }
 }
+
+/**
+ * Update a job configuration
+ * @param id Job configuration ID
+ * @param data Partial job data to update
+ * @returns Success status and updated job data or error
+ */
+export async function updateJob(id: string, data: Partial<{ name: string; description: string }>) {
+  try {
+    console.log(`[@action:jobsAction:updateJob] Updating job with ID: "${id}"`);
+
+    if (!id) {
+      console.error('[@action:jobsAction:updateJob] ERROR: No job ID provided');
+      return {
+        success: false,
+        error: 'No job ID provided',
+      };
+    }
+
+    // Get cookie store
+    const cookieStore = await cookies();
+
+    // Get current job configuration
+    const { getJobConfigById, updateJobConfiguration } = await import(
+      '@/lib/db/jobsConfigurationDb'
+    );
+    const jobConfigResult = await getJobConfigById(id, cookieStore);
+
+    if (!jobConfigResult.success || !jobConfigResult.data) {
+      console.error(`[@action:jobsAction:updateJob] Job not found: ${id}`);
+      return {
+        success: false,
+        error: 'Job not found',
+      };
+    }
+
+    const currentConfig = jobConfigResult.data;
+
+    // Create update data
+    const updateData: Partial<JobConfiguration> = {
+      ...(data.name !== undefined && { name: data.name }),
+      ...(data.description !== undefined && { description: data.description }),
+    };
+
+    // Update the job configuration
+    console.log(`[@action:jobsAction:updateJob] Updating job configuration: ${id}`);
+    const updateResult = await updateJobConfiguration(id, updateData, cookieStore);
+
+    if (!updateResult.success) {
+      console.error(`[@action:jobsAction:updateJob] Update failed: ${updateResult.error}`);
+      return {
+        success: false,
+        error: updateResult.error || 'Failed to update job',
+      };
+    }
+
+    // Revalidate the path to refresh UI
+    revalidatePath('/[locale]/[tenant]/deployment', 'page');
+
+    console.log(`[@action:jobsAction:updateJob] Update successful`);
+    return {
+      success: true,
+      data: updateResult.data,
+    };
+  } catch (error: any) {
+    console.error('[@action:jobsAction:updateJob] Error:', error.message);
+    return {
+      success: false,
+      error: error.message || 'Failed to update job',
+    };
+  }
+}

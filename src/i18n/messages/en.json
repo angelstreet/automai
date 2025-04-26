@@ -50,7 +50,7 @@
     "create": "Create",
     "manage": "Manage",
     "insert": "Create",
-    "update": "Edit All",
+    "update": "Update",
     "update_own": "Edit Own",
     "delete_own": "Delete Own",
     "execute": "Execute",
@@ -444,6 +444,11 @@
     "details_delete": "Delete Deployment",
     "details_logs": "View Logs",
     "details_retry": "Retry Deployment",
-    "details_cancel": "Cancel Deployment"
+    "details_cancel": "Cancel Deployment",
+    "edit_deployment": "Edit Deployment",
+    "name": "Name",
+    "description": "Description",
+    "update_success": "Deployment updated successfully",
+    "update_error": "Failed to update deployment"
   }
 }

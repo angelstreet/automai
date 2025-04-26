@@ -1,6 +1,6 @@
 'use client';
 
-import { Search, Clock, Play, Eye, PlayCircle, Trash2, MoreHorizontal } from 'lucide-react';
+import { Search, Clock, Play, Eye, PlayCircle, Trash2, MoreHorizontal, Edit2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
 
@@ -30,6 +30,7 @@ import { Repository } from '@/types/component/repositoryComponentType';
 import { DeploymentActionsClient } from './DeploymentActionsClient';
 import { DeploymentEvents } from './DeploymentEventListener';
 import DeploymentStatusBadgeClient from './DeploymentStatusBadgeClient';
+import { EditDeploymentDialogClient } from './EditDeploymentDialogClient';
 
 interface DeploymentListProps {
   initialDeployments: Deployment[];
@@ -59,6 +60,8 @@ export function DeploymentListClient({
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState<string | null>(null);
   const [deployments, setDeployments] = useState<Deployment[]>(initialDeployments);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [deploymentToEdit, setDeploymentToEdit] = useState<Deployment | null>(null);
 
   // Listen for refresh events
   useEffect(() => {
@@ -101,7 +104,7 @@ export function DeploymentListClient({
 
   const handleViewDeployment = (deployment: Deployment, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    
+
     // Navigate to the job runs page for this configuration
     router.push(`/deployment/job-runs/${deployment.id}`);
   };
@@ -132,26 +135,29 @@ export function DeploymentListClient({
     try {
       // Save ID to a local variable to use in case of state updates
       const idToDelete = selectedDeployment.id;
-      
+
       setActionInProgress(idToDelete);
       console.log(
         '[DeploymentListClient:handleConfirmDelete] Calling deleteJob with ID:',
         idToDelete,
       );
-      
+
       // Make sure we're calling the server action with a direct string argument
       const result = await deleteJob(String(idToDelete));
-      console.log('[DeploymentListClient:handleConfirmDelete] Delete result:', JSON.stringify(result));
+      console.log(
+        '[DeploymentListClient:handleConfirmDelete] Delete result:',
+        JSON.stringify(result),
+      );
 
       if (result && result.success) {
         console.log(
           '[DeploymentListClient:handleConfirmDelete] Delete successful for ID:',
           idToDelete,
         );
-        
+
         // Close the dialog first
         setIsDeleteDialogOpen(false);
-        
+
         toast({
           title: 'Deployment Deleted',
           description: 'Successfully deleted.',
@@ -163,7 +169,7 @@ export function DeploymentListClient({
 
         // Dispatch a single refresh event
         window.dispatchEvent(new Event(DeploymentEvents.REFRESH_DEPLOYMENTS));
-        
+
         // Refresh the page after a short delay to ensure server state is updated
         setTimeout(() => {
           router.refresh();
@@ -183,9 +189,9 @@ export function DeploymentListClient({
       console.error('[DeploymentListClient:handleConfirmDelete] Exception during delete:', {
         id: selectedDeployment?.id,
         error: error.message || 'Unknown error',
-        stack: error.stack
+        stack: error.stack,
       });
-      
+
       toast({
         title: 'Error',
         description: error.message || 'Unexpected error during deletion',
@@ -280,13 +286,16 @@ export function DeploymentListClient({
       // Get user ID for the job run
       const { getUser } = await import('@/app/actions/userAction');
       const user = await getUser();
-      
+
       // Use a user ID if available, otherwise just use a placeholder
       const userId = user?.id || 'system';
-      
+
       console.log('[DeploymentListClient:handleRunDeployment] Queuing job with ID:', deployment.id);
       const result = await startJob(deployment.id, userId);
-      console.log('[DeploymentListClient:handleRunDeployment] Queue result:', JSON.stringify(result));
+      console.log(
+        '[DeploymentListClient:handleRunDeployment] Queue result:',
+        JSON.stringify(result),
+      );
 
       if (result && result.success) {
         toast({
@@ -297,7 +306,7 @@ export function DeploymentListClient({
 
         // Dispatch a single refresh event to update other components
         window.dispatchEvent(new Event(DeploymentEvents.REFRESH_DEPLOYMENTS));
-        
+
         // Refresh the page after a short delay
         setTimeout(() => {
           router.refresh();
@@ -318,6 +327,16 @@ export function DeploymentListClient({
     } finally {
       setIsRunning(null);
     }
+  };
+
+  const handleEditClick = (deployment: Deployment, e: React.MouseEvent) => {
+    e.stopPropagation();
+    console.log('[DeploymentListClient:handleEditClick] Selected deployment for editing:', {
+      id: deployment.id,
+      name: deployment.name,
+    });
+    setDeploymentToEdit(deployment);
+    setShowEditDialog(true);
   };
 
   return (
@@ -553,6 +572,15 @@ export function DeploymentListClient({
                               <DropdownMenuItem
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  handleEditClick(deployment, e);
+                                }}
+                              >
+                                <Edit2 className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   handleRunDeployment(deployment);
                                 }}
                                 disabled={isRunning === deployment.id}
@@ -669,6 +697,11 @@ export function DeploymentListClient({
           </AlertDialogContent>
         </AlertDialog>
       </div>
+      <EditDeploymentDialogClient
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        deployment={deploymentToEdit}
+      />
     </div>
   );
 }
