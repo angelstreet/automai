@@ -208,6 +208,9 @@ export async function createJob(formData: JobFormData, hostDetails?: any[]) {
       };
     }
 
+    // Revalidate the deployment pages after a successful creation
+    revalidatePath('/[locale]/[tenant]/deployment');
+
     // Return success with the job configuration data
     return {
       success: true,
@@ -337,25 +340,16 @@ export async function deleteJob(id: string) {
       throw new Error(`Failed to delete job: ${result.error}`);
     }
 
-    // Revalidate deployment-related paths
-    console.log(`[@action:jobsAction:deleteJob] Revalidating paths`);
-    revalidatePath('/[locale]/[tenant]/deployment', 'page');
+    console.log(`[@action:jobsAction:deleteJob] Job deletion successful: ${id}`);
 
-    console.log(
-      `[@action:jobsAction:deleteJob] SUCCESS: Job deleted successfully with ID: "${id}"`,
-    );
+    // Revalidate the deployment pages after a successful deletion
+    revalidatePath('/[locale]/[tenant]/deployment');
 
     return {
       success: true,
-      message: 'Job deleted successfully',
     };
   } catch (error: any) {
-    console.error('[@action:jobsAction:deleteJob] CAUGHT ERROR:', {
-      id: id,
-      message: error.message,
-      stack: error.stack,
-    });
-
+    console.error(`[@action:jobsAction:deleteJob] Error: ${error.message}`);
     return {
       success: false,
       error: error.message || 'Failed to delete job',
@@ -546,10 +540,7 @@ export async function getJobRunsForConfig(configId: string) {
 }
 
 /**
- * Update a job configuration
- * @param id Job configuration ID
- * @param data Partial job data to update
- * @returns Success status and updated job data or error
+ * Updates a job configuration
  */
 export async function updateJob(
   id: string,
@@ -560,71 +551,27 @@ export async function updateJob(
   }>,
 ) {
   try {
-    console.log(`[@action:jobsAction:updateJob] Updating job with ID: "${id}"`);
+    console.log(`[@action:jobsAction:updateJob] Updating job with ID: ${id}`);
+    console.log(`[@action:jobsAction:updateJob] Update data:`, data);
 
-    if (!id) {
-      console.error('[@action:jobsAction:updateJob] ERROR: No job ID provided');
-      return {
-        success: false,
-        error: 'No job ID provided',
-      };
-    }
-
-    // Get cookie store
     const cookieStore = await cookies();
+    const { updateJobConfiguration } = await import('@/lib/db/jobsConfigurationDb');
+    const result = await updateJobConfiguration(id, data, cookieStore);
 
-    // Get current job configuration
-    const { getJobConfigById, updateJobConfiguration } = await import(
-      '@/lib/db/jobsConfigurationDb'
-    );
-    const jobConfigResult = await getJobConfigById(id, cookieStore);
+    if (result.success) {
+      console.log(`[@action:jobsAction:updateJob] Successfully updated job: ${id}`);
 
-    if (!jobConfigResult.success || !jobConfigResult.data) {
-      console.error(`[@action:jobsAction:updateJob] Job not found: ${id}`);
-      return {
-        success: false,
-        error: 'Job not found',
-      };
+      // Revalidate the deployment pages after a successful update
+      revalidatePath('/[locale]/[tenant]/deployment');
+      // Also revalidate any specific job run pages
+      revalidatePath(`/[locale]/[tenant]/deployment/job-runs/${id}`);
+    } else {
+      console.error(`[@action:jobsAction:updateJob] Failed to update job: ${result.error}`);
     }
 
-    const currentConfig = jobConfigResult.data;
-
-    // Create update data
-    const updateData: Partial<JobConfiguration> = {
-      ...(data.name !== undefined && { name: data.name }),
-      ...(data.description !== undefined && { description: data.description }),
-      ...(data.config !== undefined && { config: data.config }),
-    };
-
-    // Log the update data
-    console.log(`[@action:jobsAction:updateJob] Update data:`, {
-      id,
-      fields: Object.keys(updateData),
-      hasConfig: !!data.config,
-    });
-
-    // Update the job configuration
-    console.log(`[@action:jobsAction:updateJob] Updating job configuration: ${id}`);
-    const updateResult = await updateJobConfiguration(id, updateData, cookieStore);
-
-    if (!updateResult.success) {
-      console.error(`[@action:jobsAction:updateJob] Update failed: ${updateResult.error}`);
-      return {
-        success: false,
-        error: updateResult.error || 'Failed to update job',
-      };
-    }
-
-    // Revalidate the path to refresh UI
-    revalidatePath('/[locale]/[tenant]/deployment', 'page');
-
-    console.log(`[@action:jobsAction:updateJob] Update successful`);
-    return {
-      success: true,
-      data: updateResult.data,
-    };
+    return result;
   } catch (error: any) {
-    console.error('[@action:jobsAction:updateJob] Error:', error.message);
+    console.error(`[@action:jobsAction:updateJob] Error: ${error.message}`);
     return {
       success: false,
       error: error.message || 'Failed to update job',

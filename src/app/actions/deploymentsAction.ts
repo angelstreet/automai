@@ -8,6 +8,7 @@ import { getUserActiveTeam } from '@/app/actions/teamAction';
 import { getUser } from '@/app/actions/userAction';
 import { Deployment, DeploymentFormData } from '@/types/component/deploymentComponentType';
 import { AuthUser, User } from '@/types/service/userServiceType';
+
 /**
  * Get all deployments for the current user
  */
@@ -39,22 +40,9 @@ export const getDeployments = cache(
       // Get cookie store once for all operations
       const cookieStore = await cookies();
 
-      // Fetch deployments from the database
-      const result = await dbGetDeployments(teamId, cookieStore);
-
-      if (!result.success) {
-        console.error(
-          '[@action:deployments:getDeployments] Error fetching deployments:',
-          result.error,
-        );
-        return { success: false, error: result.error, data: [] };
-      }
-
-      console.log(
-        '[@action:deployments:getDeployments] Fetched deployments count:',
-        result.data?.length || 0,
-      );
-      return { success: true, data: result.data || [] };
+      // TODO: Implement database layer
+      console.log('[@action:deployments:getDeployments] Database layer not implemented yet');
+      return { success: true, data: [] };
     } catch (error: any) {
       console.error('[@action:deployments:getDeployments] Error:', error);
       return { success: false, error: error.message, data: [] };
@@ -87,15 +75,9 @@ export const getDeploymentById = cache(async (id: string): Promise<Deployment | 
     // Get cookie store once for all operations
     const cookieStore = await cookies();
 
-    // Fetch the deployment from the database
-    const result = await dbGetDeploymentById(id, cookieStore);
-
-    if (!result.success || !result.data) {
-      console.error(`[@action:deployments:getDeploymentById] Deployment not found: ${id}`);
-      return null;
-    }
-
-    return result.data;
+    // TODO: Implement database layer
+    console.log('[@action:deployments:getDeploymentById] Database layer not implemented yet');
+    return null;
   } catch (error) {
     console.error(
       `[@action:deployments:getDeploymentById] Error fetching deployment ${id}:`,
@@ -172,27 +154,15 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
       JSON.stringify(deploymentData, null, 2),
     );
 
-    // Create the deployment
-    const result = await dbCreateDeployment(deploymentData, cookieStore);
-
-    if (!result.success || !result.data) {
-      console.error(
-        '[@action:deployments:createDeployment] Failed to create deployment:',
-        result.error,
-      );
-      return { success: false, error: result.error || 'Failed to create deployment' };
-    }
+    // TODO: Implement database layer
+    console.log('[@action:deployments:createDeployment] Database layer not implemented yet');
 
     // Revalidate relevant paths
     revalidatePath('/[locale]/[tenant]/deployment', 'page');
 
-    console.log(
-      '[@action:deployments:createDeployment] Successfully created deployment:',
-      result.data.id,
-    );
     return {
-      success: true,
-      deploymentId: result.data.id,
+      success: false,
+      error: 'Database layer not implemented yet',
     };
   } catch (error: any) {
     console.error('[@action:deployments:createDeployment] Error creating deployment:', error);
@@ -231,20 +201,13 @@ export async function updateDeployment(
       environment_vars: data.environmentVars,
     };
 
-    // Update the deployment in the database
-    const result = await dbUpdateDeployment(id, dbData, cookieStore);
+    // TODO: Implement database layer
+    console.log('[@action:deployments:updateDeployment] Database layer not implemented yet');
 
     // Revalidate relevant paths
     revalidatePath('/[locale]/[tenant]/deployment');
 
-    if (!result.success || !result.data) {
-      console.error(
-        `[@action:deployments:updateDeployment] Update failed: ${result.error || 'Unknown error'}`,
-      );
-      return null;
-    }
-
-    return result.data;
+    return null;
   } catch (error) {
     console.error(
       `[@action:deployments:updateDeployment] Error updating deployment with ID ${id}:`,
@@ -278,30 +241,45 @@ export async function deleteDeployment(id: string): Promise<boolean> {
     // Get cookie store
     const cookieStore = await cookies();
 
-    // Get deployment details
-    const deploymentResult = await dbGetDeploymentById(id, cookieStore);
-    if (!deploymentResult.success || !deploymentResult.data) {
-      console.error('[@action:deployments:deleteDeployment] Deployment not found');
-      return false;
-    }
-
-    // Delete the deployment from the database
-    const deleteResult = await dbDeleteDeployment(id, cookieStore);
-    if (!deleteResult.success) {
-      console.error(
-        '[@action:deployments:deleteDeployment] Failed to delete deployment:',
-        deleteResult.error,
-      );
-      return false;
-    }
+    // TODO: Implement database layer
+    console.log('[@action:deployments:deleteDeployment] Database layer not implemented yet');
 
     // Revalidate the deployments page
     revalidatePath('/deployments');
 
-    console.log('[@action:deployments:deleteDeployment] Deployment deleted successfully');
-    return true;
+    return false;
   } catch (error) {
     console.error('[@action:deployments:deleteDeployment] Error deleting deployment:', error);
     return false;
   }
+}
+
+/**
+ * Server action to refresh deployments data
+ * This is called from client components to invalidate the deployment pages cache
+ */
+export async function refreshDeployments() {
+  console.log('[@action:deployments:refreshDeployments] Revalidating deployment pages');
+
+  // Revalidate the main deployments page
+  revalidatePath('/[locale]/[tenant]/deployment');
+
+  return { success: true };
+}
+
+/**
+ * Revalidate a specific deployment job run page
+ */
+export async function refreshDeploymentJobRun(deploymentId: string) {
+  console.log(
+    `[@action:deployments:refreshDeploymentJobRun] Revalidating job run page for deployment: ${deploymentId}`,
+  );
+
+  // Revalidate the specific job run page
+  revalidatePath(`/[locale]/[tenant]/deployment/job-runs/${deploymentId}`);
+
+  // Also revalidate the main deployments page
+  revalidatePath('/[locale]/[tenant]/deployment');
+
+  return { success: true };
 }

@@ -7,9 +7,6 @@ import { useEffect } from 'react';
 const DeploymentEvents = {
   // UI Control Events
   OPEN_DEPLOYMENT_DIALOG: 'OPEN_DEPLOYMENT_DIALOG',
-
-  // For refreshing the UI after mutation operations
-  REFRESH_DEPLOYMENTS: 'REFRESH_DEPLOYMENTS',
 };
 
 // Export the constants object
@@ -23,17 +20,12 @@ export default function DeploymentEventListener() {
   useEffect(() => {
     console.log('[@component:DeploymentEventListener] Setting up event listeners');
 
-    const handleRefreshDeployments = () => {
-      console.log('[@component:DeploymentEventListener] Refreshing deployments');
-      router.refresh();
-    };
-
-    // Set up event listeners
-    window.addEventListener(DeploymentEvents.REFRESH_DEPLOYMENTS, handleRefreshDeployments);
+    // We no longer need to listen for refresh events since we're using Next.js revalidation
+    // The component is kept for backward compatibility and for handling other events
 
     // Clean up event listeners
     return () => {
-      window.removeEventListener(DeploymentEvents.REFRESH_DEPLOYMENTS, handleRefreshDeployments);
+      // No listeners to clean up
     };
   }, [router]);
 

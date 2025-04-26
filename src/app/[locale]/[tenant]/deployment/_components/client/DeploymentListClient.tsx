@@ -4,6 +4,7 @@ import { Search, Clock, Play, Eye, PlayCircle, Trash2, MoreHorizontal, Edit2 } f
 import { useRouter } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
 
+import { refreshDeployments } from '@/app/actions/deploymentsAction';
 import { deleteJob, startJob } from '@/app/actions/jobsAction';
 import {
   AlertDialog,
@@ -28,7 +29,6 @@ import { Deployment } from '@/types/component/deploymentComponentType';
 import { Repository } from '@/types/component/repositoryComponentType';
 
 import { DeploymentActionsClient } from './DeploymentActionsClient';
-import { DeploymentEvents } from './DeploymentEventListener';
 import DeploymentStatusBadgeClient from './DeploymentStatusBadgeClient';
 import { EditDeploymentDialogClient } from './EditDeploymentDialogClient';
 
@@ -65,14 +65,12 @@ export function DeploymentListClient({
 
   // Listen for refresh events
   useEffect(() => {
-    const handleRefresh = () => {
-      // You would typically fetch data here
-      console.log('[DeploymentList] Refresh event received');
-    };
+    // No need to listen for REFRESH_DEPLOYMENTS anymore since we use direct revalidation
+    console.log('[DeploymentList] Using direct revalidation instead of events');
 
-    window.addEventListener(DeploymentEvents.REFRESH_DEPLOYMENTS, handleRefresh);
+    // No event listeners needed
     return () => {
-      window.removeEventListener(DeploymentEvents.REFRESH_DEPLOYMENTS, handleRefresh);
+      // No cleanup needed
     };
   }, []);
 
@@ -167,13 +165,8 @@ export function DeploymentListClient({
         // Update the local state to remove the deleted deployment
         setDeployments((current) => current.filter((d) => d.id !== idToDelete));
 
-        // Dispatch a single refresh event
-        window.dispatchEvent(new Event(DeploymentEvents.REFRESH_DEPLOYMENTS));
-
-        // Refresh the page after a short delay to ensure server state is updated
-        setTimeout(() => {
-          router.refresh();
-        }, 500);
+        // Use the server action to revalidate the deployment page
+        await refreshDeployments();
       } else {
         console.error('[DeploymentListClient:handleConfirmDelete] Delete failed:', {
           id: selectedDeployment.id,
@@ -304,13 +297,8 @@ export function DeploymentListClient({
           variant: 'default',
         });
 
-        // Dispatch a single refresh event to update other components
-        window.dispatchEvent(new Event(DeploymentEvents.REFRESH_DEPLOYMENTS));
-
-        // Refresh the page after a short delay
-        setTimeout(() => {
-          router.refresh();
-        }, 500);
+        // Use the server action to revalidate the deployment page
+        await refreshDeployments();
       } else {
         toast({
           title: 'Error',

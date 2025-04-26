@@ -4,6 +4,7 @@ import { PlusCircle, RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React, { useState, useEffect } from 'react';
 
+import { refreshDeployments } from '@/app/actions/deploymentsAction';
 import { Button } from '@/components/shadcn/button';
 import { useHost } from '@/hooks';
 import { useRepository } from '@/hooks/useRepository';
@@ -36,38 +37,6 @@ export function DeploymentActionsClient({
     setCurrentDeploymentCount(initialDeploymentCount);
   }, [initialDeploymentCount]);
 
-  // Listen for deployment count updates
-  useEffect(() => {
-    const handleDeploymentCountUpdate = (event: CustomEvent) => {
-      if (event.detail && typeof event.detail.count === 'number') {
-        console.log('[DeploymentActions] Deployment count updated:', event.detail.count);
-        setCurrentDeploymentCount(event.detail.count);
-      }
-    };
-
-    window.addEventListener(
-      'deployment-count-updated',
-      handleDeploymentCountUpdate as EventListener,
-    );
-    return () => {
-      window.removeEventListener(
-        'deployment-count-updated',
-        handleDeploymentCountUpdate as EventListener,
-      );
-    };
-  }, []);
-
-  // Listen for refresh complete event
-  useEffect(() => {
-    const handleRefreshComplete = () => {
-      console.log('[DeploymentActions] Refresh complete');
-      setIsRefreshing(false);
-    };
-
-    window.addEventListener('refresh-deployments-complete', handleRefreshComplete);
-    return () => window.removeEventListener('refresh-deployments-complete', handleRefreshComplete);
-  }, []);
-
   // Listen for dialog open events
   useEffect(() => {
     const handleOpenDialog = () => {
@@ -87,14 +56,17 @@ export function DeploymentActionsClient({
     setIsRefreshing(true);
     console.log('[DeploymentActions] Triggering refresh');
 
-    // Dispatch refresh event for deployment provider to handle
-    window.dispatchEvent(new CustomEvent('refresh-deployments'));
-
     try {
+      // Call the server action to revalidate
+      await refreshDeployments();
+
       // Use hooks to refresh all related data in parallel
       await Promise.all([refetchHosts(), refetchRepositories()]);
     } catch (error) {
       console.error('Error refreshing data:', error);
+    } finally {
+      // Mark refresh as complete after a delay to allow for animation
+      setTimeout(() => setIsRefreshing(false), 500);
     }
   };
 
@@ -120,7 +92,8 @@ export function DeploymentActionsClient({
               userExists: !!user,
               userId: user?.id,
               userEmail: user?.email,
-              tenantName: user?.tenant_name,
+              // Type-safe access to tenant_name
+              tenantName: (user as any)?.tenant_name,
               teamCount: user?.teams?.length,
             });
             setShowWizard(true);

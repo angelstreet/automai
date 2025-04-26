@@ -114,7 +114,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
       console.log('[DeploymentWizardMainClient] User data from context:', {
         contextUserExists: !!user,
         contextUserId: user?.id,
-        contextUserTenantName: user?.tenant_name,
+        contextUserTenantName: (user as any)?.tenant_name,
         prop_userId: userId,
         prop_tenant_name: tenantName,
       });
@@ -203,7 +203,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               // Find all scripts in the repository (root and subdirectories)
               // Limit to depth 2 to avoid infinite recursion and API rate limits
               const allFiles = await gitService.findScriptsRecursively(
-                selectedRepo.url,
+                selectedRepo.url || '',
                 owner,
                 repo,
                 branch,
@@ -520,7 +520,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           {
             userId: user?.id || userId,
             teamId,
-            tenantName: user?.tenant_name || tenantName,
+            tenantName: (user as any)?.tenant_name || tenantName,
           },
         );
 
@@ -587,9 +587,9 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
 
               // Include auth credentials based on auth type
               if ((host as any)?.auth_type === 'password' && (host as any)?.password) {
-                hostConfig['password'] = (host as any).password;
+                (hostConfig as any)['password'] = (host as any).password;
               } else if ((host as any)?.auth_type === 'privateKey' && (host as any)?.private_key) {
-                hostConfig['key'] = (host as any).private_key;
+                (hostConfig as any)['key'] = (host as any).private_key;
               }
 
               return hostConfig;
@@ -655,10 +655,6 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           // Invalidate both jobs and deployments queries for backward compatibility
           queryClient.invalidateQueries({ queryKey: ['jobs'] });
           queryClient.invalidateQueries({ queryKey: ['deployments'] });
-
-          // Dispatch events to refresh both jobs and deployments views
-          window.dispatchEvent(new CustomEvent('refresh-jobs'));
-          window.dispatchEvent(new CustomEvent('refresh-deployments'));
 
           onDeploymentCreated();
         } else {

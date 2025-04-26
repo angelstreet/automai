@@ -138,6 +138,7 @@ export function EditDeploymentDialogClient({
     try {
       console.log(`[@component:EditDeploymentDialogClient] Updating deployment: ${deployment.id}`);
 
+      // Use the server action which handles revalidation internally
       const result = await updateJob(deployment.id, {
         name: data.name,
         config: configObject,
@@ -149,6 +150,8 @@ export function EditDeploymentDialogClient({
           title: c('success'),
           description: t('update_success'),
         });
+
+        // Just close the dialog - no need for manual refresh as revalidatePath is called in the server action
         onOpenChange(false);
       } else {
         console.error(`[@component:EditDeploymentDialogClient] Update failed: ${result.error}`);

@@ -47,8 +47,7 @@ export function DeploymentWizardDialogClient({
     // Close the dialog
     onOpenChange(false);
 
-    // Refresh deployments
-    window.dispatchEvent(new CustomEvent('refresh-deployments'));
+    // Server actions handle revalidation internally - no need for router.refresh()
 
     // Call success callback if provided
     if (onSuccess) {
@@ -70,11 +69,11 @@ export function DeploymentWizardDialogClient({
         // Hook data
         hookUserExists: !!user,
         hookUserId: user?.id,
-        hookTenantName: user?.tenant_name,
+        hookTenantName: (user as any)?.tenant_name,
         // Context data (should be more reliable)
         contextUserExists: !!contextUser,
         contextUserId: contextUser?.id,
-        contextTenantName: contextUser?.tenant_name,
+        contextTenantName: (contextUser as any)?.tenant_name,
       });
     }
   }, [open, user, contextUser]);
@@ -95,11 +94,11 @@ export function DeploymentWizardDialogClient({
           <DeploymentWizardMainClient
             onCancel={() => onOpenChange(false)}
             onDeploymentCreated={handleDeploymentCreated}
-            repositories={repositories}
+            repositories={repositories as Repository[]}
             hosts={hosts || []}
             teamId={activeTeam?.id || ''}
             userId={contextUser?.id || user?.id || ''}
-            tenantName={contextUser?.tenant_name || user?.tenant_name || ''}
+            tenantName={(contextUser as any)?.tenant_name || (user as any)?.tenant_name || ''}
           />
         )}
 

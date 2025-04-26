@@ -6,7 +6,6 @@ export * from './db/teamDb';
 export * from './db/teamMemberDb';
 export * from './db/permissionDb';
 export * from './db/repositoryDb';
-export * from './db/deploymentDb';
 export * from './db/hostDb';
 
 // Service layer exports
@@ -14,7 +13,6 @@ export * from './services/teamService';
 export * from './services/hostService';
 export * from './services/sshService';
 export * from './services/repositoryService';
-export * from './services/authService';
 
 // Git API exports
 export * from './git/githubApi';
