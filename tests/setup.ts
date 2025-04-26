@@ -1,5 +1,5 @@
-import { launch, Browser, Page } from 'puppeteer';
 import { beforeAll, afterAll } from '@jest/globals';
+import { launch, Browser, Page } from 'puppeteer';
 
 let browser: Browser;
 let page: Page;
