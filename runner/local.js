@@ -71,7 +71,7 @@ async function processJob() {
       .map((script) => {
         const ext = script.path.split('.').pop().toLowerCase();
         const command = ext === 'py' ? 'python' : ext === 'sh' ? './' : '';
-        return `${command} ${script.path} ${script.parameters || ''} 2>&1`.trim();
+        return `${command} ${script.path} ${script.parameters || ''}`.trim();
       })
       .join(' && ');
     console.log(`[@runner:processJob] Scripts: ${scripts}`);
@@ -97,15 +97,8 @@ async function processJob() {
         console.log(`[@runner:processJob] Plain key/password: ${sshKeyOrPass.slice(0, 50)}...`);
       }
 
-      const cleanupCommand = `if exist ${repoName} rmdir /s /q ${repoName}`;
-      const cloneCommand = `git clone ${repoUrl} ${repoName} 2>&1`;
-      const cdCommand = `cd ${repoName} 2>&1`;
-      const dirCommand = `dir`;
       const scriptCommand = `${scripts}`;
-      const fullScript =
-        host.os === 'windows'
-          ? `cmd.exe /c  && ${cleanupCommand} && ${cloneCommand} && ${cdCommand} && ${dirCommand} && ${envPrefix} && ${scriptCommand}}`
-          : `${cleanupCommand} && ${cloneCommand} && ${cdCommand} && ${scriptCommand}`;
+      const fullScript = `cmd.exe /c python --version && cd Desktop/remote-installer && dir && echo ============================= && ${scriptCommand}`;
       console.log(`[@runner:processJob] SSH command: ${fullScript}`);
       const conn = new Client();
       conn
@@ -125,12 +118,12 @@ async function processJob() {
               })
               .stderr.on('data', (data) => {
                 output.stderr += data;
-                //console.log(`[@runner:processJob] Stderr: ${data}`);
+                console.log(`[@runner:processJob] Stderr: ${data}`);
               })
               .on('close', (code, signal) => {
-                //console.log(`[@runner:processJob] Stream closed, code: ${code}, signal: ${signal}`);
-                //console.log(`[@runner:processJob] Final stdout: ${output.stdout}`);
-                //console.log(`[@runner:processJob] Final stderr: ${output.stderr}`);
+                console.log(`[@runner:processJob] Stream closed, code: ${code}, signal: ${signal}`);
+                console.log(`[@runner:processJob] Final stdout: ${output.stdout}`);
+                console.log(`[@runner:processJob] Final stderr: ${output.stderr}`);
                 console.error(`[@runner:processJob] SSH connection closed`);
                 conn.end();
               });

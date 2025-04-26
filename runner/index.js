@@ -86,15 +86,8 @@ async function processJob() {
         console.log(`[@runner:processJob] Plain key/password: ${sshKeyOrPass.slice(0, 50)}...`);
       }
 
-      const cleanupCommand = `if exist ${repoName} rmdir /s /q ${repoName}`;
-      const cloneCommand = `git clone ${repoUrl} ${repoName}`;
-      const cdCommand = `cd ${repoName}`;
-      const dirCommand = `dir`;
       const scriptCommand = `${scripts}`;
-      const fullScript =
-        host.os === 'windows'
-          ? `cmd.exe /c ${envPrefix} && ${cleanupCommand} && ${cloneCommand} && ${cdCommand} && ${dirCommand} && ${scriptCommand}`
-          : `${cleanupCommand} && ${cloneCommand} && ${cdCommand} && ${dirCommand} && ${scriptCommand}`;
+      const fullScript = `cmd.exe /c python --version && cd Desktop/remote-installer && dir && echo ============================= && ${scriptCommand}`;
       console.log(`[@runner:processJob] SSH command: ${fullScript}`);
 
       const conn = new Client();
@@ -187,7 +180,7 @@ async function setupSchedules() {
   });
 }
 
-// Poll queue every 5 seconds
+// Poll queue every 10 seconds
 //setInterval(processJob, 10000);
 //setupSchedules().catch((err) => console.error('Setup schedules failed:', err));
 console.log('Worker running...');
