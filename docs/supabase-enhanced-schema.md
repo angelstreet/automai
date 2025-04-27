@@ -5,13 +5,15 @@ This document provides a comprehensive overview of the database schema used in t
 ## Quick Reference for AI Agents
 
 ### Core Entity Types
-- **Identity entities**: `profiles`, `auth.users`, `tenants`, `teams`, `team_members`
-- **Resource entities**: `hosts`, `repositories`, `deployments`, `cicd_providers`, `cicd_jobs`
+
+- **Identity entities**: `profiles`, `auth.users`, `tenants`, `teams`, `team_members`, `team_user_profiles`
+- **Resource entities**: `hosts`, `repositories`, `jobs_configuration`, `jobs_run`
 - **Permission entities**: `permission_matrix`, `role_templates`
 - **Configuration entities**: `subscription_tiers`, `resource_limits`
-- **Connection entities**: `git_providers`, `deployment_cicd_mappings`
+- **Connection entities**: `git_providers`
 
 ### Naming Conventions
+
 - Primary keys are named `id`
 - Foreign keys are named with the singular form of the referenced table plus `_id` (e.g., `team_id`, `tenant_id`)
 - Junction tables use a combined name of both entities (e.g., `team_members`, `profile_repository_pins`)
@@ -21,16 +23,18 @@ This document provides a comprehensive overview of the database schema used in t
 ### Common Query Patterns
 
 1. **Get resources for a specific team**:
+
    ```sql
    SELECT * FROM repositories WHERE team_id = '{{team_id}}';
    SELECT * FROM hosts WHERE team_id = '{{team_id}}';
    ```
 
 2. **Check if user has permission for a resource**:
+
    ```sql
    SELECT EXISTS (
-     SELECT 1 FROM permission_matrix 
-     WHERE profile_id = '{{user_id}}' 
+     SELECT 1 FROM permission_matrix
+     WHERE profile_id = '{{user_id}}'
      AND team_id = '{{team_id}}'
      AND resource_type = '{{resource_type}}'
      AND can_{{operation}} = true
@@ -38,37 +42,37 @@ This document provides a comprehensive overview of the database schema used in t
    ```
 
 3. **Get all teams for a user**:
+
    ```sql
    SELECT t.* FROM teams t
    JOIN team_members tm ON t.id = tm.team_id
    WHERE tm.profile_id = '{{user_id}}';
    ```
 
-4. **Get deployments with related repository and CICD details**:
+4. **Get job runs with configuration details**:
    ```sql
-   SELECT d.*, r.name as repository_name, c.name as cicd_provider_name
-   FROM deployments d
-   LEFT JOIN repositories r ON d.repository_id = r.id
-   LEFT JOIN cicd_providers c ON d.cicd_provider_id = c.id
-   WHERE d.team_id = '{{team_id}}';
+   SELECT jr.*, jc.name as job_name, r.name as repository_name
+   FROM jobs_run jr
+   JOIN jobs_configuration jc ON jr.config_id = jc.id
+   LEFT JOIN repositories r ON jc.repository_id = r.id
+   WHERE jc.team_id = '{{team_id}}';
    ```
 
 ### Multi-Tenancy Implementation
 
 The application implements multi-tenancy at multiple levels:
 
-1. **Tenant Isolation**: Each `profile` belongs to a `tenant`, and all `teams` belong to a specific `tenant`.
-2. **Team-Based Access**: Within a tenant, resources are further isolated by `team_id`.
-3. **Permission Control**: Access to resources is controlled by the `permission_matrix` table.
+1. **Team Isolation**: Resources are isolated by `team_id`.
+2. **Permission Control**: Access to resources is controlled by the `permission_matrix` table.
 
-When querying data, always filter by the appropriate tenant and team context:
+When querying data, always filter by the appropriate team context:
+
 ```sql
--- Get all repositories for the user's tenant and teams
+-- Get all repositories for the user's teams
 SELECT r.* FROM repositories r
 JOIN teams t ON r.team_id = t.id
 JOIN team_members tm ON t.id = tm.team_id
-WHERE tm.profile_id = '{{user_id}}'
-AND t.tenant_id = (SELECT tenant_id FROM profiles WHERE id = '{{user_id}}');
+WHERE tm.profile_id = '{{user_id}}';
 ```
 
 ## Database Diagram
@@ -79,28 +83,23 @@ erDiagram
     teams ||--o{ team_members : contains
     teams ||--o{ hosts : owns
     teams ||--o{ repositories : owns
-    teams ||--o{ deployments : owns
-    teams ||--o{ cicd_providers : owns
+    teams ||--o{ jobs_configuration : owns
     profiles ||--o{ permission_matrix : has
     teams ||--o{ permission_matrix : defines
     tenants ||--o{ teams : has
-    tenants ||--o{ profiles : has
-    git_providers ||--o{ repositories : provides
+    git_providers }o--|| profiles : belongs_to
     subscription_tiers ||--o{ resource_limits : defines
     tenants }o--|| subscription_tiers : subscribes
     role_templates ||--o{ permission_matrix : applies
     profiles }|--|| auth.users : authenticates
-    repositories ||--o{ deployments : used_in
-    cicd_providers ||--o{ cicd_jobs : provides
-    deployments ||--o{ deployment_cicd_mappings : has
-    cicd_jobs ||--o{ deployment_cicd_mappings : used_in
+    repositories ||--o{ jobs_configuration : used_in
+    jobs_configuration ||--o{ jobs_run : has
 
     profiles {
         uuid id PK
-        text tenant_id FK
-        text role
         text avatar_url
-        text tenant_name
+        text role
+        uuid active_team FK
     }
 
     teams {
@@ -148,11 +147,12 @@ erDiagram
         boolean is_windows
         uuid team_id FK
         uuid creator_id FK
+        text auth_type
+        text private_key
     }
 
     repositories {
         uuid id PK
-        uuid provider_id FK
         text provider_type
         text name
         text description
@@ -166,40 +166,40 @@ erDiagram
         uuid creator_id FK
     }
 
-    cicd_providers {
-        uuid id PK
-        text name
-        text type
-        text url
-        integer port
-        jsonb config
-        text tenant_id FK
-        uuid team_id FK
-        uuid creator_id FK
-    }
-
-    deployments {
+    jobs_configuration {
         uuid id PK
         text name
         text description
         uuid repository_id FK
-        text status
-        uuid user_id FK
-        text tenant_id FK
+        text[] scripts_path
+        text[] host_ids
+        text[] scripts_parameters
+        jsonb environment_vars
+        text schedule_type
+        text cron_expression
+        integer repeat_count
+        boolean is_active
         uuid team_id FK
         uuid creator_id FK
-        uuid cicd_provider_id FK
+        text branch
+        jsonb config
     }
 
-    cicd_jobs {
+    jobs_run {
         uuid id PK
-        text name
-        text description
-        text external_id
-        uuid provider_id FK
-        jsonb parameters
-        uuid team_id FK
-        uuid creator_id FK
+        uuid config_id FK
+        text status
+        jsonb output
+        jsonb logs
+        text error
+        timestamp created_at
+        timestamp started_at
+        timestamp completed_at
+        jsonb execution_parameters
+        timestamp scheduled_time
+        text worker_id
+        integer execution_attempt
+        integer execution_number
     }
 
     tenants {
@@ -244,36 +244,31 @@ erDiagram
 
 Supabase uses PostgreSQL's Row Level Security feature to control access to data at the row level. The following RLS policies are implemented:
 
-### Tenant Isolation Policies
-
-Most tables in the system have RLS policies that restrict access based on tenant ID:
-
-- **Profiles Table**:
-  ```sql
-  CREATE POLICY "Users can view their own profile" ON profiles
-    FOR SELECT USING (auth.uid() = id);
-    
-  CREATE POLICY "Users can only see profiles in their tenant" ON profiles
-    FOR SELECT USING (tenant_id IN (
-      SELECT tenant_id FROM profiles WHERE id = auth.uid()
-    ));
-  ```
-
-- **Teams Table**:
-  ```sql
-  CREATE POLICY "Users can view teams in their tenant" ON teams
-    FOR SELECT USING (tenant_id IN (
-      SELECT tenant_id FROM profiles WHERE id = auth.uid()
-    ));
-  ```
-
 ### Team-Based Access Policies
 
-Resources like repositories, hosts, and deployments have RLS policies that restrict access based on team membership:
+Resources like repositories, hosts, and jobs are restricted based on team membership:
 
 - **Repositories Table**:
+
   ```sql
-  CREATE POLICY "Users can view repositories in their teams" ON repositories
+  CREATE POLICY "repositories_select_policy" ON repositories
+    FOR SELECT USING (team_id IN (
+      SELECT team_id FROM team_members WHERE profile_id = auth.uid()
+    ));
+  ```
+
+- **Hosts Table**:
+
+  ```sql
+  CREATE POLICY "hosts_select_policy" ON hosts
+    FOR SELECT USING (team_id IN (
+      SELECT team_id FROM team_members WHERE profile_id = auth.uid()
+    ));
+  ```
+
+- **Jobs Configuration Table**:
+  ```sql
+  CREATE POLICY "Team members can view job configurations" ON jobs_configuration
     FOR SELECT USING (team_id IN (
       SELECT team_id FROM team_members WHERE profile_id = auth.uid()
     ));
@@ -281,99 +276,113 @@ Resources like repositories, hosts, and deployments have RLS policies that restr
 
 ### Permission-Based Access Policies
 
-For operations like INSERT, UPDATE, and DELETE, policies check against the permission matrix:
+For operations like UPDATE, DELETE, and EXECUTE, policies check against the permission matrix:
 
 - **Hosts Table**:
   ```sql
-  CREATE POLICY "Users with insert permission can add hosts" ON hosts
-    FOR INSERT WITH CHECK (
-      EXISTS (
-        SELECT 1 FROM permission_matrix 
-        WHERE profile_id = auth.uid() 
-        AND team_id = hosts.team_id
-        AND resource_type = 'hosts'
-        AND can_insert = true
-      )
-    );
-    
-  CREATE POLICY "Users with update permission can modify hosts" ON hosts
+  CREATE POLICY "hosts_update_policy" ON hosts
     FOR UPDATE USING (
-      EXISTS (
-        SELECT 1 FROM permission_matrix 
-        WHERE profile_id = auth.uid() 
-        AND team_id = hosts.team_id
-        AND resource_type = 'hosts'
-        AND (can_update = true OR (can_update_own = true AND creator_id = auth.uid()))
+      (team_id IN (
+        SELECT tm.team_id FROM team_members tm
+        WHERE tm.profile_id = auth.uid()
+        AND EXISTS (
+          SELECT 1 FROM permission_matrix pm
+          WHERE pm.profile_id = auth.uid()
+          AND pm.team_id = tm.team_id
+          AND pm.resource_type = 'hosts'
+          AND pm.can_update = true
+        )
+      ))
+      OR
+      (creator_id = auth.uid()
+        AND EXISTS (
+          SELECT 1 FROM permission_matrix pm
+          JOIN team_members tm ON pm.team_id = tm.team_id AND pm.profile_id = tm.profile_id
+          WHERE pm.profile_id = auth.uid()
+          AND tm.team_id = hosts.team_id
+          AND pm.resource_type = 'hosts'
+          AND pm.can_update_own = true
+        )
       )
     );
   ```
 
-### Global Policies for System Tables
+### Profile-Based Policies
 
-System tables like `subscription_tiers` and `role_templates` have simpler policies:
+Some tables like `git_providers` have policies that restrict access based on profile ownership:
 
-- **Subscription Tiers Table**:
+- **Git Providers Table**:
   ```sql
-  CREATE POLICY "Allow read access for all authenticated users" ON subscription_tiers
-    FOR SELECT USING (auth.role() = 'authenticated');
-  ```
-
-### Function-Based Policies
-
-Some tables use function-based policies for more complex access logic:
-
-- **Deployments Table**:
-  ```sql
-  CREATE POLICY "Can execute deployments with execute permission" ON deployments
-    FOR UPDATE USING (
-      check_permission(auth.uid(), team_id, 'deployments', 'execute', creator_id = auth.uid())
-    );
+  CREATE POLICY "git_providers_select_policy" ON git_providers
+    FOR SELECT USING (profile_id = auth.uid());
   ```
 
 ## Database Functions and Helpers
 
 ### Permission Check Function
+
 ```sql
 CREATE OR REPLACE FUNCTION check_permission(
-  p_profile_id UUID, 
-  p_team_id UUID, 
-  p_resource_type TEXT, 
+  p_profile_id UUID,
+  p_team_id UUID,
+  p_resource_type TEXT,
   p_operation TEXT,
-  p_is_own_resource BOOLEAN DEFAULT FALSE
+  p_is_own_resource BOOLEAN DEFAULT false
 ) RETURNS BOOLEAN AS $$
 DECLARE
-  v_result BOOLEAN;
+  v_has_permission BOOLEAN;
 BEGIN
-  -- Check if user has requested permission
-  SELECT 
-    CASE p_operation
-      WHEN 'select' THEN can_select
-      WHEN 'insert' THEN can_insert
-      WHEN 'update' THEN CASE WHEN p_is_own_resource THEN (can_update OR can_update_own) ELSE can_update END
-      WHEN 'delete' THEN CASE WHEN p_is_own_resource THEN (can_delete OR can_delete_own) ELSE can_delete END
-      WHEN 'execute' THEN can_execute
-      ELSE FALSE
-    END INTO v_result
-  FROM permission_matrix
-  WHERE profile_id = p_profile_id
-    AND team_id = p_team_id
-    AND resource_type = p_resource_type;
-    
-  RETURN COALESCE(v_result, FALSE);
+  IF p_is_own_resource = TRUE AND
+     (p_operation = 'update' OR p_operation = 'delete') THEN
+    -- Check own-resource specific permissions
+    SELECT
+      CASE
+        WHEN p_operation = 'update' THEN can_update_own
+        WHEN p_operation = 'delete' THEN can_delete_own
+        ELSE FALSE
+      END INTO v_has_permission
+    FROM permission_matrix
+    WHERE
+      profile_id = p_profile_id AND
+      team_id = p_team_id AND
+      resource_type = p_resource_type;
+  ELSE
+    -- Check regular permissions
+    SELECT
+      CASE
+        WHEN p_operation = 'select' THEN can_select
+        WHEN p_operation = 'insert' THEN can_insert
+        WHEN p_operation = 'update' THEN can_update
+        WHEN p_operation = 'delete' THEN can_delete
+        WHEN p_operation = 'execute' THEN can_execute
+        ELSE FALSE
+      END INTO v_has_permission
+    FROM permission_matrix
+    WHERE
+      profile_id = p_profile_id AND
+      team_id = p_team_id AND
+      resource_type = p_resource_type;
+  END IF;
+
+  RETURN COALESCE(v_has_permission, FALSE);
 END;
 $$ LANGUAGE plpgsql;
 ```
 
-### User Team Function
+### Team Membership Check Function
+
 ```sql
-CREATE OR REPLACE FUNCTION get_user_teams(p_profile_id UUID) RETURNS SETOF teams AS $$
-BEGIN
-  RETURN QUERY
-  SELECT t.* FROM teams t
-  JOIN team_members tm ON t.id = tm.team_id
-  WHERE tm.profile_id = p_profile_id;
-END;
-$$ LANGUAGE plpgsql;
+CREATE OR REPLACE FUNCTION is_team_member(user_id UUID, team_id UUID)
+RETURNS BOOLEAN
+LANGUAGE SQL
+SECURITY DEFINER
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM team_members
+    WHERE profile_id = user_id AND team_id = $2
+  );
+$$;
 ```
 
 ## Public Schema
@@ -381,33 +390,35 @@ $$ LANGUAGE plpgsql;
 The `public` schema contains the core application data tables.
 
 ### Profiles Table
+
 - **Table**: `profiles`
 - **Description**: Extra metadata for users
 - **Primary Key**: `id`
-- **Foreign Keys**: 
+- **Foreign Keys**:
   - `id` references `auth.users(id)`
-  - `tenant_id` references `tenants(id)`
+  - `active_team` references `teams(id)`
 - **Columns**:
   - `id` (uuid, NOT NULL): User ID from auth.uid()
   - `avatar_url` (text): User's avatar URL
-  - `tenant_id` (text): Reference to the tenant this profile belongs to
   - `role` (text, DEFAULT 'admin'): User role (admin/viewer/developer/tester)
-  - `tenant_name` (text, DEFAULT 'pro'): Tenant type (trial/pro/tenant)
+  - `active_team` (uuid): The team currently active for this user
 
 ### Tenants Table
+
 - **Table**: `tenants`
 - **Description**: Organization information
 - **Primary Key**: `id`
 - **Columns**:
   - `id` (text, NOT NULL): Generated UUID
   - `name` (text, NOT NULL): Tenant name
-  - `domain` (text, UNIQUE): Tenant domain
+  - `domain` (text): Tenant domain
   - `created_at` (timestamptz, NOT NULL, DEFAULT CURRENT_TIMESTAMP): Creation timestamp
   - `updated_at` (timestamptz, NOT NULL, DEFAULT CURRENT_TIMESTAMP): Last update timestamp
   - `subscription_tier_id` (text): Reference to subscription tier
   - `organization_id` (uuid): External organization ID
 
 ### Teams Table
+
 - **Table**: `teams`
 - **Primary Key**: `id`
 - **Foreign Keys**:
@@ -424,6 +435,7 @@ The `public` schema contains the core application data tables.
   - `updated_at` (timestamptz, DEFAULT CURRENT_TIMESTAMP)
 
 ### Team Members Table
+
 - **Table**: `team_members`
 - **Primary Keys**: `team_id`, `profile_id`
 - **Foreign Keys**:
@@ -436,7 +448,19 @@ The `public` schema contains the core application data tables.
   - `created_at` (timestamptz, DEFAULT CURRENT_TIMESTAMP)
   - `updated_at` (timestamptz, DEFAULT CURRENT_TIMESTAMP)
 
+### Team User Profiles View
+
+- **Table**: `team_user_profiles`
+- **Description**: View that joins user data for team display
+- **Columns**:
+  - `id` (uuid): User ID
+  - `email` (varchar): User email
+  - `avatar_url` (text): User avatar URL
+  - `raw_user_meta_data` (jsonb): User metadata
+  - `full_name` (text): User's full name
+
 ### Hosts Table
+
 - **Table**: `hosts`
 - **Primary Key**: `id`
 - **Foreign Keys**:
@@ -457,8 +481,11 @@ The `public` schema contains the core application data tables.
   - `updated_at` (timestamptz, NOT NULL, DEFAULT CURRENT_TIMESTAMP)
   - `team_id` (uuid): Team this host belongs to
   - `creator_id` (uuid): User who created this host
+  - `auth_type` (text, NOT NULL, DEFAULT 'password'): Authentication type
+  - `private_key` (text): SSH private key for authentication
 
 ### Git Providers Table
+
 - **Table**: `git_providers`
 - **Primary Key**: `id`
 - **Foreign Keys**:
@@ -479,15 +506,14 @@ The `public` schema contains the core application data tables.
   - `updated_at` (timestamp, DEFAULT now())
 
 ### Repositories Table
+
 - **Table**: `repositories`
 - **Primary Key**: `id`
 - **Foreign Keys**:
-  - `provider_id` references `git_providers(id)`
   - `creator_id` references `profiles(id)`
   - `team_id` references `teams(id)`
 - **Columns**:
   - `id` (uuid, NOT NULL): Generated UUID
-  - `provider_id` (uuid, NOT NULL): Git provider reference
   - `provider_type` (text, NOT NULL): Provider type
   - `name` (text, NOT NULL): Repository name
   - `description` (text): Repository description
@@ -505,6 +531,7 @@ The `public` schema contains the core application data tables.
   - `creator_id` (uuid): User who created this repository
 
 ### Profile Repository Pins Table
+
 - **Table**: `profile_repository_pins`
 - **Primary Keys**: `repository_id`, `profile_id`
 - **Foreign Keys**:
@@ -515,97 +542,60 @@ The `public` schema contains the core application data tables.
   - `repository_id` (uuid, NOT NULL)
   - `created_at` (timestamp, DEFAULT now())
 
-### CICD Providers Table
-- **Table**: `cicd_providers`
-- **Primary Key**: `id`
-- **Foreign Keys**:
-  - `tenant_id` references `tenants(id)`
-  - `creator_id` references `profiles(id)`
-  - `team_id` references `teams(id)`
-- **Columns**:
-  - `id` (uuid, NOT NULL): Generated UUID
-  - `type` (text, NOT NULL): Provider type
-  - `name` (text, NOT NULL): Provider name
-  - `url` (text, NOT NULL): Provider URL
-  - `config` (jsonb, NOT NULL): Provider configuration
-  - `created_at` (timestamptz, DEFAULT now())
-  - `updated_at` (timestamptz, DEFAULT now())
-  - `tenant_id` (text): Tenant reference
-  - `team_id` (uuid): Team reference
-  - `creator_id` (uuid): User who created this provider
-  - `port` (integer): Connection port (1-65535)
+### Jobs Configuration Table
 
-### CICD Jobs Table
-- **Table**: `cicd_jobs`
-- **Primary Key**: `id`
-- **Foreign Keys**:
-  - `provider_id` references `cicd_providers(id)`
-  - `creator_id` references `profiles(id)`
-  - `team_id` references `teams(id)`
-- **Columns**:
-  - `id` (uuid, NOT NULL): Generated UUID
-  - `provider_id` (uuid): Provider reference
-  - `external_id` (text, NOT NULL): External job ID in the provider
-  - `name` (text, NOT NULL): Job name
-  - `description` (text): Job description
-  - `parameters` (jsonb): Job parameters
-  - `created_at` (timestamptz, DEFAULT now())
-  - `updated_at` (timestamptz, DEFAULT now())
-  - `creator_id` (uuid): Creator reference
-  - `team_id` (uuid): Team reference
-
-### Deployments Table
-- **Table**: `deployments`
-- **Description**: Stores deployment information
+- **Table**: `jobs_configuration`
 - **Primary Key**: `id`
 - **Foreign Keys**:
   - `repository_id` references `repositories(id)`
-  - `user_id` references `profiles(id)` 
   - `creator_id` references `profiles(id)`
-  - `tenant_id` references `tenants(id)`
   - `team_id` references `teams(id)`
-  - `cicd_provider_id` references `cicd_providers(id)`
 - **Columns**:
   - `id` (uuid, NOT NULL): Generated UUID
-  - `name` (text, NOT NULL): Deployment name
-  - `description` (text): Deployment description
+  - `name` (text, NOT NULL): Job name
+  - `description` (text): Job description
   - `repository_id` (uuid): Repository reference
-  - `status` (text, NOT NULL, DEFAULT 'pending'): Deployment status
-  - `schedule_type` (text): Schedule type
-  - `scheduled_time` (timestamptz): Scheduled run time
+  - `team_id` (uuid, NOT NULL): Team reference
+  - `creator_id` (uuid, NOT NULL): Creator reference
   - `scripts_path` (text[]): Array of script paths
-  - `host_ids` (uuid[]): Array of host IDs
-  - `user_id` (uuid): User reference (deprecated, use creator_id)
-  - `created_at` (timestamptz, DEFAULT now())
-  - `started_at` (timestamptz): Start time
-  - `completed_at` (timestamptz): Completion time
-  - `updated_at` (timestamptz, DEFAULT now())
+  - `host_ids` (text[]): Array of host IDs
+  - `scripts_parameters` (text[]): Script parameters
+  - `environment_vars` (jsonb, DEFAULT '[]'): Environment variables
+  - `schedule_type` (text, DEFAULT 'now'): Schedule type
   - `cron_expression` (text): Cron schedule expression
   - `repeat_count` (integer, DEFAULT 0): Number of times to repeat
-  - `environment_vars` (jsonb, DEFAULT '[]'): Environment variables
-  - `tenant_id` (text): Tenant reference
-  - `scripts_parameters` (text[]): Script parameters
-  - `team_id` (uuid): Team reference
-  - `creator_id` (uuid): Creator reference
-  - `cicd_provider_id` (uuid): CICD provider reference
+  - `is_active` (boolean, DEFAULT true): Whether the job is active
+  - `created_at` (timestamptz, DEFAULT CURRENT_TIMESTAMP)
+  - `updated_at` (timestamptz, DEFAULT CURRENT_TIMESTAMP)
+  - `branch` (text, DEFAULT 'main'): Repository branch
+  - `config` (jsonb): Additional configuration
 
-### Deployment CICD Mappings Table
-- **Table**: `deployment_cicd_mappings`
+### Jobs Run Table
+
+- **Table**: `jobs_run`
 - **Primary Key**: `id`
 - **Foreign Keys**:
-  - `deployment_id` references `deployments(id)`
-  - `cicd_job_id` references `cicd_jobs(id)`
+  - `config_id` references `jobs_configuration(id)`
 - **Columns**:
   - `id` (uuid, NOT NULL): Generated UUID
-  - `deployment_id` (uuid): Deployment reference
-  - `cicd_job_id` (uuid): CICD job reference
-  - `parameters` (jsonb): Parameters for the job
-  - `build_number` (text): Build number
-  - `build_url` (text): Build URL
-  - `created_at` (timestamptz, DEFAULT now())
-  - `updated_at` (timestamptz, DEFAULT now())
+  - `config_id` (uuid, NOT NULL): Job configuration reference
+  - `status` (text, NOT NULL, DEFAULT 'queued'): Run status
+  - `output` (jsonb): Run output
+  - `logs` (jsonb): Run logs
+  - `error` (text): Error message
+  - `created_at` (timestamptz, DEFAULT CURRENT_TIMESTAMP)
+  - `updated_at` (timestamptz, DEFAULT CURRENT_TIMESTAMP)
+  - `queued_at` (timestamptz, DEFAULT CURRENT_TIMESTAMP)
+  - `started_at` (timestamptz): Start time
+  - `completed_at` (timestamptz): Completion time
+  - `execution_parameters` (jsonb): Execution parameters
+  - `scheduled_time` (timestamptz): Scheduled time
+  - `worker_id` (text): Worker ID
+  - `execution_attempt` (integer, DEFAULT 0): Attempt number
+  - `execution_number` (integer, DEFAULT 1): Execution number
 
 ### Subscription Tiers Table
+
 - **Table**: `subscription_tiers`
 - **Primary Key**: `id`
 - **Columns**:
@@ -616,6 +606,7 @@ The `public` schema contains the core application data tables.
   - `updated_at` (timestamptz, DEFAULT CURRENT_TIMESTAMP)
 
 ### Resource Limits Table
+
 - **Table**: `resource_limits`
 - **Primary Key**: `id`
 - **Foreign Keys**:
@@ -630,6 +621,7 @@ The `public` schema contains the core application data tables.
   - `updated_at` (timestamptz, DEFAULT CURRENT_TIMESTAMP)
 
 ### Permission Matrix Table
+
 - **Table**: `permission_matrix`
 - **Primary Key**: `id`
 - **Foreign Keys**:
@@ -651,6 +643,7 @@ The `public` schema contains the core application data tables.
   - `updated_at` (timestamptz, DEFAULT now())
 
 ### Role Templates Table
+
 - **Table**: `role_templates`
 - **Primary Key**: `id`
 - **Columns**:
@@ -665,6 +658,7 @@ The `public` schema contains the core application data tables.
 This schema is managed by Supabase Auth service and contains authentication-related tables.
 
 ### Users Table
+
 - **Table**: `auth.users`
 - **Description**: Stores user login data within a secure schema
 - **Primary Key**: `id`
@@ -678,13 +672,13 @@ This schema is managed by Supabase Auth service and contains authentication-rela
   - `confirmed_at` (timestamptz)
   - `last_sign_in_at` (timestamptz)
   - `role` (varchar)
-  - `user_role` (text, DEFAULT 'admin')
   - `raw_app_meta_data` (jsonb)
   - `raw_user_meta_data` (jsonb)
   - `created_at` (timestamptz)
   - `updated_at` (timestamptz)
 
 ### Identities Table
+
 - **Table**: `auth.identities`
 - **Description**: Stores identities associated to a user
 - **Primary Key**: `id`
@@ -701,6 +695,7 @@ This schema is managed by Supabase Auth service and contains authentication-rela
   - `updated_at` (timestamptz)
 
 ### Sessions Table
+
 - **Table**: `auth.sessions`
 - **Description**: Stores session data associated to a user
 - **Primary Key**: `id`
@@ -717,6 +712,7 @@ This schema is managed by Supabase Auth service and contains authentication-rela
   - `user_agent` (text)
 
 ### Other Auth Tables
+
 - `auth.refresh_tokens`: Store of tokens used to refresh JWT tokens once they expire
 - `auth.mfa_factors`: Stores metadata about multi-factor authentication factors
 - `auth.mfa_challenges`: Stores metadata about challenge requests made
@@ -732,6 +728,7 @@ This schema is managed by Supabase Auth service and contains authentication-rela
 This schema is managed by Supabase Storage service.
 
 ### Key Tables
+
 - `storage.buckets`: Storage buckets configuration
 - `storage.objects`: Stored objects metadata
 - `storage.s3_multipart_uploads`: Multipart upload tracking
@@ -740,30 +737,36 @@ This schema is managed by Supabase Storage service.
 ## Other Schemas
 
 ### Realtime Schema
+
 - `realtime.subscription`: Manages realtime subscriptions
 - `realtime.messages`: Stores realtime messages
 
 ### PgSodium Schema
+
 - `pgsodium.key`: Manages encryption keys
 
 ### Vault Schema
+
 - `vault.secrets`: Securely stores sensitive information
 
 ### Supabase Migrations Schema
+
 - `supabase_migrations.schema_migrations`: Tracks schema migrations
 - `supabase_migrations.seed_files`: Tracks seed files for database seeding
 
 ## Relationships Overview
 
 The database has a hierarchical structure with:
-- Tenants at the top level, representing organizations
-- Teams within tenants, grouping users and resources
-- Profiles (users) belonging to tenants and teams
-- Resources (hosts, repositories, deployments, etc.) organized by teams
+
+- Teams grouping users and resources
+- Profiles (users) belonging to teams
+- Resources (hosts, repositories, jobs) organized by teams
 - Permission matrix controlling access to resources
 
 Key relationship paths:
-- Tenant → Team → Team Member → Profile
-- Team → Repository/Host/Deployment/CICD Provider
-- Profile → Git Provider → Repository
-- Deployment → Repository/Host/CICD Job 
+
+- Team → Team Member → Profile
+- Team → Repository/Host/Jobs
+- Profile → Git Provider
+- Jobs Configuration → Repository/Host
+- Jobs Configuration → Jobs Run

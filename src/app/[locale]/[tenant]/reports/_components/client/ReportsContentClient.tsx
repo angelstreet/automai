@@ -19,7 +19,7 @@ const DASHBOARD_URLS = {
 };
 
 // Base URL for your Grafana instance - update this with your actual Grafana URL
-const GRAFANA_BASE_URL = process.env.NEXT_PUBLIC_GRAFANA_URL || 'http://localhost:3001';
+const GRAFANA_BASE_URL = process.env.NEXT_PUBLIC_GRAFANA_URL;
 
 interface GrafanaDashboardProps {
   dashboardUrl: string;
