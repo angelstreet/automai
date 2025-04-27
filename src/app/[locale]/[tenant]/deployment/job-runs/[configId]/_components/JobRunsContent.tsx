@@ -1,12 +1,13 @@
 'use client';
 
-import { ArrowLeft, Eye, Filter, RefreshCw, Search } from 'lucide-react';
+import { ArrowLeft, Eye, Filter, RefreshCw, Search, XCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import React, { useState } from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,7 +23,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/shadcn/table';
-import { useToast } from '@/components/shadcn/use-toast';
 import { getFormattedTime } from '@/lib/utils/deploymentUtils';
 
 import { JobRunStatusBadge } from './JobRunStatusBadge';
@@ -55,12 +55,13 @@ interface JobRunsContentProps {
 
 export function JobRunsContent({ jobRuns, configId: _configId, configName }: JobRunsContentProps) {
   const router = useRouter();
-  const { toast } = useToast();
   const t = useTranslations('deployment');
   const c = useTranslations('common');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedJobRun, setSelectedJobRun] = useState<JobRun | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Handle back button click
   const handleBack = () => {
@@ -89,12 +90,8 @@ export function JobRunsContent({ jobRuns, configId: _configId, configName }: Job
 
   // Handle view job run details
   const handleViewJobRun = (jobRun: JobRun) => {
-    // For now just show a toast with basic details
-    // Later, you could navigate to a detailed view page
-    toast({
-      title: `Job Run #${jobRun.executionNumber || '-'}`,
-      description: `Status: ${jobRun.status}, Started: ${jobRun.startedAt ? new Date(jobRun.startedAt).toLocaleString() : 'N/A'}, Completed: ${jobRun.completedAt ? new Date(jobRun.completedAt).toLocaleString() : 'N/A'}${jobRun.error ? ', Error: ' + jobRun.error : ''}`,
-    });
+    setSelectedJobRun(jobRun);
+    setIsModalOpen(true);
   };
 
   // Filter job runs based on search query and status filter
@@ -112,6 +109,14 @@ export function JobRunsContent({ jobRuns, configId: _configId, configName }: Job
 
   // Get unique statuses for the filter dropdown
   const uniqueStatuses = Array.from(new Set(jobRuns.map((run) => run.status)));
+
+  // Extract stdout content from job output
+  const getStdoutContent = (output: any) => {
+    if (!output) return 'No output available';
+    if (typeof output === 'string') return output;
+    if (output.stdout) return output.stdout;
+    return JSON.stringify(output, null, 2);
+  };
 
   return (
     <div className="container mx-auto p-4">
@@ -171,39 +176,39 @@ export function JobRunsContent({ jobRuns, configId: _configId, configName }: Job
         <CardContent>
           {filteredJobRuns.length > 0 ? (
             <div className="overflow-x-auto">
-              <Table>
+              <Table className="border-collapse">
                 <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[100px]">#</TableHead>
-                    <TableHead>{c('status')}</TableHead>
-                    <TableHead>{c('status_running')}</TableHead>
-                    <TableHead>{c('status_completed')}</TableHead>
-                    <TableHead>{c('duration')}</TableHead>
-                    <TableHead className="w-[100px] text-right">{c('actions')}</TableHead>
+                  <TableRow className="border-b border-border/50">
+                    <TableHead className="py-1 text-xs">#</TableHead>
+                    <TableHead className="py-1 text-xs">{c('status')}</TableHead>
+                    <TableHead className="py-1 text-xs">{c('status_running')}</TableHead>
+                    <TableHead className="py-1 text-xs">{c('status_completed')}</TableHead>
+                    <TableHead className="py-1 text-xs">{c('duration')}</TableHead>
+                    <TableHead className="py-1 text-xs text-right">{c('actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredJobRuns.map((jobRun) => (
-                    <TableRow key={jobRun.id}>
-                      <TableCell className="font-medium">{jobRun.executionNumber || '-'}</TableCell>
-                      <TableCell>
+                  {filteredJobRuns.map((jobRun, index) => (
+                    <TableRow key={jobRun.id} className="border-0 hover:bg-muted/30">
+                      <TableCell className="py-0.5 font-medium text-xs">{index + 1}</TableCell>
+                      <TableCell className="py-0.5 text-xs">
                         <JobRunStatusBadge status={jobRun.status} />
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-0.5 text-xs">
                         {jobRun.startedAt
                           ? getFormattedTime
                             ? getFormattedTime(jobRun.startedAt)
                             : new Date(jobRun.startedAt).toLocaleString()
                           : 'Not started'}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-0.5 text-xs">
                         {jobRun.completedAt
                           ? getFormattedTime
                             ? getFormattedTime(jobRun.completedAt)
                             : new Date(jobRun.completedAt).toLocaleString()
                           : 'Not completed'}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-0.5 text-xs">
                         {jobRun.startedAt && jobRun.completedAt
                           ? getFormattedTime
                             ? getFormattedTime(jobRun.startedAt, jobRun.completedAt)
@@ -212,9 +217,14 @@ export function JobRunsContent({ jobRuns, configId: _configId, configName }: Job
                             ? 'Running...'
                             : 'N/A'}
                       </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" onClick={() => handleViewJobRun(jobRun)}>
-                          <Eye className="h-4 w-4" />
+                      <TableCell className="py-0.5 text-xs text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewJobRun(jobRun)}
+                          className="h-6 w-6 p-0"
+                        >
+                          <Eye className="h-3 w-3" />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -239,6 +249,55 @@ export function JobRunsContent({ jobRuns, configId: _configId, configName }: Job
           )}
         </CardContent>
       </Card>
+
+      {/* Job output modal */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle>
+                {t('job_run_details')} #{selectedJobRun?.executionNumber || '-'}
+              </DialogTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0"
+                onClick={() => setIsModalOpen(false)}
+              >
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </div>
+          </DialogHeader>
+
+          <div className="flex flex-col space-y-2 mt-4">
+            <div className="text-xs font-semibold text-muted-foreground mb-1">
+              {t('job_output')}
+            </div>
+            <div className="bg-black/90 text-green-400 p-4 rounded font-mono text-xs whitespace-pre-wrap overflow-auto max-h-[60vh]">
+              {selectedJobRun ? getStdoutContent(selectedJobRun.output) : 'No output available'}
+            </div>
+
+            <div className="flex justify-between text-xs text-muted-foreground mt-2">
+              <div>
+                <span className="font-semibold">{c('status')}: </span>
+                {selectedJobRun?.status}
+              </div>
+              <div>
+                <span className="font-semibold">{c('started')}: </span>
+                {selectedJobRun?.startedAt
+                  ? new Date(selectedJobRun.startedAt).toLocaleString()
+                  : 'N/A'}
+              </div>
+              <div>
+                <span className="font-semibold">{c('completed')}: </span>
+                {selectedJobRun?.completedAt
+                  ? new Date(selectedJobRun.completedAt).toLocaleString()
+                  : 'N/A'}
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
