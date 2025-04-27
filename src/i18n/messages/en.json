@@ -269,7 +269,7 @@
     "execution_metrics": "Execution Metrics",
     "execution_details": "Execution Details",
     "grafana_login": "Grafana Login",
-    "login_required": "Auth is required to view dashboards",
+    "login_required": "Authentication is required to view dashboards",
     "username": "Username",
     "password": "Password",
     "login": "Log In",
