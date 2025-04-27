@@ -8,18 +8,12 @@ import { getJobRunsForConfig } from '@/app/actions/jobsAction';
 import { JobRunsContent } from './_components/JobRunsContent';
 import { JobRunsSkeleton } from './_components/JobRunsSkeleton';
 
-export async function generateMetadata({ params }: { params: { configId: string } }) {
-  const configId = params.configId;
-  const result = await getJobRunsForConfig(configId);
-
-  return {
-    title: result.success ? `Job Runs - ${result.configName || 'Job Configuration'}` : 'Job Runs',
-    description: 'View job run history',
-  };
-}
+// Metadata function moved to a separate file
 
 export default async function JobRunsPage({ params }: { params: { configId: string } }) {
-  const configId = params.configId;
+  // Await the entire params object
+  const awaitedParams = await params;
+  const { configId } = awaitedParams;
 
   if (!configId) {
     return notFound();

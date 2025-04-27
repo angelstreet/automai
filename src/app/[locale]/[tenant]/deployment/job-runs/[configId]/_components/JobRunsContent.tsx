@@ -33,7 +33,7 @@ interface JobRun {
   status: string;
   output: any;
   logs: any;
-  error: string | null;
+  error: string | null | undefined;
   createdAt: string;
   updatedAt?: string;
   queuedAt?: string;
