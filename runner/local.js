@@ -104,9 +104,17 @@ async function processJob() {
       conn
         .on('ready', () => {
           console.log(`[@runner:processJob] Connected to ${host.ip}`);
-          conn.exec(fullScript, (err, stream) => {
+          conn.exec(fullScript, async (err, stream) => {
             if (err) {
               console.error(`[@runner:processJob] Exec error: ${err.message}`);
+              await supabase.from('jobs_run').insert({
+                config_id,
+                status: 'failed',
+                output: { stderr: err.message },
+                created_at: new Date().toISOString(),
+                started_at: new Date().toISOString(),
+                completed_at: new Date().toISOString(),
+              });
               conn.end();
               return;
             }
@@ -120,11 +128,19 @@ async function processJob() {
                 output.stderr += data;
                 console.log(`[@runner:processJob] Stderr: ${data}`);
               })
-              .on('close', (code, signal) => {
+              .on('close', async (code, signal) => {
                 console.log(`[@runner:processJob] Stream closed, code: ${code}, signal: ${signal}`);
                 console.log(`[@runner:processJob] Final stdout: ${output.stdout}`);
                 console.log(`[@runner:processJob] Final stderr: ${output.stderr}`);
                 console.error(`[@runner:processJob] SSH connection closed`);
+                await supabase.from('jobs_run').insert({
+                  config_id,
+                  status: code === 0 ? 'success' : 'failed',
+                  output,
+                  created_at: new Date().toISOString(),
+                  started_at: new Date().toISOString(),
+                  completed_at: new Date().toISOString(),
+                });
                 conn.end();
               });
           });
