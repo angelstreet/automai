@@ -5,9 +5,9 @@ import { useState } from 'react';
 
 import { Card, CardContent } from '@/components/shadcn/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
+import { Team } from '@/types/context/teamContextType';
+import { User } from '@/types/service/userServiceType';
 
-// Constants for dashboard URLs - update these with your actual Grafana URLs
-// These should be relative to your Grafana base URL
 const DASHBOARD_URLS = {
   configOverview:
     'd/558a7504-0f4e-45b7-9662-5dd43f382a87/job-execution-metrics?orgId=1&from=now-7d&to=now&timezone=browser&theme=dark&var-team_name=7fdeb4bb-3639-4ec3-959f-b54769a219ce',
@@ -23,10 +23,13 @@ const GRAFANA_BASE_URL = process.env.NEXT_PUBLIC_GRAFANA_URL || 'http://localhos
 interface GrafanaDashboardProps {
   dashboardUrl: string;
   title: string;
+  teamId: string;
 }
 
-function GrafanaDashboard({ dashboardUrl, title }: GrafanaDashboardProps) {
-  const fullUrl = `${GRAFANA_BASE_URL}${dashboardUrl}`;
+function GrafanaDashboard({ dashboardUrl, title, teamId }: GrafanaDashboardProps) {
+  // Replace the placeholder team ID with the actual team ID
+  const urlWithTeamId = dashboardUrl.replace('7fdeb4bb-3639-4ec3-959f-b54769a219ce', teamId);
+  const fullUrl = `${GRAFANA_BASE_URL}${urlWithTeamId}`;
 
   return (
     <div className="w-full h-[600px] rounded-md overflow-hidden border border-border">
@@ -35,9 +38,21 @@ function GrafanaDashboard({ dashboardUrl, title }: GrafanaDashboardProps) {
   );
 }
 
-export function ReportsContentClient() {
+interface ReportsContentClientProps {
+  user: User | null;
+  teamDetails: Team | null;
+}
+
+export function ReportsContentClient({ user: _user, teamDetails }: ReportsContentClientProps) {
   const t = useTranslations('reports');
   const [activeTab, setActiveTab] = useState('overview');
+
+  // Get the active team ID from props
+  const teamId = teamDetails?.id || '7fdeb4bb-3639-4ec3-959f-b54769a219ce'; // Fallback to default
+
+  console.log(
+    `[@component:ReportsContentClient] Using team ID: ${teamId}, name: ${teamDetails?.name || 'Unknown'}`,
+  );
 
   return (
     <div className="space-y-4">
@@ -54,6 +69,7 @@ export function ReportsContentClient() {
               <GrafanaDashboard
                 dashboardUrl={DASHBOARD_URLS.configOverview}
                 title={t('config_overview')}
+                teamId={teamId}
               />
             </TabsContent>
 
@@ -61,6 +77,7 @@ export function ReportsContentClient() {
               <GrafanaDashboard
                 dashboardUrl={DASHBOARD_URLS.executionMetrics}
                 title={t('execution_metrics')}
+                teamId={teamId}
               />
             </TabsContent>
 
@@ -68,6 +85,7 @@ export function ReportsContentClient() {
               <GrafanaDashboard
                 dashboardUrl={DASHBOARD_URLS.executionDetails}
                 title={t('execution_details')}
+                teamId={teamId}
               />
             </TabsContent>
           </Tabs>
