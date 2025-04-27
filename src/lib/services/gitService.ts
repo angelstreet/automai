@@ -378,7 +378,7 @@ export async function fetchRepositoryContents(
   try {
     // Use a timeout to prevent hanging
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
 
     // Check for GitHub token in environment or localStorage
     let githubToken = '';

@@ -1,9 +1,11 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 
 import { Switch } from '@/components/shadcn/switch';
+import { Textarea } from '@/components/shadcn/textarea';
+import { useToast } from '@/components/shadcn/use-toast';
 import { DeploymentData } from '@/types/component/deploymentComponentType';
 import { Host } from '@/types/component/hostComponentType';
 
@@ -14,6 +16,7 @@ interface DeploymentWizardStep5ClientProps {
   isPending: boolean;
   availableHosts?: Host[];
   repositoryScripts?: any[];
+  onConfigChange?: (updatedConfig: any) => void;
 }
 
 export function DeploymentWizardStep5Client({
@@ -23,22 +26,55 @@ export function DeploymentWizardStep5Client({
   isPending,
   availableHosts = [],
   repositoryScripts = [],
+  onConfigChange,
 }: DeploymentWizardStep5ClientProps) {
   const t = useTranslations('deployment');
   const c = useTranslations('common');
+  const { toast } = useToast();
 
   // State for views and config
   const [showPipelineView, setShowPipelineView] = useState(false); // Always default to summary view
+  const [editableConfig, setEditableConfig] = useState('');
+  const [jsonError, setJsonError] = useState<string | null>(null);
 
   // Handle view toggle
   const handlePipelineToggle = (_checked: boolean) => {
     // For analytics or future state changes
-    console.log('[DeploymentWizardStep5] Toggled pipeline view:', _checked);
+    console.log('[@component:DeploymentWizardStep5] Toggled pipeline view:', _checked);
   };
 
   // Update provider details before submission
   const handleSubmit = (e: React.MouseEvent) => {
     e.preventDefault();
+
+    // If there are errors, prevent submission
+    if (jsonError) {
+      toast({
+        title: c('error'),
+        description: jsonError,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Try to parse the JSON and update the config
+    if (editableConfig && showPipelineView) {
+      try {
+        const configObject = JSON.parse(editableConfig);
+
+        // Call the onConfigChange handler if provided
+        if (onConfigChange) {
+          onConfigChange(configObject);
+        }
+      } catch (error: any) {
+        toast({
+          title: c('error'),
+          description: error.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
 
     // Call the original submit function
     if (typeof onSubmit === 'function') {
@@ -57,7 +93,7 @@ export function DeploymentWizardStep5Client({
     if (!data) return '';
 
     try {
-      console.log('[DeploymentWizardStep5] Generating preview pipeline');
+      console.log('[@component:DeploymentWizardStep5] Generating preview pipeline');
 
       // Get scripts details from the scriptIds
       const scriptDetails = repositoryScripts
@@ -103,22 +139,23 @@ export function DeploymentWizardStep5Client({
           parameters: script.parameters,
         })),
         hosts: hostDetails.map((host) => {
-          const hostConfig = {
+          // Define the host config with a Record type to avoid TypeScript errors
+          const hostConfig: Record<string, any> = {
             name: host.name,
             username: host.username,
             ip: host.ip || 'No IP',
             port: host.port,
             os: host.os,
-            authType: host.authType
+            authType: host.authType,
           };
-          
+
           // Only include the relevant authentication based on authType
           if (host.authType === 'password' && host.password) {
-            hostConfig['password'] = host.password;
+            hostConfig.password = host.password;
           } else if (host.authType === 'privateKey' && host.privateKey) {
-            hostConfig['key'] = host.privateKey;
+            hostConfig.key = host.privateKey;
           }
-          
+
           return hostConfig;
         }),
         schedule:
@@ -130,26 +167,49 @@ export function DeploymentWizardStep5Client({
       };
 
       // Convert to pretty JSON
-      const result = { pipeline: JSON.stringify(jobConfig, null, 2) };
+      const formattedConfig = JSON.stringify(jobConfig, null, 2);
 
-      console.log('[DeploymentWizardStep5] Successfully generated preview job config');
-      return result.pipeline;
+      console.log('[@component:DeploymentWizardStep5] Successfully generated preview job config');
+      return formattedConfig;
     } catch (error) {
-      console.error('[DeploymentWizardStep5] Failed to generate job preview:', error);
+      console.error('[@component:DeploymentWizardStep5] Failed to generate job preview:', error);
       return '// Failed to generate job preview. This will not affect the actual deployment.';
     }
   }, [data, repositoryScripts, availableHosts]);
 
+  // Set editable config when pipeline code changes
+  useEffect(() => {
+    if (pipelineCode && showPipelineView) {
+      setEditableConfig(pipelineCode);
+      setJsonError(null);
+    }
+  }, [pipelineCode, showPipelineView]);
+
+  // Validate JSON as user types
+  const handleConfigChange = (value: string) => {
+    setEditableConfig(value);
+    try {
+      if (value && value.trim() !== '') {
+        JSON.parse(value);
+        setJsonError(null);
+      }
+    } catch (error: any) {
+      setJsonError(error.message);
+    }
+  };
+
   // Render pipeline view
   const renderPipelineView = () => {
     return (
-      <>
-        <div className="bg-gray-900 rounded-md shadow-sm border border-gray-700 h-[400px] overflow-hidden">
-          <pre className="p-4 text-sm text-gray-200 whitespace-pre font-mono h-full overflow-auto">
-            {pipelineCode}
-          </pre>
-        </div>
-      </>
+      <div className="bg-gray-900 rounded-md shadow-sm border border-gray-700 h-[400px] overflow-hidden">
+        <Textarea
+          value={editableConfig}
+          onChange={(e) => handleConfigChange(e.target.value)}
+          className="font-mono text-sm h-full w-full bg-gray-900 text-gray-200 border-none"
+          spellCheck="false"
+        />
+        {jsonError && <div className="text-red-500 text-xs mt-1 px-2">{jsonError}</div>}
+      </div>
     );
   };
 
@@ -182,7 +242,7 @@ export function DeploymentWizardStep5Client({
           type="button"
           onClick={handleSubmit}
           className="px-4 py-1.5 rounded-md shadow-sm text-xs font-medium text-white bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 focus:outline-none focus:ring-1 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={isPending}
+          disabled={isPending || (showPipelineView && !!jsonError)}
         >
           {isPending ? (
             <>
