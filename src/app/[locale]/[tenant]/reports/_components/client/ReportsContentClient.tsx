@@ -219,11 +219,6 @@ export function ReportsContentClient({ user: _user, teamDetails }: ReportsConten
     const checkAuth = () => {
       const hasAuth = localStorage.getItem('grafana-authenticated') === 'true';
       setIsAuthenticated(hasAuth);
-
-      // If not authenticated, show login immediately
-      if (!hasAuth) {
-        setShowLogin(true);
-      }
     };
 
     checkAuth();
@@ -236,7 +231,6 @@ export function ReportsContentClient({ user: _user, teamDetails }: ReportsConten
 
   const handleLoginRequired = () => {
     setIsAuthenticated(false);
-    setShowLogin(true);
   };
 
   console.log(
