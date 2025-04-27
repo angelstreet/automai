@@ -194,7 +194,33 @@ export function DeploymentWizardStep5Client({
         setJsonError(null);
       }
     } catch (error: any) {
-      setJsonError(error.message);
+      const errorMsg = error.message;
+
+      // Extract line and position information from the error message if available
+      // JSON parser errors often include "at position X" or "at line Y column Z"
+      let lineInfo = '';
+      const positionMatch = errorMsg.match(/at position (\d+)/i);
+      const lineMatch = errorMsg.match(/at line (\d+) column (\d+)/i);
+
+      if (lineMatch) {
+        lineInfo = `Line ${lineMatch[1]}, Column ${lineMatch[2]}`;
+      } else if (positionMatch) {
+        // If we only have position, try to calculate the line number
+        const position = parseInt(positionMatch[1], 10);
+        const lines = value.substring(0, position).split('\n');
+        const lineNumber = lines.length;
+        lineInfo = `Line ${lineNumber}`;
+      }
+
+      const formattedError = lineInfo ? `${errorMsg} (${lineInfo})` : errorMsg;
+      setJsonError(formattedError);
+
+      // Show toast with error details
+      toast({
+        title: c('error') || 'Error',
+        description: formattedError,
+        variant: 'destructive',
+      });
     }
   };
 
