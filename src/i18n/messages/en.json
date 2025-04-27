@@ -267,7 +267,20 @@
     "desc": "View and analyze test execution reports and metrics",
     "config_overview": "Configuration Overview",
     "execution_metrics": "Execution Metrics",
-    "execution_details": "Execution Details"
+    "execution_details": "Execution Details",
+    "grafana_login": "Grafana Login",
+    "login_required": "Auth is required to view dashboards",
+    "username": "Username",
+    "password": "Password",
+    "login": "Log In",
+    "logging_in": "Logging in...",
+    "cancel": "Cancel",
+    "login_success": "Login Successful",
+    "login_failed": "Login Failed",
+    "login_error": "Connection Error",
+    "check_credentials": "Please check your credentials and try again",
+    "connection_error": "Could not connect to Grafana server",
+    "dashboard_ready": "Your dashboards are now ready to view"
   },
   "menu": {
     "title": "Menu",

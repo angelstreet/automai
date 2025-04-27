@@ -2,10 +2,14 @@
 
 import { useTranslations } from 'next-intl';
 import { useTheme } from 'next-themes';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
+import { Button } from '@/components/shadcn/button';
 import { Card, CardContent } from '@/components/shadcn/card';
+import { Input } from '@/components/shadcn/input';
+import { Label } from '@/components/shadcn/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
+import { useToast } from '@/components/shadcn/use-toast';
 import { Team } from '@/types/context/teamContextType';
 import { User } from '@/types/service/userServiceType';
 
@@ -19,16 +23,23 @@ const DASHBOARD_URLS = {
 };
 
 // Base URL for your Grafana instance - update this with your actual Grafana URL
-const GRAFANA_BASE_URL = process.env.NEXT_PUBLIC_GRAFANA_URL;
+const GRAFANA_BASE_URL = process.env.NEXT_PUBLIC_GRAFANA_URL || '';
 
 interface GrafanaDashboardProps {
   dashboardUrl: string;
   title: string;
   teamId: string;
   theme: string;
+  onLoginRequired: () => void;
 }
 
-function GrafanaDashboard({ dashboardUrl, title, teamId, theme }: GrafanaDashboardProps) {
+function GrafanaDashboard({
+  dashboardUrl,
+  title,
+  teamId,
+  theme,
+  onLoginRequired,
+}: GrafanaDashboardProps) {
   // Add team_name and theme parameters to the URL
   const urlWithParams = `${dashboardUrl}&var-team_name=${teamId}&theme=${theme}`;
 
@@ -36,9 +47,132 @@ function GrafanaDashboard({ dashboardUrl, title, teamId, theme }: GrafanaDashboa
   const baseUrl = GRAFANA_BASE_URL.endsWith('/') ? GRAFANA_BASE_URL.slice(0, -1) : GRAFANA_BASE_URL;
   const fullUrl = `${baseUrl}/${urlWithParams}`;
   console.log(`[@component:ReportsContentClient] Full URL: ${fullUrl}`);
+
+  // Handle iframe load event to detect login screens
+  const handleIframeLoad = (event: React.SyntheticEvent<HTMLIFrameElement, Event>) => {
+    try {
+      // Try to access iframe content to check for login page
+      // This might fail due to same-origin policy if not logged in
+      const iframe = event.target as HTMLIFrameElement;
+      if (iframe.contentWindow?.location.href.includes('login')) {
+        onLoginRequired();
+      }
+    } catch {
+      // If we can't access the iframe content, assume login is required
+      console.log(
+        `[@component:ReportsContentClient] Cannot access iframe content, login may be required`,
+      );
+      onLoginRequired();
+    }
+  };
+
   return (
-    <div className="w-full h-[600px] rounded-md overflow-hidden border border-border">
-      <iframe src={fullUrl} title={title} width="100%" height="100%" frameBorder="0" />
+    <div className="w-full h-[600px] rounded-md overflow-hidden border border-border relative">
+      <iframe
+        src={fullUrl}
+        title={title}
+        width="100%"
+        height="100%"
+        frameBorder="0"
+        onLoad={handleIframeLoad}
+      />
+    </div>
+  );
+}
+
+interface GrafanaLoginProps {
+  onLoginSuccess: () => void;
+  onCancel: () => void;
+}
+
+function GrafanaLogin({ onLoginSuccess, onCancel }: GrafanaLoginProps) {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+  const t = useTranslations('reports');
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      // You'll need to implement a server action/API route to handle authentication
+      // This is a mock implementation
+      const response = await fetch(`${GRAFANA_BASE_URL}/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+        credentials: 'include', // Important for cookie-based auth
+      });
+
+      if (response.ok) {
+        // Store a flag in localStorage to remember authentication
+        localStorage.setItem('grafana-authenticated', 'true');
+        toast({
+          title: t('login_success'),
+          description: t('dashboard_ready'),
+        });
+        onLoginSuccess();
+      } else {
+        toast({
+          title: t('login_failed'),
+          description: t('check_credentials'),
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: t('login_error'),
+        description: t('connection_error'),
+        variant: 'destructive',
+      });
+      console.error('[@component:ReportsContentClient] Login error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="absolute inset-0 bg-background/95 backdrop-blur-sm flex items-center justify-center z-10">
+      <Card className="w-[400px] max-w-[90%]">
+        <CardContent className="pt-6">
+          <h3 className="text-xl font-semibold mb-4">{t('grafana_login')}</h3>
+          <p className="text-sm text-muted-foreground mb-4">{t('login_required')}</p>
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="username">{t('username')}</Label>
+              <Input
+                id="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">{t('password')}</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            <div className="flex justify-end space-x-2 pt-2">
+              <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+                {t('cancel')}
+              </Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? t('logging_in') : t('login')}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -52,6 +186,8 @@ export function ReportsContentClient({ user: _user, teamDetails }: ReportsConten
   const t = useTranslations('reports');
   const [activeTab, setActiveTab] = useState('overview');
   const { resolvedTheme } = useTheme();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
 
   // Get the active team ID from props
   const teamId = teamDetails?.id || '7fdeb4bb-3639-4ec3-959f-b54769a219ce'; // Fallback to default
@@ -60,7 +196,34 @@ export function ReportsContentClient({ user: _user, teamDetails }: ReportsConten
   // Map our app theme to Grafana's supported theme values
   const grafanaTheme = resolvedTheme === 'dark' ? 'dark' : 'light';
 
-  console.log(`[@component:ReportsContentClient] Using team ID: ${teamId}, theme: ${grafanaTheme}`);
+  // Check for existing authentication on component mount
+  useEffect(() => {
+    const checkAuth = () => {
+      const hasAuth = localStorage.getItem('grafana-authenticated') === 'true';
+      setIsAuthenticated(hasAuth);
+
+      // If not authenticated, show login immediately
+      if (!hasAuth) {
+        setShowLogin(true);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  const handleLoginSuccess = () => {
+    setIsAuthenticated(true);
+    setShowLogin(false);
+  };
+
+  const handleLoginRequired = () => {
+    setIsAuthenticated(false);
+    setShowLogin(true);
+  };
+
+  console.log(
+    `[@component:ReportsContentClient] Using team ID: ${teamId}, theme: ${grafanaTheme}, authenticated: ${isAuthenticated}`,
+  );
 
   return (
     <div className="space-y-4">
@@ -73,30 +236,51 @@ export function ReportsContentClient({ user: _user, teamDetails }: ReportsConten
               <TabsTrigger value="details">{t('execution_details')}</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="overview" className="mt-0">
+            <TabsContent value="overview" className="mt-0 relative">
+              {showLogin && (
+                <GrafanaLogin
+                  onLoginSuccess={handleLoginSuccess}
+                  onCancel={() => setShowLogin(false)}
+                />
+              )}
               <GrafanaDashboard
                 dashboardUrl={DASHBOARD_URLS.configOverview}
                 title={t('config_overview')}
                 teamId={teamId}
                 theme={grafanaTheme}
+                onLoginRequired={handleLoginRequired}
               />
             </TabsContent>
 
-            <TabsContent value="metrics" className="mt-0">
+            <TabsContent value="metrics" className="mt-0 relative">
+              {showLogin && (
+                <GrafanaLogin
+                  onLoginSuccess={handleLoginSuccess}
+                  onCancel={() => setShowLogin(false)}
+                />
+              )}
               <GrafanaDashboard
                 dashboardUrl={DASHBOARD_URLS.executionMetrics}
                 title={t('execution_metrics')}
                 teamId={teamId}
                 theme={grafanaTheme}
+                onLoginRequired={handleLoginRequired}
               />
             </TabsContent>
 
-            <TabsContent value="details" className="mt-0">
+            <TabsContent value="details" className="mt-0 relative">
+              {showLogin && (
+                <GrafanaLogin
+                  onLoginSuccess={handleLoginSuccess}
+                  onCancel={() => setShowLogin(false)}
+                />
+              )}
               <GrafanaDashboard
                 dashboardUrl={DASHBOARD_URLS.executionDetails}
                 title={t('execution_details')}
                 teamId={teamId}
                 theme={grafanaTheme}
+                onLoginRequired={handleLoginRequired}
               />
             </TabsContent>
           </Tabs>
