@@ -1,5 +1,6 @@
 'use client';
 
+import { LockIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
@@ -9,6 +10,12 @@ import { Card, CardContent } from '@/components/shadcn/card';
 import { Input } from '@/components/shadcn/input';
 import { Label } from '@/components/shadcn/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/shadcn/tooltip';
 import { useToast } from '@/components/shadcn/use-toast';
 import { Team } from '@/types/context/teamContextType';
 import { User } from '@/types/service/userServiceType';
@@ -140,7 +147,6 @@ function GrafanaLogin({ onLoginSuccess, onCancel }: GrafanaLoginProps) {
       <Card className="w-[400px] max-w-[90%]">
         <CardContent className="pt-6">
           <h3 className="text-xl font-semibold mb-4">{t('grafana_login')}</h3>
-          <p className="text-sm text-muted-foreground mb-4">{t('login_required')}</p>
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
@@ -231,58 +237,125 @@ export function ReportsContentClient({ user: _user, teamDetails }: ReportsConten
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="mb-2 mt-2">
-              <TabsTrigger value="overview">{t('config_overview')}</TabsTrigger>
-              <TabsTrigger value="metrics">{t('execution_metrics')}</TabsTrigger>
-              <TabsTrigger value="details">{t('execution_details')}</TabsTrigger>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      {' '}
+                      {/* Wrapper div to ensure tooltip works with disabled state */}
+                      <TabsTrigger
+                        value="overview"
+                        disabled={!isAuthenticated}
+                        className={!isAuthenticated ? 'opacity-50 cursor-not-allowed' : ''}
+                      >
+                        {t('config_overview')}
+                      </TabsTrigger>
+                    </div>
+                  </TooltipTrigger>
+                  {!isAuthenticated && (
+                    <TooltipContent>
+                      <p>{t('login_required')}</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
+
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <TabsTrigger
+                        value="metrics"
+                        disabled={!isAuthenticated}
+                        className={!isAuthenticated ? 'opacity-50 cursor-not-allowed' : ''}
+                      >
+                        {t('execution_metrics')}
+                      </TabsTrigger>
+                    </div>
+                  </TooltipTrigger>
+                  {!isAuthenticated && (
+                    <TooltipContent>
+                      <p>{t('login_required')}</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
+
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <TabsTrigger
+                        value="details"
+                        disabled={!isAuthenticated}
+                        className={!isAuthenticated ? 'opacity-50 cursor-not-allowed' : ''}
+                      >
+                        {t('execution_details')}
+                      </TabsTrigger>
+                    </div>
+                  </TooltipTrigger>
+                  {!isAuthenticated && (
+                    <TooltipContent>
+                      <p>{t('login_required')}</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             </TabsList>
 
-            <TabsContent value="overview" className="mt-0 relative">
-              {showLogin && (
+            {/* Show login overlay globally rather than per tab */}
+            {showLogin && (
+              <div className="relative">
                 <GrafanaLogin
                   onLoginSuccess={handleLoginSuccess}
                   onCancel={() => setShowLogin(false)}
                 />
-              )}
-              <GrafanaDashboard
-                dashboardUrl={DASHBOARD_URLS.configOverview}
-                title={t('config_overview')}
-                teamId={teamId}
-                theme={grafanaTheme}
-                onLoginRequired={handleLoginRequired}
-              />
-            </TabsContent>
+              </div>
+            )}
 
-            <TabsContent value="metrics" className="mt-0 relative">
-              {showLogin && (
-                <GrafanaLogin
-                  onLoginSuccess={handleLoginSuccess}
-                  onCancel={() => setShowLogin(false)}
-                />
-              )}
-              <GrafanaDashboard
-                dashboardUrl={DASHBOARD_URLS.executionMetrics}
-                title={t('execution_metrics')}
-                teamId={teamId}
-                theme={grafanaTheme}
-                onLoginRequired={handleLoginRequired}
-              />
-            </TabsContent>
+            {isAuthenticated ? (
+              <>
+                {/* Show content only when authenticated */}
+                <TabsContent value="overview" className="mt-0 relative">
+                  <GrafanaDashboard
+                    dashboardUrl={DASHBOARD_URLS.configOverview}
+                    title={t('config_overview')}
+                    teamId={teamId}
+                    theme={grafanaTheme}
+                    onLoginRequired={handleLoginRequired}
+                  />
+                </TabsContent>
 
-            <TabsContent value="details" className="mt-0 relative">
-              {showLogin && (
-                <GrafanaLogin
-                  onLoginSuccess={handleLoginSuccess}
-                  onCancel={() => setShowLogin(false)}
-                />
-              )}
-              <GrafanaDashboard
-                dashboardUrl={DASHBOARD_URLS.executionDetails}
-                title={t('execution_details')}
-                teamId={teamId}
-                theme={grafanaTheme}
-                onLoginRequired={handleLoginRequired}
-              />
-            </TabsContent>
+                <TabsContent value="metrics" className="mt-0 relative">
+                  <GrafanaDashboard
+                    dashboardUrl={DASHBOARD_URLS.executionMetrics}
+                    title={t('execution_metrics')}
+                    teamId={teamId}
+                    theme={grafanaTheme}
+                    onLoginRequired={handleLoginRequired}
+                  />
+                </TabsContent>
+
+                <TabsContent value="details" className="mt-0 relative">
+                  <GrafanaDashboard
+                    dashboardUrl={DASHBOARD_URLS.executionDetails}
+                    title={t('execution_details')}
+                    teamId={teamId}
+                    theme={grafanaTheme}
+                    onLoginRequired={handleLoginRequired}
+                  />
+                </TabsContent>
+              </>
+            ) : (
+              <div className="mt-4 border rounded-md p-8 flex flex-col items-center justify-center gap-4 bg-muted/30">
+                <LockIcon className="h-12 w-12 text-muted-foreground" />
+                <h3 className="text-xl font-medium">{t('grafana_login')}</h3>
+                <p className="text-muted-foreground text-center max-w-md">{t('login_required')}</p>
+                <Button size="lg" onClick={() => setShowLogin(true)} className="mt-2">
+                  {t('login')}
+                </Button>
+              </div>
+            )}
           </Tabs>
         </CardContent>
       </Card>
