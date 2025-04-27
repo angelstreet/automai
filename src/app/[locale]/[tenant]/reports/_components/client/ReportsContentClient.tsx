@@ -19,6 +19,7 @@ import {
 import { useToast } from '@/components/shadcn/use-toast';
 import { Team } from '@/types/context/teamContextType';
 import { User } from '@/types/service/userServiceType';
+import { loginToGrafana, verifyGrafanaAuth, logoutFromGrafana } from '@/utils/grafana-auth';
 
 const DASHBOARD_URLS = {
   configOverview:
@@ -62,6 +63,7 @@ function GrafanaDashboard({
       // This might fail due to same-origin policy if not logged in
       const iframe = event.target as HTMLIFrameElement;
       if (iframe.contentWindow?.location.href.includes('login')) {
+        console.log(`[@component:ReportsContentClient] Login page detected in iframe`);
         onLoginRequired();
       }
     } catch {
@@ -104,20 +106,9 @@ function GrafanaLogin({ onLoginSuccess, onCancel }: GrafanaLoginProps) {
     setIsLoading(true);
 
     try {
-      // You'll need to implement a server action/API route to handle authentication
-      // This is a mock implementation
-      const response = await fetch(`${GRAFANA_BASE_URL}/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
-        credentials: 'include', // Important for cookie-based auth
-      });
+      const result = await loginToGrafana(username, password);
 
-      if (response.ok) {
-        // Store a flag in localStorage to remember authentication
-        localStorage.setItem('grafana-authenticated', 'true');
+      if (result.success) {
         toast({
           title: t('login_success'),
           description: t('dashboard_ready'),
@@ -126,7 +117,7 @@ function GrafanaLogin({ onLoginSuccess, onCancel }: GrafanaLoginProps) {
       } else {
         toast({
           title: t('login_failed'),
-          description: t('check_credentials'),
+          description: result.error || t('check_credentials'),
           variant: 'destructive',
         });
       }
@@ -205,7 +196,9 @@ export function ReportsContentClient({ user: _user, teamDetails }: ReportsConten
   const [activeTab, setActiveTab] = useState('overview');
   const { resolvedTheme } = useTheme();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [showLogin, setShowLogin] = useState(false);
+  const { toast } = useToast();
 
   // Get the active team ID from props
   const teamId = teamDetails?.id || '7fdeb4bb-3639-4ec3-959f-b54769a219ce'; // Fallback to default
@@ -216,9 +209,18 @@ export function ReportsContentClient({ user: _user, teamDetails }: ReportsConten
 
   // Check for existing authentication on component mount
   useEffect(() => {
-    const checkAuth = () => {
-      const hasAuth = localStorage.getItem('grafana-authenticated') === 'true';
-      setIsAuthenticated(hasAuth);
+    const checkAuth = async () => {
+      setIsCheckingAuth(true);
+      try {
+        const isAuth = await verifyGrafanaAuth();
+        setIsAuthenticated(isAuth);
+        console.log(`[@component:ReportsContentClient] Authentication check completed: ${isAuth}`);
+      } catch (error) {
+        console.error('[@component:ReportsContentClient] Error checking authentication:', error);
+        setIsAuthenticated(false);
+      } finally {
+        setIsCheckingAuth(false);
+      }
     };
 
     checkAuth();
@@ -230,12 +232,30 @@ export function ReportsContentClient({ user: _user, teamDetails }: ReportsConten
   };
 
   const handleLoginRequired = () => {
-    setIsAuthenticated(false);
+    // If we were previously authenticated but now require login,
+    // that means our session expired
+    if (isAuthenticated) {
+      logoutFromGrafana();
+      setIsAuthenticated(false);
+      toast({
+        title: t('session_expired'),
+        description: t('login_required'),
+        variant: 'destructive',
+      });
+    }
   };
 
   console.log(
     `[@component:ReportsContentClient] Using team ID: ${teamId}, theme: ${grafanaTheme}, authenticated: ${isAuthenticated}`,
   );
+
+  if (isCheckingAuth) {
+    return (
+      <div className="flex justify-center items-center p-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

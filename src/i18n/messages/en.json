@@ -280,7 +280,8 @@
     "login_error": "Connection Error",
     "check_credentials": "Please check your credentials and try again",
     "connection_error": "Could not connect to Grafana server",
-    "dashboard_ready": "Your dashboards are now ready to view"
+    "dashboard_ready": "Your dashboards are now ready to view",
+    "session_expired": "Session Expired"
   },
   "menu": {
     "title": "Menu",
@@ -480,5 +481,29 @@
     "job_run_history": "Job Run History",
     "job_run_details": "Job Run Output",
     "job_output": "Job Output"
+  },
+  "appName": "Automai",
+  "navigation": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "automations": "Automations",
+    "hosts": "Hosts",
+    "templates": "Templates",
+    "settings": "Settings",
+    "team": "Team",
+    "apikeys": "API Keys",
+    "logs": "Logs",
+    "reports": "Reports"
+  },
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "automations": "Automations",
+    "hosts": "Hosts",
+    "templates": "Templates",
+    "settings": "Settings",
+    "team": "Team",
+    "apikeys": "API Keys",
+    "logs": "Logs",
+    "reports": "Reports"
   }
 }
