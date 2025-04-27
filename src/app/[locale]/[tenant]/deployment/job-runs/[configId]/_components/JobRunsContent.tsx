@@ -252,17 +252,15 @@ export function JobRunsContent({ jobRuns, configId: _configId, configName }: Job
 
       {/* Job output modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
-          <DialogHeader className="pb-0 mb-0">
-            <div className="flex items-center justify-between">
-              <DialogTitle>
-                {t('job_run_details')} #{selectedJobRun?.executionNumber || '-'}
-              </DialogTitle>
-            </div>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col p-4">
+          <DialogHeader>
+            <DialogTitle>
+              {t('job_run_details')} #{selectedJobRun?.executionNumber || '-'}
+            </DialogTitle>
           </DialogHeader>
 
-          <div className="flex flex-col mt-0 pt-0">
-            <div className="bg-black/90 text-green-400 p-4 rounded font-mono text-xs whitespace-pre-wrap overflow-auto max-h-[60vh]">
+          <div className="flex flex-col mt-[-8px]">
+            <div className="bg-black/90 text-green-400 rounded font-mono text-xs whitespace-pre-wrap overflow-auto max-h-[60vh]">
               {selectedJobRun ? getStdoutContent(selectedJobRun.output) : 'No output available'}
             </div>
 
