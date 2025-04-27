@@ -143,36 +143,48 @@ function GrafanaLogin({ onLoginSuccess, onCancel }: GrafanaLoginProps) {
   };
 
   return (
-    <div className="absolute inset-0 bg-background/95 backdrop-blur-sm flex items-center justify-center z-10">
-      <Card className="w-[400px] max-w-[90%]">
-        <CardContent className="pt-6">
-          <h3 className="text-xl font-semibold mb-4">{t('grafana_login')}</h3>
+    <div className="fixed inset-0 bg-background/95 backdrop-blur-sm flex items-center justify-center z-50">
+      <Card className="w-[350px] max-w-[90%] shadow-lg">
+        <CardContent className="pt-4 px-4 pb-4">
+          <h3 className="text-lg font-semibold mb-3">{t('grafana_login')}</h3>
 
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="username">{t('username')}</Label>
+          <form onSubmit={handleLogin} className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="username" className="text-sm">
+                {t('username')}
+              </Label>
               <Input
                 id="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
+                className="h-9"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">{t('password')}</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="password" className="text-sm">
+                {t('password')}
+              </Label>
               <Input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                className="h-9"
               />
             </div>
-            <div className="flex justify-end space-x-2 pt-2">
-              <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+            <div className="flex justify-end space-x-2 pt-1">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onCancel}
+                disabled={isLoading}
+                size="sm"
+              >
                 {t('cancel')}
               </Button>
-              <Button type="submit" disabled={isLoading}>
+              <Button type="submit" disabled={isLoading} size="sm">
                 {isLoading ? t('logging_in') : t('login')}
               </Button>
             </div>
