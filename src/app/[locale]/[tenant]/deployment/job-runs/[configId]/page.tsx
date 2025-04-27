@@ -9,7 +9,7 @@ import { JobRunsContent } from './_components/JobRunsContent';
 import { JobRunsSkeleton } from './_components/JobRunsSkeleton';
 
 export async function generateMetadata({ params }: { params: { configId: string } }) {
-  const { configId } = params;
+  const configId = params.configId;
   const result = await getJobRunsForConfig(configId);
 
   return {
@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: { params: { configId: string 
 }
 
 export default async function JobRunsPage({ params }: { params: { configId: string } }) {
-  const { configId } = params;
+  const configId = params.configId;
 
   if (!configId) {
     return notFound();
@@ -44,7 +44,7 @@ export default async function JobRunsPage({ params }: { params: { configId: stri
   return (
     <React.Suspense fallback={<JobRunsSkeleton />}>
       <JobRunsContent
-        jobRuns={jobRunsResult.data}
+        jobRuns={jobRunsResult.data || []}
         configId={configId}
         configName={jobRunsResult.configName || ''}
       />

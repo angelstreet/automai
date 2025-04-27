@@ -80,7 +80,9 @@
     "ip": "IP",
     "custom": "Custom",
     "url": "URL",
-    "config": "Configuration"
+    "config": "Configuration",
+    "all": "All",
+    "duration": "Duration"
   },
   "auth": {
     "signin_title": "Sign In",
@@ -451,6 +453,8 @@
     "name": "Name",
     "description": "Description",
     "update_success": "Deployment updated successfully",
-    "update_error": "Failed to update deployment"
+    "update_error": "Failed to update deployment",
+    "back_to_list": "Back to Deployments",
+    "title": "Deployments"
   }
 }

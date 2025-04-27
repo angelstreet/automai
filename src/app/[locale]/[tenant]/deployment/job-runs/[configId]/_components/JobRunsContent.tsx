@@ -2,6 +2,7 @@
 
 import { ArrowLeft, Eye, Filter, RefreshCw, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import React, { useState } from 'react';
 
 import { Button } from '@/components/shadcn/button';
@@ -52,9 +53,11 @@ interface JobRunsContentProps {
   configName: string;
 }
 
-export function JobRunsContent({ jobRuns, configId, configName }: JobRunsContentProps) {
+export function JobRunsContent({ jobRuns, configId: _configId, configName }: JobRunsContentProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const t = useTranslations('deployment');
+  const c = useTranslations('common');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -90,26 +93,7 @@ export function JobRunsContent({ jobRuns, configId, configName }: JobRunsContent
     // Later, you could navigate to a detailed view page
     toast({
       title: `Job Run #${jobRun.executionNumber || '-'}`,
-      description: (
-        <div className="mt-2 text-xs">
-          <p>
-            <strong>Status:</strong> {jobRun.status}
-          </p>
-          <p>
-            <strong>Started:</strong>{' '}
-            {jobRun.startedAt ? new Date(jobRun.startedAt).toLocaleString() : 'N/A'}
-          </p>
-          <p>
-            <strong>Completed:</strong>{' '}
-            {jobRun.completedAt ? new Date(jobRun.completedAt).toLocaleString() : 'N/A'}
-          </p>
-          {jobRun.error && (
-            <p className="text-red-500">
-              <strong>Error:</strong> {jobRun.error}
-            </p>
-          )}
-        </div>
-      ),
+      description: `Status: ${jobRun.status}, Started: ${jobRun.startedAt ? new Date(jobRun.startedAt).toLocaleString() : 'N/A'}, Completed: ${jobRun.completedAt ? new Date(jobRun.completedAt).toLocaleString() : 'N/A'}${jobRun.error ? ', Error: ' + jobRun.error : ''}`,
     });
   };
 
@@ -135,27 +119,27 @@ export function JobRunsContent({ jobRuns, configId, configName }: JobRunsContent
         <div className="flex items-center space-x-2">
           <Button variant="outline" size="sm" onClick={handleBack} className="mr-4">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Deployments
+            {c('back')}
           </Button>
           <h1 className="text-xl font-bold">{configName}</h1>
         </div>
         <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
           <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-          Refresh
+          {c('refresh')}
         </Button>
       </div>
 
       <Card>
         <CardHeader className="p-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <CardTitle className="text-lg">Job Run History</CardTitle>
+            <CardTitle className="text-lg">{t('details_logs')}</CardTitle>
 
             <div className="flex items-center space-x-2">
               <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="search"
-                  placeholder="Search..."
+                  placeholder={c('search_placeholder')}
                   className="pl-8 w-[200px]"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -166,11 +150,13 @@ export function JobRunsContent({ jobRuns, configId, configName }: JobRunsContent
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm">
                     <Filter className="h-4 w-4 mr-2" />
-                    Status: {statusFilter === 'all' ? 'All' : statusFilter}
+                    {c('status')}: {statusFilter === 'all' ? c('all') : statusFilter}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setStatusFilter('all')}>All</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter('all')}>
+                    {c('all')}
+                  </DropdownMenuItem>
                   {uniqueStatuses.map((status) => (
                     <DropdownMenuItem key={status} onClick={() => setStatusFilter(status)}>
                       {status}
@@ -188,12 +174,12 @@ export function JobRunsContent({ jobRuns, configId, configName }: JobRunsContent
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[100px]">Run #</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Started</TableHead>
-                    <TableHead>Completed</TableHead>
-                    <TableHead>Duration</TableHead>
-                    <TableHead className="w-[100px] text-right">Actions</TableHead>
+                    <TableHead className="w-[100px]">{t('wizard_repeat')} #</TableHead>
+                    <TableHead>{c('status')}</TableHead>
+                    <TableHead>{c('status_running')}</TableHead>
+                    <TableHead>{c('status_completed')}</TableHead>
+                    <TableHead>{c('duration')}</TableHead>
+                    <TableHead className="w-[100px] text-right">{c('actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -242,12 +228,12 @@ export function JobRunsContent({ jobRuns, configId, configName }: JobRunsContent
                 <RefreshCw className="h-12 w-12" />
               </div>
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
-                No job runs found
+                {t('none_title')}
               </h3>
               <p className="text-gray-500 dark:text-gray-400">
                 {searchQuery || statusFilter !== 'all'
-                  ? 'Try changing your search or filter criteria'
-                  : 'This job configuration has not been run yet'}
+                  ? t('wizard_try_refreshing')
+                  : t('none_desc')}
               </p>
             </div>
           )}
