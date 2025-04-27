@@ -264,7 +264,10 @@
   "reports": {
     "title": "Reports",
     "reports_list": "Reports List",
-    "desc": "View and analyze test execution reports and metrics"
+    "desc": "View and analyze test execution reports and metrics",
+    "config_overview": "Configuration Overview",
+    "execution_metrics": "Execution Metrics",
+    "execution_details": "Execution Details"
   },
   "menu": {
     "title": "Menu",
