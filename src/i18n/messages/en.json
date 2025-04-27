@@ -82,7 +82,10 @@
     "url": "URL",
     "config": "Configuration",
     "all": "All",
-    "duration": "Duration"
+    "duration": "Duration",
+    "started": "Started",
+    "completed": "Completed",
+    "output": "Output"
   },
   "auth": {
     "signin_title": "Sign In",
@@ -458,6 +461,8 @@
     "title": "Deployments",
     "no_jobs_found": "No job runs found",
     "no_jobs_desc": "This job configuration has not been run yet",
-    "job_run_history": "Job Run History"
+    "job_run_history": "Job Run History",
+    "job_run_details": "Job Run Output",
+    "job_output": "Job Output"
   }
 }

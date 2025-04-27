@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, Eye, Filter, RefreshCw, Search, XCircle } from 'lucide-react';
+import { ArrowLeft, Eye, Filter, RefreshCw, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import React, { useState } from 'react';
@@ -253,26 +253,15 @@ export function JobRunsContent({ jobRuns, configId: _configId, configName }: Job
       {/* Job output modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
-          <DialogHeader>
+          <DialogHeader className="pb-0 mb-0">
             <div className="flex items-center justify-between">
               <DialogTitle>
                 {t('job_run_details')} #{selectedJobRun?.executionNumber || '-'}
               </DialogTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 w-6 p-0"
-                onClick={() => setIsModalOpen(false)}
-              >
-                <XCircle className="h-4 w-4" />
-              </Button>
             </div>
           </DialogHeader>
 
-          <div className="flex flex-col space-y-2 mt-4">
-            <div className="text-xs font-semibold text-muted-foreground mb-1">
-              {t('job_output')}
-            </div>
+          <div className="flex flex-col mt-0 pt-0">
             <div className="bg-black/90 text-green-400 p-4 rounded font-mono text-xs whitespace-pre-wrap overflow-auto max-h-[60vh]">
               {selectedJobRun ? getStdoutContent(selectedJobRun.output) : 'No output available'}
             </div>
@@ -280,7 +269,17 @@ export function JobRunsContent({ jobRuns, configId: _configId, configName }: Job
             <div className="flex justify-between text-xs text-muted-foreground mt-2">
               <div>
                 <span className="font-semibold">{c('status')}: </span>
-                {selectedJobRun?.status}
+                <span
+                  className={
+                    selectedJobRun?.status === 'success'
+                      ? 'text-green-500'
+                      : selectedJobRun?.status === 'failed'
+                        ? 'text-red-500'
+                        : 'text-yellow-500'
+                  }
+                >
+                  {selectedJobRun?.status}
+                </span>
               </div>
               <div>
                 <span className="font-semibold">{c('started')}: </span>
