@@ -174,7 +174,7 @@ export function JobRunsContent({ jobRuns, configId: _configId, configName }: Job
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[100px]">{t('wizard_repeat')} #</TableHead>
+                    <TableHead className="w-[100px]">#</TableHead>
                     <TableHead>{c('status')}</TableHead>
                     <TableHead>{c('status_running')}</TableHead>
                     <TableHead>{c('status_completed')}</TableHead>
