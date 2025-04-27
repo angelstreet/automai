@@ -227,11 +227,11 @@ export function DeploymentWizardStep5Client({
   // Render pipeline view
   const renderPipelineView = () => {
     return (
-      <div className="bg-gray-900 rounded-md shadow-sm border border-gray-700 h-[400px] overflow-hidden">
+      <div className="bg-gray-900 rounded-md shadow-sm border border-gray-700 h-[460px] overflow-hidden">
         <Textarea
           value={editableConfig}
           onChange={(e) => handleConfigChange(e.target.value)}
-          className="font-mono text-sm h-full w-full bg-gray-900 text-gray-200 border-none"
+          className="font-mono text-sm h-full w-full bg-gray-900 text-gray-200 border-none resize-none"
           spellCheck="false"
         />
         {jsonError && <div className="text-red-500 text-xs mt-1 px-2">{jsonError}</div>}
