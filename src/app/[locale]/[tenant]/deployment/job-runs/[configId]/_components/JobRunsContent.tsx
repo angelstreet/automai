@@ -132,7 +132,7 @@ export function JobRunsContent({ jobRuns, configId: _configId, configName }: Job
       <Card>
         <CardHeader className="p-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <CardTitle className="text-lg">{t('details_logs')}</CardTitle>
+            <CardTitle className="text-lg">{t('job_run_history')}</CardTitle>
 
             <div className="flex items-center space-x-2">
               <div className="relative">
@@ -228,12 +228,12 @@ export function JobRunsContent({ jobRuns, configId: _configId, configName }: Job
                 <RefreshCw className="h-12 w-12" />
               </div>
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
-                {t('none_title')}
+                {t('no_jobs_found')}
               </h3>
               <p className="text-gray-500 dark:text-gray-400">
                 {searchQuery || statusFilter !== 'all'
                   ? t('wizard_try_refreshing')
-                  : t('none_desc')}
+                  : t('no_jobs_desc')}
               </p>
             </div>
           )}

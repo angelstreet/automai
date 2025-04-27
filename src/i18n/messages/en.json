@@ -455,6 +455,9 @@
     "update_success": "Deployment updated successfully",
     "update_error": "Failed to update deployment",
     "back_to_list": "Back to Deployments",
-    "title": "Deployments"
+    "title": "Deployments",
+    "no_jobs_found": "No job runs found",
+    "no_jobs_desc": "This job configuration has not been run yet",
+    "job_run_history": "Job Run History"
   }
 }
