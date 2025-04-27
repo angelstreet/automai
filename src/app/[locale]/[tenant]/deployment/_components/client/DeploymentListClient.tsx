@@ -111,8 +111,14 @@ export function DeploymentListClient({
   const handleViewDeployment = (deployment: Deployment, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
 
-    // Navigate to the job runs page for this configuration
-    router.push(`/deployment/job-runs/${deployment.id}`);
+    // Get the locale and tenant from the URL
+    const pathname = window.location.pathname;
+    const segments = pathname.split('/').filter(Boolean);
+    const locale = segments[0] || 'en';
+    const tenant = segments[1] || 'trial';
+
+    // Navigate to the job runs page for this configuration with proper path
+    router.push(`/${locale}/${tenant}/deployment/job-runs/${deployment.id}`);
   };
 
   const handleDeleteClick = (deployment: Deployment, e: React.MouseEvent) => {

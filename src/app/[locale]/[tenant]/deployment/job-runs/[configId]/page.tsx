@@ -4,31 +4,30 @@ import { notFound } from 'next/navigation';
 import React from 'react';
 
 import { getJobRunsForConfig } from '@/app/actions/jobsAction';
+
 import { JobRunsContent } from './_components/JobRunsContent';
 import { JobRunsSkeleton } from './_components/JobRunsSkeleton';
 
 export async function generateMetadata({ params }: { params: { configId: string } }) {
   const { configId } = params;
   const result = await getJobRunsForConfig(configId);
-  
+
   return {
-    title: result.success 
-      ? `Job Runs - ${result.configName || 'Job Configuration'}`
-      : 'Job Runs',
+    title: result.success ? `Job Runs - ${result.configName || 'Job Configuration'}` : 'Job Runs',
     description: 'View job run history',
   };
 }
 
 export default async function JobRunsPage({ params }: { params: { configId: string } }) {
   const { configId } = params;
-  
+
   if (!configId) {
     return notFound();
   }
-  
+
   // Fetch job runs data
   const jobRunsResult = await getJobRunsForConfig(configId);
-  
+
   if (!jobRunsResult.success) {
     // You might want to handle this error differently
     return (
@@ -40,12 +39,12 @@ export default async function JobRunsPage({ params }: { params: { configId: stri
       </div>
     );
   }
-  
+
   // Render the content
   return (
     <React.Suspense fallback={<JobRunsSkeleton />}>
-      <JobRunsContent 
-        jobRuns={jobRunsResult.data} 
+      <JobRunsContent
+        jobRuns={jobRunsResult.data}
         configId={configId}
         configName={jobRunsResult.configName || ''}
       />

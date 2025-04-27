@@ -58,25 +58,32 @@ export function JobRunsContent({ jobRuns, configId, configName }: JobRunsContent
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
+
   // Handle back button click
   const handleBack = () => {
-    router.push('/deployment');
+    // Get the locale and tenant from the URL
+    const pathname = window.location.pathname;
+    const segments = pathname.split('/').filter(Boolean);
+    const locale = segments[0] || 'en';
+    const tenant = segments[1] || 'trial';
+
+    // Navigate back to the deployments page with the correct path
+    router.push(`/${locale}/${tenant}/deployment`);
   };
-  
+
   // Handle refresh button click
   const handleRefresh = () => {
     setIsRefreshing(true);
-    
+
     // Refresh the page
     router.refresh();
-    
+
     // Reset the refreshing state after a short delay
     setTimeout(() => {
       setIsRefreshing(false);
     }, 1000);
   };
-  
+
   // Handle view job run details
   const handleViewJobRun = (jobRun: JobRun) => {
     // For now just show a toast with basic details
@@ -85,64 +92,64 @@ export function JobRunsContent({ jobRuns, configId, configName }: JobRunsContent
       title: `Job Run #${jobRun.executionNumber || '-'}`,
       description: (
         <div className="mt-2 text-xs">
-          <p><strong>Status:</strong> {jobRun.status}</p>
-          <p><strong>Started:</strong> {jobRun.startedAt ? new Date(jobRun.startedAt).toLocaleString() : 'N/A'}</p>
-          <p><strong>Completed:</strong> {jobRun.completedAt ? new Date(jobRun.completedAt).toLocaleString() : 'N/A'}</p>
-          {jobRun.error && <p className="text-red-500"><strong>Error:</strong> {jobRun.error}</p>}
+          <p>
+            <strong>Status:</strong> {jobRun.status}
+          </p>
+          <p>
+            <strong>Started:</strong>{' '}
+            {jobRun.startedAt ? new Date(jobRun.startedAt).toLocaleString() : 'N/A'}
+          </p>
+          <p>
+            <strong>Completed:</strong>{' '}
+            {jobRun.completedAt ? new Date(jobRun.completedAt).toLocaleString() : 'N/A'}
+          </p>
+          {jobRun.error && (
+            <p className="text-red-500">
+              <strong>Error:</strong> {jobRun.error}
+            </p>
+          )}
         </div>
       ),
     });
   };
-  
+
   // Filter job runs based on search query and status filter
-  const filteredJobRuns = jobRuns.filter(run => {
-    const matchesSearch = 
-      searchQuery === '' || 
+  const filteredJobRuns = jobRuns.filter((run) => {
+    const matchesSearch =
+      searchQuery === '' ||
       run.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (run.workerId && run.workerId.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (run.error && run.error.toLowerCase().includes(searchQuery.toLowerCase()));
-    
+
     const matchesStatus = statusFilter === 'all' || run.status === statusFilter;
-    
+
     return matchesSearch && matchesStatus;
   });
-  
+
   // Get unique statuses for the filter dropdown
-  const uniqueStatuses = Array.from(new Set(jobRuns.map(run => run.status)));
-  
+  const uniqueStatuses = Array.from(new Set(jobRuns.map((run) => run.status)));
+
   return (
     <div className="container mx-auto p-4">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleBack}
-            className="mr-4"
-          >
+          <Button variant="outline" size="sm" onClick={handleBack} className="mr-4">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Deployments
           </Button>
-          <h1 className="text-xl font-bold">
-            Job Runs for: {configName}
-          </h1>
+          <h1 className="text-xl font-bold">{configName}</h1>
         </div>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-        >
+        <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
           <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
       </div>
-      
+
       <Card>
         <CardHeader className="p-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <CardTitle className="text-lg">Job Run History</CardTitle>
-            
+
             <div className="flex items-center space-x-2">
               <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -154,7 +161,7 @@ export function JobRunsContent({ jobRuns, configId, configName }: JobRunsContent
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              
+
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm">
@@ -163,14 +170,9 @@ export function JobRunsContent({ jobRuns, configId, configName }: JobRunsContent
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setStatusFilter('all')}>
-                    All
-                  </DropdownMenuItem>
-                  {uniqueStatuses.map(status => (
-                    <DropdownMenuItem 
-                      key={status} 
-                      onClick={() => setStatusFilter(status)}
-                    >
+                  <DropdownMenuItem onClick={() => setStatusFilter('all')}>All</DropdownMenuItem>
+                  {uniqueStatuses.map((status) => (
+                    <DropdownMenuItem key={status} onClick={() => setStatusFilter(status)}>
                       {status}
                     </DropdownMenuItem>
                   ))}
@@ -179,7 +181,7 @@ export function JobRunsContent({ jobRuns, configId, configName }: JobRunsContent
             </div>
           </div>
         </CardHeader>
-        
+
         <CardContent>
           {filteredJobRuns.length > 0 ? (
             <div className="overflow-x-auto">
@@ -197,28 +199,26 @@ export function JobRunsContent({ jobRuns, configId, configName }: JobRunsContent
                 <TableBody>
                   {filteredJobRuns.map((jobRun) => (
                     <TableRow key={jobRun.id}>
-                      <TableCell className="font-medium">
-                        {jobRun.executionNumber || '-'}
-                      </TableCell>
+                      <TableCell className="font-medium">{jobRun.executionNumber || '-'}</TableCell>
                       <TableCell>
                         <JobRunStatusBadge status={jobRun.status} />
                       </TableCell>
                       <TableCell>
-                        {jobRun.startedAt 
-                          ? getFormattedTime 
-                            ? getFormattedTime(jobRun.startedAt) 
-                            : new Date(jobRun.startedAt).toLocaleString() 
+                        {jobRun.startedAt
+                          ? getFormattedTime
+                            ? getFormattedTime(jobRun.startedAt)
+                            : new Date(jobRun.startedAt).toLocaleString()
                           : 'Not started'}
                       </TableCell>
                       <TableCell>
-                        {jobRun.completedAt 
-                          ? getFormattedTime 
-                            ? getFormattedTime(jobRun.completedAt) 
-                            : new Date(jobRun.completedAt).toLocaleString() 
+                        {jobRun.completedAt
+                          ? getFormattedTime
+                            ? getFormattedTime(jobRun.completedAt)
+                            : new Date(jobRun.completedAt).toLocaleString()
                           : 'Not completed'}
                       </TableCell>
                       <TableCell>
-                        {jobRun.startedAt && jobRun.completedAt 
+                        {jobRun.startedAt && jobRun.completedAt
                           ? getFormattedTime
                             ? getFormattedTime(jobRun.startedAt, jobRun.completedAt)
                             : `${Math.round((new Date(jobRun.completedAt).getTime() - new Date(jobRun.startedAt).getTime()) / 1000 / 60)} min`
@@ -227,11 +227,7 @@ export function JobRunsContent({ jobRuns, configId, configName }: JobRunsContent
                             : 'N/A'}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewJobRun(jobRun)}
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => handleViewJobRun(jobRun)}>
                           <Eye className="h-4 w-4" />
                         </Button>
                       </TableCell>
