@@ -19,9 +19,20 @@ export async function getJobConfigsByTeamId(
     );
     const supabase = await createClient(cookieStore);
 
+    // We need to get all job runs and make sure they're properly ordered
+    // First, get all job configurations
     const { data, error } = await supabase
       .from('jobs_configuration')
-      .select('*, jobs_run(status, started_at, completed_at)')
+      .select(`
+        *,
+        jobs_run!jobs_run_config_id_fkey (
+          id, 
+          status, 
+          created_at,
+          started_at, 
+          completed_at
+        )
+      `)
       .eq('team_id', teamId)
       .order('created_at', { ascending: false });
 

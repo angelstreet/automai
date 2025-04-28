@@ -407,12 +407,22 @@ export async function getAllJobs() {
     const transformedData =
       result.data?.map((config) => {
         // Get the latest run to determine status
-        const latestRun =
+        // Ensure proper sorting by created_at timestamp in descending order (newest first)
+        // Use non-mutating approach with a new array to avoid issues
+        const latestRun = 
           config.jobs_run && config.jobs_run.length > 0
-            ? config.jobs_run.sort(
-                (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-              )[0]
+            ? [...config.jobs_run].sort((a, b) => {
+                const timeA = new Date(a.created_at).getTime();
+                const timeB = new Date(b.created_at).getTime();
+                return timeB - timeA; // Descending order - newer runs first
+              })[0]
             : null;
+        
+        // Log to debug the sorting
+        if (config.jobs_run && config.jobs_run.length > 1) {
+          console.log(`[@action:jobsAction:getAllJobs] Found ${config.jobs_run.length} runs for job '${config.name}'`);
+          console.log(`[@action:jobsAction:getAllJobs] Latest run: ${latestRun?.created_at}`);
+        }
 
         return {
           id: config.id,
