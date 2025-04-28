@@ -13,15 +13,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
+import { languages } from '@/config';
 
 interface LanguageSwitcherProps {
   className?: string;
 }
-
-const languages = [
-  { code: 'en', name: 'English' },
-  // { code: 'fr', name: 'Français' }, // Temporarily removed during development
-];
 
 export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
   const pathname = usePathname();

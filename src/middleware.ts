@@ -144,7 +144,7 @@ export default async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     '/((?!_next/static|_next/image|avatars|favicon.ico).*)',
-    '/(fr|en)/:path*',
+    '/(en|fr|es|it|de)/:path*',
     '/api/:path*',
     '/',
   ],

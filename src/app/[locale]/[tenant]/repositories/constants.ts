@@ -16,7 +16,6 @@ export const LANGUAGE_COLORS: Record<string, string> = {
 
 // File extension color mapping for file explorer
 export const FILE_EXTENSION_COLORS: Record<string, string> = {
-  // Programming languages
   py: 'text-blue-500',
   js: 'text-yellow-500',
   ts: 'text-blue-500',

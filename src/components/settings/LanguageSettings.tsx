@@ -17,14 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/shadcn/select';
-
-const languages = [
-  { code: 'en', name: 'English' },
-  { code: 'fr', name: 'Français' },
-  { code: 'es', name: 'Español' },
-  { code: 'it', name: 'Italiano' },
-  { code: 'de', name: 'Deutsch' },
-];
+import { languages } from '@/config';
 
 export function LanguageSettings() {
   const params = useParams();

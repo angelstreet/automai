@@ -1,10 +1,3 @@
-/**
- * Core Script type definitions
- */
-
-/**
- * Supported script languages
- */
 export type ScriptLanguage = 'bash' | 'python' | 'javascript' | 'typescript';
 
 /**
