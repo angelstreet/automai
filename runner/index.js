@@ -37,7 +37,6 @@ async function processJob() {
 
     console.log(`[@runner:processJob] Processing job: ${job}`);
     const { config_id } = typeof job === 'string' ? JSON.parse(job) : job;
-
     // Fetch config from Supabase
     const { data, error } = await supabase
       .from('jobs_configuration')
@@ -48,13 +47,23 @@ async function processJob() {
       console.error(`[@runner:processJob] Failed to fetch config ${config_id}: ${error?.message}`);
       return;
     }
-
     const config = data.config;
     console.log(`[@runner:processJob] Config: ${JSON.stringify(config)}`);
 
     const hosts = config.hosts || [];
     //const repoUrl = config.repository;
     //const repoName = repoUrl.split('/').pop().replace('.git', '');
+    // Define env vars in Render (not repo)
+    //const envVars = {
+    //  FTP_SERVER: process.env.FTP_SERVER,
+    //  FTP_USER: process.env.FTP_USER,
+    //  FTP_PASS: process.env.FTP_PASS,
+    //  FTP_DIRECTORY: process.env.FTP_DIRECTORY,
+    //  DEVICE_IP: process.env.DEVICE_IP,
+    //};
+    //const envPrefix = Object.entries(envVars)
+    //  .map(([key, value]) => `set ${key}=${value}`)
+    //  .join(' && ');
     const scripts = (config.scripts || [])
       .map((script) => {
         const ext = script.path.split('.').pop().toLowerCase();
@@ -63,7 +72,6 @@ async function processJob() {
       })
       .join(' && ');
     console.log(`[@runner:processJob] Scripts: ${scripts}`);
-
     for (const host of hosts) {
       console.log(
         `[@runner:processJob] Host: ${host.ip}, OS: ${host.os}, Username: ${host.username}`,
@@ -90,21 +98,60 @@ async function processJob() {
       const fullScript = `cmd.exe /c python --version && cd Desktop/remote-installer && dir && echo ============================= && ${scriptCommand}`;
       console.log(`[@runner:processJob] SSH command: ${fullScript}`);
 
+      // Step 1: Create job with pending status
+      const created_at = new Date().toISOString();
+      const { data: jobData, error: jobError } = await supabase
+        .from('jobs_run')
+        .insert({
+          config_id,
+          status: 'pending',
+          output: { stdout: '', stderr: '' },
+          created_at: created_at,
+        })
+        .select('id')
+        .single();
+
+      if (jobError) {
+        console.error(`[@runner:processJob] Failed to create pending job: ${jobError.message}`);
+        return;
+      }
+
+      const jobId = jobData.id;
+      console.log(`[@runner:processJob] Created job with ID ${jobId} and status 'pending'`);
+
       const conn = new Client();
       conn
-        .on('ready', () => {
+        .on('ready', async () => {
           console.log(`[@runner:processJob] Connected to ${host.ip}`);
+
+          // Step 2: Update job to in_progress status
+          const started_at = new Date().toISOString();
+          await supabase
+            .from('jobs_run')
+            .update({
+              status: 'in_progress',
+              started_at: started_at,
+            })
+            .eq('id', jobId);
+
+          console.log(`[@runner:processJob] Updated job ${jobId} status to 'in_progress'`);
+
           conn.exec(fullScript, async (err, stream) => {
             if (err) {
               console.error(`[@runner:processJob] Exec error: ${err.message}`);
-              await supabase.from('jobs_run').insert({
-                config_id,
-                status: 'failed',
-                output: { stderr: err.message },
-                created_at: new Date().toISOString(),
-                started_at: new Date().toISOString(),
-                completed_at: new Date().toISOString(),
-              });
+              // Update existing job with error information
+              await supabase
+                .from('jobs_run')
+                .update({
+                  status: 'failed',
+                  output: { stderr: err.message },
+                  completed_at: new Date().toISOString(),
+                })
+                .eq('id', jobId);
+
+              console.log(
+                `[@runner:processJob] Updated job ${jobId} to failed status due to exec error`,
+              );
               conn.end();
               return;
             }
@@ -112,7 +159,7 @@ async function processJob() {
             stream
               .on('data', (data) => {
                 output.stdout += data;
-                console.log(`[@runner:processJob] Stdout: ${data}`);
+                console.log(`${data}`);
               })
               .stderr.on('data', (data) => {
                 output.stderr += data;
@@ -122,20 +169,49 @@ async function processJob() {
                 console.log(`[@runner:processJob] Stream closed, code: ${code}, signal: ${signal}`);
                 console.log(`[@runner:processJob] Final stdout: ${output.stdout}`);
                 console.log(`[@runner:processJob] Final stderr: ${output.stderr}`);
-                await supabase.from('jobs_run').insert({
-                  config_id,
-                  status: code === 0 ? 'success' : 'failed',
-                  output,
-                  created_at: new Date().toISOString(),
-                  started_at: new Date().toISOString(),
-                  completed_at: new Date().toISOString(),
-                });
+                console.log(`[@runner:processJob] SSH connection closed`);
+
+                // Step 3: Update job with final results
+                const completed_at = new Date().toISOString();
+
+                // We're looking for either "Failed on: None" string (indicating success)
+                // or for other success messages like "Installation complete"
+                const isSuccess =
+                  output.stdout.includes('Failed on: None') ||
+                  output.stdout.includes('Installation complete') ||
+                  output.stdout.includes('Successfully installed') ||
+                  code === 0;
+
+                await supabase
+                  .from('jobs_run')
+                  .update({
+                    status: isSuccess ? 'success' : 'failed',
+                    output, // Keep the original output object structure
+                    completed_at: completed_at,
+                  })
+                  .eq('id', jobId);
+
+                console.log(
+                  `[@runner:processJob] Updated job ${jobId} to final status: ${isSuccess ? 'success' : 'failed'}`,
+                );
+
+                // Remove job from queue after processing
+                //await redis.lrem('jobs_queue', 1, job);
+
                 conn.end();
               });
           });
         })
-        .on('error', (err) => {
-          console.error(`[@runner:processJob] SSH error: ${err.message}`);
+        .on('error', async (err) => {
+          if (err.message.includes('ECONNRESET')) {
+            console.error(`[@runner:processJob] SSH connection closed`);
+          } else {
+            console.error(`[@runner:processJob] SSH error: ${err.message}`);
+          }
+
+          console.log(
+            `[@runner:processJob] Updated job ${jobId} to failed status due to SSH error`,
+          );
           conn.end();
         })
         .connect({
