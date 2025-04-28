@@ -195,9 +195,6 @@ async function processJob() {
                   `[@runner:processJob] Updated job ${jobId} to final status: ${isSuccess ? 'success' : 'failed'}`,
                 );
 
-                // Remove job from queue after processing
-                //await redis.lrem('jobs_queue', 1, job);
-
                 conn.end();
               });
           });
@@ -208,10 +205,6 @@ async function processJob() {
           } else {
             console.error(`[@runner:processJob] SSH error: ${err.message}`);
           }
-
-          console.log(
-            `[@runner:processJob] Updated job ${jobId} to failed status due to SSH error`,
-          );
           conn.end();
         })
         .connect({
