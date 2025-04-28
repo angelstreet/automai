@@ -53,8 +53,8 @@ async function processJob() {
     console.log(`[@runner:processJob] Config: ${JSON.stringify(config)}`);
 
     const hosts = config.hosts || [];
-    const repoUrl = config.repository;
-    const repoName = repoUrl.split('/').pop().replace('.git', '');
+    //const repoUrl = config.repository;
+    //const repoName = repoUrl.split('/').pop().replace('.git', '');
     const scripts = (config.scripts || [])
       .map((script) => {
         const ext = script.path.split('.').pop().toLowerCase();
@@ -181,6 +181,6 @@ async function setupSchedules() {
 }
 
 // Poll queue every 10 seconds
-//setInterval(processJob, 10000);
-//setupSchedules().catch((err) => console.error('Setup schedules failed:', err));
+setInterval(processJob, 10000);
+setupSchedules().catch((err) => console.error('Setup schedules failed:', err));
 console.log('Worker running...');
