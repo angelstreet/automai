@@ -49,7 +49,7 @@ export function DeploymentListClient({
   const [sortBy, setSortBy] = useState('date');
   const [filterStatus, setFilterStatus] = useState('all');
   const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
-  const [isRefreshing, _setIsRefreshing] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [deployments, setDeployments] = useState<Deployment[]>(initialDeployments);
   const [repositoriesMap, setRepositoriesMap] = useState<Record<string, Repository>>({});
   const [selectedDeployment, setSelectedDeployment] = useState<Deployment | null>(null);
@@ -59,13 +59,41 @@ export function DeploymentListClient({
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [deploymentToEdit, setDeploymentToEdit] = useState<Deployment | null>(null);
 
-  // Listen for refresh events
+  // Setup auto-refresh every 10 seconds
   useEffect(() => {
-    console.log('[DeploymentList] Using direct revalidation instead of events');
-    return () => {
-      // No cleanup needed
+    console.log('[DeploymentList] Setting up auto-refresh (10s interval)');
+    
+    // Define the refresh function
+    const refreshData = async () => {
+      if (isRefreshing) return; // Prevent multiple concurrent refreshes
+      
+      try {
+        setIsRefreshing(true);
+        console.log('[DeploymentList] Auto-refreshing deployments data...');
+        
+        // Call the server action to refresh deployments
+        const result = await refreshDeployments();
+        if (result?.success) {
+          console.log('[DeploymentList] Auto-refresh successful');
+          // The router.refresh() will happen inside refreshDeployments() 
+          // which will trigger a re-render with new props
+        }
+      } catch (error) {
+        console.error('[DeploymentList] Auto-refresh error:', error);
+      } finally {
+        setIsRefreshing(false);
+      }
     };
-  }, []);
+    
+    // Set up the interval
+    const intervalId = setInterval(refreshData, 10000); // 10 seconds
+    
+    // Clean up the interval when component unmounts
+    return () => {
+      console.log('[DeploymentList] Cleaning up auto-refresh interval');
+      clearInterval(intervalId);
+    };
+  }, [isRefreshing]);
 
   // Update deployments when initialDeployments prop changes
   useEffect(() => {
