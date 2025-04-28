@@ -159,7 +159,7 @@ export function ReportsGrafanaDashboardClient({
       )}
       {supportedPanels.map((panel: any) => (
         <Card key={panel.id} className="mb-2">
-          <CardContent className="pt-2 px-4 pb-2">
+          <CardContent className="pt-2 px-4 pb-2 flex flex-col items-center justify-center">
             <h3 className="text-lg font-medium">{panel.title}</h3>
             {dataLoading ? (
               <div className="text-muted-foreground">Loading panel data...</div>
