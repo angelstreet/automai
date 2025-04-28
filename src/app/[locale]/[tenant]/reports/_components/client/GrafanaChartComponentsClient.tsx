@@ -54,10 +54,63 @@ export function TimeSeriesPanelClient({ panel, data }: ChartProps) {
   );
 }
 
-export function StatPanelClient({ data }: ChartProps) {
-  const value = data?.results?.A?.frames?.[0]?.data?.values?.[0]?.[0] ?? 'No data';
+export function StatPanelClient({ panel, data }: ChartProps) {
+  if (!data || !data.results || !data.results.A || !data.results.A.frames) {
+    return <div className="text-2xl font-medium mt-2">No data</div>;
+  }
 
-  return <div className="text-2xl font-medium mt-2">{value}</div>;
+  try {
+    const frames = data.results.A.frames;
+    if (!frames.length) return <div className="text-2xl font-medium mt-2">No data</div>;
+
+    const frame = frames[0];
+    const _fields = frame.schema?.fields || [];
+    const values = frame.data?.values || [];
+
+    // Check if this looks like a job duration panel by title
+    const isDurationPanel = panel.title?.toLowerCase().includes('duration');
+
+    // For duration panels, find numeric value
+    if (isDurationPanel && values.length > 0) {
+      // Look for numeric values in all columns
+      for (let i = 0; i < values.length; i++) {
+        if (values[i] && values[i].length > 0 && typeof values[i][0] === 'number') {
+          // Found a numeric value, format it appropriately
+          const duration = values[i][0];
+
+          // Format as seconds with 2 decimal places if it's a small number
+          if (duration < 60) {
+            return <div className="text-2xl font-medium mt-2">{duration.toFixed(2)}s</div>;
+          }
+          // Format as minutes and seconds for longer durations
+          else {
+            const minutes = Math.floor(duration / 60);
+            const seconds = Math.round(duration % 60);
+            return (
+              <div className="text-2xl font-medium mt-2">
+                {minutes}m {seconds}s
+              </div>
+            );
+          }
+        }
+      }
+    }
+
+    // Default behavior - try to get the first value
+    if (values.length > 0 && values[0].length > 0) {
+      return <div className="text-2xl font-medium mt-2">{values[0][0]}</div>;
+    }
+
+    // If we have a second column with values (common in Grafana stats)
+    if (values.length > 1 && values[1] && values[1].length > 0) {
+      return <div className="text-2xl font-medium mt-2">{values[1][0]}</div>;
+    }
+
+    return <div className="text-2xl font-medium mt-2">No data</div>;
+  } catch (error) {
+    console.error('Error in StatPanelClient:', error);
+    return <div className="text-2xl font-medium mt-2">Error</div>;
+  }
 }
 
 export function BargaugePanelClient({ panel, data }: ChartProps) {
