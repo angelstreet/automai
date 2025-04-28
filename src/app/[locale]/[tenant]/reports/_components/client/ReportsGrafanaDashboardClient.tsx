@@ -1,9 +1,27 @@
 'use client';
 
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
+import { Bar } from 'react-chartjs-2';
 
 import { Card, CardContent } from '@/components/shadcn/card';
+import {
+  getBarChartConfig,
+  getStatConfig,
+  isSupportedPanelType,
+} from '@/lib/utils/grafanaChartUtils';
+
+// Register Chart.js components
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 interface ReportsGrafanaDashboardClientProps {
   dashboardUid: string;
@@ -23,7 +41,10 @@ export function ReportsGrafanaDashboardClient({
     fetch(`/api/grafana-dashboard/${dashboardUid}`)
       .then((res) => res.json())
       .then((data) => {
-        console.log('[@component:ReportsGrafanaDashboardClient] API response:', data);
+        console.log(
+          '[@component:ReportsGrafanaDashboardClient] API response:',
+          JSON.stringify(data, null, 2),
+        );
         if (data.error) {
           setError(data.error);
         } else {
@@ -57,7 +78,7 @@ export function ReportsGrafanaDashboardClient({
 
   // Filter supported panels
   const supportedPanels = (dashboard.panels || []).filter((panel: any) =>
-    ['stat', 'barchart', 'graph', 'table', 'line'].includes(panel.type),
+    isSupportedPanelType(panel.type),
   );
 
   return (
@@ -68,9 +89,15 @@ export function ReportsGrafanaDashboardClient({
       {supportedPanels.map((panel: any) => (
         <Card key={panel.id} className="mb-4">
           <CardContent className="pt-4 px-4 pb-4">
-            <div className="text-muted-foreground">
-              Panel type: {panel.type} (Chart rendering coming soon)
-            </div>
+            <h3 className="text-lg font-medium mb-2">{panel.title}</h3>
+            {panel.type === 'stat' && (
+              <div className="text-3xl font-bold">{getStatConfig(panel).value}</div>
+            )}
+            {panel.type === 'barchart' && (
+              <div style={{ height: '200px' }}>
+                <Bar {...getBarChartConfig(panel)} />
+              </div>
+            )}
           </CardContent>
         </Card>
       ))}
