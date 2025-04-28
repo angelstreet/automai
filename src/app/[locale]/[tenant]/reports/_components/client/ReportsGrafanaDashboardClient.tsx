@@ -532,18 +532,77 @@ export function ReportsGrafanaDashboardClient({
                           <TableHeader>
                             <TableRow>
                               {tableData.headers.map((header: any, i: number) => (
-                                <TableHead key={i}>{header.name}</TableHead>
+                                <TableHead key={i} className="whitespace-nowrap">
+                                  {header.name}
+                                </TableHead>
                               ))}
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {tableData.rows.map((row: any[], rowIndex: number) => (
                               <TableRow key={rowIndex}>
-                                {row.map((cell, cellIndex: number) => (
-                                  <TableCell key={cellIndex}>
-                                    {cell !== null && cell !== undefined ? String(cell) : ''}
-                                  </TableCell>
-                                ))}
+                                {row.map((cell, cellIndex: number) => {
+                                  // Format different cell contents based on type
+                                  const content =
+                                    cell !== null && cell !== undefined ? String(cell) : '';
+                                  const isJSON = content.startsWith('{') && content.endsWith('}');
+                                  const isLongText = content.length > 60;
+
+                                  // For JSON content
+                                  if (isJSON) {
+                                    try {
+                                      // Try to parse and format JSON
+                                      const jsonObj = JSON.parse(content);
+                                      const formattedContent = Object.entries(jsonObj)
+                                        .map(
+                                          ([key, value]) =>
+                                            `${key}: ${String(value).substring(0, 20)}${String(value).length > 20 ? '...' : ''}`,
+                                        )
+                                        .join(', ');
+
+                                      return (
+                                        <TableCell
+                                          key={cellIndex}
+                                          className="max-w-[300px] truncate"
+                                          title={content} // Full content as tooltip
+                                        >
+                                          {`{${formattedContent.substring(0, 30)}${formattedContent.length > 30 ? '...' : ''}}`}
+                                        </TableCell>
+                                      );
+                                    } catch (_e) {
+                                      // Fallback if JSON parsing fails
+                                      return (
+                                        <TableCell
+                                          key={cellIndex}
+                                          className="max-w-[300px] truncate"
+                                          title={content}
+                                        >
+                                          {content.substring(0, 30)}...
+                                        </TableCell>
+                                      );
+                                    }
+                                  }
+
+                                  // For long text content
+                                  if (isLongText) {
+                                    return (
+                                      <TableCell
+                                        key={cellIndex}
+                                        className="max-w-[300px] truncate"
+                                        title={content} // Full content as tooltip
+                                      >
+                                        {content.substring(0, 30)}...
+                                      </TableCell>
+                                    );
+                                  }
+
+                                  // For normal content
+                                  return (
+                                    <TableCell key={cellIndex} className="whitespace-nowrap">
+                                      {content}
+                                    </TableCell>
+                                  );
+                                })}
                               </TableRow>
                             ))}
                           </TableBody>
