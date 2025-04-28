@@ -212,16 +212,6 @@ async function processJob() {
             console.error(`[@runner:processJob] SSH error: ${err.message}`);
           }
 
-          // Update job with SSH connection error
-          await supabase
-            .from('jobs_run')
-            .update({
-              status: 'failed',
-              output: { stdout: '', stderr: `SSH error: ${err.message}` },
-              completed_at: new Date().toISOString(),
-            })
-            .eq('id', jobId);
-
           console.log(
             `[@runner:processJob] Updated job ${jobId} to failed status due to SSH error`,
           );
