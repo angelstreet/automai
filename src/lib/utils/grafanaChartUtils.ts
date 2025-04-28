@@ -50,6 +50,57 @@ export const getBarChartConfig = (
   return { data, options };
 };
 
+// Updated configuration for a bar chart panel with fetched data
+export const getUpdatedBarChartConfig = (
+  panel: any,
+  data: any,
+): { data: ChartData<'bar'>; options: ChartOptions<'bar'> } => {
+  // Default to placeholder if no data is available
+  if (
+    !data ||
+    !data.results ||
+    !data.results.A ||
+    !data.results.A.frames ||
+    !data.results.A.frames[0]
+  ) {
+    return getBarChartConfig(panel);
+  }
+
+  const frame = data.results.A.frames[0];
+  const labels = frame.data.values[0] || [];
+  const values = frame.data.values[1] || [];
+
+  const chartData = {
+    labels,
+    datasets: [
+      {
+        label: panel.title || 'Bar Chart',
+        data: values,
+        backgroundColor: 'rgba(75, 192, 192, 0.5)',
+        borderColor: 'rgba(75, 192, 192, 1)',
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  const options: ChartOptions<'bar'> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      y: {
+        beginAtZero: true,
+      },
+    },
+    plugins: {
+      legend: {
+        display: false,
+      },
+    },
+  };
+
+  return { data: chartData, options };
+};
+
 // Map Grafana panel types to our rendering functions
 export const panelTypeToConfig = {
   stat: getStatConfig,

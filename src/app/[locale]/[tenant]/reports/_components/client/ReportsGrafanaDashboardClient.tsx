@@ -15,9 +15,9 @@ import { Bar } from 'react-chartjs-2';
 
 import { Card, CardContent } from '@/components/shadcn/card';
 import {
-  getBarChartConfig,
   getStatConfig,
   isSupportedPanelType,
+  getUpdatedBarChartConfig,
 } from '@/lib/utils/grafanaChartUtils';
 
 // Register Chart.js components
@@ -103,7 +103,10 @@ export function ReportsGrafanaDashboardClient({
         })
           .then((res) => res.json())
           .then((data) => {
-            console.log(`[@component:ReportsGrafanaDashboardClient] Panel ${panel.id} data:`, data);
+            console.log(
+              `[@component:ReportsGrafanaDashboardClient] Panel ${panel.id} response data:`,
+              JSON.stringify(data, null, 2),
+            );
             return { panelId: panel.id, data };
           })
           .catch((err) => {
@@ -162,14 +165,13 @@ export function ReportsGrafanaDashboardClient({
               <>
                 {panel.type === 'stat' && (
                   <div className="">
-                    {panelData[panel.id]?.data
-                      ? 'Data loaded (processing soon)'
-                      : getStatConfig(panel).value}
+                    {panelData[panel.id]?.data?.results?.A?.frames?.[0]?.data?.values?.[0]?.[0] ??
+                      getStatConfig(panel).value}
                   </div>
                 )}
                 {panel.type === 'barchart' && (
                   <div style={{ height: '200px' }}>
-                    <Bar {...getBarChartConfig(panel)} />
+                    <Bar {...getUpdatedBarChartConfig(panel, panelData[panel.id]?.data)} />
                   </div>
                 )}
                 {panelData[panel.id]?.error && (
