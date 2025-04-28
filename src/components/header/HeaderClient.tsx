@@ -6,6 +6,7 @@ import { Suspense, useEffect } from 'react';
 import { RoleSwitcher } from '@/components/layout/RoleSwitcher';
 import { ProfileDropDown } from '@/components/profile/ProfileDropDown';
 import { Button } from '@/components/shadcn/button';
+import { LanguageSwitcher } from '@/components/shadcn/language-switcher';
 import { Separator } from '@/components/shadcn/separator';
 import { SidebarTrigger } from '@/components/sidebar';
 import { ThemeToggleStatic } from '@/components/theme';
@@ -106,6 +107,8 @@ export function HeaderClient({
                 <Search />
               </div>
               <div className="flex items-center gap-1">
+                <Separator orientation="vertical" className="h-8 opacity-30" />
+                <LanguageSwitcher />
                 <Separator orientation="vertical" className="h-8 opacity-30" />
                 <ThemeToggleStatic />
                 <Separator orientation="vertical" className="h-8 opacity-30" />

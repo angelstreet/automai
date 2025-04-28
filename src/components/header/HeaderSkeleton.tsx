@@ -20,6 +20,11 @@ export function HeaderSkeleton({ className }: HeaderSkeletonProps) {
 
         {/* Right section */}
         <div className="flex items-center gap-2 px-4 h-full">
+          {/* Language Switcher Placeholder */}
+          <div className="h-8 w-8 bg-muted/30 rounded-full animate-pulse" />
+          {/* Theme Toggle Placeholder */}
+          <div className="h-8 w-8 bg-muted/30 rounded-full animate-pulse" />
+          {/* Profile Dropdown Placeholder */}
           <div className="h-8 w-8 bg-muted/30 rounded-full animate-pulse" />
         </div>
       </div>
