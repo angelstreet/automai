@@ -8,10 +8,12 @@ import {
   Title,
   Tooltip,
   Legend,
+  PointElement,
+  LineElement,
 } from 'chart.js';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState, useRef } from 'react';
-import { Bar } from 'react-chartjs-2';
+import { Bar, Line } from 'react-chartjs-2';
 
 import { Card, CardContent } from '@/components/shadcn/card';
 import {
@@ -21,7 +23,16 @@ import {
 } from '@/lib/utils/grafanaChartUtils';
 
 // Register Chart.js components
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  PointElement,
+  LineElement,
+);
 
 // Shared cache object outside component to persist across renders and tabs
 const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
@@ -71,6 +82,46 @@ const saveToCache = (dashboardUid: string, panelId: string, data: any) => {
   } catch (e) {
     console.error('[@component:ReportsGrafanaDashboardClient] Error saving to cache:', e);
   }
+};
+
+// Utility function to process time series data
+const getTimeSeriesConfig = (_panel: any, data: any) => {
+  const frames = data?.results?.A?.frames || [];
+  if (!frames.length) {
+    return {
+      datasets: [],
+      labels: [],
+    };
+  }
+
+  const frame = frames[0];
+  const fields = frame.schema.fields;
+  const values = frame.data.values;
+
+  // Assuming first field is time, others are series
+  const timeValues = values[0];
+
+  // Format date labels
+  const labels = timeValues.map((ts: number) => {
+    const date = new Date(ts);
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+  });
+
+  // Create datasets for each series
+  const datasets = fields.slice(1).map((field: any, index: number) => {
+    return {
+      label: field.name,
+      data: values[index + 1],
+      borderColor: field.config?.color?.fixedColor || 'rgb(75, 192, 192)',
+      backgroundColor: field.config?.color?.fixedColor || 'rgba(75, 192, 192, 0.2)',
+      fill: false,
+    };
+  });
+
+  return {
+    labels,
+    datasets,
+  };
 };
 
 interface ReportsGrafanaDashboardClientProps {
@@ -257,6 +308,11 @@ export function ReportsGrafanaDashboardClient({
                 {panel.type === 'barchart' && (
                   <div style={{ height: '200px' }}>
                     <Bar {...getUpdatedBarChartConfig(panel, panelData[panel.id]?.data)} />
+                  </div>
+                )}
+                {panel.type === 'timeseries' && (
+                  <div style={{ height: '200px' }}>
+                    <Line data={getTimeSeriesConfig(panel, panelData[panel.id]?.data)} />
                   </div>
                 )}
                 {panelData[panel.id]?.error && (

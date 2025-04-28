@@ -102,6 +102,7 @@ export const getUpdatedBarChartConfig = (
 export const panelTypeToConfig = {
   stat: getStatConfig,
   barchart: getBarChartConfig,
+  timeseries: getBarChartConfig, // Adding timeseries to use the same base config as barchart for now
   // Add other types like 'line', 'graph', 'table' in future iterations
 };
 
