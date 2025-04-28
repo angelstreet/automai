@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(_request: NextRequest, { params }: { params: { uid: string } }) {
-  if (!params) {
-    return NextResponse.json({ error: 'Missing UID parameter' }, { status: 400 });
-  }
-
+export async function GET(_request: NextRequest, context: { params: Promise<{ uid: string }> }) {
+  // Wait for params to resolve
+  const params = await context.params;
+  const uid = params.uid;
   const apiKey = process.env.GRAFANA_API_TOKEN;
   const baseUrl = process.env.GRAFANA_URL;
 
@@ -12,7 +11,7 @@ export async function GET(_request: NextRequest, { params }: { params: { uid: st
     return NextResponse.json({ error: 'Grafana API token or URL not configured' }, { status: 500 });
   }
 
-  const url = `${baseUrl}/api/dashboards/uid/${params.uid}`;
+  const url = `${baseUrl}/api/dashboards/uid/${uid}`;
 
   try {
     const res = await fetch(url, {
