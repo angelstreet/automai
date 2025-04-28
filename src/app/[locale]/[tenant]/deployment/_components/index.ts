@@ -17,4 +17,3 @@ export { DeploymentWizardMainClient } from './client/DeploymentWizardMainClient'
 export { DeploymentActionsClient } from './client/DeploymentActionsClient';
 export { DeploymentWizardDialogClient } from './client/DeploymentWizardDialogClient';
 export { DeploymentEmptyStateClient } from './client/DeploymentEmptyStateClient';
-export { JobDetailsListClient } from './client/JobDetailsListClient';
