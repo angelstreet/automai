@@ -466,7 +466,7 @@ export function DeploymentListClient({
                       scope="col"
                       className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                     >
-                      Runtime
+                      Completed
                     </th>
                     <th
                       scope="col"
@@ -508,7 +508,7 @@ export function DeploymentListClient({
                       scope="col"
                       className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                     >
-                      Runtime
+                      Completed
                     </th>
                     <th
                       scope="col"
@@ -539,15 +539,11 @@ export function DeploymentListClient({
                           : new Date(deployment.createdAt).toLocaleString()}
                       </td>
                       <td className="px-2 py-1 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {deployment.completedAt && deployment.startedAt
+                        {deployment.completedAt
                           ? getFormattedTime
-                            ? getFormattedTime(deployment.startedAt, deployment.completedAt)
-                            : `${Math.round((new Date(deployment.completedAt).getTime() - new Date(deployment.startedAt).getTime()) / 1000 / 60)} min`
-                          : deployment.startedAt
-                            ? 'Running...'
-                            : deployment.scheduledTime
-                              ? `Scheduled for ${getFormattedTime ? getFormattedTime(deployment.scheduledTime) : new Date(deployment.scheduledTime).toLocaleString()}`
-                              : '-'}
+                            ? getFormattedTime(deployment.completedAt)
+                            : new Date(deployment.completedAt).toLocaleString()
+                          : '-'}
                       </td>
                       <td className="px-2 py-1 whitespace-nowrap text-sm">
                         <div className="flex justify-center">
@@ -661,7 +657,7 @@ export function DeploymentListClient({
                       scope="col"
                       className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                     >
-                      Runtime
+                      Completed
                     </th>
                     <th
                       scope="col"
