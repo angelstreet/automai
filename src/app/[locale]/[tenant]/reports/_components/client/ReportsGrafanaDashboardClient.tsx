@@ -211,16 +211,14 @@ export function ReportsGrafanaDashboardClient({
                   <StatPanelClient panel={panel} data={panelData[panel.id]} />
                 )}
 
-                {panel.type === 'bargauge' && (
-                  <BargaugePanelClient panel={panel} data={panelData[panel.id]} />
-                )}
+                {panel.type === 'bargauge' && <BargaugePanelClient data={panelData[panel.id]} />}
 
                 {panel.type === 'barchart' && (
                   <BarChartPanelClient panel={panel} data={panelData[panel.id]} />
                 )}
 
                 {panel.type === 'timeseries' && (
-                  <TimeSeriesPanelClient panel={panel} data={panelData[panel.id]} />
+                  <TimeSeriesPanelClient data={panelData[panel.id]} />
                 )}
 
                 {panel.type === 'table' && (

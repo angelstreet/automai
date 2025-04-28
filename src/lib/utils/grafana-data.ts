@@ -1,9 +1,10 @@
-import { getFromCache, saveToCache } from './grafanaDataUtils';
 import {
   GrafanaDashboard,
   GrafanaPanelData,
   SUPPORTED_PANEL_TYPES,
 } from '@/types-new/grafana-constants';
+
+import { getFromCache, saveToCache } from './grafanaDataUtils';
 
 // Function to fetch a Grafana dashboard by UID
 export async function fetchDashboard(dashboardUid: string): Promise<GrafanaDashboard | null> {

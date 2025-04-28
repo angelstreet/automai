@@ -23,6 +23,11 @@ interface ChartProps {
   data: any;
 }
 
+interface ChartDataOnlyProps {
+  data: any;
+}
+
+// For components that need panel data
 export function BarChartPanelClient({ panel, data }: ChartProps) {
   if (!data) return <div className="text-muted-foreground">No data available</div>;
 
@@ -33,13 +38,14 @@ export function BarChartPanelClient({ panel, data }: ChartProps) {
   );
 }
 
-export function TimeSeriesPanelClient({ panel, data }: ChartProps) {
+// For components that only need data
+export function TimeSeriesPanelClient({ data }: ChartDataOnlyProps) {
   if (!data) return <div className="text-muted-foreground">No data available</div>;
 
   return (
     <div style={{ height: '200px' }}>
       <Line
-        data={processTimeSeriesData(panel, data)}
+        data={processTimeSeriesData(data)}
         options={{
           responsive: true,
           maintainAspectRatio: false,
@@ -64,33 +70,54 @@ export function StatPanelClient({ panel, data }: ChartProps) {
     if (!frames.length) return <div className="text-2xl font-medium mt-2">No data</div>;
 
     const frame = frames[0];
-    const _fields = frame.schema?.fields || [];
     const values = frame.data?.values || [];
 
-    // Check if this looks like a job duration panel by title
-    const isDurationPanel = panel.title?.toLowerCase().includes('duration');
+    // Check special panel types by title
+    const panelTitle = panel.title?.toLowerCase() || '';
+    const isDurationPanel = panelTitle.includes('duration');
+    const isRatePanel =
+      panelTitle.includes('rate') ||
+      panelTitle.includes('percentage') ||
+      panelTitle.includes('ratio');
+    const isCountPanel = panelTitle.includes('count') || panelTitle.includes('number');
 
-    // For duration panels, find numeric value
-    if (isDurationPanel && values.length > 0) {
+    // For all known numerical panels, find numeric value across all columns
+    if ((isDurationPanel || isRatePanel || isCountPanel) && values.length > 0) {
       // Look for numeric values in all columns
       for (let i = 0; i < values.length; i++) {
         if (values[i] && values[i].length > 0 && typeof values[i][0] === 'number') {
-          // Found a numeric value, format it appropriately
-          const duration = values[i][0];
+          // Found a numeric value
+          const numericValue = values[i][0];
 
-          // Format as seconds with 2 decimal places if it's a small number
-          if (duration < 60) {
-            return <div className="text-2xl font-medium mt-2">{duration.toFixed(2)}s</div>;
-          }
-          // Format as minutes and seconds for longer durations
-          else {
-            const minutes = Math.floor(duration / 60);
-            const seconds = Math.round(duration % 60);
-            return (
-              <div className="text-2xl font-medium mt-2">
-                {minutes}m {seconds}s
-              </div>
-            );
+          // Format based on panel type
+          if (isDurationPanel) {
+            // Format durations as time
+            if (numericValue < 60) {
+              return <div className="text-2xl font-medium mt-2">{numericValue.toFixed(2)}s</div>;
+            } else {
+              const minutes = Math.floor(numericValue / 60);
+              const seconds = Math.round(numericValue % 60);
+              return (
+                <div className="text-2xl font-medium mt-2">
+                  {minutes}m {seconds}s
+                </div>
+              );
+            }
+          } else if (isRatePanel) {
+            // For rate panels, display as a simple rounded number without percentage symbol
+            // Check if the value is very small (likely in decimal form)
+            const displayValue = numericValue < 0.1 ? numericValue * 100 : numericValue;
+
+            // Round to nearest integer if close to whole number, otherwise show one decimal place
+            const formattedValue =
+              Math.abs(displayValue - Math.round(displayValue)) < 0.1
+                ? Math.round(displayValue)
+                : Number(displayValue.toFixed(1));
+
+            return <div className="text-2xl font-medium mt-2">{formattedValue}</div>;
+          } else {
+            // Format general numbers
+            return <div className="text-2xl font-medium mt-2">{numericValue.toLocaleString()}</div>;
           }
         }
       }
@@ -98,11 +125,19 @@ export function StatPanelClient({ panel, data }: ChartProps) {
 
     // Default behavior - try to get the first value
     if (values.length > 0 && values[0].length > 0) {
+      // If it's a number, format it nicely
+      if (typeof values[0][0] === 'number') {
+        return <div className="text-2xl font-medium mt-2">{values[0][0].toLocaleString()}</div>;
+      }
       return <div className="text-2xl font-medium mt-2">{values[0][0]}</div>;
     }
 
     // If we have a second column with values (common in Grafana stats)
     if (values.length > 1 && values[1] && values[1].length > 0) {
+      // If it's a number, format it nicely
+      if (typeof values[1][0] === 'number') {
+        return <div className="text-2xl font-medium mt-2">{values[1][0].toLocaleString()}</div>;
+      }
       return <div className="text-2xl font-medium mt-2">{values[1][0]}</div>;
     }
 
@@ -113,16 +148,18 @@ export function StatPanelClient({ panel, data }: ChartProps) {
   }
 }
 
-export function BargaugePanelClient({ panel, data }: ChartProps) {
-  return <div className="text-2xl font-medium mt-2">{processBargaugeData(panel, data)}</div>;
+export function BargaugePanelClient({ data }: ChartDataOnlyProps) {
+  return <div className="text-2xl font-medium mt-2">{processBargaugeData(data)}</div>;
 }
 
-interface TablePanelProps extends ChartProps {
+interface TablePanelProps {
+  panel: any;
+  data: any;
   onCellClick: (title: string, content: string, isJson: boolean) => void;
 }
 
 export function TablePanelClient({ panel, data, onCellClick }: TablePanelProps) {
-  const tableData = processTableData(panel, data);
+  const tableData = processTableData(data);
 
   if (tableData.headers.length === 0 || tableData.rows.length === 0) {
     return <div className="text-muted-foreground">No data available</div>;

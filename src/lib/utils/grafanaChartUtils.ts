@@ -1,4 +1,5 @@
 import { ChartData, ChartOptions } from 'chart.js';
+
 import { SUPPORTED_PANEL_TYPES } from '@/types-new/grafana-constants';
 
 /**

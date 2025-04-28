@@ -52,7 +52,7 @@ export const saveToCache = (dashboardUid: string, panelId: string, data: any) =>
 };
 
 // Utility function to process time series data
-export const processTimeSeriesData = (_panel: any, data: any) => {
+export const processTimeSeriesData = (data: any) => {
   const frames = data?.results?.A?.frames || [];
   if (!frames.length) {
     return {
@@ -178,7 +178,7 @@ export const getColorForIndex = (index: number) => {
 };
 
 // Utility function to handle bargauge panel data
-export const processBargaugeData = (_panel: any, data: any) => {
+export const processBargaugeData = (data: any) => {
   try {
     const frames = data?.results?.A?.frames;
     if (!frames || !frames.length) return 'No data';
@@ -211,7 +211,7 @@ export const processBargaugeData = (_panel: any, data: any) => {
 };
 
 // Utility function to process table data
-export const processTableData = (_panel: any, data: any) => {
+export const processTableData = (data: any) => {
   try {
     const frames = data?.results?.A?.frames;
     if (!frames || !frames.length) {
