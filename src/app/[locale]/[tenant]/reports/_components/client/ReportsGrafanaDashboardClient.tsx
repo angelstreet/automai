@@ -15,7 +15,16 @@ import { useTranslations } from 'next-intl';
 import { useEffect, useState, useRef } from 'react';
 import { Bar, Line } from 'react-chartjs-2';
 
+import { Button } from '@/components/shadcn/button';
 import { Card, CardContent } from '@/components/shadcn/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/shadcn/dialog';
+import { ScrollArea } from '@/components/shadcn/scroll-area';
 import {
   Table,
   TableBody,
@@ -346,9 +355,84 @@ const getTableData = (_panel: any, data: any) => {
   }
 };
 
+// Add a helper function for status color mapping
+const getStatusColorClass = (status: string): string => {
+  const statusLower = status.toLowerCase();
+  if (statusLower.includes('success') || statusLower === 'succeeded') {
+    return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+  }
+  if (statusLower.includes('fail') || statusLower === 'failed' || statusLower === 'error') {
+    return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+  }
+  if (statusLower.includes('pending') || statusLower === 'waiting') {
+    return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+  }
+  if (
+    statusLower.includes('progress') ||
+    statusLower === 'in_progress' ||
+    statusLower === 'running'
+  ) {
+    return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
+  }
+  return '';
+};
+
 interface ReportsGrafanaDashboardClientProps {
   dashboardUid: string;
 }
+
+// Modal component for displaying cell content
+const CellContentModal = ({
+  isOpen,
+  onClose,
+  title,
+  content,
+  isJson = false,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  content: string;
+  isJson?: boolean;
+}) => {
+  const [copied, setCopied] = useState(false);
+
+  // Format JSON content for better readability if needed
+  const formattedContent = isJson
+    ? (() => {
+        try {
+          return JSON.stringify(JSON.parse(content), null, 2);
+        } catch {
+          return content;
+        }
+      })()
+    : content;
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(content).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-3xl max-h-[80vh]">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        <ScrollArea className="mt-4 max-h-[50vh]">
+          <pre className="text-sm p-4 bg-gray-100 dark:bg-gray-900 rounded overflow-auto whitespace-pre-wrap break-words">
+            {formattedContent}
+          </pre>
+        </ScrollArea>
+        <DialogFooter className="mt-4">
+          <Button onClick={copyToClipboard}>{copied ? 'Copied!' : 'Copy to Clipboard'}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 export function ReportsGrafanaDashboardClient({
   dashboardUid,
@@ -359,6 +443,12 @@ export function ReportsGrafanaDashboardClient({
   const [dataLoading, setDataLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const t = useTranslations('reports');
+
+  // Modal state
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalContent, setModalContent] = useState('');
+  const [modalTitle, setModalTitle] = useState('');
+  const [isJsonContent, setIsJsonContent] = useState(false);
 
   // Track in-progress requests to prevent duplicates
   const pendingRequests = useRef<Record<string, boolean>>({});
@@ -582,6 +672,25 @@ export function ReportsGrafanaDashboardClient({
                                   const isJSON = content.startsWith('{') && content.endsWith('}');
                                   const isLongText = content.length > 60;
 
+                                  // Check if this cell is a status cell
+                                  const headerName =
+                                    tableData.headers[cellIndex]?.name.toLowerCase() || '';
+                                  const isStatusCell =
+                                    headerName === 'status' || headerName.includes('status');
+
+                                  // For status cells, apply appropriate color coding
+                                  if (isStatusCell) {
+                                    const statusColorClass = getStatusColorClass(content);
+                                    return (
+                                      <TableCell
+                                        key={cellIndex}
+                                        className={`whitespace-nowrap font-medium text-center rounded-md px-2 py-1 ${statusColorClass}`}
+                                      >
+                                        {content}
+                                      </TableCell>
+                                    );
+                                  }
+
                                   // For JSON content
                                   if (isJSON) {
                                     try {
@@ -597,8 +706,16 @@ export function ReportsGrafanaDashboardClient({
                                       return (
                                         <TableCell
                                           key={cellIndex}
-                                          className="max-w-[300px] truncate"
-                                          title={content} // Full content as tooltip
+                                          className="max-w-[300px] truncate cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                                          title="Click to view full content"
+                                          onClick={() => {
+                                            setModalTitle(
+                                              `${panel.title} - ${tableData.headers[cellIndex]?.name || 'Output'}`,
+                                            );
+                                            setModalContent(content);
+                                            setIsJsonContent(true);
+                                            setModalOpen(true);
+                                          }}
                                         >
                                           {`{${formattedContent.substring(0, 30)}${formattedContent.length > 30 ? '...' : ''}}`}
                                         </TableCell>
@@ -608,8 +725,16 @@ export function ReportsGrafanaDashboardClient({
                                       return (
                                         <TableCell
                                           key={cellIndex}
-                                          className="max-w-[300px] truncate"
-                                          title={content}
+                                          className="max-w-[300px] truncate cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                                          title="Click to view full content"
+                                          onClick={() => {
+                                            setModalTitle(
+                                              `${panel.title} - ${tableData.headers[cellIndex]?.name || 'Output'}`,
+                                            );
+                                            setModalContent(content);
+                                            setIsJsonContent(false);
+                                            setModalOpen(true);
+                                          }}
                                         >
                                           {content.substring(0, 30)}...
                                         </TableCell>
@@ -622,8 +747,16 @@ export function ReportsGrafanaDashboardClient({
                                     return (
                                       <TableCell
                                         key={cellIndex}
-                                        className="max-w-[300px] truncate"
-                                        title={content} // Full content as tooltip
+                                        className="max-w-[300px] truncate cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                                        title="Click to view full content"
+                                        onClick={() => {
+                                          setModalTitle(
+                                            `${panel.title} - ${tableData.headers[cellIndex]?.name || 'Content'}`,
+                                          );
+                                          setModalContent(content);
+                                          setIsJsonContent(false);
+                                          setModalOpen(true);
+                                        }}
                                       >
                                         {content.substring(0, 30)}...
                                       </TableCell>
@@ -665,6 +798,13 @@ export function ReportsGrafanaDashboardClient({
           {t('open_in_grafana')}
         </a>
       </div>
+      <CellContentModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={modalTitle}
+        content={modalContent}
+        isJson={isJsonContent}
+      />
     </div>
   );
 }
