@@ -4,7 +4,8 @@ import { Suspense } from 'react';
 import { getTeamPageData } from '@/app/actions/teamAction';
 import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 
-import { ReportsContent } from './_components/ReportsContent';
+// Import from barrel file instead of direct paths
+import { ReportsContent, ReportActionsClient } from './_components';
 
 export default async function ReportsPage() {
   const t = await getTranslations('reports');
@@ -21,9 +22,13 @@ export default async function ReportsPage() {
       ? pageData.data.teamDetails
       : null;
 
-  // Using direct FeaturePageContainer approach
+  // Using direct FeaturePageContainer approach with ReportActionsClient
   return (
-    <FeaturePageContainer title={t('title')} description={t('desc')}>
+    <FeaturePageContainer
+      title={t('title')}
+      description={t('desc')}
+      actions={<ReportActionsClient />}
+    >
       <Suspense fallback={<div>Loading reports...</div>}>
         <ReportsContent
           teamDetails={

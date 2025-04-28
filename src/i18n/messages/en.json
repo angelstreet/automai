@@ -281,7 +281,11 @@
     "check_credentials": "Please check your credentials and try again",
     "connection_error": "Could not connect to Grafana server",
     "dashboard_ready": "Your dashboards are now ready to view",
-    "session_expired": "Session Expired"
+    "session_expired": "Session Expired",
+    "open_in_grafana": "Open in Grafana",
+    "dashboard_load_error": "Error loading dashboard",
+    "no_dashboard_data": "No dashboard data available",
+    "no_supported_panels": "No supported panels found in this dashboard"
   },
   "menu": {
     "title": "Menu",

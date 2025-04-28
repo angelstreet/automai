@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(request: NextRequest, { params }: { params: { uid: string } }) {
-  const { uid } = params;
+export async function GET(_request: NextRequest, { params }: { params: { uid: string } }) {
+  const uid = params.uid;
   const apiKey = process.env.GRAFANA_API_TOKEN;
   const baseUrl = process.env.GRAFANA_URL;
 

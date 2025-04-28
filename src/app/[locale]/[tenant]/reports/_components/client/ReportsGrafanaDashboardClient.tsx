@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
-import { Bar, Line } from 'react-chartjs-2';
-import { Card, CardContent } from '@/components/shadcn/card';
+'use client';
+
 import { useTranslations } from 'next-intl';
+import { useEffect, useState } from 'react';
+
+import { Card, CardContent } from '@/components/shadcn/card';
 
 interface ReportsGrafanaDashboardClientProps {
   dashboardUid: string;
@@ -61,15 +63,12 @@ export function ReportsGrafanaDashboardClient({
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-semibold mb-2">{title}</h2>
       {supportedPanels.length === 0 && (
         <div className="text-muted-foreground text-center">{t('no_supported_panels')}</div>
       )}
       {supportedPanels.map((panel: any) => (
         <Card key={panel.id} className="mb-4">
           <CardContent className="pt-4 px-4 pb-4">
-            <h3 className="text-lg font-medium mb-2">{panel.title}</h3>
-            {/* TODO: Render each panel type with Chart.js or table */}
             <div className="text-muted-foreground">
               Panel type: {panel.type} (Chart rendering coming soon)
             </div>
@@ -81,7 +80,7 @@ export function ReportsGrafanaDashboardClient({
           href={`https://automai.grafana.net/d/${dashboardUid}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-primary underline"
+          className="text-primary underline text-xs"
         >
           {t('open_in_grafana')}
         </a>
