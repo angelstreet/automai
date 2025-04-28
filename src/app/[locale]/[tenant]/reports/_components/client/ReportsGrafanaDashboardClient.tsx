@@ -98,30 +98,149 @@ const getTimeSeriesConfig = (_panel: any, data: any) => {
   const fields = frame.schema.fields;
   const values = frame.data.values;
 
-  // Assuming first field is time, others are series
-  const timeValues = values[0];
-
-  // Format date labels
-  const labels = timeValues.map((ts: number) => {
-    const date = new Date(ts);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
-  });
-
-  // Create datasets for each series
-  const datasets = fields.slice(1).map((field: any, index: number) => {
+  // If timeseries doesn't have typical format, try to handle common variations
+  if (fields.length < 2 || !values.length || values.length < 2) {
+    console.warn(
+      '[@component:ReportsGrafanaDashboardClient] Time series data has unexpected format',
+    );
     return {
-      label: field.name,
-      data: values[index + 1],
-      borderColor: field.config?.color?.fixedColor || 'rgb(75, 192, 192)',
-      backgroundColor: field.config?.color?.fixedColor || 'rgba(75, 192, 192, 0.2)',
-      fill: false,
+      datasets: [],
+      labels: [],
     };
-  });
+  }
 
-  return {
-    labels,
-    datasets,
-  };
+  try {
+    // Handle SQL timeseries panel data format
+    // Typically: Date field, Status field, Count field
+    let timeValues = values[0] || [];
+    let labels = [];
+
+    // Try to format date labels
+    if (fields[0].name.toLowerCase().includes('date')) {
+      labels = timeValues.map((ts: any) => {
+        if (typeof ts === 'string') {
+          return new Date(ts).toLocaleDateString();
+        } else if (typeof ts === 'number') {
+          return new Date(ts).toLocaleDateString();
+        }
+        return String(ts);
+      });
+    } else {
+      labels = timeValues.map((v: any) => String(v));
+    }
+
+    // Group datasets by status field (if available)
+    const datasets = [];
+    const statusIndex = fields.findIndex((f: any) => f.name.toLowerCase() === 'status');
+    const countIndex = fields.findIndex((f: any) => f.name.toLowerCase().includes('count'));
+
+    if (statusIndex !== -1 && countIndex !== -1 && values.length > countIndex) {
+      // Group by status
+      const statusValues = values[statusIndex];
+      const countValues = values[countIndex];
+      const uniqueStatuses = [...new Set(statusValues)];
+
+      // Create a dataset for each status
+      uniqueStatuses.forEach((status, idx) => {
+        const color = getColorForIndex(idx);
+        const dataPoints = Array(labels.length).fill(0);
+
+        // Map count values to their respective time slots
+        for (let i = 0; i < statusValues.length; i++) {
+          if (statusValues[i] === status) {
+            const timeLabel = labels.indexOf(
+              timeValues[i] instanceof Date
+                ? timeValues[i].toLocaleDateString()
+                : new Date(timeValues[i]).toLocaleDateString(),
+            );
+            if (timeLabel !== -1) {
+              dataPoints[timeLabel] = countValues[i];
+            }
+          }
+        }
+
+        datasets.push({
+          label: String(status),
+          data: dataPoints,
+          borderColor: color,
+          backgroundColor: color.replace('rgb', 'rgba').replace(')', ', 0.2)'),
+          fill: false,
+        });
+      });
+    } else {
+      // Fallback for simple time series
+      for (let i = 1; i < fields.length; i++) {
+        const color = getColorForIndex(i - 1);
+        datasets.push({
+          label: fields[i].name,
+          data: values[i] || [],
+          borderColor: color,
+          backgroundColor: color.replace('rgb', 'rgba').replace(')', ', 0.2)'),
+          fill: false,
+        });
+      }
+    }
+
+    return {
+      labels,
+      datasets,
+    };
+  } catch (error) {
+    console.error(
+      '[@component:ReportsGrafanaDashboardClient] Error processing time series data:',
+      error,
+    );
+    return {
+      datasets: [],
+      labels: [],
+    };
+  }
+};
+
+// Helper to generate consistent colors
+const getColorForIndex = (index: number) => {
+  const colors = [
+    'rgb(75, 192, 192)', // teal
+    'rgb(255, 99, 132)', // red
+    'rgb(54, 162, 235)', // blue
+    'rgb(255, 206, 86)', // yellow
+    'rgb(153, 102, 255)', // purple
+    'rgb(255, 159, 64)', // orange
+  ];
+  return colors[index % colors.length];
+};
+
+// Utility function to handle bargauge panel data
+const getBargaugeValue = (_panel: any, data: any) => {
+  try {
+    const frames = data?.results?.A?.frames;
+    if (!frames || !frames.length) return 'No data';
+
+    const frame = frames[0];
+    const fieldValues = frame.data.values;
+
+    // For bar gauge panels, typically:
+    // First field is the name/category (index 0)
+    // Second field is the numeric value (index 1)
+    if (fieldValues && fieldValues.length >= 2) {
+      // Sometimes bar gauge shows a configuration name and its value
+      // Return the numeric value (typically second column)
+      return fieldValues[1][0];
+    }
+
+    // If there's only one value, return it
+    if (fieldValues && fieldValues.length === 1) {
+      return fieldValues[0][0];
+    }
+
+    return 'No data';
+  } catch (error) {
+    console.error(
+      '[@component:ReportsGrafanaDashboardClient] Error processing bargauge data:',
+      error,
+    );
+    return 'Error';
+  }
 };
 
 interface ReportsGrafanaDashboardClientProps {
@@ -300,9 +419,14 @@ export function ReportsGrafanaDashboardClient({
             ) : (
               <>
                 {panel.type === 'stat' && (
-                  <div className="">
+                  <div className="text-2xl font-medium mt-2">
                     {panelData[panel.id]?.data?.results?.A?.frames?.[0]?.data?.values?.[0]?.[0] ??
                       getStatConfig(panel).value}
+                  </div>
+                )}
+                {panel.type === 'bargauge' && (
+                  <div className="text-2xl font-medium mt-2">
+                    {getBargaugeValue(panel, panelData[panel.id]?.data)}
                   </div>
                 )}
                 {panel.type === 'barchart' && (
@@ -312,7 +436,18 @@ export function ReportsGrafanaDashboardClient({
                 )}
                 {panel.type === 'timeseries' && (
                   <div style={{ height: '200px' }}>
-                    <Line data={getTimeSeriesConfig(panel, panelData[panel.id]?.data)} />
+                    <Line
+                      data={getTimeSeriesConfig(panel, panelData[panel.id]?.data)}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                          y: {
+                            beginAtZero: true,
+                          },
+                        },
+                      }}
+                    />
                   </div>
                 )}
                 {panelData[panel.id]?.error && (

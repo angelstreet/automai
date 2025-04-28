@@ -103,6 +103,7 @@ export const panelTypeToConfig = {
   stat: getStatConfig,
   barchart: getBarChartConfig,
   timeseries: getBarChartConfig, // Adding timeseries to use the same base config as barchart for now
+  bargauge: getStatConfig, // Adding support for bargauge panel type
   // Add other types like 'line', 'graph', 'table' in future iterations
 };
 
