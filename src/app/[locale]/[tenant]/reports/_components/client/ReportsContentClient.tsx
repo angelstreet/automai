@@ -35,24 +35,15 @@ export function ReportsContentClient({ teamDetails: _teamDetails }: ReportsConte
             </TabsList>
 
             <TabsContent value="overview" className="mt-0 relative">
-              <ReportsGrafanaDashboardClient
-                dashboardUid={DASHBOARD_UIDS.configOverview}
-                title={t('config_overview')}
-              />
+              <ReportsGrafanaDashboardClient dashboardUid={DASHBOARD_UIDS.configOverview} />
             </TabsContent>
 
             <TabsContent value="metrics" className="mt-0 relative">
-              <ReportsGrafanaDashboardClient
-                dashboardUid={DASHBOARD_UIDS.executionMetrics}
-                title={t('execution_metrics')}
-              />
+              <ReportsGrafanaDashboardClient dashboardUid={DASHBOARD_UIDS.executionMetrics} />
             </TabsContent>
 
             <TabsContent value="details" className="mt-0 relative">
-              <ReportsGrafanaDashboardClient
-                dashboardUid={DASHBOARD_UIDS.executionDetails}
-                title={t('execution_details')}
-              />
+              <ReportsGrafanaDashboardClient dashboardUid={DASHBOARD_UIDS.executionDetails} />
             </TabsContent>
           </Tabs>
         </CardContent>
