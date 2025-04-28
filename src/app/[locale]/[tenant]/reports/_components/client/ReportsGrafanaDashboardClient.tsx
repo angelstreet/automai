@@ -7,12 +7,10 @@ import { Card, CardContent } from '@/components/shadcn/card';
 
 interface ReportsGrafanaDashboardClientProps {
   dashboardUid: string;
-  title: string;
 }
 
 export function ReportsGrafanaDashboardClient({
   dashboardUid,
-  title,
 }: ReportsGrafanaDashboardClientProps) {
   const [dashboard, setDashboard] = useState<any>(null);
   const [loading, setLoading] = useState(true);
