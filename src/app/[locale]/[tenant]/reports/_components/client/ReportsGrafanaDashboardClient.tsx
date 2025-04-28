@@ -275,6 +275,14 @@ const getTableData = (_panel: any, data: any) => {
     // Transform column-oriented data to row-oriented for table display
     const rows = [];
     if (values.length > 0 && values[0].length > 0) {
+      // Find time/date column index if exists
+      const timeColumnIndex = fields.findIndex(
+        (field: any) =>
+          field.name.toLowerCase() === 'time' ||
+          field.name.toLowerCase().includes('date') ||
+          field.name.toLowerCase().includes('created'),
+      );
+
       for (let rowIndex = 0; rowIndex < values[0].length; rowIndex++) {
         const row: any[] = [];
         for (let colIndex = 0; colIndex < values.length; colIndex++) {
@@ -283,19 +291,45 @@ const getTableData = (_panel: any, data: any) => {
 
           // Format special values (dates, percentages, etc.)
           const fieldConfig = headers[colIndex]?.config;
-          if (fieldConfig?.unit === 'percent') {
+
+          // Special formatting for timestamp/date columns
+          if (colIndex === timeColumnIndex && value) {
+            try {
+              const date = new Date(value);
+              if (!isNaN(date.getTime())) {
+                // Format as "YYYY-MM-DD HH:MM:SS"
+                value = date.toLocaleString();
+              }
+            } catch {
+              // Keep original value if date parsing fails
+            }
+          } else if (fieldConfig?.unit === 'percent') {
             value = `${parseFloat(value).toFixed(2)}%`;
           } else if (fieldConfig?.unit?.includes('time') && typeof value === 'number') {
             // Format timestamps if needed
             const date = new Date(value);
             if (!isNaN(date.getTime())) {
-              value = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+              value = date.toLocaleString();
             }
           }
 
           row.push(value);
         }
         rows.push(row);
+      }
+
+      // If we found a time column, sort rows by that column (most recent first)
+      if (timeColumnIndex !== -1) {
+        rows.sort((a, b) => {
+          const dateA = new Date(a[timeColumnIndex]);
+          const dateB = new Date(b[timeColumnIndex]);
+
+          // Check if both are valid dates
+          if (!isNaN(dateA.getTime()) && !isNaN(dateB.getTime())) {
+            return dateB.getTime() - dateA.getTime(); // Most recent first
+          }
+          return 0;
+        });
       }
     }
 
@@ -569,7 +603,7 @@ export function ReportsGrafanaDashboardClient({
                                           {`{${formattedContent.substring(0, 30)}${formattedContent.length > 30 ? '...' : ''}}`}
                                         </TableCell>
                                       );
-                                    } catch (_e) {
+                                    } catch {
                                       // Fallback if JSON parsing fails
                                       return (
                                         <TableCell
