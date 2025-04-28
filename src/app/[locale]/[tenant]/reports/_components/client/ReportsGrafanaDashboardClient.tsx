@@ -23,6 +23,7 @@ export function ReportsGrafanaDashboardClient({
     fetch(`/api/grafana-dashboard/${dashboardUid}`)
       .then((res) => res.json())
       .then((data) => {
+        console.log('[@component:ReportsGrafanaDashboardClient] API response:', data);
         if (data.error) {
           setError(data.error);
         } else {
