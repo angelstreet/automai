@@ -80,7 +80,7 @@ export function HeaderClient({
             </div>
 
             {/* Center section - Display tenant name */}
-            <div className="flex items-center justify-start mx-10 min-w-[30rem]">
+            <div className="flex items-center justify-start mx-10 min-w-[26rem]">
               {currentTeam?.tenant_name && (
                 <div className="text-lg font-semibold ml-4 flex items-center">
                   <Building2 className="mr-2 h-5 w-5" />
