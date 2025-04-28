@@ -6,20 +6,15 @@ import { useState } from 'react';
 import { Card, CardContent } from '@/components/shadcn/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 import { Team } from '@/types/context/teamContextType';
+import { DASHBOARD_UIDS } from '@/types-new/grafana-constants';
 
 import { ReportsGrafanaDashboardClient } from './ReportsGrafanaDashboardClient';
-
-const DASHBOARD_UIDS = {
-  configOverview: '565c9d0e-1c43-424e-8705-623ee13c51df',
-  executionMetrics: '558a7504-0f4e-45b7-9662-5dd43f382a87',
-  executionDetails: '5be5172d-0105-4bd9-b5a6-8f1dfe4c5536',
-};
 
 interface ReportsContentClientProps {
   teamDetails: Team | null;
 }
 
-export function ReportsContentClient({ teamDetails: _teamDetails }: ReportsContentClientProps) {
+export function ReportsContentClient({ teamDetails }: ReportsContentClientProps) {
   const t = useTranslations('reports');
   const [activeTab, setActiveTab] = useState('overview');
 
@@ -35,15 +30,24 @@ export function ReportsContentClient({ teamDetails: _teamDetails }: ReportsConte
             </TabsList>
 
             <TabsContent value="overview" className="mt-0 relative">
-              <ReportsGrafanaDashboardClient dashboardUid={DASHBOARD_UIDS.configOverview} />
+              <ReportsGrafanaDashboardClient
+                dashboardUid={DASHBOARD_UIDS.configOverview}
+                teamDetails={teamDetails}
+              />
             </TabsContent>
 
             <TabsContent value="metrics" className="mt-0 relative">
-              <ReportsGrafanaDashboardClient dashboardUid={DASHBOARD_UIDS.executionMetrics} />
+              <ReportsGrafanaDashboardClient
+                dashboardUid={DASHBOARD_UIDS.executionMetrics}
+                teamDetails={teamDetails}
+              />
             </TabsContent>
 
             <TabsContent value="details" className="mt-0 relative">
-              <ReportsGrafanaDashboardClient dashboardUid={DASHBOARD_UIDS.executionDetails} />
+              <ReportsGrafanaDashboardClient
+                dashboardUid={DASHBOARD_UIDS.executionDetails}
+                teamDetails={teamDetails}
+              />
             </TabsContent>
           </Tabs>
         </CardContent>

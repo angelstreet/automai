@@ -1,4 +1,5 @@
 import { ChartData, ChartOptions } from 'chart.js';
+import { SUPPORTED_PANEL_TYPES } from '@/types-new/grafana-constants';
 
 /**
  * Utility functions for rendering Grafana panels with Chart.js
@@ -110,5 +111,5 @@ export const panelTypeToConfig = {
 
 // Check if a panel type is supported
 export const isSupportedPanelType = (type: string): boolean => {
-  return type in panelTypeToConfig;
+  return SUPPORTED_PANEL_TYPES.includes(type);
 };
