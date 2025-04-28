@@ -20,7 +20,10 @@ import {
 
 const languages = [
   { code: 'en', name: 'English' },
-  //{ code: 'fr', name: 'Français' }, // Temporarily removed during development
+  { code: 'fr', name: 'Français' },
+  { code: 'es', name: 'Español' },
+  { code: 'it', name: 'Italiano' },
+  { code: 'de', name: 'Deutsch' },
 ];
 
 export function LanguageSettings() {
