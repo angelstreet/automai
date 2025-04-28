@@ -23,6 +23,56 @@ import {
 // Register Chart.js components
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
+// Shared cache object outside component to persist across renders and tabs
+const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+
+// Helper functions for cache management
+const getCacheKey = (dashboardUid: string, panelId: string) => `grafana_${dashboardUid}_${panelId}`;
+
+const getFromCache = (dashboardUid: string, panelId: string) => {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const key = getCacheKey(dashboardUid, panelId);
+    const item = sessionStorage.getItem(key);
+
+    if (!item) return null;
+
+    const { data, timestamp } = JSON.parse(item);
+    const now = Date.now();
+
+    // Check if cache is still valid
+    if (now - timestamp < CACHE_DURATION_MS) {
+      console.log(
+        `[@component:ReportsGrafanaDashboardClient] Using cached data for panel ${panelId}`,
+      );
+      return data;
+    } else {
+      console.log(`[@component:ReportsGrafanaDashboardClient] Cache expired for panel ${panelId}`);
+      return null;
+    }
+  } catch (e) {
+    console.error('[@component:ReportsGrafanaDashboardClient] Error retrieving from cache:', e);
+    return null;
+  }
+};
+
+const saveToCache = (dashboardUid: string, panelId: string, data: any) => {
+  if (typeof window === 'undefined') return;
+
+  try {
+    const key = getCacheKey(dashboardUid, panelId);
+    const item = JSON.stringify({
+      data,
+      timestamp: Date.now(),
+    });
+
+    sessionStorage.setItem(key, item);
+  } catch (e) {
+    console.error('[@component:ReportsGrafanaDashboardClient] Error saving to cache:', e);
+  }
+};
+
 interface ReportsGrafanaDashboardClientProps {
   dashboardUid: string;
 }
@@ -37,31 +87,23 @@ export function ReportsGrafanaDashboardClient({
   const [error, setError] = useState<string | null>(null);
   const t = useTranslations('reports');
 
-  // Simple in-memory cache for panel data
-  const panelDataCache = useRef<Record<string, { data: any; timestamp: number }>>({});
-  const CACHE_DURATION_MS = 5 * 60 * 1000; // Cache for 5 minutes
-
-  // Function to get cache key
-  const getCacheKey = (dashboardUid: string, panelId: string) => `${dashboardUid}_${panelId}`;
+  // Track in-progress requests to prevent duplicates
+  const pendingRequests = useRef<Record<string, boolean>>({});
 
   // Fetch dashboard structure
   useEffect(() => {
     setLoading(true);
     setError(null);
+
     fetch(`/api/grafana-dashboard/${dashboardUid}`)
       .then((res) => res.json())
       .then((data) => {
-        console.log(
-          '[@component:ReportsGrafanaDashboardClient] API response:',
-          JSON.stringify(data, null, 2),
-        );
         if (data.error) {
           setError(data.error);
-          setLoading(false);
         } else {
           setDashboard(data.dashboard);
-          setLoading(false);
         }
+        setLoading(false);
       })
       .catch((err) => {
         setError(String(err));
@@ -80,24 +122,29 @@ export function ReportsGrafanaDashboardClient({
 
     Promise.all(
       panelsToProcess.map((panel: any) => {
-        const cacheKey = getCacheKey(dashboardUid, panel.id);
-        const cachedEntry = panelDataCache.current[cacheKey];
-        const now = Date.now();
+        const panelId = panel.id;
+        const requestKey = `${dashboardUid}_${panelId}`;
 
-        // Check if cached data is available and not expired
-        if (cachedEntry && now - cachedEntry.timestamp < CACHE_DURATION_MS) {
+        // Skip if this request is already in progress
+        if (pendingRequests.current[requestKey]) {
           console.log(
-            `[@component:ReportsGrafanaDashboardClient] Using cached data for panel ${panel.id}`,
+            `[@component:ReportsGrafanaDashboardClient] Request already in progress for panel ${panelId}`,
           );
-          return Promise.resolve({ panelId: panel.id, data: cachedEntry.data });
+          return Promise.resolve({ panelId, data: null, skipped: true });
         }
+
+        // Check cache first
+        const cachedData = getFromCache(dashboardUid, panelId);
+        if (cachedData) {
+          return Promise.resolve({ panelId, data: cachedData });
+        }
+
+        // Mark as pending
+        pendingRequests.current[requestKey] = true;
 
         // Ensure each query has the correct datasource information
         const updatedQueries = panel.targets.map((query: any) => {
           if (!query.datasource || query.datasource.uid === 'unknown') {
-            console.log(
-              `[@component:ReportsGrafanaDashboardClient] Setting fallback datasource for panel ${panel.id}`,
-            );
             return {
               ...query,
               datasource: {
@@ -108,6 +155,7 @@ export function ReportsGrafanaDashboardClient({
           }
           return query;
         });
+
         return fetch('/api/grafana-panel-data', {
           method: 'POST',
           headers: {
@@ -115,38 +163,52 @@ export function ReportsGrafanaDashboardClient({
           },
           body: JSON.stringify({
             dashboardUid,
-            panelId: panel.id,
+            panelId,
             queries: updatedQueries,
             timeRange: dashboard.time,
           }),
         })
           .then((res) => res.json())
           .then((data) => {
-            console.log(
-              `[@component:ReportsGrafanaDashboardClient] Panel ${panel.id} response data:`,
-              JSON.stringify(data, null, 2),
-            );
-            // Cache the data with a timestamp
-            panelDataCache.current[cacheKey] = { data, timestamp: now };
-            return { panelId: panel.id, data };
+            // Save to cache
+            saveToCache(dashboardUid, panelId, data);
+
+            // Clear pending flag
+            delete pendingRequests.current[requestKey];
+
+            return { panelId, data };
           })
           .catch((err) => {
             console.error(
-              `[@component:ReportsGrafanaDashboardClient] Error fetching data for panel ${panel.id}:`,
+              `[@component:ReportsGrafanaDashboardClient] Error fetching data for panel ${panelId}:`,
               err,
             );
-            return { panelId: panel.id, error: String(err) };
+
+            // Clear pending flag
+            delete pendingRequests.current[requestKey];
+
+            return { panelId, error: String(err) };
           });
       }),
-    ).then((results: Array<{ panelId: string; data?: any; error?: string }>) => {
-      const newPanelData: Record<string, any> = {};
-      results.forEach((result) => {
-        newPanelData[result.panelId] = result;
-      });
-      setPanelData(newPanelData);
+    ).then((results) => {
+      // Filter out skipped requests
+      const validResults = results.filter((r: any) => !r.skipped);
+
+      if (validResults.length > 0) {
+        setPanelData((prevData) => {
+          const newData = { ...prevData };
+          validResults.forEach((result: any) => {
+            if (result.data) {
+              newData[result.panelId] = result;
+            }
+          });
+          return newData;
+        });
+      }
+
       setDataLoading(false);
     });
-  }, [dashboard, dashboardUid, CACHE_DURATION_MS]);
+  }, [dashboard, dashboardUid]);
 
   if (loading) {
     return (
