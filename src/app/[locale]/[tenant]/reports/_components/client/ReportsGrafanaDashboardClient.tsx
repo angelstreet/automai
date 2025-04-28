@@ -75,7 +75,7 @@ export function ReportsGrafanaDashboardClient({
       ))}
       <div className="mt-6 text-center">
         <a
-          href={`https://automai.grafana.net/d/${dashboardUid}`}
+          href={`${process.env.NEXT_PUBLIC_GRAFANA_URL}/d/${dashboardUid}`}
           target="_blank"
           rel="noopener noreferrer"
           className="text-primary underline text-xs"

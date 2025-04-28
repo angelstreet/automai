@@ -1,14 +1,10 @@
 'use client';
 
 import { ExternalLink } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/shadcn/button';
 
 export function ReportActionsClient() {
-  const t = useTranslations('reports');
-
-  // Get Grafana URL from environment, falling back to the known URL
   const grafanaUrl = process.env.NEXT_PUBLIC_GRAFANA_URL || 'https://automai.grafana.net';
 
   const handleOpenGrafana = () => {
