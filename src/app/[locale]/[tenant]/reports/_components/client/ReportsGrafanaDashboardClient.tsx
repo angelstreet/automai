@@ -151,9 +151,11 @@ export function ReportsGrafanaDashboardClient({
   );
 
   return (
-    <div className="space-y-2">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
       {supportedPanels.length === 0 && (
-        <div className="text-muted-foreground text-center">{t('no_supported_panels')}</div>
+        <div className="text-muted-foreground text-center col-span-2">
+          {t('no_supported_panels')}
+        </div>
       )}
       {supportedPanels.map((panel: any) => (
         <Card key={panel.id} className="mb-2">
@@ -184,7 +186,7 @@ export function ReportsGrafanaDashboardClient({
           </CardContent>
         </Card>
       ))}
-      <div className="mt-2 text-right">
+      <div className="mt-2 text-right col-span-2">
         <a
           href={`${process.env.NEXT_PUBLIC_GRAFANA_URL}/d/${dashboardUid}`}
           target="_blank"

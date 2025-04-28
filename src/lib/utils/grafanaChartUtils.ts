@@ -6,10 +6,9 @@ import { ChartData, ChartOptions } from 'chart.js';
 
 // Basic configuration for a stat panel (single value display)
 export const getStatConfig = (panel: any): { value: number | string; title: string } => {
-  // For preview, since we don't have actual data, we'll use placeholder
-  // In a full implementation, this would extract data from panel.targets or a separate data API call
+  // Return a default value if no data is available
   return {
-    value: 'N/A (Preview)',
+    value: '',
     title: panel.title || 'Stat Panel',
   };
 };
@@ -18,15 +17,13 @@ export const getStatConfig = (panel: any): { value: number | string; title: stri
 export const getBarChartConfig = (
   panel: any,
 ): { data: ChartData<'bar'>; options: ChartOptions<'bar'> } => {
-  // Placeholder data for preview
-  // In full implementation, this would map data from panel.targets response
-  const labels = ['Placeholder 1', 'Placeholder 2', 'Placeholder 3'];
+  // Return an empty configuration if no real data is available
   const data = {
-    labels,
+    labels: [],
     datasets: [
       {
         label: panel.title || 'Bar Chart',
-        data: [10, 20, 30],
+        data: [],
         backgroundColor: 'rgba(75, 192, 192, 0.5)',
         borderColor: 'rgba(75, 192, 192, 1)',
         borderWidth: 1,
