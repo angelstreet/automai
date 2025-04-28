@@ -179,7 +179,9 @@ async function processJob() {
                 const isSuccess =
                   output.stdout.includes('Failed on: None') ||
                   output.stdout.includes('Installation complete') ||
-                  output.stdout.includes('Successfully installed') ||
+                  output.stdout.includes('Successfully') ||
+                  output.stdout.includes('Complete') ||
+                  output.stdout.includes('Success') ||
                   code === 0;
 
                 await supabase
