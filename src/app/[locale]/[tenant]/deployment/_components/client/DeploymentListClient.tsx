@@ -50,6 +50,7 @@ export function DeploymentListClient({
   const [filterStatus, setFilterStatus] = useState('all');
   const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true); // Track initial loading state
   const [deployments, setDeployments] = useState<Deployment[]>(initialDeployments);
   const [repositoriesMap, setRepositoriesMap] = useState<Record<string, Repository>>({});
   const [selectedDeployment, setSelectedDeployment] = useState<Deployment | null>(null);
@@ -103,14 +104,20 @@ export function DeploymentListClient({
     setDeployments(initialDeployments);
   }, [initialDeployments]);
 
+  // Set hasAttemptedLoad to true after initial load and track first-time load
   useEffect(() => {
     console.log('[DeploymentList] Loading state:', {
       isRefreshing,
       deployments: deployments.length,
       hasAttemptedLoad,
+      isInitialLoad
     });
-    setHasAttemptedLoad(true);
-  }, [isRefreshing, deployments.length, hasAttemptedLoad]);
+    
+    if (isInitialLoad && deployments.length > 0) {
+      setIsInitialLoad(false);
+      setHasAttemptedLoad(true);
+    }
+  }, [isRefreshing, deployments.length, hasAttemptedLoad, isInitialLoad]);
 
   useEffect(() => {
     if (initialRepositories && initialRepositories.length > 0) {
@@ -466,7 +473,7 @@ export function DeploymentListClient({
               </button>
             </div>
           </div>
-          {isRefreshing ? (
+          {isInitialLoad ? (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-transparent dark:bg-transparent">
@@ -637,7 +644,7 @@ export function DeploymentListClient({
                 </tbody>
               </table>
             </div>
-          ) : hasAttemptedLoad ? (
+          ) : (
             <div className="text-center py-8 bg-transparent dark:bg-transparent">
               <div className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-4">
                 {activeTab === 'scheduled' ? (
@@ -660,48 +667,6 @@ export function DeploymentListClient({
                   ? 'Try changing your search or filter criteria'
                   : 'Create your first deployment to get started'}
               </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-transparent dark:bg-transparent">
-                  <tr>
-                    <th
-                      scope="col"
-                      className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                    >
-                      Name
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                    >
-                      Status
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                    >
-                      Created
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                    >
-                      Last Run
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-1 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                    >
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-transparent dark:bg-transparent divide-y divide-gray-200 dark:divide-gray-700">
-                  {renderSkeletonRows()}
-                </tbody>
-              </table>
             </div>
           )}
         </div>
