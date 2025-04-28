@@ -22,7 +22,6 @@ export async function DeploymentContent() {
     return <DeploymentEmptyStateClient errorMessage={deploymentsResponse.error} />;
   }
 
-  // Otherwise, show the deployment list
   return (
     <DeploymentListClient initialDeployments={deployments} initialRepositories={repositories} />
   );
