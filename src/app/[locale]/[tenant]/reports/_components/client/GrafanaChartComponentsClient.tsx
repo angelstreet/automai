@@ -104,11 +104,10 @@ export function TablePanelClient({ panel, data, onCellClick }: TablePanelProps) 
                 if (isStatusCell) {
                   const statusColorClass = getStatusColorClass(content);
                   return (
-                    <TableCell
-                      key={cellIndex}
-                      className={`whitespace-nowrap font-medium text-center rounded-md px-2 py-1 ${statusColorClass}`}
-                    >
-                      {content}
+                    <TableCell key={cellIndex} className="whitespace-nowrap text-center">
+                      <span className={`font-medium rounded-md px-2 py-1 ${statusColorClass}`}>
+                        {content}
+                      </span>
                     </TableCell>
                   );
                 }

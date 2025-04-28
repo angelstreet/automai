@@ -309,20 +309,20 @@ export const processTableData = (panel: any, data: any) => {
 export const getStatusColorClass = (status: string): string => {
   const statusLower = status.toLowerCase();
   if (statusLower.includes('success') || statusLower === 'succeeded') {
-    return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+    return 'text-green-600 dark:text-green-400';
   }
   if (statusLower.includes('fail') || statusLower === 'failed' || statusLower === 'error') {
-    return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+    return 'text-red-600 dark:text-red-400';
   }
   if (statusLower.includes('pending') || statusLower === 'waiting') {
-    return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+    return 'text-blue-600 dark:text-blue-400';
   }
   if (
     statusLower.includes('progress') ||
     statusLower === 'in_progress' ||
     statusLower === 'running'
   ) {
-    return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
+    return 'text-amber-600 dark:text-amber-400';
   }
   return '';
 };
