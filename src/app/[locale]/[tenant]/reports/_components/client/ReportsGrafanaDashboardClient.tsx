@@ -67,13 +67,29 @@ export function ReportsGrafanaDashboardClient({
     if (!dashboard || !dashboard.panels) return;
 
     setDataLoading(true);
-    const supportedPanels = dashboard.panels.filter((panel: any) =>
+    const panelsToProcess = dashboard.panels.filter((panel: any) =>
       isSupportedPanelType(panel.type),
     );
 
     Promise.all(
-      supportedPanels.map((panel: any) =>
-        fetch('/api/grafana-panel-data', {
+      panelsToProcess.map((panel: any) => {
+        // Ensure each query has the correct datasource information
+        const updatedQueries = panel.targets.map((query: any) => {
+          if (!query.datasource || query.datasource.uid === 'unknown') {
+            console.log(
+              `[@component:ReportsGrafanaDashboardClient] Setting fallback datasource for panel ${panel.id}`,
+            );
+            return {
+              ...query,
+              datasource: {
+                uid: 'dek6nh62v9j40b',
+                type: 'grafana-postgresql-datasource',
+              },
+            };
+          }
+          return query;
+        });
+        return fetch('/api/grafana-panel-data', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -81,7 +97,7 @@ export function ReportsGrafanaDashboardClient({
           body: JSON.stringify({
             dashboardUid,
             panelId: panel.id,
-            queries: panel.targets,
+            queries: updatedQueries,
             timeRange: dashboard.time,
           }),
         })
@@ -96,9 +112,9 @@ export function ReportsGrafanaDashboardClient({
               err,
             );
             return { panelId: panel.id, error: String(err) };
-          }),
-      ),
-    ).then((results) => {
+          });
+      }),
+    ).then((results: Array<{ panelId: string; data?: any; error?: string }>) => {
       const newPanelData: Record<string, any> = {};
       results.forEach((result) => {
         newPanelData[result.panelId] = result;

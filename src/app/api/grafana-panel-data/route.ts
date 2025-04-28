@@ -31,11 +31,14 @@ export async function POST(request: NextRequest) {
     const url = `${baseUrl}/api/ds/query`;
 
     // Format queries for Grafana API
-    // This assumes queries are passed in a format similar to what is in panel.targets
+    // Ensure datasource field uses the UID correctly
     const queryPayload = {
       queries: queries.map((q: any) => ({
         refId: q.refId,
-        datasource: q.datasource,
+        datasource: {
+          uid: q.datasource?.uid || 'unknown',
+          type: q.datasource?.type || 'unknown',
+        },
         rawSql: q.rawSql,
         format: q.format || 'table',
       })),
@@ -44,6 +47,19 @@ export async function POST(request: NextRequest) {
         to: 'now',
       },
     };
+
+    console.log('[@api:grafana-panel-data] Query payload:', JSON.stringify(queryPayload, null, 2));
+    console.log(
+      '[@api:grafana-panel-data] Request headers:',
+      JSON.stringify(
+        {
+          Authorization: `Bearer [REDACTED]`,
+          'Content-Type': 'application/json',
+        },
+        null,
+        2,
+      ),
+    );
 
     const res = await fetch(url, {
       method: 'POST',
