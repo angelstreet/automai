@@ -17,6 +17,14 @@ import { Bar, Line } from 'react-chartjs-2';
 
 import { Card, CardContent } from '@/components/shadcn/card';
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/shadcn/table';
+import {
   getStatConfig,
   isSupportedPanelType,
   getUpdatedBarChartConfig,
@@ -243,6 +251,67 @@ const getBargaugeValue = (_panel: any, data: any) => {
   }
 };
 
+// Utility function to process table data
+const getTableData = (_panel: any, data: any) => {
+  try {
+    const frames = data?.results?.A?.frames;
+    if (!frames || !frames.length) {
+      return {
+        headers: [],
+        rows: [],
+      };
+    }
+
+    const frame = frames[0];
+    const fields = frame.schema.fields || [];
+    const values = frame.data.values || [];
+
+    // Extract headers from fields
+    const headers = fields.map((field: any) => ({
+      name: field.name,
+      config: field.config || {},
+    }));
+
+    // Transform column-oriented data to row-oriented for table display
+    const rows = [];
+    if (values.length > 0 && values[0].length > 0) {
+      for (let rowIndex = 0; rowIndex < values[0].length; rowIndex++) {
+        const row: any[] = [];
+        for (let colIndex = 0; colIndex < values.length; colIndex++) {
+          // Format the value based on field type if needed
+          let value = values[colIndex][rowIndex];
+
+          // Format special values (dates, percentages, etc.)
+          const fieldConfig = headers[colIndex]?.config;
+          if (fieldConfig?.unit === 'percent') {
+            value = `${parseFloat(value).toFixed(2)}%`;
+          } else if (fieldConfig?.unit?.includes('time') && typeof value === 'number') {
+            // Format timestamps if needed
+            const date = new Date(value);
+            if (!isNaN(date.getTime())) {
+              value = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+            }
+          }
+
+          row.push(value);
+        }
+        rows.push(row);
+      }
+    }
+
+    return {
+      headers,
+      rows,
+    };
+  } catch (error) {
+    console.error('[@component:ReportsGrafanaDashboardClient] Error processing table data:', error);
+    return {
+      headers: [],
+      rows: [],
+    };
+  }
+};
+
 interface ReportsGrafanaDashboardClientProps {
   dashboardUid: string;
 }
@@ -411,7 +480,7 @@ export function ReportsGrafanaDashboardClient({
         </div>
       )}
       {supportedPanels.map((panel: any) => (
-        <Card key={panel.id} className="mb-2">
+        <Card key={panel.id} className={`mb-2 ${panel.type === 'table' ? 'col-span-2' : ''}`}>
           <CardContent className="pt-2 px-4 pb-2 flex flex-col items-center justify-center">
             <h3 className="text-lg font-medium">{panel.title}</h3>
             {dataLoading ? (
@@ -448,6 +517,39 @@ export function ReportsGrafanaDashboardClient({
                         },
                       }}
                     />
+                  </div>
+                )}
+                {panel.type === 'table' && (
+                  <div className="w-full overflow-auto max-h-[350px] mt-2">
+                    {(() => {
+                      const tableData = getTableData(panel, panelData[panel.id]?.data);
+                      if (tableData.headers.length === 0 || tableData.rows.length === 0) {
+                        return <div className="text-muted-foreground">No data available</div>;
+                      }
+
+                      return (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              {tableData.headers.map((header: any, i: number) => (
+                                <TableHead key={i}>{header.name}</TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {tableData.rows.map((row: any[], rowIndex: number) => (
+                              <TableRow key={rowIndex}>
+                                {row.map((cell, cellIndex: number) => (
+                                  <TableCell key={cellIndex}>
+                                    {cell !== null && cell !== undefined ? String(cell) : ''}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      );
+                    })()}
                   </div>
                 )}
                 {panelData[panel.id]?.error && (
