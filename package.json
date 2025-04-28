@@ -86,8 +86,6 @@
     "electron-store": "^10.0.1",
     "get-nonce": "1.0.1",
     "i18next": "25.0.2",
-    "i18next-fs-backend": "2.6.0",
-    "i18next-google-translate": "1.0.3",
     "is-electron": "^2.2.2",
     "jose": "6.0.10",
     "js-cookie": "^3.0.5",
