@@ -20,13 +20,16 @@ export default async function TeamPage() {
     console.error('Failed to load team page data:', pageData.error);
   }
 
-  const { user, teamDetails, teamMembers } = pageData.success
-    ? pageData.data
-    : {
-        user: null,
-        teamDetails: null,
-        teamMembers: [],
-      };
+  const user =
+    pageData.success && pageData.data && 'user' in pageData.data ? pageData.data.user : null;
+  const teamDetails =
+    pageData.success && pageData.data && 'teamDetails' in pageData.data
+      ? pageData.data.teamDetails
+      : null;
+  const teamMembers =
+    pageData.success && pageData.data && 'teamMembers' in pageData.data
+      ? pageData.data.teamMembers
+      : [];
 
   // Using FeaturePageContainer directly like repositories page
   return (

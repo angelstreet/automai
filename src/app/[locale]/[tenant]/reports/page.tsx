@@ -16,18 +16,20 @@ export default async function ReportsPage() {
     console.error('Failed to load team data for reports page:', pageData.error);
   }
 
-  const { user, teamDetails } = pageData.success
-    ? pageData.data
-    : {
-        user: null,
-        teamDetails: null,
-      };
+  const teamDetails =
+    pageData.success && pageData.data && 'teamDetails' in pageData.data
+      ? pageData.data.teamDetails
+      : null;
 
   // Using direct FeaturePageContainer approach
   return (
     <FeaturePageContainer title={t('title')} description={t('desc')}>
       <Suspense fallback={<div>Loading reports...</div>}>
-        <ReportsContent user={user} teamDetails={teamDetails} />
+        <ReportsContent
+          teamDetails={
+            (teamDetails?.team as import('@/types/context/teamContextType').Team) ?? null
+          }
+        />
       </Suspense>
     </FeaturePageContainer>
   );
