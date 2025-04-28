@@ -10,7 +10,7 @@ import {
   Legend,
 } from 'chart.js';
 import { useTranslations } from 'next-intl';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Bar } from 'react-chartjs-2';
 
 import { Card, CardContent } from '@/components/shadcn/card';
@@ -36,6 +36,13 @@ export function ReportsGrafanaDashboardClient({
   const [dataLoading, setDataLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const t = useTranslations('reports');
+
+  // Simple in-memory cache for panel data
+  const panelDataCache = useRef<Record<string, { data: any; timestamp: number }>>({});
+  const CACHE_DURATION_MS = 5 * 60 * 1000; // Cache for 5 minutes
+
+  // Function to get cache key
+  const getCacheKey = (dashboardUid: string, panelId: string) => `${dashboardUid}_${panelId}`;
 
   // Fetch dashboard structure
   useEffect(() => {
@@ -73,6 +80,18 @@ export function ReportsGrafanaDashboardClient({
 
     Promise.all(
       panelsToProcess.map((panel: any) => {
+        const cacheKey = getCacheKey(dashboardUid, panel.id);
+        const cachedEntry = panelDataCache.current[cacheKey];
+        const now = Date.now();
+
+        // Check if cached data is available and not expired
+        if (cachedEntry && now - cachedEntry.timestamp < CACHE_DURATION_MS) {
+          console.log(
+            `[@component:ReportsGrafanaDashboardClient] Using cached data for panel ${panel.id}`,
+          );
+          return Promise.resolve({ panelId: panel.id, data: cachedEntry.data });
+        }
+
         // Ensure each query has the correct datasource information
         const updatedQueries = panel.targets.map((query: any) => {
           if (!query.datasource || query.datasource.uid === 'unknown') {
@@ -107,6 +126,8 @@ export function ReportsGrafanaDashboardClient({
               `[@component:ReportsGrafanaDashboardClient] Panel ${panel.id} response data:`,
               JSON.stringify(data, null, 2),
             );
+            // Cache the data with a timestamp
+            panelDataCache.current[cacheKey] = { data, timestamp: now };
             return { panelId: panel.id, data };
           })
           .catch((err) => {
@@ -125,7 +146,7 @@ export function ReportsGrafanaDashboardClient({
       setPanelData(newPanelData);
       setDataLoading(false);
     });
-  }, [dashboard, dashboardUid]);
+  }, [dashboard, dashboardUid, CACHE_DURATION_MS]);
 
   if (loading) {
     return (
