@@ -31,10 +31,13 @@ export function ReportsGrafanaDashboardClient({
   dashboardUid,
 }: ReportsGrafanaDashboardClientProps) {
   const [dashboard, setDashboard] = useState<any>(null);
+  const [panelData, setPanelData] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const t = useTranslations('reports');
 
+  // Fetch dashboard structure
   useEffect(() => {
     setLoading(true);
     setError(null);
@@ -47,16 +50,63 @@ export function ReportsGrafanaDashboardClient({
         );
         if (data.error) {
           setError(data.error);
+          setLoading(false);
         } else {
           setDashboard(data.dashboard);
+          setLoading(false);
         }
-        setLoading(false);
       })
       .catch((err) => {
         setError(String(err));
         setLoading(false);
       });
   }, [dashboardUid]);
+
+  // Fetch data for each panel once dashboard is loaded
+  useEffect(() => {
+    if (!dashboard || !dashboard.panels) return;
+
+    setDataLoading(true);
+    const supportedPanels = dashboard.panels.filter((panel: any) =>
+      isSupportedPanelType(panel.type),
+    );
+
+    Promise.all(
+      supportedPanels.map((panel: any) =>
+        fetch('/api/grafana-panel-data', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            dashboardUid,
+            panelId: panel.id,
+            queries: panel.targets,
+            timeRange: dashboard.time,
+          }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            console.log(`[@component:ReportsGrafanaDashboardClient] Panel ${panel.id} data:`, data);
+            return { panelId: panel.id, data };
+          })
+          .catch((err) => {
+            console.error(
+              `[@component:ReportsGrafanaDashboardClient] Error fetching data for panel ${panel.id}:`,
+              err,
+            );
+            return { panelId: panel.id, error: String(err) };
+          }),
+      ),
+    ).then((results) => {
+      const newPanelData: Record<string, any> = {};
+      results.forEach((result) => {
+        newPanelData[result.panelId] = result;
+      });
+      setPanelData(newPanelData);
+      setDataLoading(false);
+    });
+  }, [dashboard, dashboardUid]);
 
   if (loading) {
     return (
@@ -82,26 +132,41 @@ export function ReportsGrafanaDashboardClient({
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-2">
       {supportedPanels.length === 0 && (
         <div className="text-muted-foreground text-center">{t('no_supported_panels')}</div>
       )}
       {supportedPanels.map((panel: any) => (
-        <Card key={panel.id} className="mb-4">
-          <CardContent className="pt-4 px-4 pb-4">
-            <h3 className="text-lg font-medium mb-2">{panel.title}</h3>
-            {panel.type === 'stat' && (
-              <div className="text-3xl font-bold">{getStatConfig(panel).value}</div>
-            )}
-            {panel.type === 'barchart' && (
-              <div style={{ height: '200px' }}>
-                <Bar {...getBarChartConfig(panel)} />
-              </div>
+        <Card key={panel.id} className="mb-2">
+          <CardContent className="pt-2 px-4 pb-2">
+            <h3 className="text-lg font-medium">{panel.title}</h3>
+            {dataLoading ? (
+              <div className="text-muted-foreground">Loading panel data...</div>
+            ) : (
+              <>
+                {panel.type === 'stat' && (
+                  <div className="">
+                    {panelData[panel.id]?.data
+                      ? 'Data loaded (processing soon)'
+                      : getStatConfig(panel).value}
+                  </div>
+                )}
+                {panel.type === 'barchart' && (
+                  <div style={{ height: '200px' }}>
+                    <Bar {...getBarChartConfig(panel)} />
+                  </div>
+                )}
+                {panelData[panel.id]?.error && (
+                  <div className="text-destructive text-sm">
+                    Error loading data: {panelData[panel.id].error}
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
       ))}
-      <div className="mt-6 text-center">
+      <div className="mt-2 text-right">
         <a
           href={`${process.env.NEXT_PUBLIC_GRAFANA_URL}/d/${dashboardUid}`}
           target="_blank"
