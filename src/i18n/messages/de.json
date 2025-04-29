@@ -146,7 +146,8 @@
     "updating": "Aktualisierung läuft...",
     "url": "URL",
     "username": "Benutzername",
-    "view": "Anzeigen"
+    "view": "Anzeigen",
+    "view_config": "Konfig anzeigen"
   },
   "dashboard": {
     "desc": "Willkommen in Ihrem Dashboard",

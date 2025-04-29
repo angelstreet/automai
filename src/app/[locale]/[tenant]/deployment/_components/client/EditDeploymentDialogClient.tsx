@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 
 import { updateJob } from '@/app/actions/jobsAction';
 import { Button } from '@/components/shadcn/button';
@@ -17,7 +17,6 @@ import {
   FormMessage,
 } from '@/components/shadcn/form';
 import { Input } from '@/components/shadcn/input';
-import { Textarea } from '@/components/shadcn/textarea';
 import { useToast } from '@/components/shadcn/use-toast';
 import { Deployment } from '@/types/component/deploymentComponentType';
 
@@ -29,7 +28,7 @@ interface EditDeploymentDialogClientProps {
 
 interface FormValues {
   name: string;
-  config: string;
+  scripts: { path: string; parameters: string }[];
 }
 
 export function EditDeploymentDialogClient({
@@ -41,25 +40,34 @@ export function EditDeploymentDialogClient({
   const c = useTranslations('common');
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [jsonError, setJsonError] = useState<string | null>(null);
   const router = useRouter();
 
-  // Get the config as a formatted JSON string for editing
-  const getFormattedConfig = (deployment: Deployment | null) => {
-    if (!deployment || !deployment.config) return '{}';
+  // Extract scripts from config for editing
+  const getScriptsFromConfig = (deployment: Deployment | null) => {
+    if (!deployment || !deployment.config || !deployment.config.scripts) {
+      return [];
+    }
     try {
-      return JSON.stringify(deployment.config, null, 2);
+      return deployment.config.scripts.map((script: any) => ({
+        path: script.path || '',
+        parameters: script.parameters || '',
+      }));
     } catch (error) {
-      console.error('[@component:EditDeploymentDialogClient] Error formatting config:', error);
-      return '{}';
+      console.error('[@component:EditDeploymentDialogClient] Error extracting scripts:', error);
+      return [];
     }
   };
 
   const form = useForm<FormValues>({
     defaultValues: {
       name: deployment?.name || '',
-      config: getFormattedConfig(deployment),
+      scripts: getScriptsFromConfig(deployment),
     },
+  });
+
+  const { fields } = useFieldArray({
+    control: form.control,
+    name: 'scripts',
   });
 
   // Reset form when deployment changes
@@ -67,9 +75,8 @@ export function EditDeploymentDialogClient({
     if (deployment) {
       form.reset({
         name: deployment.name || '',
-        config: getFormattedConfig(deployment),
+        scripts: getScriptsFromConfig(deployment),
       });
-      setJsonError(null);
     }
   }, [deployment, form]);
 
@@ -80,33 +87,13 @@ export function EditDeploymentDialogClient({
         `[@component:EditDeploymentDialogClient] Loading configuration for deployment: ${deployment.id}`,
       );
 
-      // If the config is not already loaded, we could fetch it specifically here
       if (!deployment.config) {
-        // We could implement a specific fetch here if needed
         console.log(
           '[@component:EditDeploymentDialogClient] No config data available, could fetch it separately',
         );
       }
     }
   }, [open, deployment]);
-
-  // Validate JSON as user types
-  useEffect(() => {
-    const subscription = form.watch((value, { name }) => {
-      if (name === 'config') {
-        try {
-          if (value.config && value.config.trim() !== '') {
-            JSON.parse(value.config as string);
-            setJsonError(null);
-          }
-        } catch (error: any) {
-          setJsonError(error.message);
-        }
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [form]);
 
   const onSubmit = async (data: FormValues) => {
     if (!deployment?.id) {
@@ -121,19 +108,13 @@ export function EditDeploymentDialogClient({
       return;
     }
 
-    // Parse config from string to object
-    let configObject;
-    try {
-      configObject = JSON.parse(data.config);
-    } catch (error: any) {
-      console.error('[@component:EditDeploymentDialogClient] Invalid JSON config:', error);
-      setJsonError(error.message);
-      toast({
-        title: c('error'),
-        description: `Invalid JSON configuration: ${error.message}`,
-        variant: 'destructive',
-      });
-      return;
+    // Reconstruct the config object with updated scripts
+    let configObject = deployment.config ? { ...deployment.config } : {};
+    if (data.scripts.length > 0) {
+      configObject.scripts = data.scripts.map((script) => ({
+        path: script.path,
+        parameters: script.parameters,
+      }));
     }
 
     setIsSubmitting(true);
@@ -185,7 +166,7 @@ export function EditDeploymentDialogClient({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[700px]">
         <DialogHeader>
-          <DialogTitle>{t('edit_deployment')}</DialogTitle>
+          <DialogTitle>{t('edit_parameters')}</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
@@ -197,31 +178,48 @@ export function EditDeploymentDialogClient({
                 <FormItem>
                   <FormLabel>{c('name')}</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} disabled />
                   </FormControl>
                 </FormItem>
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="config"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{c('config')}</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      {...field}
-                      className={`font-mono text-sm h-[300px] ${jsonError ? 'border-red-500' : ''}`}
-                      spellCheck="false"
+            <div>
+              <FormLabel>{c('scripts')}</FormLabel>
+              {fields.length > 0 ? (
+                fields.map((field, index) => (
+                  <div key={field.id} className="space-y-2 border-b pb-2 mb-2">
+                    <FormField
+                      control={form.control}
+                      name={`scripts.${index}.path`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{c('script_path')}</FormLabel>
+                          <FormControl>
+                            <Input {...field} disabled />
+                          </FormControl>
+                        </FormItem>
+                      )}
                     />
-                  </FormControl>
-                  {jsonError && (
-                    <FormMessage className="text-red-500 text-xs">{jsonError}</FormMessage>
-                  )}
-                </FormItem>
+                    <FormField
+                      control={form.control}
+                      name={`scripts.${index}.parameters`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{c('parameters')}</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder={c('parameters')} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-gray-500">No scripts available to edit.</p>
               )}
-            />
+            </div>
 
             <div className="flex justify-end gap-2 pt-4">
               <Button
@@ -232,7 +230,7 @@ export function EditDeploymentDialogClient({
               >
                 {c('cancel')}
               </Button>
-              <Button type="submit" disabled={isSubmitting || !!jsonError}>
+              <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? c('updating') : c('update')}
               </Button>
             </div>

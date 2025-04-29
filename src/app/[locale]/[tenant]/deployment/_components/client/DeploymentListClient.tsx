@@ -2,6 +2,7 @@
 
 import { Search, Clock, Play, Eye, PlayCircle, Trash2, MoreHorizontal, Edit2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import React, { useState, useEffect } from 'react';
 
 import { refreshDeployments, deleteJob, startJob } from '@/app/actions/jobsAction';
@@ -27,6 +28,7 @@ import { getFormattedTime } from '@/lib/utils/deploymentUtils';
 import { Deployment } from '@/types/component/deploymentComponentType';
 import { Repository } from '@/types/component/repositoryComponentType';
 
+import { ConfigDeploymentDialogClient } from './ConfigDeploymentDialogClient';
 import { DeploymentActionsClient } from './DeploymentActionsClient';
 import DeploymentStatusBadgeClient from './DeploymentStatusBadgeClient';
 import { EditDeploymentDialogClient } from './EditDeploymentDialogClient';
@@ -42,6 +44,7 @@ export function DeploymentListClient({
 }: DeploymentListProps) {
   const { toast } = useToast();
   const router = useRouter();
+  const c = useTranslations('common');
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('all');
@@ -58,6 +61,10 @@ export function DeploymentListClient({
   const [isRunning, setIsRunning] = useState<string | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [deploymentToEdit, setDeploymentToEdit] = useState<Deployment | null>(null);
+  const [showConfigDialog, setShowConfigDialog] = useState(false);
+  const [selectedDeploymentForConfig, setSelectedDeploymentForConfig] = useState<Deployment | null>(
+    null,
+  );
 
   // Setup auto-refresh every 10 seconds
   useEffect(() => {
@@ -378,6 +385,16 @@ export function DeploymentListClient({
     setShowEditDialog(true);
   };
 
+  const handleConfigClick = (deployment: Deployment, e: React.MouseEvent) => {
+    e.stopPropagation();
+    console.log('[DeploymentListClient:handleConfigClick] Selected deployment for config view:', {
+      id: deployment.id,
+      name: deployment.name,
+    });
+    setSelectedDeploymentForConfig(deployment);
+    setShowConfigDialog(true);
+  };
+
   return (
     <div className="w-full">
       <div className="hidden">
@@ -611,11 +628,20 @@ export function DeploymentListClient({
                               <DropdownMenuItem
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  handleConfigClick(deployment, e);
+                                }}
+                              >
+                                <Edit2 className="mr-2 h-4 w-4" />
+                                {c('view_config')}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   handleEditClick(deployment, e);
                                 }}
                               >
                                 <Edit2 className="mr-2 h-4 w-4" />
-                                Edit
+                                {c('edit')}
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={(e) => {
@@ -698,6 +724,11 @@ export function DeploymentListClient({
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
         deployment={deploymentToEdit}
+      />
+      <ConfigDeploymentDialogClient
+        open={showConfigDialog}
+        onOpenChange={setShowConfigDialog}
+        deployment={selectedDeploymentForConfig}
       />
     </div>
   );

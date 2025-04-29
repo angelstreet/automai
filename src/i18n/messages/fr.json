@@ -146,7 +146,8 @@
     "updating": "Mise à jour en cours...",
     "url": "URL",
     "username": "Nom d'utilisateur",
-    "view": "Voir"
+    "view": "Voir",
+    "view_config": "Voir config"
   },
   "dashboard": {
     "desc": "Bienvenue sur votre tableau de bord",

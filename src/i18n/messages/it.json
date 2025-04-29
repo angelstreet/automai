@@ -146,7 +146,8 @@
     "updating": "Aggiornamento in corso...",
     "url": "URL",
     "username": "Nome utente",
-    "view": "Visualizza"
+    "view": "Visualizza",
+    "view_config": "Visualizza config"
   },
   "dashboard": {
     "desc": "Benvenuto nel tuo cruscotto",

@@ -146,7 +146,11 @@
     "updating": "Updating...",
     "url": "URL",
     "username": "Username",
-    "view": "View"
+    "view": "View",
+    "view_config": "View Config",
+    "scripts": "Scripts",
+    "script_path": "Script Path",
+    "parameters": "Parameters"
   },
   "dashboard": {
     "desc": "Welcome to your dashboard",
@@ -165,6 +169,7 @@
     "details_retry": "Retry Deployment",
     "details_view": "View Details",
     "edit_deployment": "Edit Deployment",
+    "edit_parameters": "Edit Parameters",
     "filter": "Target Hosts",
     "filter_active": "Active",
     "filter_all": "All Deployments",
@@ -187,6 +192,7 @@
     "title": "Deployments",
     "update_error": "Failed to update deployment",
     "update_success": "Deployment updated successfully",
+    "view_config": "View Configuration",
     "wizard_auto_start": "Auto Start",
     "wizard_create_button": "Create Deployment",
     "wizard_create_deployment": "Create Deployment",

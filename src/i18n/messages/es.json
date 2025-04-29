@@ -146,7 +146,8 @@
     "updating": "Actualizando...",
     "url": "URL",
     "username": "Nombre de usuario",
-    "view": "Ver"
+    "view": "Ver",
+    "view_config": "Ver Configuración"
   },
   "dashboard": {
     "desc": "Bienvenido a tu panel de control",
