@@ -198,17 +198,19 @@ async function processJob() {
           if (err.message.includes('ECONNRESET')) {
             console.error(`[@runner:processJob] SSH connection closed due to ECONNRESET`);
             // Update job status to failed due to connection reset
+            const isSuccess = output.stdout.includes('Test Success') || code === 0;
+
             await supabase
               .from('jobs_run')
               .update({
-                status: 'failed',
-                output: { stdout: '', stderr: '' },
+                status: isSuccess ? 'success' : 'failed',
+                output: output,
                 error: 'ECONNRESET',
-                completed_at: new Date().toISOString(),
+                completed_at: completed_at,
               })
               .eq('id', jobId);
             console.log(
-              `[@runner:processJob] Updated job ${jobId} to failed status due to ECONNRESET`,
+              `[@runner:processJob] Updated job ${jobId} to ${isSuccess ? 'success' : 'failed'} status inspite of ECONNRESET`,
             );
           } else {
             console.error(`[@runner:processJob] SSH error: ${err.message}`);
