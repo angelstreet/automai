@@ -120,6 +120,9 @@ async function processJob() {
       const jobId = jobData.id;
       console.log(`[@runner:processJob] Created job with ID ${jobId} and status 'pending'`);
 
+      // Declare output variable at a higher scope, outside of all event handlers
+      let output = { stdout: '', stderr: '' };
+
       const conn = new Client();
       conn
         .on('ready', async () => {
@@ -136,9 +139,6 @@ async function processJob() {
             .eq('id', jobId);
 
           console.log(`[@runner:processJob] Updated job ${jobId} status to 'in_progress'`);
-
-          // Declare output variable here to be accessible in error handler
-          let output = { stdout: '', stderr: '' };
 
           conn.exec(fullScript, async (err, stream) => {
             if (err) {
@@ -159,6 +159,7 @@ async function processJob() {
               conn.end();
               return;
             }
+
             stream
               .on('data', (data) => {
                 output.stdout += data;
