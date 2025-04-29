@@ -175,20 +175,10 @@ async function processJob() {
                 // Step 3: Update job with final results
                 const completed_at = new Date().toISOString();
 
-                // We're looking for either "Failed on: None" string (indicating success)
-                // or for other success messages like "Installation complete"
-                const isSuccess =
-                  output.stdout.includes('Failed on: None') ||
-                  output.stdout.includes('Installation complete') ||
-                  output.stdout.includes('Successfully') ||
-                  output.stdout.includes('Complete') ||
-                  output.stdout.includes('Success') ||
-                  code === 0;
-
                 await supabase
                   .from('jobs_run')
                   .update({
-                    status: isSuccess ? 'success' : 'failed',
+                    status: code === 0 ? 'success' : 'failed',
                     output, // Keep the original output object structure
                     completed_at: completed_at,
                   })
