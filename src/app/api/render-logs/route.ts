@@ -5,28 +5,36 @@ export async function GET() {
     console.log('[@api:render-logs] Starting to fetch logs from Render service');
     const renderApiEndpoint = process.env.RENDER_API_ENDPOINT;
     const renderApiKey = process.env.RENDER_API_KEY;
+    const renderApiOwner = process.env.RENDER_API_OWNER;
 
-    if (!renderApiEndpoint || !renderApiKey) {
-      console.error('[@api:render-logs] Render API endpoint or key is not defined');
+    if (!renderApiEndpoint || !renderApiKey || !renderApiOwner) {
+      console.error(
+        '[@api:render-logs] Render API endpoint, key, or owner is not defined. Endpoint defined: ',
+        !!renderApiEndpoint,
+        ', Key defined: ',
+        !!renderApiKey,
+        ', Owner defined: ',
+        !!renderApiOwner,
+      );
       return NextResponse.json({
         success: false,
-        error: 'Render API endpoint or key is not defined',
+        error: 'Render API endpoint, key, or owner is not defined',
       });
     }
 
-    // Calculate time range for the last 24 hours
-    const endTime = new Date().toISOString();
-    const startTime = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    // Ensure no trailing slash in the endpoint to prevent double slashes
+    const cleanedEndpoint = renderApiEndpoint.replace(/\/+$/, '');
 
     // Construct the URL with query parameters
     const serviceId = 'srv-cvs2ol2dbo4c73ft9dqg';
-    const url = `${renderApiEndpoint}/logs?serviceId=${serviceId}&startTime=${startTime}&endTime=${endTime}&limit=100`;
+    const url = `${cleanedEndpoint}/logs?ownerId=${renderApiOwner}&direction=backward&resource=${serviceId}&limit=100`;
 
-    console.log('[@api:render-logs] Fetching logs for service:', serviceId);
+    console.log('[@api:render-logs] Fetching logs for service:', serviceId, 'with URL:', url);
     const response = await fetch(url, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${renderApiKey}`,
+        Accept: 'application/json',
         'Content-Type': 'application/json',
       },
     });
