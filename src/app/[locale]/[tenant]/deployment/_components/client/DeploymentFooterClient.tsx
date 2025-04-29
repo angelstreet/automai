@@ -122,6 +122,13 @@ export function DeploymentFooterClient() {
     }
   };
 
+  // Format the logs for display
+  const formatLogs = (logs: any) => {
+    if (!logs) return '';
+    // Format the logs with proper indentation for JSON
+    return JSON.stringify(logs, null, 2);
+  };
+
   return (
     <footer className="flex items-center justify-end p-4 border-t border-gray-200">
       <div className="flex items-center space-x-2">
@@ -132,13 +139,22 @@ export function DeploymentFooterClient() {
               {t('render_logs_button')}
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-5xl max-h-[80vh] overflow-y-auto bg-gray-900 dark:bg-gray-900">
-            <DialogHeader>
+          <DialogContent
+            className="max-w-[90%] min-w-[75vw] w-[1200px] max-h-[80vh] overflow-hidden bg-gray-900 dark:bg-gray-900 flex flex-col"
+            style={{
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+            }}
+          >
+            <DialogHeader className="sticky top-0 z-10 bg-gray-900 dark:bg-gray-900 py-2 border-b border-gray-800">
               <DialogTitle className="text-gray-100 dark:text-white">
                 {t('render_logs_title')}
               </DialogTitle>
             </DialogHeader>
-            <div className="mt-4">
+
+            <div className="flex-grow overflow-y-auto my-4 px-6">
               {logsLoading ? (
                 <p className="text-gray-400 dark:text-gray-400">{t('loading_logs')}</p>
               ) : logsError ? (
@@ -146,32 +162,44 @@ export function DeploymentFooterClient() {
                   {t('error_logs', { message: logsError })}
                 </p>
               ) : logs ? (
-                <pre className="bg-gray-800 p-4 rounded-md text-sm overflow-x-auto text-gray-100 dark:text-white">
-                  {JSON.stringify(logs, null, 2)}
-                </pre>
+                <div className="bg-gray-800 p-4 rounded-md text-sm text-gray-100 dark:text-white">
+                  <pre
+                    style={{
+                      whiteSpace: 'pre-wrap',
+                      wordWrap: 'break-word',
+                      maxWidth: '100%',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {formatLogs(logs)}
+                  </pre>
+                </div>
               ) : (
                 <p className="text-gray-400 dark:text-gray-400">{t('no_logs')}</p>
               )}
             </div>
-            <div className="mt-4 flex justify-end space-x-2">
-              <Button
-                onClick={() => fetchLogs()}
-                variant="secondary"
-                size="sm"
-                disabled={logsLoading}
-              >
-                <RefreshCw className="w-4 h-4 mr-1" />
-                {t('refresh_logs')}
-              </Button>
-              <Button
-                onClick={copyLogs}
-                variant="secondary"
-                size="sm"
-                disabled={!logs || logsLoading}
-              >
-                <Copy className="w-4 h-4 mr-1" />
-                {copied ? t('copied_logs') : t('copy_logs')}
-              </Button>
+
+            <div className="sticky bottom-0 z-10 bg-gray-900 dark:bg-gray-900 py-2 border-t border-gray-800 px-6 mt-auto">
+              <div className="flex justify-end space-x-2">
+                <Button
+                  onClick={() => fetchLogs()}
+                  variant="secondary"
+                  size="sm"
+                  disabled={logsLoading}
+                >
+                  <RefreshCw className="w-4 h-4 mr-1" />
+                  {t('refresh_logs')}
+                </Button>
+                <Button
+                  onClick={copyLogs}
+                  variant="secondary"
+                  size="sm"
+                  disabled={!logs || logsLoading}
+                >
+                  <Copy className="w-4 h-4 mr-1" />
+                  {copied ? t('copied_logs') : t('copy_logs')}
+                </Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
