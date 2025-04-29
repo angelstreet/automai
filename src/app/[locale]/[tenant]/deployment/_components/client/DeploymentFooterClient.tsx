@@ -1,6 +1,6 @@
 'use client';
 
-import { RefreshCw, Copy } from 'lucide-react';
+import { RefreshCw, Copy, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState, useEffect } from 'react';
 
@@ -140,7 +140,7 @@ export function DeploymentFooterClient() {
             </Button>
           </DialogTrigger>
           <DialogContent
-            className="max-w-[90%] min-w-[75vw] w-[1200px] max-h-[80vh] overflow-hidden bg-gray-900 dark:bg-gray-900 flex flex-col"
+            className="max-w-[90%] min-w-[75vw] w-[1200px] max-h-[80vh] overflow-hidden bg-gray-900 dark:bg-gray-900 flex flex-col relative"
             style={{
               position: 'fixed',
               top: '50%',
@@ -148,6 +148,16 @@ export function DeploymentFooterClient() {
               transform: 'translate(-50%, -50%)',
             }}
           >
+            {/* Custom close button as overlay */}
+            <button
+              onClick={() => setModalOpen(false)}
+              className="absolute top-3 right-3 z-20 rounded-full p-1 bg-gray-800 hover:bg-gray-700 text-gray-100 focus:outline-none"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+              <span className="sr-only">Close</span>
+            </button>
+
             <DialogHeader className="sticky top-0 z-10 bg-gray-900 dark:bg-gray-900 py-2 border-b border-gray-800">
               <DialogTitle className="text-gray-100 dark:text-white">
                 {t('render_logs_title')}
