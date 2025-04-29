@@ -69,7 +69,7 @@ async function processJob() {
       .map((script) => {
         const ext = script.path.split('.').pop().toLowerCase();
         const command = ext === 'py' ? 'python' : ext === 'sh' ? './' : '';
-        return `${command} ${script.path} ${script.parameters || ''}`.trim();
+        return `${command} ${script.path} ${script.parameters || ''} 2>&1`.trim();
       })
       .join(' && ');
     console.log(`[@runner:processJob] Scripts: ${scripts}`);
@@ -96,7 +96,7 @@ async function processJob() {
       }
 
       const scriptCommand = `${scripts}`;
-      const fullScript = `cmd.exe /c python --version && cd Desktop/remote-installer && dir && echo ============================= && (${scriptCommand} && (exit /b 0) || (exit /b 1))`;
+      const fullScript = `cmd.exe /c python --version && cd Desktop/remote-installer && dir && echo ============================= && ${scriptCommand}`;
       console.log(`[@runner:processJob] SSH command: ${fullScript}`);
 
       // Step 1: Create job with pending status
@@ -175,18 +175,19 @@ async function processJob() {
 
                 // Step 3: Update job with final results
                 const completed_at = new Date().toISOString();
+                const isSuccess = output.stdout.includes('Test Success') || code === 0;
 
                 await supabase
                   .from('jobs_run')
                   .update({
-                    status: code === 0 ? 'success' : 'failed',
+                    status: isSuccess ? 'success' : 'failed',
                     output: output,
                     completed_at: completed_at,
                   })
                   .eq('id', jobId);
 
                 console.log(
-                  `[@runner:processJob] Updated job ${jobId} to final status: ${code === 0 ? 'success' : 'failed'}`,
+                  `[@runner:processJob] Updated job ${jobId} to final status: ${isSuccess ? 'success' : 'failed'}`,
                 );
 
                 conn.end();
