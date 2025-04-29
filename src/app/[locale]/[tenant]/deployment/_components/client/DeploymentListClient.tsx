@@ -619,6 +619,16 @@ export function DeploymentListClient({
                               <DropdownMenuItem
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  handleRunDeployment(deployment);
+                                }}
+                                disabled={isRunning === deployment.id}
+                              >
+                                <PlayCircle className="mr-2 h-4 w-4" />
+                                {isRunning === deployment.id ? 'Running...' : 'Run'}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   handleViewDeployment(deployment);
                                 }}
                               >
@@ -631,7 +641,7 @@ export function DeploymentListClient({
                                   handleConfigClick(deployment, e);
                                 }}
                               >
-                                <Edit2 className="mr-2 h-4 w-4" />
+                                <Eye className="mr-2 h-4 w-4" />
                                 {c('view_config')}
                               </DropdownMenuItem>
                               <DropdownMenuItem
@@ -642,16 +652,6 @@ export function DeploymentListClient({
                               >
                                 <Edit2 className="mr-2 h-4 w-4" />
                                 {c('edit')}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRunDeployment(deployment);
-                                }}
-                                disabled={isRunning === deployment.id}
-                              >
-                                <PlayCircle className="mr-2 h-4 w-4" />
-                                {isRunning === deployment.id ? 'Running...' : 'Run'}
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="text-red-600"

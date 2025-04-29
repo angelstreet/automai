@@ -42,7 +42,7 @@ export function ConfigDeploymentDialogClient({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px]">
+      <DialogContent className="sm:max-w-[1000px]">
         <DialogHeader>
           <DialogTitle>
             {t('view_config')} : {deployment?.name || 'N/A'}
@@ -53,7 +53,7 @@ export function ConfigDeploymentDialogClient({
             <Textarea
               value={formattedConfig}
               readOnly
-              className="font-mono text-sm h-[480px] bg-gray-50 dark:bg-gray-900 resize-none"
+              className="font-mono text-sm h-[480px] bg-gray-50 dark:bg-gray-900 resize-none "
               spellCheck="false"
             />
           </div>
