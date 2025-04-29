@@ -132,21 +132,25 @@ export function DeploymentFooterClient() {
               {t('render_logs_button')}
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-5xl max-h-[80vh] overflow-y-auto bg-gray-900 dark:bg-gray-900">
             <DialogHeader>
-              <DialogTitle>{t('render_logs_title')}</DialogTitle>
+              <DialogTitle className="text-gray-100 dark:text-white">
+                {t('render_logs_title')}
+              </DialogTitle>
             </DialogHeader>
             <div className="mt-4">
               {logsLoading ? (
-                <p className="text-gray-500">{t('loading_logs')}</p>
+                <p className="text-gray-400 dark:text-gray-400">{t('loading_logs')}</p>
               ) : logsError ? (
-                <p className="text-red-500">{t('error_logs', { message: logsError })}</p>
+                <p className="text-red-400 dark:text-red-400">
+                  {t('error_logs', { message: logsError })}
+                </p>
               ) : logs ? (
-                <pre className="bg-gray-100 p-4 rounded-md text-sm overflow-x-auto">
+                <pre className="bg-gray-800 p-4 rounded-md text-sm overflow-x-auto text-gray-100 dark:text-white">
                   {JSON.stringify(logs, null, 2)}
                 </pre>
               ) : (
-                <p className="text-gray-500">{t('no_logs')}</p>
+                <p className="text-gray-400 dark:text-gray-400">{t('no_logs')}</p>
               )}
             </div>
             <div className="mt-4 flex justify-end space-x-2">
