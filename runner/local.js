@@ -187,7 +187,7 @@ async function processJob() {
                   .eq('id', jobId);
 
                 console.log(
-                  `[@runner:processJob] Updated job ${jobId} to final status: ${isSuccess ? 'success' : 'failed'}`,
+                  `[@runner:processJob] Updated job ${jobId} to final status: ${code === 0 ? 'success' : 'failed'}`,
                 );
 
                 // Remove job from queue after processing
