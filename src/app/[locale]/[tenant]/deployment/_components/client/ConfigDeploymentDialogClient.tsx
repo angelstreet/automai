@@ -44,23 +44,16 @@ export function ConfigDeploymentDialogClient({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[700px]">
         <DialogHeader>
-          <DialogTitle>{t('view_config')}</DialogTitle>
+          <DialogTitle>
+            {t('view_config')} : {deployment?.name || 'N/A'}
+          </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {c('name')}
-            </label>
-            <div className="text-sm text-gray-900 dark:text-white">{deployment?.name || 'N/A'}</div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {c('config')}
-            </label>
             <Textarea
               value={formattedConfig}
               readOnly
-              className="font-mono text-sm h-[300px] bg-gray-50 dark:bg-gray-900"
+              className="font-mono text-sm h-[480px] bg-gray-50 dark:bg-gray-900 resize-none"
               spellCheck="false"
             />
           </div>
