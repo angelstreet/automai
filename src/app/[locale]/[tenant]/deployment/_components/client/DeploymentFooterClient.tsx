@@ -132,18 +132,21 @@ export function DeploymentFooterClient() {
         // Extract and format timestamp and message from each log entry
         return logs.logs
           .map((log: any) => {
-            // Format the timestamp (remove the T and Z, and keep only the date and time)
-            const timestamp = log.timestamp
-              ? new Date(log.timestamp).toLocaleString()
-              : 'Unknown time';
+            // Format the timestamp as DD/MM/YYYY, HH:MM:SS
+            let timestamp = 'Unknown time';
+            if (log.timestamp) {
+              const date = new Date(log.timestamp);
+              // Format as DD/MM/YYYY, HH:MM:SS
+              timestamp = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}, ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`;
+            }
 
             // Get the message
             const message = log.message || 'No message';
 
-            // Return formatted log entry
-            return `${timestamp}\n${message}\n`;
+            // Return formatted log entry (timestamp and message on same line to save space)
+            return `${timestamp}\n${message}`;
           })
-          .join('\n'); // Join all entries with double line breaks
+          .join('\n\n'); // Join with single line break between entries
       }
 
       // Fallback for unexpected log structure
@@ -165,7 +168,7 @@ export function DeploymentFooterClient() {
             </Button>
           </DialogTrigger>
           <DialogContent
-            className="max-w-[90%] min-w-[75vw] w-[1200px] max-h-[80vh] overflow-hidden bg-gray-900 dark:bg-gray-900 flex flex-col relative"
+            className="max-w-[90%] min-w-[75vw] w-[1000px] max-h-[80vh] overflow-hidden bg-gray-900 dark:bg-gray-900 flex flex-col relative"
             style={{
               position: 'fixed',
               top: '50%',
@@ -177,19 +180,18 @@ export function DeploymentFooterClient() {
             <button
               onClick={() => setModalOpen(false)}
               className="absolute top-3 right-3 z-20 rounded-full p-1 bg-gray-800 hover:bg-gray-700 text-gray-100 focus:outline-none"
-              aria-label="Close"
+              aria-label=""
             >
               <X className="h-5 w-5" />
-              <span className="sr-only">Close</span>
             </button>
 
-            <DialogHeader className="sticky top-0 z-10 bg-gray-900 dark:bg-gray-900 py-2 border-b border-gray-800">
+            <DialogHeader className="sticky top-0 z-10 bg-gray-900 dark:bg-gray-900 py-1 border-b border-gray-800">
               <DialogTitle className="text-gray-100 dark:text-white">
                 {t('render_logs_title')}
               </DialogTitle>
             </DialogHeader>
 
-            <div className="flex-grow overflow-y-auto my-4 px-6">
+            <div className="flex-grow overflow-y-auto px-4">
               {logsLoading ? (
                 <p className="text-gray-400 dark:text-gray-400">{t('loading_logs')}</p>
               ) : logsError ? (
@@ -197,7 +199,7 @@ export function DeploymentFooterClient() {
                   {t('error_logs', { message: logsError })}
                 </p>
               ) : logs ? (
-                <div className="bg-gray-800 p-4 rounded-md text-xs text-gray-100 dark:text-white">
+                <div className="bg-gray-800 p-2 rounded-md text-xs text-gray-100 dark:text-white">
                   <pre
                     style={{
                       whiteSpace: 'pre-wrap',
@@ -205,6 +207,7 @@ export function DeploymentFooterClient() {
                       maxWidth: '100%',
                       overflow: 'hidden',
                       fontFamily: 'monospace',
+                      lineHeight: '1.3',
                     }}
                   >
                     {parseLogsForDisplay(logs)}
@@ -215,7 +218,7 @@ export function DeploymentFooterClient() {
               )}
             </div>
 
-            <div className="sticky bottom-0 z-10 bg-gray-900 dark:bg-gray-900 py-2 border-t border-gray-800 px-6 mt-auto">
+            <div className="sticky z-10 bg-gray-900 dark:bg-gray-900 py-1 border-t border-gray-800 px-4">
               <div className="flex justify-end space-x-2">
                 <Button
                   onClick={() => fetchLogs()}
