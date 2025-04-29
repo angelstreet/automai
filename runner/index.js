@@ -179,7 +179,7 @@ async function processJob() {
                   .from('jobs_run')
                   .update({
                     status: code === 0 ? 'success' : 'failed',
-                    output, // Keep the original output object structure
+                    output: { stdout: output.stdout, stderr: output.stderr, exitCode: code },
                     completed_at: completed_at,
                   })
                   .eq('id', jobId);
