@@ -224,7 +224,15 @@
     "wizard_summary_view": "Summary",
     "wizard_target_hosts": "Target Hosts",
     "wizard_times": "times",
-    "wizard_try_refreshing": "Please try refreshing the page or contact support if the issue persists."
+    "wizard_try_refreshing": "Please try refreshing the page or contact support if the issue persists.",
+    "render_logs_button": "Render Logs",
+    "render_logs_title": "Render Logs for automai-ssh-worker",
+    "loading_logs": "Loading logs...",
+    "error_logs": "Error: {{message}}",
+    "no_logs": "No logs available. Click to refresh.",
+    "refresh_logs": "Refresh",
+    "copy_logs": "Copy",
+    "copied_logs": "Copied!"
   },
   "hosts": {
     "add_button": "Add Host",

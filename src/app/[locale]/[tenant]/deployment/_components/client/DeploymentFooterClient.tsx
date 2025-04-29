@@ -1,6 +1,7 @@
 'use client';
 
 import { RefreshCw, Copy } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useState, useEffect } from 'react';
 
 import { Button } from '@/components/shadcn/button';
@@ -95,6 +96,7 @@ export function DeploymentFooterClient() {
   const [modalOpen, setModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const { logs, loading: logsLoading, error: logsError, fetchLogs } = useRenderLogs(modalOpen);
+  const t = useTranslations('deployment');
 
   // Determine status dot color based on health response
   const isHealthy = health && health.success;
@@ -127,24 +129,24 @@ export function DeploymentFooterClient() {
         <Dialog open={modalOpen} onOpenChange={setModalOpen}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm">
-              Render Logs
+              {t('render_logs_button')}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Render Logs for automai-ssh-worker</DialogTitle>
+              <DialogTitle>{t('render_logs_title')}</DialogTitle>
             </DialogHeader>
             <div className="mt-4">
               {logsLoading ? (
-                <p className="text-gray-500">Loading logs...</p>
+                <p className="text-gray-500">{t('loading_logs')}</p>
               ) : logsError ? (
-                <p className="text-red-500">Error: {logsError}</p>
+                <p className="text-red-500">{t('error_logs', { message: logsError })}</p>
               ) : logs ? (
                 <pre className="bg-gray-100 p-4 rounded-md text-sm overflow-x-auto">
                   {JSON.stringify(logs, null, 2)}
                 </pre>
               ) : (
-                <p className="text-gray-500">No logs available. Click to refresh.</p>
+                <p className="text-gray-500">{t('no_logs')}</p>
               )}
             </div>
             <div className="mt-4 flex justify-end space-x-2">
@@ -155,7 +157,7 @@ export function DeploymentFooterClient() {
                 disabled={logsLoading}
               >
                 <RefreshCw className="w-4 h-4 mr-1" />
-                Refresh
+                {t('refresh_logs')}
               </Button>
               <Button
                 onClick={copyLogs}
@@ -164,7 +166,7 @@ export function DeploymentFooterClient() {
                 disabled={!logs || logsLoading}
               >
                 <Copy className="w-4 h-4 mr-1" />
-                {copied ? 'Copied!' : 'Copy'}
+                {copied ? t('copied_logs') : t('copy_logs')}
               </Button>
             </div>
           </DialogContent>
