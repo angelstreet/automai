@@ -245,6 +245,22 @@ export async function startJob(
       };
     }
 
+    // First, send a request to wake up the Render service
+    console.log('[@action:jobsAction:startJob] Sending request to wake up Render service');
+    const wakeUpResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/render-health`, {
+      method: 'GET',
+    });
+    let wakeUpMessage = '';
+    if (wakeUpResponse.ok) {
+      const wakeUpData = await wakeUpResponse.json();
+      wakeUpMessage = wakeUpData.message;
+      console.log(`[@action:jobsAction:startJob] Render wake-up response: ${wakeUpMessage}`);
+    } else {
+      console.error('[@action:jobsAction:startJob] Failed to get wake-up response');
+      wakeUpMessage = 'Render service wake-up request sent, please wait';
+    }
+
+    // Proceed with job queuing regardless of wake-up response
     // First verify the job configuration exists
     const cookieStore = await cookies();
     const { getJobConfigById } = await import('@/lib/db/jobsConfigurationDb');
@@ -292,6 +308,7 @@ export async function startJob(
         queued: true,
       },
       message: 'Job queued successfully',
+      wakeUpMessage: wakeUpMessage,
     };
   } catch (error: any) {
     console.error('[@action:jobsAction:startJob] CAUGHT ERROR:', {
@@ -409,7 +426,7 @@ export async function getAllJobs() {
         // Get the latest run to determine status
         // Ensure proper sorting by created_at timestamp in descending order (newest first)
         // Use non-mutating approach with a new array to avoid issues
-        const latestRun = 
+        const latestRun =
           config.jobs_run && config.jobs_run.length > 0
             ? [...config.jobs_run].sort((a, b) => {
                 const timeA = new Date(a.created_at).getTime();
@@ -417,10 +434,12 @@ export async function getAllJobs() {
                 return timeB - timeA; // Descending order - newer runs first
               })[0]
             : null;
-        
+
         // Log to debug the sorting
         if (config.jobs_run && config.jobs_run.length > 1) {
-          console.log(`[@action:jobsAction:getAllJobs] Found ${config.jobs_run.length} runs for job '${config.name}'`);
+          console.log(
+            `[@action:jobsAction:getAllJobs] Found ${config.jobs_run.length} runs for job '${config.name}'`,
+          );
           console.log(`[@action:jobsAction:getAllJobs] Latest run: ${latestRun?.created_at}`);
         }
 
