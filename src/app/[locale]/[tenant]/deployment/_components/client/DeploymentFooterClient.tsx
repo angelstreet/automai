@@ -122,11 +122,36 @@ export function DeploymentFooterClient() {
     }
   };
 
-  // Format the logs for display
-  const formatLogs = (logs: any) => {
+  // Parse logs to extract only timestamps and messages
+  const parseLogsForDisplay = (logs: any) => {
     if (!logs) return '';
-    // Format the logs with proper indentation for JSON
-    return JSON.stringify(logs, null, 2);
+
+    try {
+      // Check if logs.logs is an array (assuming the API response structure)
+      if (logs.logs && Array.isArray(logs.logs)) {
+        // Extract and format timestamp and message from each log entry
+        return logs.logs
+          .map((log: any) => {
+            // Format the timestamp (remove the T and Z, and keep only the date and time)
+            const timestamp = log.timestamp
+              ? new Date(log.timestamp).toLocaleString()
+              : 'Unknown time';
+
+            // Get the message
+            const message = log.message || 'No message';
+
+            // Return formatted log entry
+            return `${timestamp}\n${message}\n`;
+          })
+          .join('\n'); // Join all entries with double line breaks
+      }
+
+      // Fallback for unexpected log structure
+      return JSON.stringify(logs, null, 2);
+    } catch (error) {
+      console.error('[@component:DeploymentFooterClient] Error parsing logs:', error);
+      return JSON.stringify(logs, null, 2);
+    }
   };
 
   return (
@@ -172,16 +197,17 @@ export function DeploymentFooterClient() {
                   {t('error_logs', { message: logsError })}
                 </p>
               ) : logs ? (
-                <div className="bg-gray-800 p-4 rounded-md text-sm text-gray-100 dark:text-white">
+                <div className="bg-gray-800 p-4 rounded-md text-xs text-gray-100 dark:text-white">
                   <pre
                     style={{
                       whiteSpace: 'pre-wrap',
                       wordWrap: 'break-word',
                       maxWidth: '100%',
                       overflow: 'hidden',
+                      fontFamily: 'monospace',
                     }}
                   >
-                    {formatLogs(logs)}
+                    {parseLogsForDisplay(logs)}
                   </pre>
                 </div>
               ) : (
