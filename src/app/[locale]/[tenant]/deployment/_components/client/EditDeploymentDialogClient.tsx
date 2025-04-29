@@ -158,7 +158,7 @@ export function EditDeploymentDialogClient({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px]">
+      <DialogContent className="sm:max-w-[1000px]">
         <DialogHeader>
           <DialogTitle>
             {t('edit_parameters')} : {deployment?.name || 'N/A'}
@@ -168,7 +168,7 @@ export function EditDeploymentDialogClient({
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             {fields.length > 0 ? (
-              <div className="space-y-6">
+              <div className="space-y-2">
                 <div className="grid grid-cols-2 gap-4 px-1 font-medium text-sm">
                   <div>{c('script_path')}</div>
                   <div>{c('parameters')}</div>
@@ -176,7 +176,7 @@ export function EditDeploymentDialogClient({
 
                 {fields.map((field, index) => (
                   <div key={field.id}>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-2">
                       <FormField
                         control={form.control}
                         name={`scripts.${index}.path`}
