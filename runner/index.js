@@ -180,12 +180,7 @@ async function processJob() {
                   .from('jobs_run')
                   .update({
                     status: code === 0 ? 'success' : 'failed',
-                    output: {
-                      stdout: output.stdout,
-                      stderr: output.stderr,
-                      exitCode: code !== undefined ? code : -2,
-                      error: code === undefined ? 'Undefined exit code' : undefined,
-                    },
+                    output: output,
                     completed_at: completed_at,
                   })
                   .eq('id', jobId);
@@ -206,11 +201,7 @@ async function processJob() {
               .from('jobs_run')
               .update({
                 status: 'failed',
-                output: {
-                  stdout: output.stdout,
-                  stderr: output.stderr,
-                  exitCode: -1,
-                },
+                output: output,
                 error: 'ECONNRESET',
                 completed_at: new Date().toISOString(),
               })
@@ -225,12 +216,8 @@ async function processJob() {
               .from('jobs_run')
               .update({
                 status: 'failed',
-                output: {
-                  stdout: output.stdout,
-                  stderr: output.stderr,
-                  exitCode: -1,
-                  error: err.message,
-                },
+                output: output,
+                error: err.message,
                 completed_at: new Date().toISOString(),
               })
               .eq('id', jobId);
