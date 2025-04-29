@@ -201,7 +201,7 @@ async function processJob() {
               .from('jobs_run')
               .update({
                 status: 'failed',
-                output: output,
+                output: { stdout: '', stderr: '' },
                 error: 'ECONNRESET',
                 completed_at: new Date().toISOString(),
               })
