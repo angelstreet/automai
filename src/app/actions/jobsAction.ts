@@ -245,25 +245,7 @@ export async function startJob(
       };
     }
 
-    // First, send a request to wake up the Render service
-    console.log('[@action:jobsAction:startJob] Sending request to wake up Render service');
-    // Use a relative path or construct the API URL based on the current environment
-    const apiUrl = process.env.RENDER_URL;
-    const wakeUpUrl = apiUrl ? `${apiUrl}/api/render-health` : '/api/render-health';
-    const wakeUpResponse = await fetch(wakeUpUrl, {
-      method: 'GET',
-    });
-    let wakeUpMessage = '';
-    if (wakeUpResponse.ok) {
-      const wakeUpData = await wakeUpResponse.json();
-      wakeUpMessage = wakeUpData.message;
-      console.log(`[@action:jobsAction:render-health] Render is awake: ${wakeUpMessage}`);
-    } else {
-      console.error('[@action:jobsAction:render-health] Failed to get wake-up response');
-      wakeUpMessage = 'Render is waking up, please wait';
-    }
-
-    // Proceed with job queuing regardless of wake-up response
+    // Proceed with job queuing
     // First verify the job configuration exists
     const cookieStore = await cookies();
     const { getJobConfigById } = await import('@/lib/db/jobsConfigurationDb');
@@ -311,7 +293,6 @@ export async function startJob(
         queued: true,
       },
       message: 'Job queued successfully',
-      wakeUpMessage: wakeUpMessage,
     };
   } catch (error: any) {
     console.error('[@action:jobsAction:startJob] CAUGHT ERROR:', {

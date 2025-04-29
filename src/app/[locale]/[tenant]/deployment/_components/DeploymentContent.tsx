@@ -3,6 +3,7 @@ import { getRepositories } from '@/app/actions/repositoriesAction';
 
 // Import with direct relative paths
 import { DeploymentEmptyStateClient } from './client/DeploymentEmptyStateClient';
+import { DeploymentFooterClient } from './client/DeploymentFooterClient';
 import { DeploymentListClient } from './client/DeploymentListClient';
 
 export async function DeploymentContent() {
@@ -23,6 +24,9 @@ export async function DeploymentContent() {
   }
 
   return (
-    <DeploymentListClient initialDeployments={deployments} initialRepositories={repositories} />
+    <div className="flex flex-col h-full">
+      <DeploymentListClient initialDeployments={deployments} initialRepositories={repositories} />
+      <DeploymentFooterClient />
+    </div>
   );
 }

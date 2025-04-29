@@ -79,11 +79,11 @@ export function ProfileContentClient({
           <p className="text-muted-foreground mb-4">{t('please_login')}</p>
           <Button
             onClick={() => {
-              document.cookie.split(';').forEach((c) => {
-                document.cookie = c
-                  .replace(/^ +/, '')
-                  .replace(/=.*/, `=;expires=${new Date().toUTCString()};path=/`);
-              });
+              // document.cookie.split(';').forEach((c) => {
+              //   document.cookie = c
+              //     .replace(/^ +/, '')
+              //     .replace(/=.*/, `=;expires=${new Date().toUTCString()};path=/`);
+              // });
               window.location.href = `/${locale}/login`;
             }}
           >
