@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 export async function GET() {
   try {
     console.log('[@api:render-health] Sending request to wake up Render service');
-    const renderUrl = process.env.NEXT_PUBLIC_RENDER_URL;
+    const renderUrl = process.env.RENDER_URL;
     if (!renderUrl) {
       console.error('[@api:render-health] Render service URL is not defined');
       return NextResponse.json({ success: false, error: 'Render service URL is not defined' });

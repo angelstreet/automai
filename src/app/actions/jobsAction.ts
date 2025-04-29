@@ -248,7 +248,7 @@ export async function startJob(
     // First, send a request to wake up the Render service
     console.log('[@action:jobsAction:startJob] Sending request to wake up Render service');
     // Use a relative path or construct the API URL based on the current environment
-    const apiUrl = process.env.NEXT_PUBLIC_RENDER_URL;
+    const apiUrl = process.env.RENDER_URL;
     const wakeUpUrl = apiUrl ? `${apiUrl}/api/render-health` : '/api/render-health';
     const wakeUpResponse = await fetch(wakeUpUrl, {
       method: 'GET',
