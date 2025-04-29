@@ -8,15 +8,9 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { updateJob } from '@/app/actions/jobsAction';
 import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/shadcn/form';
+import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/shadcn/form';
 import { Input } from '@/components/shadcn/input';
+import { Separator } from '@/components/shadcn/separator';
 import { useToast } from '@/components/shadcn/use-toast';
 import { Deployment } from '@/types/component/deploymentComponentType';
 
@@ -173,41 +167,47 @@ export function EditDeploymentDialogClient({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div>
-              {fields.length > 0 ? (
-                fields.map((field, index) => (
-                  <div key={field.id} className="space-y-2 border-b pb-2 mb-2">
-                    <FormField
-                      control={form.control}
-                      name={`scripts.${index}.path`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{c('script_path')}</FormLabel>
-                          <FormControl>
-                            <Input {...field} disabled />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name={`scripts.${index}.parameters`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{c('parameters')}</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder={c('parameters')} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+            {fields.length > 0 ? (
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4 px-1 font-medium text-sm">
+                  <div>{c('script_path')}</div>
+                  <div>{c('parameters')}</div>
+                </div>
+
+                {fields.map((field, index) => (
+                  <div key={field.id}>
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name={`scripts.${index}.path`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input {...field} disabled />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`scripts.${index}.parameters`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input {...field} placeholder={c('parameters')} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    {index < fields.length - 1 && <Separator className="my-4" />}
                   </div>
-                ))
-              ) : (
-                <p className="text-sm text-gray-500">No scripts available to edit.</p>
-              )}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">No scripts available to edit.</p>
+            )}
 
             <div className="flex justify-end gap-2 pt-4">
               <Button
