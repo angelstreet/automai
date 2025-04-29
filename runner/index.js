@@ -137,6 +137,9 @@ async function processJob() {
 
           console.log(`[@runner:processJob] Updated job ${jobId} status to 'in_progress'`);
 
+          // Declare output variable here to be accessible in error handler
+          let output = { stdout: '', stderr: '' };
+
           conn.exec(fullScript, async (err, stream) => {
             if (err) {
               console.error(`[@runner:processJob] Exec error: ${err.message}`);
@@ -156,7 +159,6 @@ async function processJob() {
               conn.end();
               return;
             }
-            let output = { stdout: '', stderr: '' };
             stream
               .on('data', (data) => {
                 output.stdout += data;
@@ -198,7 +200,8 @@ async function processJob() {
           if (err.message.includes('ECONNRESET')) {
             console.error(`[@runner:processJob] SSH connection closed due to ECONNRESET`);
             // Update job status to failed due to connection reset
-            const isSuccess = output.stdout.includes('Test Success') || code === 0;
+            const completed_at = new Date().toISOString();
+            const isSuccess = output.stdout.includes('Test Success');
 
             await supabase
               .from('jobs_run')
