@@ -19,17 +19,17 @@ export function cacheItem<T>(key: string, data: T, ttlInSeconds = 60): void {
  */
 export function getCachedItem<T>(key: string): T | null {
   const cached = CACHE[key];
-  
+
   if (!cached) {
     return null;
   }
-  
+
   // Check if expired
   if (cached.expiry < Date.now()) {
     delete CACHE[key];
     return null;
   }
-  
+
   return cached.data as T;
 }
 
@@ -44,7 +44,7 @@ export function removeCachedItem(key: string): void {
  * Clear all items from cache
  */
 export function clearCache(): void {
-  Object.keys(CACHE).forEach(key => {
+  Object.keys(CACHE).forEach((key) => {
     delete CACHE[key];
   });
 }
@@ -55,14 +55,14 @@ export function clearCache(): void {
 export async function getOrFetch<T>(
   key: string,
   fetchFn: () => Promise<T>,
-  ttlInSeconds = 60
+  ttlInSeconds = 60,
 ): Promise<T> {
   const cached = getCachedItem<T>(key);
-  
+
   if (cached !== null) {
     return cached;
   }
-  
+
   const data = await fetchFn();
   cacheItem(key, data, ttlInSeconds);
   return data;
@@ -73,7 +73,7 @@ export async function getOrFetch<T>(
  */
 export function cleanExpiredCache(): void {
   const now = Date.now();
-  
+
   Object.entries(CACHE).forEach(([key, value]) => {
     if (value.expiry < now) {
       delete CACHE[key];
@@ -94,7 +94,7 @@ const cacheUtils = {
   removeCachedItem,
   clearCache,
   getOrFetch,
-  cleanExpiredCache
+  cleanExpiredCache,
 };
 
 export default cacheUtils;
