@@ -224,7 +224,15 @@
     "wizard_summary_view": "Riepilogo",
     "wizard_target_hosts": "Host target",
     "wizard_times": "volte",
-    "wizard_try_refreshing": "Prova ad aggiornare la pagina o contatta il supporto se il problema persiste."
+    "wizard_try_refreshing": "Prova ad aggiornare la pagina o contatta il supporto se il problema persiste.",
+    "render_logs_button": "Render Logs (IT)",
+    "render_logs_title": "Render Logs for automai-ssh-worker (IT)",
+    "loading_logs": "Loading logs... (IT)",
+    "error_logs": "Error: {{message}} (IT)",
+    "no_logs": "No logs available. Click to refresh. (IT)",
+    "refresh_logs": "Refresh (IT)",
+    "copy_logs": "Copy (IT)",
+    "copied_logs": "Copied! (IT)"
   },
   "hosts": {
     "add_button": "Aggiungi host",
