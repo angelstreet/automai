@@ -166,26 +166,14 @@ export function EditDeploymentDialogClient({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[700px]">
         <DialogHeader>
-          <DialogTitle>{t('edit_parameters')}</DialogTitle>
+          <DialogTitle>
+            {t('edit_parameters')} : {deployment?.name || 'N/A'}
+          </DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{c('name')}</FormLabel>
-                  <FormControl>
-                    <Input {...field} disabled />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
             <div>
-              <FormLabel>{c('scripts')}</FormLabel>
               {fields.length > 0 ? (
                 fields.map((field, index) => (
                   <div key={field.id} className="space-y-2 border-b pb-2 mb-2">
