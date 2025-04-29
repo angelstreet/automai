@@ -257,10 +257,10 @@ export async function startJob(
     if (wakeUpResponse.ok) {
       const wakeUpData = await wakeUpResponse.json();
       wakeUpMessage = wakeUpData.message;
-      console.log(`[@action:jobsAction:startJob] Render wake-up response: ${wakeUpMessage}`);
+      console.log(`[@action:jobsAction:render-health] Render is awake: ${wakeUpMessage}`);
     } else {
-      console.error('[@action:jobsAction:startJob] Failed to get wake-up response');
-      wakeUpMessage = 'Render service wake-up request sent, please wait';
+      console.error('[@action:jobsAction:render-health] Failed to get wake-up response');
+      wakeUpMessage = 'Render is waking up, please wait';
     }
 
     // Proceed with job queuing regardless of wake-up response

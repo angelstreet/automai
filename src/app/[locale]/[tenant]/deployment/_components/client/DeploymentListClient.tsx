@@ -86,7 +86,7 @@ export function DeploymentListClient({
     };
 
     // Set up the interval
-    const intervalId = setInterval(refreshData, 10000); // 10 seconds
+    const intervalId = setInterval(refreshData, 30000); // 10 seconds
 
     // Clean up the interval when component unmounts
     return () => {
