@@ -23,7 +23,8 @@ export async function getJobConfigsByTeamId(
     // First, get all job configurations
     const { data, error } = await supabase
       .from('jobs_configuration')
-      .select(`
+      .select(
+        `
         *,
         jobs_run!jobs_run_config_id_fkey (
           id, 
@@ -32,7 +33,8 @@ export async function getJobConfigsByTeamId(
           started_at, 
           completed_at
         )
-      `)
+      `,
+      )
       .eq('team_id', teamId)
       .order('created_at', { ascending: false });
 
