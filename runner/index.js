@@ -96,7 +96,7 @@ async function processJob() {
       }
 
       const scriptCommand = `${scripts}`;
-      const fullScript = `cmd.exe /c python --version && cd Desktop/remote-installer && dir && echo ============================= && ${scriptCommand}`;
+      const fullScript = `cmd.exe /c python --version && cd Desktop/remote-installer && dir && echo ============================= && (${scriptCommand} && (exit /b 0) || (exit /b 1))`;
       console.log(`[@runner:processJob] SSH command: ${fullScript}`);
 
       // Step 1: Create job with pending status
@@ -167,10 +167,11 @@ async function processJob() {
                 console.log(`[@runner:processJob] Stderr: ${data}`);
               })
               .on('close', async (code, signal) => {
-                console.log(`[@runner:processJob] Stream closed, code: ${code}, signal: ${signal}`);
                 console.log(`[@runner:processJob] Final stdout: ${output.stdout}`);
                 console.log(`[@runner:processJob] Final stderr: ${output.stderr}`);
-                console.log(`[@runner:processJob] SSH connection closed`);
+                console.log(
+                  `[@runner:processJob] SSH connection closed: ${code}, signal: ${signal}`,
+                );
 
                 // Step 3: Update job with final results
                 const completed_at = new Date().toISOString();
@@ -179,7 +180,12 @@ async function processJob() {
                   .from('jobs_run')
                   .update({
                     status: code === 0 ? 'success' : 'failed',
-                    output: { stdout: output.stdout, stderr: output.stderr, exitCode: code },
+                    output: {
+                      stdout: output.stdout,
+                      stderr: output.stderr,
+                      exitCode: code !== undefined ? code : -2,
+                      error: code === undefined ? 'Undefined exit code' : undefined,
+                    },
                     completed_at: completed_at,
                   })
                   .eq('id', jobId);
@@ -194,9 +200,43 @@ async function processJob() {
         })
         .on('error', async (err) => {
           if (err.message.includes('ECONNRESET')) {
-            console.error(`[@runner:processJob] SSH connection closed`);
+            console.error(`[@runner:processJob] SSH connection closed due to ECONNRESET`);
+            // Update job status to failed due to connection reset
+            await supabase
+              .from('jobs_run')
+              .update({
+                status: 'failed',
+                output: {
+                  stdout: output.stdout,
+                  stderr: output.stderr,
+                  exitCode: -1,
+                },
+                error: 'ECONNRESET',
+                completed_at: new Date().toISOString(),
+              })
+              .eq('id', jobId);
+            console.log(
+              `[@runner:processJob] Updated job ${jobId} to failed status due to ECONNRESET`,
+            );
           } else {
             console.error(`[@runner:processJob] SSH error: ${err.message}`);
+            // Update job status for other errors
+            await supabase
+              .from('jobs_run')
+              .update({
+                status: 'failed',
+                output: {
+                  stdout: output.stdout,
+                  stderr: output.stderr,
+                  exitCode: -1,
+                  error: err.message,
+                },
+                completed_at: new Date().toISOString(),
+              })
+              .eq('id', jobId);
+            console.log(
+              `[@runner:processJob] Updated job ${jobId} to failed status due to SSH error`,
+            );
           }
           conn.end();
         })
