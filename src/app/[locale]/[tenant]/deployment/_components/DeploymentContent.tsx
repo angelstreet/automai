@@ -24,8 +24,10 @@ export async function DeploymentContent() {
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <DeploymentListClient initialDeployments={deployments} initialRepositories={repositories} />
+    <div className="flex flex-col min-h-full">
+      <div className="flex-grow">
+        <DeploymentListClient initialDeployments={deployments} initialRepositories={repositories} />
+      </div>
       <DeploymentFooterClient />
     </div>
   );

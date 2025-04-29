@@ -1,5 +1,6 @@
 'use client';
 
+import { RefreshCw, Copy } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 import { Button } from '@/components/shadcn/button';
@@ -92,19 +93,37 @@ function useRenderLogs(fetchOnDemand: boolean) {
 export function DeploymentFooterClient() {
   const { health, loading: healthLoading } = useRenderHealth();
   const [modalOpen, setModalOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const { logs, loading: logsLoading, error: logsError, fetchLogs } = useRenderLogs(modalOpen);
 
   // Determine status dot color based on health response
   const isHealthy = health && health.success;
-  const statusColor = healthLoading ? 'bg-gray-400' : isHealthy ? 'bg-green-500' : 'bg-red-500';
+  const statusColor = healthLoading
+    ? 'bg-yellow-500 animate-blink'
+    : isHealthy
+      ? 'bg-green-500'
+      : 'bg-red-500';
+
+  // Function to copy logs to clipboard
+  const copyLogs = () => {
+    if (logs) {
+      navigator.clipboard
+        .writeText(JSON.stringify(logs, null, 2))
+        .then(() => {
+          setCopied(true);
+          console.log('[@component:DeploymentFooterClient] Logs copied to clipboard');
+          setTimeout(() => setCopied(false), 2000);
+        })
+        .catch((err) => {
+          console.error('[@component:DeploymentFooterClient] Failed to copy logs:', err);
+        });
+    }
+  };
 
   return (
     <footer className="flex items-center justify-end p-4 border-t border-gray-200">
       <div className="flex items-center space-x-2">
         <span className={cn('w-3 h-3 rounded-full', statusColor)} />
-        <span className="text-sm text-gray-600">
-          {healthLoading ? 'Checking Render...' : health?.message || 'Render Status Unknown'}
-        </span>
         <Dialog open={modalOpen} onOpenChange={setModalOpen}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm">
@@ -128,19 +147,43 @@ export function DeploymentFooterClient() {
                 <p className="text-gray-500">No logs available. Click to refresh.</p>
               )}
             </div>
-            <div className="mt-4 flex justify-end">
+            <div className="mt-4 flex justify-end space-x-2">
               <Button
                 onClick={() => fetchLogs()}
                 variant="secondary"
                 size="sm"
                 disabled={logsLoading}
               >
-                Refresh Logs
+                <RefreshCw className="w-4 h-4 mr-1" />
+                Refresh
+              </Button>
+              <Button
+                onClick={copyLogs}
+                variant="secondary"
+                size="sm"
+                disabled={!logs || logsLoading}
+              >
+                <Copy className="w-4 h-4 mr-1" />
+                {copied ? 'Copied!' : 'Copy'}
               </Button>
             </div>
           </DialogContent>
         </Dialog>
       </div>
+      <style jsx>{`
+        @keyframes blink {
+          0%,
+          100% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 0.2;
+          }
+        }
+        .animate-blink {
+          animation: blink 1.5s infinite;
+        }
+      `}</style>
     </footer>
   );
 }
