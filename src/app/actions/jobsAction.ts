@@ -247,7 +247,10 @@ export async function startJob(
 
     // First, send a request to wake up the Render service
     console.log('[@action:jobsAction:startJob] Sending request to wake up Render service');
-    const wakeUpResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/render-health`, {
+    // Use a relative path or construct the API URL based on the current environment
+    const apiUrl = process.env.NEXT_PUBLIC_RENDER_URL;
+    const wakeUpUrl = apiUrl ? `${apiUrl}/api/render-health` : '/api/render-health';
+    const wakeUpResponse = await fetch(wakeUpUrl, {
       method: 'GET',
     });
     let wakeUpMessage = '';
@@ -606,4 +609,39 @@ export async function updateJob(
       error: error.message || 'Failed to update job',
     };
   }
+}
+
+/**
+ * Server action to refresh deployments data
+ * This is called from client components to invalidate the deployment pages cache
+ */
+export async function refreshDeployments() {
+  try {
+    // Revalidate the main deployments page
+    console.log(
+      '[@action:jobsAction:refreshDeployments] Calling revalidatePath for /[locale]/[tenant]/deployment',
+    );
+    revalidatePath('/[locale]/[tenant]/deployment', 'page');
+    return { success: true };
+  } catch (error) {
+    console.error('[@action:jobsAction:refreshDeployments] ERROR during revalidation:', error);
+    return { success: false, error: String(error) };
+  }
+}
+
+/**
+ * Revalidate a specific deployment job run page
+ */
+export async function refreshDeploymentJobRun(deploymentId: string) {
+  console.log(
+    `[@action:jobsAction:refreshDeploymentJobRun] Revalidating job run page for deployment: ${deploymentId}`,
+  );
+
+  // Revalidate the specific job run page
+  revalidatePath(`/[locale]/[tenant]/deployment/job-runs/${deploymentId}`, 'page');
+
+  // Also revalidate the main deployments page
+  revalidatePath('/[locale]/[tenant]/deployment', 'page');
+
+  return { success: true };
 }

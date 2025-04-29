@@ -3,7 +3,12 @@ import { NextResponse } from 'next/server';
 export async function GET() {
   try {
     console.log('[@api:render-health] Sending request to wake up Render service');
-    const response = await fetch(`${process.env.RENDER_SERVICE_URL}/health`, { method: 'GET' });
+    const renderUrl = process.env.NEXT_PUBLIC_RENDER_URL;
+    if (!renderUrl) {
+      console.error('[@api:render-health] Render service URL is not defined');
+      return NextResponse.json({ success: false, error: 'Render service URL is not defined' });
+    }
+    const response = await fetch(`${renderUrl}/health`, { method: 'GET' });
     if (response.ok) {
       console.log('[@api:render-health] Render service is awake');
       return NextResponse.json({ success: true, message: 'Render service is awake' });

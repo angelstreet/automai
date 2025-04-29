@@ -4,8 +4,7 @@ import { Search, Clock, Play, Eye, PlayCircle, Trash2, MoreHorizontal, Edit2 } f
 import { useRouter } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
 
-import { refreshDeployments } from '@/app/actions/deploymentsAction';
-import { deleteJob, startJob } from '@/app/actions/jobsAction';
+import { refreshDeployments, deleteJob, startJob } from '@/app/actions/jobsAction';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,20 +62,20 @@ export function DeploymentListClient({
   // Setup auto-refresh every 10 seconds
   useEffect(() => {
     console.log('[DeploymentList] Setting up auto-refresh (10s interval)');
-    
+
     // Define the refresh function
     const refreshData = async () => {
       if (isRefreshing) return; // Prevent multiple concurrent refreshes
-      
+
       try {
         setIsRefreshing(true);
         console.log('[DeploymentList] Auto-refreshing deployments data...');
-        
+
         // Call the server action to refresh deployments
         const result = await refreshDeployments();
         if (result?.success) {
           console.log('[DeploymentList] Auto-refresh successful');
-          // The router.refresh() will happen inside refreshDeployments() 
+          // The router.refresh() will happen inside refreshDeployments()
           // which will trigger a re-render with new props
         }
       } catch (error) {
@@ -85,10 +84,10 @@ export function DeploymentListClient({
         setIsRefreshing(false);
       }
     };
-    
+
     // Set up the interval
     const intervalId = setInterval(refreshData, 10000); // 10 seconds
-    
+
     // Clean up the interval when component unmounts
     return () => {
       console.log('[DeploymentList] Cleaning up auto-refresh interval');
@@ -110,9 +109,9 @@ export function DeploymentListClient({
       isRefreshing,
       deployments: deployments.length,
       hasAttemptedLoad,
-      isInitialLoad
+      isInitialLoad,
     });
-    
+
     if (isInitialLoad && deployments.length > 0) {
       setIsInitialLoad(false);
       setHasAttemptedLoad(true);
@@ -138,7 +137,7 @@ export function DeploymentListClient({
       const repo = repositoriesMap[deployment.repositoryId];
       return repo?.name || 'Unknown';
     },
-    [repositoriesMap]
+    [repositoriesMap],
   );
 
   // Define filter and sort functions with proper dependencies
@@ -179,14 +178,18 @@ export function DeploymentListClient({
     return [...filtered].sort((a, b) => {
       if (sortBy === 'name') return a.name.localeCompare(b.name);
       if (sortBy === 'status') return a.status.localeCompare(b.status);
-      
+
       // For date sorting, prioritize the most recent run:
       // First check completedAt (most recent run completion)
-      // Then check startedAt (currently running jobs) 
+      // Then check startedAt (currently running jobs)
       // Then check scheduledTime (for scheduled jobs)
       // Finally fall back to createdAt (job creation time)
-      const dateA = new Date(a.completedAt || a.startedAt || a.scheduledTime || a.createdAt).getTime();
-      const dateB = new Date(b.completedAt || b.startedAt || b.scheduledTime || b.createdAt).getTime();
+      const dateA = new Date(
+        a.completedAt || a.startedAt || a.scheduledTime || a.createdAt,
+      ).getTime();
+      const dateB = new Date(
+        b.completedAt || b.startedAt || b.scheduledTime || b.createdAt,
+      ).getTime();
       return dateB - dateA; // Descending order (newest first)
     });
   }, [getFilteredDeployments, sortBy]);

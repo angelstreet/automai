@@ -4,8 +4,7 @@ import { Clock, Play, Eye, PlayCircle, Trash2, MoreHorizontal, Edit2 } from 'luc
 import { useRouter } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
 
-import { refreshDeployments } from '@/app/actions/deploymentsAction';
-import { deleteJob, startJob } from '@/app/actions/jobsAction';
+import { refreshDeployments, deleteJob, startJob } from '@/app/actions/jobsAction';
 import {
   AlertDialog,
   AlertDialogAction,
