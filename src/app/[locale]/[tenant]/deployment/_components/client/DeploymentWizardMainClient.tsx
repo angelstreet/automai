@@ -540,7 +540,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           },
         );
 
-        // Add detailed logging about the config being used
+        // Detailed logging of the form data for debugging
         if (latestConfigRef.current) {
           console.log(
             '[@component:DeploymentWizardMainClient:handleSubmit] Using MODIFIED config from Step 5',
@@ -555,12 +555,12 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           );
         }
 
-        // Convert deployment data to job form data
+        // Convert deployment data to job form data, synchronizing with modified config if available
         const formData: JobFormData = {
-          name: deploymentData.name,
-          description: deploymentData.description,
+          name: latestConfigRef.current?.name || deploymentData.name,
+          description: latestConfigRef.current?.description || deploymentData.description,
           repository_id: deploymentData.repositoryId,
-          branch: deploymentData.branch || 'main',
+          branch: latestConfigRef.current?.branch || deploymentData.branch || 'main',
           team_id: teamId,
           creator_id: user?.id || userId,
 
