@@ -162,7 +162,7 @@ export async function createJob(formData: JobFormData, hostDetails?: any[]) {
       // Status
       is_active: formData.is_active !== undefined ? formData.is_active : true,
 
-      // Config
+      // Config - ensure we have a valid JSON object
       config: configJson,
 
       // Creation timestamp
@@ -189,7 +189,6 @@ export async function createJob(formData: JobFormData, hostDetails?: any[]) {
         jobConfigResult.data.id,
         formData.creator_id,
         {}, // Empty object instead of null for override parameters
-        cookieStore,
       );
 
       if (!jobRunResult.success) {

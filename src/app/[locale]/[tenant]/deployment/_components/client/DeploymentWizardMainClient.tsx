@@ -28,21 +28,21 @@ const adaptHostsForDeployment = (systemHosts: SystemHost[]): HostType[] => {
 
   return systemHosts.map((host) => {
     // Base host object with essential properties
-    const adaptedHost: any = {
+    const adaptedHost: HostType = {
       id: host.id,
-      name: host.name,
+      name: host.name as string,
+      description: host.description,
+      type: (host.type as HostType['type']) || 'ssh',
+      ip: host.ip,
+      port: host.port || 22,
       environment: host.is_windows ? 'Windows' : 'Linux', // Use OS type as environment
       status: (host.status === 'connected' ? 'online' : 'offline') as any, // Type assertion
-      ip: host.ip,
-      type: host.type || 'ssh',
+      is_windows: host.is_windows || false,
       created_at: host.created_at || new Date().toISOString(),
       updated_at: host.updated_at || new Date().toISOString(),
-      is_windows: host.is_windows || false,
 
       // Authentication properties
-      username: host.user || host.username || 'user',
-      port: host.port || 22,
-      auth_type: host.auth_type || 'password',
+      auth_type: (host.auth_type as HostType['auth_type']) || 'password',
     };
 
     // Add authentication details based on auth_type
@@ -134,6 +134,8 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
     const [deploymentData, setDeploymentData] = useState<DeploymentData>(initialDeploymentData);
     const [isCreating, setIsCreating] = useState(false);
     const [_submissionError, setSubmissionError] = useState<string | null>(null);
+    // State to store the modified config from Step 5
+    const [modifiedConfig, setModifiedConfig] = useState<any>(null);
 
     // Adapt hosts for deployment
     const availableHosts = adaptHostsForDeployment(hosts);
@@ -508,9 +510,24 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
     // Get the React Query client
     const queryClient = useQueryClient();
 
+    // Add handler for config changes from Step 5
+    const handleConfigChange = (updatedConfig: any) => {
+      console.log(
+        '[@component:DeploymentWizardMainClient] Received updated config:',
+        updatedConfig,
+      );
+      console.log('[@component:DeploymentWizardMainClient] Previous config:', modifiedConfig);
+      // Store the modified config
+      setModifiedConfig(updatedConfig);
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       console.log('[@component:DeploymentWizardMainClient:handleSubmit] Starting form submission');
+      console.log(
+        '[@component:DeploymentWizardMainClient:handleSubmit] Modified config available:',
+        !!modifiedConfig,
+      );
       setIsCreating(true);
       setSubmissionError(null);
 
@@ -523,6 +540,21 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
             tenantName: (user as any)?.tenant_name || tenantName,
           },
         );
+
+        // Add detailed logging about the config being used
+        if (modifiedConfig) {
+          console.log(
+            '[@component:DeploymentWizardMainClient:handleSubmit] Using MODIFIED config from Step 5',
+          );
+          console.log(
+            '[@component:DeploymentWizardMainClient:handleSubmit] Modified config:',
+            JSON.stringify(modifiedConfig),
+          );
+        } else {
+          console.log(
+            '[@component:DeploymentWizardMainClient:handleSubmit] Using DEFAULT generated config',
+          );
+        }
 
         // Convert deployment data to job form data
         const formData: JobFormData = {
@@ -561,7 +593,8 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           is_active: deploymentData.schedule === 'now',
 
           // Config contains only runner-specific configuration
-          config: {
+          // Important: We need to use modifiedConfig if available
+          config: modifiedConfig || {
             name: deploymentData.name,
             repository: deploymentData.selectedRepository?.url || '',
             branch: deploymentData.branch || 'main',
@@ -579,17 +612,17 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
                 id: hostId,
                 name: host?.name || 'Unknown',
                 ip: host?.ip || '',
-                username: (host as any)?.username || (host as any)?.user || 'user',
-                port: (host as any)?.port || 22,
-                os: (host as any)?.is_windows ? 'windows' : 'linux',
-                authType: (host as any)?.auth_type || 'password',
+                username: host?.user || 'user',
+                port: host?.port || 22,
+                os: host?.is_windows ? 'windows' : 'linux',
+                authType: host?.auth_type || 'password',
               };
 
               // Include auth credentials based on auth type
-              if ((host as any)?.auth_type === 'password' && (host as any)?.password) {
-                (hostConfig as any)['password'] = (host as any).password;
-              } else if ((host as any)?.auth_type === 'privateKey' && (host as any)?.private_key) {
-                (hostConfig as any)['key'] = (host as any).private_key;
+              if (host?.auth_type === 'password' && host?.password) {
+                (hostConfig as any)['password'] = host.password;
+              } else if (host?.auth_type === 'privateKey' && host?.private_key) {
+                (hostConfig as any)['key'] = host.private_key;
               }
 
               return hostConfig;
@@ -629,6 +662,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
             cron_expression: formData.cron_expression,
             is_active: formData.is_active,
           },
+          config: formData.config,
         });
 
         // Use the new createJob action directly
@@ -858,6 +892,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               isPending={isCreating}
               availableHosts={availableHosts}
               repositoryScripts={repositoryScripts}
+              onConfigChange={handleConfigChange}
             />
           )}
         </form>

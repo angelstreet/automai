@@ -36,6 +36,8 @@ export function DeploymentWizardStep5Client({
   const [showPipelineView, setShowPipelineView] = useState(false); // Always default to summary view
   const [editableConfig, setEditableConfig] = useState('');
   const [jsonError, setJsonError] = useState<string | null>(null);
+  // Track if the config has been modified by the user
+  const [configModified, setConfigModified] = useState(false);
 
   // Handle view toggle
   const handlePipelineToggle = (_checked: boolean) => {
@@ -60,11 +62,35 @@ export function DeploymentWizardStep5Client({
     // Try to parse the JSON and update the config
     if (editableConfig && showPipelineView) {
       try {
+        console.log('[@component:DeploymentWizardStep5] Parsing modified config for submission');
         const configObject = JSON.parse(editableConfig);
+
+        // Force update configModified to true to ensure the update is processed
+        setConfigModified(true);
 
         // Call the onConfigChange handler if provided
         if (onConfigChange) {
+          console.log('[@component:DeploymentWizardStep5] Sending updated config to parent');
+          console.log('[@component:DeploymentWizardStep5] Config object:', configObject);
+
+          // Send the config to the parent component
           onConfigChange(configObject);
+
+          // Add a small delay to ensure state updates have time to propagate
+          setTimeout(() => {
+            // Call the original submit function
+            if (typeof onSubmit === 'function') {
+              if ('length' in onSubmit && onSubmit.length === 0) {
+                (onSubmit as () => void)();
+              } else {
+                (onSubmit as React.FormEventHandler<HTMLFormElement>)(
+                  e as unknown as React.FormEvent<HTMLFormElement>,
+                );
+              }
+            }
+          }, 100);
+
+          return;
         }
       } catch (error: any) {
         toast({
@@ -179,15 +205,18 @@ export function DeploymentWizardStep5Client({
 
   // Set editable config when pipeline code changes
   useEffect(() => {
-    if (pipelineCode && showPipelineView) {
+    if (pipelineCode && showPipelineView && !configModified) {
       setEditableConfig(pipelineCode);
       setJsonError(null);
     }
-  }, [pipelineCode, showPipelineView]);
+  }, [pipelineCode, showPipelineView, configModified]);
 
   // Validate JSON as user types
   const handleConfigChange = (value: string) => {
     setEditableConfig(value);
+    setConfigModified(true);
+    console.log('[@component:DeploymentWizardStep5] Config modified by user');
+
     try {
       if (value && value.trim() !== '') {
         JSON.parse(value);
@@ -223,6 +252,13 @@ export function DeploymentWizardStep5Client({
       });
     }
   };
+
+  // Reset configModified when switching views
+  useEffect(() => {
+    if (!showPipelineView) {
+      setConfigModified(false);
+    }
+  }, [showPipelineView]);
 
   // Render pipeline view
   const renderPipelineView = () => {
