@@ -31,6 +31,7 @@ const adaptHostsForDeployment = (systemHosts: SystemHost[]): HostType[] => {
     const adaptedHost: HostType = {
       id: host.id,
       name: host.name as string,
+      user: host.user as string,
       description: host.description,
       type: (host.type as HostType['type']) || 'ssh',
       ip: host.ip,
@@ -564,21 +565,15 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           team_id: teamId,
           creator_id: user?.id || userId,
 
-          // Scripts, hosts, and parameters with proper naming, synchronized from modified config if available
-          scripts_path:
-            latestConfigRef.current?.scripts?.map((s: any) => s.path) ||
-            deploymentData.scriptIds.map((id) => {
-              const script = repositoryScripts.find((s) => s.id === id);
-              return script?.path || '';
-            }),
-          scripts_parameters:
-            latestConfigRef.current?.scripts?.map((s: any) =>
-              JSON.stringify({ raw: s.parameters }),
-            ) ||
-            deploymentData.scriptIds.map((scriptId) =>
-              JSON.stringify(deploymentData.scriptParameters[scriptId] || {}),
-            ),
-          host_ids: latestConfigRef.current?.hosts?.map((h: any) => h.id) || deploymentData.hostIds,
+          // Scripts, hosts, and parameters with proper naming
+          scripts_path: deploymentData.scriptIds.map((id) => {
+            const script = repositoryScripts.find((s) => s.id === id);
+            return script?.path || '';
+          }),
+          scripts_parameters: deploymentData.scriptIds.map((scriptId) =>
+            JSON.stringify(deploymentData.scriptParameters[scriptId] || {}),
+          ),
+          host_ids: deploymentData.hostIds,
 
           // Environment variables
           environment_vars: deploymentData.environmentVars.reduce(
