@@ -134,8 +134,8 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
     const [deploymentData, setDeploymentData] = useState<DeploymentData>(initialDeploymentData);
     const [isCreating, setIsCreating] = useState(false);
     const [_submissionError, setSubmissionError] = useState<string | null>(null);
-    // State to store the modified config from Step 5
-    const [modifiedConfig, setModifiedConfig] = useState<any>(null);
+    // Use a ref to store the latest config for immediate access
+    const latestConfigRef = useRef<any>(null);
 
     // Adapt hosts for deployment
     const availableHosts = adaptHostsForDeployment(hosts);
@@ -511,14 +511,13 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
     const queryClient = useQueryClient();
 
     // Add handler for config changes from Step 5
-    const handleConfigChange = (updatedConfig: any) => {
+    const handleConfigChange = (modifiedConfig: any) => {
       console.log(
         '[@component:DeploymentWizardMainClient] Received updated config:',
-        updatedConfig,
+        modifiedConfig,
       );
-      console.log('[@component:DeploymentWizardMainClient] Previous config:', modifiedConfig);
-      // Store the modified config
-      setModifiedConfig(updatedConfig);
+      // Also store in ref for immediate access
+      latestConfigRef.current = modifiedConfig;
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -526,7 +525,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
       console.log('[@component:DeploymentWizardMainClient:handleSubmit] Starting form submission');
       console.log(
         '[@component:DeploymentWizardMainClient:handleSubmit] Modified config available:',
-        !!modifiedConfig,
+        !!latestConfigRef.current,
       );
       setIsCreating(true);
       setSubmissionError(null);
@@ -542,13 +541,13 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
         );
 
         // Add detailed logging about the config being used
-        if (modifiedConfig) {
+        if (latestConfigRef.current) {
           console.log(
             '[@component:DeploymentWizardMainClient:handleSubmit] Using MODIFIED config from Step 5',
           );
           console.log(
             '[@component:DeploymentWizardMainClient:handleSubmit] Modified config:',
-            JSON.stringify(modifiedConfig),
+            JSON.stringify(latestConfigRef.current),
           );
         } else {
           console.log(
@@ -593,8 +592,8 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           is_active: deploymentData.schedule === 'now',
 
           // Config contains only runner-specific configuration
-          // Important: We need to use modifiedConfig if available
-          config: modifiedConfig || {
+          // Important: We need to use the latest config if available
+          config: latestConfigRef.current || {
             name: deploymentData.name,
             repository: deploymentData.selectedRepository?.url || '',
             branch: deploymentData.branch || 'main',
