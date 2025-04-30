@@ -5,7 +5,12 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import React, { useState, useEffect } from 'react';
 
-import { refreshDeployments, deleteJob, startJob } from '@/app/actions/jobsAction';
+import {
+  refreshDeployments,
+  deleteJob,
+  startJob,
+  getJobRunsForConfig,
+} from '@/app/actions/jobsAction';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,7 +38,6 @@ import { DeploymentActionsClient } from './DeploymentActionsClient';
 import DeploymentStatusBadgeClient from './DeploymentStatusBadgeClient';
 import { EditDeploymentDialogClient } from './EditDeploymentDialogClient';
 import { JobRunOutputDialogClient } from './JobRunOutputDialogClient';
-import { getLatestJobRun } from '@/app/actions/jobRunsAction';
 
 interface DeploymentListProps {
   initialDeployments: Deployment[];
@@ -406,9 +410,13 @@ export function DeploymentListClient({
       name: deployment.name,
     });
     try {
-      const jobRun = await getLatestJobRun(deployment.id);
-      if (jobRun) {
-        setSelectedJobRunForOutput(jobRun);
+      const jobRunsResult = await getJobRunsForConfig(deployment.id);
+      if (jobRunsResult.success && jobRunsResult.data && jobRunsResult.data.length > 0) {
+        // Sort by createdAt descending to get the latest job run
+        const latestJobRun = jobRunsResult.data.sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        )[0];
+        setSelectedJobRunForOutput(latestJobRun);
         setShowOutputDialog(true);
       } else {
         toast({
