@@ -12,7 +12,7 @@ export { DeploymentWizardStep4Client } from './client/DeploymentWizardStep4Clien
 export { DeploymentWizardStep5Client } from './client/DeploymentWizardStep5Client';
 export { DeploymentStatusBadgeClient } from './client/DeploymentStatusBadgeClient';
 export { DeploymentCustomSwitchClient } from './client/DeploymentCustomSwitchClient';
-export { DeploymentListClient } from './client/DeploymentListClient';
+export { DeploymentContentClient } from './client/DeploymentContentClient';
 export { DeploymentWizardMainClient } from './client/DeploymentWizardMainClient';
 export { DeploymentActionsClient } from './client/DeploymentActionsClient';
 export { DeploymentWizardDialogClient } from './client/DeploymentWizardDialogClient';

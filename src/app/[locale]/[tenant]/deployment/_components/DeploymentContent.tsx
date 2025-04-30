@@ -4,7 +4,7 @@ import { getRepositories } from '@/app/actions/repositoriesAction';
 // Import with direct relative paths
 import { DeploymentEmptyStateClient } from './client/DeploymentEmptyStateClient';
 import { DeploymentFooterClient } from './client/DeploymentFooterClient';
-import { DeploymentListClient } from './client/DeploymentListClient';
+import { DeploymentContentClient } from './client/DeploymentContentClient';
 
 export async function DeploymentContent() {
   // Fetch data at the server level
@@ -26,7 +26,10 @@ export async function DeploymentContent() {
   return (
     <div className="flex flex-col min-h-full">
       <div className="flex-grow">
-        <DeploymentListClient initialDeployments={deployments} initialRepositories={repositories} />
+        <DeploymentContentClient
+          initialDeployments={deployments}
+          initialRepositories={repositories}
+        />
       </div>
       <DeploymentFooterClient />
     </div>

@@ -3,14 +3,14 @@
 ## Project Technologies
 
 | Technology | Used | Version |
-|------------|------|--------|
-| react | ✅ | latest |
-| nextjs | ✅ | 15.2.4 |
-| typescript | ✅ | ^5.8.2 |
-| tailwind | ✅ | 3.4.1 |
-| supabase | ✅ | 2.49.1 |
-| prisma | ❌ | - |
-| trpc | ❌ | - |
+| ---------- | ---- | ------- |
+| react      | ✅   | latest  |
+| nextjs     | ✅   | 15.2.4  |
+| typescript | ✅   | ^5.8.2  |
+| tailwind   | ✅   | 3.4.1   |
+| supabase   | ✅   | 2.49.1  |
+| prisma     | ❌   | -       |
+| trpc       | ❌   | -       |
 
 ## Key Project Areas
 
@@ -122,7 +122,7 @@
               📄 DeploymentEmptyStateClient.tsx (typescript)
               📄 DeploymentEventListener.tsx (typescript)
               📄 DeploymentHostSelectorClient.tsx (typescript)
-              📄 DeploymentListClient.tsx (typescript)
+              📄 DeploymentContentClient.tsx (typescript)
               📄 DeploymentScriptSelectorClient.tsx (typescript)
               📄 DeploymentStatusBadgeClient.tsx (typescript)
               📄 DeploymentWizardDialogClient.tsx (typescript)

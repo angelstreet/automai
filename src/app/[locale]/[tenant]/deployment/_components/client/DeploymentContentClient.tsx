@@ -54,7 +54,7 @@ interface DeploymentListProps {
   initialRepositories?: Repository[];
 }
 
-export function DeploymentListClient({
+export function DeploymentContentClient({
   initialDeployments = [],
   initialRepositories = [],
 }: DeploymentListProps) {
@@ -260,7 +260,7 @@ export function DeploymentListClient({
 
   const handleDeleteClick = (deployment: Deployment, e: React.MouseEvent) => {
     e.stopPropagation();
-    console.log('[DeploymentListClient:handleDeleteClick] Selected deployment for deletion:', {
+    console.log('[DeploymentContentClient:handleDeleteClick] Selected deployment for deletion:', {
       id: deployment.id,
       name: deployment.name,
     });
@@ -271,15 +271,18 @@ export function DeploymentListClient({
   const handleConfirmDelete = async () => {
     if (!selectedDeployment) {
       console.error(
-        '[DeploymentListClient:handleConfirmDelete] No deployment selected for deletion',
+        '[DeploymentContentClient:handleConfirmDelete] No deployment selected for deletion',
       );
       return;
     }
 
-    console.log('[DeploymentListClient:handleConfirmDelete] Confirming deletion of deployment:', {
-      id: selectedDeployment.id,
-      name: selectedDeployment.name,
-    });
+    console.log(
+      '[DeploymentContentClient:handleConfirmDelete] Confirming deletion of deployment:',
+      {
+        id: selectedDeployment.id,
+        name: selectedDeployment.name,
+      },
+    );
 
     try {
       // Save ID to a local variable to use in case of state updates
@@ -287,20 +290,20 @@ export function DeploymentListClient({
 
       setActionInProgress(idToDelete);
       console.log(
-        '[DeploymentListClient:handleConfirmDelete] Calling deleteJob with ID:',
+        '[DeploymentContentClient:handleConfirmDelete] Calling deleteJob with ID:',
         idToDelete,
       );
 
       // Make sure we're calling the server action with a direct string argument
       const result = await deleteJob(String(idToDelete));
       console.log(
-        '[DeploymentListClient:handleConfirmDelete] Delete result:',
+        '[DeploymentContentClient:handleConfirmDelete] Delete result:',
         JSON.stringify(result),
       );
 
       if (result && result.success) {
         console.log(
-          '[DeploymentListClient:handleConfirmDelete] Delete successful for ID:',
+          '[DeploymentContentClient:handleConfirmDelete] Delete successful for ID:',
           idToDelete,
         );
 
@@ -319,7 +322,7 @@ export function DeploymentListClient({
         // Use the server action to revalidate the deployment page
         await refreshDeployments();
       } else {
-        console.error('[DeploymentListClient:handleConfirmDelete] Delete failed:', {
+        console.error('[DeploymentContentClient:handleConfirmDelete] Delete failed:', {
           id: selectedDeployment.id,
           error: result?.error || 'Unknown error',
         });
@@ -330,7 +333,7 @@ export function DeploymentListClient({
         });
       }
     } catch (error: any) {
-      console.error('[DeploymentListClient:handleConfirmDelete] Exception during delete:', {
+      console.error('[DeploymentContentClient:handleConfirmDelete] Exception during delete:', {
         id: selectedDeployment?.id,
         error: error.message || 'Unknown error',
         stack: error.stack,
@@ -359,10 +362,13 @@ export function DeploymentListClient({
       // Use a user ID if available, otherwise just use a placeholder
       const userId = user?.id || 'system';
 
-      console.log('[DeploymentListClient:handleRunDeployment] Queuing job with ID:', deployment.id);
+      console.log(
+        '[DeploymentContentClient:handleRunDeployment] Queuing job with ID:',
+        deployment.id,
+      );
       const result = await startJob(deployment.id, userId);
       console.log(
-        '[DeploymentListClient:handleRunDeployment] Queue result:',
+        '[DeploymentContentClient:handleRunDeployment] Queue result:',
         JSON.stringify(result),
       );
 
@@ -395,7 +401,7 @@ export function DeploymentListClient({
 
   const handleEditClick = (deployment: Deployment, e: React.MouseEvent) => {
     e.stopPropagation();
-    console.log('[DeploymentListClient:handleEditClick] Selected deployment for editing:', {
+    console.log('[DeploymentContentClient:handleEditClick] Selected deployment for editing:', {
       id: deployment.id,
       name: deployment.name,
     });
@@ -405,20 +411,26 @@ export function DeploymentListClient({
 
   const handleConfigClick = (deployment: Deployment, e: React.MouseEvent) => {
     e.stopPropagation();
-    console.log('[DeploymentListClient:handleConfigClick] Selected deployment for config view:', {
-      id: deployment.id,
-      name: deployment.name,
-    });
+    console.log(
+      '[DeploymentContentClient:handleConfigClick] Selected deployment for config view:',
+      {
+        id: deployment.id,
+        name: deployment.name,
+      },
+    );
     setSelectedDeploymentForConfig(deployment);
     setShowConfigDialog(true);
   };
 
   const handleOutputClick = async (deployment: Deployment, e: React.MouseEvent) => {
     e.stopPropagation();
-    console.log('[DeploymentListClient:handleOutputClick] Selected deployment for output view:', {
-      id: deployment.id,
-      name: deployment.name,
-    });
+    console.log(
+      '[DeploymentContentClient:handleOutputClick] Selected deployment for output view:',
+      {
+        id: deployment.id,
+        name: deployment.name,
+      },
+    );
     try {
       const jobRunsResult = await getJobRunsForConfig(deployment.id);
       if (jobRunsResult.success && jobRunsResult.data && jobRunsResult.data.length > 0) {
@@ -436,7 +448,7 @@ export function DeploymentListClient({
         });
       }
     } catch (error: any) {
-      console.error('[DeploymentListClient:handleOutputClick] Error fetching job run:', error);
+      console.error('[DeploymentContentClient:handleOutputClick] Error fetching job run:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to fetch job run data.',
@@ -448,7 +460,7 @@ export function DeploymentListClient({
   const handleDuplicateClick = async (deployment: Deployment, e: React.MouseEvent) => {
     e.stopPropagation();
     console.log(
-      '[DeploymentListClient:handleDuplicateClick] Selected deployment for duplication:',
+      '[DeploymentContentClient:handleDuplicateClick] Selected deployment for duplication:',
       {
         id: deployment.id,
         name: deployment.name,
@@ -468,7 +480,7 @@ export function DeploymentListClient({
           await refreshDeployments();
         } else {
           console.log(
-            '[DeploymentListClient:handleDuplicateClick] Skipping refresh as one is already in progress',
+            '[DeploymentContentClient:handleDuplicateClick] Skipping refresh as one is already in progress',
           );
         }
       } else {
@@ -480,7 +492,7 @@ export function DeploymentListClient({
       }
     } catch (error: any) {
       console.error(
-        '[DeploymentListClient:handleDuplicateClick] Error duplicating deployment:',
+        '[DeploymentContentClient:handleDuplicateClick] Error duplicating deployment:',
         error,
       );
       toast({
