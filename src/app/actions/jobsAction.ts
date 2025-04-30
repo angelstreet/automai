@@ -209,7 +209,7 @@ export async function createJob(formData: JobFormData, hostDetails?: any[]) {
     }
 
     // Revalidate the deployment pages after a successful creation
-    revalidatePath('/[locale]/[tenant]/deployment');
+    revalidatePath('/[locale]/[tenant]/deployment', 'page');
 
     // Return success with the job configuration data
     return {
@@ -284,7 +284,7 @@ export async function startJob(
 
     // Revalidate paths to refresh UI
     console.log(`[@action:jobsAction:startJob] Revalidating paths`);
-    revalidatePath('/[locale]/[tenant]/deployment');
+    revalidatePath('/[locale]/[tenant]/deployment', 'page');
 
     return {
       success: true,
@@ -577,7 +577,7 @@ export async function updateJob(
       console.log(`[@action:jobsAction:updateJob] Successfully updated job: ${id}`);
 
       // Revalidate the deployment pages after a successful update
-      revalidatePath('/[locale]/[tenant]/deployment');
+      revalidatePath('/[locale]/[tenant]/deployment', 'page');
     } else {
       console.error(`[@action:jobsAction:updateJob] Failed to update job: ${result.error}`);
     }
