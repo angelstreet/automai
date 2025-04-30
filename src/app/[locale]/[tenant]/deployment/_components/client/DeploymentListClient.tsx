@@ -1,6 +1,16 @@
 'use client';
 
-import { Search, Clock, Play, Eye, PlayCircle, Trash2, MoreHorizontal, Edit2 } from 'lucide-react';
+import {
+  Search,
+  Clock,
+  Play,
+  Eye,
+  PlayCircle,
+  Trash2,
+  MoreHorizontal,
+  Edit2,
+  Copy,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import React, { useState, useEffect } from 'react';
@@ -435,6 +445,55 @@ export function DeploymentListClient({
     }
   };
 
+  const handleDuplicateClick = async (deployment: Deployment, e: React.MouseEvent) => {
+    e.stopPropagation();
+    console.log(
+      '[DeploymentListClient:handleDuplicateClick] Selected deployment for duplication:',
+      {
+        id: deployment.id,
+        name: deployment.name,
+      },
+    );
+    try {
+      setActionInProgress(deployment.id);
+      const { duplicateDeployment } = await import('@/app/actions/jobsAction');
+      const result = await duplicateDeployment(deployment.id);
+      if (result.success && result.data) {
+        toast({
+          title: 'Deployment Duplicated',
+          description: `Successfully created a copy named ${result.data.name}.`,
+          variant: 'default',
+        });
+        if (!isRefreshing) {
+          await refreshDeployments();
+        } else {
+          console.log(
+            '[DeploymentListClient:handleDuplicateClick] Skipping refresh as one is already in progress',
+          );
+        }
+      } else {
+        toast({
+          title: 'Error',
+          description: result.error || 'Failed to duplicate deployment',
+          variant: 'destructive',
+        });
+      }
+    } catch (error: any) {
+      console.error(
+        '[DeploymentListClient:handleDuplicateClick] Error duplicating deployment:',
+        error,
+      );
+      toast({
+        title: 'Error',
+        description:
+          error.message || 'An unexpected error occurred while duplicating the deployment',
+        variant: 'destructive',
+      });
+    } finally {
+      setActionInProgress(null);
+    }
+  };
+
   return (
     <div className="w-full">
       <div className="hidden">
@@ -701,6 +760,16 @@ export function DeploymentListClient({
                               >
                                 <Edit2 className="mr-2 h-4 w-4" />
                                 {c('edit')}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDuplicateClick(deployment, e);
+                                }}
+                                disabled={actionInProgress === deployment.id}
+                              >
+                                <Copy className="mr-2 h-4 w-4" />
+                                Duplicate
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="text-red-600"

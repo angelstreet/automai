@@ -625,3 +625,92 @@ export async function refreshDeploymentJobRun(deploymentId: string) {
 
   return { success: true };
 }
+
+/**
+ * Duplicates an existing deployment by creating a new one with '_copy' appended to the name
+ */
+export async function duplicateDeployment(deploymentId: string) {
+  try {
+    console.log(
+      `[@action:jobsAction:duplicateDeployment] Duplicating deployment with ID: "${deploymentId}"`,
+    );
+
+    if (!deploymentId) {
+      console.error('[@action:jobsAction:duplicateDeployment] ERROR: No deployment ID provided');
+      return {
+        success: false,
+        error: 'No deployment ID provided',
+      };
+    }
+
+    const cookieStore = await cookies();
+    const { getJobConfigById } = await import('@/lib/db/jobsConfigurationDb');
+    const existingDeploymentResult = await getJobConfigById(deploymentId, cookieStore);
+
+    if (!existingDeploymentResult.success || !existingDeploymentResult.data) {
+      console.error(
+        '[@action:jobsAction:duplicateDeployment] ERROR: Failed to fetch existing deployment:',
+        existingDeploymentResult.error,
+      );
+      return {
+        success: false,
+        error: 'Failed to fetch existing deployment',
+      };
+    }
+
+    const existingDeployment = existingDeploymentResult.data;
+    const newName = `${existingDeployment.name}_copy`;
+
+    console.log(
+      `[@action:jobsAction:duplicateDeployment] Creating new deployment with name: "${newName}"`,
+    );
+
+    const formData: JobFormData = {
+      name: newName,
+      description: existingDeployment.description || undefined,
+      repository_id: existingDeployment.repository_id || undefined,
+      branch: existingDeployment.branch || undefined,
+      team_id: existingDeployment.team_id,
+      creator_id: existingDeployment.creator_id,
+      scripts_path: existingDeployment.scripts_path || [],
+      scripts_parameters: existingDeployment.scripts_parameters || [],
+      host_ids: existingDeployment.host_ids || [],
+      environment_vars: existingDeployment.environment_vars || {},
+      cron_expression: existingDeployment.cron_expression || undefined,
+      repeat_count: existingDeployment.repeat_count || undefined,
+      is_active: existingDeployment.is_active || false,
+      config: existingDeployment.config || {},
+      created_at: new Date().toISOString(),
+    };
+
+    const newDeploymentResult = await createJob(formData);
+
+    if (!newDeploymentResult.success || !newDeploymentResult.data) {
+      console.error(
+        '[@action:jobsAction:duplicateDeployment] ERROR: Failed to create duplicated deployment:',
+        newDeploymentResult.error,
+      );
+      return {
+        success: false,
+        error: 'Failed to create duplicated deployment',
+      };
+    }
+
+    console.log(
+      `[@action:jobsAction:duplicateDeployment] Successfully duplicated deployment with new ID: "${newDeploymentResult.data.id}"`,
+    );
+
+    revalidatePath('/[locale]/[tenant]/deployment', 'page');
+
+    return {
+      success: true,
+      data: newDeploymentResult.data,
+    };
+  } catch (error: any) {
+    console.error('[@action:jobsAction:duplicateDeployment] Error:', error.message);
+    return {
+      success: false,
+      error: error.message || 'Failed to duplicate deployment',
+    };
+  }
+}
