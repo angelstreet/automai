@@ -58,19 +58,15 @@ export function JobRunOutputDialogClient({
             </div>
             <div>
               <span className="font-semibold">{c('started')}: </span>
-              {jobRun?.startedAt
-                ? new Date(jobRun.startedAt).toLocaleString()
-                : 'N/A'}
+              {jobRun?.startedAt ? new Date(jobRun.startedAt).toLocaleString() : 'N/A'}
             </div>
             <div>
               <span className="font-semibold">{c('completed')}: </span>
-              {jobRun?.completedAt
-                ? new Date(jobRun.completedAt).toLocaleString()
-                : 'N/A'}
+              {jobRun?.completedAt ? new Date(jobRun.completedAt).toLocaleString() : 'N/A'}
             </div>
           </div>
         </div>
       </DialogContent>
     </Dialog>
   );
-} 
+}

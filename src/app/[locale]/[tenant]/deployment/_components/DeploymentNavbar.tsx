@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import React from 'react';
 
-
 export const DeploymentNavbar: React.FC = () => {
   const pathname = usePathname();
 
