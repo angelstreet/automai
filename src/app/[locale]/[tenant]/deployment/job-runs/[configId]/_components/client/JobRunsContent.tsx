@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import React, { useState } from 'react';
 
+import { JobRunOutputDialogClient } from '@/app/[locale]/[tenant]/deployment/_components/client/JobRunOutputDialogClient';
 import { Button } from '@/components/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
 import {
@@ -24,8 +25,7 @@ import {
 } from '@/components/shadcn/table';
 import { getFormattedTime } from '@/lib/utils/deploymentUtils';
 
-import { JobRunStatusBadge } from './JobRunStatusBadge';
-import { JobRunOutputDialogClient } from '../../_components/client/JobRunOutputDialogClient';
+import { JobRunStatusBadge } from '../JobRunStatusBadge';
 
 interface JobRun {
   id: string;
@@ -109,14 +109,6 @@ export function JobRunsContent({ jobRuns, configId: _configId, configName }: Job
 
   // Get unique statuses for the filter dropdown
   const uniqueStatuses = Array.from(new Set(jobRuns.map((run) => run.status)));
-
-  // Extract stdout content from job output
-  const getStdoutContent = (output: any) => {
-    if (!output) return 'No output available';
-    if (typeof output === 'string') return output;
-    if (output.stdout) return output.stdout;
-    return JSON.stringify(output, null, 2);
-  };
 
   return (
     <div className="container mx-auto p-4">

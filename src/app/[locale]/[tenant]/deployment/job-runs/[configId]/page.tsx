@@ -5,7 +5,7 @@ import React from 'react';
 
 import { getJobRunsForConfig } from '@/app/actions/jobsAction';
 
-import { JobRunsContent } from './_components/JobRunsContent';
+import { JobRunsContent } from './_components/client/JobRunsContent';
 import { JobRunsSkeleton } from './_components/JobRunsSkeleton';
 
 // Metadata function moved to a separate file

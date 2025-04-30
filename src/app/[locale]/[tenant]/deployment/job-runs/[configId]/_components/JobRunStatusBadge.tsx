@@ -16,7 +16,7 @@ export function JobRunStatusBadge({ status }: JobRunStatusBadgeProps) {
     | 'warning'
     | 'pending'
     | 'running' = 'default';
-  
+
   switch (status) {
     case 'running':
     case 'in_progress':
@@ -39,14 +39,11 @@ export function JobRunStatusBadge({ status }: JobRunStatusBadgeProps) {
     default:
       variant = 'secondary';
   }
-  
+
   const displayStatus = status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ');
-  
+
   return (
-    <Badge
-      variant={variant}
-      className="capitalize"
-    >
+    <Badge variant={variant} className="capitalize">
       {displayStatus}
     </Badge>
   );
