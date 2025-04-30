@@ -550,6 +550,11 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
             '[@component:DeploymentWizardMainClient:handleSubmit] Modified config:',
             JSON.stringify(latestConfigRef.current),
           );
+          // Additional debugging for scripts structure
+          console.log(
+            '[@component:DeploymentWizardMainClient:handleSubmit] Scripts in modified config:',
+            latestConfigRef.current.scripts,
+          );
         } else {
           console.log(
             '[@component:DeploymentWizardMainClient:handleSubmit] Using DEFAULT generated config',
@@ -565,15 +570,21 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           team_id: teamId,
           creator_id: user?.id || userId,
 
-          // Scripts, hosts, and parameters with proper naming
-          scripts_path: deploymentData.scriptIds.map((id) => {
-            const script = repositoryScripts.find((s) => s.id === id);
-            return script?.path || '';
-          }),
-          scripts_parameters: deploymentData.scriptIds.map((scriptId) =>
-            JSON.stringify(deploymentData.scriptParameters[scriptId] || {}),
-          ),
-          host_ids: deploymentData.hostIds,
+          // Scripts, hosts, and parameters with proper naming, synchronized from modified config if available
+          scripts_path:
+            latestConfigRef.current?.scripts?.map((s: any) => s.path || s.filePath || '') ||
+            deploymentData.scriptIds.map((id) => {
+              const script = repositoryScripts.find((s) => s.id === id);
+              return script?.path || '';
+            }),
+          scripts_parameters:
+            latestConfigRef.current?.scripts?.map((s: any) =>
+              JSON.stringify(s.parameters ? { raw: s.parameters } : {}),
+            ) ||
+            deploymentData.scriptIds.map((scriptId) =>
+              JSON.stringify(deploymentData.scriptParameters[scriptId] || {}),
+            ),
+          host_ids: latestConfigRef.current?.hosts?.map((h: any) => h.id) || deploymentData.hostIds,
 
           // Environment variables
           environment_vars: deploymentData.environmentVars.reduce(
