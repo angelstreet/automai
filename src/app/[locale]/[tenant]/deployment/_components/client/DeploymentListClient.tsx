@@ -32,6 +32,8 @@ import { ConfigDeploymentDialogClient } from './ConfigDeploymentDialogClient';
 import { DeploymentActionsClient } from './DeploymentActionsClient';
 import DeploymentStatusBadgeClient from './DeploymentStatusBadgeClient';
 import { EditDeploymentDialogClient } from './EditDeploymentDialogClient';
+import { JobRunOutputDialogClient } from './JobRunOutputDialogClient';
+import { getLatestJobRun } from '@/app/actions/jobRunsAction';
 
 interface DeploymentListProps {
   initialDeployments: Deployment[];
@@ -65,6 +67,8 @@ export function DeploymentListClient({
   const [selectedDeploymentForConfig, setSelectedDeploymentForConfig] = useState<Deployment | null>(
     null,
   );
+  const [showOutputDialog, setShowOutputDialog] = useState(false);
+  const [selectedJobRunForOutput, setSelectedJobRunForOutput] = useState<any | null>(null);
 
   // Setup auto-refresh every 10 seconds
   useEffect(() => {
@@ -395,6 +399,34 @@ export function DeploymentListClient({
     setShowConfigDialog(true);
   };
 
+  const handleOutputClick = async (deployment: Deployment, e: React.MouseEvent) => {
+    e.stopPropagation();
+    console.log('[DeploymentListClient:handleOutputClick] Selected deployment for output view:', {
+      id: deployment.id,
+      name: deployment.name,
+    });
+    try {
+      const jobRun = await getLatestJobRun(deployment.id);
+      if (jobRun) {
+        setSelectedJobRunForOutput(jobRun);
+        setShowOutputDialog(true);
+      } else {
+        toast({
+          title: 'No Job Run Found',
+          description: 'No job run data available for this deployment.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error: any) {
+      console.error('[DeploymentListClient:handleOutputClick] Error fetching job run:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to fetch job run data.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <div className="w-full">
       <div className="hidden">
@@ -647,6 +679,15 @@ export function DeploymentListClient({
                               <DropdownMenuItem
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  handleOutputClick(deployment, e);
+                                }}
+                              >
+                                <Eye className="mr-2 h-4 w-4" />
+                                View Output
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   handleEditClick(deployment, e);
                                 }}
                               >
@@ -729,6 +770,11 @@ export function DeploymentListClient({
         open={showConfigDialog}
         onOpenChange={setShowConfigDialog}
         deployment={selectedDeploymentForConfig}
+      />
+      <JobRunOutputDialogClient
+        open={showOutputDialog}
+        onOpenChange={setShowOutputDialog}
+        jobRun={selectedJobRunForOutput}
       />
     </div>
   );

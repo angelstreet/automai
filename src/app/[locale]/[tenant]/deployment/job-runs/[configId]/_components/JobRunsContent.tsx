@@ -7,7 +7,6 @@ import React, { useState } from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +25,7 @@ import {
 import { getFormattedTime } from '@/lib/utils/deploymentUtils';
 
 import { JobRunStatusBadge } from './JobRunStatusBadge';
+import { JobRunOutputDialogClient } from '../../_components/client/JobRunOutputDialogClient';
 
 interface JobRun {
   id: string;
@@ -251,50 +251,11 @@ export function JobRunsContent({ jobRuns, configId: _configId, configName }: Job
       </Card>
 
       {/* Job output modal */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col p-4">
-          <DialogHeader>
-            <DialogTitle>
-              {t('job_run_details')} #{selectedJobRun?.executionNumber || '-'}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="flex flex-col mt-[-8px]">
-            <div className="bg-black/90 text-green-400 rounded font-mono text-xs whitespace-pre-wrap overflow-auto max-h-[60vh]">
-              {selectedJobRun ? getStdoutContent(selectedJobRun.output) : 'No output available'}
-            </div>
-
-            <div className="flex justify-between text-xs text-muted-foreground mt-2">
-              <div>
-                <span className="font-semibold">{c('status')}: </span>
-                <span
-                  className={
-                    selectedJobRun?.status === 'success'
-                      ? 'text-green-500'
-                      : selectedJobRun?.status === 'failed'
-                        ? 'text-red-500'
-                        : 'text-yellow-500'
-                  }
-                >
-                  {selectedJobRun?.status}
-                </span>
-              </div>
-              <div>
-                <span className="font-semibold">{c('started')}: </span>
-                {selectedJobRun?.startedAt
-                  ? new Date(selectedJobRun.startedAt).toLocaleString()
-                  : 'N/A'}
-              </div>
-              <div>
-                <span className="font-semibold">{c('completed')}: </span>
-                {selectedJobRun?.completedAt
-                  ? new Date(selectedJobRun.completedAt).toLocaleString()
-                  : 'N/A'}
-              </div>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <JobRunOutputDialogClient
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        jobRun={selectedJobRun}
+      />
     </div>
   );
 }
