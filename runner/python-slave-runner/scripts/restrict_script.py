@@ -20,9 +20,8 @@ def execute_script(script, venv_path=None):
         stdout = StringIO()
         sys.stdout = stdout
 
-        # Use virtual environment's Python if provided
+        site_packages = None
         if venv_path and os.path.exists(venv_path):
-            # Update sys.path to include virtual environment's site-packages
             site_packages = os.path.join(venv_path, "lib", f"python{sys.version_info.major}.{sys.version_info.minor}", "site-packages")
             if os.path.exists(site_packages):
                 sys.path.insert(0, site_packages)
@@ -38,6 +37,5 @@ def execute_script(script, venv_path=None):
     except Exception as e:
         return {"status": "error", "message": f"Execution error: {str(e)}"}
     finally:
-        # Clean up sys.path
-        if venv_path and os.path.exists(venv_path) and site_packages in sys.path:
+        if site_packages and site_packages in sys.path:
             sys.path.remove(site_packages)
