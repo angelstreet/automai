@@ -14,8 +14,8 @@ import {
 } from '@/components/shadcn/dialog';
 import { cn } from '@/lib/utils';
 
-// Custom hook for fetching Render health status
-function useRenderHealth() {
+// Custom hook for fetching Render health
+function useRenderHealth(type: 'main' | 'python') {
   const [health, setHealth] = useState<{ success: boolean; message: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -23,21 +23,21 @@ function useRenderHealth() {
   useEffect(() => {
     const fetchHealth = async () => {
       try {
-        console.log('[@component:DeploymentFooterClient] Fetching Render health status');
+        console.log(`[@component:DeploymentFooterClient] Fetching Render ${type} health status`);
         setLoading(true);
-        const response = await fetch('/api/render-health');
+        const response = await fetch(`/api/render-health/${type}`);
         if (!response.ok) {
           throw new Error(`Health check failed with status: ${response.status}`);
         }
         const data = await response.json();
         setHealth(data);
         console.log(
-          '[@component:DeploymentFooterClient] Render health status fetched:',
+          `[@component:DeploymentFooterClient] Render ${type} health status fetched:`,
           data.message,
         );
       } catch (err: any) {
         console.error(
-          '[@component:DeploymentFooterClient] Error fetching Render health:',
+          `[@component:DeploymentFooterClient] Error fetching Render ${type} health:`,
           err.message,
         );
         setError(err.message || 'Failed to fetch health status');
@@ -48,32 +48,35 @@ function useRenderHealth() {
     };
 
     fetchHealth();
-  }, []);
+  }, [type]);
 
   return { health, loading, error };
 }
 
 // Custom hook for fetching Render logs
-function useRenderLogs(fetchOnDemand: boolean) {
+function useRenderLogs(type: 'main' | 'python', fetchOnDemand: boolean) {
   const [logs, setLogs] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchLogs = async () => {
     try {
-      console.log('[@component:DeploymentFooterClient] Fetching Render logs');
+      console.log(`[@component:DeploymentFooterClient] Fetching Render ${type} logs`);
       setLoading(true);
       setError(null);
-      const response = await fetch('/api/render-main-logs');
+      const response = await fetch(`/api/render-logs/${type}`);
       if (!response.ok) {
         throw new Error(`Logs fetch failed with status: ${response.status}`);
       }
       const data = await response.json();
       setLogs(data.data);
-      console.log('[@component:DeploymentFooterClient] Render logs fetched successfully');
+      console.log(`[@component:DeploymentFooterClient] Render ${type} logs fetched successfully`);
       return data.data;
     } catch (err: any) {
-      console.error('[@component:DeploymentFooterClient] Error fetching Render logs:', err.message);
+      console.error(
+        `[@component:DeploymentFooterClient] Error fetching Render ${type} logs:`,
+        err.message,
+      );
       setError(err.message || 'Failed to fetch logs');
       setLogs(null);
       return null;
@@ -92,22 +95,46 @@ function useRenderLogs(fetchOnDemand: boolean) {
 }
 
 export function DeploymentFooterClient() {
-  const { health, loading: healthLoading } = useRenderHealth();
-  const [modalOpen, setModalOpen] = useState(false);
+  const { health: mainHealth, loading: mainHealthLoading } = useRenderHealth('main');
+  const { health: slaveHealth, loading: slaveHealthLoading } = useRenderHealth('python');
+  const [mainModalOpen, setMainModalOpen] = useState(false);
+  const [slaveModalOpen, setSlaveModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const { logs, loading: logsLoading, error: logsError, fetchLogs } = useRenderLogs(modalOpen);
+
+  const {
+    logs: mainLogs,
+    loading: mainLogsLoading,
+    error: mainLogsError,
+    fetchLogs: fetchMainLogs,
+  } = useRenderLogs('main', mainModalOpen);
+
+  const {
+    logs: slaveLogs,
+    loading: slaveLogsLoading,
+    error: slaveLogsError,
+    fetchLogs: fetchSlaveLogs,
+  } = useRenderLogs('python', slaveModalOpen);
+
   const t = useTranslations('deployment');
 
-  // Determine status dot color based on health response
-  const isHealthy = health && health.success;
-  const statusColor = healthLoading
+  // Determine status dot colors for both services
+  const isMainHealthy = mainHealth && mainHealth.success;
+  const isSlaveHealthy = slaveHealth && slaveHealth.success;
+
+  const mainStatusColor = mainHealthLoading
     ? 'bg-yellow-500 animate-blink'
-    : isHealthy
+    : isMainHealthy
+      ? 'bg-green-500'
+      : 'bg-red-500';
+
+  const slaveStatusColor = slaveHealthLoading
+    ? 'bg-yellow-500 animate-blink'
+    : isSlaveHealthy
       ? 'bg-green-500'
       : 'bg-red-500';
 
   // Function to copy logs to clipboard
-  const copyLogs = () => {
+  const copyLogs = (logs: any) => {
     if (logs) {
       navigator.clipboard
         .writeText(JSON.stringify(logs, null, 2))
@@ -136,17 +163,24 @@ export function DeploymentFooterClient() {
             let timestamp = 'Unknown time';
             if (log.timestamp) {
               const date = new Date(log.timestamp);
-              // Format as DD/MM/YYYY, HH:MM:SS
-              timestamp = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}, ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`;
+              timestamp = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1)
+                .toString()
+                .padStart(2, '0')}/${date.getFullYear()}, ${date
+                .getHours()
+                .toString()
+                .padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date
+                .getSeconds()
+                .toString()
+                .padStart(2, '0')}`;
             }
 
             // Get the message
             const message = log.message || 'No message';
 
-            // Return formatted log entry (timestamp and message on same line to save space)
+            // Return formatted log entry
             return `${timestamp}\n${message}`;
           })
-          .join('\n\n'); // Join with single line break between entries
+          .join('\n\n');
       }
 
       // Fallback for unexpected log structure
@@ -157,91 +191,133 @@ export function DeploymentFooterClient() {
     }
   };
 
+  const LogsDialog = ({
+    isOpen,
+    onOpenChange,
+    logs,
+    loading,
+    error,
+    fetchLogs,
+    title,
+  }: {
+    isOpen: boolean;
+    onOpenChange: (open: boolean) => void;
+    logs: any;
+    loading: boolean;
+    error: string | null;
+    fetchLogs: () => void;
+    title: string;
+  }) => (
+    <DialogContent
+      className="max-w-[90%] min-w-[75vw] w-[1000px] max-h-[80vh] overflow-hidden bg-gray-900 dark:bg-gray-900 flex flex-col relative"
+      style={{
+        position: 'fixed',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+      }}
+    >
+      <button
+        onClick={() => onOpenChange(false)}
+        className="absolute top-3 right-3 z-20 rounded-full p-1 bg-gray-800 hover:bg-gray-700 text-gray-100 focus:outline-none"
+        aria-label="Close"
+      >
+        <X className="h-5 w-5" />
+      </button>
+
+      <DialogHeader className="sticky top-0 z-10 bg-gray-900 dark:bg-gray-900 py-1 border-b border-gray-800">
+        <DialogTitle className="text-gray-100 dark:text-white">{title}</DialogTitle>
+      </DialogHeader>
+
+      <div className="flex-grow overflow-y-auto px-4">
+        {loading ? (
+          <p className="text-gray-400 dark:text-gray-400">{t('loading_logs')}</p>
+        ) : error ? (
+          <p className="text-red-400 dark:text-red-400">{t('error_logs', { message: error })}</p>
+        ) : logs ? (
+          <div className="bg-gray-800 p-2 rounded-md text-xs text-gray-100 dark:text-white">
+            <pre
+              style={{
+                whiteSpace: 'pre-wrap',
+                wordWrap: 'break-word',
+                maxWidth: '100%',
+                overflow: 'hidden',
+                fontFamily: 'monospace',
+                lineHeight: '1.3',
+              }}
+            >
+              {parseLogsForDisplay(logs)}
+            </pre>
+          </div>
+        ) : (
+          <p className="text-gray-400 dark:text-gray-400">{t('no_logs')}</p>
+        )}
+      </div>
+
+      <div className="sticky z-10 bg-gray-900 dark:bg-gray-900 py-1 border-t border-gray-800 px-4">
+        <div className="flex justify-end space-x-2">
+          <Button onClick={fetchLogs} variant="secondary" size="sm" disabled={loading}>
+            <RefreshCw className="w-4 h-4 mr-1" />
+            {t('refresh_logs')}
+          </Button>
+          <Button
+            onClick={() => copyLogs(logs)}
+            variant="secondary"
+            size="sm"
+            disabled={!logs || loading}
+          >
+            <Copy className="w-4 h-4 mr-1" />
+            {copied ? t('copied_logs') : t('copy_logs')}
+          </Button>
+        </div>
+      </div>
+    </DialogContent>
+  );
+
   return (
     <footer className="flex items-center justify-end p-4 border-t border-gray-200">
-      <div className="flex items-center space-x-2">
-        <span className={cn('w-3 h-3 rounded-full', statusColor)} />
-        <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="sm">
-              {t('render_logs_button')}
-            </Button>
-          </DialogTrigger>
-          <DialogContent
-            className="max-w-[90%] min-w-[75vw] w-[1000px] max-h-[80vh] overflow-hidden bg-gray-900 dark:bg-gray-900 flex flex-col relative"
-            style={{
-              position: 'fixed',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-            }}
-          >
-            {/* Custom close button as overlay */}
-            <button
-              onClick={() => setModalOpen(false)}
-              className="absolute top-3 right-3 z-20 rounded-full p-1 bg-gray-800 hover:bg-gray-700 text-gray-100 focus:outline-none"
-              aria-label=""
-            >
-              <X className="h-5 w-5" />
-            </button>
+      <div className="flex items-center space-x-4">
+        {/* Main Logs Section */}
+        <div className="flex items-center space-x-2">
+          <span className={cn('w-3 h-3 rounded-full', mainStatusColor)} />
+          <Dialog open={mainModalOpen} onOpenChange={setMainModalOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                Render Main
+              </Button>
+            </DialogTrigger>
+            <LogsDialog
+              isOpen={mainModalOpen}
+              onOpenChange={setMainModalOpen}
+              logs={mainLogs}
+              loading={mainLogsLoading}
+              error={mainLogsError}
+              fetchLogs={fetchMainLogs}
+              title="Render Main Service Logs"
+            />
+          </Dialog>
+        </div>
 
-            <DialogHeader className="sticky top-0 z-10 bg-gray-900 dark:bg-gray-900 py-1 border-b border-gray-800">
-              <DialogTitle className="text-gray-100 dark:text-white">
-                {t('render_logs_title')}
-              </DialogTitle>
-            </DialogHeader>
-
-            <div className="flex-grow overflow-y-auto px-4">
-              {logsLoading ? (
-                <p className="text-gray-400 dark:text-gray-400">{t('loading_logs')}</p>
-              ) : logsError ? (
-                <p className="text-red-400 dark:text-red-400">
-                  {t('error_logs', { message: logsError })}
-                </p>
-              ) : logs ? (
-                <div className="bg-gray-800 p-2 rounded-md text-xs text-gray-100 dark:text-white">
-                  <pre
-                    style={{
-                      whiteSpace: 'pre-wrap',
-                      wordWrap: 'break-word',
-                      maxWidth: '100%',
-                      overflow: 'hidden',
-                      fontFamily: 'monospace',
-                      lineHeight: '1.3',
-                    }}
-                  >
-                    {parseLogsForDisplay(logs)}
-                  </pre>
-                </div>
-              ) : (
-                <p className="text-gray-400 dark:text-gray-400">{t('no_logs')}</p>
-              )}
-            </div>
-
-            <div className="sticky z-10 bg-gray-900 dark:bg-gray-900 py-1 border-t border-gray-800 px-4">
-              <div className="flex justify-end space-x-2">
-                <Button
-                  onClick={() => fetchLogs()}
-                  variant="secondary"
-                  size="sm"
-                  disabled={logsLoading}
-                >
-                  <RefreshCw className="w-4 h-4 mr-1" />
-                  {t('refresh_logs')}
-                </Button>
-                <Button
-                  onClick={copyLogs}
-                  variant="secondary"
-                  size="sm"
-                  disabled={!logs || logsLoading}
-                >
-                  <Copy className="w-4 h-4 mr-1" />
-                  {copied ? t('copied_logs') : t('copy_logs')}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        {/* Slave Python Logs Section */}
+        <div className="flex items-center space-x-2">
+          <span className={cn('w-3 h-3 rounded-full', slaveStatusColor)} />
+          <Dialog open={slaveModalOpen} onOpenChange={setSlaveModalOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                Render Python
+              </Button>
+            </DialogTrigger>
+            <LogsDialog
+              isOpen={slaveModalOpen}
+              onOpenChange={setSlaveModalOpen}
+              logs={slaveLogs}
+              loading={slaveLogsLoading}
+              error={slaveLogsError}
+              fetchLogs={fetchSlaveLogs}
+              title="Render Python Service Logs"
+            />
+          </Dialog>
+        </div>
       </div>
       <style jsx>{`
         @keyframes blink {

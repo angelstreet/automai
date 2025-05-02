@@ -353,10 +353,6 @@ async function setupSchedules() {
         await redis.lpush('jobs_queue', job);
         console.log(`Scheduled job queued for config ${id}`);
       });
-    } else {
-      redis.lpush('jobs_queue', job).then(() => {
-        console.log(`Immediate job queued for config ${id}`);
-      });
     }
   });
 }
