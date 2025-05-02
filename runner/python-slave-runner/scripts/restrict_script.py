@@ -1,29 +1,31 @@
 # python-runner/scripts/restrict_script.py
 import sys
 from RestrictedPython import compile_restricted, safe_globals, utility_builtins
-from RestrictedPython.PrintCollector import PrintCollector
 
 def create_safe_globals():
     restricted_globals = safe_globals.copy()
     restricted_globals.update(utility_builtins)
     restricted_globals['__builtins__'] = utility_builtins
 
-    # Create a PrintCollector instance
-    print_collector = PrintCollector()
+    # Custom print collector
+    print_outputs = []
 
-    # Use the PrintCollector instance directly as _print_
-    restricted_globals['_print_'] = print_collector
+    def _print_(value):
+        print_outputs.append(str(value))
+        return value  # RestrictedPython expects _print_ to return the value
+
+    restricted_globals['_print_'] = _print_
     restricted_globals['_getattr_'] = getattr  # Required for some RestrictedPython internals
 
-    return restricted_globals, print_collector
+    return restricted_globals, print_outputs
 
 def execute_script(script):
     try:
         code = compile_restricted(script, '<user_script>', 'exec')
-        safe_env, print_collector = create_safe_globals()
+        safe_env, print_outputs = create_safe_globals()
         exec(code, safe_env)
-        # Retrieve output from PrintCollector
-        output = print_collector.text()
+        # Join collected print outputs
+        output = "\n".join(print_outputs) + ("\n" if print_outputs else "")
         return {"status": "success", "output": output}
     except SyntaxError as e:
         return {"status": "error", "message": f"Syntax error: {str(e)}"}
