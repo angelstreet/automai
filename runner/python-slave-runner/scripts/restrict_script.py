@@ -11,6 +11,7 @@ def is_safe_node(node):
     return isinstance(node, allowed_nodes)
 
 def execute_script(script, venv_path=None):
+    site_packages = None
     try:
         tree = ast.parse(script)
         for node in ast.walk(tree):
@@ -20,7 +21,6 @@ def execute_script(script, venv_path=None):
         stdout = StringIO()
         sys.stdout = stdout
 
-        site_packages = None
         if venv_path and os.path.exists(venv_path):
             site_packages = os.path.join(venv_path, "lib", f"python{sys.version_info.major}.{sys.version_info.minor}", "site-packages")
             if os.path.exists(site_packages):
