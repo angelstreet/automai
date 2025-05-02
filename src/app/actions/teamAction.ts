@@ -672,6 +672,36 @@ export const assignResourceToTeam = cache(
 );
 
 /**
+ * Get teams by tenant ID
+ */
+const getTeamsByTenantId = cache(async (tenantId: string): Promise<ActionResult<Team[]>> => {
+  try {
+    console.log(`[@action:team:getTeamsByTenantId] Getting teams for tenant: ${tenantId}`);
+    const cookieStore = await cookies();
+
+    // Use the proper function from teamDb
+    const { getTeamsByTenantId: dbGetTeamsByTenantId } = await import('@/lib/db/teamDb');
+
+    const result = await dbGetTeamsByTenantId(tenantId, cookieStore);
+
+    if (!result.success) {
+      console.error(`[@action:team:getTeamsByTenantId] Error: ${result.error}`);
+      return { success: false, error: result.error };
+    }
+
+    const teams = result.data || [];
+    console.log(`[@action:team:getTeamsByTenantId] Found ${teams.length} teams`);
+    return { success: true, data: teams };
+  } catch (error: any) {
+    console.error(`[@action:team:getTeamsByTenantId] Error:`, error);
+    return {
+      success: false,
+      error: error.message || 'Failed to get teams for tenant',
+    };
+  }
+});
+
+/**
  * Get resource counts for a tenant
  */
 export const getTenantResourceCounts = cache(async (tenantId: string) => {
@@ -684,11 +714,27 @@ export const getTenantResourceCounts = cache(async (tenantId: string) => {
       ? (repoResult.data || []).filter((repo) => repo.tenant_id === tenantId).length
       : 0;
 
-    // Get deployment count using jobConfigurationDb - filter in memory
-    const deploymentResult = await jobConfigurationDb.getJobConfigsByTeamId('', cookieStore);
-    const deployments = deploymentResult.success
-      ? (deploymentResult.data || []).filter((d: any) => d.tenant_id === tenantId).length
-      : 0;
+    // Get deployment count by querying teams directly for this tenant
+    // Use our custom function to get teams by tenant
+    const teamsResult = await getTeamsByTenantId(tenantId);
+    let deployments = 0;
+
+    // If we have teams, get job configs for each team
+    if (teamsResult.success && teamsResult.data && teamsResult.data.length > 0) {
+      // For each team, get job configs
+      const allDeployments = await Promise.all(
+        teamsResult.data.map((team: any) =>
+          jobConfigurationDb.getJobConfigsByTeamId(team.id, cookieStore),
+        ),
+      );
+
+      // Count all successful deployments
+      deployments = allDeployments.reduce(
+        (total: number, result: any) =>
+          total + (result.success && result.data ? result.data.length : 0),
+        0,
+      );
+    }
 
     const counts = {
       repositories: repositories,

@@ -377,3 +377,55 @@ export async function setUserActiveTeam(
     };
   }
 }
+
+/**
+ * Get teams by tenant ID
+ */
+export async function getTeamsByTenantId(
+  tenantId: string,
+  cookieStore?: any,
+): Promise<DbResponse<Team[]>> {
+  try {
+    console.log(`[@db:teamDb:getTeamsByTenantId] Getting teams for tenant: ${tenantId}`);
+    const supabase = await createClient(cookieStore);
+
+    const { data, error } = await supabase
+      .from('teams')
+      .select(
+        `
+        *,
+        tenants:tenant_id(name)
+      `,
+      )
+      .eq('tenant_id', tenantId);
+
+    if (error) throw error;
+
+    // If no data, return early
+    if (!data || data.length === 0) {
+      console.log(`[@db:teamDb:getTeamsByTenantId] No teams found for tenant: ${tenantId}`);
+      return {
+        success: true,
+        data: [],
+      };
+    }
+
+    // Create an array of plain serializable objects
+    const plainTeams = data.map((rawTeam) => createSerializableTeam(rawTeam));
+
+    console.log(
+      `[@db:teamDb:getTeamsByTenantId] Retrieved ${plainTeams.length} teams for tenant: ${tenantId}`,
+    );
+
+    return {
+      success: true,
+      data: plainTeams,
+    };
+  } catch (error) {
+    console.error('[@db:teamDb:getTeamsByTenantId] Error fetching teams:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to fetch teams for tenant',
+    };
+  }
+}
