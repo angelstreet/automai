@@ -3,14 +3,15 @@ import sys
 import io
 from contextlib import redirect_stdout
 from RestrictedPython import compile_restricted, safe_globals, utility_builtins
+from RestrictedPython.PrintCollector import PrintCollector
 
 def create_safe_globals():
     restricted_globals = safe_globals.copy()
     restricted_globals.update(utility_builtins)
     restricted_globals['__builtins__'] = utility_builtins
 
-    # Explicitly allow print by defining _print_ and _getattr_
-    restricted_globals['_print_'] = print  # Map _print_ to Python's print
+    # Use PrintCollector for print statements
+    restricted_globals['_print_'] = PrintCollector
     restricted_globals['_getattr_'] = getattr  # Required for some RestrictedPython internals
 
     return restricted_globals
