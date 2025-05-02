@@ -15,6 +15,7 @@ import {
   AlertDialogTitle,
 } from '@/components/shadcn/alert-dialog';
 import { useToast } from '@/components/shadcn/use-toast';
+import { useDeployments } from '@/hooks/useDeployment';
 import { Deployment } from '@/types/component/deploymentComponentType';
 import { Repository } from '@/types/component/repositoryComponentType';
 
@@ -23,7 +24,6 @@ import { DeploymentActionsClient } from './DeploymentActionsClient';
 import { DeploymentTableClient } from './DeploymentTableClient';
 import { EditDeploymentDialogClient } from './EditDeploymentDialogClient';
 import { JobRunOutputDialogClient } from './JobRunOutputDialogClient';
-import { useDeploymentActions } from './useDeploymentActions';
 
 interface DeploymentListProps {
   initialDeployments: Deployment[];
@@ -65,7 +65,7 @@ export function DeploymentContentClient({
     handleRunDeployment,
     handleDuplicateClick,
     handleToggleActiveClick,
-  } = useDeploymentActions(toast, setDeployments);
+  } = useDeployments(toast, setDeployments);
 
   // Setup auto-refresh every 30 seconds
   useEffect(() => {

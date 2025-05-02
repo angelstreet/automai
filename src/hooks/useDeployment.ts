@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { refreshDeployments } from '@/app/actions/jobsAction';
 import { Deployment } from '@/types/component/deploymentComponentType';
 
-export function useDeployment(
+export function useDeployments(
   toast: any,
   setDeployments: React.Dispatch<React.SetStateAction<Deployment[]>>,
 ) {
@@ -36,13 +36,11 @@ export function useDeployment(
 
   const handleConfirmDelete = async (selectedDeployment: Deployment | null): Promise<void> => {
     if (!selectedDeployment) {
-      console.error(
-        '[useDeploymentActions:handleConfirmDelete] No deployment selected for deletion',
-      );
+      console.error('[useDeployments:handleConfirmDelete] No deployment selected for deletion');
       return;
     }
 
-    console.log('[useDeploymentActions:handleConfirmDelete] Confirming deletion of deployment:', {
+    console.log('[useDeployments:handleConfirmDelete] Confirming deletion of deployment:', {
       id: selectedDeployment.id,
       name: selectedDeployment.name,
     });
@@ -52,24 +50,15 @@ export function useDeployment(
       const idToDelete = selectedDeployment.id;
 
       setActionInProgress(idToDelete);
-      console.log(
-        '[useDeploymentActions:handleConfirmDelete] Calling deleteJob with ID:',
-        idToDelete,
-      );
+      console.log('[useDeployments:handleConfirmDelete] Calling deleteJob with ID:', idToDelete);
 
       // Make sure we're calling the server action with a direct string argument
       const { deleteJob } = await import('@/app/actions/jobsAction');
       const result = await deleteJob(String(idToDelete));
-      console.log(
-        '[useDeploymentActions:handleConfirmDelete] Delete result:',
-        JSON.stringify(result),
-      );
+      console.log('[useDeployments:handleConfirmDelete] Delete result:', JSON.stringify(result));
 
       if (result && result.success) {
-        console.log(
-          '[useDeploymentActions:handleConfirmDelete] Delete successful for ID:',
-          idToDelete,
-        );
+        console.log('[useDeployments:handleConfirmDelete] Delete successful for ID:', idToDelete);
 
         toast({
           title: 'Deployment Deleted',
@@ -83,7 +72,7 @@ export function useDeployment(
         // Use the server action to revalidate the deployment page
         await refreshDeployments();
       } else {
-        console.error('[useDeploymentActions:handleConfirmDelete] Delete failed:', {
+        console.error('[useDeployments:handleConfirmDelete] Delete failed:', {
           id: selectedDeployment.id,
           error: result?.error || 'Unknown error',
         });
@@ -94,7 +83,7 @@ export function useDeployment(
         });
       }
     } catch (error: any) {
-      console.error('[useDeploymentActions:handleConfirmDelete] Exception during delete:', {
+      console.error('[useDeployments:handleConfirmDelete] Exception during delete:', {
         id: selectedDeployment?.id,
         error: error.message || 'Unknown error',
         stack: error.stack,
@@ -111,7 +100,7 @@ export function useDeployment(
   };
 
   const handleRunDeployment = async (deployment: Deployment): Promise<void> => {
-    console.log('[useDeploymentActions:handleRunDeployment] Running deployment:', {
+    console.log('[useDeployments:handleRunDeployment] Running deployment:', {
       id: deployment.id,
       name: deployment.name,
     });
@@ -124,7 +113,7 @@ export function useDeployment(
       const { startJob } = await import('@/app/actions/jobsAction');
       const result = await startJob(deployment.id.toString(), 'system');
 
-      console.log('[useDeploymentActions:handleRunDeployment] Run job result:', result);
+      console.log('[useDeployments:handleRunDeployment] Run job result:', result);
 
       if (result && result.success) {
         toast({
@@ -136,7 +125,7 @@ export function useDeployment(
         // Force refresh the deployments list
         await refreshDeployments();
       } else {
-        console.error('[useDeploymentActions:handleRunDeployment] Run failed:', {
+        console.error('[useDeployments:handleRunDeployment] Run failed:', {
           id: deployment.id,
           error: result?.error || 'Unknown error',
         });
@@ -147,7 +136,7 @@ export function useDeployment(
         });
       }
     } catch (error: any) {
-      console.error('[useDeploymentActions:handleRunDeployment] Exception during run:', {
+      console.error('[useDeployments:handleRunDeployment] Exception during run:', {
         id: deployment.id,
         error: error.message || 'Unknown error',
         stack: error.stack,
@@ -164,7 +153,7 @@ export function useDeployment(
 
   const handleEditClick = (deployment: Deployment, e: React.MouseEvent) => {
     e.stopPropagation();
-    console.log('[useDeploymentActions:handleEditClick] Edit deployment:', {
+    console.log('[useDeployments:handleEditClick] Edit deployment:', {
       id: deployment.id,
       name: deployment.name,
     });
@@ -180,7 +169,7 @@ export function useDeployment(
 
   const handleConfigClick = (deployment: Deployment, e: React.MouseEvent) => {
     e.stopPropagation();
-    console.log('[useDeploymentActions:handleConfigClick] Configure deployment:', {
+    console.log('[useDeployments:handleConfigClick] Configure deployment:', {
       id: deployment.id,
       name: deployment.name,
     });
@@ -196,7 +185,7 @@ export function useDeployment(
 
   const handleOutputClick = (deployment: Deployment, e: React.MouseEvent) => {
     e.stopPropagation();
-    console.log('[useDeploymentActions:handleOutputClick] View output for deployment:', {
+    console.log('[useDeployments:handleOutputClick] View output for deployment:', {
       id: deployment.id,
       name: deployment.name,
     });
@@ -215,7 +204,7 @@ export function useDeployment(
     e: React.MouseEvent,
   ): Promise<void> => {
     e.stopPropagation();
-    console.log('[useDeploymentActions:handleDuplicateClick] Duplicating deployment:', {
+    console.log('[useDeployments:handleDuplicateClick] Duplicating deployment:', {
       id: deployment.id,
       name: deployment.name,
     });
@@ -237,7 +226,7 @@ export function useDeployment(
         // Force refresh the deployments list
         await refreshDeployments();
       } else {
-        console.error('[useDeploymentActions:handleDuplicateClick] Duplication failed:', {
+        console.error('[useDeployments:handleDuplicateClick] Duplication failed:', {
           id: deployment.id,
           error: result?.error || 'Unknown error',
         });
@@ -261,7 +250,7 @@ export function useDeployment(
         }
       }
     } catch (error: any) {
-      console.error('[useDeploymentActions:handleDuplicateClick] Exception during duplication:', {
+      console.error('[useDeployments:handleDuplicateClick] Exception during duplication:', {
         id: deployment.id,
         error: error.message || 'Unknown error',
         stack: error.stack,
@@ -283,7 +272,7 @@ export function useDeployment(
     e.stopPropagation();
     const newStatus = !deployment.is_active;
 
-    console.log('[useDeploymentActions:handleToggleActiveClick] Toggling deployment status:', {
+    console.log('[useDeployments:handleToggleActiveClick] Toggling deployment status:', {
       id: deployment.id,
       name: deployment.name,
       currentStatus: deployment.is_active,
@@ -312,7 +301,7 @@ export function useDeployment(
         // Force refresh the deployments list
         await refreshDeployments();
       } else {
-        console.error('[useDeploymentActions:handleToggleActiveClick] Toggle failed:', {
+        console.error('[useDeployments:handleToggleActiveClick] Toggle failed:', {
           id: deployment.id,
           error: result?.error || 'Unknown error',
         });
@@ -323,7 +312,7 @@ export function useDeployment(
         });
       }
     } catch (error: any) {
-      console.error('[useDeploymentActions:handleToggleActiveClick] Exception during toggle:', {
+      console.error('[useDeployments:handleToggleActiveClick] Exception during toggle:', {
         id: deployment.id,
         error: error.message || 'Unknown error',
         stack: error.stack,
