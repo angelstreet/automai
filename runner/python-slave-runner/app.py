@@ -12,6 +12,7 @@ import subprocess
 app = Flask(__name__)
 
 BASE_REPO_PATH = "/opt/render/project/src/repo"
+LOCAL_SCRIPTS_PATH = "/opt/render/project/src/runner/python-slave-runner/scripts"
 
 def get_repo_path(repo_url):
     # Create unique path based on repo_url hash
@@ -136,7 +137,7 @@ def execute():
             venv_path = venv_result
         else:
             # Fallback to local scripts folder
-            full_script_path = os.path.join("/opt/render/project/src/scripts", script_path)
+            full_script_path = os.path.join(LOCAL_SCRIPTS_PATH, script_path)
             venv_path = None
 
         if not os.path.exists(full_script_path):
