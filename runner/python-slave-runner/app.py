@@ -2,7 +2,6 @@ from flask import Flask, request, jsonify
 from datetime import datetime
 from scripts.restrict_script import execute_script
 import os
-from func_timeout import func_set_timeout, FunctionTimedOut
 
 app = Flask(__name__)
 
@@ -20,7 +19,6 @@ def execute():
                 "duration_seconds": 0
             }), 400
 
-        # Verify script path
         if not os.path.exists(script_path):
             return jsonify({
                 "status": "error",
@@ -30,26 +28,18 @@ def execute():
                 "duration_seconds": 0
             }), 400
 
-        # Record start time
         start_time = datetime.utcnow()
         start_time_str = start_time.isoformat() + 'Z'
 
-        # Read and execute the script with a timeout
         with open(script_path, 'r') as f:
             script_content = f.read()
 
-        @func_set_timeout(5)  # 5-second timeout
-        def run_script():
-            return execute_script(script_content)
+        result = execute_script(script_content)
 
-        result = run_script()
-
-        # Record end time
         end_time = datetime.utcnow()
         end_time_str = end_time.isoformat() + 'Z'
         duration = (end_time - start_time).total_seconds()
 
-        # Format response
         return jsonify({
             "status": result["status"],
             "output": {
@@ -70,15 +60,6 @@ def execute():
             "end_time": end_time.isoformat() + 'Z',
             "duration_seconds": 0
         }), 400
-    except FunctionTimedOut:
-        end_time = datetime.utcnow()
-        return jsonify({
-            "status": "error",
-            "message": "Script execution timed out",
-            "start_time": datetime.utcnow().isoformat() + 'Z',
-            "end_time": end_time.isoformat() + 'Z',
-            "duration_seconds": 0
-        }), 408
     except Exception as e:
         end_time = datetime.utcnow()
         return jsonify({
@@ -90,4 +71,4 @@ def execute():
         }), 500
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)  # Render default port
+    app.run(host="0.0.0.0", port=10000)
