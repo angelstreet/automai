@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   try {
-    console.log('[@api:render-logs] Starting to fetch logs from Render service');
+    console.log('[@api:render-main-logs] Starting to fetch logs from Render service');
     const renderApiEndpoint = process.env.RENDER_API_ENDPOINT;
     const renderApiKey = process.env.RENDER_API_KEY;
     const renderApiOwner = process.env.RENDER_API_OWNER;
@@ -10,7 +10,7 @@ export async function GET() {
 
     if (!renderApiEndpoint || !renderApiKey || !renderApiOwner) {
       console.error(
-        '[@api:render-logs] Render API endpoint, key, or owner is not defined. Endpoint defined: ',
+        '[@api:render-main-logs] Render API endpoint, key, or owner is not defined. Endpoint defined: ',
         !!renderApiEndpoint,
         ', Key defined: ',
         !!renderApiKey,
@@ -27,10 +27,9 @@ export async function GET() {
     const cleanedEndpoint = renderApiEndpoint.replace(/\/+$/, '');
 
     // Construct the URL with query parameters
-
     const url = `${cleanedEndpoint}/logs?ownerId=${renderApiOwner}&direction=backward&resource=${serviceId}&limit=100`;
 
-    console.log('[@api:render-logs] Fetching logs for service:', serviceId, 'with URL:', url);
+    console.log('[@api:render-main-logs] Fetching logs for service:', serviceId, 'with URL:', url);
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -42,11 +41,11 @@ export async function GET() {
 
     if (response.ok) {
       const data = await response.json();
-      console.log('[@api:render-logs] Successfully fetched logs for service:', serviceId);
+      console.log('[@api:render-main-logs] Successfully fetched logs for service:', serviceId);
       return NextResponse.json({ success: true, message: 'Logs fetched successfully', data });
     } else {
       const errorText = await response.text();
-      console.error('[@api:render-logs] Failed to fetch logs:', response.status, errorText);
+      console.error('[@api:render-main-logs] Failed to fetch logs:', response.status, errorText);
       return NextResponse.json({
         success: false,
         error: 'Failed to fetch logs from Render',
@@ -54,7 +53,10 @@ export async function GET() {
       });
     }
   } catch (error: any) {
-    console.error('[@api:render-logs] Error fetching logs from Render service:', error.message);
+    console.error(
+      '[@api:render-main-logs] Error fetching logs from Render service:',
+      error.message,
+    );
     return NextResponse.json({ success: false, error: 'Failed to fetch logs from Render service' });
   }
 }

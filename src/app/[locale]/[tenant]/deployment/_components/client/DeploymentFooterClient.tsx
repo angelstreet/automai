@@ -64,7 +64,7 @@ function useRenderLogs(fetchOnDemand: boolean) {
       console.log('[@component:DeploymentFooterClient] Fetching Render logs');
       setLoading(true);
       setError(null);
-      const response = await fetch('/api/render-logs');
+      const response = await fetch('/api/render-main-logs');
       if (!response.ok) {
         throw new Error(`Logs fetch failed with status: ${response.status}`);
       }
