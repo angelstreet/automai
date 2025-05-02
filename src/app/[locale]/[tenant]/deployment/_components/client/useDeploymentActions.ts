@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { refreshDeployments } from '@/app/actions/jobsAction';
 import { Deployment } from '@/types/component/deploymentComponentType';
 
-export function useDeploymentActions(
+export function useDeployment(
   toast: any,
   setDeployments: React.Dispatch<React.SetStateAction<Deployment[]>>,
 ) {
@@ -241,11 +241,24 @@ export function useDeploymentActions(
           id: deployment.id,
           error: result?.error || 'Unknown error',
         });
-        toast({
-          title: 'Error',
-          description: result?.error || 'Failed to duplicate job',
-          variant: 'destructive',
-        });
+        const errorMessage = result?.error || 'Failed to duplicate job';
+        // Check if the error might be due to a name conflict
+        if (
+          errorMessage.toLowerCase().includes('name') ||
+          errorMessage.toLowerCase().includes('unique')
+        ) {
+          toast({
+            title: 'Error',
+            description: `${errorMessage}. Try renaming the deployment before duplicating.`,
+            variant: 'destructive',
+          });
+        } else {
+          toast({
+            title: 'Error',
+            description: errorMessage,
+            variant: 'destructive',
+          });
+        }
       }
     } catch (error: any) {
       console.error('[useDeploymentActions:handleDuplicateClick] Exception during duplication:', {

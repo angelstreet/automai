@@ -144,28 +144,10 @@ export async function createJob(formData: JobFormData, hostDetails?: any[]) {
       description: formData.description || null,
       team_id: formData.team_id,
       creator_id: formData.creator_id,
-      repository_id: formData.repository_id || null,
-      branch: formData.branch || null,
-
-      // Scripts and hosts
-      scripts_path: formData.scripts_path || [],
-      scripts_parameters: formData.scripts_parameters || [],
-      host_ids: formData.host_ids || [],
-
-      // Environment variables
-      environment_vars: formData.environment_vars || {},
-
-      // Schedule
       cron_expression: formData.cron_expression || null,
       repeat_count: formData.repeat_count || null,
-
-      // Status
       is_active: formData.is_active !== undefined ? formData.is_active : true,
-
-      // Config - ensure we have a valid JSON object
       config: configJson,
-
-      // Creation timestamp
       created_at: formData.created_at || new Date().toISOString(),
     };
 
@@ -670,14 +652,8 @@ export async function duplicateDeployment(deploymentId: string) {
     const formData: JobFormData = {
       name: newName,
       description: existingDeployment.description || undefined,
-      repository_id: existingDeployment.repository_id || undefined,
-      branch: existingDeployment.branch || undefined,
       team_id: existingDeployment.team_id,
       creator_id: existingDeployment.creator_id,
-      scripts_path: existingDeployment.scripts_path || [],
-      scripts_parameters: existingDeployment.scripts_parameters || [],
-      host_ids: existingDeployment.host_ids || [],
-      environment_vars: existingDeployment.environment_vars || {},
       cron_expression: existingDeployment.cron_expression || undefined,
       repeat_count: existingDeployment.repeat_count || undefined,
       is_active: existingDeployment.is_active || false,
