@@ -63,9 +63,6 @@ export function DeploymentContentClient({
     handleDeleteClick,
     handleConfirmDelete,
     handleRunDeployment,
-    handleEditClick,
-    handleConfigClick,
-    handleOutputClick,
     handleDuplicateClick,
     handleToggleActiveClick,
   } = useDeploymentActions(toast, setDeployments);
@@ -222,19 +219,28 @@ export function DeploymentContentClient({
   };
 
   const onEditClick = (deployment: Deployment, e: React.MouseEvent) => {
-    handleEditClick(deployment, e);
+    e.preventDefault();
+    e.stopPropagation();
+    // Do not call handleEditClick to prevent navigation
+    // handleEditClick(deployment, e);
     setDeploymentToEdit(deployment);
     setShowEditDialog(true);
   };
 
   const onConfigClick = (deployment: Deployment, e: React.MouseEvent) => {
-    handleConfigClick(deployment, e);
+    e.preventDefault();
+    e.stopPropagation();
+    // Do not call handleConfigClick to prevent navigation
+    // handleConfigClick(deployment, e);
     setSelectedDeploymentForConfig(deployment);
     setShowConfigDialog(true);
   };
 
   const onOutputClick = async (deployment: Deployment, e: React.MouseEvent) => {
-    handleOutputClick(deployment, e);
+    e.preventDefault();
+    e.stopPropagation();
+    // Do not call handleOutputClick to prevent navigation
+    // handleOutputClick(deployment, e);
     try {
       const { getJobRunsForConfig } = await import('@/app/actions/jobsAction');
       const jobRunsResult = await getJobRunsForConfig(deployment.id);
