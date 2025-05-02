@@ -9,13 +9,10 @@ def create_safe_globals():
     restricted_globals['__builtins__'] = utility_builtins
 
     # Create a PrintCollector instance
-    print_collector = PrintCollector(_inplace=True)
+    print_collector = PrintCollector()
 
-    # Wrap PrintCollector to handle RestrictedPython's print calls
-    def _print_wrapper(*args, **kwargs):
-        return print_collector(*args, **kwargs)
-
-    restricted_globals['_print_'] = _print_wrapper
+    # Use the PrintCollector instance directly as _print_
+    restricted_globals['_print_'] = print_collector
     restricted_globals['_getattr_'] = getattr  # Required for some RestrictedPython internals
 
     return restricted_globals, print_collector
