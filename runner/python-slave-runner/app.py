@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from datetime import datetime
-from restrict_script import execute_script
+from scripts.restrict_script import execute_script
 import os
 import timeout_decorator
 
