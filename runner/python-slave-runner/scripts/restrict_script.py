@@ -13,16 +13,18 @@ def create_safe_globals():
             self.value = value
 
         def _call_print(self, _globals):
+            print(f"DEBUG: _call_print invoked with value: {self.value}", file=sys.stderr)
             print_outputs.append(self.value)
             return self.value
 
     def _print_(*args):
         output = " ".join(str(arg) for arg in args)
+        print(f"DEBUG: _print_ called with output: {output}", file=sys.stderr)
         return Printed(output)
 
     restricted_globals['_print_'] = _print_
-    # Only include _getattr_ if strictly needed (optional for now)
-    restricted_globals['_getattr_'] = getattr
+    # Removed _getattr_ to avoid interference
+    # restricted_globals['_getattr_'] = getattr
 
     return restricted_globals, print_outputs
 
