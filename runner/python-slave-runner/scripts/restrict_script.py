@@ -27,11 +27,15 @@ def create_safe_globals():
 
 def execute_script(script):
     try:
+        # Suppress SyntaxWarning for 'printed' variable
+        import warnings
+        warnings.filterwarnings("ignore", category=SyntaxWarning)
+
         code = compile_restricted(script, '<user_script>', 'exec')
         safe_env, print_outputs = create_safe_globals()
         exec(code, safe_env)
-        # Join collected print outputs
-        output = "\ออนอ" if print_outputs else ""
+        # Join collected print outputs correctly
+        output = "\n".join(print_outputs) + ("\n" if print_outputs else "")
         return {"status": "success", "output": output}
     except SyntaxError as e:
         return {"status": "error", "message": f"Syntax error: {str(e)}"}
