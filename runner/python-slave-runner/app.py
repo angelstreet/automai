@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 from datetime import datetime
 from scripts.restrict_script import execute_script
 import os
-import timeout_decorator
+from func_timeout import func_set_timeout, FunctionTimedOut
 
 app = Flask(__name__)
 
@@ -38,7 +38,7 @@ def execute():
         with open(script_path, 'r') as f:
             script_content = f.read()
 
-        @timeout_decorator.timeout(5)  # 5-second timeout
+        @func_set_timeout(5)  # 5-second timeout
         def run_script():
             return execute_script(script_content)
 
@@ -70,7 +70,7 @@ def execute():
             "end_time": end_time.isoformat() + 'Z',
             "duration_seconds": 0
         }), 400
-    except timeout_decorator.TimeoutError:
+    except FunctionTimedOut:
         end_time = datetime.utcnow()
         return jsonify({
             "status": "error",
