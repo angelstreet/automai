@@ -716,3 +716,49 @@ export async function duplicateDeployment(deploymentId: string) {
     };
   }
 }
+
+/**
+ * Toggle the active status of a job
+ */
+export async function toggleJobActiveStatus(id: string, isActive: boolean) {
+  try {
+    console.log(
+      `[@action:jobsAction:toggleJobActiveStatus] Toggling job with ID: "${id}" to ${isActive ? 'active' : 'inactive'}`,
+    );
+
+    if (!id) {
+      console.error('[@action:jobsAction:toggleJobActiveStatus] ERROR: No job ID provided');
+      return {
+        success: false,
+        error: 'No job ID provided',
+      };
+    }
+
+    const cookieStore = await cookies();
+    const { updateJobConfiguration } = await import('@/lib/db/jobsConfigurationDb');
+
+    // Update only the is_active field
+    const result = await updateJobConfiguration(id, { is_active: isActive }, cookieStore);
+
+    if (result.success) {
+      console.log(
+        `[@action:jobsAction:toggleJobActiveStatus] Successfully ${isActive ? 'enabled' : 'disabled'} job: ${id}`,
+      );
+
+      // Revalidate the deployment pages after a successful update
+      revalidatePath('/[locale]/[tenant]/deployment', 'page');
+    } else {
+      console.error(
+        `[@action:jobsAction:toggleJobActiveStatus] Failed to toggle job status: ${result.error}`,
+      );
+    }
+
+    return result;
+  } catch (error: any) {
+    console.error(`[@action:jobsAction:toggleJobActiveStatus] Error: ${error.message}`);
+    return {
+      success: false,
+      error: error.message || 'Failed to toggle job status',
+    };
+  }
+}

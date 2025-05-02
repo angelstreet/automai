@@ -10,6 +10,7 @@ import {
   MoreHorizontal,
   Edit2,
   Copy,
+  EyeOff,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -519,21 +520,10 @@ export function DeploymentContentClient({
     );
     try {
       setActionInProgress(deployment.id);
-      // Temporarily comment out the call to toggleJobActiveStatus as it might not be implemented yet
-      // const { toggleJobActiveStatus } = await import('@/app/actions/jobsAction');
+      const { toggleJobActiveStatus } = await import('@/app/actions/jobsAction');
       const newStatus = !(deployment as any).is_active;
-      // const result = await toggleJobActiveStatus(deployment.id, newStatus);
-      // Placeholder for the toggle action
-      console.log(
-        `[DeploymentContentClient:handleToggleActiveClick] Would toggle status to: ${newStatus}`,
-      );
-      toast({
-        title: 'Action Not Implemented',
-        description: 'Toggling deployment status is not yet implemented.',
-        variant: 'destructive',
-      });
-      // Remove this once the function is implemented
-      /*
+      const result = await toggleJobActiveStatus(deployment.id, newStatus);
+
       if (result.success) {
         toast({
           title: newStatus ? 'Deployment Enabled' : 'Deployment Disabled',
@@ -548,7 +538,6 @@ export function DeploymentContentClient({
           variant: 'destructive',
         });
       }
-      */
     } catch (error: any) {
       console.error(
         '[DeploymentContentClient:handleToggleActiveClick] Error toggling deployment status:',
@@ -870,7 +859,7 @@ export function DeploymentContentClient({
                                     }}
                                     disabled={actionInProgress === deployment.id}
                                   >
-                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    <EyeOff className="mr-2 h-4 w-4" />
                                     Disable
                                   </DropdownMenuItem>
                                 </>
@@ -882,7 +871,7 @@ export function DeploymentContentClient({
                                   }}
                                   disabled={actionInProgress === deployment.id}
                                 >
-                                  <PlayCircle className="mr-2 h-4 w-4" />
+                                  <Eye className="mr-2 h-4 w-4" />
                                   Enable
                                 </DropdownMenuItem>
                               )}
