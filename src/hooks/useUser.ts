@@ -4,7 +4,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 
 import { getUser, updateProfile, invalidateUserCache } from '@/app/actions/userAction';
-import type { User, Role } from '@/types/service/userServiceType';
+import { updateTeamMemberRole } from '@/app/actions/teamMemberAction';
+import type { User } from '@/types/service/userServiceType';
+import { createClient } from '@/lib/supabase/client';
 
 // Generate a unique ID for each hook instance
 let hookInstanceCounter = 0;
@@ -64,11 +66,52 @@ export function useUser(initialUser: User | null = null, componentName = 'unknow
     },
   });
 
-  // Role update mutation (uses updateProfile with role data)
+  // Direct function to get user role using Supabase client
+  const getUserRoleFromTeamMembers = async (userId: string, activeTeamId: string) => {
+    try {
+      if (!userId || !activeTeamId) return null;
+
+      const supabase = createClient();
+
+      // Get the team member record for this user and team
+      const { data, error } = await supabase
+        .from('team_members')
+        .select('role')
+        .eq('profile_id', userId)
+        .eq('team_id', activeTeamId)
+        .single();
+
+      if (error) {
+        console.error(`[@hook:useUser:getUserRoleFromTeamMembers] Error fetching role:`, error);
+        return null;
+      }
+
+      return data?.role || null;
+    } catch (error) {
+      console.error(`[@hook:useUser:getUserRoleFromTeamMembers] Error:`, error);
+      return null;
+    }
+  };
+
+  // Role update mutation (uses team member update directly)
   const { mutate: updateRole, isPending: isRoleUpdating } = useMutation({
-    mutationFn: (role: Role) => {
+    mutationFn: async (role: string) => {
       console.log(`[@hook:useUser:updateRole] #${instanceId.current} Updating user role`, role);
-      return updateProfile({ role });
+
+      // We need to get the user first
+      const userData = await getUser();
+      if (!userData) {
+        throw new Error('User not found');
+      }
+
+      // Get active team directly from user data
+      const activeTeamId = userData.active_team;
+      if (!activeTeamId) {
+        throw new Error('No active team found');
+      }
+
+      // Update the role in team_members
+      return updateTeamMemberRole(activeTeamId, userData.id, role);
     },
     onSuccess: () => {
       console.log(
@@ -94,7 +137,7 @@ export function useUser(initialUser: User | null = null, componentName = 'unknow
     },
   });
 
-  // Main user data query
+  // Main user data query - now gets role directly from team_members
   const {
     data: user,
     isLoading,
@@ -117,18 +160,27 @@ export function useUser(initialUser: User | null = null, componentName = 'unknow
           return null;
         });
 
-        // Handle case where server action returns undefined (likely due to server action hash mismatch)
-        if (result === undefined) {
+        // Handle case where server action returns undefined
+        if (!result) {
           console.error(
-            `[@hook:useUser:useUser] #${instanceId.current} Server action returned undefined`,
+            `[@hook:useUser:useUser] #${instanceId.current} Server action returned no user data`,
           );
           return null;
+        }
+
+        // Get the user's role directly using active_team from the profile
+        if (result.id && result.active_team) {
+          const role = await getUserRoleFromTeamMembers(result.id, result.active_team);
+
+          // Add the role to the user object
+          if (role) {
+            result.role = role;
+          }
         }
 
         console.log(
           `[@hook:useUser:useUser] #${instanceId.current} Received user data:`,
           result ? 'User found' : 'No user',
-          result,
         );
 
         return result;

@@ -25,7 +25,7 @@ export async function getTeamMembers(
         role,
         created_at,
         updated_at,
-        profiles:profiles(id,active_team, role),
+        profiles:profiles(id, active_team),
         teams:team_id(id, name)
       `,
       )

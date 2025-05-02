@@ -44,7 +44,7 @@ export const getUser = cache(async (): Promise<User | null> => {
     // Get profile data
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('role, active_team, avatar_url')
+      .select('active_team, avatar_url')
       .eq('id', authUser.id)
       .single();
 
