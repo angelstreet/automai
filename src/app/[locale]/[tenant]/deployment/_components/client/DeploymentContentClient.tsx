@@ -506,6 +506,50 @@ export function DeploymentContentClient({
     }
   };
 
+  const handleToggleActiveClick = async (deployment: Deployment, e: React.MouseEvent) => {
+    e.stopPropagation();
+    console.log(
+      '[DeploymentContentClient:handleToggleActiveClick] Toggling active status for deployment:',
+      {
+        id: deployment.id,
+        name: deployment.name,
+        currentStatus: deployment.is_active,
+      },
+    );
+    try {
+      setActionInProgress(deployment.id);
+      const { toggleJobActiveStatus } = await import('@/app/actions/jobsAction');
+      const newStatus = !deployment.is_active;
+      const result = await toggleJobActiveStatus(deployment.id, newStatus);
+      if (result.success) {
+        toast({
+          title: newStatus ? 'Deployment Enabled' : 'Deployment Disabled',
+          description: `Successfully ${newStatus ? 'enabled' : 'disabled'} the deployment.`,
+          variant: 'default',
+        });
+        await refreshDeployments();
+      } else {
+        toast({
+          title: 'Error',
+          description: result.error || 'Failed to toggle deployment status',
+          variant: 'destructive',
+        });
+      }
+    } catch (error: any) {
+      console.error(
+        '[DeploymentContentClient:handleToggleActiveClick] Error toggling deployment status:',
+        error,
+      );
+      toast({
+        title: 'Error',
+        description: error.message || 'An unexpected error occurred while toggling the status',
+        variant: 'destructive',
+      });
+    } finally {
+      setActionInProgress(null);
+    }
+  };
+
   return (
     <div className="w-full">
       <div className="hidden">
@@ -722,78 +766,111 @@ export function DeploymentContentClient({
                                 variant="ghost"
                                 size="sm"
                                 className="h-8 w-8 p-0 flex items-center justify-center"
+                                disabled={actionInProgress === deployment.id}
                               >
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRunDeployment(deployment);
-                                }}
-                                disabled={isRunning === deployment.id}
-                              >
-                                <PlayCircle className="mr-2 h-4 w-4" />
-                                {isRunning === deployment.id ? 'Running...' : 'Run'}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleViewDeployment(deployment);
-                                }}
-                              >
-                                <Eye className="mr-2 h-4 w-4" />
-                                View Runs
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleConfigClick(deployment, e);
-                                }}
-                              >
-                                <Eye className="mr-2 h-4 w-4" />
-                                {c('view_config')}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleOutputClick(deployment, e);
-                                }}
-                              >
-                                <Eye className="mr-2 h-4 w-4" />
-                                View Output
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEditClick(deployment, e);
-                                }}
-                              >
-                                <Edit2 className="mr-2 h-4 w-4" />
-                                {c('edit')}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDuplicateClick(deployment, e);
-                                }}
-                                disabled={actionInProgress === deployment.id}
-                              >
-                                <Copy className="mr-2 h-4 w-4" />
-                                Duplicate
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="text-red-600"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteClick(deployment, e);
-                                }}
-                                disabled={actionInProgress === deployment.id}
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
+                              {deployment.is_active ? (
+                                <>
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleRunDeployment(deployment);
+                                    }}
+                                    disabled={
+                                      isRunning === deployment.id ||
+                                      actionInProgress === deployment.id
+                                    }
+                                  >
+                                    <PlayCircle className="mr-2 h-4 w-4" />
+                                    {isRunning === deployment.id ? 'Running...' : 'Run'}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleViewDeployment(deployment);
+                                    }}
+                                    disabled={actionInProgress === deployment.id}
+                                  >
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    View Runs
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleConfigClick(deployment, e);
+                                    }}
+                                    disabled={actionInProgress === deployment.id}
+                                  >
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    {c('view_config')}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOutputClick(deployment, e);
+                                    }}
+                                    disabled={actionInProgress === deployment.id}
+                                  >
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    View Output
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEditClick(deployment, e);
+                                    }}
+                                    disabled={actionInProgress === deployment.id}
+                                  >
+                                    <Edit2 className="mr-2 h-4 w-4" />
+                                    {c('edit')}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDuplicateClick(deployment, e);
+                                    }}
+                                    disabled={actionInProgress === deployment.id}
+                                  >
+                                    <Copy className="mr-2 h-4 w-4" />
+                                    Duplicate
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="text-red-600"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteClick(deployment, e);
+                                    }}
+                                    disabled={actionInProgress === deployment.id}
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleToggleActiveClick(deployment, e);
+                                    }}
+                                    disabled={actionInProgress === deployment.id}
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Disable
+                                  </DropdownMenuItem>
+                                </>
+                              ) : (
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleToggleActiveClick(deployment, e);
+                                  }}
+                                  disabled={actionInProgress === deployment.id}
+                                >
+                                  <PlayCircle className="mr-2 h-4 w-4" />
+                                  Enable
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>

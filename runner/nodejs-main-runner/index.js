@@ -105,7 +105,7 @@ async function processJob() {
             script_path: null,
             iteration: null,
             stdout: '',
-            stderr: 'No script path provided'
+            stderr: 'No script path provided',
           });
           continue;
         }
@@ -134,13 +134,11 @@ async function processJob() {
               }
 
               console.log(
-                `[@runner:processJob] Sending payload to Flask (attempt ${attempt}/${retries}, iteration ${i}/${iterations}): ${JSON.stringify(payload)}`
+                `[@runner:processJob] Sending payload to Flask (attempt ${attempt}/${retries}, iteration ${i}/${iterations}): ${JSON.stringify(payload)}`,
               );
-              const response = await axios.post(
-                `${FLASK_SERVICE_URL}/execute`,
-                payload,
-                { timeout: (payload.timeout + 5) * 1000 }
-              );
+              const response = await axios.post(`${FLASK_SERVICE_URL}/execute`, payload, {
+                timeout: (payload.timeout + 5) * 1000,
+              });
 
               scriptOutput.stdout = response.data.output.stdout || '';
               scriptOutput.stderr = response.data.output.stderr || '';
@@ -150,13 +148,13 @@ async function processJob() {
                 break;
               } else {
                 console.log(
-                  `[@runner:processJob] Script failed, attempt ${attempt}/${retries}: ${scriptOutput.stderr}`
+                  `[@runner:processJob] Script failed, attempt ${attempt}/${retries}: ${scriptOutput.stderr}`,
                 );
               }
             } catch (err) {
               scriptOutput.stderr = err.response?.data?.message || err.message;
               console.log(
-                `[@runner:processJob] Script error, attempt ${attempt}/${retries}: ${scriptOutput.stderr}`
+                `[@runner:processJob] Script error, attempt ${attempt}/${retries}: ${scriptOutput.stderr}`,
               );
             }
           }
@@ -172,7 +170,7 @@ async function processJob() {
       const hosts = config.hosts;
       for (const host of hosts) {
         console.log(
-          `[@runner:processJob] Host: ${host.ip}, OS: ${host.os}, Username: ${host.username}`
+          `[@runner:processJob] Host: ${host.ip}, OS: ${host.os}, Username: ${host.username}`,
         );
         let sshKeyOrPass = host.key || host.password;
         if (!sshKeyOrPass) {
@@ -233,7 +231,7 @@ async function processJob() {
                   })
                   .eq('id', jobId);
                 console.log(
-                  `[@runner:processJob] Updated job ${jobId} to failed status due to exec error`
+                  `[@runner:processJob] Updated job ${jobId} to failed status due to exec error`,
                 );
                 conn.end();
                 return;
@@ -252,7 +250,7 @@ async function processJob() {
                   console.log(`[@runner:processJob] Final stdout: ${output.stdout}`);
                   console.log(`[@runner:processJob] Final stderr: ${output.stderr}`);
                   console.log(
-                    `[@runner:processJob] SSH connection closed: ${code}, signal: ${signal}`
+                    `[@runner:processJob] SSH connection closed: ${code}, signal: ${signal}`,
                   );
 
                   const completed_at = new Date().toISOString();
@@ -268,7 +266,7 @@ async function processJob() {
                     .eq('id', jobId);
 
                   console.log(
-                    `[@runner:processJob] Updated job ${jobId} to final status: ${isSuccess ? 'success' : 'failed'}`
+                    `[@runner:processJob] Updated job ${jobId} to final status: ${isSuccess ? 'success' : 'failed'}`,
                   );
 
                   conn.end();
@@ -291,7 +289,7 @@ async function processJob() {
                 })
                 .eq('id', jobId);
               console.log(
-                `[@runner:processJob] Updated job ${jobId} to ${isSuccess ? 'success' : 'failed'} status despite ECONNRESET`
+                `[@runner:processJob] Updated job ${jobId} to ${isSuccess ? 'success' : 'failed'} status despite ECONNRESET`,
               );
             } else {
               console.error(`[@runner:processJob] SSH error: ${err.message}`);
@@ -305,7 +303,7 @@ async function processJob() {
                 })
                 .eq('id', jobId);
               console.log(
-                `[@runner:processJob] Updated job ${jobId} to failed status due to SSH error`
+                `[@runner:processJob] Updated job ${jobId} to failed status due to SSH error`,
               );
             }
             conn.end();
@@ -345,10 +343,6 @@ async function setupSchedules() {
       cron.schedule(config.schedule, async () => {
         await redis.lpush('jobs_queue', job);
         console.log(`Scheduled job queued for config ${id}`);
-      });
-    } else {
-      redis.lpush('jobs_queue', job).then(() => {
-        console.log(`Immediate job queued for config ${id}`);
       });
     }
   });
