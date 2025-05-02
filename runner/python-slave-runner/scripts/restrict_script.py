@@ -1,21 +1,21 @@
 # python-runner/scripts/restrict_script.py
 import sys
-from RestrictedPython import compile_restricted, safe_globals, utility_builtins
+from RestrictedPython import compile_restricted, safe_globals, safe_builtins
 
 def create_safe_globals():
     restricted_globals = safe_globals.copy()
-    restricted_globals.update(utility_builtins)
-    restricted_globals['__builtins__'] = utility_builtins
+    restricted_globals['__builtins__'] = safe_builtins.copy()
 
     # Custom print collector
     print_outputs = []
 
-    def _print_(value):
-        print_outputs.append(str(value))
-        return value  # RestrictedPython expects _print_ to return the value
+    def _print_(*args):
+        output = " ".join(str(arg) for arg in args)
+        print_outputs.append(output)
+        return output  # Required for RestrictedPython compatibility
 
     restricted_globals['_print_'] = _print_
-    restricted_globals['_getattr_'] = getattr  # Required for some RestrictedPython internals
+    restricted_globals['_getattr_'] = getattr  # Required for some internal access
 
     return restricted_globals, print_outputs
 
