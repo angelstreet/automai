@@ -565,57 +565,29 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
         const formData: JobFormData = {
           name: latestConfigRef.current?.name || deploymentData.name,
           description: latestConfigRef.current?.description || deploymentData.description,
-          repository_id: deploymentData.repositoryId,
-          branch: latestConfigRef.current?.branch || deploymentData.branch || 'main',
           team_id: teamId,
           creator_id: user?.id || userId,
-
-          // Scripts, hosts, and parameters with proper naming, synchronized from modified config if available
-          scripts_path:
-            latestConfigRef.current?.scripts?.map((s: any) => s.path || s.filePath || '') ||
-            deploymentData.scriptIds.map((id) => {
-              const script = repositoryScripts.find((s) => s.id === id);
-              return script?.path || '';
-            }),
-          scripts_parameters:
-            latestConfigRef.current?.scripts?.map((s: any) =>
-              JSON.stringify(s.parameters ? { raw: s.parameters } : {}),
-            ) ||
-            deploymentData.scriptIds.map((scriptId) =>
-              JSON.stringify(deploymentData.scriptParameters[scriptId] || {}),
-            ),
-          host_ids: latestConfigRef.current?.hosts?.map((h: any) => h.id) || deploymentData.hostIds,
-
-          // Environment variables
-          environment_vars: deploymentData.environmentVars.reduce(
-            (acc, curr) => {
-              acc[curr.key] = curr.value;
-              return acc;
-            },
-            {} as Record<string, string>,
-          ),
-
-          // Schedule with proper field names - no schedule_type
-          cron_expression:
-            deploymentData.schedule !== 'now' ? deploymentData.cronExpression : undefined,
-          repeat_count: deploymentData.schedule !== 'now' ? deploymentData.repeatCount : undefined,
-
-          // Status
           is_active: deploymentData.schedule === 'now',
-
-          // Config contains only runner-specific configuration
-          // Important: We need to use the latest config if available
+          created_at: new Date().toISOString(),
           config: latestConfigRef.current || {
-            name: deploymentData.name,
-            repository: deploymentData.selectedRepository?.url || '',
-            branch: deploymentData.branch || 'main',
             scripts: deploymentData.scriptIds.map((scriptId) => {
               const script = repositoryScripts.find((s) => s.id === scriptId);
               const params = deploymentData.scriptParameters[scriptId]?.['raw'] || '';
               return {
                 path: script?.path || '',
                 parameters: params,
+                timeout: 3600,
+                retry_on_failure: 3,
+                iterations: 1,
               };
+            }),
+            execution: {
+              parallel: false,
+            },
+            ...(deploymentData.repositoryId && {
+              repository: deploymentData.selectedRepository?.url || '',
+              branch: deploymentData.branch || 'main',
+              git_folder: 'runner/python-slave-runner/scripts',
             }),
             hosts: deploymentData.hostIds.map((hostId) => {
               const host = availableHosts.find((h) => h.id === hostId);
@@ -646,15 +618,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
               {} as Record<string, string>,
             ),
             schedule: deploymentData.schedule === 'now' ? 'now' : deploymentData.cronExpression,
-            execution: {
-              parallel: false,
-              timeout: 3600,
-            },
-            created_at: new Date().toISOString(),
           },
-
-          // Creation timestamp
-          created_at: new Date().toISOString(),
         };
 
         // Detailed logging of the form data for debugging
@@ -662,15 +626,13 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           basic: {
             name: formData.name,
             description: formData.description,
-            repository_id: formData.repository_id,
-            branch: formData.branch,
           },
           execution: {
-            scripts_path: formData.scripts_path,
-            host_ids: formData.host_ids,
+            scripts: formData.config.scripts,
+            hosts: formData.config.hosts,
           },
           scheduling: {
-            cron_expression: formData.cron_expression,
+            schedule: formData.config.schedule,
             is_active: formData.is_active,
           },
           config: formData.config,
@@ -697,7 +659,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           setDeploymentData(initialDeploymentData);
           setStep(1);
 
-          // Invalidate both jobs and deployments queries for backward compatibility
+          // Invalidate both jobs and deployments queries
           queryClient.invalidateQueries({ queryKey: ['jobs'] });
           queryClient.invalidateQueries({ queryKey: ['deployments'] });
 

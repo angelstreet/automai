@@ -154,16 +154,25 @@ export function DeploymentWizardStep5Client({
         (data.repositoryId ? `https://github.com/${data.repositoryId}.git` : '');
       const branch = data.branch || 'main';
 
-      // Format pipeline preview (simple job config example)
+      // Format pipeline preview with new configuration structure
       const jobConfig = {
         name: data.name,
         description: data.description,
-        repository: repoUrl,
-        branch: branch,
         scripts: scriptDetails.map((script) => ({
           path: script.path,
           parameters: script.parameters,
+          timeout: 3600,
+          retry_on_failure: 3,
+          iterations: 1,
         })),
+        execution: {
+          parallel: false,
+        },
+        ...(repoUrl && {
+          repository: repoUrl,
+          branch: branch,
+          git_folder: 'runner/python-slave-runner/scripts',
+        }),
         hosts: hostDetails.map((host) => {
           // Define the host config with a Record type to avoid TypeScript errors
           const hostConfig: Record<string, any> = {
