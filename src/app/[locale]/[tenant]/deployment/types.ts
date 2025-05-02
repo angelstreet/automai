@@ -87,6 +87,7 @@ export interface Deployment {
   hostIds: string[];
   environmentVars?: any[];
   config?: Record<string, any>;
+  is_active: boolean;
 }
 
 export interface DeploymentConfig {

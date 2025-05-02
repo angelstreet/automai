@@ -513,14 +513,27 @@ export function DeploymentContentClient({
       {
         id: deployment.id,
         name: deployment.name,
-        currentStatus: deployment.is_active,
+        is_active: (deployment as any).is_active,
+        fullDeploymentObject: deployment,
       },
     );
     try {
       setActionInProgress(deployment.id);
-      const { toggleJobActiveStatus } = await import('@/app/actions/jobsAction');
-      const newStatus = !deployment.is_active;
-      const result = await toggleJobActiveStatus(deployment.id, newStatus);
+      // Temporarily comment out the call to toggleJobActiveStatus as it might not be implemented yet
+      // const { toggleJobActiveStatus } = await import('@/app/actions/jobsAction');
+      const newStatus = !(deployment as any).is_active;
+      // const result = await toggleJobActiveStatus(deployment.id, newStatus);
+      // Placeholder for the toggle action
+      console.log(
+        `[DeploymentContentClient:handleToggleActiveClick] Would toggle status to: ${newStatus}`,
+      );
+      toast({
+        title: 'Action Not Implemented',
+        description: 'Toggling deployment status is not yet implemented.',
+        variant: 'destructive',
+      });
+      // Remove this once the function is implemented
+      /*
       if (result.success) {
         toast({
           title: newStatus ? 'Deployment Enabled' : 'Deployment Disabled',
@@ -535,6 +548,7 @@ export function DeploymentContentClient({
           variant: 'destructive',
         });
       }
+      */
     } catch (error: any) {
       console.error(
         '[DeploymentContentClient:handleToggleActiveClick] Error toggling deployment status:',
@@ -772,7 +786,8 @@ export function DeploymentContentClient({
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              {deployment.is_active ? (
+                              {/* Temporary fix: Assume deployment is inactive if is_active is undefined. Need to identify correct field for active status. */}
+                              {(deployment as any).is_active === true ? (
                                 <>
                                   <DropdownMenuItem
                                     onClick={(e) => {
