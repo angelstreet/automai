@@ -13,8 +13,8 @@ import sys
 app = Flask(__name__)
 
 BASE_REPO_PATH = "/opt/render/project/src/repo"
-LOCAL_SCRIPTS_PATH = os.path.join(os.path.dirname(__file__), "scripts")
-LOCAL_VENV_PATH = os.path.join(os.path.dirname(__file__), ".venv")
+LOCAL_SCRIPTS_PATH = os.path.join(os.path.dirname(__file__), "runner", "python-slave-runner", "scripts")
+LOCAL_VENV_PATH = os.path.join(os.path.dirname(__file__), "runner", "python-slave-runner", ".venv")
 
 def get_repo_path(repo_url):
     repo_hash = hashlib.sha1(repo_url.encode()).hexdigest()
@@ -67,13 +67,13 @@ def setup_venv(base_path, folder):
     print(f"DEBUG: No requirements.txt found, skipping virtualenv", file=sys.stderr)
     return None
 
-def run_with_timeout(script_content, timeout=30, venv_path=None):
+def run_with_timeout(script_content, parameters, timeout=30, venv_path=None):
     result_queue = queue.Queue()
-    print(f"DEBUG: Running script with timeout={timeout}, venv_path={venv_path}", file=sys.stderr)
+    print(f"DEBUG: Running script with timeout={timeout}, venv_path={venv_path}, parameters={parameters}", file=sys.stderr)
 
     def target():
         try:
-            result = execute_script(script_content, venv_path)
+            result = execute_script(script_content, parameters, venv_path)
             result_queue.put(result)
         except Exception as e:
             result_queue.put({"status": "error", "message": f"Execution error: {str(e)}"})
@@ -112,11 +112,14 @@ def execute():
             timeout = float(timeout)
             if timeout < 1:
                 timeout = 30
-            elif timeout > 60:
-                timeout = 60
+            elif timeout > 3600: # Cap at 1 hour
+                timeout = 3600
         except (TypeError, ValueError):
             print(f"DEBUG: Invalid timeout value, using default: 30s", file=sys.stderr)
             timeout = 30
+
+        parameters = data.get('parameters', '')
+        param_list = parameters.split() if parameters else []
 
         start_time = datetime.utcnow()
         start_time_str = start_time.isoformat() + 'Z'
@@ -178,7 +181,7 @@ def execute():
         with open(full_script_path, 'r') as f:
             script_content = f.read()
 
-        result = run_with_timeout(script_content, timeout, venv_path)
+        result = run_with_timeout(script_content, param_list, timeout, venv_path)
 
         end_time = datetime.utcnow()
         end_time_str = end_time.isoformat() + 'Z'

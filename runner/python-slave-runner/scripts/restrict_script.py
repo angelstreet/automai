@@ -7,11 +7,11 @@ def is_safe_node(node):
     allowed_nodes = (
         ast.Module, ast.Expr, ast.Call, ast.Name, ast.Load,
         ast.Str, ast.Constant, ast.Num, ast.Import, ast.ImportFrom, ast.alias,
-        ast.JoinedStr, ast.FormattedValue, ast.Attribute
+        ast.JoinedStr, ast.FormattedValue, ast.Attribute, ast.Subscript
     )
     return isinstance(node, allowed_nodes)
 
-def execute_script(script, venv_path=None):
+def execute_script(script, parameters=None, venv_path=None):
     site_packages = None
     try:
         tree = ast.parse(script)
@@ -27,10 +27,15 @@ def execute_script(script, venv_path=None):
             if os.path.exists(site_packages):
                 sys.path.insert(0, site_packages)
 
-        safe_globals = {"print": print}
+        # Set sys.argv for parameters
+        original_argv = sys.argv
+        sys.argv = [script_path or "script.py"] + (parameters or [])
+
+        safe_globals = {"print": print, "sys": sys}
         exec(script, safe_globals)
 
         sys.stdout = sys.__stdout__
+        sys.argv = original_argv
         output = stdout.getvalue()
         return {"status": "success", "output": output}
     except SyntaxError as e:
@@ -38,5 +43,6 @@ def execute_script(script, venv_path=None):
     except Exception as e:
         return {"status": "error", "message": f"Execution error: {str(e)}"}
     finally:
+        sys.argv = original_argv
         if site_packages and site_packages in sys.path:
             sys.path.remove(site_packages)

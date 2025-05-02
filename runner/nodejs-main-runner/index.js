@@ -3,7 +3,7 @@ const http = require('http');
 
 const { createClient } = require('@supabase/supabase-js');
 const { Redis } = require('@upstash/redis');
-const axios = require('axios'); // Add axios for HTTP requests
+const axios = require('axios');
 const cron = require('node-cron');
 const { Client } = require('ssh2');
 
@@ -13,7 +13,6 @@ const redis = new Redis({
 });
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-// Flask service URL (set in Render environment variables)
 const FLASK_SERVICE_URL = process.env.PYTHON_SLAVE_RUNNER_FLASK_SERVICE_URL;
 
 const ALGORITHM = 'aes-256-gcm';
@@ -75,7 +74,7 @@ async function processJob() {
       .insert({
         config_id,
         status: 'pending',
-        output: { stdout: '', stderr: '' },
+        output: { scripts: [] },
         created_at: created_at,
       })
       .select('id')
@@ -89,58 +88,101 @@ async function processJob() {
     const jobId = jobRunData.id;
     console.log(`[@runner:processJob] Created job with ID ${jobId} and status 'pending'`);
 
-    let output = { stdout: '', stderr: '' };
+    let output = { scripts: [] };
+    let overallStatus = 'success';
 
     if (executionMode === 'local') {
       console.log(`[@runner:processJob] Forwarding to Flask service for local execution`);
 
-      try {
-        // Send request to Flask service
-        const scriptPath = config.scripts[0]?.path; // Assume single script
+      // Process each script sequentially
+      for (const script of config.scripts || []) {
+        const scriptPath = script.path;
+        const parameters = script.parameters || '';
+        const timeout = script.timeout || 30; // Default to 30s
+        const retryOnFailure = script.retry_on_failure || 0; // Default to 0 retries
+        const iterations = script.iterations || 1; // Default to 1 iteration
+
         if (!scriptPath) {
-          throw new Error('No script path provided');
+          console.error(`[@runner:processJob] No script path provided for script`);
+          overallStatus = 'failed';
+          output.scripts.push({
+            script_path: null,
+            iteration: null,
+            stdout: '',
+            stderr: 'No script path provided',
+          });
+          continue;
         }
 
-        const response = await axios.post(
-          `${FLASK_SERVICE_URL}/execute`,
-          {
-            script_path: scriptPath,
-          },
-          { timeout: 10000 },
-        ); // 10-second timeout
+        // Execute each iteration
+        for (let i = 1; i <= iterations; i++) {
+          let retries = retryOnFailure + 1; // Include initial attempt
+          let attempt = 0;
+          let scriptOutput = { script_path: scriptPath, iteration: i, stdout: '', stderr: '' };
+          let scriptStatus = 'failed';
 
-        output = response.data.output || { stdout: '', stderr: '' };
-        const status = response.data.status;
+          while (attempt < retries) {
+            attempt++;
+            try {
+              // Build payload with iteration number appended to parameters
+              const payload = {
+                script_path: scriptPath,
+                parameters: parameters ? `${parameters} ${i}` : `${i}`,
+                timeout: timeout,
+              };
 
-        const completed_at = new Date().toISOString();
-        const isSuccess = status === 'success';
+              if (config.repository) {
+                payload.repo_url = config.repository;
+                payload.git_folder = 'runner/python-slave-runner/scripts';
+                payload.branch = config.branch || 'main';
+              }
 
-        await supabase
-          .from('jobs_run')
-          .update({
-            status: isSuccess ? 'success' : 'failed',
-            output: output,
-            completed_at: completed_at,
-          })
-          .eq('id', jobId);
+              console.log(
+                `[@runner:processJob] Sending payload to Flask (attempt ${attempt}/${retries}, iteration ${i}/${iterations}): ${JSON.stringify(payload)}`,
+              );
+              const response = await axios.post(
+                `${FLASK_SERVICE_URL}/execute`,
+                payload,
+                { timeout: (payload.timeout + 5) * 1000 }, // Add 5s buffer
+              );
 
-        console.log(
-          `[@runner:processJob] Updated job ${jobId} to final status: ${isSuccess ? 'success' : 'failed'}`,
-        );
-      } catch (err) {
-        output.stderr = err.response?.data?.message || err.message;
-        await supabase
-          .from('jobs_run')
-          .update({
-            status: 'failed',
-            output: output,
-            completed_at: new Date().toISOString(),
-          })
-          .eq('id', jobId);
-        console.log(
-          `[@runner:processJob] Updated job ${jobId} to failed due to error: ${output.stderr}`,
-        );
+              scriptOutput.stdout = response.data.output.stdout || '';
+              scriptOutput.stderr = response.data.output.stderr || '';
+              scriptStatus = response.data.status;
+
+              if (scriptStatus === 'success') {
+                break; // Exit retry loop on success
+              } else {
+                console.log(
+                  `[@runner:processJob] Script failed, attempt ${attempt}/${retries}: ${scriptOutput.stderr}`,
+                );
+              }
+            } catch (err) {
+              scriptOutput.stderr = err.response?.data?.message || err.message;
+              console.log(
+                `[@runner:processJob] Script error, attempt ${attempt}/${retries}: ${scriptOutput.stderr}`,
+              );
+            }
+          }
+
+          output.scripts.push(scriptOutput);
+          if (scriptStatus !== 'success') {
+            overallStatus = 'failed';
+          }
+        }
       }
+
+      const completed_at = new Date().toISOString();
+      await supabase
+        .from('jobs_run')
+        .update({
+          status: overallStatus,
+          output: output,
+          completed_at: completed_at,
+        })
+        .eq('id', jobId);
+
+      console.log(`[@runner:processJob] Updated job ${jobId} to final status: ${overallStatus}`);
     } else {
       // SSH execution (unchanged)
       const hosts = config.hosts || [];
@@ -311,11 +353,14 @@ async function setupSchedules() {
         await redis.lpush('jobs_queue', job);
         console.log(`Scheduled job queued for config ${id}`);
       });
+    } else {
+      redis.lpush('jobs_queue', job).then(() => {
+        console.log(`Immediate job queued for config ${id}`);
+      });
     }
   });
 }
 
-// Poll queue every 10 seconds
 setInterval(processJob, 10000);
 setupSchedules().catch((err) => console.error('Setup schedules failed:', err));
 console.log('Worker running...');

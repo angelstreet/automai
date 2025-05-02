@@ -1,9 +1,7 @@
-require('dotenv').config(); // Load environment variables from .env
-const crypto = require('crypto');
-
+require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 const { Redis } = require('@upstash/redis');
-const { Client } = require('ssh2');
+const axios = require('axios');
 
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL,
@@ -11,33 +9,21 @@ const redis = new Redis({
 });
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-
-const ALGORITHM = 'aes-256-gcm';
-function decrypt(encryptedData, keyBase64) {
-  const key = Buffer.from(keyBase64, 'base64');
-  const [ivHex, authTagHex, encrypted] = encryptedData.split(':');
-  const iv = Buffer.from(ivHex, 'hex');
-  const authTag = Buffer.from(authTagHex, 'hex');
-  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
-  decipher.setAuthTag(authTag);
-  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-  decrypted += decipher.final('utf8');
-  return decrypted;
-}
+const FLASK_SERVICE_URL = process.env.PYTHON_SLAVE_RUNNER_FLASK_SERVICE_URL;
 
 async function processJob() {
   try {
     const queueLength = await redis.llen('jobs_queue');
-    console.log(`[@runner:processJob] Queue length: ${queueLength} jobs`);
+    console.log(`[@local-runner:processJob] Queue length: ${queueLength} jobs`);
 
     const jobs = await redis.lrange('jobs_queue', -1, -1);
     if (!jobs || jobs.length === 0) {
-      console.log(`[@runner:processJob] Queue is empty`);
+      console.log(`[@local-runner:processJob] Queue is empty`);
       return;
     }
     const job = jobs[0];
 
-    console.log(`[@runner:processJob] Processing job: ${JSON.stringify(job)}`);
+    console.log(`[@local-runner:processJob] Processing job: ${JSON.stringify(job)}`);
     const { config_id } = typeof job === 'string' ? JSON.parse(job) : job;
 
     // Fetch config from Supabase
@@ -47,179 +33,136 @@ async function processJob() {
       .eq('id', config_id)
       .single();
     if (error || !data) {
-      console.error(`[@runner:processJob] Failed to fetch config ${config_id}: ${error?.message}`);
+      console.error(
+        `[@local-runner:processJob] Failed to fetch config ${config_id}: ${error?.message}`,
+      );
       return;
     }
     const config = data.config;
-    console.log(`[@runner:processJob] Config: ${JSON.stringify(config)}`);
+    console.log(`[@local-runner:processJob] Config: ${JSON.stringify(config)}`);
 
-    const hosts = config.hosts || [];
-    const repoUrl = config.repository;
-    const repoName = repoUrl.split('/').pop().replace('.git', '');
-    // Define env vars in Render (not repo)
-    const envVars = {
-      FTP_SERVER: process.env.FTP_SERVER,
-      FTP_USER: process.env.FTP_USER,
-      FTP_PASS: process.env.FTP_PASS,
-      FTP_DIRECTORY: process.env.FTP_DIRECTORY,
-      DEVICE_IP: process.env.DEVICE_IP,
-    };
-    const envPrefix = Object.entries(envVars)
-      .map(([key, value]) => `set ${key}=${value}`)
-      .join(' && ');
-    const scripts = (config.scripts || [])
-      .map((script) => {
-        const ext = script.path.split('.').pop().toLowerCase();
-        const command = ext === 'py' ? 'python' : ext === 'sh' ? './' : '';
-        return `${command} ${script.path} ${script.parameters || ''}`.trim();
+    // Create job with pending status
+    const created_at = new Date().toISOString();
+    const { data: jobRunData, error: jobError } = await supabase
+      .from('jobs_run')
+      .insert({
+        config_id,
+        status: 'pending',
+        output: { scripts: [] },
+        created_at: created_at,
       })
-      .join(' && ');
-    console.log(`[@runner:processJob] Scripts: ${scripts}`);
-    for (const host of hosts) {
-      console.log(
-        `[@runner:processJob] Host: ${host.ip}, OS: ${host.os}, Username: ${host.username}`,
-      );
-      let sshKeyOrPass = host.key || host.password;
-      if (!sshKeyOrPass) {
-        console.error(`[@runner:processJob] No key/password for ${host.ip}`);
-        return;
-      }
+      .select('id')
+      .single();
 
-      if (host.authType === 'privateKey' && sshKeyOrPass.includes(':')) {
-        try {
-          sshKeyOrPass = decrypt(sshKeyOrPass, process.env.ENCRYPTION_KEY);
-          console.log(`[@runner:processJob] Decrypted key: ${sshKeyOrPass.slice(0, 50)}...`);
-        } catch (decryptError) {
-          console.error(`[@runner:processJob] Decryption failed: ${decryptError.message}`);
-          return;
-        }
-      } else {
-        console.log(`[@runner:processJob] Plain key/password: ${sshKeyOrPass.slice(0, 50)}...`);
-      }
-
-      const scriptCommand = `${scripts}`;
-      const fullScript = `cmd.exe /c python --version && cd Desktop/remote-installer && dir && echo ============================= && ${scriptCommand}`;
-      console.log(`[@runner:processJob] SSH command: ${fullScript}`);
-
-      // Step 1: Create job with pending status
-      const created_at = new Date().toISOString();
-      const { data: jobData, error: jobError } = await supabase
-        .from('jobs_run')
-        .insert({
-          config_id,
-          status: 'pending',
-          output: { stdout: '', stderr: '' },
-          created_at: created_at,
-        })
-        .select('id')
-        .single();
-
-      if (jobError) {
-        console.error(`[@runner:processJob] Failed to create pending job: ${jobError.message}`);
-        return;
-      }
-
-      const jobId = jobData.id;
-      console.log(`[@runner:processJob] Created job with ID ${jobId} and status 'pending'`);
-
-      const conn = new Client();
-      conn
-        .on('ready', async () => {
-          console.log(`[@runner:processJob] Connected to ${host.ip}`);
-
-          // Step 2: Update job to in_progress status
-          const started_at = new Date().toISOString();
-          await supabase
-            .from('jobs_run')
-            .update({
-              status: 'in_progress',
-              started_at: started_at,
-            })
-            .eq('id', jobId);
-
-          console.log(`[@runner:processJob] Updated job ${jobId} status to 'in_progress'`);
-
-          conn.exec(fullScript, async (err, stream) => {
-            if (err) {
-              console.error(`[@runner:processJob] Exec error: ${err.message}`);
-              // Update existing job with error information
-              await supabase
-                .from('jobs_run')
-                .update({
-                  status: 'failed',
-                  output: { stderr: err.message },
-                  completed_at: new Date().toISOString(),
-                })
-                .eq('id', jobId);
-
-              console.log(
-                `[@runner:processJob] Updated job ${jobId} to failed status due to exec error`,
-              );
-              conn.end();
-              return;
-            }
-            let output = { stdout: '', stderr: '' };
-            stream
-              .on('data', (data) => {
-                output.stdout += data;
-                console.log(`${data}`);
-              })
-              .stderr.on('data', (data) => {
-                output.stderr += data;
-                console.log(`[@runner:processJob] Stderr: ${data}`);
-              })
-              .on('close', async (code, signal) => {
-                console.log(`[@runner:processJob] Stream closed, code: ${code}, signal: ${signal}`);
-                console.log(`[@runner:processJob] Final stdout: ${output.stdout}`);
-                console.log(`[@runner:processJob] Final stderr: ${output.stderr}`);
-                console.log(`[@runner:processJob] SSH connection closed`);
-
-                // Step 3: Update job with final results
-                const completed_at = new Date().toISOString();
-
-                await supabase
-                  .from('jobs_run')
-                  .update({
-                    status: code === 0 ? 'success' : 'failed',
-                    output, // Keep the original output object structure
-                    completed_at: completed_at,
-                  })
-                  .eq('id', jobId);
-
-                console.log(
-                  `[@runner:processJob] Updated job ${jobId} to final status: ${code === 0 ? 'success' : 'failed'}`,
-                );
-
-                // Remove job from queue after processing
-                //await redis.lrem('jobs_queue', 1, job);
-
-                conn.end();
-              });
-          });
-        })
-        .on('error', async (err) => {
-          if (err.message.includes('ECONNRESET')) {
-            console.error(`[@runner:processJob] SSH connection closed`);
-          } else {
-            console.error(`[@runner:processJob] SSH error: ${err.message}`);
-          }
-
-          console.log(
-            `[@runner:processJob] Updated job ${jobId} to failed status due to SSH error`,
-          );
-          conn.end();
-        })
-        .connect({
-          host: host.ip,
-          port: host.port || 22,
-          username: host.username,
-          [host.authType === 'privateKey' ? 'privateKey' : 'password']: sshKeyOrPass,
-        });
+    if (jobError) {
+      console.error(`[@local-runner:processJob] Failed to create pending job: ${jobError.message}`);
+      return;
     }
+
+    const jobId = jobRunData.id;
+    console.log(`[@local-runner:processJob] Created job with ID ${jobId} and status 'pending'`);
+
+    let output = { scripts: [] };
+    let overallStatus = 'success';
+
+    console.log(`[@local-runner:processJob] Forwarding to Flask service for local execution`);
+
+    // Process each script sequentially
+    for (const script of config.scripts || []) {
+      const scriptPath = script.path;
+      const parameters = script.parameters || '';
+      const timeout = script.timeout || 30;
+      const retryOnFailure = script.retry_on_failure || 0;
+      const iterations = script.iterations || 1;
+
+      if (!scriptPath) {
+        console.error(`[@local-runner:processJob] No script path provided for script`);
+        overallStatus = 'failed';
+        output.scripts.push({
+          script_path: null,
+          iteration: null,
+          stdout: '',
+          stderr: 'No script path provided',
+        });
+        continue;
+      }
+
+      // Execute each iteration
+      for (let i = 1; i <= iterations; i++) {
+        let retries = retryOnFailure + 1;
+        let attempt = 0;
+        let scriptOutput = { script_path: scriptPath, iteration: i, stdout: '', stderr: '' };
+        let scriptStatus = 'failed';
+
+        while (attempt < retries) {
+          attempt++;
+          try {
+            // Build payload with iteration number appended to parameters
+            const payload = {
+              script_path: scriptPath,
+              parameters: parameters ? `${parameters} ${i}` : `${i}`,
+              timeout: timeout,
+            };
+
+            if (config.repository) {
+              payload.repo_url = config.repository;
+              payload.git_folder = 'runner/python-slave-runner/scripts';
+              payload.branch = config.branch || 'main';
+            }
+
+            console.log(
+              `[@local-runner:processJob] Sending payload to Flask (attempt ${attempt}/${retries}, iteration ${i}/${iterations}): ${JSON.stringify(payload)}`,
+            );
+            const response = await axios.post(`${FLASK_SERVICE_URL}/execute`, payload, {
+              timeout: (payload.timeout + 5) * 1000,
+            });
+
+            scriptOutput.stdout = response.data.output.stdout || '';
+            scriptOutput.stderr = response.data.output.stderr || '';
+            scriptStatus = response.data.status;
+
+            if (scriptStatus === 'success') {
+              break;
+            } else {
+              console.log(
+                `[@local-runner:processJob] Script failed, attempt ${attempt}/${retries}: ${scriptOutput.stderr}`,
+              );
+            }
+          } catch (err) {
+            scriptOutput.stderr = err.response?.data?.message || err.message;
+            console.log(
+              `[@local-runner:processJob] Script error, attempt ${attempt}/${retries}: ${scriptOutput.stderr}`,
+            );
+          }
+        }
+
+        output.scripts.push(scriptOutput);
+        if (scriptStatus !== 'success') {
+          overallStatus = 'failed';
+        }
+      }
+    }
+
+    const completed_at = new Date().toISOString();
+    await supabase
+      .from('jobs_run')
+      .update({
+        status: overallStatus,
+        output: output,
+        completed_at: completed_at,
+      })
+      .eq('id', jobId);
+
+    console.log(
+      `[@local-runner:processJob] Updated job ${jobId} to final status: ${overallStatus}`,
+    );
+
+    // Remove job from queue after processing
+    await redis.lrem('jobs_queue', 1, job);
   } catch (error) {
-    console.error(`[@runner:processJob] Error: ${error.message}`);
+    console.error(`[@local-runner:processJob] Error: ${error.message}`);
   }
 }
 
-// Run once for local testing
-processJob().then(() => console.log('Test complete'));
+// Run immediately for testing
+processJob().then(() => console.log('[@local-runner] Test complete'));
