@@ -1,20 +1,20 @@
-const { exec } = require('child_process');
 const crypto = require('crypto');
-const fs = require('fs');
 const http = require('http');
-const util = require('util');
 
 const { createClient } = require('@supabase/supabase-js');
 const { Redis } = require('@upstash/redis');
+const axios = require('axios'); // Add axios for HTTP requests
 const cron = require('node-cron');
 const { Client } = require('ssh2');
-const execPromise = util.promisify(exec);
 
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL,
   token: process.env.UPSTASH_REDIS_REST_TOKEN,
 });
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+// Flask service URL (set in Render environment variables)
+const FLASK_SERVICE_URL = process.env.FLASK_SERVICE_URL || 'http://localhost:10000';
 
 const ALGORITHM = 'aes-256-gcm';
 function decrypt(encryptedData, keyBase64) {
@@ -92,29 +92,28 @@ async function processJob() {
     let output = { stdout: '', stderr: '' };
 
     if (executionMode === 'local') {
-      console.log(`[@runner:processJob] Executing locally`);
+      console.log(`[@runner:processJob] Forwarding to Flask service for local execution`);
 
       try {
-        // Read script content from file
-        const scriptPath = config.scripts[0]?.path; // Assume single script for simplicity
-        if (!scriptPath || !fs.existsSync(scriptPath)) {
-          throw new Error(`Script file ${scriptPath} not found`);
+        // Send request to Flask service
+        const scriptPath = config.scripts[0]?.path; // Assume single script
+        if (!scriptPath) {
+          throw new Error('No script path provided');
         }
-        const scriptContent = fs.readFileSync(scriptPath, 'utf8');
 
-        // Run restrict_script.py with script content via stdin
-        const { stdout, stderr } = await execPromise(
-          `echo "${scriptContent.replace(/"/g, '\\"')}" | python3 scripts/restrict_script.py`,
-          { timeout: 5000 }, // 5-second timeout
-        );
+        const response = await axios.post(
+          `${FLASK_SERVICE_URL}/execute`,
+          {
+            script_path: scriptPath,
+          },
+          { timeout: 10000 },
+        ); // 10-second timeout
 
-        // Parse output from restrict_script.py
-        const [status, ...resultLines] = stdout.trim().split('\n');
-        output.stdout = resultLines.join('\n');
-        output.stderr = stderr;
+        output = response.data.output || { stdout: '', stderr: '' };
+        const status = response.data.status;
 
-        const isSuccess = status === 'success';
         const completed_at = new Date().toISOString();
+        const isSuccess = status === 'success';
 
         await supabase
           .from('jobs_run')
@@ -129,7 +128,7 @@ async function processJob() {
           `[@runner:processJob] Updated job ${jobId} to final status: ${isSuccess ? 'success' : 'failed'}`,
         );
       } catch (err) {
-        output.stderr = err.message;
+        output.stderr = err.response?.data?.message || err.message;
         await supabase
           .from('jobs_run')
           .update({
@@ -139,7 +138,7 @@ async function processJob() {
           })
           .eq('id', jobId);
         console.log(
-          `[@runner:processJob] Updated job ${jobId} to failed due to error: ${err.message}`,
+          `[@runner:processJob] Updated job ${jobId} to failed due to error: ${output.stderr}`,
         );
       }
     } else {
