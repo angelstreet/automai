@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 
-export async function GET(_request: Request, { params }: { params: { service: string } }) {
+export async function GET(_request: Request, context: { params: { service: string } }) {
   try {
+    const params = await context.params;
     const service = params.service;
     console.log(`[@api:render-logs] Starting to fetch logs from Render ${service} service`);
     const renderApiEndpoint = process.env.RENDER_API_ENDPOINT;
