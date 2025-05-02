@@ -6,7 +6,7 @@ import os
 def is_safe_node(node):
     allowed_nodes = (
         ast.Module, ast.Expr, ast.Call, ast.Name, ast.Load,
-        ast.Str, ast.Constant, ast.Num, ast.Import, ast.ImportFrom
+        ast.Str, ast.Constant, ast.Num, ast.Import, ast.ImportFrom, ast.alias
     )
     return isinstance(node, allowed_nodes)
 
