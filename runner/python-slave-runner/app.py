@@ -68,7 +68,7 @@ def execute():
             "message": f"Script not found: {str(e)}",
             "start_time": datetime.utcnow().isoformat() + 'Z',
             "end_time": end_time.isoformat() + 'Z',
-            "duration_seconds": (end_time - datetime.utcnow()).total_seconds()
+            "duration_seconds": 0
         }), 400
     except timeout_decorator.TimeoutError:
         end_time = datetime.utcnow()
@@ -77,7 +77,7 @@ def execute():
             "message": "Script execution timed out",
             "start_time": datetime.utcnow().isoformat() + 'Z',
             "end_time": end_time.isoformat() + 'Z',
-            "duration_seconds": (end_time - datetime.utcnow()).total_seconds()
+            "duration_seconds": 0
         }), 408
     except Exception as e:
         end_time = datetime.utcnow()
@@ -86,7 +86,7 @@ def execute():
             "message": f"Execution error: {str(e)}",
             "start_time": datetime.utcnow().isoformat() + 'Z',
             "end_time": end_time.isoformat() + 'Z',
-            "duration_seconds": (end_time - datetime.utcnow()).total_seconds()
+            "duration_seconds": 0
         }), 500
 
 if __name__ == "__main__":
