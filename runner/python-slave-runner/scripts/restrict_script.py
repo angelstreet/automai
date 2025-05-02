@@ -1,4 +1,4 @@
-# scripts/restrict_script.py
+# python-runner/scripts/restrict_script.py
 import sys
 import io
 from contextlib import redirect_stdout
@@ -8,6 +8,11 @@ def create_safe_globals():
     restricted_globals = safe_globals.copy()
     restricted_globals.update(utility_builtins)
     restricted_globals['__builtins__'] = utility_builtins
+
+    # Explicitly allow print by defining _print_ and _getattr_
+    restricted_globals['_print_'] = print  # Map _print_ to Python's print
+    restricted_globals['_getattr_'] = getattr  # Required for some RestrictedPython internals
+
     return restricted_globals
 
 def execute_script(script):
@@ -16,7 +21,7 @@ def execute_script(script):
         safe_env = create_safe_globals()
         output = io.StringIO()
         with redirect_stdout(output):
-            exec(code, safe_env, {})
+            exec(code, safe_env)
         return {"status": "success", "output": output.getvalue()}
     except SyntaxError as e:
         return {"status": "error", "message": f"Syntax error: {str(e)}"}
