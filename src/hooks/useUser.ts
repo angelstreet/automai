@@ -3,10 +3,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 
-import { getUser, updateProfile, invalidateUserCache } from '@/app/actions/userAction';
 import { updateTeamMemberRole } from '@/app/actions/teamMemberAction';
-import type { User } from '@/types/service/userServiceType';
+import { getUser, updateProfile, invalidateUserCache } from '@/app/actions/userAction';
 import { createClient } from '@/lib/supabase/client';
+import type { User } from '@/types/service/userServiceType';
 
 // Generate a unique ID for each hook instance
 let hookInstanceCounter = 0;
