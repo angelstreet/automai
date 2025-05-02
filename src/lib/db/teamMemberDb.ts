@@ -636,6 +636,53 @@ export async function getTeamMemberRole(
   }
 }
 
+/**
+ * Get all teams that a user is a member of
+ * @param userId User ID
+ * @param cookieStore Cookie store from server action
+ * @returns Teams the user is a member of
+ */
+export async function getTeamsByUserId(
+  userId: string,
+  cookieStore?: any,
+): Promise<DbResponse<any[]>> {
+  try {
+    console.log(`[@db:teamMemberDb:getTeamsByUserId] Getting teams for user: ${userId}`);
+    const supabase = await createClient(cookieStore);
+
+    // Get team memberships with team data
+    const { data, error } = await supabase
+      .from('team_members')
+      .select('team_id, teams:teams(id, name, tenant_id, created_at)')
+      .eq('profile_id', userId);
+
+    if (error) {
+      console.error('[@db:teamMemberDb:getTeamsByUserId] Error fetching teams:', error);
+      return { success: false, error: error.message };
+    }
+
+    // Transform data to the expected format
+    const teams = data.map((membership: any) => ({
+      id: membership.teams.id,
+      name: membership.teams.name,
+      tenant_id: membership.teams.tenant_id,
+      created_at: membership.teams.created_at,
+      is_default: false,
+    }));
+
+    console.log(
+      `[@db:teamMemberDb:getTeamsByUserId] Found ${teams.length} teams for user ${userId}`,
+    );
+    return { success: true, data: teams };
+  } catch (error: any) {
+    console.error('[@db:teamMemberDb:getTeamsByUserId] Error:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to fetch teams for user',
+    };
+  }
+}
+
 // Export at the end of the file
 export default {
   getTeamMembers,
@@ -645,4 +692,5 @@ export default {
   getAvailableTenantProfilesForTeam,
   addMultipleTeamMembers,
   getTeamMemberRole,
+  getTeamsByUserId,
 };

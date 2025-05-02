@@ -70,18 +70,27 @@ export async function findMany(options: any = {}, cookieStore?: any): Promise<an
 export async function findUnique(
   { where }: { where: any },
   cookieStore?: any,
-): Promise<any | null> {
-  const supabase = await createClient(cookieStore);
+): Promise<DbResponse<any>> {
+  try {
+    const supabase = await createClient(cookieStore);
 
-  // Apply the 'where' conditions
-  const { data, error } = await supabase.from('profiles').select().match(where).single();
+    // Apply the 'where' conditions
+    const { data, error } = await supabase.from('profiles').select().match(where).single();
 
-  if (error) {
-    console.error('[@db:userDb:findUnique] Error finding user:', error);
-    return null;
+    if (error) {
+      console.error('[@db:userDb:findUnique] Error finding user:', error);
+      return { success: false, error: error.message, data: null };
+    }
+
+    return { success: true, data };
+  } catch (error) {
+    console.error('[@db:userDb:findUnique] Unexpected error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error finding user',
+      data: null,
+    };
   }
-
-  return data;
 }
 
 /**

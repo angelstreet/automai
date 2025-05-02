@@ -37,25 +37,27 @@ export const getUser = cache(async (): Promise<User | null> => {
 
     // Get profile data
     const profileResult = await userDb.findUnique({ where: { id: authUser.id } });
-    if (!profileResult || !profileResult.data) {
-      console.error('[@action:user:getUser] Profile error:', profileResult?.error);
+    if (!profileResult.success || !profileResult.data) {
+      console.error('[@action:user:getUser] Profile error:', profileResult.error);
       return null;
     }
 
     const profile = profileResult.data;
 
-    // Get user teams
-    const teamsResult = await teamMemberDb.getTeamMembers(authUser.id);
-    const userTeams =
-      teamsResult.success && teamsResult.data
-        ? teamsResult.data.map((teamMember: any) => ({
-            id: teamMember.team.id,
-            name: teamMember.team.name,
-            tenant_id: teamMember.team.tenant_id,
-            created_at: teamMember.team.created_at,
-            is_default: false,
-          }))
-        : [];
+    // Create a userTeams array from authUser.teams data or fetch it if needed
+    let userTeams = authUser.teams || [];
+
+    // If no teams were found in authUser, we need to find all teams the user belongs to
+    if (userTeams.length === 0) {
+      console.log('[@action:user:getUser] No teams found in authUser, fetching from teamMemberDb');
+      const teamsResult = await teamMemberDb.getTeamsByUserId(authUser.id);
+
+      if (!teamsResult.success) {
+        console.error('[@action:user:getUser] Error fetching teams:', teamsResult.error);
+      } else {
+        userTeams = teamsResult.data || [];
+      }
+    }
 
     // Get selected team
     const selectedTeamId = profile.active_team;
