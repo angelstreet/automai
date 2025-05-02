@@ -453,6 +453,8 @@ export async function getAllJobs() {
           environmentVars: config.environment_vars || [],
           // Add config field
           config: config.config || {},
+          // Add is_active field from the database
+          is_active: config.is_active,
         };
       }) || [];
 
