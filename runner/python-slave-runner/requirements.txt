@@ -1,4 +1,4 @@
 # python-runner/requirements.txt
 Flask==3.0.3
-pysandbox==0.3.5
+pysandbox==0.3.4
 timeout-decorator
