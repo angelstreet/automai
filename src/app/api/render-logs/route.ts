@@ -6,6 +6,7 @@ export async function GET() {
     const renderApiEndpoint = process.env.RENDER_API_ENDPOINT;
     const renderApiKey = process.env.RENDER_API_KEY;
     const renderApiOwner = process.env.RENDER_API_OWNER;
+    const serviceId = process.env.RENDER_MAIN_SERVICE_ID;
 
     if (!renderApiEndpoint || !renderApiKey || !renderApiOwner) {
       console.error(
@@ -26,7 +27,7 @@ export async function GET() {
     const cleanedEndpoint = renderApiEndpoint.replace(/\/+$/, '');
 
     // Construct the URL with query parameters
-    const serviceId = 'srv-cvs2ol2dbo4c73ft9dqg';
+
     const url = `${cleanedEndpoint}/logs?ownerId=${renderApiOwner}&direction=backward&resource=${serviceId}&limit=100`;
 
     console.log('[@api:render-logs] Fetching logs for service:', serviceId, 'with URL:', url);
