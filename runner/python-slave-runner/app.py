@@ -8,11 +8,13 @@ import git
 import hashlib
 import virtualenv
 import subprocess
+import sys
 
 app = Flask(__name__)
 
 BASE_REPO_PATH = "/opt/render/project/src/repo"
 LOCAL_SCRIPTS_PATH = os.path.join(os.path.dirname(__file__), "runner", "python-slave-runner", "scripts")
+LOCAL_VENV_PATH = os.path.join(os.path.dirname(__file__), "runner", "python-slave-runner", ".venv")
 
 def get_repo_path(repo_url):
     repo_hash = hashlib.sha1(repo_url.encode()).hexdigest()
@@ -20,15 +22,20 @@ def get_repo_path(repo_url):
 
 def ensure_repo(repo_url, git_folder, branch=None):
     repo_path = get_repo_path(repo_url)
+    print(f"DEBUG: Ensuring repo: url={repo_url}, folder={git_folder}, branch={branch}, path={repo_path}", file=sys.stderr)
     try:
         if os.path.exists(repo_path):
+            print(f"DEBUG: Repo exists, pulling updates: {repo_path}", file=sys.stderr)
             repo = git.Repo(repo_path)
             repo.remotes.origin.pull()
             if branch:
+                print(f"DEBUG: Checking out branch: {branch}", file=sys.stderr)
                 repo.git.checkout(branch)
         else:
+            print(f"DEBUG: Cloning repo: {repo_url} to {repo_path}", file=sys.stderr)
             os.makedirs(repo_path, exist_ok=True)
             repo = git.Repo.clone_from(repo_url, repo_path, branch=branch)
+            print(f"DEBUG: Enabling sparse checkout for folder: {git_folder}", file=sys.stderr)
             with repo.config_writer() as cw:
                 cw.set_value("core", "sparseCheckout", "true")
             sparse_file = os.path.join(repo_path, ".git", "info", "sparse-checkout")
@@ -38,23 +45,31 @@ def ensure_repo(repo_url, git_folder, branch=None):
             repo.git.checkout()
         return repo_path
     except Exception as e:
+        print(f"ERROR: Git operation failed: {str(e)}", file=sys.stderr)
         return {"status": "error", "message": f"Git operation failed: {str(e)}"}
 
-def setup_venv(repo_path, git_folder):
-    requirements_path = os.path.join(repo_path, git_folder, "requirements.txt")
-    venv_path = os.path.join(repo_path, ".venv")
+def setup_venv(base_path, folder):
+    requirements_path = os.path.join(base_path, folder, "requirements.txt")
+    venv_path = os.path.join(base_path, ".venv")
+    print(f"DEBUG: Checking for requirements.txt at: {requirements_path}", file=sys.stderr)
     if os.path.exists(requirements_path):
         try:
+            print(f"DEBUG: Creating virtualenv at: {venv_path}", file=sys.stderr)
             virtualenv.cli_run([venv_path])
             pip_path = os.path.join(venv_path, "bin", "pip")
-            subprocess.run([pip_path, "install", "-r", requirements_path], check=True, capture_output=True, text=True)
+            print(f"DEBUG: Running pip install -r {requirements_path}", file=sys.stderr)
+            result = subprocess.run([pip_path, "install", "-r", requirements_path], check=True, capture_output=True, text=True)
+            print(f"DEBUG: pip install output: {result.stdout}", file=sys.stderr)
             return venv_path
         except Exception as e:
+            print(f"ERROR: Failed to install requirements: {str(e)}", file=sys.stderr)
             return {"status": "error", "message": f"Failed to install requirements: {str(e)}"}
+    print(f"DEBUG: No requirements.txt found, skipping virtualenv", file=sys.stderr)
     return None
 
 def run_with_timeout(script_content, timeout=30, venv_path=None):
     result_queue = queue.Queue()
+    print(f"DEBUG: Running script with timeout={timeout}, venv_path={venv_path}", file=sys.stderr)
 
     def target():
         try:
@@ -69,10 +84,12 @@ def run_with_timeout(script_content, timeout=30, venv_path=None):
     thread.join(timeout)
 
     if thread.is_alive():
+        print(f"ERROR: Script execution timed out after {timeout} seconds", file=sys.stderr)
         return {"status": "error", "message": "Script execution timed out"}
     try:
         return result_queue.get_nowait()
     except queue.Empty:
+        print(f"ERROR: No result returned from script execution", file=sys.stderr)
         return {"status": "error", "message": "No result returned"}
 
 @app.route('/execute', methods=['POST'])
@@ -81,6 +98,7 @@ def execute():
         data = request.get_json()
         script_path = data.get('script_path')
         if not script_path:
+            print(f"ERROR: No script_path provided in payload", file=sys.stderr)
             return jsonify({
                 "status": "error",
                 "message": "No script_path provided",
@@ -97,6 +115,7 @@ def execute():
             elif timeout > 60:
                 timeout = 60
         except (TypeError, ValueError):
+            print(f"DEBUG: Invalid timeout value, using default: 30s", file=sys.stderr)
             timeout = 30
 
         start_time = datetime.utcnow()
@@ -107,6 +126,7 @@ def execute():
         branch = data.get('branch')
 
         if repo_url:
+            print(f"DEBUG: Processing Git repo: url={repo_url}, folder={git_folder}, branch={branch}", file=sys.stderr)
             repo_result = ensure_repo(repo_url, git_folder, branch)
             if isinstance(repo_result, dict):
                 return jsonify({
@@ -131,10 +151,22 @@ def execute():
                 }), 500
             venv_path = venv_result
         else:
+            print(f"DEBUG: Using local scripts folder: {LOCAL_SCRIPTS_PATH}", file=sys.stderr)
             full_script_path = os.path.join(LOCAL_SCRIPTS_PATH, script_path)
-            venv_path = None
+            venv_result = setup_venv(os.path.dirname(LOCAL_SCRIPTS_PATH), os.path.basename(LOCAL_SCRIPTS_PATH))
+            if isinstance(venv_result, dict):
+                return jsonify({
+                    "status": venv_result["status"],
+                    "message": venv_result["message"],
+                    "start_time": start_time_str,
+                    "end_time": datetime.utcnow().isoformat() + 'Z',
+                    "duration_seconds": (datetime.utcnow() - start_time).total_seconds()
+                }), 500
+            venv_path = venv_result
 
+        print(f"DEBUG: Checking script path: {full_script_path}", file=sys.stderr)
         if not os.path.exists(full_script_path):
+            print(f"ERROR: Script not found: {full_script_path}", file=sys.stderr)
             return jsonify({
                 "status": "error",
                 "message": f"Script not found: {full_script_path}",
@@ -152,6 +184,7 @@ def execute():
         end_time_str = end_time.isoformat() + 'Z'
         duration = (end_time - start_time).total_seconds()
 
+        print(f"DEBUG: Script execution result: {result}", file=sys.stderr)
         return jsonify({
             "status": result["status"],
             "output": {
@@ -164,6 +197,7 @@ def execute():
         })
 
     except FileNotFoundError as e:
+        print(f"ERROR: FileNotFoundError: {str(e)}", file=sys.stderr)
         end_time = datetime.utcnow()
         return jsonify({
             "status": "error",
@@ -173,6 +207,7 @@ def execute():
             "duration_seconds": (end_time - start_time).total_seconds()
         }), 400
     except Exception as e:
+        print(f"ERROR: Execution error: {str(e)}", file=sys.stderr)
         end_time = datetime.utcnow()
         return jsonify({
             "status": "error",
