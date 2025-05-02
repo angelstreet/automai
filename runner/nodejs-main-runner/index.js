@@ -14,7 +14,7 @@ const redis = new Redis({
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 // Flask service URL (set in Render environment variables)
-const FLASK_SERVICE_URL = process.env.FLASK_SERVICE_URL || 'http://localhost:10000';
+const FLASK_SERVICE_URL = process.env.PYTHON_SLAVE_RUNNER_FLASK_SERVICE_URL;
 
 const ALGORITHM = 'aes-256-gcm';
 function decrypt(encryptedData, keyBase64) {
