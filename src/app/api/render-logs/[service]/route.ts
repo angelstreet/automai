@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-export async function GET(request: Request, { params }: { params: { service: string } }) {
+export async function GET(_request: Request, { params }: { params: { service: string } }) {
   try {
     const service = params.service;
     console.log(`[@api:render-logs] Starting to fetch logs from Render ${service} service`);

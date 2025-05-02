@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-export async function GET(request: Request, { params }: { params: { service: string } }) {
+export async function GET(_request: Request, { params }: { params: { service: string } }) {
   try {
     const service = params.service;
     console.log(`[@api:render-health] Sending request to wake up Render ${service} service`);

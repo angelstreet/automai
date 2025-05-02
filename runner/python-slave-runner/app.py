@@ -220,5 +220,14 @@ def execute():
             "duration_seconds": (end_time - start_time).total_seconds()
         }), 500
 
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint for the Python runner service."""
+    return jsonify({
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat() + 'Z',
+        "service": "python-slave-runner"
+    })
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
