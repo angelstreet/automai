@@ -12,23 +12,23 @@ import subprocess
 app = Flask(__name__)
 
 BASE_REPO_PATH = "/opt/render/project/src/repo"
-LOCAL_SCRIPTS_PATH = "/opt/render/project/src/runner/python-slave-runner/scripts"
+LOCAL_SCRIPTS_PATH = os.path.join(os.path.dirname(__file__), "runner", "python-slave-runner", "scripts")
 
 def get_repo_path(repo_url):
-    # Create unique path based on repo_url hash
     repo_hash = hashlib.sha1(repo_url.encode()).hexdigest()
     return os.path.join(BASE_REPO_PATH, repo_hash)
 
-def ensure_repo(repo_url, git_folder):
+def ensure_repo(repo_url, git_folder, branch=None):
     repo_path = get_repo_path(repo_url)
     try:
         if os.path.exists(repo_path):
             repo = git.Repo(repo_path)
             repo.remotes.origin.pull()
+            if branch:
+                repo.git.checkout(branch)
         else:
             os.makedirs(repo_path, exist_ok=True)
-            repo = git.Repo.clone_from(repo_url, repo_path)
-            # Enable sparse checkout
+            repo = git.Repo.clone_from(repo_url, repo_path, branch=branch)
             with repo.config_writer() as cw:
                 cw.set_value("core", "sparseCheckout", "true")
             sparse_file = os.path.join(repo_path, ".git", "info", "sparse-checkout")
@@ -45,9 +45,7 @@ def setup_venv(repo_path, git_folder):
     venv_path = os.path.join(repo_path, ".venv")
     if os.path.exists(requirements_path):
         try:
-            # Create virtual environment
             virtualenv.cli_run([venv_path])
-            # Run pip install in virtual environment
             pip_path = os.path.join(venv_path, "bin", "pip")
             subprocess.run([pip_path, "install", "-r", requirements_path], check=True, capture_output=True, text=True)
             return venv_path
@@ -91,7 +89,6 @@ def execute():
                 "duration_seconds": 0
             }), 400
 
-        # Get timeout from payload, default to 30s, cap at 60s
         timeout = data.get('timeout', 30)
         try:
             timeout = float(timeout)
@@ -105,13 +102,12 @@ def execute():
         start_time = datetime.utcnow()
         start_time_str = start_time.isoformat() + 'Z'
 
-        # Check if repo_url is provided
         repo_url = data.get('repo_url')
         git_folder = data.get('git_folder', '')
+        branch = data.get('branch')
 
         if repo_url:
-            # Handle Git repository
-            repo_result = ensure_repo(repo_url, git_folder)
+            repo_result = ensure_repo(repo_url, git_folder, branch)
             if isinstance(repo_result, dict):
                 return jsonify({
                     "status": repo_result["status"],
@@ -124,7 +120,6 @@ def execute():
             repo_path = repo_result
             full_script_path = os.path.join(repo_path, git_folder, script_path)
 
-            # Setup virtual environment if requirements.txt exists
             venv_result = setup_venv(repo_path, git_folder)
             if isinstance(venv_result, dict):
                 return jsonify({
@@ -136,7 +131,6 @@ def execute():
                 }), 500
             venv_path = venv_result
         else:
-            # Fallback to local scripts folder
             full_script_path = os.path.join(LOCAL_SCRIPTS_PATH, script_path)
             venv_path = None
 
