@@ -1,27 +1,9 @@
 'use client';
 
-import {
-  Search,
-  Clock,
-  Play,
-  Eye,
-  PlayCircle,
-  Trash2,
-  MoreHorizontal,
-  Edit2,
-  Copy,
-  EyeOff,
-} from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { Search, Clock, Play } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 
-import {
-  refreshDeployments,
-  deleteJob,
-  startJob,
-  getJobRunsForConfig,
-} from '@/app/actions/jobsAction';
+import { refreshDeployments } from '@/app/actions/jobsAction';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,23 +14,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/shadcn/alert-dialog';
-import { Button } from '@/components/shadcn/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/shadcn/dropdown-menu';
 import { useToast } from '@/components/shadcn/use-toast';
-import { getFormattedTime } from '@/lib/utils/deploymentUtils';
 import { Deployment } from '@/types/component/deploymentComponentType';
 import { Repository } from '@/types/component/repositoryComponentType';
 
 import { ConfigDeploymentDialogClient } from './ConfigDeploymentDialogClient';
 import { DeploymentActionsClient } from './DeploymentActionsClient';
-import DeploymentStatusBadgeClient from './DeploymentStatusBadgeClient';
+import { DeploymentTableClient } from './DeploymentTableClient';
 import { EditDeploymentDialogClient } from './EditDeploymentDialogClient';
 import { JobRunOutputDialogClient } from './JobRunOutputDialogClient';
+import { useDeploymentActions } from './useDeploymentActions';
 
 interface DeploymentListProps {
   initialDeployments: Deployment[];
@@ -60,8 +35,6 @@ export function DeploymentContentClient({
   initialRepositories = [],
 }: DeploymentListProps) {
   const { toast } = useToast();
-  const router = useRouter();
-  const c = useTranslations('common');
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('all');
@@ -74,8 +47,6 @@ export function DeploymentContentClient({
   const [repositoriesMap, setRepositoriesMap] = useState<Record<string, Repository>>({});
   const [selectedDeployment, setSelectedDeployment] = useState<Deployment | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [actionInProgress, setActionInProgress] = useState<string | null>(null);
-  const [isRunning, setIsRunning] = useState<string | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [deploymentToEdit, setDeploymentToEdit] = useState<Deployment | null>(null);
   const [showConfigDialog, setShowConfigDialog] = useState(false);
@@ -85,9 +56,23 @@ export function DeploymentContentClient({
   const [showOutputDialog, setShowOutputDialog] = useState(false);
   const [selectedJobRunForOutput, setSelectedJobRunForOutput] = useState<any | null>(null);
 
-  // Setup auto-refresh every 10 seconds
+  // Use the deployment actions hook
+  const {
+    actionInProgress,
+    handleViewDeployment,
+    handleDeleteClick,
+    handleConfirmDelete,
+    handleRunDeployment,
+    handleEditClick,
+    handleConfigClick,
+    handleOutputClick,
+    handleDuplicateClick,
+    handleToggleActiveClick,
+  } = useDeploymentActions(toast, setDeployments);
+
+  // Setup auto-refresh every 30 seconds
   useEffect(() => {
-    console.log('[DeploymentList] Setting up auto-refresh (10s interval)');
+    console.log('[DeploymentList] Setting up auto-refresh (30s interval)');
 
     // Define the refresh function
     const refreshData = async () => {
@@ -112,7 +97,7 @@ export function DeploymentContentClient({
     };
 
     // Set up the interval
-    const intervalId = setInterval(refreshData, 30000); // 10 seconds
+    const intervalId = setInterval(refreshData, 30000);
 
     // Clean up the interval when component unmounts
     return () => {
@@ -222,217 +207,36 @@ export function DeploymentContentClient({
 
   const displayDeployments = React.useMemo(() => getSortedDeployments(), [getSortedDeployments]);
 
-  const renderSkeletonRows = () => {
-    return Array(5)
-      .fill(0)
-      .map((_, index) => (
-        <tr key={`skeleton-${index}`} className="animate-pulse">
-          <td className="px-2 py-3 whitespace-nowrap">
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
-          </td>
-          <td className="px-2 py-3 whitespace-nowrap">
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
-          </td>
-          <td className="px-2 py-3 whitespace-nowrap">
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
-          </td>
-          <td className="px-2 py-3 whitespace-nowrap">
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16"></div>
-          </td>
-          <td className="px-2 py-3 whitespace-nowrap">
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-12"></div>
-          </td>
-        </tr>
-      ));
-  };
-
-  const handleViewDeployment = (deployment: Deployment, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-
-    // Get the locale and tenant from the URL
-    const pathname = window.location.pathname;
-    const segments = pathname.split('/').filter(Boolean);
-    const locale = segments[0] || 'en';
-    const tenant = segments[1] || 'trial';
-
-    // Navigate to the job runs page for this configuration with proper path
-    router.push(`/${locale}/${tenant}/deployment/job-runs/${deployment.id}`);
-  };
-
-  const handleDeleteClick = (deployment: Deployment, e: React.MouseEvent) => {
-    e.stopPropagation();
-    console.log('[DeploymentContentClient:handleDeleteClick] Selected deployment for deletion:', {
-      id: deployment.id,
-      name: deployment.name,
-    });
+  // Enhanced action handlers that work with the hook but maintain component state
+  const onDeleteClick = (deployment: Deployment, e: React.MouseEvent) => {
+    handleDeleteClick(deployment, e);
     setSelectedDeployment(deployment);
     setIsDeleteDialogOpen(true);
   };
 
-  const handleConfirmDelete = async () => {
-    if (!selectedDeployment) {
-      console.error(
-        '[DeploymentContentClient:handleConfirmDelete] No deployment selected for deletion',
-      );
-      return;
-    }
+  const onConfirmDelete = async () => {
+    if (!selectedDeployment) return;
 
-    console.log(
-      '[DeploymentContentClient:handleConfirmDelete] Confirming deletion of deployment:',
-      {
-        id: selectedDeployment.id,
-        name: selectedDeployment.name,
-      },
-    );
-
-    try {
-      // Save ID to a local variable to use in case of state updates
-      const idToDelete = selectedDeployment.id;
-
-      setActionInProgress(idToDelete);
-      console.log(
-        '[DeploymentContentClient:handleConfirmDelete] Calling deleteJob with ID:',
-        idToDelete,
-      );
-
-      // Make sure we're calling the server action with a direct string argument
-      const result = await deleteJob(String(idToDelete));
-      console.log(
-        '[DeploymentContentClient:handleConfirmDelete] Delete result:',
-        JSON.stringify(result),
-      );
-
-      if (result && result.success) {
-        console.log(
-          '[DeploymentContentClient:handleConfirmDelete] Delete successful for ID:',
-          idToDelete,
-        );
-
-        // Close the dialog first
-        setIsDeleteDialogOpen(false);
-
-        toast({
-          title: 'Deployment Deleted',
-          description: 'Successfully deleted.',
-          variant: 'default',
-        });
-
-        // Update the local state to remove the deleted deployment
-        setDeployments((current) => current.filter((d) => d.id !== idToDelete));
-
-        // Use the server action to revalidate the deployment page
-        await refreshDeployments();
-      } else {
-        console.error('[DeploymentContentClient:handleConfirmDelete] Delete failed:', {
-          id: selectedDeployment.id,
-          error: result?.error || 'Unknown error',
-        });
-        toast({
-          title: 'Error',
-          description: result?.error || 'Failed to delete',
-          variant: 'destructive',
-        });
-      }
-    } catch (error: any) {
-      console.error('[DeploymentContentClient:handleConfirmDelete] Exception during delete:', {
-        id: selectedDeployment?.id,
-        error: error.message || 'Unknown error',
-        stack: error.stack,
-      });
-
-      toast({
-        title: 'Error',
-        description: error.message || 'Unexpected error during deletion',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsDeleteDialogOpen(false);
-      setActionInProgress(null);
-    }
+    await handleConfirmDelete(selectedDeployment);
+    // Dialog is closed by the handler
   };
 
-  const handleRunDeployment = async (deployment: Deployment) => {
-    if (isRunning === deployment.id) return;
-
-    setIsRunning(deployment.id);
-    try {
-      // Get user ID for the job run
-      const { getUser } = await import('@/app/actions/userAction');
-      const user = await getUser();
-
-      // Use a user ID if available, otherwise just use a placeholder
-      const userId = user?.id || 'system';
-
-      console.log(
-        '[DeploymentContentClient:handleRunDeployment] Queuing job with ID:',
-        deployment.id,
-      );
-      const result = await startJob(deployment.id, userId);
-      console.log(
-        '[DeploymentContentClient:handleRunDeployment] Queue result:',
-        JSON.stringify(result),
-      );
-
-      if (result && result.success) {
-        toast({
-          title: 'Success',
-          description: 'Deployment queued for execution',
-          variant: 'default',
-        });
-
-        // Use the server action to revalidate the deployment page
-        await refreshDeployments();
-      } else {
-        toast({
-          title: 'Error',
-          description: result?.error || 'Failed to queue deployment',
-          variant: 'destructive',
-        });
-      }
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'An unexpected error occurred',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsRunning(null);
-    }
-  };
-
-  const handleEditClick = (deployment: Deployment, e: React.MouseEvent) => {
-    e.stopPropagation();
-    console.log('[DeploymentContentClient:handleEditClick] Selected deployment for editing:', {
-      id: deployment.id,
-      name: deployment.name,
-    });
+  const onEditClick = (deployment: Deployment, e: React.MouseEvent) => {
+    handleEditClick(deployment, e);
     setDeploymentToEdit(deployment);
     setShowEditDialog(true);
   };
 
-  const handleConfigClick = (deployment: Deployment, e: React.MouseEvent) => {
-    e.stopPropagation();
-    console.log(
-      '[DeploymentContentClient:handleConfigClick] Selected deployment for config view:',
-      {
-        id: deployment.id,
-        name: deployment.name,
-      },
-    );
+  const onConfigClick = (deployment: Deployment, e: React.MouseEvent) => {
+    handleConfigClick(deployment, e);
     setSelectedDeploymentForConfig(deployment);
     setShowConfigDialog(true);
   };
 
-  const handleOutputClick = async (deployment: Deployment, e: React.MouseEvent) => {
-    e.stopPropagation();
-    console.log(
-      '[DeploymentContentClient:handleOutputClick] Selected deployment for output view:',
-      {
-        id: deployment.id,
-        name: deployment.name,
-      },
-    );
+  const onOutputClick = async (deployment: Deployment, e: React.MouseEvent) => {
+    handleOutputClick(deployment, e);
     try {
+      const { getJobRunsForConfig } = await import('@/app/actions/jobsAction');
       const jobRunsResult = await getJobRunsForConfig(deployment.id);
       if (jobRunsResult.success && jobRunsResult.data && jobRunsResult.data.length > 0) {
         // Sort by createdAt descending to get the latest job run
@@ -449,107 +253,12 @@ export function DeploymentContentClient({
         });
       }
     } catch (error: any) {
-      console.error('[DeploymentContentClient:handleOutputClick] Error fetching job run:', error);
+      console.error('[DeploymentContentClient:onOutputClick] Error fetching job run:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to fetch job run data.',
         variant: 'destructive',
       });
-    }
-  };
-
-  const handleDuplicateClick = async (deployment: Deployment, e: React.MouseEvent) => {
-    e.stopPropagation();
-    console.log(
-      '[DeploymentContentClient:handleDuplicateClick] Selected deployment for duplication:',
-      {
-        id: deployment.id,
-        name: deployment.name,
-      },
-    );
-    try {
-      setActionInProgress(deployment.id);
-      const { duplicateDeployment } = await import('@/app/actions/jobsAction');
-      const result = await duplicateDeployment(deployment.id);
-      if (result.success && result.data) {
-        toast({
-          title: 'Deployment Duplicated',
-          description: `Successfully created a copy named ${result.data.name}.`,
-          variant: 'default',
-        });
-        if (!isRefreshing) {
-          await refreshDeployments();
-        } else {
-          console.log(
-            '[DeploymentContentClient:handleDuplicateClick] Skipping refresh as one is already in progress',
-          );
-        }
-      } else {
-        toast({
-          title: 'Error',
-          description: result.error || 'Failed to duplicate deployment',
-          variant: 'destructive',
-        });
-      }
-    } catch (error: any) {
-      console.error(
-        '[DeploymentContentClient:handleDuplicateClick] Error duplicating deployment:',
-        error,
-      );
-      toast({
-        title: 'Error',
-        description:
-          error.message || 'An unexpected error occurred while duplicating the deployment',
-        variant: 'destructive',
-      });
-    } finally {
-      setActionInProgress(null);
-    }
-  };
-
-  const handleToggleActiveClick = async (deployment: Deployment, e: React.MouseEvent) => {
-    e.stopPropagation();
-    console.log(
-      '[DeploymentContentClient:handleToggleActiveClick] Toggling active status for deployment:',
-      {
-        id: deployment.id,
-        name: deployment.name,
-        is_active: (deployment as any).is_active,
-        fullDeploymentObject: deployment,
-      },
-    );
-    try {
-      setActionInProgress(deployment.id);
-      const { toggleJobActiveStatus } = await import('@/app/actions/jobsAction');
-      const newStatus = !(deployment as any).is_active;
-      const result = await toggleJobActiveStatus(deployment.id, newStatus);
-
-      if (result.success) {
-        toast({
-          title: newStatus ? 'Deployment Enabled' : 'Deployment Disabled',
-          description: `Successfully ${newStatus ? 'enabled' : 'disabled'} the deployment.`,
-          variant: 'default',
-        });
-        await refreshDeployments();
-      } else {
-        toast({
-          title: 'Error',
-          description: result.error || 'Failed to toggle deployment status',
-          variant: 'destructive',
-        });
-      }
-    } catch (error: any) {
-      console.error(
-        '[DeploymentContentClient:handleToggleActiveClick] Error toggling deployment status:',
-        error,
-      );
-      toast({
-        title: 'Error',
-        description: error.message || 'An unexpected error occurred while toggling the status',
-        variant: 'destructive',
-      });
-    } finally {
-      setActionInProgress(null);
     }
   };
 
@@ -651,264 +360,23 @@ export function DeploymentContentClient({
               </button>
             </div>
           </div>
-          {isInitialLoad ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-transparent dark:bg-transparent">
-                  <tr>
-                    <th
-                      scope="col"
-                      className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                    >
-                      Name
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                    >
-                      Status
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                    >
-                      Created
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                    >
-                      Last Run
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-1 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                    >
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-transparent dark:bg-transparent divide-y divide-gray-200 dark:divide-gray-700">
-                  {renderSkeletonRows()}
-                </tbody>
-              </table>
-            </div>
-          ) : displayDeployments.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-transparent dark:bg-transparent">
-                  <tr>
-                    <th
-                      scope="col"
-                      className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                    >
-                      Name
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                    >
-                      Status
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                    >
-                      Created
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                    >
-                      Last Run
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-1 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                    >
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-transparent dark:bg-transparent divide-y divide-gray-200 dark:divide-gray-700">
-                  {displayDeployments.map((deployment) => (
-                    <tr
-                      key={deployment.id}
-                      className="hover:bg-gray-800/10 dark:hover:bg-gray-700/30 cursor-pointer"
-                      onClick={(e) => handleViewDeployment(deployment, e)}
-                    >
-                      <td className="px-2 py-1 whitespace-nowrap">
-                        <div className="text-sm text-gray-900 dark:text-white">
-                          {deployment.name}
-                        </div>
-                      </td>
-                      <td className="px-2 py-1 whitespace-nowrap">
-                        <DeploymentStatusBadgeClient status={deployment.status} />
-                      </td>
-                      <td className="px-2 py-1 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {getFormattedTime
-                          ? getFormattedTime(deployment.createdAt)
-                          : new Date(deployment.createdAt).toLocaleString()}
-                      </td>
-                      <td className="px-2 py-1 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {deployment.completedAt
-                          ? getFormattedTime
-                            ? getFormattedTime(deployment.completedAt)
-                            : new Date(deployment.completedAt).toLocaleString()
-                          : deployment.startedAt
-                            ? getFormattedTime
-                              ? getFormattedTime(deployment.startedAt) + ' (Running)'
-                              : new Date(deployment.startedAt).toLocaleString() + ' (Running)'
-                            : '-'}
-                      </td>
-                      <td className="px-2 py-1 whitespace-nowrap text-sm">
-                        <div className="flex justify-center">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0 flex items-center justify-center"
-                                disabled={actionInProgress === deployment.id}
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              {/* Temporary fix: Assume deployment is inactive if is_active is undefined. Need to identify correct field for active status. */}
-                              {(deployment as any).is_active === true ? (
-                                <>
-                                  <DropdownMenuItem
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleRunDeployment(deployment);
-                                    }}
-                                    disabled={
-                                      isRunning === deployment.id ||
-                                      actionInProgress === deployment.id
-                                    }
-                                  >
-                                    <PlayCircle className="mr-2 h-4 w-4" />
-                                    {isRunning === deployment.id ? 'Running...' : 'Run'}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleViewDeployment(deployment);
-                                    }}
-                                    disabled={actionInProgress === deployment.id}
-                                  >
-                                    <Eye className="mr-2 h-4 w-4" />
-                                    View Runs
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleConfigClick(deployment, e);
-                                    }}
-                                    disabled={actionInProgress === deployment.id}
-                                  >
-                                    <Eye className="mr-2 h-4 w-4" />
-                                    {c('view_config')}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleOutputClick(deployment, e);
-                                    }}
-                                    disabled={actionInProgress === deployment.id}
-                                  >
-                                    <Eye className="mr-2 h-4 w-4" />
-                                    View Output
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleEditClick(deployment, e);
-                                    }}
-                                    disabled={actionInProgress === deployment.id}
-                                  >
-                                    <Edit2 className="mr-2 h-4 w-4" />
-                                    {c('edit')}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDuplicateClick(deployment, e);
-                                    }}
-                                    disabled={actionInProgress === deployment.id}
-                                  >
-                                    <Copy className="mr-2 h-4 w-4" />
-                                    Duplicate
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    className="text-red-600"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDeleteClick(deployment, e);
-                                    }}
-                                    disabled={actionInProgress === deployment.id}
-                                  >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleToggleActiveClick(deployment, e);
-                                    }}
-                                    disabled={actionInProgress === deployment.id}
-                                  >
-                                    <EyeOff className="mr-2 h-4 w-4" />
-                                    Disable
-                                  </DropdownMenuItem>
-                                </>
-                              ) : (
-                                <DropdownMenuItem
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleToggleActiveClick(deployment, e);
-                                  }}
-                                  disabled={actionInProgress === deployment.id}
-                                >
-                                  <Eye className="mr-2 h-4 w-4" />
-                                  Enable
-                                </DropdownMenuItem>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="text-center py-8 bg-transparent dark:bg-transparent">
-              <div className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-4">
-                {activeTab === 'scheduled' ? (
-                  <Clock className="h-12 w-12" />
-                ) : activeTab === 'pending' ? (
-                  <Clock className="h-12 w-12" />
-                ) : activeTab === 'active' ? (
-                  <Play className="h-12 w-12" />
-                ) : activeTab === 'completed' ? (
-                  <Clock className="h-12 w-12" />
-                ) : (
-                  <Clock className="h-12 w-12" />
-                )}
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
-                No deployments found
-              </h3>
-              <p className="text-gray-500 dark:text-gray-400">
-                {searchQuery || filterStatus !== 'all'
-                  ? 'Try changing your search or filter criteria'
-                  : 'Create your first deployment to get started'}
-              </p>
-            </div>
-          )}
+          <DeploymentTableClient
+            displayDeployments={displayDeployments}
+            activeTab={activeTab}
+            searchQuery={searchQuery}
+            filterStatus={filterStatus}
+            isInitialLoad={isInitialLoad}
+            actionInProgress={actionInProgress}
+            isRunning={null}
+            handleViewDeployment={handleViewDeployment}
+            handleRunDeployment={handleRunDeployment}
+            handleDeleteClick={onDeleteClick}
+            handleEditClick={onEditClick}
+            handleConfigClick={onConfigClick}
+            handleOutputClick={onOutputClick}
+            handleDuplicateClick={handleDuplicateClick}
+            handleToggleActiveClick={handleToggleActiveClick}
+          />
         </div>
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <AlertDialogContent className="max-w-[400px]">
@@ -922,7 +390,7 @@ export function DeploymentContentClient({
             <AlertDialogFooter className="flex justify-end gap-2">
               <AlertDialogCancel className="mt-0">Cancel</AlertDialogCancel>
               <AlertDialogAction
-                onClick={handleConfirmDelete}
+                onClick={onConfirmDelete}
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
                 Delete
