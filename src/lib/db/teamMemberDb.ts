@@ -514,6 +514,128 @@ export async function addMultipleTeamMembers(
   }
 }
 
+/**
+ * Get a team member's role based on their profile ID and active team
+ * @param profileId The user's profile ID
+ * @param teamId The team ID (typically the user's active team)
+ * @param cookieStore Cookie store for authentication
+ * @returns The user's role in the specified team or null if not found
+ */
+export async function getTeamMemberRole(
+  profileId: string,
+  teamId: string,
+  cookieStore?: any,
+): Promise<DbResponse<string | null>> {
+  try {
+    console.log(
+      `[@db:teamMemberDb:getTeamMemberRole] Getting role for profile: ${profileId}, team: ${teamId}`,
+    );
+
+    if (!profileId || !teamId) {
+      console.error(
+        `[@db:teamMemberDb:getTeamMemberRole] Missing required parameters: profileId=${profileId}, teamId=${teamId}`,
+      );
+      return { success: false, error: 'Missing required parameters' };
+    }
+
+    const supabase = await createClient(cookieStore);
+    console.log(`[@db:teamMemberDb:getTeamMemberRole] Supabase client created, fetching role`);
+
+    // Log raw query parameters for debugging
+    console.log(`[@db:teamMemberDb:getTeamMemberRole] Query parameters:`, {
+      table: 'team_members',
+      profileIdType: typeof profileId,
+      profileIdValue: profileId,
+      teamIdType: typeof teamId,
+      teamIdValue: teamId,
+    });
+
+    // Get the team member record for this user and team
+    const start = Date.now();
+    const { data, error } = await supabase
+      .from('team_members')
+      .select('role')
+      .eq('profile_id', profileId)
+      .eq('team_id', teamId)
+      .single();
+    const duration = Date.now() - start;
+
+    console.log(`[@db:teamMemberDb:getTeamMemberRole] Query completed in ${duration}ms`);
+
+    // Log the raw query result for debugging
+    console.log(`[@db:teamMemberDb:getTeamMemberRole] Raw query result:`, {
+      hasData: !!data,
+      dataType: data ? typeof data : 'null',
+      data: data,
+      hasError: !!error,
+      errorCode: error?.code,
+      errorMessage: error?.message,
+    });
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // No rows returned - user is not a member of this team
+        console.log(
+          `[@db:teamMemberDb:getTeamMemberRole] No team membership found for profile: ${profileId} in team: ${teamId} (query time: ${duration}ms)`,
+        );
+
+        // Try a fallback query without .single() to see if we get any rows at all
+        console.log(`[@db:teamMemberDb:getTeamMemberRole] Trying fallback query without .single()`);
+        const fallbackStart = Date.now();
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('team_members')
+          .select('role')
+          .eq('profile_id', profileId)
+          .eq('team_id', teamId);
+        const fallbackDuration = Date.now() - fallbackStart;
+
+        console.log(`[@db:teamMemberDb:getTeamMemberRole] Fallback query results:`, {
+          duration: fallbackDuration,
+          hasData: !!fallbackData,
+          dataLength: fallbackData?.length,
+          data: fallbackData,
+          hasError: !!fallbackError,
+        });
+
+        return { success: true, data: null };
+      }
+
+      console.error(`[@db:teamMemberDb:getTeamMemberRole] Error fetching role:`, error);
+      console.error(`[@db:teamMemberDb:getTeamMemberRole] Query parameters:`, {
+        profileId,
+        teamId,
+      });
+      return { success: false, error: error.message };
+    }
+
+    if (!data) {
+      console.warn(
+        `[@db:teamMemberDb:getTeamMemberRole] Query returned no data but no error for profile: ${profileId} in team: ${teamId}`,
+      );
+      return { success: true, data: null };
+    }
+
+    console.log(
+      `[@db:teamMemberDb:getTeamMemberRole] Found role: ${data.role} for profile: ${profileId} in team: ${teamId} (query time: ${duration}ms)`,
+    );
+
+    // Log additional details about the role value
+    console.log(`[@db:teamMemberDb:getTeamMemberRole] Role details:`, {
+      roleType: typeof data.role,
+      roleValue: data.role,
+      roleIsEmpty: data.role === '',
+      roleIsNull: data.role === null,
+      roleIsUndefined: data.role === undefined,
+    });
+
+    return { success: true, data: data.role };
+  } catch (error: any) {
+    console.error(`[@db:teamMemberDb:getTeamMemberRole] Error:`, error);
+    console.error(`[@db:teamMemberDb:getTeamMemberRole] Query parameters:`, { profileId, teamId });
+    return { success: false, error: error.message || 'Failed to get team member role' };
+  }
+}
+
 // Export at the end of the file
 export default {
   getTeamMembers,
@@ -522,4 +644,5 @@ export default {
   removeTeamMember,
   getAvailableTenantProfilesForTeam,
   addMultipleTeamMembers,
+  getTeamMemberRole,
 };

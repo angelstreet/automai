@@ -3,9 +3,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 
-import { updateTeamMemberRole } from '@/app/actions/teamMemberAction';
+import { updateTeamMemberRole, getTeamMemberRole } from '@/app/actions/teamMemberAction';
 import { getUser, updateProfile, invalidateUserCache } from '@/app/actions/userAction';
-import { createClient } from '@/lib/supabase/client';
 import type { User } from '@/types/service/userServiceType';
 
 // Generate a unique ID for each hook instance
@@ -66,52 +65,51 @@ export function useUser(initialUser: User | null = null, componentName = 'unknow
     },
   });
 
-  // Direct function to get user role using Supabase client
-  const getUserRoleFromTeamMembers = async (userId: string, activeTeamId: string) => {
-    try {
-      if (!userId || !activeTeamId) return null;
-
-      const supabase = createClient();
-
-      // Get the team member record for this user and team
-      const { data, error } = await supabase
-        .from('team_members')
-        .select('role')
-        .eq('profile_id', userId)
-        .eq('team_id', activeTeamId)
-        .single();
-
-      if (error) {
-        console.error(`[@hook:useUser:getUserRoleFromTeamMembers] Error fetching role:`, error);
-        return null;
-      }
-
-      return data?.role || null;
-    } catch (error) {
-      console.error(`[@hook:useUser:getUserRoleFromTeamMembers] Error:`, error);
-      return null;
-    }
-  };
-
   // Role update mutation (uses team member update directly)
   const { mutate: updateRole, isPending: isRoleUpdating } = useMutation({
     mutationFn: async (role: string) => {
-      console.log(`[@hook:useUser:updateRole] #${instanceId.current} Updating user role`, role);
+      console.log(
+        `[@hook:useUser:updateRole] #${instanceId.current} Updating user role to "${role}"`,
+      );
 
       // We need to get the user first
       const userData = await getUser();
       if (!userData) {
+        console.error(`[@hook:useUser:updateRole] #${instanceId.current} User not found`);
         throw new Error('User not found');
       }
 
-      // Get active team directly from user data
-      const activeTeamId = userData.active_team;
+      // Get active team directly from user data - need to typecast since our type doesn't include active_team
+      const userWithActiveTeam = userData as User & { active_team?: string };
+
+      console.log(`[@hook:useUser:updateRole] #${instanceId.current} User data:`, {
+        id: userData.id,
+        // Log the current role if it exists
+        currentRole: userData.role || 'undefined',
+        active_team: userWithActiveTeam.active_team,
+      });
+
+      // Get active team directly from user data - need to typecast since our type doesn't include active_team
+      const activeTeamId = userWithActiveTeam.active_team;
       if (!activeTeamId) {
+        console.error(`[@hook:useUser:updateRole] #${instanceId.current} No active team found`);
         throw new Error('No active team found');
       }
 
+      console.log(
+        `[@hook:useUser:updateRole] #${instanceId.current} Updating role in team ${activeTeamId} for user ${userData.id} to "${role}"`,
+      );
+
       // Update the role in team_members
-      return updateTeamMemberRole(activeTeamId, userData.id, role);
+      const result = await updateTeamMemberRole(activeTeamId, userData.id, role);
+
+      console.log(`[@hook:useUser:updateRole] #${instanceId.current} Role update result:`, {
+        success: result.success,
+        error: result.error || 'none',
+        updatedRole: result.data?.role || 'unknown',
+      });
+
+      return result;
     },
     onSuccess: () => {
       console.log(
@@ -137,7 +135,7 @@ export function useUser(initialUser: User | null = null, componentName = 'unknow
     },
   });
 
-  // Main user data query - now gets role directly from team_members
+  // Main user data query - now gets role from team_members using our server action
   const {
     data: user,
     isLoading,
@@ -168,22 +166,74 @@ export function useUser(initialUser: User | null = null, componentName = 'unknow
           return null;
         }
 
-        // Get the user's role directly using active_team from the profile
-        if (result.id && result.active_team) {
-          const role = await getUserRoleFromTeamMembers(result.id, result.active_team);
+        // The result from getUser() might have active_team but our User type doesn't reflect this
+        // Use type assertion to work with the actual data structure
+        const userWithActiveTeam = result as User & { active_team?: string };
+
+        console.log(`[@hook:useUser:useUser] #${instanceId.current} User data received:`, {
+          id: userWithActiveTeam.id,
+          active_team: userWithActiveTeam.active_team,
+          email: userWithActiveTeam.email,
+          hasRoleProperty: 'role' in userWithActiveTeam,
+          roleValue: userWithActiveTeam.role,
+          userKeys: Object.keys(userWithActiveTeam),
+        });
+
+        // Get the user's role from team_members using our server action
+        if (userWithActiveTeam.id && userWithActiveTeam.active_team) {
+          console.log(
+            `[@hook:useUser:useUser] #${instanceId.current} Getting role for user ${userWithActiveTeam.id} with active team ${userWithActiveTeam.active_team}`,
+          );
+
+          // Use the server action instead of direct Supabase query
+          const startTime = Date.now();
+          const role = await getTeamMemberRole(
+            userWithActiveTeam.id,
+            userWithActiveTeam.active_team,
+          );
+          const duration = Date.now() - startTime;
+
+          // Log the role returned from the server action with more detail
+          console.log(
+            `[@hook:useUser:useUser] #${instanceId.current} Role from getTeamMemberRole: "${role}" (${typeof role}) - full value:`,
+            role,
+          );
 
           // Add the role to the user object
           if (role) {
-            result.role = role;
+            console.log(
+              `[@hook:useUser:useUser] #${instanceId.current} Setting user role to: "${role}" (took ${duration}ms)`,
+            );
+            // Cast the role to the User type's role property
+            userWithActiveTeam.role = role as any;
+
+            // Verify the role was properly set
+            console.log(`[@hook:useUser:useUser] #${instanceId.current} After setting role:`, {
+              hasRoleProperty: 'role' in userWithActiveTeam,
+              roleValue: userWithActiveTeam.role,
+              roleType: typeof userWithActiveTeam.role,
+            });
+          } else {
+            console.log(
+              `[@hook:useUser:useUser] #${instanceId.current} No role found for user ${userWithActiveTeam.id} in team ${userWithActiveTeam.active_team} (took ${duration}ms)`,
+            );
           }
+        } else {
+          console.log(
+            `[@hook:useUser:useUser] #${instanceId.current} Missing user ID or active team, cannot fetch role. User ID: ${userWithActiveTeam.id}, Active team: ${userWithActiveTeam.active_team}`,
+          );
         }
 
-        console.log(
-          `[@hook:useUser:useUser] #${instanceId.current} Received user data:`,
-          result ? 'User found' : 'No user',
-        );
+        console.log(`[@hook:useUser:useUser] #${instanceId.current} Final user object with role:`, {
+          id: userWithActiveTeam.id,
+          role: userWithActiveTeam.role || 'undefined',
+          hasRoleProperty: 'role' in userWithActiveTeam,
+          roleType: typeof userWithActiveTeam.role,
+          active_team: userWithActiveTeam.active_team,
+          allProperties: Object.keys(userWithActiveTeam),
+        });
 
-        return result;
+        return userWithActiveTeam;
       } catch (error) {
         // Handle any unexpected errors in the queryFn itself
         console.error(`[@hook:useUser:useUser] #${instanceId.current} Error in queryFn:`, error);
@@ -202,6 +252,10 @@ export function useUser(initialUser: User | null = null, componentName = 'unknow
         console.log(
           `[@hook:useUser:useUser] #${instanceId.current} Caching user data to localStorage`,
         );
+        console.log(
+          `[@hook:useUser:useUser] #${instanceId.current} User role being cached:`,
+          user.role || 'undefined',
+        );
         localStorage.setItem('cached_user', JSON.stringify(user));
         localStorage.setItem('user_cache_timestamp', Date.now().toString());
       } catch (error) {
@@ -212,6 +266,46 @@ export function useUser(initialUser: User | null = null, componentName = 'unknow
       }
     }
   }, [user]);
+
+  // After main React Query, ensure role is present even if initial user data lacked it
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchMissingRole() {
+      if (user && !user.role && (user as any).active_team) {
+        const activeTeamId = (user as any).active_team as string;
+        console.log(
+          `[@hook:useUser:useUser] #${instanceId.current} Detected missing role for user ${user.id} with active team ${activeTeamId}. Fetching...`,
+        );
+        try {
+          const start = Date.now();
+          const fetchedRole = await getTeamMemberRole(user.id, activeTeamId);
+          const duration = Date.now() - start;
+          console.log(
+            `[@hook:useUser:useUser] #${instanceId.current} Fetched missing role: "${fetchedRole}" in ${duration}ms`,
+          );
+          if (!cancelled && fetchedRole) {
+            // Update cache so all subscribers get updated role
+            queryClient.setQueryData(['user'], (old: any) => {
+              if (!old) return old;
+              return { ...old, role: fetchedRole };
+            });
+          }
+        } catch (err) {
+          console.error(
+            `[@hook:useUser:useUser] #${instanceId.current} Error fetching missing role:`,
+            err,
+          );
+        }
+      }
+    }
+
+    fetchMissingRole();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, queryClient]);
 
   return {
     // User data

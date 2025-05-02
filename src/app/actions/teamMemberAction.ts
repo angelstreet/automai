@@ -488,3 +488,115 @@ export const applyRolePermissionTemplate = cache(
     }
   },
 );
+
+/**
+ * Get a team member's role based on their profile ID and team ID
+ */
+export const getTeamMemberRole = cache(async (profileId: string, teamId: string) => {
+  try {
+    console.log(
+      `[@action:teamMember:getTeamMemberRole] Getting role for profile: ${profileId}, team: ${teamId}`,
+    );
+
+    // Verify if inputs are valid
+    if (!profileId || !teamId) {
+      console.error(
+        `[@action:teamMember:getTeamMemberRole] Invalid inputs: profileId=${profileId}, teamId=${teamId}`,
+      );
+      return null;
+    }
+
+    // Log current time for tracking when this function was called
+    console.log(
+      `[@action:teamMember:getTeamMemberRole] Function called at: ${new Date().toISOString()}`,
+    );
+
+    const cookieStore = await cookies();
+    console.log(
+      `[@action:teamMember:getTeamMemberRole] Cookie store created, calling teamMemberDb.getTeamMemberRole`,
+    );
+
+    // Track timing for the database call
+    const startTime = Date.now();
+    const result = await teamMemberDb.getTeamMemberRole(profileId, teamId, cookieStore);
+    const duration = Date.now() - startTime;
+
+    console.log(
+      `[@action:teamMember:getTeamMemberRole] DB query completed in ${duration}ms with result:`,
+      {
+        success: result.success,
+        error: result.error || 'none',
+        hasData: result.data !== undefined && result.data !== null,
+        dataType: result.data !== null ? typeof result.data : 'null',
+        dataValue: result.data,
+      },
+    );
+
+    if (result.success) {
+      if (result.data) {
+        console.log(`[@action:teamMember:getTeamMemberRole] Role found: ${result.data}`);
+        console.log(`[@action:teamMember:getTeamMemberRole] Role type: ${typeof result.data}`);
+
+        // Ensure we're returning a string
+        if (typeof result.data !== 'string') {
+          console.warn(
+            `[@action:teamMember:getTeamMemberRole] Role is not a string! Converting from ${typeof result.data} to string`,
+          );
+          return String(result.data);
+        }
+
+        return result.data;
+      } else {
+        console.warn(
+          `[@action:teamMember:getTeamMemberRole] No role found for profile: ${profileId}, team: ${teamId}`,
+        );
+
+        // Try a direct Supabase query as a fallback
+        try {
+          console.log(
+            `[@action:teamMember:getTeamMemberRole] Attempting direct DB query as fallback`,
+          );
+          const supabase = await createClient(cookieStore);
+          const { data, error } = await supabase
+            .from('team_members')
+            .select('role')
+            .eq('profile_id', profileId)
+            .eq('team_id', teamId)
+            .maybeSingle();
+
+          console.log(`[@action:teamMember:getTeamMemberRole] Fallback query result:`, {
+            hasData: !!data,
+            data,
+            hasError: !!error,
+            error,
+          });
+
+          if (data?.role) {
+            console.log(
+              `[@action:teamMember:getTeamMemberRole] Found role via fallback: ${data.role}`,
+            );
+            return data.role;
+          }
+        } catch (fallbackError) {
+          console.error(
+            `[@action:teamMember:getTeamMemberRole] Fallback query failed:`,
+            fallbackError,
+          );
+        }
+      }
+
+      return null;
+    } else {
+      console.error(`[@action:teamMember:getTeamMemberRole] Error getting role: ${result.error}`, {
+        profileId,
+        teamId,
+      });
+    }
+
+    return null;
+  } catch (error) {
+    console.error(`[@action:teamMember:getTeamMemberRole] Error:`, error);
+    console.error(`[@action:teamMember:getTeamMemberRole] Stack trace:`, new Error().stack);
+    return null;
+  }
+});
