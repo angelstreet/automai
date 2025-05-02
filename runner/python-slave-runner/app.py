@@ -2,8 +2,32 @@ from flask import Flask, request, jsonify
 from datetime import datetime
 from scripts.restrict_script import execute_script
 import os
+import threading
+import queue
 
 app = Flask(__name__)
+
+def run_with_timeout(script_content, timeout=30):
+    result_queue = queue.Queue()
+
+    def target():
+        try:
+            result = execute_script(script_content)
+            result_queue.put(result)
+        except Exception as e:
+            result_queue.put({"status": "error", "message": f"Execution error: {str(e)}"})
+
+    thread = threading.Thread(target=target)
+    thread.daemon = True
+    thread.start()
+    thread.join(timeout)
+
+    if thread.is_alive():
+        return {"status": "error", "message": "Script execution timed out"}
+    try:
+        return result_queue.get_nowait()
+    except queue.Empty:
+        return {"status": "error", "message": "No result returned"}
 
 @app.route('/execute', methods=['POST'])
 def execute():
@@ -28,13 +52,24 @@ def execute():
                 "duration_seconds": 0
             }), 400
 
+        # Get timeout from payload, default to 30s, cap at 60s
+        timeout = data.get('timeout', 30)
+        try:
+            timeout = float(timeout)
+            if timeout < 1:
+                timeout = 30
+            elif timeout > 60:
+                timeout = 60
+        except (TypeError, ValueError):
+            timeout = 30
+
         start_time = datetime.utcnow()
         start_time_str = start_time.isoformat() + 'Z'
 
         with open(script_path, 'r') as f:
             script_content = f.read()
 
-        result = execute_script(script_content)
+        result = run_with_timeout(script_content, timeout)
 
         end_time = datetime.utcnow()
         end_time_str = end_time.isoformat() + 'Z'
