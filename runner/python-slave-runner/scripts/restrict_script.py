@@ -21,6 +21,7 @@ def create_safe_globals():
         return Printed(output)
 
     restricted_globals['_print_'] = _print_
+    # Only include _getattr_ if strictly needed (optional for now)
     restricted_globals['_getattr_'] = getattr
 
     return restricted_globals, print_outputs
@@ -31,11 +32,18 @@ def execute_script(script):
         import warnings
         warnings.filterwarnings("ignore", category=SyntaxWarning)
 
+        # Debug: Print script content
+        print(f"Executing script: {script}", file=sys.stderr)
+
         code = compile_restricted(script, '<user_script>', 'exec')
         safe_env, print_outputs = create_safe_globals()
         exec(code, safe_env)
-        # Join collected print outputs correctly
-        output = "\n".join(print_outputs) + ("\n" if print_outputs else "")
+
+        # Debug: Print collected outputs
+        print(f"Collected print_outputs: {print_outputs}", file=sys.stderr)
+
+        # Join collected print outputs
+        output = "\n".join(str(item) for item in print_outputs) + ("\n" if print_outputs else "")
         return {"status": "success", "output": output}
     except SyntaxError as e:
         return {"status": "error", "message": f"Syntax error: {str(e)}"}
