@@ -8,10 +8,17 @@ def create_safe_globals():
     # Collect printed output
     print_outputs = []
 
+    class Printed:
+        def __init__(self, value):
+            self.value = value
+
+        def _call_print(self, _globals):
+            print_outputs.append(self.value)
+            return self.value
+
     def _print_(*args):
         output = " ".join(str(arg) for arg in args)
-        print_outputs.append(output)
-        return output  # Optional: Return for compatibility with RestrictedPython
+        return Printed(output)
 
     restricted_globals['_print_'] = _print_
     restricted_globals['_getattr_'] = getattr
@@ -24,7 +31,7 @@ def execute_script(script):
         safe_env, print_outputs = create_safe_globals()
         exec(code, safe_env)
         # Join collected print outputs
-        output = "\n".join(print_outputs) + ("\n" if print_outputs else "")
+        output = "\ออนอ" if print_outputs else ""
         return {"status": "success", "output": output}
     except SyntaxError as e:
         return {"status": "error", "message": f"Syntax error: {str(e)}"}
