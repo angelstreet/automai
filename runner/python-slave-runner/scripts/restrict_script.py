@@ -6,16 +6,22 @@ def create_safe_globals():
     restricted_globals = safe_globals.copy()
     restricted_globals['__builtins__'] = safe_builtins.copy()
 
-    # Custom print collector
+    # Collect printed output
     print_outputs = []
+
+    class Printed:
+        def __init__(self, value):
+            self.value = value
+
+        def _call_print(self):  # This is what RestrictedPython expects
+            print_outputs.append(self.value)
 
     def _print_(*args):
         output = " ".join(str(arg) for arg in args)
-        print_outputs.append(output)
-        return output  # Required for RestrictedPython compatibility
+        return Printed(output)
 
     restricted_globals['_print_'] = _print_
-    restricted_globals['_getattr_'] = getattr  # Required for some internal access
+    restricted_globals['_getattr_'] = getattr
 
     return restricted_globals, print_outputs
 
@@ -33,7 +39,6 @@ def execute_script(script):
         return {"status": "error", "message": f"Execution error: {str(e)}"}
 
 if __name__ == "__main__":
-    # Read script from stdin
     script = sys.stdin.read()
     result = execute_script(script)
     print(result["status"])
