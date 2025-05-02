@@ -8,6 +8,7 @@
     "@upstash/redis": "^1.28.4",
     "@supabase/supabase-js": "^2.39.8",
     "ssh2": "^1.15.0",
-    "node-cron": "^3.0.3"
+    "node-cron": "^3.0.3",
+    "axios": "1.9.0"  
   }
 }
