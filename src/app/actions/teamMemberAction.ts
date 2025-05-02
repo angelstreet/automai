@@ -7,7 +7,6 @@ import { cache } from 'react';
 import { getUser } from '@/app/actions/userAction';
 import permissionDb from '@/lib/db/permissionDb';
 import teamMemberDb from '@/lib/db/teamMemberDb';
-import { createClient } from '@/lib/supabase/server';
 import type { ResourceType } from '@/types/context/permissionsContextType';
 import { ResourcePermissions } from '@/types/context/teamContextType';
 
@@ -59,24 +58,23 @@ export const updateTeamMemberRole = cache(
       const cookieStore = await cookies();
 
       // Check if the member being updated is an admin (prevent changing admin roles)
-      const supabase = await createClient(cookieStore);
-      const { data: memberData, error: memberError } = await supabase
-        .from('team_members')
-        .select('role')
-        .eq('team_id', teamId)
-        .eq('profile_id', profileId)
-        .single();
-
-      if (memberError) {
+      const membersResult = await teamMemberDb.getTeamMembers(teamId, cookieStore);
+      if (!membersResult.success || !membersResult.data) {
         console.error(
           '[@action:teamMemberAction:updateTeamMemberRole] Error checking member role:',
-          memberError,
+          membersResult.error,
         );
         return { success: false, error: 'Failed to check member role' };
       }
 
+      const memberData = membersResult.data.find((member) => member.profile_id === profileId);
+      if (!memberData) {
+        console.error('[@action:teamMemberAction:updateTeamMemberRole] Member not found in team');
+        return { success: false, error: 'Member not found in team' };
+      }
+
       // Prevent modifying admin users
-      if (memberData && memberData.role && memberData.role.toLowerCase() === 'admin') {
+      if (memberData.role && memberData.role.toLowerCase() === 'admin') {
         console.warn(
           '[@action:teamMemberAction:updateTeamMemberRole] Attempted to modify an admin user - operation blocked',
         );
@@ -120,23 +118,41 @@ export const addTeamMember = cache(async (teamId: string, email: string, role: s
 
     // Lookup the user ID from the email
     const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
 
-    // Find user by email
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('email', email)
-      .single();
+    // Use a db function to find user profiles by email
+    // Since we don't have a direct method for this in teamMemberDb,
+    // we can use the getAvailableTenantProfilesForTeam which returns profiles
+    const profilesResult = await teamMemberDb.getAvailableTenantProfilesForTeam(
+      user.tenant_id || '',
+      teamId,
+      cookieStore,
+    );
 
-    if (profileError || !profileData) {
+    if (!profilesResult.success || !profilesResult.data) {
+      console.error(
+        '[@action:teamMemberAction:addTeamMember] Error getting profiles:',
+        profilesResult.error,
+      );
+      return {
+        success: false,
+        error: 'Failed to look up users',
+      };
+    }
+
+    // Find the profile with matching email
+    const userProfile = profilesResult.data.find(
+      (profile) => profile.email === email || profile.user?.email === email,
+    );
+
+    if (!userProfile) {
+      console.error('[@action:teamMemberAction:addTeamMember] User not found with email:', email);
       return {
         success: false,
         error: `User with email ${email} not found`,
       };
     }
 
-    const profileId = profileData.id;
+    const profileId = userProfile.id;
 
     // Add the member to the team
     const result = await teamMemberDb.addTeamMember(
@@ -339,24 +355,23 @@ export const removeTeamMember = cache(async (teamId: string, profileId: string) 
     const cookieStore = await cookies();
 
     // Check if the member being removed is an admin (prevent removal of admin users)
-    const supabase = await createClient(cookieStore);
-    const { data: memberData, error: memberError } = await supabase
-      .from('team_members')
-      .select('role')
-      .eq('team_id', teamId)
-      .eq('profile_id', profileId)
-      .single();
-
-    if (memberError) {
+    const membersResult = await teamMemberDb.getTeamMembers(teamId, cookieStore);
+    if (!membersResult.success || !membersResult.data) {
       console.error(
         '[@action:teamMemberAction:removeTeamMember] Error checking member role:',
-        memberError,
+        membersResult.error,
       );
       return { success: false, error: 'Failed to check member role' };
     }
 
+    const memberData = membersResult.data.find((member) => member.profile_id === profileId);
+    if (!memberData) {
+      console.error('[@action:teamMemberAction:removeTeamMember] Member not found in team');
+      return { success: false, error: 'Member not found in team' };
+    }
+
     // Prevent removing admin users
-    if (memberData && memberData.role && memberData.role.toLowerCase() === 'admin') {
+    if (memberData.role && memberData.role.toLowerCase() === 'admin') {
       console.warn(
         '[@action:teamMemberAction:removeTeamMember] Attempted to remove an admin user - operation blocked',
       );
@@ -550,39 +565,6 @@ export const getTeamMemberRole = cache(async (profileId: string, teamId: string)
         console.warn(
           `[@action:teamMember:getTeamMemberRole] No role found for profile: ${profileId}, team: ${teamId}`,
         );
-
-        // Try a direct Supabase query as a fallback
-        try {
-          console.log(
-            `[@action:teamMember:getTeamMemberRole] Attempting direct DB query as fallback`,
-          );
-          const supabase = await createClient(cookieStore);
-          const { data, error } = await supabase
-            .from('team_members')
-            .select('role')
-            .eq('profile_id', profileId)
-            .eq('team_id', teamId)
-            .maybeSingle();
-
-          console.log(`[@action:teamMember:getTeamMemberRole] Fallback query result:`, {
-            hasData: !!data,
-            data,
-            hasError: !!error,
-            error,
-          });
-
-          if (data?.role) {
-            console.log(
-              `[@action:teamMember:getTeamMemberRole] Found role via fallback: ${data.role}`,
-            );
-            return data.role;
-          }
-        } catch (fallbackError) {
-          console.error(
-            `[@action:teamMember:getTeamMemberRole] Fallback query failed:`,
-            fallbackError,
-          );
-        }
       }
 
       return null;

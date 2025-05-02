@@ -2,9 +2,9 @@ import { getAllJobs as getDeployments } from '@/app/actions/jobsAction';
 import { getRepositories } from '@/app/actions/repositoriesAction';
 
 // Import with direct relative paths
+import { DeploymentContentClient } from './client/DeploymentContentClient';
 import { DeploymentEmptyStateClient } from './client/DeploymentEmptyStateClient';
 import { DeploymentFooterClient } from './client/DeploymentFooterClient';
-import { DeploymentContentClient } from './client/DeploymentContentClient';
 
 export async function DeploymentContent() {
   // Fetch data at the server level

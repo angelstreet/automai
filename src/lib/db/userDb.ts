@@ -97,7 +97,7 @@ export async function getUser(userId: string, cookieStore?: any): Promise<DbResp
     // Get the user profile directly - don't use admin API
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('role, tenant_id, tenant_name, avatar_url')
+      .select('avatar_url,active_team')
       .eq('id', userId)
       .single();
 
@@ -133,12 +133,41 @@ export async function getUser(userId: string, cookieStore?: any): Promise<DbResp
       selectedTeamId = selectedTeamCookie?.value || null;
     }
 
-    // Only use role from profiles table
-    const role = profile.role;
+    // Get role from active team's team_members entry
+    let role = null;
+    if (profile.active_team) {
+      const { data: teamMember, error: roleError } = await supabase
+        .from('team_members')
+        .select('role')
+        .eq('team_id', profile.active_team)
+        .eq('profile_id', userId)
+        .single();
+
+      if (roleError) {
+        console.error('[@db:userDb:getUser] Error getting user role:', roleError);
+      } else if (teamMember) {
+        role = teamMember.role;
+      }
+    }
 
     if (!role) {
-      console.error('[@db:userDb:getUser] No role found in profiles table');
-      return { success: false, error: 'No role found for user' };
+      console.warn('[@db:userDb:getUser] No role found for user in team_members table');
+
+      // Fallback: Try to get role from any team the user belongs to
+      const { data: anyTeamMember, error: anyRoleError } = await supabase
+        .from('team_members')
+        .select('role')
+        .eq('profile_id', userId)
+        .limit(1)
+        .single();
+
+      if (!anyRoleError && anyTeamMember) {
+        role = anyTeamMember.role;
+        console.log('[@db:userDb:getUser] Using fallback role from team_members:', role);
+      } else {
+        console.error('[@db:userDb:getUser] No fallback role found:', anyRoleError);
+        return { success: false, error: 'No role found for user' };
+      }
     }
 
     // Transform teams data
@@ -159,8 +188,9 @@ export async function getUser(userId: string, cookieStore?: any): Promise<DbResp
         id: userId,
         email: authData.user.email || '',
         role,
-        tenant_id: profile.tenant_id,
-        tenant_name: profile.tenant_name,
+        // Get tenant_id from the active team if possible
+        tenant_id: userTeams.find((team) => team.id === profile.active_team)?.tenant_id || '',
+        tenant_name: '', // This needs to be fetched separately if needed
         user_metadata: authData.user.user_metadata || {},
         teams: userTeams,
         selectedTeamId: selectedTeamId || undefined, // Ensure compatible type

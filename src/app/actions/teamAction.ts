@@ -18,7 +18,6 @@ import {
   type Team,
 } from '@/lib/db/teamDb';
 import teamMemberDb from '@/lib/db/teamMemberDb';
-import { createClient } from '@/lib/supabase/server';
 import type { Host } from '@/types/component/hostComponentType';
 import { TeamMember } from '@/types/context/teamContextType';
 import type {
@@ -678,23 +677,22 @@ export const assignResourceToTeam = cache(
 export const getTenantResourceCounts = cache(async (tenantId: string) => {
   try {
     const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
 
-    // Get repository count
-    const { count: repositories } = await supabase
-      .from('repositories')
-      .select('id', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId);
+    // Get repository count using repositoryDb
+    const repoResult = await repositoryDb.getRepositories(cookieStore);
+    const repositories = repoResult.success
+      ? (repoResult.data || []).filter((repo) => repo.tenant_id === tenantId).length
+      : 0;
 
-    // Get deployment count
-    const { count: deployments } = await supabase
-      .from('Deployments')
-      .select('id', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId);
+    // Get deployment count using jobConfigurationDb - filter in memory
+    const deploymentResult = await jobConfigurationDb.getJobConfigsByTeamId('', cookieStore);
+    const deployments = deploymentResult.success
+      ? (deploymentResult.data || []).filter((d: any) => d.tenant_id === tenantId).length
+      : 0;
 
     const counts = {
-      repositories: repositories || 0,
-      deployments: deployments || 0,
+      repositories: repositories,
+      deployments: deployments,
     };
 
     console.log(`[@action:team:getTenantResourceCounts] Successfully got resource counts`);
@@ -721,42 +719,32 @@ export const getTenantResourceCounts = cache(async (tenantId: string) => {
 export const getTeamResourceCounts = cache(async (teamId: string) => {
   try {
     const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
 
     console.log(`[@action:team:getTeamResourceCounts] Getting resource counts for team: ${teamId}`);
 
-    // Get repository count
-    const { count: repositories } = await supabase
-      .from('repositories')
-      .select('id', { count: 'exact', head: true })
-      .eq('team_id', teamId);
+    // Get all resource counts in parallel using the proper database layers
+    const [repoResult, hostResult, deploymentResult] = await Promise.all([
+      repositoryDb.getRepositories(cookieStore, teamId),
+      hostDb.getHosts(teamId),
+      jobConfigurationDb.getJobConfigsByTeamId(teamId, cookieStore),
+    ]);
 
-    // Get host count
-    const { count: hosts } = await supabase
-      .from('hosts')
-      .select('id', { count: 'exact', head: true })
-      .eq('team_id', teamId);
-
-    // Get deployment count
-    const { count: deployments } = await supabase
-      .from('Deployments')
-      .select('id', { count: 'exact', head: true })
-      .eq('team_id', teamId);
+    const resourceCounts = {
+      repositories: repoResult.success ? repoResult.data?.length || 0 : 0,
+      hosts: hostResult.success ? hostResult.data?.length || 0 : 0,
+      deployments: deploymentResult.success ? deploymentResult.data?.length || 0 : 0,
+    };
 
     console.log(
       `[@action:team:getTeamResourceCounts] Successfully got resource counts for team ${teamId}`,
     );
     console.log(
-      `[@action:team:getTeamResourceCounts] Counts: repos=${repositories || 0}, hosts=${hosts || 0}, deployments=${deployments || 0}`,
+      `[@action:team:getTeamResourceCounts] Counts: repos=${resourceCounts.repositories}, hosts=${resourceCounts.hosts}, deployments=${resourceCounts.deployments}`,
     );
 
     return {
       success: true,
-      data: {
-        repositories: repositories || 0,
-        hosts: hosts || 0,
-        deployments: deployments || 0,
-      },
+      data: resourceCounts,
     };
   } catch (error: any) {
     console.error(`[@action:team:getTeamResourceCounts] Error:`, error);
