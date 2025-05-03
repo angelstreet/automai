@@ -267,19 +267,36 @@ async function processJob() {
         console.log(`[@runner:processJob] Scripts: ${scripts}`);
 
         let repoCommands = '';
-        let workingDir = 'Desktop/remote-installer';
+        let workingDir =
+          host.os === 'windows' ? 'Desktop\\remote-installer' : 'Desktop/remote-installer';
         if (config.repository) {
           const repoUrl = config.repository;
           const branch = config.branch || 'main';
           const gitFolder = config.git_folder || 'repo';
-          const repoDir = `/tmp/${gitFolder}-${jobId}`;
-          repoCommands = `
-            if [ -d "${repoDir}" ]; then
-              cd ${repoDir} && git pull origin ${branch} || exit 1
-            else
-              rm -rf ${repoDir} && git clone -b ${branch} ${repoUrl} ${repoDir} && cd ${repoDir} || exit 1
-            fi
-          `;
+          const repoDir =
+            host.os === 'windows'
+              ? `C:\\Temp\\${gitFolder}-${jobId}`
+              : `/tmp/${gitFolder}-${jobId}`;
+          if (host.os === 'windows') {
+            console.log(
+              `[@runner:processJob] WARNING: Git must be installed on Windows host ${host.ip} for repository operations.`,
+            );
+            repoCommands = `
+              if exist "${repoDir}" (
+                cd /d ${repoDir} && git pull origin ${branch} || exit /b 1
+              ) else (
+                rmdir /S /Q ${repoDir} 2>nul && git clone -b ${branch} ${repoUrl} ${repoDir} && cd /d ${repoDir} || exit /b 1
+              )
+            `;
+          } else {
+            repoCommands = `
+              if [ -d "${repoDir}" ]; then
+                cd ${repoDir} && git pull origin ${branch} || exit 1
+              else
+                rm -rf ${repoDir} && git clone -b ${branch} ${repoUrl} ${repoDir} && cd ${repoDir} || exit 1
+              fi
+            `;
+          }
           workingDir = repoDir;
           console.log(
             `[@runner:processJob] Repository setup: ${repoDir} exists ? git pull : clone ${repoUrl} branch ${branch}`,
@@ -287,11 +304,16 @@ async function processJob() {
         }
 
         const scriptCommand = `${scripts}`;
-        const fullScript = `
-          ${repoCommands} \
-          ${repoCommands ? '' : `cd ${workingDir} && `} \
-          cmd.exe /c python --version && dir && echo ============================= && ${scriptCommand}
-        `.trim();
+        let fullScript;
+        if (host.os === 'windows') {
+          fullScript = `
+            ${repoCommands} ${repoCommands ? '' : `cd /d ${workingDir} && `} cmd.exe /c python --version && dir && echo ============================= && ${scriptCommand}
+          `.trim();
+        } else {
+          fullScript = `
+            ${repoCommands} ${repoCommands ? '' : `cd ${workingDir} && `} cmd.exe /c python --version && dir && echo ============================= && ${scriptCommand}
+          `.trim();
+        }
         console.log(`[@runner:processJob] SSH command: ${fullScript}`);
 
         const conn = new Client();
