@@ -1,14 +1,13 @@
 // environmentVariablesAction.ts
 'use server';
 
-import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
+import { cookies } from 'next/headers';
 import { cache } from 'react';
 
 import { getUser } from '@/app/actions/userAction';
 import * as environmentVariablesDb from '@/lib/db/environmentVariablesDb';
 import { encryptValue, decryptValue } from '@/lib/utils/encryptionUtils';
-import { EnvironmentVariable } from '@/types/context/environmentVariablesContextType';
 
 /**
  * Get all environment variables for a team
