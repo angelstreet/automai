@@ -107,16 +107,6 @@ def execute():
                 "duration_seconds": 0
             }), 400
 
-            # Verify script path
-        if not os.path.exists(script_path):
-            return jsonify({
-                "status": "error",
-                "message": f"Script not found: {script_path}",
-                "start_time": datetime.utcnow().isoformat() + 'Z',
-                "end_time": datetime.utcnow().isoformat() + 'Z',
-                "duration_seconds": 0
-            }), 400
-
         timeout = data.get('timeout', 30)
         try:
             timeout = float(timeout)
