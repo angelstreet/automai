@@ -123,15 +123,15 @@ export function EnvironmentVariablesListClient({
 
       <div className="text-sm text-muted-foreground text-right">
         {filteredVariables.length === 0 ? (
-          <p>{t('no_data')}</p>
+          <div>{t('no_data')}</div>
         ) : (
-          <p>
+          <div>
             {t('showing')}{' '}
             <Badge variant="outline" className="font-mono">
               {filteredVariables.length}
             </Badge>{' '}
             {filteredVariables.length === 1 ? t('variable_singular') : t('variable_plural')}
-          </p>
+          </div>
         )}
       </div>
     </div>
