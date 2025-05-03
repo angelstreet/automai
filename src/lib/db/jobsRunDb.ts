@@ -21,7 +21,8 @@ export async function getJobRunsByConfigId(
       .from('jobs_run')
       .select('*')
       .eq('config_id', configId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(10);
 
     if (error) {
       console.error(`[@db:jobsRunDb:getJobRunsByConfigId] Error: ${error.message}`);
