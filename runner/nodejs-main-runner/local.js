@@ -323,13 +323,13 @@ async function processJob() {
         let fullScript;
 
         if (host.os === 'windows') {
-          fullScript = `${repoCommands} ${repoCommands ? '' : repoDir ? `cd /d ${repoDir}/${scriptFolder} && ` : ''} && cd ${repoDir}/${scriptFolder} && pip install -r requirements.txt && ${envSetup}python --version && echo ============================= && ${scriptCommand}`;
+          fullScript = `${repoCommands} ${repoCommands ? '' : repoDir ? `cd /d ${repoDir}/${scriptFolder} && ` : ''} && cd ${repoDir}/${scriptFolder} && powershell -Command "if (Test-Path 'requirements.txt') { pip install -r requirements.txt } else { Write-Output 'No requirements.txt file found, skipping pip install' }" && ${envSetup}python --version && echo ============================= && ${scriptCommand}`;
           console.log(
             `[@local-runner:processJob] Using PowerShell command structure for Windows host ${host.ip}`,
           );
         } else {
           fullScript = `
-            ${repoCommands} ${repoCommands ? '' : repoDir ? `cd ${repoDir} && ` : ''} ${envSetup}python --version && ls -l && echo ============================= && ${scriptCommand}
+            ${repoCommands} ${repoCommands ? '' : repoDir ? `cd ${repoDir}/${scriptFolder} && ` : ''} && cd ${repoDir}/${scriptFolder} && if [ -f "requirements.txt" ]; then pip install -r requirements.txt; else echo "No requirements.txt file found, skipping pip install"; fi && ${envSetup}python --version && echo ============================= && ${scriptCommand}
           `.trim();
         }
         console.log(
