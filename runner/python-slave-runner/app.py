@@ -155,15 +155,6 @@ def execute():
             venv_path = venv_result
         else:
             print(f"DEBUG: Using local scripts folder: {LOCAL_SCRIPTS_PATH}", file=sys.stderr)
-            print(f"DEBUG: LOCAL_SCRIPTS_PATH is set to: {LOCAL_SCRIPTS_PATH}", file=sys.stderr)
-            
-            # List all files in the scripts directory to verify they exist
-            print(f"DEBUG: Files in scripts directory:", file=sys.stderr)
-            try:
-                for f in os.listdir(LOCAL_SCRIPTS_PATH):
-                    print(f"DEBUG: - {f}", file=sys.stderr)
-            except Exception as e:
-                print(f"DEBUG: Error listing files: {str(e)}", file=sys.stderr)
             
             # Fix the path resolution by handling both cases correctly
             if script_path.startswith("scripts/"):
@@ -173,8 +164,6 @@ def execute():
             else:
                 # Otherwise, just join the paths normally
                 full_script_path = os.path.join(LOCAL_SCRIPTS_PATH, script_path)
-            
-            print(f"DEBUG: Resolved script path: {full_script_path}", file=sys.stderr)
             
             venv_result = setup_venv(os.path.dirname(LOCAL_SCRIPTS_PATH), os.path.basename(LOCAL_SCRIPTS_PATH))
             if isinstance(venv_result, dict):
@@ -188,22 +177,6 @@ def execute():
             venv_path = venv_result
 
         print(f"DEBUG: Checking script path: {full_script_path}", file=sys.stderr)
-        print(f"DEBUG: full_script_path calculated as: {full_script_path}", file=sys.stderr)
-        print(f"DEBUG: Does path exist? {os.path.exists(full_script_path)}", file=sys.stderr)
-        
-        # Check if the directory exists
-        script_dir = os.path.dirname(full_script_path)
-        print(f"DEBUG: Script directory: {script_dir}", file=sys.stderr)
-        print(f"DEBUG: Does directory exist? {os.path.exists(script_dir)}", file=sys.stderr)
-        
-        # If directory exists, list its contents
-        if os.path.exists(script_dir):
-            print(f"DEBUG: Contents of directory {script_dir}:", file=sys.stderr)
-            try:
-                for f in os.listdir(script_dir):
-                    print(f"DEBUG: - {f}", file=sys.stderr)
-            except Exception as e:
-                print(f"DEBUG: Error listing directory: {str(e)}", file=sys.stderr)
         
         if not os.path.exists(full_script_path):
             print(f"ERROR: Script not found: {full_script_path}", file=sys.stderr)
