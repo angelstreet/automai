@@ -253,6 +253,11 @@ async function processJob() {
       }
     } else {
       const hosts = config.hosts;
+      // Log current jobData state at the start of SSH section
+      console.log(
+        `[@runner:processJob] Job data at start of SSH section: team_id=${team_id}, config_id=${config_id}`,
+      );
+
       for (const host of hosts) {
         console.log(
           `[@runner:processJob] Host: ${host.ip}, OS: ${host.os}, Username: ${host.username}`,
@@ -286,26 +291,28 @@ async function processJob() {
         console.log(`[@runner:processJob] Scripts: ${scripts}`);
 
         let repoCommands = '';
-        let workingDir;
+        let scriptFolder = config.script_folder || '';
+        let repoDir = '';
+        console.log(`[@runner:processJob] Script folder: ${scriptFolder}`);
+
         if (config.repository) {
           const repoUrl = config.repository;
           const branch = config.branch || 'main';
-          const gitFolder = config.git_folder || 'repo';
-          const repoDir =
-            host.os === 'windows'
-              ? `C:\\Temp\\${gitFolder}-${jobId}`
-              : `/tmp/${gitFolder}-${jobId}`;
+
+          // Derive repository directory name from the URL for meaningful identification
+          repoDir =
+            repoUrl
+              .split('/')
+              .pop()
+              .replace(/\.git$/, '') || 'repo';
+
           if (host.os === 'windows') {
             console.log(
               `[@runner:processJob] WARNING: Git must be installed on Windows host ${host.ip} for repository operations.`,
             );
-            repoCommands = `
-              if exist "${repoDir}" (
-                cd /d ${repoDir} && git pull origin ${branch} || exit /b 1
-              ) else (
-                rmdir /S /Q ${repoDir} 2>nul && git clone -b ${branch} ${repoUrl} ${repoDir} && cd /d ${repoDir} || exit /b 1
-              )
-            `;
+            // Use PowerShell for repository check and operations on Windows
+            let repoScript = `if (Test-Path '${repoDir}') { Write-Output 'Repository exists, pulling latest changes'; cd '${repoDir}'; git pull origin ${branch} } else { Write-Output 'Repository does not exist, cloning'; git clone -b ${branch} ${repoUrl} '${repoDir}'; cd '${repoDir}' }`;
+            repoCommands = `powershell -Command "${repoScript}"; cd '${scriptFolder}'`;
           } else {
             repoCommands = `
               if [ -d "${repoDir}" ]; then
@@ -315,21 +322,20 @@ async function processJob() {
               fi
             `;
           }
-          workingDir = repoDir;
           console.log(
-            `[@runner:processJob] Repository setup: ${repoDir} exists ? git pull : clone ${repoUrl} branch ${branch}`,
+            `[@runner:processJob] Repository setup: ${repoDir} exists ? git pull : clone ${repoUrl} branch ${branch}${scriptFolder ? `, then navigate to ${scriptFolder}` : ''}`,
           );
         } else {
           if (config.scripts && config.scripts.length > 0 && config.scripts[0].folder) {
-            workingDir = config.scripts[0].folder;
+            scriptFolder = config.scripts[0].folder;
             console.log(
-              `[@runner:processJob] Using folder from script configuration as working directory: ${workingDir}`,
+              `[@runner:processJob] Using folder from script configuration as working directory: ${scriptFolder}`,
             );
           } else {
             console.log(
               `[@runner:processJob] No folder specified in script configuration or repository, using default SSH directory (if any)`,
             );
-            // Not setting a specific workingDir, letting SSH use its default directory
+            // Not setting a specific scriptFolder, letting SSH use its default directory
           }
         }
 
@@ -356,12 +362,13 @@ async function processJob() {
         const scriptCommand = `${scripts}`;
         let fullScript;
         if (host.os === 'windows') {
-          fullScript = `
-            ${repoCommands} ${repoCommands ? '' : `cd /d ${workingDir} 2>&1 && `} ${envSetup}cmd.exe /c python --version 2>&1 && dir 2>&1 && echo ============================= 2>&1 && ${scriptCommand}
-          `.trim();
+          fullScript = `${repoCommands} ${repoCommands ? '' : repoDir ? `cd /d ${repoDir}/${scriptFolder} && ` : ''} && cd ${repoDir}/${scriptFolder} && pip install -r requirements.txt && ${envSetup}python --version && echo ============================= && ${scriptCommand}`;
+          console.log(
+            `[@runner:processJob] Using PowerShell command structure for Windows host ${host.ip}`,
+          );
         } else {
           fullScript = `
-            ${repoCommands} ${repoCommands ? '' : `cd ${workingDir} && `} ${envSetup}python --version && ls -l && echo ============================= && ${scriptCommand}
+            ${repoCommands} ${repoCommands ? '' : repoDir ? `cd ${repoDir}/${scriptFolder} && ` : ''} ${envSetup}python --version && ls -l && echo ============================= && ${scriptCommand}
           `.trim();
         }
         console.log(`[@runner:processJob] SSH command: ${fullScript}`);
