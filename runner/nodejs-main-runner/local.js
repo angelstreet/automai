@@ -33,7 +33,6 @@ async function processJob() {
     const usePayload = process.argv.includes('-payload');
     let jobData;
     let config;
-    let job;
 
     if (usePayload) {
       console.log(
@@ -46,9 +45,30 @@ async function processJob() {
       }
       try {
         jobData = JSON.parse(payloadStr);
+        config = jobData;
         console.log(
           `[@local-runner:processJob] Custom payload parsed successfully: ${JSON.stringify(jobData, null, 2)}`,
         );
+
+        // For custom payload, always fetch team_id from the default config
+        const defaultConfigId = 'b0238c60-fc08-4008-a445-6ee35b99e83c';
+        const { data: configData, error: configError } = await supabase
+          .from('jobs_configuration')
+          .select('team_id')
+          .eq('id', defaultConfigId)
+          .single();
+
+        if (!configError && configData && configData.team_id) {
+          jobData.team_id = configData.team_id;
+          config.team_id = configData.team_id; // Also set it in the config object
+          console.log(
+            `[@local-runner:processJob] Retrieved team_id from default config: ${jobData.team_id}`,
+          );
+        } else {
+          console.log(
+            `[@local-runner:processJob] Failed to get team_id from default config: ${configError?.message}`,
+          );
+        }
       } catch (err) {
         console.error(`[@local-runner:processJob] Failed to parse PAYLOAD: ${err.message}`);
         return;
@@ -62,30 +82,40 @@ async function processJob() {
         console.log(`[@local-runner:processJob] Queue is empty`);
         return;
       }
-      job = jobs[0];
+      const job = jobs[0];
 
       console.log(`[@local-runner:processJob] Processing job: ${JSON.stringify(job)}`);
       jobData = typeof job === 'string' ? JSON.parse(job) : job;
-    }
 
-    // Fetch config and team_id from Supabase using config_id
-    const { data, error } = await supabase
-      .from('jobs_configuration')
-      .select('config, team_id')
-      .eq('id', jobData.config_id)
-      .single();
-    if (error || !data) {
-      console.error(
-        `[@local-runner:processJob] Failed to fetch config and team_id for ${jobData.config_id}: ${error?.message}`,
+      // Fetch config and team_id from Supabase
+      const { data, error } = await supabase
+        .from('jobs_configuration')
+        .select('config, team_id')
+        .eq('id', jobData.config_id)
+        .single();
+      if (error || !data) {
+        console.error(
+          `[@local-runner:processJob] Failed to fetch config ${jobData.config_id}: ${error?.message}`,
+        );
+        return;
+      }
+      config = data.config;
+      // Set team_id from jobs_configuration
+      if (data.team_id) {
+        jobData.team_id = data.team_id;
+        console.log(
+          `[@local-runner:processJob] Retrieved team_id from jobs_configuration: ${jobData.team_id}`,
+        );
+      } else {
+        console.log(
+          `[@local-runner:processJob] No team_id found in jobs_configuration for config_id ${jobData.config_id}, skipping environment variables fetch`,
+        );
+      }
+      console.log(`[@local-runner:processJob] Config: ${JSON.stringify(config)}`);
+      console.log(
+        `[@local-runner:processJob] Full jobData after setting team_id: ${JSON.stringify(jobData)}`,
       );
-      return;
     }
-    config = data.config;
-    jobData.team_id = data.team_id;
-    console.log(`[@local-runner:processJob] Config: ${JSON.stringify(config)}`);
-    console.log(
-      `[@local-runner:processJob] Fetched team_id: ${jobData.team_id} for config_id: ${jobData.config_id}`,
-    );
 
     // Create job with pending status in Supabase (even for custom payload)
     const created_at = new Date().toISOString();
@@ -115,7 +145,19 @@ async function processJob() {
     const hasHosts = config.hosts && config.hosts.length > 0;
     if (hasHosts) {
       console.log(`[@local-runner:processJob] Hosts specified, processing with SSH execution`);
+
+      // Make sure we explicitly set the team_id in the config object to ensure it's available
+      config.team_id = jobData.team_id;
+      console.log(
+        `[@local-runner:processJob] Ensuring team_id is available in config: ${config.team_id}`,
+      );
+
       const hosts = config.hosts;
+      // Log current jobData state at the start of SSH section
+      console.log(
+        `[@local-runner:processJob] JobData at start of SSH section: team_id=${jobData.team_id}, config_id=${jobData.config_id}`,
+      );
+
       for (const host of hosts) {
         console.log(
           `[@local-runner:processJob] Host: ${host.ip}, OS: ${host.os}, Username: ${host.username}`,
@@ -200,15 +242,25 @@ async function processJob() {
         // Add environment variables to the SSH script
         let envSetup = '';
         let decryptedEnvVars = {}; // Placeholder for environment variables logic
+        // Log current jobData state before env var fetch
+        console.log(
+          `[@local-runner:processJob] DEBUG - JobData before env fetch: team_id=${jobData.team_id}, has config_id=${!!jobData.config_id}`,
+        );
+
+        // Use config.team_id as the primary source and fall back to jobData.team_id
+        const team_id = config.team_id || jobData.team_id;
+        console.log(`[@local-runner:processJob] Using team_id for env variables: ${team_id}`);
+
         // Fetch encrypted environment variables for the team only if running from a repository
-        if (jobData.team_id && config.repository) {
+        if (team_id && config.repository) {
           const { data: envVarsData, error: envVarsError } = await supabase
             .from('environment_variables')
             .select('key, value')
-            .eq('team_id', jobData.team_id);
+            .eq('team_id', team_id);
+
           if (envVarsError) {
             console.error(
-              `[@local-runner:processJob] Failed to fetch environment variables for team ${jobData.team_id}: ${envVarsError.message}`,
+              `[@local-runner:processJob] Failed to fetch environment variables for team ${team_id}: ${envVarsError.message}`,
             );
           } else if (envVarsData && envVarsData.length > 0) {
             const encryptedEnvVars = envVarsData.reduce((acc, { key, value }) => {
@@ -236,16 +288,16 @@ async function processJob() {
               }),
             );
             console.log(
-              `[@local-runner:processJob] Fetched and processed ${envVarsData.length} environment variables for team ${jobData.team_id} due to repository configuration`,
+              `[@local-runner:processJob] Fetched and processed ${envVarsData.length} environment variables for team ${team_id} due to repository configuration`,
             );
           } else {
             console.log(
-              `[@local-runner:processJob] No environment variables found for team ${jobData.team_id}`,
+              `[@local-runner:processJob] No environment variables found for team ${team_id}`,
             );
           }
         } else {
           console.log(
-            `[@local-runner:processJob] Skipping environment variables fetch: team_id=${jobData.team_id}, repository=${!!config.repository}`,
+            `[@local-runner:processJob] Skipping environment variables fetch: team_id=${team_id}, repository=${!!config.repository}`,
           );
         }
 
