@@ -51,9 +51,7 @@ export function EnvironmentVariableItemClient({
         <TableCell className="font-mono py-1.5">{variable.key}</TableCell>
         <TableCell className="py-1.5">
           <div className="flex items-center gap-2">
-            <span className={`font-mono text-muted-foreground truncate max-w-[200px]`}>
-              {displayValue()}
-            </span>
+            <span className={`font-mono text-muted-foreground`}>{displayValue()}</span>
           </div>
         </TableCell>
         <TableCell className="text-center py-1.5 w-24">

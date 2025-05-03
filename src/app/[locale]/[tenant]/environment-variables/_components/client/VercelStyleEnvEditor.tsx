@@ -333,7 +333,7 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
                   onChange={(e) => updateRow(row.id, 'value', e.target.value)}
                   placeholder="e.g. your-secret-value"
                   className={cn(
-                    'h-8',
+                    'h-8 w-full',
                     row.error ? 'border-destructive' : '',
                     row.isSecret && !row.isValueVisible ? 'font-mono text-muted-foreground' : '',
                   )}
