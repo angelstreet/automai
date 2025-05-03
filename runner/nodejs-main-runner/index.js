@@ -326,11 +326,10 @@ async function processJob() {
               `[@runner:processJob] Using folder from script configuration as working directory: ${workingDir}`,
             );
           } else {
-            workingDir =
-              host.os === 'windows' ? 'Desktop\\remote-installer' : 'Desktop/remote-installer';
             console.log(
-              `[@runner:processJob] No folder specified in script configuration, using default working directory: ${workingDir}`,
+              `[@runner:processJob] No folder specified in script configuration or repository, using default SSH directory (if any)`,
             );
+            // Not setting a specific workingDir, letting SSH use its default directory
           }
         }
 
