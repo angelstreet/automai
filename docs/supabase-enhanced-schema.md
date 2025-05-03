@@ -9,7 +9,7 @@ This document provides a comprehensive overview of the database schema used in t
 - **Identity entities**: `profiles`, `auth.users`, `tenants`, `teams`, `team_members`, `team_user_profiles`
 - **Resource entities**: `hosts`, `repositories`, `jobs_configuration`, `jobs_run`
 - **Permission entities**: `permission_matrix`, `role_templates`
-- **Configuration entities**: `subscription_tiers`, `resource_limits`
+- **Configuration entities**: `subscription_tiers`, `resource_limits`, `environment_variables`
 - **Connection entities**: `git_providers`
 
 ### Naming Conventions
@@ -27,6 +27,7 @@ This document provides a comprehensive overview of the database schema used in t
    ```sql
    SELECT * FROM repositories WHERE team_id = '{{team_id}}';
    SELECT * FROM hosts WHERE team_id = '{{team_id}}';
+   SELECT * FROM environment_variables WHERE team_id = '{{team_id}}';
    ```
 
 2. **Check if user has permission for a resource**:
@@ -50,12 +51,21 @@ This document provides a comprehensive overview of the database schema used in t
    ```
 
 4. **Get job runs with configuration details**:
+
    ```sql
    SELECT jr.*, jc.name as job_name, r.name as repository_name
    FROM jobs_run jr
    JOIN jobs_configuration jc ON jr.config_id = jc.id
    LEFT JOIN repositories r ON jc.repository_id = r.id
    WHERE jc.team_id = '{{team_id}}';
+   ```
+
+5. **Get environment variables with creator information**:
+   ```sql
+   SELECT ev.*, p.email as creator_email
+   FROM environment_variables ev
+   JOIN profiles p ON ev.created_by = p.id
+   WHERE ev.team_id = '{{team_id}}';
    ```
 
 ### Multi-Tenancy Implementation
@@ -84,7 +94,9 @@ erDiagram
     teams ||--o{ hosts : owns
     teams ||--o{ repositories : owns
     teams ||--o{ jobs_configuration : owns
+    teams ||--o{ environment_variables : owns
     profiles ||--o{ permission_matrix : has
+    profiles ||--o{ environment_variables : creates
     teams ||--o{ permission_matrix : defines
     tenants ||--o{ teams : has
     git_providers }o--|| profiles : belongs_to
@@ -202,6 +214,18 @@ erDiagram
         integer execution_number
     }
 
+    environment_variables {
+        uuid id PK
+        text key
+        text value
+        text description
+        boolean is_secret
+        uuid team_id FK
+        uuid created_by FK
+        timestamp created_at
+        timestamp updated_at
+    }
+
     tenants {
         text id PK
         text name
@@ -267,9 +291,34 @@ Resources like repositories, hosts, and jobs are restricted based on team member
   ```
 
 - **Jobs Configuration Table**:
+
   ```sql
   CREATE POLICY "Team members can view job configurations" ON jobs_configuration
     FOR SELECT USING (team_id IN (
+      SELECT team_id FROM team_members WHERE profile_id = auth.uid()
+    ));
+  ```
+
+- **Environment Variables Table**:
+
+  ```sql
+  CREATE POLICY "team_members_select_policy" ON environment_variables
+    FOR SELECT USING (team_id IN (
+      SELECT team_id FROM team_members WHERE profile_id = auth.uid()
+    ));
+
+  CREATE POLICY "team_members_insert_policy" ON environment_variables
+    FOR INSERT WITH CHECK (team_id IN (
+      SELECT team_id FROM team_members WHERE profile_id = auth.uid()
+    ));
+
+  CREATE POLICY "team_members_update_policy" ON environment_variables
+    FOR UPDATE USING (team_id IN (
+      SELECT team_id FROM team_members WHERE profile_id = auth.uid()
+    ));
+
+  CREATE POLICY "team_members_delete_policy" ON environment_variables
+    FOR DELETE USING (team_id IN (
       SELECT team_id FROM team_members WHERE profile_id = auth.uid()
     ));
   ```
@@ -593,6 +642,30 @@ The `public` schema contains the core application data tables.
   - `worker_id` (text): Worker ID
   - `execution_attempt` (integer, DEFAULT 0): Attempt number
   - `execution_number` (integer, DEFAULT 1): Execution number
+
+### Environment Variables Table
+
+- **Table**: `environment_variables`
+- **Primary Key**: `id`
+- **Foreign Keys**:
+  - `team_id` references `teams(id)`
+  - `created_by` references `profiles(id)`
+- **Unique Constraints**:
+  - Unique pair of `team_id` and `key` (each team can have only one variable with a given key)
+- **Columns**:
+  - `id` (uuid, NOT NULL, DEFAULT uuid_generate_v4()): Generated UUID
+  - `key` (text, NOT NULL): Variable name/key
+  - `value` (text, NOT NULL): Variable value (encrypted for secrets)
+  - `description` (text): Optional description
+  - `is_secret` (boolean, DEFAULT false): Whether the variable is a secret
+  - `team_id` (uuid, NOT NULL): Team this variable belongs to
+  - `created_by` (uuid, NOT NULL): User who created this variable
+  - `created_at` (timestamptz, DEFAULT now()): Creation timestamp
+  - `updated_at` (timestamptz, DEFAULT now()): Last update timestamp
+- **Indexes**:
+  - Primary key index on `id`
+  - Index on `team_id` for faster filtering
+  - Unique index on `team_id, key` pair
 
 ### Subscription Tiers Table
 
