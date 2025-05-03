@@ -165,6 +165,7 @@ def execute():
             venv_path = venv_result
         else:
             print(f"DEBUG: Using local scripts folder: {LOCAL_SCRIPTS_PATH}", file=sys.stderr)
+            print(f"DEBUG: LOCAL_SCRIPTS_PATH is set to: {LOCAL_SCRIPTS_PATH}", file=sys.stderr)
             full_script_path = os.path.join(LOCAL_SCRIPTS_PATH, script_path)
             venv_result = setup_venv(os.path.dirname(LOCAL_SCRIPTS_PATH), os.path.basename(LOCAL_SCRIPTS_PATH))
             if isinstance(venv_result, dict):
@@ -178,6 +179,7 @@ def execute():
             venv_path = venv_result
 
         print(f"DEBUG: Checking script path: {full_script_path}", file=sys.stderr)
+        print(f"DEBUG: full_script_path calculated as: {full_script_path}", file=sys.stderr)
         if not os.path.exists(full_script_path):
             print(f"ERROR: Script not found: {full_script_path}", file=sys.stderr)
             return jsonify({
