@@ -1,10 +1,13 @@
 'use client';
 
-import { Copy, Trash, Eye, EyeOff, Edit } from 'lucide-react';
+import { Copy, Trash, Eye, EyeOff, Edit, Check, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
+import { updateEnvironmentVariable } from '@/app/actions/environmentVariablesAction';
 import { Button } from '@/components/shadcn/button';
+import { Input } from '@/components/shadcn/input';
 import { TableRow, TableCell } from '@/components/shadcn/table';
 import { EnvironmentVariable } from '@/types/context/environmentVariablesContextType';
 
@@ -26,6 +29,10 @@ export function EnvironmentVariableItemClient({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isValueVisible, setIsValueVisible] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedKey, setEditedKey] = useState(variable.key);
+  const [editedValue, setEditedValue] = useState(variable.value);
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleCopyValue = async () => {
     try {
@@ -47,22 +54,95 @@ export function EnvironmentVariableItemClient({
   };
 
   const handleEdit = () => {
-    console.log(`[@component:EnvironmentVariableItemClient] Editing variable: ${variable.key}`);
+    if (!isEditing) {
+      // Start editing
+      setIsEditing(true);
+      setEditedKey(variable.key);
+      setEditedValue(variable.value);
+    } else {
+      // Save changes
+      saveChanges();
+    }
+  };
 
-    if (onVariableUpdated) {
-      // This would be called after a successful edit
-      // onVariableUpdated(updatedVariable);
+  const cancelEdit = () => {
+    setIsEditing(false);
+    setEditedKey(variable.key);
+    setEditedValue(variable.value);
+  };
+
+  const saveChanges = async () => {
+    // Validate key
+    if (!editedKey.trim()) {
+      toast.error(t('key_required'));
+      return;
+    }
+
+    if (!editedKey.match(/^[A-Za-z0-9_]+$/)) {
+      toast.error(t('key_validation'));
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      // Update variable in database
+      const result = await updateEnvironmentVariable(variable.id, {
+        key: editedKey,
+        value: editedValue,
+        description: variable.description || '',
+        is_secret: true, // All variables are stored encrypted
+      });
+
+      if (result.success && result.data) {
+        toast.success(t('update_success'));
+
+        // Update local state via parent component
+        if (onVariableUpdated) {
+          onVariableUpdated(result.data);
+        }
+
+        setIsEditing(false);
+      } else {
+        toast.error(result.error || t('error_update'));
+      }
+    } catch (error) {
+      console.error('Error updating environment variable:', error);
+      toast.error(t('error_update'));
+    } finally {
+      setIsSaving(false);
     }
   };
 
   return (
     <>
       <TableRow className="h-9">
-        <TableCell className="font-mono py-1.5">{variable.key}</TableCell>
         <TableCell className="py-1.5">
-          <div className="flex items-center gap-2">
-            <span className={`font-mono text-muted-foreground`}>{displayValue()}</span>
-          </div>
+          {isEditing ? (
+            <Input
+              value={editedKey}
+              onChange={(e) => setEditedKey(e.target.value)}
+              className="h-8 font-mono"
+              disabled={isSaving}
+            />
+          ) : (
+            <span className="font-mono">{variable.key}</span>
+          )}
+        </TableCell>
+        <TableCell className="py-1.5">
+          {isEditing ? (
+            <Input
+              type={isValueVisible ? 'text' : 'password'}
+              value={editedValue}
+              onChange={(e) => setEditedValue(e.target.value)}
+              className="h-8 font-mono"
+              disabled={isSaving}
+            />
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className={`font-mono text-muted-foreground`}>{displayValue()}</span>
+            </div>
+          )}
         </TableCell>
         <TableCell className="text-center py-1.5 w-24">
           <Button
@@ -71,6 +151,7 @@ export function EnvironmentVariableItemClient({
             onClick={toggleValueVisibility}
             title={isValueVisible ? t('hide_value') : t('show_value')}
             className="h-6 w-6"
+            disabled={isSaving}
           >
             {isValueVisible ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
           </Button>
@@ -82,20 +163,47 @@ export function EnvironmentVariableItemClient({
             onClick={handleCopyValue}
             title={isCopied ? c('copied') : c('copy')}
             className="h-6 w-6"
+            disabled={isSaving || isEditing}
           >
             <Copy className="h-3.5 w-3.5" />
           </Button>
         </TableCell>
         <TableCell className="text-center py-1.5 w-12">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleEdit}
-            title={c('edit')}
-            className="h-6 w-6"
-          >
-            <Edit className="h-3.5 w-3.5" />
-          </Button>
+          {isEditing ? (
+            <div className="flex justify-center space-x-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={cancelEdit}
+                title={c('cancel')}
+                className="h-6 w-6"
+                disabled={isSaving}
+              >
+                <X className="h-3.5 w-3.5 text-red-500" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleEdit}
+                title={c('save')}
+                className="h-6 w-6"
+                disabled={isSaving}
+              >
+                <Check className="h-3.5 w-3.5 text-green-500" />
+              </Button>
+            </div>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleEdit}
+              title={c('edit')}
+              className="h-6 w-6"
+              disabled={isSaving}
+            >
+              <Edit className="h-3.5 w-3.5" />
+            </Button>
+          )}
         </TableCell>
         <TableCell className="text-center py-1.5 w-12">
           <Button
@@ -104,6 +212,7 @@ export function EnvironmentVariableItemClient({
             onClick={() => setIsDeleteDialogOpen(true)}
             title={c('delete')}
             className="h-6 w-6"
+            disabled={isSaving || isEditing}
           >
             <Trash className="h-3.5 w-3.5" />
           </Button>
