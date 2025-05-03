@@ -13,8 +13,8 @@ import sys
 app = Flask(__name__)
 
 BASE_REPO_PATH = "/opt/render/project/src/repo"
-LOCAL_SCRIPTS_PATH = os.path.join(os.path.dirname(__file__), "runner", "python-slave-runner", "scripts")
-LOCAL_VENV_PATH = os.path.join(os.path.dirname(__file__), "runner", "python-slave-runner", ".venv")
+LOCAL_SCRIPTS_PATH = os.path.join(os.path.dirname(__file__), "scripts")
+LOCAL_VENV_PATH = os.path.join(os.path.dirname(__file__), ".venv")
 
 def get_repo_path(repo_url):
     repo_hash = hashlib.sha1(repo_url.encode()).hexdigest()
