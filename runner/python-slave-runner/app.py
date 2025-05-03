@@ -166,7 +166,26 @@ def execute():
         else:
             print(f"DEBUG: Using local scripts folder: {LOCAL_SCRIPTS_PATH}", file=sys.stderr)
             print(f"DEBUG: LOCAL_SCRIPTS_PATH is set to: {LOCAL_SCRIPTS_PATH}", file=sys.stderr)
-            full_script_path = os.path.join(LOCAL_SCRIPTS_PATH, script_path)
+            
+            # List all files in the scripts directory to verify they exist
+            print(f"DEBUG: Files in scripts directory:", file=sys.stderr)
+            try:
+                for f in os.listdir(LOCAL_SCRIPTS_PATH):
+                    print(f"DEBUG: - {f}", file=sys.stderr)
+            except Exception as e:
+                print(f"DEBUG: Error listing files: {str(e)}", file=sys.stderr)
+            
+            # Fix the path resolution by handling both cases correctly
+            if script_path.startswith("scripts/"):
+                # If the path already includes "scripts/", strip it out
+                script_name = script_path.replace("scripts/", "", 1)
+                full_script_path = os.path.join(LOCAL_SCRIPTS_PATH, script_name)
+            else:
+                # Otherwise, just join the paths normally
+                full_script_path = os.path.join(LOCAL_SCRIPTS_PATH, script_path)
+            
+            print(f"DEBUG: Resolved script path: {full_script_path}", file=sys.stderr)
+            
             venv_result = setup_venv(os.path.dirname(LOCAL_SCRIPTS_PATH), os.path.basename(LOCAL_SCRIPTS_PATH))
             if isinstance(venv_result, dict):
                 return jsonify({

@@ -29,9 +29,16 @@ def execute_script(script, parameters=None, venv_path=None):
 
         # Set sys.argv for parameters
         original_argv = sys.argv
-        sys.argv = [script_path or "script.py"] + (parameters or [])
+        # Use "script.py" since script_path is not defined in this scope
+        sys.argv = ["script.py"] + (parameters or [])
 
-        safe_globals = {"print": print, "sys": sys}
+        # Create a more useful globals dictionary that allows importing modules
+        safe_globals = {
+            "print": print,
+            "sys": sys,
+            "__builtins__": __builtins__,  # This allows built-in functions like import to work
+        }
+        
         exec(script, safe_globals)
 
         sys.stdout = sys.__stdout__
