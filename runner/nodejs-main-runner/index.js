@@ -172,7 +172,7 @@ async function processJob() {
 
               if (config.repository) {
                 payload.repo_url = config.repository;
-                payload.git_folder = config.git_folder;
+                payload.script_folder = config.script_folder || '';
                 payload.branch = config.branch || 'main';
               }
 
