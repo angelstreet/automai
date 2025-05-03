@@ -105,6 +105,11 @@ export const createEnvironmentVariable = cache(
         created_by: user.id,
       };
 
+      // Debug log the auth context
+      console.log(
+        `[@action:environmentVariablesAction:createEnvironmentVariable] User ID: ${user.id}, Team ID: ${teamId}`,
+      );
+
       // Call database layer to create environment variable
       const result = await environmentVariablesDb.createEnvironmentVariable(
         processedVariable,
@@ -120,7 +125,7 @@ export const createEnvironmentVariable = cache(
       }
 
       // Revalidate paths that might display environment variables
-      revalidatePath('/[locale]/[tenant]/team/environment-variables', 'page');
+      revalidatePath('/[locale]/[tenant]/environment-variables', 'page');
 
       console.log(
         `[@action:environmentVariablesAction:createEnvironmentVariable] Successfully created variable with key: ${variable.key}`,
@@ -135,6 +140,93 @@ export const createEnvironmentVariable = cache(
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to create environment variable',
+      };
+    }
+  },
+);
+
+/**
+ * Create multiple environment variables for a team in a single operation
+ */
+export const createEnvironmentVariablesBatch = cache(
+  async (
+    teamId: string,
+    variables: Array<{
+      key: string;
+      value: string;
+      description?: string;
+      is_secret: boolean;
+    }>,
+  ) => {
+    try {
+      console.log(
+        `[@action:environmentVariablesAction:createEnvironmentVariablesBatch] Creating ${variables.length} variables for team: ${teamId}`,
+      );
+
+      if (variables.length === 0) {
+        return { success: true, data: [] };
+      }
+
+      // Verify user is authenticated
+      const user = await getUser();
+      if (!user) {
+        console.error(
+          '[@action:environmentVariablesAction:createEnvironmentVariablesBatch] User not authenticated',
+        );
+        return { success: false, error: 'User not authenticated' };
+      }
+
+      const cookieStore = await cookies();
+
+      // Process and encrypt variables
+      const processedVariables = variables.map((variable) => ({
+        ...variable,
+        value: variable.is_secret ? encryptValue(variable.value) : variable.value,
+        team_id: teamId,
+        created_by: user.id,
+      }));
+
+      // Debug log auth context
+      console.log(
+        `[@action:environmentVariablesAction:createEnvironmentVariablesBatch] User ID: ${user.id}, Team ID: ${teamId}, Variables count: ${variables.length}`,
+      );
+
+      // Call database layer to create environment variables in batch
+      const result = await environmentVariablesDb.createEnvironmentVariablesBatch(
+        processedVariables,
+        cookieStore,
+      );
+
+      if (!result.success) {
+        console.error(
+          '[@action:environmentVariablesAction:createEnvironmentVariablesBatch] Error:',
+          result.error,
+        );
+        return {
+          success: false,
+          error: result.error || 'Failed to create environment variables',
+        };
+      }
+
+      // Revalidate paths that might display environment variables
+      revalidatePath('/[locale]/[tenant]/environment-variables', 'page');
+
+      console.log(
+        `[@action:environmentVariablesAction:createEnvironmentVariablesBatch] Successfully created ${result.data.length} variables`,
+      );
+
+      return {
+        success: true,
+        data: result.data,
+      };
+    } catch (error) {
+      console.error(
+        '[@action:environmentVariablesAction:createEnvironmentVariablesBatch] Error:',
+        error,
+      );
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to create environment variables',
       };
     }
   },
@@ -213,7 +305,7 @@ export const updateEnvironmentVariable = cache(
       }
 
       // Revalidate paths that might display environment variables
-      revalidatePath('/[locale]/[tenant]/team/environment-variables', 'page');
+      revalidatePath('/[locale]/[tenant]/environment-variables', 'page');
 
       console.log(
         `[@action:environmentVariablesAction:updateEnvironmentVariable] Successfully updated variable: ${variableId}`,
@@ -265,7 +357,7 @@ export const deleteEnvironmentVariable = cache(async (variableId: string) => {
     }
 
     // Revalidate paths that might display environment variables
-    revalidatePath('/[locale]/[tenant]/team/environment-variables', 'page');
+    revalidatePath('/[locale]/[tenant]/environment-variables', 'page');
 
     console.log(
       `[@action:environmentVariablesAction:deleteEnvironmentVariable] Successfully deleted variable: ${variableId}`,

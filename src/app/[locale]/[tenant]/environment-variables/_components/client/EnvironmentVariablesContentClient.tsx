@@ -41,15 +41,14 @@ export function EnvironmentVariablesContentClient({
         </div>
       ) : (
         <div className="space-y-6">
-          <EnvironmentVariablesListClient
-            variables={variables}
-            onVariableDeleted={(id) => {
-              setVariables((prev) => prev.filter((v) => v.id !== id));
-            }}
-          />
-          <div className="border-t pt-6">
-            <h3 className="text-lg font-semibold mb-4">Add New Variables</h3>
-            <VercelStyleEnvEditor teamId={teamId} onVariablesCreated={handleVariablesCreated} />
+          <VercelStyleEnvEditor teamId={teamId} onVariablesCreated={handleVariablesCreated} />
+          <div className="border-t pt-4">
+            <EnvironmentVariablesListClient
+              variables={variables}
+              onVariableDeleted={(id) => {
+                setVariables((prev) => prev.filter((v) => v.id !== id));
+              }}
+            />
           </div>
         </div>
       )}

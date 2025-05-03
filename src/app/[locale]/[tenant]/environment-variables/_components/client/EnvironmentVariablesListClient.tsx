@@ -31,24 +31,17 @@ export function EnvironmentVariablesListClient({
 }: EnvironmentVariablesListClientProps) {
   const t = useTranslations('environmentVariables');
   const [searchQuery, setSearchQuery] = useState('');
-  const [filter, setFilter] = useState('all'); // 'all', 'secret', 'normal'
-  const [sortBy, setSortBy] = useState('key_asc'); // 'key_asc', 'key_desc', 'newest', 'oldest'
+  const [sortBy, setSortBy] = useState('newest'); // Default to newest first
 
-  // Filter variables based on search and filter
+  // Filter variables based on search
   const filteredVariables = variables.filter((variable) => {
-    // First apply text search
-    const matchesSearch =
+    // Apply text search
+    return (
       searchQuery === '' ||
       variable.key.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (variable.description &&
-        variable.description.toLowerCase().includes(searchQuery.toLowerCase()));
-
-    // Then apply type filter
-    if (filter === 'all') return matchesSearch;
-    if (filter === 'secret') return matchesSearch && variable.is_secret;
-    if (filter === 'normal') return matchesSearch && !variable.is_secret;
-
-    return matchesSearch;
+        variable.description.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
   });
 
   // Sort variables
@@ -68,32 +61,21 @@ export function EnvironmentVariablesListClient({
   });
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-3 justify-between">
+    <div className="space-y-3">
+      <div className="flex flex-col sm:flex-row gap-2 justify-between">
         <div className="relative w-full sm:w-64">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={t('search_placeholder')}
-            className="pl-8"
+            className="pl-8 h-9"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
         <div className="flex gap-2">
-          <Select value={filter} onValueChange={setFilter}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder={t('filter_all')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('filter_all')}</SelectItem>
-              <SelectItem value="secret">{t('filter_secret')}</SelectItem>
-              <SelectItem value="normal">{t('filter_normal')}</SelectItem>
-            </SelectContent>
-          </Select>
-
           <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder={t('sort_key_asc')} />
+            <SelectTrigger className="w-[140px] h-9">
+              <SelectValue placeholder={t('sort_newest')} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="key_asc">{t('sort_key_asc')}</SelectItem>
@@ -108,12 +90,11 @@ export function EnvironmentVariablesListClient({
       <div className="border rounded-md">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead className="w-1/4">{t('key')}</TableHead>
-              <TableHead className="w-1/3">{t('value')}</TableHead>
-              <TableHead className="w-1/4">{t('description')}</TableHead>
-              <TableHead className="w-24 text-center">{t('is_secret')}</TableHead>
-              <TableHead className="w-24"></TableHead>
+            <TableRow className="h-9">
+              <TableHead className="w-1/3 py-1.5">{t('key')}</TableHead>
+              <TableHead className="w-1/2 py-1.5">{t('value')}</TableHead>
+              <TableHead className="w-24 text-center py-1.5">{t('is_secret')}</TableHead>
+              <TableHead className="w-16 py-1.5"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -129,7 +110,7 @@ export function EnvironmentVariablesListClient({
         </Table>
       </div>
 
-      <div className="text-sm text-muted-foreground">
+      <div className="text-sm text-muted-foreground text-right">
         {filteredVariables.length === 0 ? (
           <p>{t('no_data')}</p>
         ) : (

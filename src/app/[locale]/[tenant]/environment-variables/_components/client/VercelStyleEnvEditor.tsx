@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-import { createEnvironmentVariable } from '@/app/actions/environmentVariablesAction';
+import { createEnvironmentVariablesBatch } from '@/app/actions/environmentVariablesAction';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { Label } from '@/components/shadcn/label';
@@ -254,57 +254,29 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
     setIsSaving(true);
 
     try {
-      const results = [];
-      const successfulVariables = [];
+      // Prepare variables for batch creation
+      const variables = validRows.map((row) => ({
+        key: row.key,
+        value: row.value,
+        description: '',
+        is_secret: row.isSecret,
+      }));
 
-      // Save each variable one by one
-      for (const row of validRows) {
-        const result = await createEnvironmentVariable(teamId, {
-          key: row.key,
-          value: row.value,
-          description: '',
-          is_secret: row.isSecret,
-        });
+      console.log(`Saving ${variables.length} environment variables in batch`);
 
-        results.push(result);
+      // Save all variables in a single batch operation
+      const result = await createEnvironmentVariablesBatch(teamId, variables);
 
-        if (result.success && result.data) {
-          successfulVariables.push(result.data);
-        }
-      }
-
-      // Check if all were successful
-      const allSuccessful = results.every((result) => result.success);
-
-      if (allSuccessful) {
-        toast.success(`${results.length} environment variables saved successfully`);
-        onVariablesCreated(successfulVariables);
+      if (result.success && result.data) {
+        toast.success(`${result.data.length} environment variables saved successfully`);
+        onVariablesCreated(result.data);
         // Reset to a single empty row
         setRows([
           { id: `row-${Date.now()}`, key: '', value: '', isSecret: false, isValueVisible: true },
         ]);
       } else {
-        const successCount = results.filter((result) => result.success).length;
-        toast.warning(
-          `${successCount}/${results.length} variables saved. Some variables could not be saved.`,
-        );
-
-        // Keep the rows that failed and clear the successful ones
-        const successfulKeys = successfulVariables.map((v) => v.key);
-        const remainingRows = rows.filter((row) => !successfulKeys.includes(row.key));
-        setRows(
-          remainingRows.length > 0
-            ? remainingRows
-            : [
-                {
-                  id: `row-${Date.now()}`,
-                  key: '',
-                  value: '',
-                  isSecret: false,
-                  isValueVisible: true,
-                },
-              ],
-        );
+        toast.error(result.error || 'Failed to save environment variables');
+        // Keep the rows since they failed to save
       }
     } catch (error) {
       console.error('Error saving environment variables:', error);

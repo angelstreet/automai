@@ -4,8 +4,8 @@ import { Copy, Trash, Eye, EyeOff } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 
-import { Badge } from '@/components/shadcn/badge';
 import { Button } from '@/components/shadcn/button';
+import { Switch } from '@/components/shadcn/switch';
 import { TableRow, TableCell } from '@/components/shadcn/table';
 import { EnvironmentVariable } from '@/types/context/environmentVariablesContextType';
 
@@ -22,6 +22,7 @@ export function EnvironmentVariableItemClient({
   onVariableDeleted,
 }: EnvironmentVariableItemClientProps) {
   const t = useTranslations('environmentVariables');
+  const c = useTranslations('common');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isValueVisible, setIsValueVisible] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -48,11 +49,13 @@ export function EnvironmentVariableItemClient({
 
   return (
     <>
-      <TableRow>
-        <TableCell className="font-mono">{variable.key}</TableCell>
-        <TableCell>
-          <div className="flex items-center gap-2">
-            <span className={`font-mono ${variable.is_secret ? 'text-muted-foreground' : ''}`}>
+      <TableRow className="h-9">
+        <TableCell className="font-mono py-1.5">{variable.key}</TableCell>
+        <TableCell className="py-1.5">
+          <div className="flex items-center gap-1">
+            <span
+              className={`font-mono ${variable.is_secret ? 'text-muted-foreground' : ''} truncate max-w-[200px]`}
+            >
               {displayValue()}
             </span>
             {variable.is_secret && (
@@ -61,8 +64,13 @@ export function EnvironmentVariableItemClient({
                 size="icon"
                 onClick={toggleValueVisibility}
                 title={isValueVisible ? t('hide_value') : t('show_value')}
+                className="h-6 w-6 ml-0.5"
               >
-                {isValueVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {isValueVisible ? (
+                  <EyeOff className="h-3.5 w-3.5" />
+                ) : (
+                  <Eye className="h-3.5 w-3.5" />
+                )}
               </Button>
             )}
             <Button
@@ -70,24 +78,29 @@ export function EnvironmentVariableItemClient({
               size="icon"
               onClick={handleCopyValue}
               title={isCopied ? t('copied') : t('copy_value')}
+              className="h-6 w-6"
             >
-              <Copy className="h-4 w-4" />
+              <Copy className="h-3.5 w-3.5" />
             </Button>
           </div>
         </TableCell>
-        <TableCell>{variable.description || '-'}</TableCell>
-        <TableCell className="text-center">
-          {variable.is_secret ? <Badge variant="secondary">{t('is_secret')}</Badge> : '-'}
+        <TableCell className="text-center py-1.5 w-24">
+          <Switch
+            className="data-[state=checked]:bg-primary scale-75"
+            checked={variable.is_secret}
+            disabled
+          />
         </TableCell>
-        <TableCell>
-          <div className="flex justify-end gap-1">
+        <TableCell className="py-1.5">
+          <div className="flex justify-end">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setIsDeleteDialogOpen(true)}
-              title={t('delete')}
+              title={c('delete')}
+              className="h-6 w-6"
             >
-              <Trash className="h-4 w-4" />
+              <Trash className="h-3.5 w-3.5" />
             </Button>
           </div>
         </TableCell>
