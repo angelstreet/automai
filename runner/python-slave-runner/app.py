@@ -10,6 +10,8 @@ import virtualenv
 import subprocess
 import sys
 import shutil
+import base64
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 app = Flask(__name__)
 
@@ -111,16 +113,54 @@ def setup_venv(base_path, folder):
     print(f"DEBUG: No requirements.txt found, skipping virtualenv", file=sys.stderr)
     return None
 
-def run_with_timeout(script_content, parameters, timeout=30, venv_path=None):
+def decrypt_value(encrypted_text):
+    """Decrypt data encrypted with AES-256-GCM mirroring encryptionUtils.ts"""
+    try:
+        encryption_key_b64 = os.environ.get("ENCRYPTION_KEY")
+        if not encryption_key_b64:
+            print(f"ERROR: No encryption key found in environment", file=sys.stderr)
+            return encrypted_text
+
+        encryption_key = base64.b64decode(encryption_key_b64)
+        parts = encrypted_text.split(":")
+        if len(parts) != 3:
+            print(f"ERROR: Invalid encrypted text format", file=sys.stderr)
+            return encrypted_text
+
+        iv = bytes.fromhex(parts[0])
+        auth_tag = bytes.fromhex(parts[1])
+        encrypted_data = bytes.fromhex(parts[2])
+
+        aesgcm = AESGCM(encryption_key)
+        nonce = iv
+        ciphertext = encrypted_data + auth_tag
+        decrypted = aesgcm.decrypt(nonce, ciphertext, None)
+        return decrypted.decode("utf-8")
+    except Exception as e:
+        print(f"ERROR: Decryption error: {str(e)}", file=sys.stderr)
+        return encrypted_text
+
+def run_with_timeout(script_content, parameters, timeout=30, venv_path=None, env_vars=None):
     result_queue = queue.Queue()
     print(f"DEBUG: Running script with timeout={timeout}, venv_path={venv_path}, parameters={parameters}", file=sys.stderr)
 
     def target():
         try:
+            # Temporarily set environment variables for this execution
+            original_env = dict(os.environ)
+            if env_vars:
+                for key, value in env_vars.items():
+                    os.environ[key] = value
+
             result = execute_script(script_content, parameters, venv_path)
+
+            # Restore original environment
+            os.environ.clear()
+            os.environ.update(original_env)
+
             result_queue.put(result)
         except Exception as e:
-            result_queue.put({"status": "error", "message": f"Execution error: {str(e)}"})
+            result_queue.put({"status": "error", "message": f"Execution error: {str(e)}"})}
 
     thread = threading.Thread(target=target)
     thread.daemon = True
@@ -164,6 +204,18 @@ def execute():
 
         parameters = data.get('parameters', '')
         param_list = parameters.split() if parameters else []
+
+        # Handle encrypted environment variables
+        encrypted_env_vars = data.get('encrypted_env_vars', {})
+        decrypted_env_vars = {}
+        for key, encrypted_value in encrypted_env_vars.items():
+            if encrypted_value and isinstance(encrypted_value, str) and ':' in encrypted_value:
+                decrypted_value = decrypt_value(encrypted_value)
+                decrypted_env_vars[key] = decrypted_value
+                print(f"DEBUG: Decrypted environment variable: {key}", file=sys.stderr)
+            else:
+                decrypted_env_vars[key] = encrypted_value
+                print(f"DEBUG: Using non-encrypted environment variable: {key}", file=sys.stderr)
 
         start_time = datetime.utcnow()
         start_time_str = start_time.isoformat() + 'Z'
@@ -235,7 +287,7 @@ def execute():
         with open(full_script_path, 'r') as f:
             script_content = f.read()
 
-        result = run_with_timeout(script_content, param_list, timeout, venv_path)
+        result = run_with_timeout(script_content, param_list, timeout, venv_path, decrypted_env_vars)
 
         end_time = datetime.utcnow()
         end_time_str = end_time.isoformat() + 'Z'

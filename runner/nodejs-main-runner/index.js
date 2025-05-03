@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const http = require('http');
+
 const { createClient } = require('@supabase/supabase-js');
 const { Redis } = require('@upstash/redis');
 const axios = require('axios');
@@ -44,7 +45,7 @@ async function processJob() {
 
     const { data, error } = await supabase
       .from('jobs_configuration')
-      .select('config, is_active')
+      .select('config, is_active, team_id')
       .eq('id', config_id)
       .single();
     if (error || !data) {
@@ -52,11 +53,38 @@ async function processJob() {
       return;
     }
     const config = data.config;
+    const team_id = data.team_id;
     if (!data.is_active) {
       console.log(`[@runner:processJob] Config ${config_id} is inactive, skipping execution`);
       return;
     }
     console.log(`[@runner:processJob] Config: ${JSON.stringify(config)}`);
+
+    // Fetch encrypted environment variables for the team
+    let encryptedEnvVars = {};
+    if (team_id) {
+      const { data: envVarsData, error: envVarsError } = await supabase
+        .from('environment_variables')
+        .select('key, value')
+        .eq('team_id', team_id);
+      if (envVarsError) {
+        console.error(
+          `[@runner:processJob] Failed to fetch environment variables for team ${team_id}: ${envVarsError.message}`,
+        );
+      } else if (envVarsData && envVarsData.length > 0) {
+        encryptedEnvVars = envVarsData.reduce((acc, { key, value }) => {
+          acc[key] = value;
+          return acc;
+        }, {});
+        console.log(
+          `[@runner:processJob] Fetched ${envVarsData.length} encrypted environment variables for team ${team_id}`,
+        );
+      } else {
+        console.log(`[@runner:processJob] No environment variables found for team ${team_id}`);
+      }
+    } else {
+      console.log(`[@runner:processJob] No team_id found in config ${config_id}`);
+    }
 
     const created_at = new Date().toISOString();
     const { data: jobRunData, error: jobError } = await supabase
@@ -118,6 +146,7 @@ async function processJob() {
                 script_path: scriptPath,
                 parameters: parameters ? `${parameters} ${i}` : `${i}`,
                 timeout: timeout,
+                encrypted_env_vars: encryptedEnvVars,
               };
 
               if (config.repository) {
@@ -132,11 +161,13 @@ async function processJob() {
                 .update({
                   status: 'in_progress',
                   started_at: started_at,
-(INPUT)                })
+                })
                 .eq('id', jobId);
 
               if (statusError) {
-                console.error(`[@runner:processJob] Failed to update job ${jobId} to in_progress: ${statusError.message}`);
+                console.error(
+                  `[@runner:processJob] Failed to update job ${jobId} to in_progress: ${statusError.message}`,
+                );
                 scriptOutput.stderr = `Failed to update job status: ${statusError.message}`;
                 overallStatus = 'failed';
                 output.scripts.push(scriptOutput);
@@ -193,7 +224,9 @@ async function processJob() {
         .eq('id', jobId);
 
       if (finalStatusError) {
-        console.error(`[@runner:processJob] Failed to update final status for job ${jobId}: ${finalStatusError.message}`);
+        console.error(
+          `[@runner:processJob] Failed to update final status for job ${jobId}: ${finalStatusError.message}`,
+        );
       } else {
         console.log(`[@runner:processJob] Updated job ${jobId} to final status: ${overallStatus}`);
       }
@@ -246,7 +279,9 @@ async function processJob() {
             fi
           `;
           workingDir = repoDir;
-          console.log(`[@runner:processJob] Repository setup: ${repoDir} exists ? git pull : clone ${repoUrl} branch ${branch}`);
+          console.log(
+            `[@runner:processJob] Repository setup: ${repoDir} exists ? git pull : clone ${repoUrl} branch ${branch}`,
+          );
         }
 
         const scriptCommand = `${scripts}`;
