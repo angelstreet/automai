@@ -156,7 +156,6 @@ export function DeploymentWizardStep5Client({
 
       // Format pipeline preview with new configuration structure
       const jobConfig = {
-        name: data.name,
         description: data.description,
         scripts: scriptDetails.map((script) => ({
           path: script.path,

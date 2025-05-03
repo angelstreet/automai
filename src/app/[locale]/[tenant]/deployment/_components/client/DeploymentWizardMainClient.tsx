@@ -569,56 +569,62 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
           creator_id: user?.id || userId,
           is_active: deploymentData.schedule === 'now',
           created_at: new Date().toISOString(),
-          config: latestConfigRef.current || {
-            scripts: deploymentData.scriptIds.map((scriptId) => {
-              const script = repositoryScripts.find((s) => s.id === scriptId);
-              const params = deploymentData.scriptParameters[scriptId]?.['raw'] || '';
-              return {
-                path: script?.path || '',
-                parameters: params,
-                timeout: 3600,
-                retry_on_failure: 3,
-                iterations: 1,
-              };
-            }),
-            execution: {
-              parallel: false,
-            },
-            ...(deploymentData.repositoryId && {
-              repository: deploymentData.selectedRepository?.url || '',
-              branch: deploymentData.branch || 'main',
-              git_folder: 'runner/python-slave-runner/scripts',
-            }),
-            hosts: deploymentData.hostIds.map((hostId) => {
-              const host = availableHosts.find((h) => h.id === hostId);
-              const hostConfig = {
-                id: hostId,
-                name: host?.name || 'Unknown',
-                ip: host?.ip || '',
-                username: host?.user || 'user',
-                port: host?.port || 22,
-                os: host?.is_windows ? 'windows' : 'linux',
-                authType: host?.auth_type || 'password',
-              };
+          config: latestConfigRef.current
+            ? (() => {
+                // Create a new object without the name field
+                const { name, ...configWithoutName } = latestConfigRef.current;
+                return configWithoutName;
+              })()
+            : {
+                scripts: deploymentData.scriptIds.map((scriptId) => {
+                  const script = repositoryScripts.find((s) => s.id === scriptId);
+                  const params = deploymentData.scriptParameters[scriptId]?.['raw'] || '';
+                  return {
+                    path: script?.path || '',
+                    parameters: params,
+                    timeout: 3600,
+                    retry_on_failure: 3,
+                    iterations: 1,
+                  };
+                }),
+                execution: {
+                  parallel: false,
+                },
+                ...(deploymentData.repositoryId && {
+                  repository: deploymentData.selectedRepository?.url || '',
+                  branch: deploymentData.branch || 'main',
+                  git_folder: 'runner/python-slave-runner/scripts',
+                }),
+                hosts: deploymentData.hostIds.map((hostId) => {
+                  const host = availableHosts.find((h) => h.id === hostId);
+                  const hostConfig = {
+                    id: hostId,
+                    name: host?.name || 'Unknown',
+                    ip: host?.ip || '',
+                    username: host?.user || 'user',
+                    port: host?.port || 22,
+                    os: host?.is_windows ? 'windows' : 'linux',
+                    authType: host?.auth_type || 'password',
+                  };
 
-              // Include auth credentials based on auth type
-              if (host?.auth_type === 'password' && host?.password) {
-                (hostConfig as any)['password'] = host.password;
-              } else if (host?.auth_type === 'privateKey' && host?.private_key) {
-                (hostConfig as any)['key'] = host.private_key;
-              }
+                  // Include auth credentials based on auth type
+                  if (host?.auth_type === 'password' && host?.password) {
+                    (hostConfig as any)['password'] = host.password;
+                  } else if (host?.auth_type === 'privateKey' && host?.private_key) {
+                    (hostConfig as any)['key'] = host.private_key;
+                  }
 
-              return hostConfig;
-            }),
-            env: deploymentData.environmentVars.reduce(
-              (acc, curr) => {
-                acc[curr.key] = curr.value;
-                return acc;
+                  return hostConfig;
+                }),
+                env: deploymentData.environmentVars.reduce(
+                  (acc, curr) => {
+                    acc[curr.key] = curr.value;
+                    return acc;
+                  },
+                  {} as Record<string, string>,
+                ),
+                schedule: deploymentData.schedule === 'now' ? 'now' : deploymentData.cronExpression,
               },
-              {} as Record<string, string>,
-            ),
-            schedule: deploymentData.schedule === 'now' ? 'now' : deploymentData.cronExpression,
-          },
         };
 
         // Detailed logging of the form data for debugging

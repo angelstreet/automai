@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import React, { useState, useEffect } from 'react';
 
@@ -28,6 +29,7 @@ export function ConfigDeploymentDialogClient({
   const t = useTranslations('deployment');
   const c = useTranslations('common');
   const { toast } = useToast();
+  const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
 
   // Check if the current user is an admin
@@ -149,7 +151,13 @@ export function ConfigDeploymentDialogClient({
       }
 
       // If JSON is valid, parse it
-      const configToSave = JSON.parse(formattedConfig);
+      let configToSave = JSON.parse(formattedConfig);
+
+      // Remove name property from config if it exists
+      if (configToSave.name) {
+        const { name: _name, ...configWithoutName } = configToSave;
+        configToSave = configWithoutName;
+      }
 
       const result = await updateJob(deployment.id, {
         name: jobName,
@@ -161,6 +169,11 @@ export function ConfigDeploymentDialogClient({
           title: 'Configuration Updated',
           description: 'The job configuration has been successfully updated.',
         });
+
+        // Client-side refresh to immediately update the UI
+        // Note: The server action already calls revalidatePath, but this ensures immediate UI update
+        router.refresh();
+
         onOpenChange(false);
       } else {
         toast({

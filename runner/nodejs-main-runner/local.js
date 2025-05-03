@@ -106,7 +106,7 @@ async function processJob() {
 
             if (config.repository) {
               payload.repo_url = config.repository;
-              payload.git_folder = 'runner/python-slave-runner/scripts';
+              payload.git_folder = config.git_folder;
               payload.branch = config.branch || 'main';
             }
 
