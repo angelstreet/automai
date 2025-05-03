@@ -1,6 +1,6 @@
 'use client';
 
-import { Copy, Trash, Eye, EyeOff } from 'lucide-react';
+import { Copy, Trash, Eye, EyeOff, Edit } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 
@@ -18,6 +18,7 @@ interface EnvironmentVariableItemClientProps {
 
 export function EnvironmentVariableItemClient({
   variable,
+  onVariableUpdated,
   onVariableDeleted,
 }: EnvironmentVariableItemClientProps) {
   const t = useTranslations('environmentVariables');
@@ -43,6 +44,15 @@ export function EnvironmentVariableItemClient({
   const displayValue = () => {
     if (isValueVisible) return variable.value;
     return '••••••••••••';
+  };
+
+  const handleEdit = () => {
+    console.log(`[@component:EnvironmentVariableItemClient] Editing variable: ${variable.key}`);
+
+    if (onVariableUpdated) {
+      // This would be called after a successful edit
+      // onVariableUpdated(updatedVariable);
+    }
   };
 
   return (
@@ -74,6 +84,17 @@ export function EnvironmentVariableItemClient({
             className="h-6 w-6"
           >
             <Copy className="h-3.5 w-3.5" />
+          </Button>
+        </TableCell>
+        <TableCell className="text-center py-1.5 w-12">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleEdit}
+            title={c('edit')}
+            className="h-6 w-6"
+          >
+            <Edit className="h-3.5 w-3.5" />
           </Button>
         </TableCell>
         <TableCell className="text-center py-1.5 w-12">

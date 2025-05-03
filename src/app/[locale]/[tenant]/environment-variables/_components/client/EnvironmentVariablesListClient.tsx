@@ -104,6 +104,7 @@ export function EnvironmentVariablesListClient({
               <TableHead className="w-1/3 py-1.5">{t('value')}</TableHead>
               <TableHead className="w-24 text-center py-1.5">{c('visibility')}</TableHead>
               <TableHead className="w-12 text-center py-1.5">{c('copy')}</TableHead>
+              <TableHead className="w-12 text-center py-1.5">{c('edit')}</TableHead>
               <TableHead className="w-12 text-center py-1.5">{c('actions')}</TableHead>
             </TableRow>
           </TableHeader>
