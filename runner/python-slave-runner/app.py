@@ -9,6 +9,7 @@ import hashlib
 import virtualenv
 import subprocess
 import sys
+import shutil
 
 app = Flask(__name__)
 
@@ -51,9 +52,16 @@ def ensure_repo(repo_url, git_folder, branch=None):
 def setup_venv(base_path, folder):
     requirements_path = os.path.join(base_path, folder, "requirements.txt")
     venv_path = os.path.join(base_path, ".venv")
-    requirements_hash_path = os.path.join(venv_path, ".requirements_hash")
     
+    # Add explicit directory checks with detailed logging
+    print(f"DEBUG: Venv path is: {venv_path}", file=sys.stderr)
+    print(f"DEBUG: Venv exists? {os.path.exists(venv_path)}", file=sys.stderr)
+    if os.path.exists(venv_path):
+        print(f"DEBUG: Venv contents: {os.listdir(venv_path)}", file=sys.stderr)
+    
+    # Check if requirements file exists
     print(f"DEBUG: Checking for requirements.txt at: {requirements_path}", file=sys.stderr)
+    print(f"DEBUG: Requirements file exists? {os.path.exists(requirements_path)}", file=sys.stderr)
     
     if os.path.exists(requirements_path):
         try:
@@ -61,30 +69,23 @@ def setup_venv(base_path, folder):
             if not os.path.exists(venv_path):
                 print(f"DEBUG: Creating new virtualenv at: {venv_path}", file=sys.stderr)
                 virtualenv.cli_run([venv_path])
-            
-            # Calculate the hash of the requirements file
-            with open(requirements_path, 'rb') as f:
-                current_hash = hashlib.md5(f.read()).hexdigest()
-            
-            # Check if we need to reinstall packages
-            needs_install = True
-            if os.path.exists(requirements_hash_path):
-                with open(requirements_hash_path, 'r') as f:
-                    saved_hash = f.read().strip()
-                if saved_hash == current_hash:
-                    print(f"DEBUG: Requirements unchanged, skipping pip install", file=sys.stderr)
-                    needs_install = False
-            
-            if needs_install:
-                pip_path = os.path.join(venv_path, "bin", "pip")
-                print(f"DEBUG: Running pip install -r {requirements_path}", file=sys.stderr)
-                result = subprocess.run([pip_path, "install", "-r", requirements_path], check=True, capture_output=True, text=True)
-                print(f"DEBUG: pip install output: {result.stdout}", file=sys.stderr)
+            else:
+                print(f"DEBUG: Using existing virtualenv at: {venv_path}", file=sys.stderr)
                 
-                # Save the new hash
-                with open(requirements_hash_path, 'w') as f:
-                    f.write(current_hash)
-                print(f"DEBUG: Updated requirements hash file", file=sys.stderr)
+                # Check if the virtualenv is valid by looking for bin/python
+                bin_python = os.path.join(venv_path, "bin", "python")
+                if os.path.exists(bin_python):
+                    print(f"DEBUG: Verified virtualenv has python executable", file=sys.stderr)
+                else:
+                    print(f"DEBUG: Virtualenv exists but missing python executable, recreating", file=sys.stderr)
+                    shutil.rmtree(venv_path, ignore_errors=True)
+                    virtualenv.cli_run([venv_path])
+            
+            # Always install requirements for now until we debug
+            pip_path = os.path.join(venv_path, "bin", "pip")
+            print(f"DEBUG: Running pip install -r {requirements_path}", file=sys.stderr)
+            result = subprocess.run([pip_path, "install", "-r", requirements_path], check=True, capture_output=True, text=True)
+            print(f"DEBUG: pip install output: {result.stdout}", file=sys.stderr)
             
             return venv_path
         except Exception as e:
