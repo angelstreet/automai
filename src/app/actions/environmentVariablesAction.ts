@@ -43,11 +43,11 @@ export const getTeamEnvironmentVariables = cache(async (teamId: string) => {
       return { success: false, error: result.error || 'Failed to fetch environment variables' };
     }
 
-    // Decrypt sensitive values before returning
+    // Decrypt all values before returning
     const decryptedVariables =
       result.data?.map((variable) => ({
         ...variable,
-        value: variable.is_secret ? decryptValue(variable.value) : variable.value,
+        value: decryptValue(variable.value),
       })) || [];
 
     console.log(
@@ -77,7 +77,6 @@ export const createEnvironmentVariable = cache(
       key: string;
       value: string;
       description?: string;
-      is_secret: boolean;
     },
   ) => {
     try {
@@ -96,10 +95,10 @@ export const createEnvironmentVariable = cache(
 
       const cookieStore = await cookies();
 
-      // Encrypt value if it's a secret
+      // Always encrypt the value before storing
       const processedVariable = {
         ...variable,
-        value: variable.is_secret ? encryptValue(variable.value) : variable.value,
+        value: encryptValue(variable.value),
         team_id: teamId,
         created_by: user.id,
       };
@@ -130,9 +129,17 @@ export const createEnvironmentVariable = cache(
         `[@action:environmentVariablesAction:createEnvironmentVariable] Successfully created variable with key: ${variable.key}`,
       );
 
+      // Decrypt the value before returning the variable
+      const updatedVariable = result.data
+        ? {
+            ...result.data,
+            value: decryptValue(result.data.value),
+          }
+        : null;
+
       return {
         success: true,
-        data: result.data,
+        data: updatedVariable,
       };
     } catch (error) {
       console.error('[@action:environmentVariablesAction:createEnvironmentVariable] Error:', error);
@@ -154,7 +161,6 @@ export const createEnvironmentVariablesBatch = cache(
       key: string;
       value: string;
       description?: string;
-      is_secret: boolean;
     }>,
   ) => {
     try {
@@ -177,10 +183,10 @@ export const createEnvironmentVariablesBatch = cache(
 
       const cookieStore = await cookies();
 
-      // Process and encrypt variables
+      // Process and encrypt all variables
       const processedVariables = variables.map((variable) => ({
         ...variable,
-        value: variable.is_secret ? encryptValue(variable.value) : variable.value,
+        value: encryptValue(variable.value),
         team_id: teamId,
         created_by: user.id,
       }));
@@ -210,13 +216,21 @@ export const createEnvironmentVariablesBatch = cache(
       // Revalidate paths that might display environment variables
       revalidatePath('/[locale]/[tenant]/environment-variables', 'page');
 
+      // Decrypt values before returning the variables
+      const decryptedVariables = result.data
+        ? result.data.map((variable) => ({
+            ...variable,
+            value: decryptValue(variable.value),
+          }))
+        : [];
+
       console.log(
-        `[@action:environmentVariablesAction:createEnvironmentVariablesBatch] Successfully created ${result.data.length} variables`,
+        `[@action:environmentVariablesAction:createEnvironmentVariablesBatch] Successfully created ${result.data?.length} variables`,
       );
 
       return {
         success: true,
-        data: result.data,
+        data: decryptedVariables,
       };
     } catch (error) {
       console.error(
@@ -241,7 +255,6 @@ export const updateEnvironmentVariable = cache(
       key?: string;
       value?: string;
       description?: string;
-      is_secret?: boolean;
     },
   ) => {
     try {
@@ -260,32 +273,12 @@ export const updateEnvironmentVariable = cache(
 
       const cookieStore = await cookies();
 
-      // Get the current variable to determine if we need to encrypt/decrypt
-      const currentVar = await environmentVariablesDb.getEnvironmentVariableById(
-        variableId,
-        cookieStore,
-      );
-
-      if (!currentVar.success || !currentVar.data) {
-        console.error(
-          '[@action:environmentVariablesAction:updateEnvironmentVariable] Error fetching current variable:',
-          currentVar.error,
-        );
-        return { success: false, error: 'Failed to fetch current variable state' };
-      }
-
-      // Process updates, handling encryption if needed
+      // Process updates, handling encryption if value is being updated
       const processedUpdates = { ...updates };
 
-      // Only process value if it was provided in the updates
+      // If updating the value, encrypt it
       if (updates.value !== undefined) {
-        // Determine if the value needs encryption (either it was secret before, or is being made secret now)
-        const shouldEncrypt =
-          updates.is_secret !== undefined ? updates.is_secret : currentVar.data.is_secret;
-
-        if (shouldEncrypt) {
-          processedUpdates.value = encryptValue(updates.value);
-        }
+        processedUpdates.value = encryptValue(updates.value);
       }
 
       // Call database layer to update environment variable
@@ -306,13 +299,21 @@ export const updateEnvironmentVariable = cache(
       // Revalidate paths that might display environment variables
       revalidatePath('/[locale]/[tenant]/environment-variables', 'page');
 
+      // Decrypt the value before returning the updated variable
+      const updatedVariable = result.data
+        ? {
+            ...result.data,
+            value: decryptValue(result.data.value),
+          }
+        : null;
+
       console.log(
         `[@action:environmentVariablesAction:updateEnvironmentVariable] Successfully updated variable: ${variableId}`,
       );
 
       return {
         success: true,
-        data: result.data,
+        data: updatedVariable,
       };
     } catch (error) {
       console.error('[@action:environmentVariablesAction:updateEnvironmentVariable] Error:', error);
@@ -409,12 +410,12 @@ export const getEnvironmentVariablesForJob = cache(async (jobId: string, teamId:
       return { success: false, error: result.error || 'Failed to fetch environment variables' };
     }
 
-    // Process variables (decrypt secrets, format for job usage)
+    // Process variables (decrypt all values, format for job usage)
     const processedVariables =
       result.data?.reduce(
         (acc, variable) => {
-          // Decrypt secret values
-          const value = variable.is_secret ? decryptValue(variable.value) : variable.value;
+          // Decrypt values
+          const value = decryptValue(variable.value);
 
           // Add to the accumulator as a key-value pair
           acc[variable.key] = value;

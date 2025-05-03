@@ -91,7 +91,6 @@ export function EnvironmentVariableItemClient({
         key: editedKey,
         value: editedValue,
         description: variable.description || '',
-        is_secret: true, // All variables are stored encrypted
       });
 
       if (result.success && result.data) {

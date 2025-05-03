@@ -231,7 +231,6 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
         key: row.key,
         value: row.value,
         description: '',
-        is_secret: true, // All variables are stored as encrypted/secret
       }));
 
       console.log(`Saving ${variables.length} environment variables in batch`);

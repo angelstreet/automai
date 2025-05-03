@@ -109,7 +109,6 @@ export async function createEnvironmentVariable(
     key: string;
     value: string;
     description?: string;
-    is_secret: boolean;
     team_id: string;
     created_by: string;
   },
@@ -154,7 +153,6 @@ export async function createEnvironmentVariable(
     console.log(`[@db:environmentVariablesDb:createEnvironmentVariable] Insert data:`, {
       key: variable.key,
       description: variable.description || null,
-      is_secret: variable.is_secret,
       team_id: variable.team_id,
       created_by: variable.created_by,
       // Don't log the actual value for security, just log if it exists
@@ -168,7 +166,6 @@ export async function createEnvironmentVariable(
         key: variable.key,
         value: variable.value,
         description: variable.description || null,
-        is_secret: variable.is_secret,
         team_id: variable.team_id,
         created_by: variable.created_by,
       })
@@ -217,7 +214,6 @@ export async function createEnvironmentVariablesBatch(
     key: string;
     value: string;
     description?: string;
-    is_secret: boolean;
     team_id: string;
     created_by: string;
   }>,
@@ -288,7 +284,6 @@ export async function createEnvironmentVariablesBatch(
         key: v.key,
         team_id: v.team_id,
         created_by: v.created_by,
-        is_secret: v.is_secret,
         value_exists: !!v.value,
       })),
     );
@@ -344,7 +339,6 @@ export async function updateEnvironmentVariable(
     key?: string;
     value?: string;
     description?: string;
-    is_secret?: boolean;
   },
   cookieStore?: ReadonlyRequestCookies,
 ): Promise<DbResponse<EnvironmentVariable>> {

@@ -10,7 +10,6 @@ export interface EnvironmentVariable {
   key: string;
   value: string;
   description?: string | null;
-  is_secret: boolean;
   team_id: string;
   created_by: string;
   created_at: string;
@@ -24,7 +23,6 @@ export interface EnvironmentVariableCreateInput {
   key: string;
   value: string;
   description?: string;
-  is_secret: boolean;
 }
 
 /**
@@ -34,7 +32,6 @@ export interface EnvironmentVariableUpdateInput {
   key?: string;
   value?: string;
   description?: string | null;
-  is_secret?: boolean;
 }
 
 /**
