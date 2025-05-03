@@ -256,28 +256,28 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {/* Header row with labels */}
-      <div className="grid grid-cols-11 gap-2 mb-1 px-1">
+      <div className="grid grid-cols-11 gap-1 mb-1 px-1">
         <div className="col-span-5">
-          <Label>{t('key')}</Label>
+          <Label className="">{t('key')}</Label>
         </div>
         <div className="col-span-4">
-          <Label>{t('value')}</Label>
+          <Label className="">{t('value')}</Label>
         </div>
-        <div className="col-span-1 text-xs text-muted-foreground flex items-center justify-center pt-1">
+        <div className="col-span-1 text-muted-foreground flex items-center justify-center">
           {c('visibility')}
         </div>
-        <div className="col-span-1 text-xs text-muted-foreground flex items-center justify-center pt-1">
+        <div className="col-span-1 text-muted-foreground flex items-center justify-center">
           {c('remove')}
         </div>
       </div>
 
-      <div className="grid gap-1">
+      <div className="grid gap-0.5">
         {rows.map((row) => (
           <div
             key={row.id}
-            className="grid grid-cols-11 gap-2 items-center py-1 group border-b border-border/30 last:border-0"
+            className="grid grid-cols-11 gap-1 items-center py-0.5 group border-b border-border/30 last:border-0"
           >
             {/* Key */}
             <div className="col-span-5">
@@ -287,7 +287,7 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
                 onChange={(e) => updateRow(row.id, 'key', e.target.value)}
                 onPaste={(e) => handleKeyFieldPaste(e, row.id)}
                 placeholder="e.g. CLIENT_KEY"
-                className={cn('h-8 text-xs', row.error ? 'border-destructive' : '')}
+                className={cn('h-7', row.error ? 'border-destructive' : '')}
               />
               {row.error && <p className="text-xs text-destructive mt-0.5">{row.error}</p>}
             </div>
@@ -302,7 +302,7 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
                   onChange={(e) => updateRow(row.id, 'value', e.target.value)}
                   placeholder="e.g. your-secret-value"
                   className={cn(
-                    'h-8 w-full',
+                    'h-7 w-full text-xs',
                     row.error ? 'border-destructive' : '',
                     !row.isValueVisible ? 'font-mono text-muted-foreground' : '',
                   )}
@@ -318,13 +318,9 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
                 size="icon"
                 onClick={() => toggleValueVisibility(row.id)}
                 title={row.isValueVisible ? t('hide_value') : t('show_value')}
-                className="h-6 w-6"
+                className="h-5 w-5"
               >
-                {row.isValueVisible ? (
-                  <EyeOff className="h-3.5 w-3.5" />
-                ) : (
-                  <Eye className="h-3.5 w-3.5" />
-                )}
+                {row.isValueVisible ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
               </Button>
             </div>
 
@@ -337,9 +333,9 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
                 onClick={() => removeRow(row.id)}
                 aria-label={c('remove')}
                 title={c('remove')}
-                className="h-6 w-6"
+                className="h-5 w-5"
               >
-                <X className="h-3.5 w-3.5" />
+                <X className="h-3 w-3" />
               </Button>
             </div>
           </div>

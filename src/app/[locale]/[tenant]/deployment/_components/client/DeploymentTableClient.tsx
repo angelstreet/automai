@@ -69,20 +69,20 @@ export function DeploymentTableClient({
       .fill(0)
       .map((_, index) => (
         <tr key={`skeleton-${index}`} className="animate-pulse">
-          <td className="px-2 py-3 whitespace-nowrap">
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+          <td className="px-2 py-0.5 whitespace-nowrap">
+            <div className="h-3.5 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
           </td>
-          <td className="px-2 py-3 whitespace-nowrap">
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
+          <td className="px-2 py-0.5 whitespace-nowrap">
+            <div className="h-3.5 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
           </td>
-          <td className="px-2 py-3 whitespace-nowrap">
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+          <td className="px-2 py-0.5 whitespace-nowrap">
+            <div className="h-3.5 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
           </td>
-          <td className="px-2 py-3 whitespace-nowrap">
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16"></div>
+          <td className="px-2 py-0.5 whitespace-nowrap">
+            <div className="h-3.5 bg-gray-200 dark:bg-gray-700 rounded w-16"></div>
           </td>
-          <td className="px-2 py-3 whitespace-nowrap">
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-12"></div>
+          <td className="px-2 py-0.5 whitespace-nowrap">
+            <div className="h-3.5 bg-gray-200 dark:bg-gray-700 rounded w-12"></div>
           </td>
         </tr>
       ));
@@ -96,31 +96,31 @@ export function DeploymentTableClient({
             <tr>
               <th
                 scope="col"
-                className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                className="px-2 py-0.5 text-left text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
               >
                 Name
               </th>
               <th
                 scope="col"
-                className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                className="px-2 py-0.5 text-left text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
               >
                 Status
               </th>
               <th
                 scope="col"
-                className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                className="px-2 py-0.5 text-left text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
               >
                 Created
               </th>
               <th
                 scope="col"
-                className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                className="px-2 py-0.5 text-left text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
               >
                 Last Run
               </th>
               <th
                 scope="col"
-                className="px-2 py-1 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                className="px-2 py-0.5 text-center text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
               >
                 Actions
               </th>
@@ -142,31 +142,31 @@ export function DeploymentTableClient({
             <tr>
               <th
                 scope="col"
-                className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                className="px-2 py-0.5 text-left text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
               >
                 Name
               </th>
               <th
                 scope="col"
-                className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                className="px-2 py-0.5 text-left text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
               >
                 Status
               </th>
               <th
                 scope="col"
-                className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                className="px-2 py-0.5 text-left text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
               >
                 Created
               </th>
               <th
                 scope="col"
-                className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                className="px-2 py-0.5 text-left text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
               >
                 Last Run
               </th>
               <th
                 scope="col"
-                className="px-2 py-1 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                className="px-2 py-0.5 text-center text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
               >
                 Actions
               </th>
@@ -179,18 +179,18 @@ export function DeploymentTableClient({
                 className="hover:bg-gray-800/10 dark:hover:bg-gray-700/30 cursor-pointer"
                 onClick={(e) => handleViewDeployment(deployment, e)}
               >
-                <td className="px-2 py-1 whitespace-nowrap">
-                  <div className="text-sm text-gray-900 dark:text-white">{deployment.name}</div>
+                <td className="px-2 py-0.5 whitespace-nowrap">
+                  <div className="text-xs text-gray-900 dark:text-white">{deployment.name}</div>
                 </td>
-                <td className="px-2 py-1 whitespace-nowrap">
+                <td className="px-2 py-0.5 whitespace-nowrap">
                   <DeploymentStatusBadgeClient status={deployment.status} />
                 </td>
-                <td className="px-2 py-1 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                <td className="px-2 py-0.5 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
                   {getFormattedTime
                     ? getFormattedTime(deployment.createdAt)
                     : new Date(deployment.createdAt).toLocaleString()}
                 </td>
-                <td className="px-2 py-1 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                <td className="px-2 py-0.5 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
                   {deployment.completedAt
                     ? getFormattedTime
                       ? getFormattedTime(deployment.completedAt)
@@ -201,20 +201,20 @@ export function DeploymentTableClient({
                         : new Date(deployment.startedAt).toLocaleString() + ' (Running)'
                       : '-'}
                 </td>
-                <td className="px-2 py-1 whitespace-nowrap text-sm">
+                <td className="px-2 py-0.5 whitespace-nowrap text-xs">
                   <div className="flex justify-center">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-8 w-8 p-0 flex items-center justify-center"
+                          className="h-6 w-6 p-0 flex items-center justify-center"
                           disabled={actionInProgress === deployment.id}
                         >
-                          <MoreHorizontal className="h-4 w-4" />
+                          <MoreHorizontal className="h-3.5 w-3.5" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
+                      <DropdownMenuContent align="end" className="text-xs">
                         {/* Temporary fix: Assume deployment is inactive if is_active is undefined. Need to identify correct field for active status. */}
                         {(deployment as any).is_active === true ? (
                           <>
@@ -226,8 +226,9 @@ export function DeploymentTableClient({
                               disabled={
                                 isRunning === deployment.id || actionInProgress === deployment.id
                               }
+                              className="text-xs py-1.5 h-7"
                             >
-                              <PlayCircle className="mr-2 h-4 w-4" />
+                              <PlayCircle className="mr-2 h-3.5 w-3.5" />
                               {isRunning === deployment.id ? 'Running...' : 'Run'}
                             </DropdownMenuItem>
                             <DropdownMenuItem
@@ -236,8 +237,9 @@ export function DeploymentTableClient({
                                 handleViewDeployment(deployment);
                               }}
                               disabled={actionInProgress === deployment.id}
+                              className="text-xs py-1.5 h-7"
                             >
-                              <Eye className="mr-2 h-4 w-4" />
+                              <Eye className="mr-2 h-3.5 w-3.5" />
                               View Runs
                             </DropdownMenuItem>
                             <DropdownMenuItem
@@ -246,8 +248,9 @@ export function DeploymentTableClient({
                                 handleConfigClick(deployment, e);
                               }}
                               disabled={actionInProgress === deployment.id}
+                              className="text-xs py-1.5 h-7"
                             >
-                              <Eye className="mr-2 h-4 w-4" />
+                              <Eye className="mr-2 h-3.5 w-3.5" />
                               {c('view_config')}
                             </DropdownMenuItem>
                             <DropdownMenuItem
@@ -256,8 +259,9 @@ export function DeploymentTableClient({
                                 handleOutputClick(deployment, e);
                               }}
                               disabled={actionInProgress === deployment.id}
+                              className="text-xs py-1.5 h-7"
                             >
-                              <Eye className="mr-2 h-4 w-4" />
+                              <Eye className="mr-2 h-3.5 w-3.5" />
                               View Output
                             </DropdownMenuItem>
                             <DropdownMenuItem
@@ -266,8 +270,9 @@ export function DeploymentTableClient({
                                 handleEditClick(deployment, e);
                               }}
                               disabled={actionInProgress === deployment.id}
+                              className="text-xs py-1.5 h-7"
                             >
-                              <Edit2 className="mr-2 h-4 w-4" />
+                              <Edit2 className="mr-2 h-3.5 w-3.5" />
                               {c('edit')}
                             </DropdownMenuItem>
                             <DropdownMenuItem
@@ -276,19 +281,20 @@ export function DeploymentTableClient({
                                 handleDuplicateClick(deployment, e);
                               }}
                               disabled={actionInProgress === deployment.id}
+                              className="text-xs py-1.5 h-7"
                             >
-                              <Copy className="mr-2 h-4 w-4" />
+                              <Copy className="mr-2 h-3.5 w-3.5" />
                               Duplicate
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              className="text-red-600"
+                              className="text-xs py-1.5 h-7 text-red-600"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDeleteClick(deployment, e);
                               }}
                               disabled={actionInProgress === deployment.id}
                             >
-                              <Trash2 className="mr-2 h-4 w-4" />
+                              <Trash2 className="mr-2 h-3.5 w-3.5" />
                               Delete
                             </DropdownMenuItem>
                             <DropdownMenuItem
@@ -297,8 +303,9 @@ export function DeploymentTableClient({
                                 handleToggleActiveClick(deployment, e);
                               }}
                               disabled={actionInProgress === deployment.id}
+                              className="text-xs py-1.5 h-7"
                             >
-                              <EyeOff className="mr-2 h-4 w-4" />
+                              <EyeOff className="mr-2 h-3.5 w-3.5" />
                               Disable
                             </DropdownMenuItem>
                           </>
@@ -309,8 +316,9 @@ export function DeploymentTableClient({
                               handleToggleActiveClick(deployment, e);
                             }}
                             disabled={actionInProgress === deployment.id}
+                            className="text-xs py-1.5 h-7"
                           >
-                            <Eye className="mr-2 h-4 w-4" />
+                            <Eye className="mr-2 h-3.5 w-3.5" />
                             Enable
                           </DropdownMenuItem>
                         )}

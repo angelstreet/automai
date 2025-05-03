@@ -115,59 +115,59 @@ export function EnvironmentVariableItemClient({
 
   return (
     <>
-      <TableRow className="h-9">
-        <TableCell className="py-1.5">
+      <TableRow className="h-7">
+        <TableCell className="py-1">
           {isEditing ? (
             <Input
               value={editedKey}
               onChange={(e) => setEditedKey(e.target.value)}
-              className="h-8 font-mono"
+              className="h-6 font-mono text-xs"
               disabled={isSaving}
             />
           ) : (
-            <span className="font-mono">{variable.key}</span>
+            <span className="font-mono text-xs">{variable.key}</span>
           )}
         </TableCell>
-        <TableCell className="py-1.5">
+        <TableCell className="py-1">
           {isEditing ? (
             <Input
               type={isValueVisible ? 'text' : 'password'}
               value={editedValue}
               onChange={(e) => setEditedValue(e.target.value)}
-              className="h-8 font-mono"
+              className="h-6 font-mono text-xs"
               disabled={isSaving}
             />
           ) : (
             <div className="flex items-center gap-2">
-              <span className={`font-mono text-muted-foreground`}>{displayValue()}</span>
+              <span className="font-mono text-muted-foreground text-xs">{displayValue()}</span>
             </div>
           )}
         </TableCell>
-        <TableCell className="text-center py-1.5 w-24">
+        <TableCell className="text-center py-1 w-24">
           <Button
             variant="ghost"
             size="icon"
             onClick={toggleValueVisibility}
             title={isValueVisible ? t('hide_value') : t('show_value')}
-            className="h-6 w-6"
+            className="h-5 w-5"
             disabled={isSaving}
           >
-            {isValueVisible ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            {isValueVisible ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
           </Button>
         </TableCell>
-        <TableCell className="text-center py-1.5 w-12">
+        <TableCell className="text-center py-1 w-12">
           <Button
             variant="ghost"
             size="icon"
             onClick={handleCopyValue}
             title={isCopied ? c('copied') : c('copy')}
-            className="h-6 w-6"
+            className="h-5 w-5"
             disabled={isSaving || isEditing}
           >
-            <Copy className="h-3.5 w-3.5" />
+            <Copy className="h-3 w-3" />
           </Button>
         </TableCell>
-        <TableCell className="text-center py-1.5 w-12">
+        <TableCell className="text-center py-1 w-12">
           {isEditing ? (
             <div className="flex justify-center space-x-1">
               <Button
@@ -175,20 +175,20 @@ export function EnvironmentVariableItemClient({
                 size="icon"
                 onClick={cancelEdit}
                 title={c('cancel')}
-                className="h-6 w-6"
+                className="h-5 w-5"
                 disabled={isSaving}
               >
-                <X className="h-3.5 w-3.5 text-red-500" />
+                <X className="h-3 w-3 text-red-500" />
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={handleEdit}
                 title={c('save')}
-                className="h-6 w-6"
+                className="h-5 w-5"
                 disabled={isSaving}
               >
-                <Check className="h-3.5 w-3.5 text-green-500" />
+                <Check className="h-3 w-3 text-green-500" />
               </Button>
             </div>
           ) : (
@@ -197,23 +197,23 @@ export function EnvironmentVariableItemClient({
               size="icon"
               onClick={handleEdit}
               title={c('edit')}
-              className="h-6 w-6"
+              className="h-5 w-5"
               disabled={isSaving}
             >
-              <Edit className="h-3.5 w-3.5" />
+              <Edit className="h-3 w-3" />
             </Button>
           )}
         </TableCell>
-        <TableCell className="text-center py-1.5 w-12">
+        <TableCell className="text-center py-1 w-12">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setIsDeleteDialogOpen(true)}
             title={c('delete')}
-            className="h-6 w-6"
+            className="h-5 w-5"
             disabled={isSaving || isEditing}
           >
-            <Trash className="h-3.5 w-3.5" />
+            <Trash className="h-3 w-3" />
           </Button>
         </TableCell>
       </TableRow>
