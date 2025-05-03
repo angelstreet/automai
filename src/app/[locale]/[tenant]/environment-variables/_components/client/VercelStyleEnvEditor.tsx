@@ -287,7 +287,7 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
                 onChange={(e) => updateRow(row.id, 'key', e.target.value)}
                 onPaste={(e) => handleKeyFieldPaste(e, row.id)}
                 placeholder="e.g. CLIENT_KEY"
-                className={cn('h-8', row.error ? 'border-destructive' : '')}
+                className={cn('h-8 text-xs', row.error ? 'border-destructive' : '')}
               />
               {row.error && <p className="text-xs text-destructive mt-0.5">{row.error}</p>}
             </div>

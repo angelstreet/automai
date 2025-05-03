@@ -108,7 +108,7 @@ async function processJob() {
     const jobId = jobRunData.id;
     console.log(`[@runner:processJob] Created job with ID ${jobId} and status 'pending'`);
 
-    let output = { scripts: [] };
+    let output = { scripts: [], stdout: '', stderr: '' };
     let overallStatus = 'success';
 
     const hasHosts = config.hosts && config.hosts.length > 0;
@@ -345,7 +345,8 @@ async function processJob() {
                   );
 
                   const completed_at = new Date().toISOString();
-                  const isSuccess = output.stdout.includes('Test Success') || code === 0;
+                  const isSuccess =
+                    (output.stdout && output.stdout.includes('Test Success')) || code === 0;
 
                   await supabase
                     .from('jobs_run')
@@ -368,7 +369,7 @@ async function processJob() {
             if (err.message.includes('ECONNRESET')) {
               console.error(`[@runner:processJob] SSH connection closed due to ECONNRESET`);
               const completed_at = new Date().toISOString();
-              const isSuccess = output.stdout.includes('Test Success');
+              const isSuccess = output.stdout && output.stdout.includes('Test Success');
 
               await supabase
                 .from('jobs_run')
