@@ -2,7 +2,7 @@
 
 import { RefreshCw, Copy, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
@@ -47,68 +47,6 @@ function useRenderHealth(type: 'main' | 'python') {
   return { health, loading, error };
 }
 
-// Custom hook for fetching Render logs
-function useRenderLogs(type: 'main' | 'python', fetchOnDemand: boolean) {
-  const [logs, setLogs] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [hasFetched, setHasFetched] = useState(false);
-
-  const fetchLogs = useCallback(async () => {
-    // Prevent duplicate fetches if already loading or already fetched
-    if (loading || (hasFetched && logs)) {
-      return logs;
-    }
-
-    try {
-      console.log(`[@component:DeploymentFooterClient] Fetching Render ${type} logs`);
-      setLoading(true);
-      setError(null);
-      const response = await fetch(`/api/render-logs/${type}`);
-      if (!response.ok) {
-        throw new Error(`Logs fetch failed with status: ${response.status}`);
-      }
-      const data = await response.json();
-      setLogs(data.data);
-      setHasFetched(true);
-      console.log(`[@component:DeploymentFooterClient] Render ${type} logs fetched successfully`);
-      return data.data;
-    } catch (err: any) {
-      console.error(
-        `[@component:DeploymentFooterClient] Error fetching Render ${type} logs:`,
-        err.message,
-      );
-      setError(err.message || 'Failed to fetch logs');
-      setLogs(null);
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, [type, loading, logs, hasFetched]);
-
-  useEffect(() => {
-    let _isMounted = true;
-
-    if (fetchOnDemand && !hasFetched) {
-      fetchLogs();
-    }
-
-    return () => {
-      _isMounted = false;
-    };
-  }, [fetchOnDemand, fetchLogs, hasFetched]);
-
-  // Clear state when modal closes
-  useEffect(() => {
-    if (!fetchOnDemand) {
-      // Keep the data in cache for performance, but reset loading state
-      setLoading(false);
-    }
-  }, [fetchOnDemand]);
-
-  return { logs, loading, error, fetchLogs };
-}
-
 // Custom hook for fetching Upstash Redis health
 function useUpstashHealth() {
   const [health, setHealth] = useState<{ success: boolean; message: string } | null>(null);
@@ -148,68 +86,6 @@ function useUpstashHealth() {
   return { health, loading, error };
 }
 
-// Custom hook for fetching Upstash Redis logs
-function useUpstashLogs(fetchOnDemand: boolean) {
-  const [logs, setLogs] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [hasFetched, setHasFetched] = useState(false);
-
-  const fetchLogs = useCallback(async () => {
-    // Prevent duplicate fetches if already loading or already fetched
-    if (loading || (hasFetched && logs)) {
-      return logs;
-    }
-
-    try {
-      console.log(`[@component:DeploymentFooterClient] Fetching Upstash Redis logs`);
-      setLoading(true);
-      setError(null);
-      const response = await fetch(`/api/upstash-logs`);
-      if (!response.ok) {
-        throw new Error(`Logs fetch failed with status: ${response.status}`);
-      }
-      const data = await response.json();
-      setLogs(data.data);
-      setHasFetched(true);
-      console.log(`[@component:DeploymentFooterClient] Upstash Redis logs fetched successfully`);
-      return data.data;
-    } catch (err: any) {
-      console.error(
-        `[@component:DeploymentFooterClient] Error fetching Upstash Redis logs:`,
-        err.message,
-      );
-      setError(err.message || 'Failed to fetch logs');
-      setLogs(null);
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, [loading, logs, hasFetched]);
-
-  useEffect(() => {
-    let _isMounted = true;
-
-    if (fetchOnDemand && !hasFetched) {
-      fetchLogs();
-    }
-
-    return () => {
-      _isMounted = false;
-    };
-  }, [fetchOnDemand, fetchLogs, hasFetched]);
-
-  // Clear state when modal closes
-  useEffect(() => {
-    if (!fetchOnDemand) {
-      // Keep the data in cache for performance, but reset loading state
-      setLoading(false);
-    }
-  }, [fetchOnDemand]);
-
-  return { logs, loading, error, fetchLogs };
-}
-
 export function DeploymentFooterClient() {
   const { health: mainHealth, loading: mainHealthLoading } = useRenderHealth('main');
   const { health: slaveHealth, loading: slaveHealthLoading } = useRenderHealth('python');
@@ -233,7 +109,7 @@ export function DeploymentFooterClient() {
   const [upstashLogsError, setUpstashLogsError] = useState<string | null>(null);
 
   const t = useTranslations('deployment');
-
+  const c = useTranslations('common');
   // Determine status dot colors for all services
   const isMainHealthy = mainHealth && mainHealth.success;
   const isSlaveHealthy = slaveHealth && slaveHealth.success;
@@ -559,7 +435,7 @@ export function DeploymentFooterClient() {
             disabled={!logs || loading}
           >
             <Copy className="w-4 h-4 mr-1" />
-            {copied ? t('copied_logs') : t('copy_logs')}
+            {copied ? c('copied') : c('copy')}
           </Button>
         </div>
       </div>
