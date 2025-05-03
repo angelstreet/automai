@@ -183,9 +183,7 @@ export function ConfigDeploymentDialogClient({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[1000px]">
         <DialogHeader>
-          <DialogTitle>
-            {t('view_config')} : {deployment?.name || 'N/A'}
-          </DialogTitle>
+          <DialogTitle>{t('view_config')}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div>
@@ -214,7 +212,7 @@ export function ConfigDeploymentDialogClient({
             </Button>
             {isAdmin && (
               <Button type="button" variant="default" onClick={handleSave} className="ml-2">
-                {c('save')}
+                {c('update')}
               </Button>
             )}
           </div>
