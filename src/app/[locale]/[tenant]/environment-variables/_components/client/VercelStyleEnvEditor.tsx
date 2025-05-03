@@ -9,7 +9,6 @@ import { createEnvironmentVariablesBatch } from '@/app/actions/environmentVariab
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { Label } from '@/components/shadcn/label';
-import { Switch } from '@/components/shadcn/switch';
 import { cn } from '@/lib/utils';
 import { EnvironmentVariable } from '@/types/context/environmentVariablesContextType';
 
@@ -22,7 +21,6 @@ interface EnvRow {
   id: string; // Temporary ID for UI tracking
   key: string;
   value: string;
-  isSecret: boolean;
   isValueVisible: boolean;
   error?: string;
 }
@@ -32,25 +30,20 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
   const c = useTranslations('common');
 
   const [rows, setRows] = useState<EnvRow[]>([
-    { id: 'initial', key: '', value: '', isSecret: false, isValueVisible: false },
+    { id: 'initial', key: '', value: '', isValueVisible: false },
   ]);
   const [isSaving, setIsSaving] = useState(false);
 
   // Add a new empty row
   const addRow = () => {
-    setRows([
-      ...rows,
-      { id: `row-${Date.now()}`, key: '', value: '', isSecret: false, isValueVisible: false },
-    ]);
+    setRows([...rows, { id: `row-${Date.now()}`, key: '', value: '', isValueVisible: false }]);
   };
 
   // Remove a row by its ID
   const removeRow = (id: string) => {
     if (rows.length === 1) {
       // If it's the last row, just clear it instead of removing
-      setRows([
-        { id: `row-${Date.now()}`, key: '', value: '', isSecret: false, isValueVisible: false },
-      ]);
+      setRows([{ id: `row-${Date.now()}`, key: '', value: '', isValueVisible: false }]);
     } else {
       setRows(rows.filter((row) => row.id !== id));
     }
@@ -62,25 +55,6 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
       rows.map((row) => {
         if (row.id === id) {
           return { ...row, [field]: value };
-        }
-        return row;
-      }),
-    );
-  };
-
-  // Toggle secret value
-  const toggleSecret = (id: string) => {
-    setRows(
-      rows.map((row) => {
-        if (row.id === id) {
-          // When toggling secret on, also hide the value by default
-          const newIsSecret = !row.isSecret;
-          return {
-            ...row,
-            isSecret: newIsSecret,
-            // Hide value when making it secret, otherwise show it
-            isValueVisible: newIsSecret ? false : true,
-          };
         }
         return row;
       }),
@@ -101,7 +75,7 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
 
   // Get display value (actual or masked)
   const _getDisplayValue = (row: EnvRow) => {
-    if (!row.isSecret || row.isValueVisible) {
+    if (row.isValueVisible) {
       return row.value;
     }
     // Return masked value (dots) matching the length of the actual value
@@ -141,7 +115,6 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
           id: `row-${Date.now()}-${Math.random()}`,
           key,
           value: cleanValue,
-          isSecret: false,
           isValueVisible: false,
         };
       }
@@ -151,7 +124,6 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
         id: `row-${Date.now()}-${Math.random()}`,
         key: line.trim(),
         value: '',
-        isSecret: false,
         isValueVisible: false,
       };
     });
@@ -259,7 +231,7 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
         key: row.key,
         value: row.value,
         description: '',
-        is_secret: row.isSecret,
+        is_secret: true, // All variables are stored as encrypted/secret
       }));
 
       console.log(`Saving ${variables.length} environment variables in batch`);
@@ -271,9 +243,7 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
         toast.success(`${result.data.length} environment variables saved successfully`);
         onVariablesCreated(result.data);
         // Reset to a single empty row
-        setRows([
-          { id: `row-${Date.now()}`, key: '', value: '', isSecret: false, isValueVisible: false },
-        ]);
+        setRows([{ id: `row-${Date.now()}`, key: '', value: '', isValueVisible: false }]);
       } else {
         toast.error(result.error || 'Failed to save environment variables');
         // Keep the rows since they failed to save
@@ -297,7 +267,7 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
           <Label>{t('value')}</Label>
         </div>
         <div className="col-span-1 text-xs text-muted-foreground flex items-center justify-center pt-1">
-          {c('secret')}
+          {c('visibility')}
         </div>
         <div className="col-span-1 text-xs text-muted-foreground flex items-center justify-center pt-1">
           {c('remove')}
@@ -328,43 +298,35 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
               <div className="relative">
                 <Input
                   id={`value-${row.id}`}
-                  type={row.isSecret && !row.isValueVisible ? 'password' : 'text'}
+                  type={!row.isValueVisible ? 'password' : 'text'}
                   value={row.value}
                   onChange={(e) => updateRow(row.id, 'value', e.target.value)}
                   placeholder="e.g. your-secret-value"
                   className={cn(
                     'h-8 w-full',
                     row.error ? 'border-destructive' : '',
-                    row.isSecret && !row.isValueVisible ? 'font-mono text-muted-foreground' : '',
+                    !row.isValueVisible ? 'font-mono text-muted-foreground' : '',
                   )}
                 />
-                {row.isSecret && row.value && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6"
-                    onClick={() => toggleValueVisibility(row.id)}
-                    title={row.isValueVisible ? t('hide_value') : t('show_value')}
-                  >
-                    {row.isValueVisible ? (
-                      <EyeOff className="h-3 w-3" />
-                    ) : (
-                      <Eye className="h-3 w-3" />
-                    )}
-                  </Button>
-                )}
               </div>
             </div>
 
-            {/* Secret Toggle */}
+            {/* Visibility Toggle */}
             <div className="col-span-1 flex justify-center">
-              <Switch
-                id={`secret-${row.id}`}
-                checked={row.isSecret}
-                onCheckedChange={() => toggleSecret(row.id)}
-                className="data-[state=checked]:bg-primary"
-              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => toggleValueVisibility(row.id)}
+                title={row.isValueVisible ? t('hide_value') : t('show_value')}
+                className="h-6 w-6"
+              >
+                {row.isValueVisible ? (
+                  <EyeOff className="h-3.5 w-3.5" />
+                ) : (
+                  <Eye className="h-3.5 w-3.5" />
+                )}
+              </Button>
             </div>
 
             {/* Remove Button */}
