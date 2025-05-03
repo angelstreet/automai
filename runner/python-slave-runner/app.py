@@ -15,7 +15,7 @@ app = Flask(__name__)
 
 BASE_REPO_PATH = "/opt/render/project/src/repo"
 LOCAL_SCRIPTS_PATH = os.path.join(os.path.dirname(__file__), "scripts")
-LOCAL_VENV_PATH = os.path.join(os.path.dirname(__file__), ".venv")
+LOCAL_VENV_PATH = "/venv-disk"
 
 def get_repo_path(repo_url):
     repo_hash = hashlib.sha1(repo_url.encode()).hexdigest()
@@ -51,7 +51,8 @@ def ensure_repo(repo_url, git_folder, branch=None):
 
 def setup_venv(base_path, folder):
     requirements_path = os.path.join(base_path, folder, "requirements.txt")
-    venv_path = os.path.join(base_path, ".venv")
+    venv_path = os.path.join(base_path, ".venv") if base_path != os.path.dirname(LOCAL_SCRIPTS_PATH) else LOCAL_VENV_PATH
+    hash_file_path = os.path.join(venv_path, "requirements_hash.txt")
     
     # Add explicit directory checks with detailed logging
     print(f"DEBUG: Venv path is: {venv_path}", file=sys.stderr)
@@ -81,11 +82,26 @@ def setup_venv(base_path, folder):
                     shutil.rmtree(venv_path, ignore_errors=True)
                     virtualenv.cli_run([venv_path])
             
-            # Always install requirements for now until we debug
-            pip_path = os.path.join(venv_path, "bin", "pip")
-            print(f"DEBUG: Running pip install -r {requirements_path}", file=sys.stderr)
-            result = subprocess.run([pip_path, "install", "-r", requirements_path], check=True, capture_output=True, text=True)
-            print(f"DEBUG: pip install output: {result.stdout}", file=sys.stderr)
+            # Compute hash of requirements.txt
+            current_hash = None
+            with open(requirements_path, 'rb') as f:
+                current_hash = hashlib.sha1(f.read()).hexdigest()
+            stored_hash = None
+            if os.path.exists(hash_file_path):
+                with open(hash_file_path, 'r') as f:
+                    stored_hash = f.read().strip()
+            
+            # Only install requirements if hash differs or hash file doesn't exist
+            if current_hash != stored_hash:
+                pip_path = os.path.join(venv_path, "bin", "pip")
+                print(f"DEBUG: Running pip install -r {requirements_path}", file=sys.stderr)
+                result = subprocess.run([pip_path, "install", "-r", requirements_path], check=True, capture_output=True, text=True)
+                print(f"DEBUG: pip install output: {result.stdout}", file=sys.stderr)
+                # Store the new hash
+                with open(hash_file_path, 'w') as f:
+                    f.write(current_hash)
+            else:
+                print(f"DEBUG: Requirements hash matches, skipping pip install", file=sys.stderr)
             
             return venv_path
         except Exception as e:
