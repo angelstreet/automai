@@ -12,6 +12,7 @@ import {
   Building,
   Server,
   GitBranch,
+  Key,
 } from 'lucide-react';
 
 import { Role } from '@/types/service/userServiceType';
@@ -94,6 +95,12 @@ export const sidebarNavigationData: SidebarNavigationData = {
           href: '/repositories',
           icon: GitBranch,
           roles: ['admin', 'developer'],
+        },
+        {
+          title: 'Environment Variables',
+          href: '/environment-variables',
+          icon: Key,
+          roles: ['admin'],
         },
       ],
     },

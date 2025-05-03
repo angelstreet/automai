@@ -1,7 +1,9 @@
-import { CookieStore } from 'next/dist/server/web/spec-extension/cookies';
-
-import { createClient } from '@/lib/db/db';
-import { DbResult } from '@/types/db';
+/**
+ * Environment Variables Database Layer
+ * Handles database operations for environment variables
+ */
+import { createClient } from '@/lib/supabase/server';
+import { DbResponse } from '@/lib/utils/commonUtils';
 import { EnvironmentVariable } from '@/types/context/environmentVariablesContextType';
 
 /**
@@ -9,14 +11,13 @@ import { EnvironmentVariable } from '@/types/context/environmentVariablesContext
  */
 export async function getEnvironmentVariablesByTeamId(
   teamId: string,
-  cookieStore: CookieStore,
-): Promise<DbResult<EnvironmentVariable[]>> {
+): Promise<DbResponse<EnvironmentVariable[]>> {
   try {
     console.log(
       `[@db:environmentVariablesDb:getEnvironmentVariablesByTeamId] Fetching for team: ${teamId}`,
     );
 
-    const supabase = await createClient(cookieStore);
+    const supabase = await createClient();
 
     const { data, error } = await supabase
       .from('environment_variables')
@@ -58,12 +59,11 @@ export async function getEnvironmentVariablesByTeamId(
  */
 export async function getEnvironmentVariableById(
   id: string,
-  cookieStore: CookieStore,
-): Promise<DbResult<EnvironmentVariable>> {
+): Promise<DbResponse<EnvironmentVariable>> {
   try {
     console.log(`[@db:environmentVariablesDb:getEnvironmentVariableById] Fetching variable: ${id}`);
 
-    const supabase = await createClient(cookieStore);
+    const supabase = await createClient();
 
     const { data, error } = await supabase
       .from('environment_variables')
@@ -101,23 +101,20 @@ export async function getEnvironmentVariableById(
 /**
  * Create a new environment variable
  */
-export async function createEnvironmentVariable(
-  variable: {
-    key: string;
-    value: string;
-    description?: string;
-    is_secret: boolean;
-    team_id: string;
-    created_by: string;
-  },
-  cookieStore: CookieStore,
-): Promise<DbResult<EnvironmentVariable>> {
+export async function createEnvironmentVariable(variable: {
+  key: string;
+  value: string;
+  description?: string;
+  is_secret: boolean;
+  team_id: string;
+  created_by: string;
+}): Promise<DbResponse<EnvironmentVariable>> {
   try {
     console.log(
       `[@db:environmentVariablesDb:createEnvironmentVariable] Creating variable: ${variable.key}`,
     );
 
-    const supabase = await createClient(cookieStore);
+    const supabase = await createClient();
 
     // Check if a variable with this key already exists for this team
     const { data: existingVar, error: checkError } = await supabase
@@ -199,12 +196,11 @@ export async function updateEnvironmentVariable(
     description?: string;
     is_secret?: boolean;
   },
-  cookieStore: CookieStore,
-): Promise<DbResult<EnvironmentVariable>> {
+): Promise<DbResponse<EnvironmentVariable>> {
   try {
     console.log(`[@db:environmentVariablesDb:updateEnvironmentVariable] Updating variable: ${id}`);
 
-    const supabase = await createClient(cookieStore);
+    const supabase = await createClient();
 
     // Check if we're updating the key, and if so, ensure it's unique
     if (updates.key) {
@@ -296,14 +292,11 @@ export async function updateEnvironmentVariable(
 /**
  * Delete an environment variable
  */
-export async function deleteEnvironmentVariable(
-  id: string,
-  cookieStore: CookieStore,
-): Promise<DbResult<void>> {
+export async function deleteEnvironmentVariable(id: string): Promise<DbResponse<null>> {
   try {
     console.log(`[@db:environmentVariablesDb:deleteEnvironmentVariable] Deleting variable: ${id}`);
 
-    const supabase = await createClient(cookieStore);
+    const supabase = await createClient();
 
     const { error } = await supabase.from('environment_variables').delete().eq('id', id);
 
@@ -323,6 +316,7 @@ export async function deleteEnvironmentVariable(
 
     return {
       success: true,
+      data: null,
     };
   } catch (error) {
     console.error(`[@db:environmentVariablesDb:deleteEnvironmentVariable] Exception: ${error}`);
@@ -332,3 +326,14 @@ export async function deleteEnvironmentVariable(
     };
   }
 }
+
+// Default export for all environment variables database operations
+const environmentVariablesDb = {
+  getEnvironmentVariablesByTeamId,
+  getEnvironmentVariableById,
+  createEnvironmentVariable,
+  updateEnvironmentVariable,
+  deleteEnvironmentVariable,
+};
+
+export default environmentVariablesDb;
