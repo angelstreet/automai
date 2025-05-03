@@ -33,6 +33,7 @@ async function processJob() {
     const usePayload = process.argv.includes('-payload');
     let jobData;
     let config;
+    let job;
 
     if (usePayload) {
       console.log(
@@ -45,18 +46,6 @@ async function processJob() {
       }
       try {
         jobData = JSON.parse(payloadStr);
-        // Set a fallback team_id from environment variable if not in payload
-        if (!jobData.team_id && process.env.TEAM_ID) {
-          jobData.team_id = process.env.TEAM_ID;
-          console.log(
-            `[@local-runner:processJob] Using fallback TEAM_ID from environment: ${jobData.team_id}`,
-          );
-        } else if (!jobData.team_id) {
-          console.log(
-            `[@local-runner:processJob] No team_id in payload or environment, skipping environment variables fetch`,
-          );
-        }
-        config = jobData;
         console.log(
           `[@local-runner:processJob] Custom payload parsed successfully: ${JSON.stringify(jobData, null, 2)}`,
         );
@@ -73,26 +62,30 @@ async function processJob() {
         console.log(`[@local-runner:processJob] Queue is empty`);
         return;
       }
-      const job = jobs[0];
+      job = jobs[0];
 
       console.log(`[@local-runner:processJob] Processing job: ${JSON.stringify(job)}`);
       jobData = typeof job === 'string' ? JSON.parse(job) : job;
-
-      // Fetch config from Supabase
-      const { data, error } = await supabase
-        .from('jobs_configuration')
-        .select('config')
-        .eq('id', jobData.config_id)
-        .single();
-      if (error || !data) {
-        console.error(
-          `[@local-runner:processJob] Failed to fetch config ${jobData.config_id}: ${error?.message}`,
-        );
-        return;
-      }
-      config = data.config;
-      console.log(`[@local-runner:processJob] Config: ${JSON.stringify(config)}`);
     }
+
+    // Fetch config and team_id from Supabase using config_id
+    const { data, error } = await supabase
+      .from('jobs_configuration')
+      .select('config, team_id')
+      .eq('id', jobData.config_id)
+      .single();
+    if (error || !data) {
+      console.error(
+        `[@local-runner:processJob] Failed to fetch config and team_id for ${jobData.config_id}: ${error?.message}`,
+      );
+      return;
+    }
+    config = data.config;
+    jobData.team_id = data.team_id;
+    console.log(`[@local-runner:processJob] Config: ${JSON.stringify(config)}`);
+    console.log(
+      `[@local-runner:processJob] Fetched team_id: ${jobData.team_id} for config_id: ${jobData.config_id}`,
+    );
 
     // Create job with pending status in Supabase (even for custom payload)
     const created_at = new Date().toISOString();
@@ -278,13 +271,13 @@ async function processJob() {
         let fullScript;
 
         if (host.os === 'windows') {
-          fullScript = `${repoCommands} ${repoCommands ? '' : workingDir ? `cd /d ${workingDir}/${scriptFolder} && ` : ''} && cd ${repoDir}/${scriptFolder} && pip install -r requirements.txt && ${envSetup}python --version && echo ============================= && ${scriptCommand}`;
+          fullScript = `${repoCommands} ${repoCommands ? '' : repoDir ? `cd /d ${repoDir}/${scriptFolder} && ` : ''} && cd ${repoDir}/${scriptFolder} && pip install -r requirements.txt && ${envSetup}python --version && echo ============================= && ${scriptCommand}`;
           console.log(
             `[@local-runner:processJob] Using PowerShell command structure for Windows host ${host.ip}`,
           );
         } else {
           fullScript = `
-            ${repoCommands} ${repoCommands ? '' : workingDir ? `cd ${workingDir} && ` : ''} ${envSetup}python --version && ls -l && echo ============================= && ${scriptCommand}
+            ${repoCommands} ${repoCommands ? '' : repoDir ? `cd ${repoDir} && ` : ''} ${envSetup}python --version && ls -l && echo ============================= && ${scriptCommand}
           `.trim();
         }
         console.log(
@@ -516,8 +509,9 @@ async function processJob() {
     }
 
     // Remove job from queue after processing (only if not using custom payload)
-    if (!usePayload) {
+    if (!usePayload && typeof job !== 'undefined') {
       await redis.lrem('jobs_queue', 1, job);
+      console.log(`[@local-runner:processJob] Removed job from queue`);
     }
   } catch (error) {
     console.error(`[@local-runner:processJob] Error: ${error.message}`);
