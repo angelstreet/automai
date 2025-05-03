@@ -199,6 +199,22 @@ def execute():
 
         print(f"DEBUG: Checking script path: {full_script_path}", file=sys.stderr)
         print(f"DEBUG: full_script_path calculated as: {full_script_path}", file=sys.stderr)
+        print(f"DEBUG: Does path exist? {os.path.exists(full_script_path)}", file=sys.stderr)
+        
+        # Check if the directory exists
+        script_dir = os.path.dirname(full_script_path)
+        print(f"DEBUG: Script directory: {script_dir}", file=sys.stderr)
+        print(f"DEBUG: Does directory exist? {os.path.exists(script_dir)}", file=sys.stderr)
+        
+        # If directory exists, list its contents
+        if os.path.exists(script_dir):
+            print(f"DEBUG: Contents of directory {script_dir}:", file=sys.stderr)
+            try:
+                for f in os.listdir(script_dir):
+                    print(f"DEBUG: - {f}", file=sys.stderr)
+            except Exception as e:
+                print(f"DEBUG: Error listing directory: {str(e)}", file=sys.stderr)
+        
         if not os.path.exists(full_script_path):
             print(f"ERROR: Script not found: {full_script_path}", file=sys.stderr)
             return jsonify({
