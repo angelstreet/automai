@@ -66,7 +66,7 @@ export function EnvironmentVariableDeleteDialogClient({
           </AlertDialogTitle>
           <AlertDialogDescription className="space-y-2">
             <p>{t('confirm_delete')}</p>
-            <p className="font-medium">{variable.key}</p>
+
             <p className="text-destructive">{t('delete_warning')}</p>
           </AlertDialogDescription>
         </AlertDialogHeader>
