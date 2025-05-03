@@ -17,3 +17,4 @@ public/test-auth.html
 src/components/shadcn/*
 runner/.env
 runner/nodejs-main-runner/.env
+.env

@@ -209,13 +209,8 @@ def execute():
         encrypted_env_vars = data.get('encrypted_env_vars', {})
         decrypted_env_vars = {}
         for key, encrypted_value in encrypted_env_vars.items():
-            if encrypted_value and isinstance(encrypted_value, str) and ':' in encrypted_value:
-                decrypted_value = decrypt_value(encrypted_value)
-                decrypted_env_vars[key] = decrypted_value
-                print(f"DEBUG: Decrypted environment variable: {key}=[secret]", file=sys.stderr)
-            else:
-                decrypted_env_vars[key] = encrypted_value
-                print(f"DEBUG: Using non-encrypted environment variable: {key}=[secret]", file=sys.stderr)
+            decrypted_env_vars[key] = encrypted_value
+            print(f"DEBUG: Using environment variable: {key}=[secret]", file=sys.stderr)
 
         start_time = datetime.utcnow()
         start_time_str = start_time.isoformat() + 'Z'

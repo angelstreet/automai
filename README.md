@@ -7,6 +7,7 @@ AutomAI is a multi-tenant SaaS platform designed to simplify deployment workflow
 ## Core Purpose
 
 ### Your Simple Interface for Powerful Automation Tools.
+
 Automai brings together the powerful automation tools your IT team already uses and makes them accessible through one simple interface. We don't reinvent the wheel - we make it easier to drive.
 
 ### What Makes Automai Different?
@@ -48,11 +49,13 @@ Automai doesn't replace your existing tools - it makes them work better together
 The application follows a strict three-layer architecture:
 
 1. **Server DB Layer (Core)**
+
    - Direct database interaction via Supabase
    - Located in `/src/lib/supabase/db*.ts` files
    - Feature-specific DB modules in `/src/lib/supabase/db-{feature}/`
 
 2. **Server Actions Layer (Bridge)**
+
    - Business logic and orchestration
    - Located in `/src/app/actions/*.ts` and feature-specific action files
    - Handles validation, error management, and calls to DB Layer
@@ -92,6 +95,7 @@ npx supabase gen types typescript --project-id db?pwd > src/types/supabase.ts
      NEXT_PUBLIC_SUPABASE_ANON_KEY= # Your Supabase anon key
      JWT_SECRET=                # Your JWT secret key
      ```
+
 - package.json
   "dev": "cross-env NODE_ENV=development ENV_FILE=.env.development ts-node server.ts",
 
@@ -183,7 +187,7 @@ npm run browser-tools     # Run browser tools server
 npm run electron-dev      # Run Electron in development mode
 npm run electron-build    # Build Electron application
 npm run electron-pack     # Package Electron application
-``` 
+```
 
 ---
 

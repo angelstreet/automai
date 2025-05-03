@@ -62,6 +62,7 @@ async function processJob() {
 
     // Fetch encrypted environment variables for the team only if running from a repository
     let encryptedEnvVars = {};
+    let decryptedEnvVars = {};
     if (team_id && config.repository) {
       const { data: envVarsData, error: envVarsError } = await supabase
         .from('environment_variables')
@@ -76,8 +77,26 @@ async function processJob() {
           acc[key] = value;
           return acc;
         }, {});
+        // Decrypt environment variables
+        decryptedEnvVars = Object.fromEntries(
+          Object.entries(encryptedEnvVars).map(([key, value]) => {
+            if (value && typeof value === 'string' && value.includes(':')) {
+              try {
+                const decryptedValue = decrypt(value, process.env.ENCRYPTION_KEY);
+                console.log(`[@runner:processJob] Decrypted environment variable: ${key}`);
+                return [key, decryptedValue];
+              } catch (err) {
+                console.error(
+                  `[@runner:processJob] Failed to decrypt environment variable ${key}: ${err.message}`,
+                );
+                return [key, value];
+              }
+            }
+            return [key, value];
+          }),
+        );
         console.log(
-          `[@runner:processJob] Fetched ${envVarsData.length} encrypted environment variables for team ${team_id} due to repository configuration`,
+          `[@runner:processJob] Fetched and processed ${envVarsData.length} environment variables for team ${team_id} due to repository configuration`,
         );
       } else {
         console.log(`[@runner:processJob] No environment variables found for team ${team_id}`);
@@ -148,7 +167,7 @@ async function processJob() {
                 script_path: scriptPath,
                 parameters: parameters ? `${parameters} ${i}` : `${i}`,
                 timeout: timeout,
-                encrypted_env_vars: encryptedEnvVars,
+                encrypted_env_vars: decryptedEnvVars,
               };
 
               if (config.repository) {
@@ -303,15 +322,35 @@ async function processJob() {
           );
         }
 
+        // Add environment variables to the SSH script
+        let envSetup = '';
+        if (Object.keys(decryptedEnvVars).length > 0) {
+          envSetup =
+            host.os === 'windows'
+              ? Object.entries(decryptedEnvVars)
+                  .map(([key, value]) => `set ${key}=${value}`)
+                  .join(' && ')
+              : Object.entries(decryptedEnvVars)
+                  .map(([key, value]) => `export ${key}=${value}`)
+                  .join(' && ');
+          envSetup += host.os === 'windows' ? ' && ' : ' && ';
+          console.log(
+            `[@runner:processJob] Environment variables setup for SSH: ${Object.keys(decryptedEnvVars).join(', ')}`,
+          );
+        } else {
+          console.log(
+            `[@runner:processJob] No environment variables to set for SSH host ${host.ip}`,
+          );
+        }
         const scriptCommand = `${scripts}`;
         let fullScript;
         if (host.os === 'windows') {
           fullScript = `
-            ${repoCommands} ${repoCommands ? '' : `cd /d ${workingDir} && `} cmd.exe /c python --version && dir && echo ============================= && ${scriptCommand}
+            ${repoCommands} ${repoCommands ? '' : `cd /d ${workingDir} && `} ${envSetup}cmd.exe /c python --version && dir && echo ============================= && ${scriptCommand}
           `.trim();
         } else {
           fullScript = `
-            ${repoCommands} ${repoCommands ? '' : `cd ${workingDir} && `} cmd.exe /c python --version && dir && echo ============================= && ${scriptCommand}
+            ${repoCommands} ${repoCommands ? '' : `cd ${workingDir} && `} ${envSetup}python --version && ls -l && echo ============================= && ${scriptCommand}
           `.trim();
         }
         console.log(`[@runner:processJob] SSH command: ${fullScript}`);
