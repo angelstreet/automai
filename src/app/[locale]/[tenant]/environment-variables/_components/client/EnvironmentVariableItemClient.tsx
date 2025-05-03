@@ -44,7 +44,7 @@ export function EnvironmentVariableItemClient({
   const displayValue = () => {
     if (!variable.is_secret) return variable.value;
     if (isValueVisible) return variable.value;
-    return t('secret_value_masked');
+    return '••••••••••••';
   };
 
   return (
@@ -52,7 +52,7 @@ export function EnvironmentVariableItemClient({
       <TableRow className="h-9">
         <TableCell className="font-mono py-1.5">{variable.key}</TableCell>
         <TableCell className="py-1.5">
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <span
               className={`font-mono ${variable.is_secret ? 'text-muted-foreground' : ''} truncate max-w-[200px]`}
             >
@@ -64,7 +64,7 @@ export function EnvironmentVariableItemClient({
                 size="icon"
                 onClick={toggleValueVisibility}
                 title={isValueVisible ? t('hide_value') : t('show_value')}
-                className="h-6 w-6 ml-0.5"
+                className="h-6 w-6"
               >
                 {isValueVisible ? (
                   <EyeOff className="h-3.5 w-3.5" />
@@ -73,15 +73,6 @@ export function EnvironmentVariableItemClient({
                 )}
               </Button>
             )}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleCopyValue}
-              title={isCopied ? t('copied') : t('copy_value')}
-              className="h-6 w-6"
-            >
-              <Copy className="h-3.5 w-3.5" />
-            </Button>
           </div>
         </TableCell>
         <TableCell className="text-center py-1.5 w-24">
@@ -89,20 +80,30 @@ export function EnvironmentVariableItemClient({
             className="data-[state=checked]:bg-primary scale-75"
             checked={variable.is_secret}
             disabled
+            title={variable.is_secret ? t('secret_tooltip') : ''}
           />
         </TableCell>
-        <TableCell className="py-1.5">
-          <div className="flex justify-end">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsDeleteDialogOpen(true)}
-              title={c('delete')}
-              className="h-6 w-6"
-            >
-              <Trash className="h-3.5 w-3.5" />
-            </Button>
-          </div>
+        <TableCell className="text-center py-1.5 w-12">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleCopyValue}
+            title={isCopied ? t('copied') : t('copy_value')}
+            className="h-6 w-6"
+          >
+            <Copy className="h-3.5 w-3.5" />
+          </Button>
+        </TableCell>
+        <TableCell className="text-center py-1.5 w-12">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsDeleteDialogOpen(true)}
+            title={c('delete')}
+            className="h-6 w-6"
+          >
+            <Trash className="h-3.5 w-3.5" />
+          </Button>
         </TableCell>
       </TableRow>
 

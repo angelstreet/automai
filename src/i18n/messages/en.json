@@ -65,6 +65,8 @@
     "all": "All",
     "back": "Back",
     "cancel": "Cancel",
+    "copy": "Copy",
+    "copied": "Copied",
     "close": "Close",
     "completed": "Completed",
     "config": "Configuration",
@@ -238,9 +240,7 @@
     "loading_logs": "Loading logs...",
     "error_logs": "Error: {{message}}",
     "no_logs": "No logs available. Click to refresh.",
-    "refresh_logs": "Refresh",
-    "copy_logs": "Copy",
-    "copied_logs": "Copied!"
+    "refresh_logs": "Refresh"
   },
   "hosts": {
     "add_button": "Add Host",
@@ -568,8 +568,6 @@
     "filter_all": "All Variables",
     "filter_secret": "Secret Variables",
     "filter_normal": "Regular Variables",
-    "copy_value": "Copy Value",
-    "copied": "Copied!",
     "sort_key_asc": "Key (A-Z)",
     "sort_key_desc": "Key (Z-A)",
     "sort_newest": "Newest First",

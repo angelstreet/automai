@@ -1,6 +1,6 @@
 'use client';
 
-import { PlusCircle, Save, X, Eye, EyeOff } from 'lucide-react';
+import { PlusCircle, Save, X, Eye, EyeOff, Copy } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -32,7 +32,7 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
   const c = useTranslations('common');
 
   const [rows, setRows] = useState<EnvRow[]>([
-    { id: 'initial', key: '', value: '', isSecret: false, isValueVisible: true },
+    { id: 'initial', key: '', value: '', isSecret: false, isValueVisible: false },
   ]);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -40,7 +40,7 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
   const addRow = () => {
     setRows([
       ...rows,
-      { id: `row-${Date.now()}`, key: '', value: '', isSecret: false, isValueVisible: true },
+      { id: `row-${Date.now()}`, key: '', value: '', isSecret: false, isValueVisible: false },
     ]);
   };
 
@@ -49,7 +49,7 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
     if (rows.length === 1) {
       // If it's the last row, just clear it instead of removing
       setRows([
-        { id: `row-${Date.now()}`, key: '', value: '', isSecret: false, isValueVisible: true },
+        { id: `row-${Date.now()}`, key: '', value: '', isSecret: false, isValueVisible: false },
       ]);
     } else {
       setRows(rows.filter((row) => row.id !== id));
@@ -142,7 +142,7 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
           key,
           value: cleanValue,
           isSecret: false,
-          isValueVisible: true,
+          isValueVisible: false,
         };
       }
 
@@ -152,7 +152,7 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
         key: line.trim(),
         value: '',
         isSecret: false,
-        isValueVisible: true,
+        isValueVisible: false,
       };
     });
 
@@ -272,7 +272,7 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
         onVariablesCreated(result.data);
         // Reset to a single empty row
         setRows([
-          { id: `row-${Date.now()}`, key: '', value: '', isSecret: false, isValueVisible: true },
+          { id: `row-${Date.now()}`, key: '', value: '', isSecret: false, isValueVisible: false },
         ]);
       } else {
         toast.error(result.error || 'Failed to save environment variables');
@@ -293,11 +293,14 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
         <div className="col-span-5">
           <Label>{t('key')}</Label>
         </div>
-        <div className="col-span-5">
+        <div className="col-span-4">
           <Label>{t('value')}</Label>
         </div>
         <div className="col-span-1 text-xs text-muted-foreground flex items-center justify-center pt-1">
           {c('secret')}
+        </div>
+        <div className="col-span-1 text-xs text-muted-foreground flex items-center justify-center pt-1">
+          {c('copy')}
         </div>
         <div className="col-span-1"></div>
       </div>
@@ -322,7 +325,7 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
             </div>
 
             {/* Value */}
-            <div className="col-span-5">
+            <div className="col-span-4">
               <div className="relative">
                 <Input
                   id={`value-${row.id}`}
@@ -330,7 +333,11 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
                   value={row.value}
                   onChange={(e) => updateRow(row.id, 'value', e.target.value)}
                   placeholder="e.g. your-secret-value"
-                  className={cn('h-8', row.error ? 'border-destructive' : '')}
+                  className={cn(
+                    'h-8',
+                    row.error ? 'border-destructive' : '',
+                    row.isSecret && !row.isValueVisible ? 'font-mono text-muted-foreground' : '',
+                  )}
                 />
                 {row.isSecret && row.value && (
                   <Button
@@ -359,6 +366,28 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
                 onCheckedChange={() => toggleSecret(row.id)}
                 className="data-[state=checked]:bg-primary"
               />
+            </div>
+
+            {/* Copy Button */}
+            <div className="col-span-1 flex justify-center">
+              {row.value && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    if (row.value) {
+                      navigator.clipboard.writeText(row.value);
+                      toast.success(c('copied'));
+                    }
+                  }}
+                  aria-label="Copy"
+                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                  title={c('copy')}
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                </Button>
+              )}
             </div>
 
             {/* Remove Button */}
