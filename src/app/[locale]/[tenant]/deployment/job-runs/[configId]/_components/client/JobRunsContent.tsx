@@ -3,7 +3,7 @@
 import { ArrowLeft, Eye, Filter, RefreshCw, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 import { JobRunOutputDialogClient } from '@/app/[locale]/[tenant]/deployment/_components/client/JobRunOutputDialogClient';
 import { Button } from '@/components/shadcn/button';
@@ -62,6 +62,8 @@ export function JobRunsContent({ jobRuns, configId: _configId, configName }: Job
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedJobRun, setSelectedJobRun] = useState<JobRun | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Handle back button click
   const handleBack = () => {
@@ -87,6 +89,44 @@ export function JobRunsContent({ jobRuns, configId: _configId, configName }: Job
       setIsRefreshing(false);
     }, 1000);
   };
+
+  // Toggle auto-refresh
+  const toggleAutoRefresh = () => {
+    setAutoRefreshEnabled(!autoRefreshEnabled);
+  };
+
+  // Setup auto-refresh interval
+  useEffect(() => {
+    console.log(
+      `[@component:JobRunsContent] Auto-refresh ${autoRefreshEnabled ? 'enabled' : 'disabled'}`,
+    );
+
+    if (autoRefreshEnabled) {
+      // Clear any existing interval
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+      }
+
+      // Set up new interval for 30 seconds
+      refreshIntervalRef.current = setInterval(() => {
+        console.log('[@component:JobRunsContent] Auto-refreshing job runs data');
+        router.refresh();
+      }, 30000); // 30 seconds
+    } else if (refreshIntervalRef.current) {
+      // Clear interval if auto-refresh is disabled
+      clearInterval(refreshIntervalRef.current);
+      refreshIntervalRef.current = null;
+    }
+
+    // Cleanup on component unmount
+    return () => {
+      if (refreshIntervalRef.current) {
+        console.log('[@component:JobRunsContent] Cleaning up auto-refresh interval');
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
+      }
+    };
+  }, [autoRefreshEnabled, router]);
 
   // Handle view job run details
   const handleViewJobRun = (jobRun: JobRun) => {
@@ -120,10 +160,24 @@ export function JobRunsContent({ jobRuns, configId: _configId, configName }: Job
           </Button>
           <h1 className="text-xl font-bold">{configName}</h1>
         </div>
-        <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-          {c('refresh')}
-        </Button>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleAutoRefresh}
+            className={
+              autoRefreshEnabled
+                ? 'bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50'
+                : ''
+            }
+          >
+            {autoRefreshEnabled ? 'Auto-refresh ON' : 'Auto-refresh OFF'}
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {c('refresh')}
+          </Button>
+        </div>
       </div>
 
       <Card>
