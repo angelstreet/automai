@@ -60,9 +60,9 @@ async function processJob() {
     }
     console.log(`[@runner:processJob] Config: ${JSON.stringify(config)}`);
 
-    // Fetch encrypted environment variables for the team
+    // Fetch encrypted environment variables for the team only if running from a repository
     let encryptedEnvVars = {};
-    if (team_id) {
+    if (team_id && config.repository) {
       const { data: envVarsData, error: envVarsError } = await supabase
         .from('environment_variables')
         .select('key, value')
@@ -77,13 +77,15 @@ async function processJob() {
           return acc;
         }, {});
         console.log(
-          `[@runner:processJob] Fetched ${envVarsData.length} encrypted environment variables for team ${team_id}`,
+          `[@runner:processJob] Fetched ${envVarsData.length} encrypted environment variables for team ${team_id} due to repository configuration`,
         );
       } else {
         console.log(`[@runner:processJob] No environment variables found for team ${team_id}`);
       }
     } else {
-      console.log(`[@runner:processJob] No team_id found in config ${config_id}`);
+      console.log(
+        `[@runner:processJob] Skipping environment variables fetch: team_id=${team_id}, repository=${!!config.repository}`,
+      );
     }
 
     const created_at = new Date().toISOString();
