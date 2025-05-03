@@ -325,7 +325,7 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
           <Label>{t('value')}</Label>
         </div>
         <div className="col-span-1 text-xs text-muted-foreground flex items-center justify-center pt-1">
-          {t('secret')}
+          {c('secret')}
         </div>
         <div className="col-span-1"></div>
       </div>
