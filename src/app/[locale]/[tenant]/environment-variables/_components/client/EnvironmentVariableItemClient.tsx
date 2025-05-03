@@ -5,7 +5,6 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 
 import { Button } from '@/components/shadcn/button';
-import { Switch } from '@/components/shadcn/switch';
 import { TableRow, TableCell } from '@/components/shadcn/table';
 import { EnvironmentVariable } from '@/types/context/environmentVariablesContextType';
 
@@ -55,28 +54,18 @@ export function EnvironmentVariableItemClient({
             <span className={`font-mono text-muted-foreground truncate max-w-[200px]`}>
               {displayValue()}
             </span>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleValueVisibility}
-              title={isValueVisible ? t('hide_value') : t('show_value')}
-              className="h-6 w-6"
-            >
-              {isValueVisible ? (
-                <EyeOff className="h-3.5 w-3.5" />
-              ) : (
-                <Eye className="h-3.5 w-3.5" />
-              )}
-            </Button>
           </div>
         </TableCell>
         <TableCell className="text-center py-1.5 w-24">
-          <Switch
-            className="data-[state=checked]:bg-primary scale-75"
-            checked={variable.is_secret}
-            disabled
-            title={variable.is_secret ? t('secret_tooltip') : ''}
-          />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleValueVisibility}
+            title={isValueVisible ? t('hide_value') : t('show_value')}
+            className="h-6 w-6"
+          >
+            {isValueVisible ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+          </Button>
         </TableCell>
         <TableCell className="text-center py-1.5 w-12">
           <Button
