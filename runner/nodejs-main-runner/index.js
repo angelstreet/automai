@@ -362,13 +362,13 @@ async function processJob() {
         const scriptCommand = `${scripts}`;
         let fullScript;
         if (host.os === 'windows') {
-          fullScript = `${repoCommands} ${repoCommands ? '' : repoDir ? `cd /d ${repoDir}/${scriptFolder} && ` : ''} && cd ${repoDir}/${scriptFolder} && pip install -r requirements.txt && ${envSetup}python --version && echo ============================= && ${scriptCommand}`;
+          fullScript = `${repoCommands} ${repoCommands ? '' : repoDir ? `cd /d ${repoDir}/${scriptFolder} && ` : ''} && cd ${repoDir}${scriptFolder ? `/${scriptFolder}` : ''} && pip install -r requirements.txt && ${envSetup}python --version && echo ============================= && ${scriptCommand}`;
           console.log(
             `[@runner:processJob] Using PowerShell command structure for Windows host ${host.ip}`,
           );
         } else {
           fullScript = `
-            ${repoCommands} ${repoCommands ? '' : repoDir ? `cd ${repoDir}/${scriptFolder} && ` : ''} ${envSetup}python --version && ls -l && echo ============================= && ${scriptCommand}
+            ${repoCommands} ${repoCommands ? '' : repoDir ? `cd ${repoDir}${scriptFolder ? `/${scriptFolder}` : ''} && ` : ''} ${envSetup}python --version && ls -l && echo ============================= && ${scriptCommand}
           `.trim();
         }
         console.log(`[@runner:processJob] SSH command: ${fullScript}`);
