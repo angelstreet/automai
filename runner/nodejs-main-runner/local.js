@@ -324,18 +324,12 @@ async function processJob() {
 
         if (host.os === 'windows') {
           fullScript = `${repoCommands} ${repoCommands ? '' : repoDir ? `cd /d ${repoDir}/${scriptFolder} && ` : ''} && cd ${repoDir}/${scriptFolder} && powershell -Command "if (Test-Path 'requirements.txt') { pip install -r requirements.txt } else { Write-Output 'No requirements.txt file found, skipping pip install' }" && ${envSetup}python --version && echo ============================= && ${scriptCommand}`;
-          console.log(
-            `[@local-runner:processJob] Using PowerShell command structure for Windows host ${host.ip}`,
-          );
         } else {
-          fullScript = `
-            ${repoCommands} ${repoCommands ? '' : repoDir ? `cd ${repoDir}/${scriptFolder} && ` : ''} && cd ${repoDir}/${scriptFolder} && if [ -f "requirements.txt" ]; then pip install -r requirements.txt; else echo "No requirements.txt file found, skipping pip install"; fi && ${envSetup}python --version && echo ============================= && ${scriptCommand}
-          `.trim();
+          fullScript = `${repoCommands} ${repoCommands ? '' : repoDir ? `cd ${repoDir}/${scriptFolder} && ` : ''} && cd ${repoDir}/${scriptFolder} && if [ -f "requirements.txt" ]; then pip install -r requirements.txt; else echo "No requirements.txt file found, skipping pip install"; fi && ${envSetup}python --version && echo ============================= && ${scriptCommand}`;
         }
         console.log(
           `[@local-runner:processJob] SSH command to be executed on ${host.ip}: ${fullScript}`,
         );
-        //return;
         const conn = new Client();
         conn
           .on('ready', async () => {
