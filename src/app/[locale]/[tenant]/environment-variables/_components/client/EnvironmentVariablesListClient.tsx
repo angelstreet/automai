@@ -75,14 +75,22 @@ export function EnvironmentVariablesListClient({
         </div>
         <div className="flex gap-2">
           <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-[140px] h-9">
-              <SelectValue placeholder={t('sort_newest')} />
+            <SelectTrigger className="w-[120px] h-9 text-xs whitespace-nowrap overflow-hidden">
+              <SelectValue placeholder={t('sort_newest')} className="truncate" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="key_asc">{t('sort_key_asc')}</SelectItem>
-              <SelectItem value="key_desc">{t('sort_key_desc')}</SelectItem>
-              <SelectItem value="newest">{t('sort_newest')}</SelectItem>
-              <SelectItem value="oldest">{t('sort_oldest')}</SelectItem>
+              <SelectItem value="key_asc" className="text-xs">
+                {t('sort_key_asc')}
+              </SelectItem>
+              <SelectItem value="key_desc" className="text-xs">
+                {t('sort_key_desc')}
+              </SelectItem>
+              <SelectItem value="newest" className="text-xs">
+                {t('sort_newest')}
+              </SelectItem>
+              <SelectItem value="oldest" className="text-xs">
+                {t('sort_oldest')}
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>

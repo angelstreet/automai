@@ -1,6 +1,6 @@
 'use client';
 
-import { PlusCircle, Save, X, Eye, EyeOff, Copy } from 'lucide-react';
+import { PlusCircle, Save, X, Eye, EyeOff } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -289,7 +289,7 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
   return (
     <div className="space-y-3">
       {/* Header row with labels */}
-      <div className="grid grid-cols-12 gap-2 mb-1 px-1">
+      <div className="grid grid-cols-11 gap-2 mb-1 px-1">
         <div className="col-span-5">
           <Label>{t('key')}</Label>
         </div>
@@ -300,16 +300,15 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
           {c('secret')}
         </div>
         <div className="col-span-1 text-xs text-muted-foreground flex items-center justify-center pt-1">
-          {c('copy')}
+          {c('remove')}
         </div>
-        <div className="col-span-1"></div>
       </div>
 
       <div className="grid gap-1">
         {rows.map((row) => (
           <div
             key={row.id}
-            className="grid grid-cols-12 gap-2 items-center py-1 group border-b border-border/30 last:border-0"
+            className="grid grid-cols-11 gap-2 items-center py-1 group border-b border-border/30 last:border-0"
           >
             {/* Key */}
             <div className="col-span-5">
@@ -368,28 +367,6 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
               />
             </div>
 
-            {/* Copy Button */}
-            <div className="col-span-1 flex justify-center">
-              {row.value && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    if (row.value) {
-                      navigator.clipboard.writeText(row.value);
-                      toast.success(c('copied'));
-                    }
-                  }}
-                  aria-label="Copy"
-                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                  title={c('copy')}
-                >
-                  <Copy className="h-3.5 w-3.5" />
-                </Button>
-              )}
-            </div>
-
             {/* Remove Button */}
             <div className="col-span-1 flex justify-center">
               <Button
@@ -397,8 +374,9 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
                 variant="ghost"
                 size="icon"
                 onClick={() => removeRow(row.id)}
-                aria-label="Remove"
-                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                aria-label={c('remove')}
+                title={c('remove')}
+                className="h-6 w-6"
               >
                 <X className="h-3.5 w-3.5" />
               </Button>
