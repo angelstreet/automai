@@ -14,8 +14,8 @@ const redis = new Redis({
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 const FLASK_SERVICE_URL = process.env.PYTHON_SLAVE_RUNNER_FLASK_SERVICE_URL;
-
 const ALGORITHM = 'aes-256-gcm';
+
 function decrypt(encryptedData, keyBase64) {
   const key = Buffer.from(keyBase64, 'base64');
   const [ivHex, authTagHex, encrypted] = encryptedData.split(':');
@@ -43,7 +43,6 @@ async function processJob() {
     const jobData = typeof job === 'string' ? JSON.parse(job) : job;
     const { config_id } = jobData;
 
-    // Fetch config from Supabase
     const { data, error } = await supabase
       .from('jobs_configuration')
       .select('config, is_active')
@@ -60,7 +59,6 @@ async function processJob() {
     }
     console.log(`[@runner:processJob] Config: ${JSON.stringify(config)}`);
 
-    // Create job with pending status
     const created_at = new Date().toISOString();
     const { data: jobRunData, error: jobError } = await supabase
       .from('jobs_run')
@@ -84,13 +82,11 @@ async function processJob() {
     let output = { scripts: [] };
     let overallStatus = 'success';
 
-    // Determine execution mode based on config.hosts
     const hasHosts = config.hosts && config.hosts.length > 0;
 
     if (!hasHosts) {
       console.log(`[@runner:processJob] No hosts found, forwarding to Flask service`);
 
-      // Process each script sequentially
       for (const script of config.scripts || []) {
         const scriptPath = script.path;
         const parameters = script.parameters || '';
@@ -110,7 +106,6 @@ async function processJob() {
           continue;
         }
 
-        // Execute each iteration
         for (let i = 1; i <= iterations; i++) {
           let retries = retryOnFailure + 1;
           let attempt = 0;
@@ -120,7 +115,6 @@ async function processJob() {
           while (attempt < retries) {
             attempt++;
             try {
-              // Build payload with iteration number appended to parameters
               const payload = {
                 script_path: scriptPath,
                 parameters: parameters ? `${parameters} ${i}` : `${i}`,
@@ -133,6 +127,27 @@ async function processJob() {
                 payload.branch = config.branch || 'main';
               }
 
+              const started_at = new Date().toISOString();
+              const { error: statusError } = await supabase
+                .from('jobs_run')
+                .update({
+                  status: 'in_progress',
+                  started_at: started_at,
+                })
+                .eq('id', jobId);
+
+              if (statusError) {
+                console.error(
+                  `[@runner:processJob] Failed to update job ${jobId} to in_progress: ${statusError.message}`,
+                );
+                scriptOutput.stderr = `Failed to update job status: ${statusError.message}`;
+                overallStatus = 'failed';
+                output.scripts.push(scriptOutput);
+                continue;
+              }
+
+              console.log(`[@runner:processJob] Updated job ${jobId} status to 'in_progress'`);
+
               console.log(
                 `[@runner:processJob] Sending payload to Flask (attempt ${attempt}/${retries}, iteration ${i}/${iterations}): ${JSON.stringify(payload)}`,
               );
@@ -143,6 +158,10 @@ async function processJob() {
               scriptOutput.stdout = response.data.output.stdout || '';
               scriptOutput.stderr = response.data.output.stderr || '';
               scriptStatus = response.data.status;
+
+              console.log(
+                `[@runner:processJob] Received response from Flask for job ${jobId}: status=${scriptStatus}, stdout=${scriptOutput.stdout}, stderr=${scriptOutput.stderr}`,
+              );
 
               if (scriptStatus === 'success') {
                 break;
@@ -165,8 +184,25 @@ async function processJob() {
           }
         }
       }
+
+      const completed_at = new Date().toISOString();
+      const { error: finalStatusError } = await supabase
+        .from('jobs_run')
+        .update({
+          status: overallStatus,
+          output: output,
+          completed_at: completed_at,
+        })
+        .eq('id', jobId);
+
+      if (finalStatusError) {
+        console.error(
+          `[@runner:processJob] Failed to update final status for job ${jobId}: ${finalStatusError.message}`,
+        );
+      } else {
+        console.log(`[@runner:processJob] Updated job ${jobId} to final status: ${overallStatus}`);
+      }
     } else {
-      // SSH execution
       const hosts = config.hosts;
       for (const host of hosts) {
         console.log(
