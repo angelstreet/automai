@@ -63,6 +63,7 @@ export function EnvironmentVariableDialogClient({
   onVariableUpdated,
 }: EnvironmentVariableDialogClientProps) {
   const t = useTranslations('environmentVariables');
+  const c = useTranslations('common');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isEditMode = !!variable;
@@ -222,10 +223,10 @@ export function EnvironmentVariableDialogClient({
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
             >
-              {t('cancel')}
+              {c('cancel')}
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? t('saving') : isEditMode ? t('update') : t('create')}
+              {isSubmitting ? c('saving') : isEditMode ? c('update') : c('create')}
             </Button>
           </DialogFooter>
         </form>

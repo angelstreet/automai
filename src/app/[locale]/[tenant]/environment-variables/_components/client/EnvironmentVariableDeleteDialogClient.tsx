@@ -32,6 +32,7 @@ export function EnvironmentVariableDeleteDialogClient({
   onVariableDeleted,
 }: EnvironmentVariableDeleteDialogClientProps) {
   const t = useTranslations('environmentVariables');
+  const c = useTranslations('common');
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = async () => {
@@ -81,9 +82,9 @@ export function EnvironmentVariableDeleteDialogClient({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isDeleting}>{t('cancel')}</AlertDialogCancel>
+          <AlertDialogCancel disabled={isDeleting}>{c('cancel')}</AlertDialogCancel>
           <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
-            {isDeleting ? t('deleting') : t('delete')}
+            {isDeleting ? c('deleting') : c('delete')}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
