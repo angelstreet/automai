@@ -357,7 +357,7 @@ async function processJob() {
         let fullScript;
         if (host.os === 'windows') {
           fullScript = `
-            ${repoCommands} ${repoCommands ? '' : `cd /d ${workingDir} && `} ${envSetup}cmd.exe /c python --version && dir && echo ============================= && ${scriptCommand}
+            ${repoCommands} ${repoCommands ? '' : `cd /d ${workingDir} 2>&1 && `} ${envSetup}cmd.exe /c python --version 2>&1 && dir 2>&1 && echo ============================= 2>&1 && ${scriptCommand}
           `.trim();
         } else {
           fullScript = `
