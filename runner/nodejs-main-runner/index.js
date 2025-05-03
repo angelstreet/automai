@@ -1,6 +1,5 @@
 const crypto = require('crypto');
 const http = require('http');
-
 const { createClient } = require('@supabase/supabase-js');
 const { Redis } = require('@upstash/redis');
 const axios = require('axios');
@@ -133,13 +132,11 @@ async function processJob() {
                 .update({
                   status: 'in_progress',
                   started_at: started_at,
-                })
+(INPUT)                })
                 .eq('id', jobId);
 
               if (statusError) {
-                console.error(
-                  `[@runner:processJob] Failed to update job ${jobId} to in_progress: ${statusError.message}`,
-                );
+                console.error(`[@runner:processJob] Failed to update job ${jobId} to in_progress: ${statusError.message}`);
                 scriptOutput.stderr = `Failed to update job status: ${statusError.message}`;
                 overallStatus = 'failed';
                 output.scripts.push(scriptOutput);
@@ -196,9 +193,7 @@ async function processJob() {
         .eq('id', jobId);
 
       if (finalStatusError) {
-        console.error(
-          `[@runner:processJob] Failed to update final status for job ${jobId}: ${finalStatusError.message}`,
-        );
+        console.error(`[@runner:processJob] Failed to update final status for job ${jobId}: ${finalStatusError.message}`);
       } else {
         console.log(`[@runner:processJob] Updated job ${jobId} to final status: ${overallStatus}`);
       }
@@ -233,10 +228,33 @@ async function processJob() {
             return `${command} ${script.path} ${script.parameters || ''} 2>&1`.trim();
           })
           .join(' && ');
+
         console.log(`[@runner:processJob] Scripts: ${scripts}`);
 
+        let repoCommands = '';
+        let workingDir = 'Desktop/remote-installer';
+        if (config.repository) {
+          const repoUrl = config.repository;
+          const branch = config.branch || 'main';
+          const gitFolder = config.git_folder || 'repo';
+          const repoDir = `/tmp/${gitFolder}-${jobId}`;
+          repoCommands = `
+            if [ -d "${repoDir}" ]; then
+              cd ${repoDir} && git pull origin ${branch} || exit 1
+            else
+              rm -rf ${repoDir} && git clone -b ${branch} ${repoUrl} ${repoDir} && cd ${repoDir} || exit 1
+            fi
+          `;
+          workingDir = repoDir;
+          console.log(`[@runner:processJob] Repository setup: ${repoDir} exists ? git pull : clone ${repoUrl} branch ${branch}`);
+        }
+
         const scriptCommand = `${scripts}`;
-        const fullScript = `cmd.exe /c python --version && cd Desktop/remote-installer && dir && echo ============================= && ${scriptCommand}`;
+        const fullScript = `
+          ${repoCommands} \
+          ${repoCommands ? '' : `cd ${workingDir} && `} \
+          cmd.exe /c python --version && dir && echo ============================= && ${scriptCommand}
+        `.trim();
         console.log(`[@runner:processJob] SSH command: ${fullScript}`);
 
         const conn = new Client();
