@@ -123,6 +123,7 @@
     "saving": "Speichern läuft...",
     "search": "Suchen",
     "search_placeholder": "Suchen...",
+    "secret": "Geheim",
     "select": "Auswählen",
     "select_all": "Alle auswählen",
     "settings": "Einstellungen",
@@ -149,7 +150,8 @@
     "url": "URL",
     "username": "Benutzername",
     "view": "Anzeigen",
-    "view_config": "Konfig anzeigen"
+    "view_config": "Konfig anzeigen",
+    "visibility": "Sichtbarkeit"
   },
   "dashboard": {
     "desc": "Willkommen in Ihrem Dashboard",

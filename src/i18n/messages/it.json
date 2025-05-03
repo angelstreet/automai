@@ -149,7 +149,8 @@
     "url": "URL",
     "username": "Nome utente",
     "view": "Visualizza",
-    "view_config": "Visualizza config"
+    "view_config": "Visualizza config",
+    "visibility": "Visibilità"
   },
   "dashboard": {
     "desc": "Benvenuto nel tuo cruscotto",

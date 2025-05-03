@@ -149,7 +149,8 @@
     "url": "URL",
     "username": "Nombre de usuario",
     "view": "Ver",
-    "view_config": "Ver Configuración"
+    "view_config": "Ver Configuración",
+    "visibility": "Visibilidad"
   },
   "dashboard": {
     "desc": "Bienvenido a tu panel de control",

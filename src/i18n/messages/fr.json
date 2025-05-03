@@ -149,7 +149,8 @@
     "url": "URL",
     "username": "Nom d'utilisateur",
     "view": "Voir",
-    "view_config": "Voir config"
+    "view_config": "Voir config",
+    "visibility": "Visibilité"
   },
   "dashboard": {
     "desc": "Bienvenue sur votre tableau de bord",

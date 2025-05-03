@@ -154,7 +154,8 @@
     "scripts": "Scripts",
     "script_path": "Script Path",
     "parameters": "Parameters",
-    "add_another": "Add Another"
+    "add_another": "Add Another",
+    "visibility": "Visibility"
   },
   "dashboard": {
     "desc": "Welcome to your dashboard",
