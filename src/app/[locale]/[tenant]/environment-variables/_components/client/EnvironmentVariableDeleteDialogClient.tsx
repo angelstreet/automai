@@ -3,6 +3,7 @@
 import { AlertCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 import { deleteEnvironmentVariable } from '@/app/actions/environmentVariablesAction';
 import {
@@ -15,7 +16,6 @@ import {
   AlertDialogCancel,
 } from '@/components/shadcn/alert-dialog';
 import { Button } from '@/components/shadcn/button';
-import { toast } from '@/components/shadcn/use-toast';
 import { EnvironmentVariable } from '@/types/context/environmentVariablesContextType';
 
 interface EnvironmentVariableDeleteDialogClientProps {
@@ -42,26 +42,15 @@ export function EnvironmentVariableDeleteDialogClient({
       const result = await deleteEnvironmentVariable(variable.id);
 
       if (result.success) {
-        toast({
-          title: t('delete_success'),
-          description: `${variable.key} ${t('deleted_successfully')}`,
-        });
+        toast.success(`${variable.key} ${t('deleted_successfully')}`);
         onVariableDeleted(variable.id);
         onOpenChange(false);
       } else {
-        toast({
-          title: t('error_delete'),
-          description: result.error || t('unknown_error'),
-          variant: 'destructive',
-        });
+        toast.error(result.error || t('unknown_error'));
       }
     } catch (error) {
       console.error('Error deleting variable:', error);
-      toast({
-        title: t('error_delete'),
-        description: error instanceof Error ? error.message : t('unknown_error'),
-        variant: 'destructive',
-      });
+      toast.error(error instanceof Error ? error.message : t('unknown_error'));
     } finally {
       setIsDeleting(false);
     }

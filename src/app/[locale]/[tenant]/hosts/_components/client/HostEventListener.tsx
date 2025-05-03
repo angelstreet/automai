@@ -21,13 +21,13 @@ const HostsEvents = {
 // Export the constants object
 export { HostsEvents };
 
-export default function HostsEventListener() {
+export default function HostEventListener() {
   const router = useRouter();
 
   useEffect(() => {
     // Handle refresh hosts request
     const handleRefreshHosts = () => {
-      console.log('[@component:HostsEventListener] REFRESH_HOSTS: Refreshing hosts data');
+      console.log('[@component:HostEventListener] REFRESH_HOSTS: Refreshing hosts data');
       router.refresh();
     };
 
@@ -35,7 +35,7 @@ export default function HostsEventListener() {
     const handleHostTestingStart = (event: CustomEvent) => {
       if (event.detail?.hostId) {
         console.log(
-          `[@component:HostsEventListener] HOST_TESTING_START: Host ${event.detail.hostId}`,
+          `[@component:HostEventListener] HOST_TESTING_START: Host ${event.detail.hostId}`,
         );
       }
     };
@@ -43,13 +43,13 @@ export default function HostsEventListener() {
     const handleHostTestingComplete = (event: CustomEvent) => {
       if (event.detail?.hostId) {
         console.log(
-          `[@component:HostsEventListener] HOST_TESTING_COMPLETE: Host ${event.detail.hostId}`,
+          `[@component:HostEventListener] HOST_TESTING_COMPLETE: Host ${event.detail.hostId}`,
         );
       }
     };
 
     // Debug message when component mounts
-    console.log('[@component:HostsEventListener] Setting up event listeners');
+    console.log('[@component:HostEventListener] Setting up event listeners');
 
     // Add event listeners
     window.addEventListener(HostsEvents.REFRESH_HOSTS, handleRefreshHosts);
@@ -64,7 +64,7 @@ export default function HostsEventListener() {
 
     return () => {
       // Debug message when component unmounts
-      console.log('[@component:HostsEventListener] Removing event listeners');
+      console.log('[@component:HostEventListener] Removing event listeners');
 
       // Remove event listeners
       window.removeEventListener(HostsEvents.REFRESH_HOSTS, handleRefreshHosts);

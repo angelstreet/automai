@@ -1,6 +1,6 @@
 'use client';
 
-import { Edit, Copy, Trash, Eye, EyeOff } from 'lucide-react';
+import { Copy, Trash, Eye, EyeOff } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 
@@ -10,21 +10,18 @@ import { TableRow, TableCell } from '@/components/shadcn/table';
 import { EnvironmentVariable } from '@/types/context/environmentVariablesContextType';
 
 import { EnvironmentVariableDeleteDialogClient } from './EnvironmentVariableDeleteDialogClient';
-import { EnvironmentVariableDialogClient } from './EnvironmentVariableDialogClient';
 
 interface EnvironmentVariableItemClientProps {
   variable: EnvironmentVariable;
-  onVariableUpdated: (variable: EnvironmentVariable) => void;
+  onVariableUpdated?: (variable: EnvironmentVariable) => void;
   onVariableDeleted: (id: string) => void;
 }
 
 export function EnvironmentVariableItemClient({
   variable,
-  onVariableUpdated,
   onVariableDeleted,
 }: EnvironmentVariableItemClientProps) {
   const t = useTranslations('environmentVariables');
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isValueVisible, setIsValueVisible] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -87,14 +84,6 @@ export function EnvironmentVariableItemClient({
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setIsEditDialogOpen(true)}
-              title={t('edit')}
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
               onClick={() => setIsDeleteDialogOpen(true)}
               title={t('delete')}
             >
@@ -103,14 +92,6 @@ export function EnvironmentVariableItemClient({
           </div>
         </TableCell>
       </TableRow>
-
-      <EnvironmentVariableDialogClient
-        isOpen={isEditDialogOpen}
-        onOpenChange={setIsEditDialogOpen}
-        variable={variable}
-        teamId={variable.team_id}
-        onVariableUpdated={onVariableUpdated}
-      />
 
       <EnvironmentVariableDeleteDialogClient
         isOpen={isDeleteDialogOpen}

@@ -150,7 +150,8 @@
     "view_config": "View Config",
     "scripts": "Scripts",
     "script_path": "Script Path",
-    "parameters": "Parameters"
+    "parameters": "Parameters",
+    "add_another": "Add Another"
   },
   "dashboard": {
     "desc": "Welcome to your dashboard",
@@ -571,6 +572,14 @@
     "sort_key_asc": "Key (A-Z)",
     "sort_key_desc": "Key (Z-A)",
     "sort_newest": "Newest First",
-    "sort_oldest": "Oldest First"
+    "sort_oldest": "Oldest First",
+    "import_env": "Import .env",
+    "updated_successfully": "updated successfully",
+    "created_successfully": "created successfully",
+    "deleted_successfully": "deleted successfully",
+    "unknown_error": "An unknown error occurred",
+    "showing": "Showing",
+    "variable_singular": "variable",
+    "variable_plural": "variables"
   }
 }

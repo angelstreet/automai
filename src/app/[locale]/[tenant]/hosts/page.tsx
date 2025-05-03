@@ -5,7 +5,7 @@ import { getHosts } from '@/app/actions/hostsAction';
 import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 
 // Import from barrel file instead of direct paths
-import { HostContent, HostSkeleton, HostActionsClient, HostsEventListener } from './_components';
+import { HostContent, HostSkeleton, HostActionsClient, HostEventListener } from './_components';
 
 export default async function HostsPage() {
   const t = await getTranslations('hosts');
@@ -23,7 +23,7 @@ export default async function HostsPage() {
       actions={<HostActionsClient hostCount={hostCount} />}
     >
       {/* Event listener component for handling refresh and view toggling events */}
-      <HostsEventListener />
+      <HostEventListener />
 
       <Suspense fallback={<HostSkeleton hostCount={hostCount} />}>
         <HostContent />

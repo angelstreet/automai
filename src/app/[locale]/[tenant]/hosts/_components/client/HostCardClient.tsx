@@ -35,8 +35,6 @@ import {
 } from '@/components/shadcn/tooltip';
 import { Host } from '@/types/component/hostComponentType';
 
-import { HostsEvents } from './HostsEventListener';
-
 interface HostCardClientProps {
   host: Host & { animationDelay?: number };
   onDelete?: (id: string) => void;

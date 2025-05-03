@@ -20,13 +20,13 @@ import { EnvironmentVariableItemClient } from './EnvironmentVariableItemClient';
 
 interface EnvironmentVariablesListClientProps {
   variables: EnvironmentVariable[];
-  onVariableUpdated: (variable: EnvironmentVariable) => void;
+  onVariableUpdated?: (variable: EnvironmentVariable) => void;
   onVariableDeleted: (id: string) => void;
 }
 
 export function EnvironmentVariablesListClient({
   variables,
-  onVariableUpdated,
+  onVariableUpdated = () => {},
   onVariableDeleted,
 }: EnvironmentVariablesListClientProps) {
   const t = useTranslations('environmentVariables');

@@ -1,6 +1,6 @@
 import { getHosts } from '@/app/actions/hostsAction';
 
-import { HostListClient } from './client';
+import { HostContentClient } from './client/HostContentClient';
 
 /**
  * Server component for fetching host data
@@ -11,5 +11,5 @@ export default async function HostContent() {
   const hostsResponse = await getHosts();
   const hosts = hostsResponse.success ? hostsResponse.data || [] : [];
 
-  return <HostListClient initialHosts={hosts} />;
+  return <HostContentClient initialHosts={hosts} />;
 }

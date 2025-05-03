@@ -19,7 +19,7 @@ import {
 import { Textarea } from '@/components/shadcn/textarea';
 import { useHost } from '@/hooks/useHost';
 
-import { HostsEvents } from './HostsEventListener';
+import { HostsEvents } from './HostEventListener';
 
 // Define a throttle constant for testing connections
 const REQUEST_THROTTLE_MS = 1000;

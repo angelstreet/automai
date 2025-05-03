@@ -9,11 +9,11 @@ import { useHost } from '@/hooks/useHost';
 import { useHostViewStore } from '@/store/hostViewStore';
 import { Host } from '@/types/component/hostComponentType';
 
+import { HostsEvents } from './HostEventListener';
 import { HostGridClient } from './HostGridClient';
 import { HostTableClient } from './HostTableClient';
-import { HostsEvents } from './HostsEventListener';
 
-interface HostListClientProps {
+interface HostContentClientProps {
   initialHosts: Host[];
 }
 
@@ -21,9 +21,9 @@ interface HostListClientProps {
  * Client component for displaying and managing hosts
  * Supports both grid and table views with React Query for state management
  */
-export { HostListClient as default, HostListClient };
+export { HostContentClient as default, HostContentClient };
 
-function HostListClient({ initialHosts }: HostListClientProps) {
+function HostContentClient({ initialHosts }: HostContentClientProps) {
   // Initialize React Query with initial data from server
   const {
     hosts: queryHosts,

@@ -10,7 +10,7 @@ import { useHost } from '@/hooks/useHost';
 import { useHostViewStore } from '@/store/hostViewStore';
 
 import { HostFormDialogClient, FormData as ConnectionFormData } from './HostFormDialogClient';
-import { HostsEvents } from './HostsEventListener';
+import { HostsEvents } from './HostEventListener';
 
 interface HostActionsClientProps {
   hostCount?: number;
