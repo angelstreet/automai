@@ -278,12 +278,7 @@ async function processJob() {
         let fullScript;
 
         if (host.os === 'windows') {
-          // Simplified command with PowerShell for Windows
-          fullScript = `
-            ${repoCommands} ${repoCommands ? '' : workingDir ? `cd /d ${workingDir} && ` : ''} ${envSetup} echo Testing shell environment && python --version && dir && echo ============================= && ${scriptCommand}
-          `;
-          // Temporary test command using PowerShell to check directory existence
-          fullScript = `${repoCommands} ${repoCommands ? '' : workingDir ? `cd /d ${workingDir}/${scriptFolder} && ` : ''} && cd ${repoDir}/${scriptFolder} && pip install -r requirements.txt && python --version && echo ============================= && ${scriptCommand}`;
+          fullScript = `${repoCommands} ${repoCommands ? '' : workingDir ? `cd /d ${workingDir}/${scriptFolder} && ` : ''} && cd ${repoDir}/${scriptFolder} && pip install -r requirements.txt && ${envSetup}python --version && echo ============================= && ${scriptCommand}`;
           console.log(
             `[@local-runner:processJob] Using PowerShell command structure for Windows host ${host.ip}`,
           );
