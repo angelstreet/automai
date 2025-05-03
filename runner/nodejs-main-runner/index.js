@@ -286,8 +286,7 @@ async function processJob() {
         console.log(`[@runner:processJob] Scripts: ${scripts}`);
 
         let repoCommands = '';
-        let workingDir =
-          host.os === 'windows' ? 'Desktop\\remote-installer' : 'Desktop/remote-installer';
+        let workingDir;
         if (config.repository) {
           const repoUrl = config.repository;
           const branch = config.branch || 'main';
@@ -320,6 +319,19 @@ async function processJob() {
           console.log(
             `[@runner:processJob] Repository setup: ${repoDir} exists ? git pull : clone ${repoUrl} branch ${branch}`,
           );
+        } else {
+          if (config.scripts && config.scripts.length > 0 && config.scripts[0].folder) {
+            workingDir = config.scripts[0].folder;
+            console.log(
+              `[@runner:processJob] Using folder from script configuration as working directory: ${workingDir}`,
+            );
+          } else {
+            workingDir =
+              host.os === 'windows' ? 'Desktop\\remote-installer' : 'Desktop/remote-installer';
+            console.log(
+              `[@runner:processJob] No folder specified in script configuration, using default working directory: ${workingDir}`,
+            );
+          }
         }
 
         // Add environment variables to the SSH script
