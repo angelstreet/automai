@@ -160,7 +160,7 @@ def run_with_timeout(script_content, parameters, timeout=30, venv_path=None, env
 
             result_queue.put(result)
         except Exception as e:
-            result_queue.put({"status": "error", "message": f"Execution error: {str(e)}"})}
+            result_queue.put({"status": "error", "message": f"Execution error: {str(e)}"})
 
     thread = threading.Thread(target=target)
     thread.daemon = True
