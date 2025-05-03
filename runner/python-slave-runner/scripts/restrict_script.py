@@ -2,54 +2,96 @@ import sys
 import ast
 from io import StringIO
 import os
+import builtins
 
 def is_safe_node(node):
+    # Expanded list of allowed AST nodes for common Python constructs
     allowed_nodes = (
-        ast.Module, ast.Expr, ast.Call, ast.Name, ast.Load,
-        ast.Str, ast.Constant, ast.Num, ast.Import, ast.ImportFrom, ast.alias,
-        ast.JoinedStr, ast.FormattedValue, ast.Attribute, ast.Subscript
+        # Core structure
+        ast.Module, ast.Expr, ast.Call, ast.Name, ast.Load, ast.Store, ast.Assign,
+        ast.FunctionDef, ast.If, ast.Return, ast.Pass, ast.AnnAssign,
+        # Literals and constants
+        ast.Str, ast.Constant, ast.Num, ast.List, ast.Dict, ast.Tuple, ast.Set,
+        # Control flow
+        ast.For, ast.While, ast.Break, ast.Continue,
+        # Comparisons and operations
+        ast.Compare, ast.Eq, ast.NotEq, ast.Lt, ast.LtE, ast.Gt, ast.GtE, ast.In, ast.NotIn,
+        ast.BinOp, ast.Add, ast.Sub, ast.Mult, ast.Div, ast.Mod, ast.Pow,
+        ast.UnaryOp, ast.USub, ast.Not,
+        # Imports
+        ast.Import, ast.ImportFrom, ast.alias,
+        # String formatting
+        ast.JoinedStr, ast.FormattedValue,
+        # Attribute access and indexing
+        ast.Attribute, ast.Subscript, ast.Slice,
+        # Comprehensions
+        ast.ListComp, ast.DictComp, ast.SetComp, ast.GeneratorExp,
+        # Boolean operations
+        ast.BoolOp, ast.And, ast.Or,
+        # Context management
+        ast.With, ast.withitem
     )
     return isinstance(node, allowed_nodes)
 
 def execute_script(script, parameters=None, venv_path=None):
     site_packages = None
+    original_argv = sys.argv  # Initialize before try block
+    original_stdout = sys.stdout
     try:
+        # Parse and validate AST
         tree = ast.parse(script)
         for node in ast.walk(tree):
             if not is_safe_node(node):
-                return {"status": "error", "message": f"Unsafe construct: {type(node).__name__}"}
+                return {"status": "error", "message": f"Disallowed construct: {type(node).__name__}"}
 
+        # Capture stdout
         stdout = StringIO()
         sys.stdout = stdout
 
+        # Set up virtual environment if provided
         if venv_path and os.path.exists(venv_path):
             site_packages = os.path.join(venv_path, "lib", f"python{sys.version_info.major}.{sys.version_info.minor}", "site-packages")
             if os.path.exists(site_packages):
                 sys.path.insert(0, site_packages)
 
         # Set sys.argv for parameters
-        original_argv = sys.argv
-        # Use "script.py" since script_path is not defined in this scope
         sys.argv = ["script.py"] + (parameters or [])
 
-        # Create a more useful globals dictionary that allows importing modules
-        safe_globals = {
-            "print": print,
-            "sys": sys,
-            "__builtins__": __builtins__,  # This allows built-in functions like import to work
+        # Curated safe built-ins
+        safe_builtins = {
+            'abs': abs, 'all': all, 'any': any, 'bool': bool, 'chr': chr,
+            'dict': dict, 'enumerate': enumerate, 'float': float, 'format': format,
+            'int': int, 'isinstance': isinstance, 'len': len, 'list': list,
+            'map': map, 'max': max, 'min': min, 'ord': ord, 'print': print,
+            'range': range, 'reversed': reversed, 'round': round, 'set': set,
+            'slice': slice, 'sorted': sorted, 'str': str, 'sum': sum, 'tuple': tuple,
+            'type': type, 'zip': zip
         }
-        
+
+        # Flexible globals namespace
+        safe_globals = {
+            "__builtins__": safe_builtins,
+            "sys": sys,
+            "__name__": "__main__"  # Support if __name__ == "__main__":
+        }
+
+        # Execute the script
         exec(script, safe_globals)
 
-        sys.stdout = sys.__stdout__
+        sys.stdout = original_stdout
         sys.argv = original_argv
         output = stdout.getvalue()
         return {"status": "success", "output": output}
     except SyntaxError as e:
         return {"status": "error", "message": f"Syntax error: {str(e)}"}
+    except ImportError as e:
+        return {"status": "error", "message": f"Module import error: {str(e)}"}
+    except SystemExit:
+        return {"status": "success", "output": stdout.getvalue()}  # Handle exit() gracefully
     except Exception as e:
         return {"status": "error", "message": f"Execution error: {str(e)}"}
     finally:
+        sys.stdout = original_stdout
         sys.argv = original_argv
         if site_packages and site_packages in sys.path:
             sys.path.remove(site_packages)

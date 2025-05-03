@@ -510,6 +510,9 @@ async function processJob() {
               const response = await axios.post(`${FLASK_SERVICE_URL}/execute`, payload, {
                 timeout: (payload.timeout + 5) * 1000,
               });
+              console.log(
+                `[@local-runner:processJob] Full response from Flask (attempt ${attempt}/${retries}, iteration ${i}/${iterations}): ${JSON.stringify(response.data, null, 2)}`,
+              );
 
               scriptOutput.stdout = response.data.output.stdout || '';
               scriptOutput.stderr = response.data.output.stderr || '';
