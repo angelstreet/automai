@@ -1,6 +1,6 @@
 'use client';
 
-import { PlusCircle, Save, X } from 'lucide-react';
+import { PlusCircle, Save, X, Eye, EyeOff } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -23,6 +23,7 @@ interface EnvRow {
   key: string;
   value: string;
   isSecret: boolean;
+  isValueVisible: boolean;
   error?: string;
 }
 
@@ -31,20 +32,25 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
   const c = useTranslations('common');
 
   const [rows, setRows] = useState<EnvRow[]>([
-    { id: 'initial', key: '', value: '', isSecret: false },
+    { id: 'initial', key: '', value: '', isSecret: false, isValueVisible: true },
   ]);
   const [isSaving, setIsSaving] = useState(false);
 
   // Add a new empty row
   const addRow = () => {
-    setRows([...rows, { id: `row-${Date.now()}`, key: '', value: '', isSecret: false }]);
+    setRows([
+      ...rows,
+      { id: `row-${Date.now()}`, key: '', value: '', isSecret: false, isValueVisible: true },
+    ]);
   };
 
   // Remove a row by its ID
   const removeRow = (id: string) => {
     if (rows.length === 1) {
       // If it's the last row, just clear it instead of removing
-      setRows([{ id: `row-${Date.now()}`, key: '', value: '', isSecret: false }]);
+      setRows([
+        { id: `row-${Date.now()}`, key: '', value: '', isSecret: false, isValueVisible: true },
+      ]);
     } else {
       setRows(rows.filter((row) => row.id !== id));
     }
@@ -67,11 +73,39 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
     setRows(
       rows.map((row) => {
         if (row.id === id) {
-          return { ...row, isSecret: !row.isSecret };
+          // When toggling secret on, also hide the value by default
+          const newIsSecret = !row.isSecret;
+          return {
+            ...row,
+            isSecret: newIsSecret,
+            // Hide value when making it secret, otherwise show it
+            isValueVisible: newIsSecret ? false : true,
+          };
         }
         return row;
       }),
     );
+  };
+
+  // Toggle value visibility
+  const toggleValueVisibility = (id: string) => {
+    setRows(
+      rows.map((row) => {
+        if (row.id === id) {
+          return { ...row, isValueVisible: !row.isValueVisible };
+        }
+        return row;
+      }),
+    );
+  };
+
+  // Get display value (actual or masked)
+  const getDisplayValue = (row: EnvRow) => {
+    if (!row.isSecret || row.isValueVisible) {
+      return row.value;
+    }
+    // Return masked value (dots) matching the length of the actual value
+    return row.value ? '•'.repeat(Math.min(row.value.length, 10)) : '';
   };
 
   // Parse .env content
@@ -108,6 +142,7 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
           key,
           value: cleanValue,
           isSecret: false,
+          isValueVisible: true,
         };
       }
 
@@ -117,6 +152,7 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
         key: line.trim(),
         value: '',
         isSecret: false,
+        isValueVisible: true,
       };
     });
 
@@ -244,7 +280,9 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
         toast.success(`${results.length} environment variables saved successfully`);
         onVariablesCreated(successfulVariables);
         // Reset to a single empty row
-        setRows([{ id: `row-${Date.now()}`, key: '', value: '', isSecret: false }]);
+        setRows([
+          { id: `row-${Date.now()}`, key: '', value: '', isSecret: false, isValueVisible: true },
+        ]);
       } else {
         const successCount = results.filter((result) => result.success).length;
         toast.warning(
@@ -257,7 +295,15 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
         setRows(
           remainingRows.length > 0
             ? remainingRows
-            : [{ id: `row-${Date.now()}`, key: '', value: '', isSecret: false }],
+            : [
+                {
+                  id: `row-${Date.now()}`,
+                  key: '',
+                  value: '',
+                  isSecret: false,
+                  isValueVisible: true,
+                },
+              ],
         );
       }
     } catch (error) {
@@ -290,13 +336,32 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
             {/* Value */}
             <div className="col-span-5 space-y-1">
               {index === 0 && <Label htmlFor={`value-${row.id}`}>{t('value')}</Label>}
-              <Input
-                id={`value-${row.id}`}
-                value={row.value}
-                onChange={(e) => updateRow(row.id, 'value', e.target.value)}
-                placeholder="e.g. your-secret-value"
-                className={cn(row.error ? 'border-destructive' : '')}
-              />
+              <div className="relative">
+                <Input
+                  id={`value-${row.id}`}
+                  type={row.isSecret && !row.isValueVisible ? 'password' : 'text'}
+                  value={row.value}
+                  onChange={(e) => updateRow(row.id, 'value', e.target.value)}
+                  placeholder="e.g. your-secret-value"
+                  className={cn(row.error ? 'border-destructive' : '')}
+                />
+                {row.isSecret && row.value && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6"
+                    onClick={() => toggleValueVisibility(row.id)}
+                    title={row.isValueVisible ? t('hide_value') : t('show_value')}
+                  >
+                    {row.isValueVisible ? (
+                      <EyeOff className="h-3 w-3" />
+                    ) : (
+                      <Eye className="h-3 w-3" />
+                    )}
+                  </Button>
+                )}
+              </div>
             </div>
 
             {/* Secret Toggle */}
