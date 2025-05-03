@@ -341,15 +341,19 @@ export async function deleteJob(id: string) {
 
 /**
  * Get all job configurations (replacements for deployments)
+ * @param providedUser Optional user object to avoid redundant getUser calls
  */
-export async function getAllJobs() {
+export async function getAllJobs(providedUser?: any) {
   try {
     console.log('[@action:jobsAction:getAllJobs] Getting all job configurations');
     const cookieStore = await cookies();
 
-    // Get current user
-    const { getUser } = await import('@/app/actions/userAction');
-    const user = await getUser();
+    // Get current user or use provided user
+    let user = providedUser;
+    if (!user) {
+      const { getUser } = await import('@/app/actions/userAction');
+      user = await getUser();
+    }
 
     if (!user) {
       console.error('[@action:jobsAction:getAllJobs] User not authenticated');

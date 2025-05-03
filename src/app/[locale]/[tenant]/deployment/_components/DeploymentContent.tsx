@@ -1,4 +1,3 @@
-import { getAllJobs as getDeployments } from '@/app/actions/jobsAction';
 import { getRepositories } from '@/app/actions/repositoriesAction';
 
 // Import with direct relative paths
@@ -6,21 +5,22 @@ import { DeploymentContentClient } from './client/DeploymentContentClient';
 import { DeploymentEmptyStateClient } from './client/DeploymentEmptyStateClient';
 import { DeploymentFooterClient } from './client/DeploymentFooterClient';
 
-export async function DeploymentContent() {
-  // Fetch data at the server level
-  const deploymentsResponse = await getDeployments();
-  const deployments = deploymentsResponse.success ? deploymentsResponse.data || [] : [];
+interface DeploymentContentProps {
+  initialDeployments: any[];
+  user: any;
+}
 
-  const repositoriesResult = await getRepositories();
+export async function DeploymentContent({ initialDeployments, user }: DeploymentContentProps) {
+  // Use the deployments passed from the parent component
+  const deployments = initialDeployments || [];
+
+  // Fetch repositories and pass the user to avoid redundant API calls
+  const repositoriesResult = await getRepositories({}, user);
   const repositories = repositoriesResult.success ? repositoriesResult.data || [] : [];
 
-  // If deployments failed to load or no deployments found, show empty state
-  if (!deploymentsResponse.success || deployments.length === 0) {
-    if (!deploymentsResponse.success) {
-      console.error('Error loading deployments:', deploymentsResponse.error);
-    }
-
-    return <DeploymentEmptyStateClient errorMessage={deploymentsResponse.error} />;
+  // If no deployments found, show empty state
+  if (deployments.length === 0) {
+    return <DeploymentEmptyStateClient errorMessage="" />;
   }
 
   return (

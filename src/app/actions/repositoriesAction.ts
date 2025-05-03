@@ -29,16 +29,18 @@ interface RepositoryFilter {
 /**
  * Get all repositories with optional filtering
  * @param filter Optional filter criteria for repositories
+ * @param providedUser Optional user object to avoid redundant getUser calls
  */
 export const getRepositories = cache(
   async (
     filter?: RepositoryFilter,
+    providedUser?: any,
   ): Promise<{ success: boolean; error?: string; data?: Repository[] }> => {
     try {
       console.log('[@action:repositories:getRepositories] Starting...', { filter });
 
-      // Get the authenticated user
-      const user = await getUser();
+      // Get the authenticated user or use provided user
+      const user = providedUser || (await getUser());
       if (!user) {
         console.log('[@action:repositories:getRepositories] No authenticated user found');
         return { success: false, error: 'Unauthorized' };
