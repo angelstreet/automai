@@ -23,9 +23,9 @@ def get_repo_path(repo_url):
     repo_hash = hashlib.sha1(repo_url.encode()).hexdigest()
     return os.path.join(BASE_REPO_PATH, repo_hash)
 
-def ensure_repo(repo_url, git_folder, branch=None):
+def ensure_repo(repo_url, script_folder, branch=None):
     repo_path = get_repo_path(repo_url)
-    print(f"DEBUG: Ensuring repo: url={repo_url}, folder={git_folder}, branch={branch}, path={repo_path}", file=sys.stderr)
+    print(f"DEBUG: Ensuring repo: url={repo_url}, folder={script_folder}, branch={branch}, path={repo_path}", file=sys.stderr)
     try:
         if os.path.exists(repo_path):
             print(f"DEBUG: Repo exists, pulling updates: {repo_path}", file=sys.stderr)
@@ -38,13 +38,13 @@ def ensure_repo(repo_url, git_folder, branch=None):
             print(f"DEBUG: Cloning repo: {repo_url} to {repo_path}", file=sys.stderr)
             os.makedirs(repo_path, exist_ok=True)
             repo = git.Repo.clone_from(repo_url, repo_path, branch=branch)
-            print(f"DEBUG: Enabling sparse checkout for folder: {git_folder}", file=sys.stderr)
+            print(f"DEBUG: Enabling sparse checkout for folder: {script_folder}", file=sys.stderr)
             with repo.config_writer() as cw:
                 cw.set_value("core", "sparseCheckout", "true")
             sparse_file = os.path.join(repo_path, ".git", "info", "sparse-checkout")
             os.makedirs(os.path.dirname(sparse_file), exist_ok=True)
             with open(sparse_file, "w") as f:
-                f.write(f"{git_folder}/\n")
+                f.write(f"{script_folder}/\n")
             repo.git.checkout()
         return repo_path
     except Exception as e:
@@ -216,12 +216,12 @@ def execute():
         start_time_str = start_time.isoformat() + 'Z'
 
         repo_url = data.get('repo_url')
-        git_folder = data.get('git_folder', '')
+        script_folder = data.get('script_folder', '')
         branch = data.get('branch')
 
         if repo_url:
-            print(f"DEBUG: Processing Git repo: url={repo_url}, folder={git_folder}, branch={branch}", file=sys.stderr)
-            repo_result = ensure_repo(repo_url, git_folder, branch)
+            print(f"DEBUG: Processing Git repo: url={repo_url}, folder={script_folder}, branch={branch}", file=sys.stderr)
+            repo_result = ensure_repo(repo_url, script_folder, branch)
             if isinstance(repo_result, dict):
                 return jsonify({
                     "status": repo_result["status"],
@@ -232,9 +232,9 @@ def execute():
                 }), 500
 
             repo_path = repo_result
-            full_script_path = os.path.join(repo_path, git_folder, script_path)
+            full_script_path = os.path.join(repo_path, script_folder, script_path)
 
-            venv_result = setup_venv(repo_path, git_folder)
+            venv_result = setup_venv(repo_path, script_folder)
             if isinstance(venv_result, dict):
                 return jsonify({
                     "status": venv_result["status"],
