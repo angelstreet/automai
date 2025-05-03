@@ -593,7 +593,7 @@ const DeploymentWizardMainClient: React.FC<DeploymentWizardProps> = React.memo(
                 ...(deploymentData.repositoryId && {
                   repository: deploymentData.selectedRepository?.url || '',
                   branch: deploymentData.branch || 'main',
-                  git_folder: 'runner/python-slave-runner/scripts',
+                  script_folder: 'runner/python-slave-runner/scripts',
                 }),
                 hosts: deploymentData.hostIds.map((hostId) => {
                   const host = availableHosts.find((h) => h.id === hostId);

@@ -170,7 +170,7 @@ export function DeploymentWizardStep5Client({
         ...(repoUrl && {
           repository: repoUrl,
           branch: branch,
-          git_folder: 'runner/python-slave-runner/scripts',
+          script_folder: '',
         }),
         hosts: hostDetails.map((host) => {
           // Define the host config with a Record type to avoid TypeScript errors
