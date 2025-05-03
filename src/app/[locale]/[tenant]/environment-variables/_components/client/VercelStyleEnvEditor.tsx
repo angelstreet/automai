@@ -100,7 +100,7 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
   };
 
   // Get display value (actual or masked)
-  const getDisplayValue = (row: EnvRow) => {
+  const _getDisplayValue = (row: EnvRow) => {
     if (!row.isSecret || row.isValueVisible) {
       return row.value;
     }
@@ -315,27 +315,42 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
   };
 
   return (
-    <div className="space-y-4">
-      <div className="grid gap-4">
-        {rows.map((row, index) => (
-          <div key={row.id} className="grid grid-cols-12 gap-2 items-start">
+    <div className="space-y-3">
+      {/* Header row with labels */}
+      <div className="grid grid-cols-12 gap-2 mb-1 px-1">
+        <div className="col-span-5">
+          <Label>{t('key')}</Label>
+        </div>
+        <div className="col-span-5">
+          <Label>{t('value')}</Label>
+        </div>
+        <div className="col-span-1 text-xs text-muted-foreground flex items-center justify-center pt-1">
+          {t('secret')}
+        </div>
+        <div className="col-span-1"></div>
+      </div>
+
+      <div className="grid gap-1">
+        {rows.map((row) => (
+          <div
+            key={row.id}
+            className="grid grid-cols-12 gap-2 items-center py-1 group border-b border-border/30 last:border-0"
+          >
             {/* Key */}
-            <div className="col-span-5 space-y-1">
-              {index === 0 && <Label htmlFor={`key-${row.id}`}>{t('key')}</Label>}
+            <div className="col-span-5">
               <Input
                 id={`key-${row.id}`}
                 value={row.key}
                 onChange={(e) => updateRow(row.id, 'key', e.target.value)}
                 onPaste={(e) => handleKeyFieldPaste(e, row.id)}
                 placeholder="e.g. CLIENT_KEY"
-                className={cn(row.error ? 'border-destructive' : '')}
+                className={cn('h-8', row.error ? 'border-destructive' : '')}
               />
-              {row.error && <p className="text-xs text-destructive">{row.error}</p>}
+              {row.error && <p className="text-xs text-destructive mt-0.5">{row.error}</p>}
             </div>
 
             {/* Value */}
-            <div className="col-span-5 space-y-1">
-              {index === 0 && <Label htmlFor={`value-${row.id}`}>{t('value')}</Label>}
+            <div className="col-span-5">
               <div className="relative">
                 <Input
                   id={`value-${row.id}`}
@@ -343,7 +358,7 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
                   value={row.value}
                   onChange={(e) => updateRow(row.id, 'value', e.target.value)}
                   placeholder="e.g. your-secret-value"
-                  className={cn(row.error ? 'border-destructive' : '')}
+                  className={cn('h-8', row.error ? 'border-destructive' : '')}
                 />
                 {row.isSecret && row.value && (
                   <Button
@@ -365,31 +380,33 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
             </div>
 
             {/* Secret Toggle */}
-            <div className="col-span-1 space-y-1 flex items-center mt-8">
+            <div className="col-span-1 flex justify-center">
               <Switch
                 id={`secret-${row.id}`}
                 checked={row.isSecret}
                 onCheckedChange={() => toggleSecret(row.id)}
+                className="data-[state=checked]:bg-primary"
               />
             </div>
 
             {/* Remove Button */}
-            <div className="col-span-1 space-y-1 flex items-center mt-8">
+            <div className="col-span-1 flex justify-center">
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 onClick={() => removeRow(row.id)}
                 aria-label="Remove"
+                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
               >
-                <X className="h-4 w-4" />
+                <X className="h-3.5 w-3.5" />
               </Button>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-3 mt-4">
         <Button
           type="button"
           variant="outline"
