@@ -32,6 +32,7 @@ export function EnvironmentVariableItemClient({
   const [isEditing, setIsEditing] = useState(false);
   const [editedKey, setEditedKey] = useState(variable.key);
   const [editedValue, setEditedValue] = useState(variable.value);
+  const [editedIsShared, setEditedIsShared] = useState(variable.isShared);
   const [isSaving, setIsSaving] = useState(false);
 
   const handleCopyValue = async () => {
@@ -59,6 +60,7 @@ export function EnvironmentVariableItemClient({
       setIsEditing(true);
       setEditedKey(variable.key);
       setEditedValue(variable.value);
+      setEditedIsShared(variable.isShared);
     } else {
       // Save changes
       saveChanges();
@@ -69,6 +71,7 @@ export function EnvironmentVariableItemClient({
     setIsEditing(false);
     setEditedKey(variable.key);
     setEditedValue(variable.value);
+    setEditedIsShared(variable.isShared);
   };
 
   const saveChanges = async () => {
@@ -91,6 +94,7 @@ export function EnvironmentVariableItemClient({
         key: editedKey,
         value: editedValue,
         description: variable.description || '',
+        isShared: editedIsShared,
       });
 
       if (result.success && result.data) {
@@ -144,7 +148,13 @@ export function EnvironmentVariableItemClient({
           )}
         </TableCell>
         <TableCell className="text-center">
-          <input type="checkbox" checked={variable.isShared} disabled className="w-3 h-3" />
+          <input
+            type="checkbox"
+            checked={isEditing ? editedIsShared : variable.isShared}
+            disabled={!isEditing || isSaving}
+            className="w-3 h-3"
+            onChange={() => isEditing && setEditedIsShared(!editedIsShared)}
+          />
         </TableCell>
         <TableCell className="text-center">
           <Button

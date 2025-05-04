@@ -830,6 +830,7 @@ export async function updateEnvironmentVariable(
     key?: string;
     value?: string;
     description?: string;
+    isShared?: boolean;
   },
   cookieStore?: ReadonlyRequestCookies,
 ): Promise<DbResponse<EnvironmentVariable>> {
@@ -851,10 +852,16 @@ export async function updateEnvironmentVariable(
     }
 
     const { table, team_id, tenant_id } = originResult.data;
+    const targetTable =
+      updates.isShared === true
+        ? 'shared_environment_variables'
+        : updates.isShared === false
+          ? 'environment_variables'
+          : table;
 
     // If updating key, check for conflicts in the same table
     if (updates.key) {
-      if (table === 'environment_variables' && team_id) {
+      if (targetTable === 'environment_variables' && team_id) {
         // Check for existing key in team variables
         const { data: existingVar, error: checkError } = await supabase
           .from('environment_variables')
@@ -883,7 +890,7 @@ export async function updateEnvironmentVariable(
             error: `Environment variable with key "${updates.key}" already exists`,
           };
         }
-      } else if (table === 'shared_environment_variables' && tenant_id) {
+      } else if (targetTable === 'shared_environment_variables' && tenant_id) {
         // Check for existing key in shared variables
         const { data: existingVar, error: checkError } = await supabase
           .from('shared_environment_variables')
@@ -915,7 +922,79 @@ export async function updateEnvironmentVariable(
       }
     }
 
-    // Update the variable in the correct table
+    // Check if isShared status changed and requires table transition
+    if (updates.isShared !== undefined && table !== targetTable) {
+      console.log(
+        `[@db:environmentVariablesDb:updateEnvironmentVariable] isShared status changed, moving variable ${id} from ${table} to ${targetTable}`,
+      );
+
+      // Fetch the current variable data to preserve fields
+      const { data: currentVar, error: fetchError } = await supabase
+        .from(table)
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (fetchError) {
+        console.error(
+          `[@db:environmentVariablesDb:updateEnvironmentVariable] Error fetching current variable data: ${fetchError.message}`,
+        );
+        return {
+          success: false,
+          error: fetchError.message,
+        };
+      }
+
+      // Delete from current table
+      const { error: deleteError } = await supabase.from(table).delete().eq('id', id);
+
+      if (deleteError) {
+        console.error(
+          `[@db:environmentVariablesDb:updateEnvironmentVariable] Error deleting from ${table}: ${deleteError.message}`,
+        );
+        return {
+          success: false,
+          error: deleteError.message,
+        };
+      }
+
+      // Create in target table with updated fields
+      const { data: newVar, error: createError } = await supabase
+        .from(targetTable)
+        .insert({
+          key: updates.key || currentVar.key,
+          value: updates.value !== undefined ? updates.value : currentVar.value,
+          description:
+            updates.description !== undefined ? updates.description : currentVar.description,
+          team_id: targetTable === 'environment_variables' ? team_id : undefined,
+          tenant_id: targetTable === 'shared_environment_variables' ? tenant_id : undefined,
+          created_by: currentVar.created_by,
+          created_at: currentVar.created_at,
+        })
+        .select('*')
+        .single();
+
+      if (createError) {
+        console.error(
+          `[@db:environmentVariablesDb:updateEnvironmentVariable] Error creating in ${targetTable}: ${createError.message}`,
+        );
+        return {
+          success: false,
+          error: createError.message,
+        };
+      }
+
+      console.log(
+        `[@db:environmentVariablesDb:updateEnvironmentVariable] Successfully moved variable: ${id} to ${targetTable} with new ID: ${newVar.id}`,
+      );
+
+      return {
+        success: true,
+        data: newVar as EnvironmentVariable,
+      };
+    }
+
+    // Update the variable in the current table if no table transition is needed
     const { data, error } = await supabase
       .from(table)
       .update({

@@ -313,16 +313,17 @@ export const createEnvironmentVariablesBatch = cache(
  */
 export const updateEnvironmentVariable = cache(
   async (
-    variableId: string,
+    id: string,
     updates: {
       key?: string;
       value?: string;
       description?: string;
+      isShared?: boolean;
     },
   ) => {
     try {
       console.log(
-        `[@action:environmentVariablesAction:updateEnvironmentVariable] Updating variable: ${variableId}`,
+        `[@action:environmentVariablesAction:updateEnvironmentVariable] Updating variable: ${id}`,
       );
 
       // Verify user is authenticated
@@ -336,17 +337,15 @@ export const updateEnvironmentVariable = cache(
 
       const cookieStore = await cookies();
 
-      // Process updates, handling encryption if value is being updated
-      const processedUpdates = { ...updates };
+      // Encrypt value if provided
+      const processedUpdates = {
+        ...updates,
+        value: updates.value ? encryptValue(updates.value) : undefined,
+      };
 
-      // If updating the value, encrypt it
-      if (updates.value !== undefined) {
-        processedUpdates.value = encryptValue(updates.value);
-      }
-
-      // Call database layer to update environment variable
+      // Call database layer to update the variable
       const result = await environmentVariablesDb.updateEnvironmentVariable(
-        variableId,
+        id,
         processedUpdates,
         cookieStore,
       );
@@ -362,17 +361,17 @@ export const updateEnvironmentVariable = cache(
       // Revalidate paths that might display environment variables
       revalidatePath('/[locale]/[tenant]/environment-variables', 'page');
 
-      // Decrypt the value before returning the updated variable
+      console.log(
+        `[@action:environmentVariablesAction:updateEnvironmentVariable] Successfully updated variable: ${id}`,
+      );
+
+      // Decrypt the value before returning the variable
       const updatedVariable = result.data
         ? {
             ...result.data,
             value: decryptValue(result.data.value),
           }
         : null;
-
-      console.log(
-        `[@action:environmentVariablesAction:updateEnvironmentVariable] Successfully updated variable: ${variableId}`,
-      );
 
       return {
         success: true,
