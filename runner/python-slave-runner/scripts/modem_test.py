@@ -2,17 +2,23 @@ import subprocess
 import json
 import platform
 import argparse
-from pythonping import ping
 
 def ping_test(host="8.8.8.8", count=4):
-    """Test connectivity by pinging a host."""
+    """Test connectivity by pinging a host using system ping command."""
     try:
-        response = ping(host, count=count, timeout=2)
-        print(f"Ping to {host} successful." if response.success() else f"Ping to {host} failed. No connectivity.")
-        return response.success()
+        # Determine the correct ping command based on OS
+        if platform.system().lower() == "windows":
+            ping_cmd = ["ping", "-n", str(count), "-w", "2000", host]
+        else:  # macOS or Linux
+            ping_cmd = ["ping", "-c", str(count), "-W", "2", host]
+        
+        result = subprocess.run(ping_cmd, capture_output=True, text=True)
+        success = result.returncode == 0
+        print(f"Ping to {host} successful." if success else f"Ping to {host} failed. No connectivity.")
+        return 0
     except Exception as e:
         print(f"Ping to {host} failed: {e}")
-        return False
+        return 1
 
 def run_iperf_test(server_ip, port=5201, test_type="download"):
     """Run iperf3 test for download or upload."""
@@ -29,11 +35,11 @@ def run_iperf_test(server_ip, port=5201, test_type="download"):
     except subprocess.CalledProcessError as e:
         print(f"Error running iperf3 for {test_type} on {server_ip}: {e}")
         print(f"iperf3 stderr: {e.stderr}")
-        return None
+        return 1
     except json.JSONDecodeError as e:
         print(f"Error parsing iperf3 JSON output for {test_type}: {e}")
         print(f"iperf3 stdout: {result.stdout}")
-        return None
+        return 1
 
 def main():
     parser = argparse.ArgumentParser(description="Test modem connectivity and speeds.")
@@ -65,9 +71,7 @@ def main():
     else:
         print("Upload test failed.")
         print("Test Fail")
-        return 1
-
-    
+        return 1   
 
 if __name__ == "__main__":
     main()
