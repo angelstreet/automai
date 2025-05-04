@@ -160,11 +160,20 @@ def run_with_timeout(script_content, parameters, timeout=30, venv_path=None, env
 
             # Prepare command to run the script
             cmd = [os.path.join(venv_path, "bin", "python") if venv_path else "python", temp_script_path] + parameters
-            print(f"DEBUG: Executing command: {cmd}", file=sys.stderr)
+            print(f"DEBUG: Executing command (first attempt with parameters): {cmd}", file=sys.stderr)
 
-            # Run the script in a subprocess
+            # Run the script in a subprocess - first attempt with parameters
             process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             stdout, stderr = process.communicate(timeout=timeout)
+
+            # Check if the error is due to unrecognized arguments (argparse issue)
+            if process.returncode != 0 and "unrecognized arguments" in stderr.lower():
+                print(f"DEBUG: Unrecognized arguments error detected, retrying without parameters", file=sys.stderr)
+                # Retry without parameters for scripts with argparse expecting specific flags
+                cmd = [os.path.join(venv_path, "bin", "python") if venv_path else "python", temp_script_path]
+                print(f"DEBUG: Executing command (retry without parameters): {cmd}", file=sys.stderr)
+                process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                stdout, stderr = process.communicate(timeout=timeout)
 
             # Clean up temporary file
             os.unlink(temp_script_path)
