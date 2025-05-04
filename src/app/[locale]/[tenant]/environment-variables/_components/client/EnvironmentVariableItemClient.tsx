@@ -9,6 +9,12 @@ import { updateEnvironmentVariable } from '@/app/actions/environmentVariablesAct
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { TableRow, TableCell } from '@/components/shadcn/table';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/shadcn/tooltip';
 import { EnvironmentVariable } from '@/types/context/environmentVariablesContextType';
 
 import { EnvironmentVariableDeleteDialogClient } from './EnvironmentVariableDeleteDialogClient';
@@ -42,6 +48,7 @@ export function EnvironmentVariableItemClient({
       setTimeout(() => setIsCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy value:', err);
+      toast.error(t('copy_failed'));
     }
   };
 
@@ -169,16 +176,24 @@ export function EnvironmentVariableItemClient({
           </Button>
         </TableCell>
         <TableCell className="text-center w-12">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleCopyValue}
-            title={isCopied ? c('copied') : c('copy')}
-            className="h-5 w-5"
-            disabled={isSaving || isEditing}
-          >
-            <Copy className="h-3 w-3" />
-          </Button>
+          <TooltipProvider>
+            <Tooltip open={isCopied}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleCopyValue}
+                  className="h-5 w-5"
+                  disabled={isSaving || isEditing}
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{c('copied_clipboard')}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </TableCell>
         <TableCell className="text-center w-12">
           {isEditing ? (
