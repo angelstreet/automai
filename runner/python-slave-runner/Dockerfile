@@ -24,4 +24,6 @@ COPY . .
 EXPOSE 10000
 
 # Command to run the Flask application
+# Temporarily run as root for testing to resolve permission issues with ping
+USER root
 CMD ["python", "app.py"] 
