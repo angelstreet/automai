@@ -13,7 +13,6 @@ import shutil
 import base64
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 import tempfile
-from supabase import create_client, Client
 import boto3
 from botocore.client import Config
 
@@ -23,21 +22,21 @@ BASE_REPO_PATH = "/opt/render/project/src/repo"
 LOCAL_SCRIPTS_PATH = os.path.join(os.path.dirname(__file__), "scripts")
 LOCAL_VENV_PATH = "/venv-disk"
 
-# Initialize S3 client for Supabase Storage
-SUPABASE_S3_ENDPOINT = os.environ.get('SUPABASE_S3_ENDPOINT', '')
-SUPABASE_S3_KEY = os.environ.get('SUPABASE_S3_KEY', '')
-SUPABASE_S3_SECRET = os.environ.get('SUPABASE_S3_SECRET', '')
-if SUPABASE_S3_ENDPOINT and SUPABASE_S3_KEY and SUPABASE_S3_SECRET:
+# Initialize S3 client for Cloudflare R2 instead of Supabase Storage
+CLOUDFLARE_R2_ENDPOINT = os.environ.get('CLOUDFLARE_R2_ENDPOINT', '')
+CLOUDFLARE_R2_ACCESS_KEY_ID = os.environ.get('CLOUDFLARE_R2_ACCESS_KEY_ID', '')
+CLOUDFLARE_R2_SECRET_ACCESS_KEY = os.environ.get('CLOUDFLARE_R2_SECRET_ACCESS_KEY', '')
+if CLOUDFLARE_R2_ENDPOINT and CLOUDFLARE_R2_ACCESS_KEY_ID and CLOUDFLARE_R2_SECRET_ACCESS_KEY:
     s3_client = boto3.client(
         's3',
-        endpoint_url=SUPABASE_S3_ENDPOINT,
-        aws_access_key_id=SUPABASE_S3_KEY,
-        aws_secret_access_key=SUPABASE_S3_SECRET,
+        endpoint_url=CLOUDFLARE_R2_ENDPOINT,
+        aws_access_key_id=CLOUDFLARE_R2_ACCESS_KEY_ID,
+        aws_secret_access_key=CLOUDFLARE_R2_SECRET_ACCESS_KEY,
         config=Config(signature_version='s3v4'),
     )
 else:
     s3_client = None
-    print(f"WARNING: S3 client not initialized, missing credentials", file=sys.stderr)
+    print(f"WARNING: S3 client for Cloudflare R2 not initialized, missing credentials", file=sys.stderr)
 
 def get_repo_path(repo_url):
     repo_hash = hashlib.sha1(repo_url.encode()).hexdigest()
@@ -249,8 +248,8 @@ def collect_file_metadata(directory):
             })
     return files
 
-# Function to upload files to Supabase Storage using S3-compatible API
-def upload_files_to_supabase(files, bucket_name, folder_path):
+# Function to upload files to Cloudflare R2 using S3-compatible API
+def upload_files_to_cloudflare(files, bucket_name, folder_path):
     if not s3_client:
         print(f"ERROR: S3 client not initialized, cannot upload files", file=sys.stderr)
         return []
@@ -263,7 +262,7 @@ def upload_files_to_supabase(files, bucket_name, folder_path):
             with open(file_path, 'rb') as f:
                 s3_client.upload_fileobj(f, bucket_name, remote_path, ExtraArgs={'ContentType': 'application/octet-stream'})
             # Construct public URL (assuming bucket is public)
-            public_url = f"{SUPABASE_S3_ENDPOINT}/{bucket_name}/{remote_path}"
+            public_url = f"{CLOUDFLARE_R2_ENDPOINT}/{bucket_name}/{remote_path}"
             uploaded_files.append({
                 'name': file['name'],
                 'path': file_path,
@@ -271,9 +270,9 @@ def upload_files_to_supabase(files, bucket_name, folder_path):
                 'size': file['size'],
                 'public_url': public_url
             })
-            print(f"DEBUG: Uploaded file to Supabase S3: {remote_path}, URL: {public_url}", file=sys.stderr)
+            print(f"DEBUG: Uploaded file to Cloudflare R2: {remote_path}, URL: {public_url}", file=sys.stderr)
         except Exception as e:
-            print(f"ERROR: Failed to upload file to Supabase S3: {remote_path}, Error: {str(e)}", file=sys.stderr)
+            print(f"ERROR: Failed to upload file to Cloudflare R2: {remote_path}, Error: {str(e)}", file=sys.stderr)
     return uploaded_files
 
 @app.route('/execute', methods=['POST'])
@@ -401,16 +400,16 @@ def execute():
         associated_files = collect_file_metadata(temp_folder)
         print(f"DEBUG: Found {len(associated_files)} associated files in temporary folder", file=sys.stderr)
 
-        # Upload associated files to Supabase Storage
+        # Upload associated files to Cloudflare R2
         job_id = data.get('job_id', 'unknown_job_id')
         folder_name = f"{used_timestamp}_{job_id}"
         assets_folder_path = f"reports/{folder_name}/assets"
         uploaded_files = []
         if associated_files:
-            uploaded_files = upload_files_to_supabase(associated_files, 'reports', assets_folder_path)
-            print(f"DEBUG: Uploaded {len(uploaded_files)} files to Supabase Storage", file=sys.stderr)
+            uploaded_files = upload_files_to_cloudflare(associated_files, 'reports', assets_folder_path)
+            print(f"DEBUG: Uploaded {len(uploaded_files)} files to Cloudflare R2", file=sys.stderr)
         else:
-            print(f"DEBUG: No files to upload to Supabase Storage", file=sys.stderr)
+            print(f"DEBUG: No files to upload to Cloudflare R2", file=sys.stderr)
 
         # Clean up temporary folder after execution
         try:
