@@ -298,8 +298,6 @@ def execute():
             timeout = float(timeout)
             if timeout < 1:
                 timeout = 30
-            elif timeout > 3600: # Cap at 1 hour
-                timeout = 3600
         except (TypeError, ValueError):
             print(f"DEBUG: Invalid timeout value, using default: 30s", file=sys.stderr)
             timeout = 30
