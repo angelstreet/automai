@@ -2,10 +2,11 @@
  * Environment Variables Database Layer
  * Handles database operations for environment variables
  */
+import { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies';
+
 import { createClient } from '@/lib/supabase/server';
 import { DbResponse } from '@/lib/utils/commonUtils';
 import { EnvironmentVariable } from '@/types/context/environmentVariablesContextType';
-import { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies';
 
 /**
  * Get all environment variables for a specific team
@@ -447,24 +448,30 @@ export async function getAllEnvironmentVariables(
 
     // Fetch tenant ID for shared variables
     const tenantResult = await getTenantIdByTeamId(teamId, cookieStore);
-    if (!tenantResult.success) {
+    if (!tenantResult.success || !tenantResult.data) {
       console.error(
         `[@db:environmentVariablesDb:getAllEnvironmentVariables] Error fetching tenant ID: ${tenantResult.error}`,
       );
-      return tenantResult;
+      return {
+        success: false,
+        error: tenantResult.error || 'Failed to fetch tenant ID',
+      };
     }
 
     const tenantId = tenantResult.data;
     const sharedResult = await getSharedEnvironmentVariablesByTenantId(tenantId, cookieStore);
-    if (!sharedResult.success) {
+    if (!sharedResult.success || !sharedResult.data) {
       console.error(
         `[@db:environmentVariablesDb:getAllEnvironmentVariables] Error fetching shared variables: ${sharedResult.error}`,
       );
-      return sharedResult;
+      return {
+        success: false,
+        error: sharedResult.error || 'Failed to fetch shared variables',
+      };
     }
 
-    const teamVariables = teamResult.data;
-    const sharedVariables = sharedResult.data;
+    const teamVariables = teamResult.data || [];
+    const sharedVariables = sharedResult.data || [];
 
     // Combine variables, prioritizing team-specific over shared for duplicate keys
     const combinedVariables: EnvironmentVariable[] = [...teamVariables];
@@ -833,15 +840,15 @@ export async function updateEnvironmentVariable(
 
     // Determine which table the variable belongs to
     const originResult = await getEnvironmentVariableOrigin(id, cookieStore);
-    if (!originResult.success) {
-        console.error(
+    if (!originResult.success || !originResult.data) {
+      console.error(
         `[@db:environmentVariablesDb:updateEnvironmentVariable] Error determining variable origin: ${originResult.error}`,
-        );
-        return {
-          success: false,
-        error: originResult.error,
-        };
-      }
+      );
+      return {
+        success: false,
+        error: originResult.error || 'Failed to determine variable origin',
+      };
+    }
 
     const { table, team_id, tenant_id } = originResult.data;
 
@@ -849,33 +856,33 @@ export async function updateEnvironmentVariable(
     if (updates.key) {
       if (table === 'environment_variables' && team_id) {
         // Check for existing key in team variables
-      const { data: existingVar, error: checkError } = await supabase
-        .from('environment_variables')
-        .select('id')
+        const { data: existingVar, error: checkError } = await supabase
+          .from('environment_variables')
+          .select('id')
           .eq('team_id', team_id)
-        .eq('key', updates.key)
+          .eq('key', updates.key)
           .neq('id', id)
-        .maybeSingle();
+          .maybeSingle();
 
-      if (checkError) {
-        console.error(
+        if (checkError) {
+          console.error(
             `[@db:environmentVariablesDb:updateEnvironmentVariable] Error checking for existing team variable: ${checkError.message}`,
-        );
-        return {
-          success: false,
-          error: checkError.message,
-        };
-      }
+          );
+          return {
+            success: false,
+            error: checkError.message,
+          };
+        }
 
-      if (existingVar) {
-        console.error(
+        if (existingVar) {
+          console.error(
             `[@db:environmentVariablesDb:updateEnvironmentVariable] Variable with key "${updates.key}" already exists in team variables`,
-        );
-        return {
-          success: false,
-          error: `Environment variable with key "${updates.key}" already exists`,
-        };
-      }
+          );
+          return {
+            success: false,
+            error: `Environment variable with key "${updates.key}" already exists`,
+          };
+        }
       } else if (table === 'shared_environment_variables' && tenant_id) {
         // Check for existing key in shared variables
         const { data: existingVar, error: checkError } = await supabase
@@ -959,18 +966,18 @@ export async function deleteEnvironmentVariable(
     const supabase = await createClient(cookieStore);
 
     // Determine which table the variable belongs to
-    const originResult = await getEnvironmentVariableOrigin(id, cookieStore);
-    if (!originResult.success) {
+    const originResultDelete = await getEnvironmentVariableOrigin(id, cookieStore);
+    if (!originResultDelete.success || !originResultDelete.data) {
       console.error(
-        `[@db:environmentVariablesDb:deleteEnvironmentVariable] Error determining variable origin: ${originResult.error}`,
+        `[@db:environmentVariablesDb:deleteEnvironmentVariable] Error determining variable origin: ${originResultDelete.error}`,
       );
       return {
         success: false,
-        error: originResult.error,
+        error: originResultDelete.error || 'Failed to determine variable origin',
       };
     }
 
-    const { table } = originResult.data;
+    const { table } = originResultDelete.data;
 
     // Delete from the correct table
     const { error } = await supabase.from(table).delete().eq('id', id);
