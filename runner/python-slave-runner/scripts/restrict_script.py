@@ -16,6 +16,7 @@ def is_safe_node(node):
         ast.Global, ast.Nonlocal,  # Variable scope declarations
         ast.Yield, ast.YieldFrom, ast.Lambda,  # Advanced function constructs
         ast.IfExp, ast.Starred, ast.NamedExpr,  # Modern Python features
+        ast.keyword,  # Added for keyword arguments support
         # Literals and constants
         ast.Str, ast.Constant, ast.Num, ast.List, ast.Dict, ast.Tuple, ast.Set,
         # Control flow
