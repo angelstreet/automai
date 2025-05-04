@@ -260,6 +260,24 @@ export function DeploymentTableClient({
                           <Eye className="mr-2 h-3.5 w-3.5" />
                           View Output
                         </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (deployment.report_url) {
+                              window.open(deployment.report_url, '_blank');
+                            } else {
+                              console.log(
+                                '[@component:DeploymentTableClient] No report URL available for deployment:',
+                                deployment.id,
+                              );
+                            }
+                          }}
+                          disabled={actionInProgress === deployment.id || !deployment.report_url}
+                          className="text-xs py-1.5 h-7"
+                        >
+                          <Eye className="mr-2 h-3.5 w-3.5" />
+                          View Report
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
