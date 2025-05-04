@@ -10,6 +10,7 @@ def is_safe_node(node):
         # Core structure
         ast.Module, ast.Expr, ast.Call, ast.Name, ast.Load, ast.Store, ast.Assign,
         ast.FunctionDef, ast.If, ast.Return, ast.Pass, ast.AnnAssign,
+        ast.arguments, ast.arg,  # Added for argparse support
         # Literals and constants
         ast.Str, ast.Constant, ast.Num, ast.List, ast.Dict, ast.Tuple, ast.Set,
         # Control flow
