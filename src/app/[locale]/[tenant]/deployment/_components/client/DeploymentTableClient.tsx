@@ -122,6 +122,12 @@ export function DeploymentTableClient({
                 scope="col"
                 className="px-2 py-0.5 text-center text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
               >
+                View
+              </th>
+              <th
+                scope="col"
+                className="px-2 py-0.5 text-center text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+              >
                 Actions
               </th>
             </tr>
@@ -163,6 +169,12 @@ export function DeploymentTableClient({
                 className="px-2 py-0.5 text-left text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
               >
                 Last Run
+              </th>
+              <th
+                scope="col"
+                className="px-2 py-0.5 text-center text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+              >
+                View
               </th>
               <th
                 scope="col"
@@ -215,7 +227,57 @@ export function DeploymentTableClient({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="text-xs">
-                        {/* Temporary fix: Assume deployment is inactive if is_active is undefined. Need to identify correct field for active status. */}
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewDeployment(deployment);
+                          }}
+                          disabled={actionInProgress === deployment.id}
+                          className="text-xs py-1.5 h-7"
+                        >
+                          <Eye className="mr-2 h-3.5 w-3.5" />
+                          View Runs
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleConfigClick(deployment, e);
+                          }}
+                          disabled={actionInProgress === deployment.id}
+                          className="text-xs py-1.5 h-7"
+                        >
+                          <Eye className="mr-2 h-3.5 w-3.5" />
+                          {c('view_config')}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOutputClick(deployment, e);
+                          }}
+                          disabled={actionInProgress === deployment.id}
+                          className="text-xs py-1.5 h-7"
+                        >
+                          <Eye className="mr-2 h-3.5 w-3.5" />
+                          View Output
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </td>
+                <td className="px-2 py-0.5 whitespace-nowrap text-xs">
+                  <div className="flex justify-center">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 flex items-center justify-center"
+                          disabled={actionInProgress === deployment.id}
+                        >
+                          <MoreHorizontal className="h-3.5 w-3.5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="text-xs">
                         {(deployment as any).is_active === true ? (
                           <>
                             <DropdownMenuItem
@@ -230,39 +292,6 @@ export function DeploymentTableClient({
                             >
                               <PlayCircle className="mr-2 h-3.5 w-3.5" />
                               {isRunning === deployment.id ? 'Running...' : 'Run'}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleViewDeployment(deployment);
-                              }}
-                              disabled={actionInProgress === deployment.id}
-                              className="text-xs py-1.5 h-7"
-                            >
-                              <Eye className="mr-2 h-3.5 w-3.5" />
-                              View Runs
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleConfigClick(deployment, e);
-                              }}
-                              disabled={actionInProgress === deployment.id}
-                              className="text-xs py-1.5 h-7"
-                            >
-                              <Eye className="mr-2 h-3.5 w-3.5" />
-                              {c('view_config')}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleOutputClick(deployment, e);
-                              }}
-                              disabled={actionInProgress === deployment.id}
-                              className="text-xs py-1.5 h-7"
-                            >
-                              <Eye className="mr-2 h-3.5 w-3.5" />
-                              View Output
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={(e) => {
