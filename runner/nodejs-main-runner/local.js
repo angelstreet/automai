@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const { S3Client, PutObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const { createClient } = require('@supabase/supabase-js');
 const { Redis } = require('@upstash/redis');
@@ -828,7 +828,7 @@ async function generateAndUploadReport(
     }
 
     // Generate a presigned URL for the report with a 7-day expiration
-    const getObjectCommand = new PutObjectCommand({
+    const getObjectCommand = new GetObjectCommand({
       Bucket: bucketName,
       Key: reportPath,
     });
