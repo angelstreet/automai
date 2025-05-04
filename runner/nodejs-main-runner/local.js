@@ -628,6 +628,7 @@ async function processJob() {
         created_at, // started_at is not defined in local.js, using created_at as placeholder
         completed_at,
         overallStatus,
+        decryptedEnvVars,
       );
       if (reportUrl) {
         const { error: reportError } = await supabase
@@ -733,6 +734,7 @@ async function generateAndUploadReport(
   started_at,
   completed_at,
   status,
+  decryptedEnvVars = {},
 ) {
   try {
     console.log(`[@local-runner:generateAndUploadReport] Generating report for job ${jobId}`);
