@@ -89,6 +89,7 @@ def execute_script(script, parameters=None, venv_path=None):
             "platform": platform,  # Pre-imported for modem_test.py
             "argparse": argparse  # Pre-imported for modem_test.py
         }
+        print("DEBUG: safe_globals keys available: ", list(safe_globals.keys()))
 
         # Execute the script
         exec(script, safe_globals)
