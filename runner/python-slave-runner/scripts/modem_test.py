@@ -2,17 +2,16 @@ import subprocess
 import json
 import platform
 import argparse
+from pythonping import ping
 
 def ping_test(host="8.8.8.8", count=4):
     """Test connectivity by pinging a host."""
-    param = "-n" if platform.system().lower() == "windows" else "-c"
-    cmd = ["ping", param, str(count), host]
     try:
-        subprocess.run(cmd, capture_output=True, text=True, check=True)
-        print(f"Ping to {host} successful.")
-        return True
-    except subprocess.CalledProcessError:
-        print(f"Ping to {host} failed. No connectivity.")
+        response = ping(host, count=count, timeout=2)
+        print(f"Ping to {host} successful." if response.success() else f"Ping to {host} failed. No connectivity.")
+        return response.success()
+    except Exception as e:
+        print(f"Ping to {host} failed: {e}")
         return False
 
 def run_iperf_test(server_ip, port=5201, test_type="download"):
