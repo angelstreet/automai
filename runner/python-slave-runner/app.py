@@ -244,6 +244,7 @@ def execute():
         for key, encrypted_value in encrypted_env_vars.items():
             decrypted_env_vars[key] = encrypted_value
             print(f"DEBUG: Using environment variable: {key}=[secret]", file=sys.stderr)
+        print(f"DEBUG: Decrypted environment variable keys: {list(decrypted_env_vars.keys())}", file=sys.stderr)
 
         start_time = datetime.utcnow()
         start_time_str = start_time.isoformat() + 'Z'
