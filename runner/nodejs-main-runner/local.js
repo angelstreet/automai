@@ -742,11 +742,10 @@ const reportTemplate = `<!DOCTYPE html>
 
 // Configure S3 client for Cloudflare R2
 const r2Client = new S3Client({
-  endpoint:
-    process.env.CLOUDFLARE_R2_ENDPOINT || 'https://<your-account-id>.r2.cloudflarestorage.com',
+  endpoint: process.env.CLOUDFLARE_R2_ENDPOINT,
   credentials: {
-    accessKeyId: process.env.CLOUDFLARE_R2_ACCESS_KEY_ID || 'your-access-key-id',
-    secretAccessKey: process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY || 'your-secret-access-key',
+    accessKeyId: process.env.CLOUDFLARE_R2_ACCESS_KEY_ID,
+    secretAccessKey: process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY,
   },
   region: 'auto', // Cloudflare R2 uses 'auto' for region
   forcePathStyle: true, // Required for R2 compatibility
@@ -819,9 +818,6 @@ async function generateAndUploadReport(
 
     try {
       await r2Client.send(putObjectCommand);
-      console.log(
-        `[@local-runner:generateAndUploadReport] Report uploaded to Cloudflare R2 for job ${jobId}: ${reportPath}`,
-      );
     } catch (uploadError) {
       console.error(
         `[@local-runner:generateAndUploadReport] Failed to upload report for job ${jobId}: ${uploadError.message}`,
@@ -835,9 +831,6 @@ async function generateAndUploadReport(
       Key: reportPath,
     });
     const reportUrl = await getSignedUrl(r2Client, getObjectCommand, { expiresIn: 604800 }); // 7 days in seconds
-    console.log(
-      `[@local-runner:generateAndUploadReport] Presigned report URL for job ${jobId}: ${reportUrl}`,
-    );
 
     // Clean up temporary file
     fs.unlinkSync(tempReportPath);
