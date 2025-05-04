@@ -231,6 +231,7 @@ async function processJob() {
 
     let output = { scripts: [], stdout: '', stderr: '' };
     let overallStatus = 'success';
+    let started_at = created_at; // Initialize started_at with created_at as fallback
 
     const hasHosts = config.hosts && config.hosts.length > 0;
 
@@ -279,7 +280,6 @@ async function processJob() {
                 payload.branch = config.branch || 'main';
               }
 
-              const started_at = new Date().toISOString();
               const { error: statusError } = await supabase
                 .from('jobs_run')
                 .update({
