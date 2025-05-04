@@ -151,6 +151,7 @@ def run_with_timeout(script_content, parameters, timeout=30, venv_path=None, env
             if env_vars:
                 for key, value in env_vars.items():
                     os.environ[key] = value
+                print(f"DEBUG: Environment variable keys provided: {list(env_vars.keys())}", file=sys.stderr)
 
             # Write script content to a temporary file
             import tempfile
