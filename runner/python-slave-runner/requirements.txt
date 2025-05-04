@@ -5,4 +5,3 @@ virtualenv
 python-dotenv>=1.1.0
 cryptography==43.0.1
 boto3
-playwright>=1.52.0
