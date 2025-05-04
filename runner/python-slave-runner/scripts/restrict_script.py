@@ -76,10 +76,18 @@ def execute_script(script, parameters=None, venv_path=None):
         }
 
         # Flexible globals namespace
+        import subprocess
+        import json
+        import platform
+        import argparse
         safe_globals = {
             "__builtins__": safe_builtins,
             "sys": sys,
-            "__name__": "__main__"  # Support if __name__ == "__main__":
+            "__name__": "__main__",  # Support if __name__ == "__main__":
+            "subprocess": subprocess,  # Pre-imported for modem_test.py
+            "json": json,  # Pre-imported for modem_test.py
+            "platform": platform,  # Pre-imported for modem_test.py
+            "argparse": argparse  # Pre-imported for modem_test.py
         }
 
         # Execute the script
