@@ -152,13 +152,32 @@ def run_with_timeout(script_content, parameters, timeout=30, venv_path=None, env
                 for key, value in env_vars.items():
                     os.environ[key] = value
 
-            result = execute_script(script_content, parameters, venv_path)
+            # Write script content to a temporary file
+            import tempfile
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+                f.write(script_content)
+                temp_script_path = f.name
+
+            # Prepare command to run the script
+            cmd = [os.path.join(venv_path, "bin", "python") if venv_path else "python", temp_script_path] + parameters
+            print(f"DEBUG: Executing command: {cmd}", file=sys.stderr)
+
+            # Run the script in a subprocess
+            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            stdout, stderr = process.communicate(timeout=timeout)
+
+            # Clean up temporary file
+            os.unlink(temp_script_path)
 
             # Restore original environment
             os.environ.clear()
             os.environ.update(original_env)
 
+            result = {"status": "success" if process.returncode == 0 else "error", "output": stdout, "message": stderr}
             result_queue.put(result)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            result_queue.put({"status": "error", "message": f"Script execution timed out after {timeout} seconds"})
         except Exception as e:
             result_queue.put({"status": "error", "message": f"Execution error: {str(e)}"})
 
