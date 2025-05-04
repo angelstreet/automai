@@ -16,6 +16,10 @@ COPY requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install playwright python-dotenv requests
+
+# Install Playwright browsers
+RUN playwright install
 
 # Copy the application code
 COPY . .
