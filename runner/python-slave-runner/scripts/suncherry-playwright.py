@@ -121,7 +121,8 @@ def main():
     parser = argparse.ArgumentParser(description='Run Suncherry Playwright script')
     parser.add_argument('--headless', action='store_true', help='Run in headless mode')
     parser.add_argument('--debug', action='store_true', help='Enable debug mode')
-    args = parser.parse_args()
+    # Ignore any additional arguments to prevent errors
+    args, _ = parser.parse_known_args()
     
     print(f"Running in {'headless' if args.headless else 'visible'} mode")
     
