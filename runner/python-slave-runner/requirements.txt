@@ -4,3 +4,4 @@ gitpython
 virtualenv
 python-dotenv
 cryptography==43.0.1
+boto3

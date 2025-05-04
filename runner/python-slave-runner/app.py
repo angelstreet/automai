@@ -12,12 +12,32 @@ import sys
 import shutil
 import base64
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+import tempfile
+from supabase import create_client, Client
+import boto3
+from botocore.client import Config
 
 app = Flask(__name__)
 
 BASE_REPO_PATH = "/opt/render/project/src/repo"
 LOCAL_SCRIPTS_PATH = os.path.join(os.path.dirname(__file__), "scripts")
 LOCAL_VENV_PATH = "/venv-disk"
+
+# Initialize S3 client for Supabase Storage
+SUPABASE_S3_ENDPOINT = os.environ.get('SUPABASE_S3_ENDPOINT', '')
+SUPABASE_S3_KEY = os.environ.get('SUPABASE_S3_KEY', '')
+SUPABASE_S3_SECRET = os.environ.get('SUPABASE_S3_SECRET', '')
+if SUPABASE_S3_ENDPOINT and SUPABASE_S3_KEY and SUPABASE_S3_SECRET:
+    s3_client = boto3.client(
+        's3',
+        endpoint_url=SUPABASE_S3_ENDPOINT,
+        aws_access_key_id=SUPABASE_S3_KEY,
+        aws_secret_access_key=SUPABASE_S3_SECRET,
+        config=Config(signature_version='s3v4'),
+    )
+else:
+    s3_client = None
+    print(f"WARNING: S3 client not initialized, missing credentials", file=sys.stderr)
 
 def get_repo_path(repo_url):
     repo_hash = hashlib.sha1(repo_url.encode()).hexdigest()
@@ -155,7 +175,6 @@ def run_with_timeout(script_content, parameters, timeout=30, venv_path=None, env
                 print(f"DEBUG: Environment variable keys provided: {list(env_vars.keys())}", file=sys.stderr)
 
             # Write script content to a temporary file
-            import tempfile
             with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
                 f.write(script_content)
                 temp_script_path = f.name
@@ -207,6 +226,56 @@ def run_with_timeout(script_content, parameters, timeout=30, venv_path=None, env
         print(f"ERROR: No result returned from script execution", file=sys.stderr)
         return {"status": "error", "message": "No result returned"}
 
+# Function to create a temporary folder with timestamp
+def create_temp_folder_with_timestamp(timestamp=None):
+    if not timestamp:
+        timestamp = datetime.datetime.utcnow().isoformat().replace(':', '-').replace('.', '-')
+    temp_dir = os.path.join(tempfile.gettempdir(), f"script_run_{timestamp}")
+    os.makedirs(temp_dir, exist_ok=True)
+    return temp_dir, timestamp
+
+# Function to collect metadata about files in a directory
+def collect_file_metadata(directory):
+    files = []
+    for root, _, filenames in os.walk(directory):
+        for filename in filenames:
+            file_path = os.path.join(root, filename)
+            relative_path = os.path.relpath(file_path, directory)
+            files.append({
+                'name': filename,
+                'path': file_path,
+                'relative_path': relative_path,
+                'size': os.path.getsize(file_path)
+            })
+    return files
+
+# Function to upload files to Supabase Storage using S3-compatible API
+def upload_files_to_supabase(files, bucket_name, folder_path):
+    if not s3_client:
+        print(f"ERROR: S3 client not initialized, cannot upload files", file=sys.stderr)
+        return []
+    
+    uploaded_files = []
+    for file in files:
+        file_path = file['path']
+        remote_path = f"{folder_path}/{file['relative_path']}"
+        try:
+            with open(file_path, 'rb') as f:
+                s3_client.upload_fileobj(f, bucket_name, remote_path, ExtraArgs={'ContentType': 'application/octet-stream'})
+            # Construct public URL (assuming bucket is public)
+            public_url = f"{SUPABASE_S3_ENDPOINT}/{bucket_name}/{remote_path}"
+            uploaded_files.append({
+                'name': file['name'],
+                'path': file_path,
+                'relative_path': file['relative_path'],
+                'size': file['size'],
+                'public_url': public_url
+            })
+            print(f"DEBUG: Uploaded file to Supabase S3: {remote_path}, URL: {public_url}", file=sys.stderr)
+        except Exception as e:
+            print(f"ERROR: Failed to upload file to Supabase S3: {remote_path}, Error: {str(e)}", file=sys.stderr)
+    return uploaded_files
+
 @app.route('/execute', methods=['POST'])
 def execute():
     try:
@@ -219,8 +288,8 @@ def execute():
             return jsonify({
                 "status": "error",
                 "message": "No script_path provided",
-                "start_time": datetime.utcnow().isoformat() + 'Z',
-                "end_time": datetime.utcnow().isoformat() + 'Z',
+                "start_time": datetime.datetime.utcnow().isoformat() + 'Z',
+                "end_time": datetime.datetime.utcnow().isoformat() + 'Z',
                 "duration_seconds": 0
             }), 400
 
@@ -244,8 +313,13 @@ def execute():
         for key, value in environment_variables.items():
             env_vars[key] = value
             print(f"DEBUG: Using environment variable: {key}=[secret]", file=sys.stderr)
-        start_time = datetime.utcnow()
+        start_time = datetime.datetime.utcnow()
         start_time_str = start_time.isoformat() + 'Z'
+
+        # Get or create timestamp for folder naming
+        created_at = data.get('created_at', start_time_str)
+        temp_folder, used_timestamp = create_temp_folder_with_timestamp(created_at.replace(':', '-').replace('.', '-'))
+        print(f"DEBUG: Created temporary folder for execution: {temp_folder}", file=sys.stderr)
 
         repo_url = data.get('repo_url')
         script_folder = data.get('script_folder', '')
@@ -259,8 +333,8 @@ def execute():
                     "status": repo_result["status"],
                     "message": repo_result["message"],
                     "start_time": start_time_str,
-                    "end_time": datetime.utcnow().isoformat() + 'Z',
-                    "duration_seconds": (datetime.utcnow() - start_time).total_seconds()
+                    "end_time": datetime.datetime.utcnow().isoformat() + 'Z',
+                    "duration_seconds": (datetime.datetime.utcnow() - start_time).total_seconds()
                 }), 500
 
             repo_path = repo_result
@@ -272,8 +346,8 @@ def execute():
                     "status": venv_result["status"],
                     "message": venv_result["message"],
                     "start_time": start_time_str,
-                    "end_time": datetime.utcnow().isoformat() + 'Z',
-                    "duration_seconds": (datetime.utcnow() - start_time).total_seconds()
+                    "end_time": datetime.datetime.utcnow().isoformat() + 'Z',
+                    "duration_seconds": (datetime.datetime.utcnow() - start_time).total_seconds()
                 }), 500
             venv_path = venv_result
         else:
@@ -294,8 +368,8 @@ def execute():
                     "status": venv_result["status"],
                     "message": venv_result["message"],
                     "start_time": start_time_str,
-                    "end_time": datetime.utcnow().isoformat() + 'Z',
-                    "duration_seconds": (datetime.utcnow() - start_time).total_seconds()
+                    "end_time": datetime.datetime.utcnow().isoformat() + 'Z',
+                    "duration_seconds": (datetime.datetime.utcnow() - start_time).total_seconds()
                 }), 500
             venv_path = venv_result
 
@@ -307,18 +381,43 @@ def execute():
                 "status": "error",
                 "message": f"Script not found: {full_script_path}",
                 "start_time": start_time_str,
-                "end_time": datetime.utcnow().isoformat() + 'Z',
-                "duration_seconds": (datetime.utcnow() - start_time).total_seconds()
+                "end_time": datetime.datetime.utcnow().isoformat() + 'Z',
+                "duration_seconds": (datetime.datetime.utcnow() - start_time).total_seconds()
             }), 400
 
         with open(full_script_path, 'r') as f:
             script_content = f.read()
 
+        # Set temporary folder as an environment variable for scripts to use if needed
+        env_vars['SCRIPT_TEMP_FOLDER'] = temp_folder
+
         result = run_with_timeout(script_content, param_list, timeout, venv_path, env_vars)
 
-        end_time = datetime.utcnow()
+        end_time = datetime.datetime.utcnow()
         end_time_str = end_time.isoformat() + 'Z'
         duration = (end_time - start_time).total_seconds()
+
+        # Collect metadata about files generated in the temporary folder
+        associated_files = collect_file_metadata(temp_folder)
+        print(f"DEBUG: Found {len(associated_files)} associated files in temporary folder", file=sys.stderr)
+
+        # Upload associated files to Supabase Storage
+        job_id = data.get('job_id', 'unknown_job_id')
+        folder_name = f"{used_timestamp}_{job_id}"
+        assets_folder_path = f"reports/{folder_name}/assets"
+        uploaded_files = []
+        if associated_files:
+            uploaded_files = upload_files_to_supabase(associated_files, 'reports', assets_folder_path)
+            print(f"DEBUG: Uploaded {len(uploaded_files)} files to Supabase Storage", file=sys.stderr)
+        else:
+            print(f"DEBUG: No files to upload to Supabase Storage", file=sys.stderr)
+
+        # Clean up temporary folder after execution
+        try:
+            shutil.rmtree(temp_folder)
+            print(f"DEBUG: Cleaned up temporary folder: {temp_folder}", file=sys.stderr)
+        except Exception as e:
+            print(f"DEBUG: Failed to clean up temporary folder {temp_folder}: {str(e)}", file=sys.stderr)
 
         print(f"DEBUG: Script execution result: {result}", file=sys.stderr)
         return jsonify({
@@ -329,12 +428,14 @@ def execute():
             },
             "start_time": start_time_str,
             "end_time": end_time_str,
-            "duration_seconds": duration
+            "duration_seconds": duration,
+            "created_at": created_at,
+            "associated_files": uploaded_files
         })
 
     except FileNotFoundError as e:
         print(f"ERROR: FileNotFoundError: {str(e)}", file=sys.stderr)
-        end_time = datetime.utcnow()
+        end_time = datetime.datetime.utcnow()
         return jsonify({
             "status": "error",
             "message": f"Script not found: {str(e)}",
@@ -344,7 +445,7 @@ def execute():
         }), 400
     except Exception as e:
         print(f"ERROR: Execution error: {str(e)}", file=sys.stderr)
-        end_time = datetime.utcnow()
+        end_time = datetime.datetime.utcnow()
         return jsonify({
             "status": "error",
             "message": f"Execution error: {str(e)}",
@@ -358,7 +459,7 @@ def health_check():
     """Health check endpoint for the Python runner service."""
     return jsonify({
         "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat() + 'Z',
+        "timestamp": datetime.datetime.utcnow().isoformat() + 'Z',
         "service": "python-slave-runner"
     })
 
