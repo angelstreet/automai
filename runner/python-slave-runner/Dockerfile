@@ -8,6 +8,9 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Set up ping to work without root permissions (doesn't always work in all environments)
+RUN chmod +s /bin/ping
+
 # Set working directory
 WORKDIR /app
 
@@ -23,7 +26,11 @@ COPY . .
 # Expose the port for Flask
 EXPOSE 10000
 
-# Command to run the Flask application
 # Temporarily run as root for testing to resolve permission issues with ping
 USER root
-CMD ["python", "app.py"] 
+
+# Command to run the Flask application
+CMD ["python", "app.py"]
+
+# Note: For Render deployment, you may need to add the following to your service configuration:
+# Docker Command: --cap-add=NET_RAW 
