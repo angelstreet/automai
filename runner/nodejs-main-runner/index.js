@@ -63,7 +63,7 @@ async function processJob() {
     // Fetch encrypted environment variables for the team only if running from a repository
     let encryptedEnvVars = {};
     let decryptedEnvVars = {};
-    if (team_id && config.repository) {
+    if (team_id) {
       // Fetch team-specific environment variables
       const { data: teamEnvVarsData, error: teamEnvVarsError } = await supabase
         .from('environment_variables')
@@ -137,12 +137,10 @@ async function processJob() {
         }),
       );
       console.log(
-        `[@runner:processJob] Fetched and processed ${Object.keys(encryptedEnvVars).length} environment variables (team-specific: ${teamEnvVarsData?.length || 0}, shared: ${sharedEnvVarsData?.length || 0}) for team ${team_id} due to repository configuration`,
+        `[@runner:processJob] Fetched and processed ${Object.keys(encryptedEnvVars).length} environment variables (team-specific: ${teamEnvVarsData?.length || 0}, shared: ${sharedEnvVarsData?.length || 0}) for team ${team_id}`,
       );
     } else {
-      console.log(
-        `[@runner:processJob] Skipping environment variables fetch: team_id=${team_id}, repository=${!!config.repository}`,
-      );
+      console.log(`[@runner:processJob] Skipping environment variables fetch: team_id=${team_id}`);
     }
 
     const created_at = new Date().toISOString();
