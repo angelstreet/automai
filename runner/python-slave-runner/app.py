@@ -158,9 +158,10 @@ def run_with_timeout(script_content, parameters, timeout=30, venv_path=None, env
                 f.write(script_content)
                 temp_script_path = f.name
 
-            # Prepare command to run the script
+            # Prepare command to run the script - first attempt with parameters
             cmd = [os.path.join(venv_path, "bin", "python") if venv_path else "python", temp_script_path] + parameters
             print(f"DEBUG: Executing command (first attempt with parameters): {cmd}", file=sys.stderr)
+            print(f"DEBUG: Note - Parameters {parameters} are treated as command-line arguments. If not intended, they will be ignored in retry.", file=sys.stderr)
 
             # Run the script in a subprocess - first attempt with parameters
             process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
