@@ -2,6 +2,8 @@ from playwright.sync_api import sync_playwright, Page, Playwright
 from time import sleep
 import random
 import os
+import sys
+import argparse
 from dotenv import load_dotenv
 import re
 
@@ -75,15 +77,15 @@ def login(page: Page, url: str, username: str = None, password: str = None):
         print('Login failed:', str(e))
 
 
-def init_browser(playwright: Playwright, debug: bool = False):
+def init_browser(playwright: Playwright, headless=False, debug: bool = False):
     browser = playwright.chromium.launch(
-        headless=False,
+        headless=headless,
         args=[
             '--disable-blink-features=AutomationControlled', #mandatory to pass sunrise oauth
         ]
        )
 
-    # Extra parmeters
+    # Extra parameters
     context = browser.new_context(
         viewport={
             "width": 1280,
@@ -102,8 +104,8 @@ def init_browser(playwright: Playwright, debug: bool = False):
     return page, context, browser
 
 
-def run(playwright: Playwright, debug: bool = False):
-    page, context, browser = init_browser(playwright, debug)
+def run(playwright: Playwright, headless=False, debug: bool = False):
+    page, context, browser = init_browser(playwright, headless, debug)
     load_dotenv()
 
     url = "https://www.sunrisetv.ch/de/home"
@@ -115,8 +117,17 @@ def run(playwright: Playwright, debug: bool = False):
 
 
 def main():
+    # Simple argument parsing
+    parser = argparse.ArgumentParser(description='Run Suncherry Playwright script')
+    parser.add_argument('--headless', action='store_true', help='Run in headless mode')
+    parser.add_argument('--debug', action='store_true', help='Enable debug mode')
+    args = parser.parse_args()
+    
+    print(f"Running in {'headless' if args.headless else 'visible'} mode")
+    
     with sync_playwright() as playwright:
-        run(playwright, debug=False)
+        run(playwright, headless=args.headless, debug=args.debug)
+
 
 if __name__ == "__main__":
     main()
