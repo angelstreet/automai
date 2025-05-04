@@ -782,6 +782,7 @@ async function generateAndUploadReport(
       Key: reportPath,
       Body: fs.createReadStream(tempReportPath),
       ContentType: 'text/html',
+      ContentDisposition: 'inline',
     });
 
     try {
