@@ -31,7 +31,8 @@ export async function getJobConfigsByTeamId(
           status, 
           created_at,
           started_at, 
-          completed_at
+          completed_at,
+          report_url
         )
       `,
       )
@@ -66,7 +67,7 @@ export async function getJobConfigById(
 
     const { data, error } = await supabase
       .from('jobs_configuration')
-      .select('*, jobs_run(status, started_at, completed_at)')
+      .select('*, jobs_run(status, started_at, completed_at, report_url)')
       .eq('id', id)
       .single();
 
@@ -281,7 +282,8 @@ export async function getJobConfigsWithLatestRun(
           created_at,
           started_at,
           completed_at,
-          results
+          results,
+          report_url
         )
       `,
       )
@@ -349,7 +351,8 @@ export async function getJobConfigWithRuns(
           completed_at,
           user_id,
           results,
-          logs
+          logs,
+          report_url
         )
       `,
       )

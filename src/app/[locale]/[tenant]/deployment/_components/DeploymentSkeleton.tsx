@@ -35,7 +35,7 @@ export function DeploymentSkeleton() {
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-transparent dark:bg-transparent">
                 <tr>
-                  {['Name', 'Repository', 'Status', 'Created', 'Runtime', 'Actions'].map(
+                  {['Name', 'Repository', 'Status', 'Created', 'Runtime', 'View', 'Actions'].map(
                     (header) => (
                       <th key={header} className="px-2 py-1 text-left text-xs font-medium">
                         <Skeleton className="h-4 w-full max-w-[80px]" />
@@ -61,6 +61,9 @@ export function DeploymentSkeleton() {
                     </td>
                     <td className="px-2 py-3 whitespace-nowrap">
                       <Skeleton className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16" />
+                    </td>
+                    <td className="px-2 py-3 whitespace-nowrap flex justify-center">
+                      <Skeleton className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded-full" />
                     </td>
                     <td className="px-2 py-3 whitespace-nowrap flex justify-center space-x-2">
                       <Skeleton className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded" />

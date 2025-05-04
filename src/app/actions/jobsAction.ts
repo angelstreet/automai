@@ -428,6 +428,8 @@ export async function getAllJobs(providedUser?: any) {
           completedAt: latestRun?.completed_at || null,
           scheduledTime: config.scheduled_time || null,
           scheduleType: config.schedule_type || 'now',
+          // Add report_url from latestRun
+          report_url: latestRun?.report_url || null,
           // Additional fields if needed
           scriptsPath: Array.isArray(config.scripts_path) ? config.scripts_path : [],
           scriptsParameters: Array.isArray(config.scripts_parameters)

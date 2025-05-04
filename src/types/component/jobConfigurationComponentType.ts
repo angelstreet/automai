@@ -57,6 +57,7 @@ export interface JobRun {
   output: Record<string, any> | null;
   logs: Record<string, any> | null;
   error?: string | null;
+  report_url?: string | null;
   created_at: string;
   updated_at?: string;
   queued_at?: string;
