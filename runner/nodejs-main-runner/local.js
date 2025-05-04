@@ -719,6 +719,21 @@ const reportTemplate = `
     </td></tr>
     <tr><th>Environment Variables</th><td><%= envVars %></td></tr>
   </table>
+  <h2>Associated Files</h2>
+  <% if (associatedFiles && associatedFiles.length > 0) { %>
+    <table>
+      <tr><th>File Name</th><th>Size (bytes)</th><th>Link</th></tr>
+      <% associatedFiles.forEach(function(file) { %>
+        <tr>
+          <td><%= file.name %></td>
+          <td><%= file.size %></td>
+          <td><a href="<%= file.public_url || '#' %>" target="_blank">Download</a></td>
+        </tr>
+      <% }); %>
+    </table>
+  <% } else { %>
+    <p>No associated files uploaded.</p>
+  <% } %>
 </body>
 </html>
 `;
@@ -761,6 +776,7 @@ async function generateAndUploadReport(
         .join(', ') || 'None';
 
     const scripts = output.scripts || [];
+    const associatedFiles = output.associated_files || [];
     const reportData = {
       jobId,
       configId: config_id,
@@ -771,6 +787,7 @@ async function generateAndUploadReport(
       status,
       scripts,
       envVars,
+      associatedFiles,
     };
 
     const htmlReport = await ejs.render(reportTemplate, reportData);

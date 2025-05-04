@@ -60,6 +60,21 @@ const reportTemplate = `
     </td></tr>
     <tr><th>Environment Variables</th><td><%= envVars %></td></tr>
   </table>
+  <h2>Associated Files</h2>
+  <% if (associatedFiles && associatedFiles.length > 0) { %>
+    <table>
+      <tr><th>File Name</th><th>Size (bytes)</th><th>Link</th></tr>
+      <% associatedFiles.forEach(function(file) { %>
+        <tr>
+          <td><%= file.name %></td>
+          <td><%= file.size %></td>
+          <td><a href="<%= file.public_url || '#' %>" target="_blank">Download</a></td>
+        </tr>
+      <% }); %>
+    </table>
+  <% } else { %>
+    <p>No associated files uploaded.</p>
+  <% } %>
 </body>
 </html>
 `;
@@ -749,6 +764,7 @@ async function generateAndUploadReport(
         .join(', ') || 'None';
 
     const scripts = output.scripts || [];
+    const associatedFiles = output.associated_files || [];
     const reportData = {
       jobId,
       configId: config_id,
@@ -759,6 +775,7 @@ async function generateAndUploadReport(
       status,
       scripts,
       envVars,
+      associatedFiles,
     };
 
     const htmlReport = await ejs.render(reportTemplate, reportData);
@@ -818,11 +835,11 @@ async function generateAndUploadReport(
     fs.unlinkSync(tempReportPath);
 
     // Upload associated files if any
-    if (output.associated_files && output.associated_files.length > 0) {
+    if (associatedFiles && associatedFiles.length > 0) {
       console.log(
-        `[@runner:generateAndUploadReport] Uploading ${output.associated_files.length} associated files for job ${jobId}`,
+        `[@runner:generateAndUploadReport] Uploading ${associatedFiles.length} associated files for job ${jobId}`,
       );
-      for (const file of output.associated_files) {
+      for (const file of associatedFiles) {
         try {
           // Check if file has a public_url (already uploaded by Python runner)
           if (file.public_url) {
