@@ -696,6 +696,8 @@ const reportTemplate = `<!DOCTYPE html>
     th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
     th { background-color: #f2f2f2; }
     pre { background-color: #f9f9f9; padding: 10px; overflow-x: auto; }
+    .status-success { color: #22c55e; font-weight: bold; }
+    .status-failed { color: #ef4444; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -707,7 +709,7 @@ const reportTemplate = `<!DOCTYPE html>
     <tr><th>Start Time</th><td><%= startTime %></td></tr>
     <tr><th>End Time</th><td><%= endTime %></td></tr>
     <tr><th>Duration (s)</th><td><%= duration %></td></tr>
-    <tr><th>Status</th><td><%= status %></td></tr>
+    <tr><th>Status</th><td class="status-<%= status.toLowerCase() %>"><%= status %></td></tr>
     <tr><th>Scripts</th><td>
       <% scripts.forEach(function(script, index) { %>
         <strong>Script <%= index + 1 %>: <%= script.script_path %></strong><br>
