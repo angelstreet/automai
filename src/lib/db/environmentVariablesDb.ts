@@ -473,11 +473,15 @@ export async function getAllEnvironmentVariables(
     const teamVariables = teamResult.data || [];
     const sharedVariables = sharedResult.data || [];
 
-    // Combine variables, prioritizing team-specific over shared for duplicate keys
-    const combinedVariables: EnvironmentVariable[] = [...teamVariables];
-    const teamKeys = new Set(teamVariables.map((v) => v.key));
+    // Add isShared property to distinguish between team and shared variables
+    const teamVariablesWithFlag = teamVariables.map((v) => ({ ...v, isShared: false }));
+    const sharedVariablesWithFlag = sharedVariables.map((v) => ({ ...v, isShared: true }));
 
-    sharedVariables.forEach((sharedVar) => {
+    // Combine variables, prioritizing team-specific over shared for duplicate keys
+    const combinedVariables: EnvironmentVariable[] = [...teamVariablesWithFlag];
+    const teamKeys = new Set(teamVariablesWithFlag.map((v) => v.key));
+
+    sharedVariablesWithFlag.forEach((sharedVar) => {
       if (!teamKeys.has(sharedVar.key)) {
         combinedVariables.push(sharedVar);
       }
@@ -945,32 +949,51 @@ export async function updateEnvironmentVariable(
         };
       }
 
-      // Delete from current table
-      const { error: deleteError } = await supabase.from(table).delete().eq('id', id);
-
-      if (deleteError) {
-        console.error(
-          `[@db:environmentVariablesDb:updateEnvironmentVariable] Error deleting from ${table}: ${deleteError.message}`,
+      // Fetch tenant_id if moving to shared_environment_variables and tenant_id is undefined
+      let finalTenantId = tenant_id;
+      if (targetTable === 'shared_environment_variables' && !tenant_id && team_id) {
+        console.log(
+          `[@db:environmentVariablesDb:updateEnvironmentVariable] Tenant ID is undefined, fetching it for team: ${team_id}`,
         );
-        return {
-          success: false,
-          error: deleteError.message,
-        };
+        const tenantResult = await getTenantIdByTeamId(team_id, cookieStore);
+        if (!tenantResult.success || !tenantResult.data) {
+          console.error(
+            `[@db:environmentVariablesDb:updateEnvironmentVariable] Error fetching tenant ID: ${tenantResult.error}`,
+          );
+          return {
+            success: false,
+            error: tenantResult.error || 'Failed to fetch tenant ID',
+          };
+        }
+        finalTenantId = tenantResult.data;
+        console.log(
+          `[@db:environmentVariablesDb:updateEnvironmentVariable] Fetched tenant ID: ${finalTenantId}`,
+        );
       }
 
-      // Create in target table with updated fields
+      // Log the data to be inserted for debugging
+      const insertData = {
+        key: updates.key || currentVar.key,
+        value: updates.value !== undefined ? updates.value : currentVar.value,
+        description:
+          updates.description !== undefined ? updates.description : currentVar.description,
+        team_id: targetTable === 'environment_variables' ? team_id : undefined,
+        tenant_id: targetTable === 'shared_environment_variables' ? finalTenantId : undefined,
+        created_by: currentVar.created_by,
+        created_at: currentVar.created_at,
+      };
+      console.log(
+        `[@db:environmentVariablesDb:updateEnvironmentVariable] Attempting insert into ${targetTable} with data:`,
+        {
+          ...insertData,
+          value: insertData.value ? 'value provided (hidden for security)' : 'no value provided',
+        },
+      );
+
+      // Create in target table with updated fields first
       const { data: newVar, error: createError } = await supabase
         .from(targetTable)
-        .insert({
-          key: updates.key || currentVar.key,
-          value: updates.value !== undefined ? updates.value : currentVar.value,
-          description:
-            updates.description !== undefined ? updates.description : currentVar.description,
-          team_id: targetTable === 'environment_variables' ? team_id : undefined,
-          tenant_id: targetTable === 'shared_environment_variables' ? tenant_id : undefined,
-          created_by: currentVar.created_by,
-          created_at: currentVar.created_at,
-        })
+        .insert(insertData)
         .select('*')
         .single();
 
@@ -978,10 +1001,30 @@ export async function updateEnvironmentVariable(
         console.error(
           `[@db:environmentVariablesDb:updateEnvironmentVariable] Error creating in ${targetTable}: ${createError.message}`,
         );
+        if (createError.details) {
+          console.error(`Error details: ${createError.details}`);
+        }
+        if (createError.hint) {
+          console.error(`Error hint: ${createError.hint}`);
+        }
         return {
           success: false,
           error: createError.message,
         };
+      }
+
+      // Only delete from current table if insert was successful
+      const { error: deleteError } = await supabase.from(table).delete().eq('id', id);
+
+      if (deleteError) {
+        console.error(
+          `[@db:environmentVariablesDb:updateEnvironmentVariable] Error deleting from ${table} after successful insert: ${deleteError.message}`,
+        );
+        // Since insert was successful, we return the new variable data despite deletion error
+        // This prevents data loss, though it might leave a duplicate record
+        console.warn(
+          `[@db:environmentVariablesDb:updateEnvironmentVariable] Continuing with new variable data despite deletion error`,
+        );
       }
 
       console.log(
@@ -995,12 +1038,15 @@ export async function updateEnvironmentVariable(
     }
 
     // Update the variable in the current table if no table transition is needed
+    const updatePayload = {
+      key: updates.key,
+      value: updates.value,
+      description: updates.description,
+      updated_at: new Date().toISOString(),
+    };
     const { data, error } = await supabase
       .from(table)
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq('id', id)
       .select('*')
       .single();

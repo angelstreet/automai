@@ -207,20 +207,6 @@ export function EnvironmentVariablesListClient({
 
       {renderTable(sortedTeamVariables, t('team_variables'), teamPage, setTeamPage)}
       {renderTable(sortedSharedVariables, t('shared_variables'), sharedPage, setSharedPage)}
-
-      <div className="text-sm text-muted-foreground text-right">
-        {filteredVariables.length === 0 ? (
-          <div>{t('no_data')}</div>
-        ) : (
-          <div>
-            {t('showing')}{' '}
-            <Badge variant="outline" className="font-mono">
-              {filteredVariables.length}
-            </Badge>{' '}
-            {filteredVariables.length === 1 ? t('variable_singular') : t('variable_plural')}
-          </div>
-        )}
-      </div>
     </div>
   );
 }
