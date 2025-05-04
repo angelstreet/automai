@@ -12,6 +12,7 @@ import sys
 import shutil
 import base64
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from contextlib import contextmanager
 
 app = Flask(__name__)
 
@@ -140,71 +141,66 @@ def decrypt_value(encrypted_text):
         print(f"ERROR: Decryption error: {str(e)}", file=sys.stderr)
         return encrypted_text
 
-def run_with_timeout(script_content, parameters, timeout=30, venv_path=None, env_vars=None):
-    result_queue = queue.Queue()
-    print(f"DEBUG: Running script with timeout={timeout}, venv_path={venv_path}, parameters={parameters}", file=sys.stderr)
-
-    def target():
+def execute_script(script_path, timeout, venv_path, parameters=None):
+    @contextmanager
+    def temporary_copy(src_path):
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.py') as temp_file:
+            with open(src_path, 'r') as src:
+                temp_file.write(src.read())
+            temp_file_path = temp_file.name
         try:
-            # Temporarily set environment variables for this execution
-            original_env = dict(os.environ)
-            if env_vars:
-                for key, value in env_vars.items():
-                    os.environ[key] = value
-                print(f"DEBUG: Environment variable keys provided: {list(env_vars.keys())}", file=sys.stderr)
+            yield temp_file_path
+        finally:
+            os.unlink(temp_file_path)
 
-            # Write script content to a temporary file
-            import tempfile
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
-                f.write(script_content)
-                temp_script_path = f.name
-
-            # Prepare command to run the script - first attempt with parameters
-            cmd = [os.path.join(venv_path, "bin", "python") if venv_path else "python", temp_script_path] + parameters
-            print(f"DEBUG: Executing command (first attempt with parameters): {cmd}", file=sys.stderr)
-            print(f"DEBUG: Note - Parameters {parameters} are treated as command-line arguments. If not intended, they will be ignored in retry.", file=sys.stderr)
-
-            # Run the script in a subprocess - first attempt with parameters
-            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            stdout, stderr = process.communicate(timeout=timeout)
-
-            # Check if the error is due to unrecognized arguments (argparse issue)
-            if process.returncode != 0 and "unrecognized arguments" in stderr.lower():
-                print(f"DEBUG: Unrecognized arguments error detected, retrying without parameters", file=sys.stderr)
-                # Retry without parameters for scripts with argparse expecting specific flags
-                cmd = [os.path.join(venv_path, "bin", "python") if venv_path else "python", temp_script_path]
-                print(f"DEBUG: Executing command (retry without parameters): {cmd}", file=sys.stderr)
-                process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-                stdout, stderr = process.communicate(timeout=timeout)
-
-            # Clean up temporary file
-            os.unlink(temp_script_path)
-
-            # Restore original environment
-            os.environ.clear()
-            os.environ.update(original_env)
-
-            result = {"status": "success" if process.returncode == 0 else "error", "output": stdout, "message": stderr}
-            result_queue.put(result)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            result_queue.put({"status": "error", "message": f"Script execution timed out after {timeout} seconds"})
-        except Exception as e:
-            result_queue.put({"status": "error", "message": f"Execution error: {str(e)}"})
-
-    thread = threading.Thread(target=target)
-    thread.daemon = True
-    thread.start()
-    thread.join(timeout)
-
-    if thread.is_alive():
-        print(f"ERROR: Script execution timed out after {timeout} seconds", file=sys.stderr)
-        return {"status": "error", "message": "Script execution timed out"}
+    app.logger.debug(f"Running script with {timeout=}, {venv_path=}, {parameters=}")
+    python_path = os.path.join(venv_path, 'bin', 'python')
+    
+    # Prepare environment variables
+    env = os.environ.copy()
+    app.logger.debug(f"Environment variables keys passed to script: {list(env.keys())}")
+    
     try:
-        return result_queue.get_nowait()
-    except queue.Empty:
-        print(f"ERROR: No result returned from script execution", file=sys.stderr)
-        return {"status": "error", "message": "No result returned"}
+        with temporary_copy(script_path) as temp_script:
+            # First attempt: with parameters
+            cmd = [python_path, temp_script]
+            if parameters:
+                cmd.extend(parameters)
+            app.logger.debug(f"Executing command (first attempt with parameters): {cmd}")
+            try:
+                process = subprocess.Popen(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    env=env
+                )
+                stdout, stderr = process.communicate(timeout=timeout)
+                if process.returncode == 0:
+                    return {'status': 'success', 'output': stdout, 'message': stderr}
+                elif "unrecognized arguments" in stderr.lower() or "argparse" in stderr.lower():
+                    app.logger.debug("Note - Parameters are treated as command-line arguments. If not intended, they will be ignored in retry.")
+                    # Retry without parameters
+                    cmd = [python_path, temp_script]
+                    app.logger.debug(f"Retrying command without parameters: {cmd}")
+                    process = subprocess.Popen(
+                        cmd,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True,
+                        env=env
+                    )
+                    stdout, stderr = process.communicate(timeout=timeout)
+                    if process.returncode == 0:
+                        return {'status': 'success', 'output': stdout, 'message': stderr}
+                return {'status': 'error', 'output': stdout, 'message': stderr}
+            except subprocess.TimeoutExpired:
+                process.kill()
+                return {'status': 'timeout', 'output': '', 'message': f"Script execution timed out after {timeout} seconds."}
+            except Exception as e:
+                return {'status': 'error', 'output': '', 'message': str(e)}
+    except Exception as e:
+        return {'status': 'error', 'output': '', 'message': f"Failed to create temporary script: {str(e)}"}
 
 @app.route('/execute', methods=['POST'])
 def execute():
@@ -309,10 +305,7 @@ def execute():
                 "duration_seconds": (datetime.utcnow() - start_time).total_seconds()
             }), 400
 
-        with open(full_script_path, 'r') as f:
-            script_content = f.read()
-
-        result = run_with_timeout(script_content, param_list, timeout, venv_path, decrypted_env_vars)
+        result = execute_script(full_script_path, timeout, venv_path, param_list)
 
         end_time = datetime.utcnow()
         end_time_str = end_time.isoformat() + 'Z'
