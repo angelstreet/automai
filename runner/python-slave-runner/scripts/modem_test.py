@@ -15,10 +15,10 @@ def ping_test(host="8.8.8.8", count=4):
         result = subprocess.run(ping_cmd, capture_output=True, text=True)
         success = result.returncode == 0
         print(f"Ping to {host} successful." if success else f"Ping to {host} failed. No connectivity.")
-        return 0
+        return True  # Return True for success, False for failure
     except Exception as e:
         print(f"Ping to {host} failed: {e}")
-        return 1
+        return False  # Return False for exceptions
 
 def run_iperf_test(server_ip, port=5201, test_type="download"):
     """Run iperf3 test for download or upload."""
@@ -31,15 +31,15 @@ def run_iperf_test(server_ip, port=5201, test_type="download"):
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         data = json.loads(result.stdout)
         bandwidth = data["end"]["sum_received"]["bits_per_second"] / 1_000_000
-        return bandwidth
+        return True, bandwidth
     except subprocess.CalledProcessError as e:
         print(f"Error running iperf3 for {test_type} on {server_ip}: {e}")
         print(f"iperf3 stderr: {e.stderr}")
-        return 1
+        return False
     except json.JSONDecodeError as e:
         print(f"Error parsing iperf3 JSON output for {test_type}: {e}")
         print(f"iperf3 stdout: {result.stdout}")
-        return 1
+        return False
 
 def main():
     parser = argparse.ArgumentParser(description="Test modem connectivity and speeds.")
