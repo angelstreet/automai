@@ -299,6 +299,30 @@ async function processJob() {
           const repoUrl = config.repository;
           const branch = config.branch || 'main';
 
+          const isRepoAccessible = await pingRepository(repoUrl);
+          if (!isRepoAccessible) {
+            console.error(
+              `[@runner:processJob] Repository ${repoUrl} is not accessible, aborting job execution.`,
+            );
+            const completed_at = new Date().toISOString();
+            await supabase
+              .from('jobs_run')
+              .update({
+                status: 'failed',
+                output: {
+                  scripts: [],
+                  stdout: '',
+                  stderr: `Repository ${repoUrl} is not accessible, job aborted.`,
+                },
+                completed_at: completed_at,
+              })
+              .eq('id', jobId);
+            console.log(
+              `[@runner:processJob] Updated job ${jobId} to failed status due to inaccessible repository.`,
+            );
+            return;
+          }
+
           // Derive repository directory name from the URL for meaningful identification
           repoDir =
             repoUrl
@@ -311,7 +335,7 @@ async function processJob() {
               `[@runner:processJob] WARNING: Git must be installed on Windows host ${host.ip} for repository operations.`,
             );
             // Use PowerShell for repository check and operations on Windows
-            let repoScript = `if (Test-Path '${repoDir}') { Write-Output 'Repository exists, pulling latest changes'; cd '${repoDir}'; git pull origin ${branch} } else { Write-Output 'Repository does not exist, cloning'; git clone -b ${branch} ${repoUrl} '${repoDir}'; cd '${repoDir}' }`;
+            let repoScript = `if (Test-Path '${repoDir}') { Write-Output 'Repository exists, pulling latest changes'; cd /d '${repoDir}'; git pull origin ${branch} } else { Write-Output 'Repository does not exist, cloning'; git clone -b ${branch} ${repoUrl} '${repoDir}'; cd '${repoDir}' }`;
             repoCommands = `powershell -Command "${repoScript}"; cd '${scriptFolder}'`;
           } else {
             repoCommands = `
@@ -361,9 +385,9 @@ async function processJob() {
         }
         const scriptCommand = `${scripts}`;
         if (host.os === 'windows') {
-          fullScript = `${repoCommands} ${repoCommands ? '' : repoDir ? `cd ${repoDir}/${scriptFolder} && ` : ''} && cd ${repoDir}/${scriptFolder} && powershell -Command "if (Test-Path 'requirements.txt') { pip install -r requirements.txt } else { Write-Output 'No requirements.txt file found, skipping pip install' }" && ${envSetup}python --version && echo ============================= && ${scriptCommand}`;
+          fullScript = `${repoCommands}${repoCommands ? ' && ' : ''}${repoDir ? `cd /d ${repoDir} && ` : ''} cd ${scriptFolder} && powershell -Command "if (Test-Path 'requirements.txt') { pip install -r requirements.txt } else { Write-Output 'No requirements.txt file found, skipping pip install' }" && ${envSetup}python --version && echo ============================= && ${scriptCommand}`;
         } else {
-          fullScript = `${repoCommands} ${repoCommands ? '' : repoDir ? `cd ${repoDir}/${scriptFolder} && ` : ''} && cd ${repoDir}/${scriptFolder} && if [ -f "requirements.txt" ]; then pip install -r requirements.txt; else echo "No requirements.txt file found, skipping pip install"; fi && ${envSetup}python --version && echo ============================= && ${scriptCommand}`;
+          fullScript = `${repoCommands} ${repoCommands ? '' : repoDir ? `cd ${repoDir} && ` : ''} cd ${scriptFolder} && if [ -f "requirements.txt" ]; then pip install -r requirements.txt; else echo "No requirements.txt file found, skipping pip install"; fi && ${envSetup}python --version && echo ============================= && ${scriptCommand}`;
         }
         console.log(
           `[@local-runner:processJob] SSH command to be executed on ${host.ip}: ${fullScript}`,
@@ -533,3 +557,19 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`[@runner:server] Server listening on port ${PORT}`);
 });
+
+async function pingRepository(repoUrl) {
+  try {
+    console.log(`[@runner:pingRepository] Pinging repository: ${repoUrl}`);
+    const response = await axios.head(repoUrl, { timeout: 5000 });
+    console.log(
+      `[@runner:pingRepository] Repository ping successful: ${repoUrl}, status: ${response.status}`,
+    );
+    return true;
+  } catch (error) {
+    console.error(
+      `[@runner:pingRepository] Failed to ping repository ${repoUrl}: ${error.message}`,
+    );
+    return false;
+  }
+}

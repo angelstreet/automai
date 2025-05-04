@@ -215,6 +215,31 @@ async function processJob() {
         if (config.repository) {
           const repoUrl = config.repository;
           const branch = config.branch || 'main';
+
+          const isRepoAccessible = await pingRepository(repoUrl);
+          if (!isRepoAccessible) {
+            console.error(
+              `[@local-runner:processJob] Repository ${repoUrl} is not accessible, aborting job execution.`,
+            );
+            const completed_at = new Date().toISOString();
+            await supabase
+              .from('jobs_run')
+              .update({
+                status: 'failed',
+                output: {
+                  scripts: [],
+                  stdout: '',
+                  stderr: `Repository ${repoUrl} is not accessible, job aborted.`,
+                },
+                completed_at: completed_at,
+              })
+              .eq('id', jobId);
+            console.log(
+              `[@local-runner:processJob] Updated job ${jobId} to failed status due to inaccessible repository.`,
+            );
+            return;
+          }
+
           // Derive repository directory name from the URL for meaningful identification
           repoDir =
             repoUrl
@@ -323,9 +348,9 @@ async function processJob() {
         let fullScript;
 
         if (host.os === 'windows') {
-          fullScript = `${repoCommands} ${repoCommands ? '' : repoDir ? `cd ${repoDir}/${scriptFolder} && ` : ''} && cd ${repoDir}/${scriptFolder} && powershell -Command "if (Test-Path 'requirements.txt') { pip install -r requirements.txt } else { Write-Output 'No requirements.txt file found, skipping pip install' }" && ${envSetup}python --version && echo ============================= && ${scriptCommand}`;
+          fullScript = `${repoCommands}${repoCommands ? ' && ' : ''}${repoDir ? `cd /d ${repoDir} && ` : ''} cd ${scriptFolder} && powershell -Command "if (Test-Path 'requirements.txt') { pip install -r requirements.txt } else { Write-Output 'No requirements.txt file found, skipping pip install' }" && ${envSetup}python --version && echo ============================= && ${scriptCommand}`;
         } else {
-          fullScript = `${repoCommands} ${repoCommands ? '' : repoDir ? `cd ${repoDir}/${scriptFolder} && ` : ''} && cd ${repoDir}/${scriptFolder} && if [ -f "requirements.txt" ]; then pip install -r requirements.txt; else echo "No requirements.txt file found, skipping pip install"; fi && ${envSetup}python --version && echo ============================= && ${scriptCommand}`;
+          fullScript = `${repoCommands} ${repoCommands ? '' : repoDir ? `cd ${repoDir} && ` : ''} cd ${scriptFolder} && if [ -f "requirements.txt" ]; then pip install -r requirements.txt; else echo "No requirements.txt file found, skipping pip install"; fi && ${envSetup}python --version && echo ============================= && ${scriptCommand}`;
         }
         console.log(
           `[@local-runner:processJob] SSH command to be executed on ${host.ip}: ${fullScript}`,
@@ -564,6 +589,22 @@ async function processJob() {
     }
   } catch (error) {
     console.error(`[@local-runner:processJob] Error: ${error.message}`);
+  }
+}
+
+async function pingRepository(repoUrl) {
+  try {
+    console.log(`[@local-runner:pingRepository] Pinging repository: ${repoUrl}`);
+    const response = await axios.head(repoUrl, { timeout: 5000 });
+    console.log(
+      `[@local-runner:pingRepository] Repository ping successful: ${repoUrl}, status: ${response.status}`,
+    );
+    return true;
+  } catch (error) {
+    console.error(
+      `[@local-runner:pingRepository] Failed to ping repository ${repoUrl}: ${error.message}`,
+    );
+    return false;
   }
 }
 
