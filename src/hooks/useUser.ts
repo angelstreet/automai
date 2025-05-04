@@ -244,6 +244,14 @@ export function useUser(initialUser: User | null = null, componentName = 'unknow
     staleTime: 30 * 60 * 1000, // 30 minutes
     gcTime: 30 * 60 * 1000, // 30 minutes
     enabled: (() => {
+      // Check if we are in a browser environment where localStorage is available
+      if (typeof window === 'undefined') {
+        console.log(
+          `[@hook:useUser:useUser] #${instanceId.current} Not in browser environment, fetching new data`,
+        );
+        return true; // Enable fetching if not in browser
+      }
+
       // Check if there is cached user data in localStorage and if it's still valid
       const cachedUser = localStorage.getItem('cached_user');
       const cacheTimestamp = localStorage.getItem('user_cache_timestamp');
