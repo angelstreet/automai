@@ -11,6 +11,11 @@ def is_safe_node(node):
         ast.Module, ast.Expr, ast.Call, ast.Name, ast.Load, ast.Store, ast.Assign,
         ast.FunctionDef, ast.If, ast.Return, ast.Pass, ast.AnnAssign,
         ast.arguments, ast.arg,  # Added for argparse support
+        ast.Try, ast.ExceptHandler,  # Added for try/except support
+        ast.AugAssign, ast.Raise, ast.Assert, ast.Delete,  # Common operations
+        ast.Global, ast.Nonlocal,  # Variable scope declarations
+        ast.Yield, ast.YieldFrom, ast.Lambda,  # Advanced function constructs
+        ast.IfExp, ast.Starred, ast.NamedExpr,  # Modern Python features
         # Literals and constants
         ast.Str, ast.Constant, ast.Num, ast.List, ast.Dict, ast.Tuple, ast.Set,
         # Control flow
