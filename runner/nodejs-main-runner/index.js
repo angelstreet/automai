@@ -368,6 +368,7 @@ async function processJob() {
         started_at,
         completed_at,
         overallStatus,
+        decryptedEnvVars || {},
       );
       if (reportUrl) {
         const { error: reportError } = await supabase
@@ -599,6 +600,7 @@ async function processJob() {
                     started_at,
                     completed_at,
                     isSuccess ? 'success' : 'failed',
+                    decryptedEnvVars || {},
                   );
                   if (sshReportUrl) {
                     const { error: sshReportError } = await supabase
@@ -750,6 +752,7 @@ async function generateAndUploadReport(
   started_at,
   completed_at,
   status,
+  decryptedEnvVars = {},
 ) {
   try {
     console.log(`[@runner:generateAndUploadReport] Generating report for job ${jobId}`);
@@ -763,7 +766,7 @@ async function generateAndUploadReport(
 
     // Mask sensitive environment variables
     const envVars =
-      Object.keys(decryptedEnvVars || {})
+      Object.keys(decryptedEnvVars)
         .map((key) => `${key}=***MASKED***`)
         .join(', ') || 'None';
 
