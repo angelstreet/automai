@@ -40,6 +40,9 @@ export function EnvironmentVariablesListClient({
   const c = useTranslations('common');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('newest'); // Default to newest first
+  const [teamPage, setTeamPage] = useState(1);
+  const [sharedPage, setSharedPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Filter variables based on search and type (team/shared)
   const filteredVariables = variables.filter((variable) => {
@@ -77,43 +80,95 @@ export function EnvironmentVariablesListClient({
   const sortedTeamVariables = sortVariables(teamVariables);
   const sortedSharedVariables = sortVariables(sharedVariables);
 
-  const renderTable = (variables: EnvironmentVariable[], title: string) => (
-    <div className="space-y-2">
-      <h3 className="text-sm font-medium">{title}</h3>
-      <div className="border rounded-md">
-        <Table className="[&_tr]:h-7 [&_td]:py-1 [&_td]:px-2 [&_th]:py-1 [&_th]:px-2 [&_th]:h-7">
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[30%]">{c('key')}</TableHead>
-              <TableHead className="w-[30%]">{c('value')}</TableHead>
-              <TableHead className="w-[8%] text-center">{c('shared')}</TableHead>
-              <TableHead className="w-[8%] text-center">{c('visibility')}</TableHead>
-              <TableHead className="w-[8%] text-center">{c('copy')}</TableHead>
-              <TableHead className="w-[8%] text-center">{c('edit')}</TableHead>
-              <TableHead className="w-[8%] text-center">{c('delete')}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {variables.map((variable) => (
-              <EnvironmentVariableItemClient
-                key={variable.id}
-                variable={variable}
-                onVariableUpdated={onVariableUpdated}
-                onVariableDeleted={onVariableDeleted}
-              />
-            ))}
-            {variables.length === 0 && (
+  const renderTable = (
+    variables: EnvironmentVariable[],
+    title: string,
+    currentPage: number,
+    setPage: (page: number) => void,
+  ) => {
+    const totalPages = Math.ceil(variables.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedVariables = variables.slice(startIndex, endIndex);
+
+    return (
+      <div className="space-y-2">
+        <h3 className="text-sm font-medium">{title}</h3>
+        <div className="border rounded-md">
+          <Table className="[&_tr]:h-7 [&_td]:py-1 [&_td]:px-2 [&_th]:py-1 [&_th]:px-2 [&_th]:h-7">
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
-                  {t('no_data')}
-                </TableCell>
+                <TableHead className="w-[30%]">{c('key')}</TableHead>
+                <TableHead className="w-[30%]">{c('value')}</TableHead>
+                <TableHead className="w-[8%] text-center">{c('shared')}</TableHead>
+                <TableHead className="w-[8%] text-center">{c('visibility')}</TableHead>
+                <TableHead className="w-[8%] text-center">{c('copy')}</TableHead>
+                <TableHead className="w-[8%] text-center">{c('edit')}</TableHead>
+                <TableHead className="w-[8%] text-center">{c('delete')}</TableHead>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {paginatedVariables.map((variable) => (
+                <EnvironmentVariableItemClient
+                  key={variable.id}
+                  variable={variable}
+                  onVariableUpdated={onVariableUpdated}
+                  onVariableDeleted={onVariableDeleted}
+                />
+              ))}
+              {paginatedVariables.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
+                    {t('no_data')}
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+        {totalPages > 1 && (
+          <div className="flex justify-center gap-2 mt-2">
+            <button
+              className="px-3 py-1 text-sm border rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => setPage(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              {c('previous')}
+            </button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <button
+                  key={page}
+                  className={`px-3 py-1 text-sm rounded-md ${page === currentPage ? 'bg-primary text-white' : 'border'}`}
+                  onClick={() => setPage(page)}
+                >
+                  {page}
+                </button>
+              ))}
+            </div>
+            <button
+              className="px-3 py-1 text-sm border rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => setPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+            >
+              {c('next')}
+            </button>
+          </div>
+        )}
+        <div className="text-sm text-muted-foreground text-right mt-2">
+          {variables.length > 0 && (
+            <div>
+              {t('showing')}{' '}
+              <Badge variant="outline" className="font-mono">
+                {paginatedVariables.length}
+              </Badge>{' '}
+              {paginatedVariables.length === 1 ? t('variable_singular') : t('variable_plural')}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -150,8 +205,8 @@ export function EnvironmentVariablesListClient({
         </div>
       </div>
 
-      {renderTable(sortedTeamVariables, t('team_variables'))}
-      {renderTable(sortedSharedVariables, t('shared_variables'))}
+      {renderTable(sortedTeamVariables, t('team_variables'), teamPage, setTeamPage)}
+      {renderTable(sortedSharedVariables, t('shared_variables'), sharedPage, setSharedPage)}
 
       <div className="text-sm text-muted-foreground text-right">
         {filteredVariables.length === 0 ? (
