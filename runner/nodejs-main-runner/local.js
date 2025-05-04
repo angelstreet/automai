@@ -774,12 +774,12 @@ async function generateAndUploadReport(
     };
 
     const htmlReport = await ejs.render(reportTemplate, reportData);
-    // Use a simpler date-time format for folder naming
+    // Use a simpler date_time format for folder naming with underscores
     const dateStr = new Date(created_at)
       .toISOString()
-      .replace(/[:.]/g, '-')
+      .replace(/[:.]/g, '_')
       .slice(0, 19)
-      .replace('T', '-');
+      .replace('T', '_');
     const folderName = `${dateStr}_${jobId}`;
     // Correct the path to avoid duplicating 'reports'
     const reportPath = `${folderName}/report.html`;
@@ -808,10 +808,10 @@ async function generateAndUploadReport(
       return null;
     }
 
-    // Generate a signed URL using Supabase Storage API
+    // Generate a signed URL using Supabase Storage API, valid for 1 year
     const { data: signedUrlData, error: signedUrlError } = await supabase.storage
       .from(bucketName)
-      .createSignedUrl(reportPath, 60 * 60 * 24); // URL valid for 24 hours
+      .createSignedUrl(reportPath, 60 * 60 * 24 * 365); // URL valid for 1 year
 
     if (signedUrlError) {
       console.error(
