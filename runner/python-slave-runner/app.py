@@ -228,7 +228,7 @@ def run_with_timeout(script_content, parameters, timeout=30, venv_path=None, env
 # Function to create a temporary folder with timestamp
 def create_temp_folder_with_timestamp(timestamp=None):
     if not timestamp:
-        timestamp = datetime.datetime.utcnow().isoformat().replace(':', '-').replace('.', '-')
+        timestamp = datetime.utcnow().isoformat().replace(':', '-').replace('.', '-')
     temp_dir = os.path.join(tempfile.gettempdir(), f"script_run_{timestamp}")
     os.makedirs(temp_dir, exist_ok=True)
     return temp_dir, timestamp
@@ -287,8 +287,8 @@ def execute():
             return jsonify({
                 "status": "error",
                 "message": "No script_path provided",
-                "start_time": datetime.datetime.utcnow().isoformat() + 'Z',
-                "end_time": datetime.datetime.utcnow().isoformat() + 'Z',
+                "start_time": datetime.utcnow().isoformat() + 'Z',
+                "end_time": datetime.utcnow().isoformat() + 'Z',
                 "duration_seconds": 0
             }), 400
 
@@ -312,7 +312,7 @@ def execute():
         for key, value in environment_variables.items():
             env_vars[key] = value
             print(f"DEBUG: Using environment variable: {key}=[secret]", file=sys.stderr)
-        start_time = datetime.datetime.utcnow()
+        start_time = datetime.utcnow()
         start_time_str = start_time.isoformat() + 'Z'
 
         # Get or create timestamp for folder naming
@@ -332,8 +332,8 @@ def execute():
                     "status": repo_result["status"],
                     "message": repo_result["message"],
                     "start_time": start_time_str,
-                    "end_time": datetime.datetime.utcnow().isoformat() + 'Z',
-                    "duration_seconds": (datetime.datetime.utcnow() - start_time).total_seconds()
+                    "end_time": datetime.utcnow().isoformat() + 'Z',
+                    "duration_seconds": (datetime.utcnow() - start_time).total_seconds()
                 }), 500
 
             repo_path = repo_result
@@ -345,8 +345,8 @@ def execute():
                     "status": venv_result["status"],
                     "message": venv_result["message"],
                     "start_time": start_time_str,
-                    "end_time": datetime.datetime.utcnow().isoformat() + 'Z',
-                    "duration_seconds": (datetime.datetime.utcnow() - start_time).total_seconds()
+                    "end_time": datetime.utcnow().isoformat() + 'Z',
+                    "duration_seconds": (datetime.utcnow() - start_time).total_seconds()
                 }), 500
             venv_path = venv_result
         else:
@@ -367,8 +367,8 @@ def execute():
                     "status": venv_result["status"],
                     "message": venv_result["message"],
                     "start_time": start_time_str,
-                    "end_time": datetime.datetime.utcnow().isoformat() + 'Z',
-                    "duration_seconds": (datetime.datetime.utcnow() - start_time).total_seconds()
+                    "end_time": datetime.utcnow().isoformat() + 'Z',
+                    "duration_seconds": (datetime.utcnow() - start_time).total_seconds()
                 }), 500
             venv_path = venv_result
 
@@ -380,8 +380,8 @@ def execute():
                 "status": "error",
                 "message": f"Script not found: {full_script_path}",
                 "start_time": start_time_str,
-                "end_time": datetime.datetime.utcnow().isoformat() + 'Z',
-                "duration_seconds": (datetime.datetime.utcnow() - start_time).total_seconds()
+                "end_time": datetime.utcnow().isoformat() + 'Z',
+                "duration_seconds": (datetime.utcnow() - start_time).total_seconds()
             }), 400
 
         with open(full_script_path, 'r') as f:
@@ -392,7 +392,7 @@ def execute():
 
         result = run_with_timeout(script_content, param_list, timeout, venv_path, env_vars)
 
-        end_time = datetime.datetime.utcnow()
+        end_time = datetime.utcnow()
         end_time_str = end_time.isoformat() + 'Z'
         duration = (end_time - start_time).total_seconds()
 
@@ -434,7 +434,7 @@ def execute():
 
     except FileNotFoundError as e:
         print(f"ERROR: FileNotFoundError: {str(e)}", file=sys.stderr)
-        end_time = datetime.datetime.utcnow()
+        end_time = datetime.utcnow()
         return jsonify({
             "status": "error",
             "message": f"Script not found: {str(e)}",
@@ -444,7 +444,7 @@ def execute():
         }), 400
     except Exception as e:
         print(f"ERROR: Execution error: {str(e)}", file=sys.stderr)
-        end_time = datetime.datetime.utcnow()
+        end_time = datetime.utcnow()
         return jsonify({
             "status": "error",
             "message": f"Execution error: {str(e)}",
@@ -458,7 +458,7 @@ def health_check():
     """Health check endpoint for the Python runner service."""
     return jsonify({
         "status": "healthy",
-        "timestamp": datetime.datetime.utcnow().isoformat() + 'Z',
+        "timestamp": datetime.utcnow().isoformat() + 'Z',
         "service": "python-slave-runner"
     })
 
