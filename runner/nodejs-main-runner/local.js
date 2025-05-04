@@ -126,6 +126,7 @@ async function processJob() {
         status: 'pending',
         output: { scripts: [] },
         created_at: created_at,
+        // Note: Do not update last_run in jobs_configuration when setting status to pending
       })
       .select('id')
       .single();
