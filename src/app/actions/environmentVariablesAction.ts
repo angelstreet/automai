@@ -29,11 +29,8 @@ export const getTeamEnvironmentVariables = cache(async (teamId: string) => {
 
     const cookieStore = await cookies();
 
-    // Call database layer to get environment variables
-    const result = await environmentVariablesDb.getEnvironmentVariablesByTeamId(
-      teamId,
-      cookieStore,
-    );
+    // Call database layer to get all environment variables (team-specific and shared)
+    const result = await environmentVariablesDb.getAllEnvironmentVariables(teamId, cookieStore);
 
     if (!result.success) {
       console.error(
@@ -77,11 +74,12 @@ export const createEnvironmentVariable = cache(
       key: string;
       value: string;
       description?: string;
+      isShared?: boolean;
     },
   ) => {
     try {
       console.log(
-        `[@action:environmentVariablesAction:createEnvironmentVariable] Creating variable for team: ${teamId}`,
+        `[@action:environmentVariablesAction:createEnvironmentVariable] Creating variable for team: ${teamId}, shared: ${variable.isShared || false}`,
       );
 
       // Verify user is authenticated
@@ -108,11 +106,37 @@ export const createEnvironmentVariable = cache(
         `[@action:environmentVariablesAction:createEnvironmentVariable] User ID: ${user.id}, Team ID: ${teamId}`,
       );
 
-      // Call database layer to create environment variable
-      const result = await environmentVariablesDb.createEnvironmentVariable(
-        processedVariable,
-        cookieStore,
-      );
+      let result;
+      if (variable.isShared) {
+        // Fetch tenant ID for shared variable
+        const tenantResult = await environmentVariablesDb.getTenantIdByTeamId(teamId, cookieStore);
+        if (!tenantResult.success) {
+          console.error(
+            '[@action:environmentVariablesAction:createEnvironmentVariable] Error fetching tenant ID:',
+            tenantResult.error,
+          );
+          return { success: false, error: tenantResult.error || 'Failed to fetch tenant ID' };
+        }
+
+        const tenantId = tenantResult.data;
+        const sharedVariable = {
+          key: variable.key,
+          value: encryptValue(variable.value),
+          description: variable.description,
+          tenant_id: tenantId,
+          created_by: user.id,
+        };
+
+        result = await environmentVariablesDb.createSharedEnvironmentVariable(
+          sharedVariable,
+          cookieStore,
+        );
+      } else {
+        result = await environmentVariablesDb.createEnvironmentVariable(
+          processedVariable,
+          cookieStore,
+        );
+      }
 
       if (!result.success) {
         console.error(
@@ -161,6 +185,7 @@ export const createEnvironmentVariablesBatch = cache(
       key: string;
       value: string;
       description?: string;
+      isShared?: boolean;
     }>,
   ) => {
     try {
@@ -183,49 +208,87 @@ export const createEnvironmentVariablesBatch = cache(
 
       const cookieStore = await cookies();
 
-      // Process and encrypt all variables
-      const processedVariables = variables.map((variable) => ({
-        ...variable,
-        value: encryptValue(variable.value),
-        team_id: teamId,
-        created_by: user.id,
-      }));
+      // Separate variables into team-specific and shared
+      const teamVariables = variables
+        .filter((v) => !v.isShared)
+        .map((variable) => ({
+          ...variable,
+          value: encryptValue(variable.value),
+          team_id: teamId,
+          created_by: user.id,
+        }));
 
-      // Debug log auth context
-      console.log(
-        `[@action:environmentVariablesAction:createEnvironmentVariablesBatch] User ID: ${user.id}, Team ID: ${teamId}, Variables count: ${variables.length}`,
-      );
+      const sharedVariables = variables.filter((v) => v.isShared);
 
-      // Call database layer to create environment variables in batch
-      const result = await environmentVariablesDb.createEnvironmentVariablesBatch(
-        processedVariables,
-        cookieStore,
-      );
+      let sharedResult = { success: true, data: [] as EnvironmentVariable[] };
+      if (sharedVariables.length > 0) {
+        // Fetch tenant ID for shared variables
+        const tenantResult = await environmentVariablesDb.getTenantIdByTeamId(teamId, cookieStore);
+        if (!tenantResult.success) {
+          console.error(
+            '[@action:environmentVariablesAction:createEnvironmentVariablesBatch] Error fetching tenant ID:',
+            tenantResult.error,
+          );
+          return { success: false, error: tenantResult.error || 'Failed to fetch tenant ID' };
+        }
 
-      if (!result.success) {
-        console.error(
-          '[@action:environmentVariablesAction:createEnvironmentVariablesBatch] Error:',
-          result.error,
+        const tenantId = tenantResult.data;
+        const processedSharedVariables = sharedVariables.map((variable) => ({
+          key: variable.key,
+          value: encryptValue(variable.value),
+          description: variable.description,
+          tenant_id: tenantId,
+          created_by: user.id,
+        }));
+
+        sharedResult = await environmentVariablesDb.createSharedEnvironmentVariablesBatch(
+          processedSharedVariables,
+          cookieStore,
         );
-        return {
-          success: false,
-          error: result.error || 'Failed to create environment variables',
-        };
+        if (!sharedResult.success) {
+          console.error(
+            '[@action:environmentVariablesAction:createEnvironmentVariablesBatch] Error creating shared variables:',
+            sharedResult.error,
+          );
+          return {
+            success: false,
+            error: sharedResult.error || 'Failed to create shared environment variables',
+          };
+        }
+      }
+
+      let teamResult = { success: true, data: [] as EnvironmentVariable[] };
+      if (teamVariables.length > 0) {
+        teamResult = await environmentVariablesDb.createEnvironmentVariablesBatch(
+          teamVariables,
+          cookieStore,
+        );
+        if (!teamResult.success) {
+          console.error(
+            '[@action:environmentVariablesAction:createEnvironmentVariablesBatch] Error creating team variables:',
+            teamResult.error,
+          );
+          return {
+            success: false,
+            error: teamResult.error || 'Failed to create team environment variables',
+          };
+        }
       }
 
       // Revalidate paths that might display environment variables
       revalidatePath('/[locale]/[tenant]/environment-variables', 'page');
 
-      // Decrypt values before returning the variables
-      const decryptedVariables = result.data
-        ? result.data.map((variable) => ({
+      // Combine results and decrypt values before returning
+      const combinedData = [...teamResult.data, ...sharedResult.data];
+      const decryptedVariables = combinedData
+        ? combinedData.map((variable) => ({
             ...variable,
             value: decryptValue(variable.value),
           }))
         : [];
 
       console.log(
-        `[@action:environmentVariablesAction:createEnvironmentVariablesBatch] Successfully created ${result.data?.length} variables`,
+        `[@action:environmentVariablesAction:createEnvironmentVariablesBatch] Successfully created ${combinedData.length} variables (team: ${teamResult.data.length}, shared: ${sharedResult.data.length})`,
       );
 
       return {
@@ -396,11 +459,8 @@ export const getEnvironmentVariablesForJob = cache(async (jobId: string, teamId:
 
     const cookieStore = await cookies();
 
-    // Get all environment variables for this team
-    const result = await environmentVariablesDb.getEnvironmentVariablesByTeamId(
-      teamId,
-      cookieStore,
-    );
+    // Get all environment variables for this team (including shared)
+    const result = await environmentVariablesDb.getAllEnvironmentVariables(teamId, cookieStore);
 
     if (!result.success) {
       console.error(

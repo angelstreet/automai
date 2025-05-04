@@ -99,13 +99,13 @@ export function EnvironmentVariablesListClient({
       <div className="border rounded-md">
         <Table>
           <TableHeader>
-            <TableRow className="h-7">
-              <TableHead className="w-1/3 py-1 text-xs">{t('key')}</TableHead>
-              <TableHead className="w-1/3 py-1 text-xs">{t('value')}</TableHead>
-              <TableHead className="w-24 text-center py-1 text-xs">{c('visibility')}</TableHead>
-              <TableHead className="w-12 text-center py-1 text-xs">{c('copy')}</TableHead>
-              <TableHead className="w-12 text-center py-1 text-xs">{c('edit')}</TableHead>
-              <TableHead className="w-12 text-center py-1 text-xs">{c('actions')}</TableHead>
+            <TableRow className="">
+              <TableHead className="w-1/3 text-xs">{t('key')}</TableHead>
+              <TableHead className="w-1/3  text-xs">{t('value')}</TableHead>
+              <TableHead className="w-24 text-center  text-xs">{c('visibility')}</TableHead>
+              <TableHead className="w-12 text-center  text-xs">{c('copy')}</TableHead>
+              <TableHead className="w-12 text-center  text-xs">{c('edit')}</TableHead>
+              <TableHead className="w-12 text-center text-xs">{c('actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

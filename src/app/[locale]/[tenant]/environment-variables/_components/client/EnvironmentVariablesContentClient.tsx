@@ -29,7 +29,7 @@ export function EnvironmentVariablesContentClient({
   return (
     <>
       {variables.length === 0 ? (
-        <div className="space-y-6">
+        <div className="space-y-2">
           <div className="flex flex-col items-center justify-center p-8 text-center">
             <div className="rounded-full bg-muted p-4 mb-4">
               <KeyRound className="h-10 w-10 text-muted-foreground" />
@@ -40,7 +40,7 @@ export function EnvironmentVariablesContentClient({
           <VercelStyleEnvEditor teamId={teamId} onVariablesCreated={handleVariablesCreated} />
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-2">
           <VercelStyleEnvEditor teamId={teamId} onVariablesCreated={handleVariablesCreated} />
           <div className="border-t pt-4">
             <EnvironmentVariablesListClient

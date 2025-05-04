@@ -22,6 +22,7 @@ interface EnvRow {
   key: string;
   value: string;
   isValueVisible: boolean;
+  isShared: boolean; // Flag to indicate if the variable should be shared across tenant
   error?: string;
 }
 
@@ -30,20 +31,25 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
   const c = useTranslations('common');
 
   const [rows, setRows] = useState<EnvRow[]>([
-    { id: 'initial', key: '', value: '', isValueVisible: false },
+    { id: 'initial', key: '', value: '', isValueVisible: false, isShared: false },
   ]);
   const [isSaving, setIsSaving] = useState(false);
 
   // Add a new empty row
   const addRow = () => {
-    setRows([...rows, { id: `row-${Date.now()}`, key: '', value: '', isValueVisible: false }]);
+    setRows([
+      ...rows,
+      { id: `row-${Date.now()}`, key: '', value: '', isValueVisible: false, isShared: false },
+    ]);
   };
 
   // Remove a row by its ID
   const removeRow = (id: string) => {
     if (rows.length === 1) {
       // If it's the last row, just clear it instead of removing
-      setRows([{ id: `row-${Date.now()}`, key: '', value: '', isValueVisible: false }]);
+      setRows([
+        { id: `row-${Date.now()}`, key: '', value: '', isValueVisible: false, isShared: false },
+      ]);
     } else {
       setRows(rows.filter((row) => row.id !== id));
     }
@@ -67,6 +73,18 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
       rows.map((row) => {
         if (row.id === id) {
           return { ...row, isValueVisible: !row.isValueVisible };
+        }
+        return row;
+      }),
+    );
+  };
+
+  // Toggle shared status
+  const toggleSharedStatus = (id: string) => {
+    setRows(
+      rows.map((row) => {
+        if (row.id === id) {
+          return { ...row, isShared: !row.isShared };
         }
         return row;
       }),
@@ -116,6 +134,7 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
           key,
           value: cleanValue,
           isValueVisible: false,
+          isShared: false,
         };
       }
 
@@ -125,6 +144,7 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
         key: line.trim(),
         value: '',
         isValueVisible: false,
+        isShared: false,
       };
     });
 
@@ -231,6 +251,7 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
         key: row.key,
         value: row.value,
         description: '',
+        isShared: row.isShared,
       }));
 
       console.log(`Saving ${variables.length} environment variables in batch`);
@@ -242,7 +263,9 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
         toast.success(`${result.data.length} environment variables saved successfully`);
         onVariablesCreated(result.data);
         // Reset to a single empty row
-        setRows([{ id: `row-${Date.now()}`, key: '', value: '', isValueVisible: false }]);
+        setRows([
+          { id: `row-${Date.now()}`, key: '', value: '', isValueVisible: false, isShared: false },
+        ]);
       } else {
         toast.error(result.error || 'Failed to save environment variables');
         // Keep the rows since they failed to save
@@ -256,19 +279,22 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
   };
 
   return (
-    <div className="space-y-2">
+    <div className="">
       {/* Header row with labels */}
-      <div className="grid grid-cols-11 gap-1 mb-1 px-1">
+      <div className="grid grid-cols-11 gap-1 px-1">
         <div className="col-span-5">
-          <Label className="">{t('key')}</Label>
+          <Label className="text-xs muted-foreground">{t('key')}</Label>
         </div>
-        <div className="col-span-4">
-          <Label className="">{t('value')}</Label>
+        <div className="col-span-3">
+          <Label className="text-xs muted-foreground">{t('value')}</Label>
         </div>
-        <div className="col-span-1 text-muted-foreground flex items-center justify-center">
+        <div className="col-span-1 text-xs muted-foreground flex items-center justify-center">
           {c('visibility')}
         </div>
-        <div className="col-span-1 text-muted-foreground flex items-center justify-center">
+        <div className="col-span-1 text-xs muted-foreground flex items-center justify-center">
+          Shared
+        </div>
+        <div className="col-span-1 text-xs muted-foreground flex items-center justify-center">
           {c('remove')}
         </div>
       </div>
@@ -293,7 +319,7 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
             </div>
 
             {/* Value */}
-            <div className="col-span-4">
+            <div className="col-span-3">
               <div className="relative">
                 <Input
                   id={`value-${row.id}`}
@@ -320,8 +346,18 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
                 title={row.isValueVisible ? t('hide_value') : t('show_value')}
                 className="h-5 w-5"
               >
-                {row.isValueVisible ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                {row.isValueVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
+            </div>
+
+            {/* Shared Checkbox */}
+            <div className="col-span-1 flex justify-center">
+              <input
+                type="checkbox"
+                checked={row.isShared}
+                onChange={() => toggleSharedStatus(row.id)}
+                className="w-3 h-3"
+              />
             </div>
 
             {/* Remove Button */}
@@ -342,7 +378,7 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
         ))}
       </div>
 
-      <div className="flex flex-wrap gap-3 mt-4">
+      <div className="flex flex-wrap gap-3 mt-1">
         <Button
           type="button"
           variant="outline"
