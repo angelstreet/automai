@@ -530,7 +530,7 @@ async function processJob() {
       for (const script of config.scripts || []) {
         const scriptPath = script.path;
         const parameters = script.parameters || '';
-        const timeout = script.timeout || 30;
+        const timeout = config.execution?.timeout || script.timeout || 30;
         const retryOnFailure = script.retry_on_failure || 0;
         const iterations = script.iterations || 1;
 
