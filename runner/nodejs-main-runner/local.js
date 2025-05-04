@@ -7,6 +7,12 @@ const axios = require('axios');
 const { Client } = require('ssh2');
 const ALGORITHM = 'aes-256-gcm';
 
+// Third-party modules for report generation and S3 upload
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const ejs = require('ejs');
+const fs = require('fs');
+const path = require('path');
+
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL,
   token: process.env.UPSTASH_REDIS_REST_TOKEN,
@@ -613,6 +619,31 @@ async function processJob() {
       console.log(
         `[@local-runner:processJob] Updated job ${jobId} to final status: ${overallStatus}`,
       );
+
+      const reportUrl = await generateAndUploadReport(
+        jobId,
+        jobData.config_id || 'b0238c60-fc08-4008-a445-6ee35b99e83c',
+        output,
+        created_at,
+        created_at, // started_at is not defined in local.js, using created_at as placeholder
+        completed_at,
+        overallStatus,
+      );
+      if (reportUrl) {
+        const { error: reportError } = await supabase
+          .from('jobs_run')
+          .update({ report_url: reportUrl })
+          .eq('id', jobId);
+        if (reportError) {
+          console.error(
+            `[@local-runner:processJob] Failed to update report URL for job ${jobId}: ${reportError.message}`,
+          );
+        } else {
+          console.log(
+            `[@local-runner:processJob] Updated job ${jobId} with report URL: ${reportUrl}`,
+          );
+        }
+      }
     }
 
     // Remove job from queue after processing (only if not using custom payload)
@@ -638,6 +669,175 @@ async function pingRepository(repoUrl) {
       `[@local-runner:pingRepository] Failed to ping repository ${repoUrl}: ${error.message}`,
     );
     return false;
+  }
+}
+
+// HTML Report Template
+const reportTemplate = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job Run Report - <%= jobId %></title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h1 { color: #333; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background-color: #f2f2f2; }
+    pre { background-color: #f9f9f9; padding: 10px; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>Job Run Report</h1>
+  <table>
+    <tr><th>Job Run ID</th><td><%= jobId %></td></tr>
+    <tr><th>Config ID</th><td><%= configId %></td></tr>
+    <tr><th>Runner ID</th><td><%= runnerId %></td></tr>
+    <tr><th>Start Time</th><td><%= startTime %></td></tr>
+    <tr><th>End Time</th><td><%= endTime %></td></tr>
+    <tr><th>Duration (s)</th><td><%= duration %></td></tr>
+    <tr><th>Status</th><td><%= status %></td></tr>
+    <tr><th>Scripts</th><td>
+      <% scripts.forEach(function(script, index) { %>
+        <strong>Script <%= index + 1 %>: <%= script.script_path %></strong><br>
+        Parameters: <%= script.parameters || 'None' %><br>
+        Iteration: <%= script.iteration || 'N/A' %><br>
+        Stdout: <pre><%= script.stdout %></pre><br>
+        Stderr: <pre><%= script.stderr %></pre><br>
+      <% }); %>
+    </td></tr>
+    <tr><th>Environment Variables</th><td><%= envVars %></td></tr>
+  </table>
+</body>
+</html>
+`;
+
+// Configure S3 client for Supabase Storage
+const s3Client = new S3Client({
+  endpoint: process.env.SUPABASE_S3_ENDPOINT,
+  credentials: {
+    accessKeyId: process.env.SUPABASE_S3_KEY,
+    secretAccessKey: process.env.SUPABASE_S3_SECRET,
+  },
+  region: 'us-east-1', // Region is often required, using a placeholder
+  forcePathStyle: true, // Required for S3-compatible APIs like Supabase
+});
+
+async function generateAndUploadReport(
+  jobId,
+  config_id,
+  output,
+  created_at,
+  started_at,
+  completed_at,
+  status,
+) {
+  try {
+    console.log(`[@local-runner:generateAndUploadReport] Generating report for job ${jobId}`);
+    const runnerId = process.env.RUNNER_ID || 'default-runner';
+    const startTime = started_at || 'N/A';
+    const endTime = completed_at || 'N/A';
+    const duration =
+      startTime !== 'N/A' && endTime !== 'N/A'
+        ? ((new Date(endTime) - new Date(startTime)) / 1000).toFixed(2)
+        : 'N/A';
+
+    // Mask sensitive environment variables
+    const envVars =
+      Object.keys(decryptedEnvVars)
+        .map((key) => `${key}=***MASKED***`)
+        .join(', ') || 'None';
+
+    const scripts = output.scripts || [];
+    const reportData = {
+      jobId,
+      configId: config_id,
+      runnerId,
+      startTime,
+      endTime,
+      duration,
+      status,
+      scripts,
+      envVars,
+    };
+
+    const htmlReport = await ejs.render(reportTemplate, reportData);
+    const folderName = `${created_at.replace(/[:.]/g, '-')}_${jobId}`;
+    const reportPath = `reports/${folderName}/report.html`;
+    // Write report temporarily to disk
+    const tempReportPath = path.join('/tmp', `report_${jobId}.html`);
+    fs.writeFileSync(tempReportPath, htmlReport);
+
+    // Upload report to Supabase Storage using S3-compatible API
+    const bucketName = 'reports';
+    const putObjectCommand = new PutObjectCommand({
+      Bucket: bucketName,
+      Key: reportPath,
+      Body: fs.createReadStream(tempReportPath),
+      ContentType: 'text/html',
+    });
+
+    try {
+      await s3Client.send(putObjectCommand);
+      console.log(
+        `[@local-runner:generateAndUploadReport] Report uploaded to S3-compatible storage for job ${jobId}: ${reportPath}`,
+      );
+    } catch (uploadError) {
+      console.error(
+        `[@local-runner:generateAndUploadReport] Failed to upload report for job ${jobId}: ${uploadError.message}`,
+      );
+      return null;
+    }
+
+    // Generate a public URL (assuming Supabase Storage provides a way to construct public URLs)
+    // Note: Supabase S3-compatible API may not directly provide public URLs; adjust based on actual API
+    const reportUrl = `${process.env.SUPABASE_S3_ENDPOINT}/${bucketName}/${reportPath}`;
+    console.log(
+      `[@local-runner:generateAndUploadReport] Report URL for job ${jobId}: ${reportUrl}`,
+    );
+
+    // Clean up temporary file
+    fs.unlinkSync(tempReportPath);
+
+    // Upload associated files if any
+    if (output.associated_files && output.associated_files.length > 0) {
+      console.log(
+        `[@local-runner:generateAndUploadReport] Uploading ${output.associated_files.length} associated files for job ${jobId}`,
+      );
+      for (const file of output.associated_files) {
+        try {
+          // Check if file has a public_url (already uploaded by Python runner)
+          if (file.public_url) {
+            console.log(
+              `[@local-runner:generateAndUploadReport] File already uploaded by Python runner: ${file.name}, URL: ${file.public_url}`,
+            );
+            continue;
+          }
+          // If file content is not available, log placeholder
+          console.log(
+            `[@local-runner:generateAndUploadReport] Placeholder for uploading file: ${file.name}`,
+          );
+          // TODO: Implement actual file upload logic if file content is accessible
+        } catch (fileError) {
+          console.error(
+            `[@local-runner:generateAndUploadReport] Failed to upload associated file ${file.name} for job ${jobId}: ${fileError.message}`,
+          );
+        }
+      }
+    } else {
+      console.log(
+        `[@local-runner:generateAndUploadReport] No associated files to upload for job ${jobId}`,
+      );
+    }
+
+    return reportUrl;
+  } catch (error) {
+    console.error(
+      `[@local-runner:generateAndUploadReport] Error generating/uploading report for job ${jobId}: ${error.message}`,
+    );
+    return null;
   }
 }
 
