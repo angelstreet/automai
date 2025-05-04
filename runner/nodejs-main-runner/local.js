@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const { createClient } = require('@supabase/supabase-js');
 const { Redis } = require('@upstash/redis');
 const axios = require('axios');
@@ -790,7 +791,7 @@ async function generateAndUploadReport(
       associatedFiles,
     };
 
-    const htmlReport = await ejs.render(reportTemplate, reportData).then((result) => result.trim());
+    const htmlReport = ejs.render(reportTemplate, reportData).trim();
     // Use a simpler date_time format for folder naming with underscores
     const dateStr = new Date(created_at)
       .toISOString()
@@ -826,10 +827,14 @@ async function generateAndUploadReport(
       return null;
     }
 
-    // Generate a public URL for the report (adjust based on your R2 setup)
-    const reportUrl = `${process.env.CLOUDFLARE_R2_ENDPOINT || 'https://<your-account-id>.r2.cloudflarestorage.com'}/${bucketName}/${reportPath}`;
+    // Generate a presigned URL for the report with a 7-day expiration
+    const getObjectCommand = new PutObjectCommand({
+      Bucket: bucketName,
+      Key: reportPath,
+    });
+    const reportUrl = await getSignedUrl(r2Client, getObjectCommand, { expiresIn: 604800 }); // 7 days in seconds
     console.log(
-      `[@local-runner:generateAndUploadReport] Report URL for job ${jobId}: ${reportUrl}`,
+      `[@local-runner:generateAndUploadReport] Presigned report URL for job ${jobId}: ${reportUrl}`,
     );
 
     // Clean up temporary file

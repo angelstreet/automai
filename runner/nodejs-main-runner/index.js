@@ -5,7 +5,8 @@ const http = require('http');
 const path = require('path');
 
 // Third-party modules
-// const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3'); // Commented out as we're using Supabase Storage API
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const { createClient } = require('@supabase/supabase-js');
 const { Redis } = require('@upstash/redis');
 const axios = require('axios');
@@ -727,18 +728,17 @@ async function pingRepository(repoUrl) {
   }
 }
 
-// Configure S3 client for Supabase Storage (commented out as we're using Supabase Storage API directly)
-/*
-const s3Client = new S3Client({
-  endpoint: process.env.SUPABASE_S3_ENDPOINT,
+// Configure S3 client for Cloudflare R2
+const r2Client = new S3Client({
+  endpoint:
+    process.env.CLOUDFLARE_R2_ENDPOINT || 'https://<your-account-id>.r2.cloudflarestorage.com',
   credentials: {
-    accessKeyId: process.env.SUPABASE_S3_KEY,
-    secretAccessKey: process.env.SUPABASE_S3_SECRET,
+    accessKeyId: process.env.CLOUDFLARE_R2_ACCESS_KEY_ID || 'your-access-key-id',
+    secretAccessKey: process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY || 'your-secret-access-key',
   },
-  region: 'us-east-1', // Region is often required, using a placeholder
-  forcePathStyle: true, // Required for S3-compatible APIs like Supabase
+  region: 'auto', // Cloudflare R2 uses 'auto' for region
+  forcePathStyle: true, // Required for R2 compatibility
 });
-*/
 
 async function generateAndUploadReport(
   jobId,
@@ -761,7 +761,7 @@ async function generateAndUploadReport(
 
     // Mask sensitive environment variables
     const envVars =
-FLARE      Object.keys(decryptedEnvVars || {})
+      Object.keys(decryptedEnvVars || {})
         .map((key) => `${key}=***MASKED***`)
         .join(', ') || 'None';
 
@@ -780,7 +780,7 @@ FLARE      Object.keys(decryptedEnvVars || {})
       associatedFiles,
     };
 
-    const htmlReport = await ejs.render(reportTemplate, reportData).then((result) => result.trim());
+    const htmlReport = ejs.render(reportTemplate, reportData).trim();
     // Use a simpler date_time format for folder naming with underscores
     const dateStr = new Date(created_at)
       .toISOString()
@@ -794,30 +794,20 @@ FLARE      Object.keys(decryptedEnvVars || {})
     const tempReportPath = path.join('/tmp', `report_${jobId}.html`);
     fs.writeFileSync(tempReportPath, htmlReport);
 
-    // Upload report to Supabase Storage using Storage API instead of S3-compatible API
+    // Upload report to Cloudflare R2 using S3-compatible API
     const bucketName = 'reports';
+    const putObjectCommand = new PutObjectCommand({
+      Bucket: bucketName,
+      Key: reportPath,
+      Body: fs.createReadStream(tempReportPath),
+      ContentType: 'text/html',
+      ContentDisposition: 'inline',
+    });
+
     try {
-      const fileBuffer = fs.readFileSync(tempReportPath);
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from(bucketName)
-        .upload(reportPath, fileBuffer, {
-          contentType: 'text/html',
-          upsert: true,
-          metadata: { 'Content-Disposition': 'inline' },
-        });
-
-      if (uploadError) {
-        console.error(
-          `[@runner:generateAndUploadReport] Failed to upload report for job ${jobId}: ${uploadError.message}`,
-        );
-        return null;
-      }
-
+      await r2Client.send(putObjectCommand);
       console.log(
-        `[@runner:generateAndUploadReport] Report uploaded to Supabase Storage for job ${jobId}: ${reportPath}`,
-      );
-      console.log(
-        `[@runner:generateAndUploadReport] Upload response data: ${JSON.stringify(uploadData, null, 2)}`,
+        `[@runner:generateAndUploadReport] Report uploaded to Cloudflare R2 for job ${jobId}: ${reportPath}`,
       );
     } catch (uploadError) {
       console.error(
@@ -826,21 +816,14 @@ FLARE      Object.keys(decryptedEnvVars || {})
       return null;
     }
 
-    // Generate a signed URL using Supabase Storage API, valid for 1 year
-    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-      .from(bucketName)
-      .createSignedUrl(reportPath, 60 * 60 * 24 * 365); // URL valid for 1 year
-
-    if (signedUrlError) {
-      console.error(
-        `[@runner:generateAndUploadReport] Failed to generate signed URL for job ${jobId}: ${signedUrlError.message}`,
-      );
-      return null;
-    }
-
-    const reportUrl = signedUrlData.signedUrl;
+    // Generate a presigned URL for the report with a 7-day expiration
+    const getObjectCommand = new PutObjectCommand({
+      Bucket: bucketName,
+      Key: reportPath,
+    });
+    const reportUrl = await getSignedUrl(r2Client, getObjectCommand, { expiresIn: 604800 }); // 7 days in seconds
     console.log(
-      `[@runner:generateAndUploadReport] Signed report URL for job ${jobId}: ${reportUrl}`,
+      `[@runner:generateAndUploadReport] Presigned report URL for job ${jobId}: ${reportUrl}`,
     );
 
     // Clean up temporary file
