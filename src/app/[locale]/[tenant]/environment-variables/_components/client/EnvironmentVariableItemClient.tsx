@@ -115,8 +115,8 @@ export function EnvironmentVariableItemClient({
 
   return (
     <>
-      <TableRow className="h-7">
-        <TableCell className="py-1">
+      <TableRow>
+        <TableCell>
           {isEditing ? (
             <Input
               value={editedKey}
@@ -128,7 +128,7 @@ export function EnvironmentVariableItemClient({
             <span className="font-mono text-xs">{variable.key}</span>
           )}
         </TableCell>
-        <TableCell className="py-1">
+        <TableCell>
           {isEditing ? (
             <Input
               type={isValueVisible ? 'text' : 'password'}
@@ -143,7 +143,7 @@ export function EnvironmentVariableItemClient({
             </div>
           )}
         </TableCell>
-        <TableCell className="text-center py-1 w-24">
+        <TableCell className="text-center w-24">
           <Button
             variant="ghost"
             size="icon"
@@ -155,7 +155,7 @@ export function EnvironmentVariableItemClient({
             {isValueVisible ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
           </Button>
         </TableCell>
-        <TableCell className="text-center py-1 w-12">
+        <TableCell className="text-center w-12">
           <Button
             variant="ghost"
             size="icon"
@@ -167,7 +167,7 @@ export function EnvironmentVariableItemClient({
             <Copy className="h-3 w-3" />
           </Button>
         </TableCell>
-        <TableCell className="text-center py-1 w-12">
+        <TableCell className="text-center w-12">
           {isEditing ? (
             <div className="flex justify-center space-x-1">
               <Button
@@ -204,7 +204,7 @@ export function EnvironmentVariableItemClient({
             </Button>
           )}
         </TableCell>
-        <TableCell className="text-center py-1 w-12">
+        <TableCell className="text-center w-12">
           <Button
             variant="ghost"
             size="icon"
