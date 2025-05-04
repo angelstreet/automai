@@ -234,7 +234,7 @@ async function processJob() {
               console.log(`[@runner:processJob] Updated job ${jobId} status to 'in_progress'`);
 
               console.log(
-                `[@runner:processJob] Sending payload to Flask (attempt ${attempt}/${retries}, iteration ${i}/${iterations}): ${JSON.stringify(payload)}`,
+                `[@runner:processJob] Sending payload to Flask (attempt ${attempt}/${retries}, iteration ${i}/${iterations}): ${JSON.stringify({ ...payload, environment_variables: payload.environment_variables ? Object.keys(payload.environment_variables).reduce((acc, key) => ({ ...acc, [key]: '***MASKED***' }), {}) : {} })}`,
               );
               const response = await axios.post(`${FLASK_SERVICE_URL}/execute`, payload, {
                 timeout: (payload.timeout + 5) * 1000,
