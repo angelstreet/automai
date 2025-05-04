@@ -5,7 +5,7 @@ const http = require('http');
 const path = require('path');
 
 // Third-party modules
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+// const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3'); // Commented out as we're using Supabase Storage API
 const { createClient } = require('@supabase/supabase-js');
 const { Redis } = require('@upstash/redis');
 const axios = require('axios');
@@ -727,7 +727,8 @@ async function pingRepository(repoUrl) {
   }
 }
 
-// Configure S3 client for Supabase Storage
+// Configure S3 client for Supabase Storage (commented out as we're using Supabase Storage API directly)
+/*
 const s3Client = new S3Client({
   endpoint: process.env.SUPABASE_S3_ENDPOINT,
   credentials: {
@@ -737,6 +738,7 @@ const s3Client = new S3Client({
   region: 'us-east-1', // Region is often required, using a placeholder
   forcePathStyle: true, // Required for S3-compatible APIs like Supabase
 });
+*/
 
 async function generateAndUploadReport(
   jobId,
@@ -759,7 +761,7 @@ async function generateAndUploadReport(
 
     // Mask sensitive environment variables
     const envVars =
-      Object.keys(decryptedEnvVars || {})
+FLARE      Object.keys(decryptedEnvVars || {})
         .map((key) => `${key}=***MASKED***`)
         .join(', ') || 'None';
 
@@ -778,7 +780,7 @@ async function generateAndUploadReport(
       associatedFiles,
     };
 
-    const htmlReport = await ejs.render(reportTemplate, reportData);
+    const htmlReport = await ejs.render(reportTemplate, reportData).then((result) => result.trim());
     // Use a simpler date_time format for folder naming with underscores
     const dateStr = new Date(created_at)
       .toISOString()
@@ -792,20 +794,30 @@ async function generateAndUploadReport(
     const tempReportPath = path.join('/tmp', `report_${jobId}.html`);
     fs.writeFileSync(tempReportPath, htmlReport);
 
-    // Upload report to Supabase Storage using S3-compatible API
+    // Upload report to Supabase Storage using Storage API instead of S3-compatible API
     const bucketName = 'reports';
-    const putObjectCommand = new PutObjectCommand({
-      Bucket: bucketName,
-      Key: reportPath,
-      Body: fs.createReadStream(tempReportPath),
-      ContentType: 'text/html',
-      ContentDisposition: 'inline',
-    });
-
     try {
-      await s3Client.send(putObjectCommand);
+      const fileBuffer = fs.readFileSync(tempReportPath);
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from(bucketName)
+        .upload(reportPath, fileBuffer, {
+          contentType: 'text/html',
+          upsert: true,
+          metadata: { 'Content-Disposition': 'inline' },
+        });
+
+      if (uploadError) {
+        console.error(
+          `[@runner:generateAndUploadReport] Failed to upload report for job ${jobId}: ${uploadError.message}`,
+        );
+        return null;
+      }
+
       console.log(
-        `[@runner:generateAndUploadReport] Report uploaded to S3-compatible storage for job ${jobId}: ${reportPath}`,
+        `[@runner:generateAndUploadReport] Report uploaded to Supabase Storage for job ${jobId}: ${reportPath}`,
+      );
+      console.log(
+        `[@runner:generateAndUploadReport] Upload response data: ${JSON.stringify(uploadData, null, 2)}`,
       );
     } catch (uploadError) {
       console.error(

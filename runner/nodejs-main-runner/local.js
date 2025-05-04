@@ -1,17 +1,17 @@
 require('dotenv').config();
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const { createClient } = require('@supabase/supabase-js');
 const { Redis } = require('@upstash/redis');
 const axios = require('axios');
+const ejs = require('ejs');
 const { Client } = require('ssh2');
 const ALGORITHM = 'aes-256-gcm';
 
-// Third-party modules for report generation and S3 upload
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
-const ejs = require('ejs');
-const fs = require('fs');
-const path = require('path');
+// Third-party modules for report generation and S3 upload (using Cloudflare R2)
 
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL,
@@ -682,8 +682,7 @@ async function pingRepository(repoUrl) {
 }
 
 // HTML Report Template
-const reportTemplate = `
-<!DOCTYPE html>
+const reportTemplate = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -738,15 +737,16 @@ const reportTemplate = `
 </html>
 `;
 
-// Configure S3 client for Supabase Storage
-const s3Client = new S3Client({
-  endpoint: process.env.SUPABASE_S3_ENDPOINT,
+// Configure S3 client for Cloudflare R2
+const r2Client = new S3Client({
+  endpoint:
+    process.env.CLOUDFLARE_R2_ENDPOINT || 'https://<your-account-id>.r2.cloudflarestorage.com',
   credentials: {
-    accessKeyId: process.env.SUPABASE_S3_KEY,
-    secretAccessKey: process.env.SUPABASE_S3_SECRET,
+    accessKeyId: process.env.CLOUDFLARE_R2_ACCESS_KEY_ID || 'your-access-key-id',
+    secretAccessKey: process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY || 'your-secret-access-key',
   },
-  region: 'us-east-1', // Region is often required, using a placeholder
-  forcePathStyle: true, // Required for S3-compatible APIs like Supabase
+  region: 'auto', // Cloudflare R2 uses 'auto' for region
+  forcePathStyle: true, // Required for R2 compatibility
 });
 
 async function generateAndUploadReport(
@@ -790,7 +790,7 @@ async function generateAndUploadReport(
       associatedFiles,
     };
 
-    const htmlReport = await ejs.render(reportTemplate, reportData);
+    const htmlReport = await ejs.render(reportTemplate, reportData).then((result) => result.trim());
     // Use a simpler date_time format for folder naming with underscores
     const dateStr = new Date(created_at)
       .toISOString()
@@ -804,7 +804,7 @@ async function generateAndUploadReport(
     const tempReportPath = path.join('/tmp', `report_${jobId}.html`);
     fs.writeFileSync(tempReportPath, htmlReport);
 
-    // Upload report to Supabase Storage using S3-compatible API
+    // Upload report to Cloudflare R2 using S3-compatible API
     const bucketName = 'reports';
     const putObjectCommand = new PutObjectCommand({
       Bucket: bucketName,
@@ -815,9 +815,9 @@ async function generateAndUploadReport(
     });
 
     try {
-      await s3Client.send(putObjectCommand);
+      await r2Client.send(putObjectCommand);
       console.log(
-        `[@local-runner:generateAndUploadReport] Report uploaded to S3-compatible storage for job ${jobId}: ${reportPath}`,
+        `[@local-runner:generateAndUploadReport] Report uploaded to Cloudflare R2 for job ${jobId}: ${reportPath}`,
       );
     } catch (uploadError) {
       console.error(
@@ -826,21 +826,10 @@ async function generateAndUploadReport(
       return null;
     }
 
-    // Generate a signed URL using Supabase Storage API, valid for 1 year
-    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-      .from(bucketName)
-      .createSignedUrl(reportPath, 60 * 60 * 24 * 365); // URL valid for 1 year
-
-    if (signedUrlError) {
-      console.error(
-        `[@local-runner:generateAndUploadReport] Failed to generate signed URL for job ${jobId}: ${signedUrlError.message}`,
-      );
-      return null;
-    }
-
-    const reportUrl = signedUrlData.signedUrl;
+    // Generate a public URL for the report (adjust based on your R2 setup)
+    const reportUrl = `${process.env.CLOUDFLARE_R2_ENDPOINT || 'https://<your-account-id>.r2.cloudflarestorage.com'}/${bucketName}/${reportPath}`;
     console.log(
-      `[@local-runner:generateAndUploadReport] Signed report URL for job ${jobId}: ${reportUrl}`,
+      `[@local-runner:generateAndUploadReport] Report URL for job ${jobId}: ${reportUrl}`,
     );
 
     // Clean up temporary file
