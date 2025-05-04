@@ -44,7 +44,7 @@ def run_iperf_test(server_ip, port=5201, test_type="download"):
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         data = json.loads(result.stdout)
         bandwidth = data["end"]["sum_received"]["bits_per_second"] / 1_000_000
-        return True, bandwidth
+        return bandwidth
     except subprocess.CalledProcessError as e:
         print(f"Error running iperf3 for {test_type} on {server_ip}: {e}")
         print(f"iperf3 stderr: {e.stderr}")
