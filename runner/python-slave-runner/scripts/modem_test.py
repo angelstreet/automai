@@ -2,23 +2,36 @@ import subprocess
 import json
 import platform
 import argparse
+import requests
+import time
 
 def ping_test(host="8.8.8.8", count=4):
-    """Test connectivity by pinging a host using system ping command."""
+    """Test connectivity by making HTTP requests instead of using ping."""
     try:
-        # Determine the correct ping command based on OS
-        if platform.system().lower() == "windows":
-            ping_cmd = ["ping", "-n", str(count), "-w", "2000", host]
-        else:  # macOS or Linux
-            ping_cmd = ["ping", "-c", str(count), "-W", "2", host]
+        # Convert IP address to URL if needed
+        if host == "8.8.8.8":
+            url = "https://www.google.com"
+        else:
+            # If host is already a domain, use it, otherwise prepend https://
+            url = host if host.startswith(("http://", "https://")) else f"https://{host}"
         
-        result = subprocess.run(ping_cmd, capture_output=True, text=True)
-        success = result.returncode == 0
-        print(f"Ping to {host} successful." if success else f"Ping to {host} failed. No connectivity.")
-        return True  # Return True for success, False for failure
+        print(f"Testing connectivity to {url}...")
+        start_time = time.time()
+        response = requests.get(url, timeout=5)
+        end_time = time.time()
+        
+        if response.status_code < 400:
+            print(f"Connection to {url} successful (Status: {response.status_code}, Time: {(end_time-start_time)*1000:.2f}ms)")
+            return True
+        else:
+            print(f"Connection to {url} failed (Status: {response.status_code})")
+            return False
+    except requests.exceptions.RequestException as e:
+        print(f"Connection to {host} failed: {e}")
+        return False
     except Exception as e:
-        print(f"Ping to {host} failed: {e}")
-        return False  # Return False for exceptions
+        print(f"Unexpected error during connectivity test: {e}")
+        return False
 
 def run_iperf_test(server_ip, port=5201, test_type="download"):
     """Run iperf3 test for download or upload."""
