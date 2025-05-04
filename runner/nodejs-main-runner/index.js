@@ -796,9 +796,22 @@ async function generateAndUploadReport(
       return null;
     }
 
-    // Generate a public URL with the corrected path
-    const reportUrl = `${process.env.SUPABASE_S3_ENDPOINT}/${bucketName}/${reportPath}`;
-    console.log(`[@runner:generateAndUploadReport] Report URL for job ${jobId}: ${reportUrl}`);
+    // Generate a signed URL using Supabase Storage API
+    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+      .from(bucketName)
+      .createSignedUrl(reportPath, 60 * 60 * 24); // URL valid for 24 hours
+
+    if (signedUrlError) {
+      console.error(
+        `[@runner:generateAndUploadReport] Failed to generate signed URL for job ${jobId}: ${signedUrlError.message}`,
+      );
+      return null;
+    }
+
+    const reportUrl = signedUrlData.signedUrl;
+    console.log(
+      `[@runner:generateAndUploadReport] Signed report URL for job ${jobId}: ${reportUrl}`,
+    );
 
     // Clean up temporary file
     fs.unlinkSync(tempReportPath);
