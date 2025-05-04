@@ -283,10 +283,10 @@ export function VercelStyleEnvEditor({ teamId, onVariablesCreated }: VercelStyle
       {/* Header row with labels */}
       <div className="grid grid-cols-11 gap-1 px-1">
         <div className="col-span-5">
-          <Label className="text-xs muted-foreground">{t('key')}</Label>
+          <Label className="text-xs muted-foreground">{c('key')}</Label>
         </div>
         <div className="col-span-3">
-          <Label className="text-xs muted-foreground">{t('value')}</Label>
+          <Label className="text-xs muted-foreground">{c('value')}</Label>
         </div>
         <div className="col-span-1 text-xs muted-foreground flex items-center justify-center">
           {c('visibility')}

@@ -840,8 +840,8 @@ export async function updateEnvironmentVariable(
         return {
           success: false,
         error: originResult.error,
-      };
-    }
+        };
+      }
 
     const { table, team_id, tenant_id } = originResult.data;
 
@@ -875,7 +875,7 @@ export async function updateEnvironmentVariable(
           success: false,
           error: `Environment variable with key "${updates.key}" already exists`,
         };
-        }
+      }
       } else if (table === 'shared_environment_variables' && tenant_id) {
         // Check for existing key in shared variables
         const { data: existingVar, error: checkError } = await supabase

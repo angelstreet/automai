@@ -13,7 +13,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/shadcn/select';
-import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/shadcn/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/shadcn/table';
 import { EnvironmentVariable } from '@/types/context/environmentVariablesContextType';
 
 import { EnvironmentVariableItemClient } from './EnvironmentVariableItemClient';
@@ -34,7 +41,7 @@ export function EnvironmentVariablesListClient({
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('newest'); // Default to newest first
 
-  // Filter variables based on search
+  // Filter variables based on search and type (team/shared)
   const filteredVariables = variables.filter((variable) => {
     // Apply text search
     return (
@@ -45,24 +52,71 @@ export function EnvironmentVariablesListClient({
     );
   });
 
+  // Split variables into team and shared
+  const teamVariables = filteredVariables.filter((v) => !v.isShared);
+  const sharedVariables = filteredVariables.filter((v) => v.isShared);
+
   // Sort variables
-  const sortedVariables = [...filteredVariables].sort((a, b) => {
-    switch (sortBy) {
-      case 'key_asc':
-        return a.key.localeCompare(b.key);
-      case 'key_desc':
-        return b.key.localeCompare(a.key);
-      case 'newest':
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      case 'oldest':
-        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-      default:
-        return 0;
-    }
-  });
+  const sortVariables = (vars: EnvironmentVariable[]) => {
+    return [...vars].sort((a, b) => {
+      switch (sortBy) {
+        case 'key_asc':
+          return a.key.localeCompare(b.key);
+        case 'key_desc':
+          return b.key.localeCompare(a.key);
+        case 'newest':
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case 'oldest':
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        default:
+          return 0;
+      }
+    });
+  };
+
+  const sortedTeamVariables = sortVariables(teamVariables);
+  const sortedSharedVariables = sortVariables(sharedVariables);
+
+  const renderTable = (variables: EnvironmentVariable[], title: string) => (
+    <div className="space-y-2">
+      <h3 className="text-sm font-medium">{title}</h3>
+      <div className="border rounded-md">
+        <Table className="[&_tr]:h-7 [&_td]:py-1 [&_td]:px-2 [&_th]:py-1 [&_th]:px-2 [&_th]:h-7">
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[30%]">{c('key')}</TableHead>
+              <TableHead className="w-[30%]">{c('value')}</TableHead>
+              <TableHead className="w-[8%] text-center">{c('shared')}</TableHead>
+              <TableHead className="w-[8%] text-center">{c('visibility')}</TableHead>
+              <TableHead className="w-[8%] text-center">{c('copy')}</TableHead>
+              <TableHead className="w-[8%] text-center">{c('edit')}</TableHead>
+              <TableHead className="w-[8%] text-center">{c('delete')}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {variables.map((variable) => (
+              <EnvironmentVariableItemClient
+                key={variable.id}
+                variable={variable}
+                onVariableUpdated={onVariableUpdated}
+                onVariableDeleted={onVariableDeleted}
+              />
+            ))}
+            {variables.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
+                  {t('no_data')}
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-6">
       <div className="flex flex-col sm:flex-row gap-2 justify-between">
         <div className="relative w-full sm:w-64">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -96,30 +150,8 @@ export function EnvironmentVariablesListClient({
         </div>
       </div>
 
-      <div className="border rounded-md">
-        <Table className="[&_tr]:h-7 [&_td]:py-1 [&_td]:px-2 [&_th]:py-1 [&_th]:px-2 [&_th]:h-7">
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-1/3">{t('key')}</TableHead>
-              <TableHead className="w-1/3">{t('value')}</TableHead>
-              <TableHead className="w-24 text-center">{c('visibility')}</TableHead>
-              <TableHead className="w-12 text-center">{c('copy')}</TableHead>
-              <TableHead className="w-12 text-center">{c('edit')}</TableHead>
-              <TableHead className="w-12 text-center">{c('actions')}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sortedVariables.map((variable) => (
-              <EnvironmentVariableItemClient
-                key={variable.id}
-                variable={variable}
-                onVariableUpdated={onVariableUpdated}
-                onVariableDeleted={onVariableDeleted}
-              />
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      {renderTable(sortedTeamVariables, t('team_variables'))}
+      {renderTable(sortedSharedVariables, t('shared_variables'))}
 
       <div className="text-sm text-muted-foreground text-right">
         {filteredVariables.length === 0 ? (

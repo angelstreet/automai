@@ -143,7 +143,10 @@ export function EnvironmentVariableItemClient({
             </div>
           )}
         </TableCell>
-        <TableCell className="text-center w-24">
+        <TableCell className="text-center">
+          <input type="checkbox" checked={variable.isShared} disabled className="w-3 h-3" />
+        </TableCell>
+        <TableCell className="text-center">
           <Button
             variant="ghost"
             size="icon"

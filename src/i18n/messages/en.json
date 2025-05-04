@@ -99,6 +99,8 @@
     "insert": "Create",
     "ip": "IP",
     "ip_address": "IP Address",
+    "key": "Key",
+    "value": "Value",
     "last_synced": "Last synced {{date}}",
     "loading": "Loading...",
     "logs": "Logs",
@@ -127,6 +129,7 @@
     "select": "Select",
     "select_all": "Select All",
     "settings": "Settings",
+    "shared": "Shared",
     "sort": "Sort",
     "started": "Started",
     "status": "Status",
@@ -537,8 +540,6 @@
     "add_desc": "Add a new environment variable for your team",
     "add_title": "Add Environment Variable",
     "edit_title": "Edit Environment Variable",
-    "key": "Key",
-    "value": "Value",
     "description": "Description",
     "is_secret": "Secret Value",
     "secret_tooltip": "Secret values are encrypted and masked in the UI",
@@ -580,6 +581,9 @@
     "unknown_error": "An unknown error occurred",
     "showing": "Showing",
     "variable_singular": "variable",
-    "variable_plural": "variables"
+    "variable_plural": "variables",
+    "team_variables": "Team Variables",
+    "shared_variables": "Shared Variables",
+    "no_data": "No variables found"
   }
 }

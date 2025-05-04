@@ -14,6 +14,7 @@ export interface EnvironmentVariable {
   created_by: string;
   created_at: string;
   updated_at: string;
+  isShared: boolean;
 }
 
 /**
