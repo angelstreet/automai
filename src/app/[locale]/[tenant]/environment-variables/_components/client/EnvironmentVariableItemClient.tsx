@@ -189,7 +189,7 @@ export function EnvironmentVariableItemClient({
                   <Copy className="h-3 w-3" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>
+              <TooltipContent className="text-xs">
                 <p>{c('copied_clipboard')}</p>
               </TooltipContent>
             </Tooltip>
