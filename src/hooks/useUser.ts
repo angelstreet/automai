@@ -241,8 +241,32 @@ export function useUser(initialUser: User | null = null, componentName = 'unknow
       }
     },
     initialData: initialUser,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 30 * 60 * 1000, // 30 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    enabled: (() => {
+      // Check if there is cached user data in localStorage and if it's still valid
+      const cachedUser = localStorage.getItem('cached_user');
+      const cacheTimestamp = localStorage.getItem('user_cache_timestamp');
+      if (cachedUser && cacheTimestamp) {
+        const cacheAge = Date.now() - parseInt(cacheTimestamp, 10);
+        // Consider cache valid if less than 30 minutes old
+        if (cacheAge < 30 * 60 * 1000) {
+          console.log(
+            `[@hook:useUser:useUser] #${instanceId.current} Using cached user data from localStorage (age: ${cacheAge / 1000}s)`,
+          );
+          return false; // Disable fetching if cache is valid
+        } else {
+          console.log(
+            `[@hook:useUser:useUser] #${instanceId.current} Cached user data expired (age: ${cacheAge / 1000}s), fetching new data`,
+          );
+          return true; // Enable fetching if cache is outdated
+        }
+      }
+      console.log(
+        `[@hook:useUser:useUser] #${instanceId.current} No valid cached user data found, fetching new data`,
+      );
+      return true; // Enable fetching if no cache exists
+    })(),
   });
 
   // Store user data in localStorage for persistence across page refreshes
