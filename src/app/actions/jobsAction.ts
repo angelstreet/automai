@@ -190,7 +190,7 @@ export async function createJob(formData: JobFormData, hostDetails?: any[]) {
     }
 
     // Revalidate the deployment pages after a successful creation
-    revalidatePath('/[locale]/[tenant]/deployment', 'page');
+    revalidatePath('/[locale]/[tenant]/deployment');
 
     // Return success with the job configuration data
     return {

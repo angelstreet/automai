@@ -160,7 +160,7 @@ export async function createEnvironmentVariable(
       value_exists: !!variable.value,
     });
 
-    // Insert the new variable
+    // Insert the new variable without isShared
     const { data, error } = await supabase
       .from('environment_variables')
       .insert({
@@ -289,10 +289,18 @@ export async function createEnvironmentVariablesBatch(
       })),
     );
 
-    // Insert all variables in a single operation
+    // Insert all variables in a single operation without isShared
     const { data, error } = await supabase
       .from('environment_variables')
-      .insert(newVariables)
+      .insert(
+        newVariables.map((v) => ({
+          key: v.key,
+          value: v.value,
+          description: v.description || null,
+          team_id: v.team_id,
+          created_by: v.created_by,
+        })),
+      )
       .select('*');
 
     if (error) {

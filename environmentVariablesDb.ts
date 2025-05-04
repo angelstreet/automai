@@ -1,3 +1,0 @@
-const getAllEnvironmentVariables = async (teamId: string): Promise<EnvironmentVariable[]> => {
-  // ... existing code ...
-};

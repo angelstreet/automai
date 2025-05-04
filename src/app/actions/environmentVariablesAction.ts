@@ -146,8 +146,7 @@ export const createEnvironmentVariable = cache(
         return { success: false, error: result.error || 'Failed to create environment variable' };
       }
 
-      // Revalidate paths that might display environment variables
-      revalidatePath('/[locale]/[tenant]/environment-variables', 'page');
+      revalidatePath('/[locale]/[tenant]/environment-variables');
 
       console.log(
         `[@action:environmentVariablesAction:createEnvironmentVariable] Successfully created variable with key: ${variable.key}`,
