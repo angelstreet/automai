@@ -167,7 +167,7 @@ async function processJob() {
                 script_path: scriptPath,
                 parameters: parameters ? `${parameters} ${i}` : `${i}`,
                 timeout: timeout,
-                encrypted_env_vars: decryptedEnvVars,
+                environment_variables: decryptedEnvVars,
               };
 
               if (config.repository) {

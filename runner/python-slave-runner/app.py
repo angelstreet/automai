@@ -238,14 +238,12 @@ def execute():
         parameters = data.get('parameters', '')
         param_list = parameters.split() if parameters else []
 
-        # Handle encrypted environment variables
-        encrypted_env_vars = data.get('encrypted_env_vars', {})
-        decrypted_env_vars = {}
-        for key, encrypted_value in encrypted_env_vars.items():
-            decrypted_env_vars[key] = encrypted_value
+        # Handle environment variables (already decrypted)
+        environment_variables = data.get('environment_variables', {})
+        env_vars = {}
+        for key, value in environment_variables.items():
+            env_vars[key] = value
             print(f"DEBUG: Using environment variable: {key}=[secret]", file=sys.stderr)
-        print(f"DEBUG: Decrypted environment variable keys: {list(decrypted_env_vars.keys())}", file=sys.stderr)
-
         start_time = datetime.utcnow()
         start_time_str = start_time.isoformat() + 'Z'
 
@@ -316,7 +314,7 @@ def execute():
         with open(full_script_path, 'r') as f:
             script_content = f.read()
 
-        result = run_with_timeout(script_content, param_list, timeout, venv_path, decrypted_env_vars)
+        result = run_with_timeout(script_content, param_list, timeout, venv_path, env_vars)
 
         end_time = datetime.utcnow()
         end_time_str = end_time.isoformat() + 'Z'
