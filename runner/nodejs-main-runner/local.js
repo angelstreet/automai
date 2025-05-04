@@ -620,6 +620,14 @@ async function processJob() {
         `[@local-runner:processJob] Updated job ${jobId} to final status: ${overallStatus}`,
       );
 
+      // Ensure decryptedEnvVars is defined before calling generateAndUploadReport
+      if (typeof decryptedEnvVars === 'undefined') {
+        decryptedEnvVars = {};
+        console.log(
+          `[@local-runner:processJob] decryptedEnvVars was undefined, initialized as empty object`,
+        );
+      }
+
       const reportUrl = await generateAndUploadReport(
         jobId,
         jobData.config_id || 'b0238c60-fc08-4008-a445-6ee35b99e83c',
@@ -748,7 +756,7 @@ async function generateAndUploadReport(
 
     // Mask sensitive environment variables
     const envVars =
-      Object.keys(decryptedEnvVars)
+      Object.keys(decryptedEnvVars || {})
         .map((key) => `${key}=***MASKED***`)
         .join(', ') || 'None';
 
@@ -766,8 +774,15 @@ async function generateAndUploadReport(
     };
 
     const htmlReport = await ejs.render(reportTemplate, reportData);
-    const folderName = `${created_at.replace(/[:.]/g, '-')}_${jobId}`;
-    const reportPath = `reports/${folderName}/report.html`;
+    // Use a simpler date-time format for folder naming
+    const dateStr = new Date(created_at)
+      .toISOString()
+      .replace(/[:.]/g, '-')
+      .slice(0, 19)
+      .replace('T', '-');
+    const folderName = `${dateStr}_${jobId}`;
+    // Correct the path to avoid duplicating 'reports'
+    const reportPath = `${folderName}/report.html`;
     // Write report temporarily to disk
     const tempReportPath = path.join('/tmp', `report_${jobId}.html`);
     fs.writeFileSync(tempReportPath, htmlReport);
@@ -793,8 +808,7 @@ async function generateAndUploadReport(
       return null;
     }
 
-    // Generate a public URL (assuming Supabase Storage provides a way to construct public URLs)
-    // Note: Supabase S3-compatible API may not directly provide public URLs; adjust based on actual API
+    // Generate a public URL with the corrected path
     const reportUrl = `${process.env.SUPABASE_S3_ENDPOINT}/${bucketName}/${reportPath}`;
     console.log(
       `[@local-runner:generateAndUploadReport] Report URL for job ${jobId}: ${reportUrl}`,
