@@ -275,6 +275,113 @@ def upload_files_to_cloudflare(files, bucket_name, folder_path):
             print(f"ERROR: Failed to upload file to Cloudflare R2: {remote_path}, Error: {str(e)}", file=sys.stderr)
     return uploaded_files
 
+def upload_files_to_r2(job_id, created_at, associated_files):
+    """
+    Upload associated files to Cloudflare R2 and return a list of file info with public URLs.
+    :param job_id: The job ID
+    :param created_at: The creation timestamp of the job
+    :param associated_files: List of file info dictionaries to upload
+    :return: List of file info dictionaries with public URLs added
+    """
+    try:
+        # Use a simpler date_time format for folder naming with underscores
+        date_str = created_at.replace(':', '_').replace('.', '_').replace(' ', '_')[:19]
+        folder_name = f"{date_str}_{job_id}"
+        bucket_name = 'reports'
+
+        updated_files = []
+        for file_info in associated_files:
+            try:
+                file_path = file_info.get('path')
+                file_name = file_info.get('name')
+                if not file_path or not os.path.exists(file_path):
+                    print(f"[@python-slave-runner:app] File not found for upload: {file_name}, path: {file_path}")
+                    updated_files.append(file_info)
+                    continue
+
+                # Determine content type based on file extension
+                _, ext = os.path.splitext(file_name)
+                content_type = {
+                    '.html': 'text/html',
+                    '.json': 'application/json',
+                    '.txt': 'text/plain',
+                    '.log': 'text/plain',
+                    '.png': 'image/png',
+                    '.jpg': 'image/jpeg',
+                    '.jpeg': 'image/jpeg',
+                    '.zip': 'application/zip',
+                }.get(ext.lower(), 'application/octet-stream')
+
+                content_disposition = 'inline' if content_type.startswith('text') or content_type.startswith('image') else 'attachment'
+
+                r2_path = f"{folder_name}/{file_name}"
+                print(f"[@python-slave-runner:app] Uploading file to R2: {file_name} -> {r2_path}")
+
+                # Upload file to R2
+                with open(file_path, 'rb') as f:
+                    s3_client.upload_fileobj(
+                        f,
+                        bucket_name,
+                        r2_path,
+                        ExtraArgs={
+                            'ContentType': content_type,
+                            'ContentDisposition': content_disposition
+                        }
+                    )
+
+                # Generate presigned URL (valid for 7 days)
+                url = s3_client.generate_presigned_url(
+                    'get_object',
+                    Params={'Bucket': bucket_name, 'Key': r2_path},
+                    ExpiresIn=604800  # 7 days in seconds
+                )
+
+                # Add the public URL to the file info
+                file_info['public_url'] = url
+                print(f"[@python-slave-runner:app] Uploaded file to R2: {file_name}, Public URL: {url[:50]}...")
+                updated_files.append(file_info)
+            except Exception as e:
+                print(f"[@python-slave-runner:app] Error uploading file to R2: {file_info.get('name')}, Error: {str(e)}")
+                updated_files.append(file_info)
+        
+        # Check if the script file is available to upload
+        script_file_path = os.environ.get('SCRIPT_FILE_PATH', '')
+        if script_file_path and os.path.exists(script_file_path):
+            script_file_name = os.path.basename(script_file_path)
+            script_r2_path = f"{folder_name}/{script_file_name}"
+            try:
+                with open(script_file_path, 'rb') as f:
+                    s3_client.upload_fileobj(
+                        f,
+                        bucket_name,
+                        script_r2_path,
+                        ExtraArgs={
+                            'ContentType': 'text/plain',
+                            'ContentDisposition': 'attachment'
+                        }
+                    )
+                script_url = s3_client.generate_presigned_url(
+                    'get_object',
+                    Params={'Bucket': bucket_name, 'Key': script_r2_path},
+                    ExpiresIn=604800  # 7 days in seconds
+                )
+                script_info = {
+                    'name': script_file_name,
+                    'path': script_file_path,
+                    'public_url': script_url
+                }
+                updated_files.append(script_info)
+                print(f"[@python-slave-runner:app] Uploaded script to R2: {script_file_name}, Public URL: {script_url[:50]}...")
+            except Exception as e:
+                print(f"[@python-slave-runner:app] Error uploading script to R2: {script_file_name}, Error: {str(e)}")
+        else:
+            print(f"[@python-slave-runner:app] No script file found to upload at: {script_file_path}")
+
+        return updated_files
+    except Exception as e:
+        print(f"[@python-slave-runner:app] Error in upload_files_to_r2: {str(e)}")
+        return associated_files
+
 @app.route('/execute', methods=['POST'])
 def execute():
     try:

@@ -116,7 +116,12 @@ def init_browser(playwright: Playwright, headless=False, debug: bool = False):
 def run(playwright: Playwright, headless=False, debug: bool = False):
     # Create trace folder before starting the test
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    trace_folder = "suncherry-playwright_trace"
+    # Use the temporary folder provided by app.py if available
+    temp_folder = os.environ.get('SCRIPT_TEMP_FOLDER', None)
+    if temp_folder:
+        trace_folder = os.path.join(temp_folder, "suncherry-playwright_trace")
+    else:
+        trace_folder = "suncherry-playwright_trace"
     trace_subfolder = f"{trace_folder}/{timestamp}"
     os.makedirs(trace_subfolder, exist_ok=True)
     print(f"Trace subfolder created or already exists: {trace_subfolder}")

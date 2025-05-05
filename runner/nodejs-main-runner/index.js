@@ -878,6 +878,52 @@ async function generateAndUploadReport(
       );
     }
 
+    // Upload the executed script if available
+    if (scripts.length > 0 && scripts[0].script_path) {
+      const scriptPath = scripts[0].script_path;
+      const scriptName = path.basename(scriptPath);
+      const scriptUploadPath = `${folderName}/${scriptName}`;
+      try {
+        // Check if script file exists locally (for local runners)
+        if (fs.existsSync(scriptPath)) {
+          const scriptPutCommand = new PutObjectCommand({
+            Bucket: bucketName,
+            Key: scriptUploadPath,
+            Body: fs.createReadStream(scriptPath),
+            ContentType: 'text/plain',
+            ContentDisposition: 'attachment',
+          });
+          await r2Client.send(scriptPutCommand);
+          console.log(
+            `[@runner:generateAndUploadReport] Uploaded script ${scriptName} for job ${jobId} to ${scriptUploadPath}`,
+          );
+          // Add script to associated files for report linking
+          const scriptGetCommand = new GetObjectCommand({
+            Bucket: bucketName,
+            Key: scriptUploadPath,
+          });
+          const scriptUrl = await getSignedUrl(r2Client, scriptGetCommand, { expiresIn: 604800 });
+          associatedFiles.push({
+            name: scriptName,
+            size: fs.statSync(scriptPath).size,
+            public_url: scriptUrl,
+          });
+        } else {
+          console.log(
+            `[@runner:generateAndUploadReport] Script file not found locally: ${scriptPath}`,
+          );
+        }
+      } catch (scriptUploadError) {
+        console.error(
+          `[@runner:generateAndUploadReport] Failed to upload script ${scriptName} for job ${jobId}: ${scriptUploadError.message}`,
+        );
+      }
+    } else {
+      console.log(
+        `[@runner:generateAndUploadReport] No script path available to upload for job ${jobId}`,
+      );
+    }
+
     return reportUrl;
   } catch (error) {
     console.error(
