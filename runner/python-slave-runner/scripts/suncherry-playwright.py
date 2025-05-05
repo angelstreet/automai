@@ -40,14 +40,6 @@ def activate_semantic_placeholder(page: Page):
 
 
 def login(page: Page, url: str, username: str = None, password: str = None, trace_folder: str = None):
-    if not username or not password:
-        load_dotenv()
-        username = os.getenv("login_username")
-        password = os.getenv("login_password")
-
-    if not username or not password:
-        raise ValueError("Username and password must be provided either as arguments or in .env file")
-
     activate_semantic_placeholder(page)
     page.wait_for_timeout(1000)
 
@@ -167,7 +159,7 @@ def run(playwright: Playwright, headless=False, debug: bool = False):
     page.set_default_timeout(5000)
     page.goto(url, timeout=30000)
     page.wait_for_timeout(10000) 
-    login_result = login(page, url)
+    login_result = login(page, url, username, password)
     page.wait_for_timeout(5000)
     page.close()
     # Save tracing data to zip
