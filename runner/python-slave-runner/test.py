@@ -411,8 +411,11 @@ def execute():
                     print(f"DEBUG: Generated presigned URL for {file_info['name']}", file=sys.stderr)
                 except Exception as e:
                     print(f"ERROR: Failed to upload file {file_info['name']} to R2: {str(e)}", file=sys.stderr)
+                    file_info['public_url'] = '#'
         else:
             print(f"WARNING: S3 client not initialized, cannot upload files to R2", file=sys.stderr)
+            for file_info in associated_files:
+                file_info['public_url'] = '#'
 
         # Clean up temporary folder after execution
         try:
