@@ -275,7 +275,7 @@ async function processJob() {
         .update({
           status: overallStatus,
           output: output,
-          completed_at: completed_at
+          completed_at: completed_at,
         })
         .eq('id', jobId);
 
