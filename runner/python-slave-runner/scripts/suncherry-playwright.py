@@ -186,14 +186,14 @@ def main():
             success = run(playwright, headless=args.headless, debug=args.debug)
             if success:
                 print("Login successful")
-                return 0
+                sys.exit(0)
             else:
                 print("Login failed")
-                return 1
+                sys.exit(1)
     except Exception as e:
         print(f"An error occurred: {str(e)}")
         print("Login failed")
-        return 1
+        sys.exit(1)
 
 
 if __name__ == "__main__":
