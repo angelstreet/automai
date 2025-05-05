@@ -438,6 +438,7 @@ async function processJob() {
           status: overallStatus,
           output: output,
           completed_at: completed_at,
+          runner_id: process.env.RUNNER_ID || 'default-runner',
         })
         .eq('id', jobId);
 

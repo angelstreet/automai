@@ -479,6 +479,7 @@ async function processJob() {
                       status: isSuccess ? 'success' : 'failed',
                       output: output,
                       completed_at: completed_at,
+                      runner_id: process.env.RUNNER_ID || 'local-runner',
                     })
                     .eq('id', jobId);
 
@@ -503,6 +504,7 @@ async function processJob() {
                   output: output,
                   error: 'ECONNRESET',
                   completed_at: completed_at,
+                  runner_id: process.env.RUNNER_ID || 'local-runner',
                 })
                 .eq('id', jobId);
               console.log(
@@ -517,6 +519,7 @@ async function processJob() {
                   output: output,
                   error: err.message,
                   completed_at: new Date().toISOString(),
+                  runner_id: process.env.RUNNER_ID || 'local-runner',
                 })
                 .eq('id', jobId);
               console.log(
@@ -628,6 +631,7 @@ async function processJob() {
           status: overallStatus,
           output: output,
           completed_at: completed_at,
+          runner_id: process.env.RUNNER_ID || 'local-runner',
         })
         .eq('id', jobId);
 

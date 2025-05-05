@@ -15,6 +15,7 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 import tempfile
 import boto3
 from botocore.client import Config
+import requests
 
 app = Flask(__name__)
 
@@ -541,6 +542,36 @@ def execute():
             print(f"DEBUG: Failed to clean up temporary folder {temp_folder}: {str(e)}", file=sys.stderr)
 
         print(f"DEBUG: Script execution result: {result}", file=sys.stderr)
+
+        # Update job status in Supabase with runner_id
+        runner_id = os.environ.get('RUNNER_ID', 'python-slave-runner')
+        response = requests.post(
+            f"{SUPABASE_URL}/rest/v1/jobs_run",
+            headers={
+                "apikey": SUPABASE_ANON_KEY,
+                "Authorization": f"Bearer {SUPABASE_ANON_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "config_id": job_id,
+                "status": result["status"],
+                "output": {
+                    "scripts": [{
+                        "script_path": script_path,
+                        "iteration": 1,
+                        "stdout": result.get("output", ""),
+                        "stderr": result.get("message", "") if result["status"] == "error" else ""
+                    }]
+                },
+                "completed_at": datetime.utcnow().isoformat() + 'Z',
+                "runner_id": runner_id
+            }
+        )
+        if response.status_code != 201:
+            print(f"Failed to update job status in Supabase: {response.text}", file=sys.stderr)
+        else:
+            print(f"Updated job status in Supabase: {result['status']}", file=sys.stderr)
+
         return jsonify({
             "status": result["status"],
             "output": {
