@@ -1,4 +1,3 @@
-// ... existing code ...
 const fs = require('fs');
 const path = require('path');
 
@@ -114,4 +113,3 @@ async function generateAndUploadReport(
 }
 
 module.exports = { generateAndUploadReport };
-// ... existing code ...
