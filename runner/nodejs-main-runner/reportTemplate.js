@@ -68,17 +68,10 @@ const reportTemplate = `
       let input = document.getElementById("filterInput").value.toLowerCase();
       let table = document.getElementById("filesTable");
       let rows = table.getElementsByTagName("TR");
-      let regexPattern = input;
-      
-      // Convert wildcard patterns to regex
-      if (input.includes('*')) {
-        regexPattern = input.replace(/\*/g, '.*');
-      } else if (input.startsWith('.') && !input.includes(' ')) {
-        regexPattern = '.*' + input;
-      }
+      console.log("Filtering with input: " + input); // Debug log to confirm function call
       
       try {
-        let regex = new RegExp(regexPattern, 'i');
+        let regex = new RegExp(input, 'i');
         for (let i = 1; i < rows.length; i++) {
           let name = rows[i].getElementsByTagName("TD")[2].innerHTML.toLowerCase();
           if (regex.test(name)) {
