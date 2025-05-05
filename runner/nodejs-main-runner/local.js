@@ -547,6 +547,7 @@ async function processJob() {
                 script_path: scriptPath,
                 parameters: parameters ? `${parameters} ${i}` : `${i}`,
                 timeout: timeout,
+                job_id: jobId,
               };
 
               if (config.repository) {

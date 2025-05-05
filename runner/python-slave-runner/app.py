@@ -427,7 +427,8 @@ def execute():
             "status": result["status"],
             "output": {
                 "stdout": result.get("output", ""),
-                "stderr": result.get("message", "") if result["status"] == "error" else ""
+                "stderr": result.get("message", "") if result["status"] == "error" else "",
+                "exitCode": result.get("returncode", 0)
             },
             "start_time": start_time_str,
             "end_time": end_time_str,

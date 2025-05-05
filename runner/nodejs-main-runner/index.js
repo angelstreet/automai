@@ -187,6 +187,7 @@ async function processJob() {
                 timeout: timeout,
                 environment_variables: decryptedEnvVars,
                 created_at: created_at,
+                job_id: jobId,
               };
 
               if (config.repository) {
