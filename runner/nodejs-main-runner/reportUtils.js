@@ -177,10 +177,12 @@ async function generateAndUploadReport(
               Key: scriptUploadPath,
             });
             const scriptUrl = await getSignedUrl(r2Client, scriptGetCommand, { expiresIn: 604800 });
+            const scriptStats = fs.statSync(tempScriptPath);
             associatedFiles.push({
               name: scriptName,
-              size: fs.statSync(tempScriptPath).size,
+              size: scriptStats.size,
               public_url: scriptUrl,
+              creation_date: scriptStats.birthtime.toISOString(),
             });
 
             // Clean up temporary script file
