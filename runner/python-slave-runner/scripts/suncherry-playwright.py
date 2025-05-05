@@ -86,7 +86,7 @@ def login(page: Page, url: str, username: str = None, password: str = None, trac
         return False
 
 
-def init_browser(playwright: Playwright, headless=False, debug: bool = False):
+def init_browser(playwright: Playwright, headless=False, debug: bool = False, video_dir: str = None):
     browser = playwright.chromium.launch(
         headless=headless,
         args=[
@@ -100,7 +100,9 @@ def init_browser(playwright: Playwright, headless=False, debug: bool = False):
             "width": 1280,
             "height": 1024
         },
-        )
+        record_video_dir=video_dir,
+        record_video_size={"width": 1280, "height": 1024}
+    )
     
     # Enable tracing with screenshots
     context.tracing.start(screenshots=True, snapshots=True, sources=True)
@@ -130,7 +132,7 @@ def run(playwright: Playwright, headless=False, debug: bool = False):
     #print(f"Trace subfolder created or already exists: {trace_subfolder}")
     trace_file = f"{trace_subfolder}/{timestamp}.zip"
     
-    page, context, browser = init_browser(playwright, headless, debug)
+    page, context, browser = init_browser(playwright, headless, debug, trace_subfolder)
     load_dotenv()
 
     url = "https://www.sunrisetv.ch/de/home"
@@ -149,6 +151,10 @@ def run(playwright: Playwright, headless=False, debug: bool = False):
     # Optionally, remove the zip file to keep only the extracted data
     os.remove(trace_file)
     print(f"Zip file removed: {trace_file}")
+    # Save video path
+    video_path = page.video.path() if page.video else None
+    if video_path:
+        print(f"Video saved to: {video_path}")
     browser.close()
     return login_result
 
