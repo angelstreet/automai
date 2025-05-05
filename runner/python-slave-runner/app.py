@@ -162,7 +162,7 @@ def decrypt_value(encrypted_text):
 def run_with_timeout(script_content, parameters, timeout=30, venv_path=None, env_vars=None):
     result_queue = queue.Queue()
     print(f"DEBUG: Running script with timeout={timeout}, venv_path={venv_path}, parameters={parameters}", file=sys.stderr)
-    print(f"DEBUG: Environment variables provided: {env_vars.keys() if env_vars else 'None'}", file=sys.stderr)
+    print(f"DEBUG: Environment variable keys provided: {env_vars.keys() if env_vars else 'None'}", file=sys.stderr)
 
     def target():
         try:
@@ -171,7 +171,6 @@ def run_with_timeout(script_content, parameters, timeout=30, venv_path=None, env
             if env_vars:
                 for key, value in env_vars.items():
                     os.environ[key] = value
-                print(f"DEBUG: Environment variable keys provided: {list(env_vars.keys())}", file=sys.stderr)
 
             # Write script content to a temporary file
             with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:

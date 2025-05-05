@@ -1,0 +1,1 @@
+OK(BF)|sn=v_4_srv_34_sn_9A9E2FBBC83634A9594AEF914394CDEF_app-3A832518aee056ba0c_1_ol_0_perc_100000_mul_1|name=ruxitagent|featureHash=ICANVfqru|buildNumber=10287240325103108|lastModification=1742987473343
