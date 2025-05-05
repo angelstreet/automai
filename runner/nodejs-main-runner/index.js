@@ -17,7 +17,6 @@ const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL,
   token: process.env.UPSTASH_REDIS_REST_TOKEN,
 });
-const runnerId = process.env.RUNNER_ID || 'default-runner';
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 const FLASK_SERVICE_URL = process.env.PYTHON_SLAVE_RUNNER_FLASK_SERVICE_URL;
@@ -276,8 +275,7 @@ async function processJob() {
         .update({
           status: overallStatus,
           output: output,
-          completed_at: completed_at,
-          runner_id: runnerId,
+          completed_at: completed_at
         })
         .eq('id', jobId);
 

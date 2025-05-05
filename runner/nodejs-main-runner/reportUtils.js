@@ -48,7 +48,6 @@ async function generateAndUploadReport(
     const reportData = {
       jobId,
       configId: config_id,
-      runnerId,
       startTime,
       endTime,
       duration,

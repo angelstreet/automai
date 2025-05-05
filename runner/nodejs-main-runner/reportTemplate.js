@@ -102,7 +102,6 @@ const reportTemplate = `
   <table>
     <tr><th>Job Run ID</th><td><%= jobId %></td></tr>
     <tr><th>Config ID</th><td><%= configId %></td></tr>
-    <tr><th>Runner ID</th><td><%= runnerId %></td></tr>
     <tr><th>Start Time</th><td><%= startTime %></td></tr>
     <tr><th>End Time</th><td><%= endTime %></td></tr>
     <tr><th>Duration (s)</th><td><%= duration %></td></tr>
