@@ -241,11 +241,13 @@ def collect_file_metadata(directory):
         for filename in filenames:
             file_path = os.path.join(root, filename)
             relative_path = os.path.relpath(file_path, directory)
+            creation_time = os.path.getctime(file_path)
             files.append({
                 'name': filename,
                 'path': file_path,
                 'relative_path': relative_path,
-                'size': os.path.getsize(file_path)
+                'size': os.path.getsize(file_path),
+                'creation_date': datetime.fromtimestamp(creation_time).isoformat() + 'Z'
             })
     return files
 
