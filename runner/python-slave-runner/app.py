@@ -284,9 +284,9 @@ def upload_files_to_r2(job_id, created_at, associated_files):
     :return: List of file info dictionaries with public URLs added
     """
     try:
-        # Use a simpler date_time format for folder naming with underscores
-        date_str = created_at.replace(':', '_').replace('.', '_').replace(' ', '_')[:19]
-        folder_name = f"{date_str}_{job_id}"
+        # Use date_HHMMSS format for folder naming
+        date_str = datetime.strptime(created_at[:19], "%Y-%m-%dT%H:%M:%S").strftime("%Y%m%d_%H%M%S")
+        folder_name = f"{date_str}_{job_id if job_id != 'unknown_job_id' else 'no_job_id'}"
         bucket_name = 'reports'
 
         updated_files = []
@@ -310,12 +310,32 @@ def upload_files_to_r2(job_id, created_at, associated_files):
                     '.jpg': 'image/jpeg',
                     '.jpeg': 'image/jpeg',
                     '.zip': 'application/zip',
+                    '.js': 'application/javascript',
+                    '.css': 'text/css',
+                    '.pdf': 'application/pdf',
+                    '.xml': 'application/xml',
+                    '.csv': 'text/csv',
+                    '.gif': 'image/gif',
+                    '.bmp': 'image/bmp',
+                    '.webp': 'image/webp',
+                    '.mp3': 'audio/mpeg',
+                    '.wav': 'audio/wav',
+                    '.ogg': 'audio/ogg',
+                    '.mp4': 'video/mp4',
+                    '.webm': 'video/webm',
+                    '.mpeg': 'video/mpeg',
+                    '.bin': 'application/octet-stream'
                 }.get(ext.lower(), 'application/octet-stream')
 
-                content_disposition = 'inline' if content_type.startswith('text') or content_type.startswith('image') else 'attachment'
+                content_disposition = 'inline' if content_type.startswith('text') or content_type.startswith('image') or content_type.startswith('video') or content_type.startswith('audio') else 'attachment'
 
-                r2_path = f"{folder_name}/{file_name}"
-                print(f"[@python-slave-runner:app] Uploading file to R2: {file_name} -> {r2_path}")
+                # Organize files in subfolders based on their type or path
+                relative_path = file_info.get('relative_path', file_name)
+                if 'suncherry-playwright_trace' in relative_path:
+                    r2_path = f"{folder_name}/trace/{relative_path.split('suncherry-playwright_trace/')[1]}"
+                else:
+                    r2_path = f"{folder_name}/assets/{relative_path}"
+                print(f"[@python-slave-runner:app] Uploading file to R2: {file_name} -> {r2_path} with Content-Type: {content_type}")
 
                 # Upload file to R2
                 with open(file_path, 'rb') as f:
@@ -429,6 +449,10 @@ def execute():
         script_folder = data.get('script_folder', '')
         branch = data.get('branch')
 
+        # Ensure job_id is properly set
+        job_id = data.get('job_id', f"no_job_id_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}")
+        print(f"DEBUG: Using job_id: {job_id}", file=sys.stderr)
+
         if repo_url:
             print(f"DEBUG: Processing Git repo: url={repo_url}, folder={script_folder}, branch={branch}", file=sys.stderr)
             repo_result = ensure_repo(repo_url, script_folder, branch)
@@ -506,15 +530,8 @@ def execute():
         print(f"DEBUG: Found {len(associated_files)} associated files in temporary folder", file=sys.stderr)
 
         # Upload associated files to Cloudflare R2
-        job_id = data.get('job_id', 'unknown_job_id')
-        folder_name = f"{used_timestamp}_{job_id}"
-        assets_folder_path = f"reports/{folder_name}/assets"
-        uploaded_files = []
-        if associated_files:
-            uploaded_files = upload_files_to_cloudflare(associated_files, 'reports', assets_folder_path)
-            print(f"DEBUG: Uploaded {len(uploaded_files)} files to Cloudflare R2", file=sys.stderr)
-        else:
-            print(f"DEBUG: No files to upload to Cloudflare R2", file=sys.stderr)
+        uploaded_files = upload_files_to_r2(job_id, created_at, associated_files)
+        print(f"DEBUG: Uploaded {len(uploaded_files)} files to Cloudflare R2", file=sys.stderr)
 
         # Clean up temporary folder after execution
         try:
@@ -534,7 +551,8 @@ def execute():
             "end_time": end_time_str,
             "duration_seconds": duration,
             "created_at": created_at,
-            "associated_files": uploaded_files
+            "associated_files": uploaded_files,
+            "job_id": job_id
         })
 
     except FileNotFoundError as e:

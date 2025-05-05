@@ -805,13 +805,16 @@ async function generateAndUploadReport(
     };
 
     const htmlReport = ejs.render(reportTemplate, reportData).trim();
-    // Use a simpler date_time format for folder naming with underscores
+    // Use date_HHMMSS format for folder naming
     const dateStr = new Date(created_at)
       .toISOString()
-      .replace(/[:.]/g, '_')
       .slice(0, 19)
-      .replace('T', '_');
-    const folderName = `${dateStr}_${jobId}`;
+      .replace(/[-T:]/g, '')
+      .replace(' ', '_')
+      .slice(0, 15)
+      .replace(':', '')
+      .replace(':', '');
+    const folderName = `${dateStr}_${jobId || 'no_job_id'}`;
     // Correct the path to avoid duplicating 'reports'
     const reportPath = `${folderName}/report.html`;
     // Write report temporarily to disk
