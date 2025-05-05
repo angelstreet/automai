@@ -54,7 +54,7 @@ def login(page: Page, url: str, username: str = None, password: str = None, trac
 
     activate_semantic_placeholder(page)
 
-    random_delay(2)
+    random_delay(1)
     page.locator("#onetrust-accept-btn-handler").click()
     page.locator("#flt-semantic-node-6").click()
     random_delay(3)
@@ -68,7 +68,7 @@ def login(page: Page, url: str, username: str = None, password: str = None, trac
     page.locator("#kc-login").click()
     sleep(5)
     page.reload()
-    sleep(10)
+    sleep(5)
     activate_semantic_placeholder(page)
     sleep(1)
     try:
@@ -137,7 +137,7 @@ def run(playwright: Playwright, headless=False, debug: bool = False):
 
     url = "https://www.sunrisetv.ch/de/home"
     page.goto(url, timeout=20 * 1000)
-    sleep(10)
+    sleep(5)
     login_result = login(page, url)
     sleep(5)
     page.close()
