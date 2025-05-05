@@ -48,16 +48,29 @@ def upload_files_to_r2(s3_client, job_id, created_at, associated_files):
                 '.png': 'image/png',
                 '.jpg': 'image/jpeg',
                 '.jpeg': 'image/jpeg',
-                '.zip': 'application/zip'
+                '.zip': 'application/zip',
+                '.js': 'application/javascript',
+                '.css': 'text/css',
+                '.pdf': 'application/pdf',
+                '.xml': 'application/xml',
+                '.csv': 'text/csv',
+                '.gif': 'image/gif',
+                '.bmp': 'image/bmp',
+                '.webp': 'image/webp',
+                '.mp3': 'audio/mpeg',
+                '.wav': 'audio/wav',
+                '.ogg': 'audio/ogg',
+                '.mp4': 'video/mp4',
+                '.webm': 'video/webm',
+                '.mpeg': 'video/mpeg',
+                '.bin': 'application/octet-stream',
+                '.py': 'text/plain'
             }.get(ext.lower(), 'application/octet-stream')
 
             content_disposition = 'inline' if content_type.startswith('text') or content_type.startswith('image') else 'attachment'
 
             # Organize files in subfolders based on their type or path
-            if 'suncherry-playwright_trace' in relative_path:
-                r2_path = f"{folder_name}/trace/{relative_path.split('suncherry-playwright_trace/')[1]}"
-            else:
-                r2_path = f"{folder_name}/assets/{relative_path}"
+            r2_path = f"{folder_name}/{relative_path}"
 
             print(f"[@python-slave-runner:utils] Uploading file to R2: {file_name} -> {r2_path}", file=sys.stderr)
 
