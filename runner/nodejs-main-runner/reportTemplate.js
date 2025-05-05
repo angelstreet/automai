@@ -68,12 +68,34 @@ const reportTemplate = `
       let input = document.getElementById("filterInput").value.toLowerCase();
       let table = document.getElementById("filesTable");
       let rows = table.getElementsByTagName("TR");
-      for (let i = 1; i < rows.length; i++) {
-        let name = rows[i].getElementsByTagName("TD")[3].innerHTML.toLowerCase();
-        if (name.indexOf(input) > -1) {
-          rows[i].style.display = "";
-        } else {
-          rows[i].style.display = "none";
+      let regexPattern = input;
+      
+      // Convert wildcard patterns to regex
+      if (input.includes('*')) {
+        regexPattern = input.replace(/\*/g, '.*');
+      } else if (input.startsWith('.') && !input.includes(' ')) {
+        regexPattern = '.*' + input;
+      }
+      
+      try {
+        let regex = new RegExp(regexPattern, 'i');
+        for (let i = 1; i < rows.length; i++) {
+          let name = rows[i].getElementsByTagName("TD")[2].innerHTML.toLowerCase();
+          if (regex.test(name)) {
+            rows[i].style.display = "";
+          } else {
+            rows[i].style.display = "none";
+          }
+        }
+      } catch (e) {
+        // Fallback to substring search if regex is invalid
+        for (let i = 1; i < rows.length; i++) {
+          let name = rows[i].getElementsByTagName("TD")[2].innerHTML.toLowerCase();
+          if (name.indexOf(input) > -1) {
+            rows[i].style.display = "";
+          } else {
+            rows[i].style.display = "none";
+          }
         }
       }
     }
@@ -105,7 +127,7 @@ const reportTemplate = `
   </table>
   <h2>Associated Files</h2>
   <% if (associatedFiles && associatedFiles.length > 0) { %>
-    <input type="text" id="filterInput" onkeyup="filterTable()" placeholder="Filter by filename or extension...">
+    <input type="text" id="filterInput" onkeyup="filterTable()" placeholder="Filter by filename or extension (use * for wildcard, e.g., *.png)">
     <table id="filesTable">
       <tr>
         <th onclick="sortTable(0)">Timestamp</th>
