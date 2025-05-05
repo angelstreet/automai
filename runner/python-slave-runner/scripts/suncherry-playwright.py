@@ -47,6 +47,9 @@ def login(page: Page, url: str, username: str = None, password: str = None):
         username = os.getenv("login_username")
         password = os.getenv("login_password")
 
+    if not username or not password:
+        raise ValueError("Username and password must be provided either as arguments or in .env file")
+
     activate_semantic_placeholder(page)
 
     random_delay(1)
@@ -112,22 +115,42 @@ def run(playwright: Playwright, headless=False, debug: bool = False):
     page.goto(url, timeout=20 * 1000)
     sleep(10)
     login(page, url)
-    sleep(3000)
+    sleep(10)
     page.close()
-
+    return True
 
 def main():
     # Simple argument parsing
     parser = argparse.ArgumentParser(description='Run Suncherry Playwright script')
     parser.add_argument('--headless', action='store_true', help='Run in headless mode')
     parser.add_argument('--debug', action='store_true', help='Enable debug mode')
+    parser.add_argument('--username', type=str, help='Login username')
+    parser.add_argument('--password', type=str, help='Login password')
     # Ignore any additional arguments to prevent errors
     args, _ = parser.parse_known_args()
+    
+    # Validate credentials at the very start
+    username = args.username
+    password = args.password
+    if not username or not password:
+        load_dotenv()
+        username = os.getenv("login_username")
+        password = os.getenv("login_password")
+
+    if not username or not password:
+        raise ValueError("Username and password must be provided either as command-line arguments or in .env file")
     
     print(f"Running in {'headless' if args.headless else 'visible'} mode")
     
     with sync_playwright() as playwright:
         run(playwright, headless=args.headless, debug=args.debug)
+        # Pass username and password to login function if provided
+        if login(page, url, username, password):
+            print("Login successful")
+            return 0
+        else:
+            print("Login failed")
+            return 1
 
 
 if __name__ == "__main__":
