@@ -23,16 +23,17 @@ const FLASK_SERVICE_URL = process.env.PYTHON_SLAVE_RUNNER_FLASK_SERVICE_URL;
 
 async function processJob() {
   try {
+    const runnerId = process.env.RUNNER_ID || 'default-runner';
     const queueLength = await redis.llen('jobs_queue');
-    console.log(`[@runner:processJob] Queue length: ${queueLength} jobs`);
+    console.log(`[@${runnerId}:processJob] Queue length: ${queueLength} jobs`);
 
     const job = await redis.rpop('jobs_queue');
     if (!job) {
-      console.log(`[@runner:processJob] Queue is empty`);
+      console.log(`[@${runnerId}:processJob] Queue is empty`);
       return;
     }
 
-    console.log(`[@runner:processJob] Processing job: ${job}`);
+    console.log(`[@${runnerId}:processJob] Processing job: ${job}`);
     const jobData = typeof job === 'string' ? JSON.parse(job) : job;
     const { config_id } = jobData;
 
@@ -42,16 +43,18 @@ async function processJob() {
       .eq('id', config_id)
       .single();
     if (error || !data) {
-      console.error(`[@runner:processJob] Failed to fetch config ${config_id}: ${error?.message}`);
+      console.error(
+        `[@${runnerId}:processJob] Failed to fetch config ${config_id}: ${error?.message}`,
+      );
       return;
     }
     const config = data.config;
     const team_id = data.team_id;
     if (!data.is_active) {
-      console.log(`[@runner:processJob] Config ${config_id} is inactive, skipping execution`);
+      console.log(`[@${runnerId}:processJob] Config ${config_id} is inactive, skipping execution`);
       return;
     }
-    console.log(`[@runner:processJob] Config: ${JSON.stringify(config)}`);
+    console.log(`[@${runnerId}:processJob] Config: ${JSON.stringify(config)}`);
 
     // Fetch encrypted environment variables for the team only if running from a repository
     let encryptedEnvVars = {};
@@ -65,7 +68,7 @@ async function processJob() {
 
       if (teamEnvVarsError) {
         console.error(
-          `[@runner:processJob] Failed to fetch team-specific environment variables for team ${team_id}: ${teamEnvVarsError.message}`,
+          `[@${runnerId}:processJob] Failed to fetch team-specific environment variables for team ${team_id}: ${teamEnvVarsError.message}`,
         );
       }
 
@@ -79,7 +82,7 @@ async function processJob() {
       let sharedEnvVarsData = [];
       if (teamError) {
         console.error(
-          `[@runner:processJob] Failed to fetch tenant for team ${team_id}: ${teamError.message}`,
+          `[@${runnerId}:processJob] Failed to fetch tenant for team ${team_id}: ${teamError.message}`,
         );
       } else if (teamData && teamData.tenant_id) {
         // Fetch shared variables for the tenant
@@ -90,7 +93,7 @@ async function processJob() {
 
         if (sharedError) {
           console.error(
-            `[@runner:processJob] Failed to fetch shared environment variables for tenant ${teamData.tenant_id}: ${sharedError.message}`,
+            `[@${runnerId}:processJob] Failed to fetch shared environment variables for tenant ${teamData.tenant_id}: ${sharedError.message}`,
           );
         } else if (sharedData) {
           sharedEnvVarsData = sharedData;
@@ -117,11 +120,11 @@ async function processJob() {
           if (value && typeof value === 'string' && value.includes(':')) {
             try {
               const decryptedValue = decrypt(value, process.env.ENCRYPTION_KEY);
-              console.log(`[@runner:processJob] Decrypted environment variable: ${key}`);
+              console.log(`[@${runnerId}:processJob] Decrypted environment variable: ${key}`);
               return [key, decryptedValue];
             } catch (err) {
               console.error(
-                `[@runner:processJob] Failed to decrypt environment variable ${key}: ${err.message}`,
+                `[@${runnerId}:processJob] Failed to decrypt environment variable ${key}: ${err.message}`,
               );
               return [key, value];
             }
@@ -130,10 +133,12 @@ async function processJob() {
         }),
       );
       console.log(
-        `[@runner:processJob] Fetched and processed ${Object.keys(encryptedEnvVars).length} environment variables (team-specific: ${teamEnvVarsData?.length || 0}, shared: ${sharedEnvVarsData?.length || 0}) for team ${team_id}`,
+        `[@${runnerId}:processJob] Fetched and processed ${Object.keys(encryptedEnvVars).length} environment variables (team-specific: ${teamEnvVarsData?.length || 0}, shared: ${sharedEnvVarsData?.length || 0}) for team ${team_id}`,
       );
     } else {
-      console.log(`[@runner:processJob] Skipping environment variables fetch: team_id=${team_id}`);
+      console.log(
+        `[@${runnerId}:processJob] Skipping environment variables fetch: team_id=${team_id}`,
+      );
     }
 
     const created_at = new Date().toISOString();
@@ -149,12 +154,12 @@ async function processJob() {
       .single();
 
     if (jobError) {
-      console.error(`[@runner:processJob] Failed to create pending job: ${jobError.message}`);
+      console.error(`[@${runnerId}:processJob] Failed to create pending job: ${jobError.message}`);
       return;
     }
 
     const jobId = jobRunData.id;
-    console.log(`[@runner:processJob] Created job with ID ${jobId} and status 'pending'`);
+    console.log(`[@${runnerId}:processJob] Created job with ID ${jobId} and status 'pending'`);
 
     let output = { scripts: [], stdout: '', stderr: '' };
     let overallStatus = 'success';
@@ -163,7 +168,7 @@ async function processJob() {
     const hasHosts = config.hosts && config.hosts.length > 0;
 
     if (!hasHosts) {
-      console.log(`[@runner:processJob] No hosts found, forwarding to Flask service`);
+      console.log(`[@${runnerId}:processJob] No hosts found, forwarding to Flask service`);
 
       for (const script of config.scripts || []) {
         const scriptPath = script.path;
@@ -206,7 +211,7 @@ async function processJob() {
 
               if (statusError) {
                 console.error(
-                  `[@runner:processJob] Failed to update job ${jobId} to in_progress: ${statusError.message}`,
+                  `[@${runnerId}:processJob] Failed to update job ${jobId} to in_progress: ${statusError.message}`,
                 );
                 scriptOutput.stderr = `Failed to update job status: ${statusError.message}`;
                 overallStatus = 'failed';
@@ -214,10 +219,10 @@ async function processJob() {
                 continue;
               }
 
-              console.log(`[@runner:processJob] Updated job ${jobId} status to 'in_progress'`);
+              console.log(`[@${runnerId}:processJob] Updated job ${jobId} status to 'in_progress'`);
 
               console.log(
-                `[@runner:processJob] Sending payload to Flask (attempt ${attempt}/${retries}, iteration ${i}/${iterations}): ${JSON.stringify({ ...payload, environment_variables: payload.environment_variables ? Object.keys(payload.environment_variables).reduce((acc, key) => ({ ...acc, [key]: '***MASKED***' }), {}) : {} })}`,
+                `[@${runnerId}:processJob] Sending payload to Flask (attempt ${attempt}/${retries}, iteration ${i}/${iterations}): ${JSON.stringify({ ...payload, environment_variables: payload.environment_variables ? Object.keys(payload.environment_variables).reduce((acc, key) => ({ ...acc, [key]: '***MASKED***' }), {}) : {} })}`,
               );
               const response = await axios.post(`${FLASK_SERVICE_URL}/execute`, payload, {
                 timeout: (payload.timeout + 5) * 1000,
@@ -229,12 +234,12 @@ async function processJob() {
               if (response.data.output && typeof response.data.output.exitCode === 'number') {
                 scriptStatus = response.data.output.exitCode === 0 ? 'success' : 'failed';
                 console.log(
-                  `[@runner:processJob] Script status determined by exit code: ${scriptStatus} (exitCode: ${response.data.output.exitCode})`,
+                  `[@${runnerId}:processJob] Script status determined by exit code: ${scriptStatus} (exitCode: ${response.data.output.exitCode})`,
                 );
               } else {
                 scriptStatus = response.data.status;
                 console.log(
-                  `[@runner:processJob] Script status determined by response status: ${scriptStatus} (no exit code available)`,
+                  `[@${runnerId}:processJob] Script status determined by response status: ${scriptStatus} (no exit code available)`,
                 );
               }
 
@@ -244,20 +249,20 @@ async function processJob() {
               }
 
               console.log(
-                `[@runner:processJob] Received response from Flask for job ${jobId}: status=${scriptStatus}, stdout=${scriptOutput.stdout}, stderr=${scriptOutput.stderr}`,
+                `[@${runnerId}:processJob] Received response from Flask for job ${jobId}: status=${scriptStatus}, stdout=${scriptOutput.stdout}, stderr=${scriptOutput.stderr}`,
               );
 
               if (scriptStatus === 'success') {
                 break;
               } else {
                 console.log(
-                  `[@runner:processJob] Script failed, attempt ${attempt}/${retries}: ${scriptOutput.stderr}`,
+                  `[@${runnerId}:processJob] Script failed, attempt ${attempt}/${retries}: ${scriptOutput.stderr}`,
                 );
               }
             } catch (err) {
               scriptOutput.stderr = err.response?.data?.message || err.message;
               console.log(
-                `[@runner:processJob] Script error, attempt ${attempt}/${retries}: ${scriptOutput.stderr}`,
+                `[@${runnerId}:processJob] Script error, attempt ${attempt}/${retries}: ${scriptOutput.stderr}`,
               );
             }
           }
@@ -276,16 +281,18 @@ async function processJob() {
           status: overallStatus,
           output: output,
           completed_at: completed_at,
-          runner_id: process.env.RUNNER_ID || 'default-runner',
+          runner_id: runnerId,
         })
         .eq('id', jobId);
 
       if (finalStatusError) {
         console.error(
-          `[@runner:processJob] Failed to update final status for job ${jobId}: ${finalStatusError.message}`,
+          `[@${runnerId}:processJob] Failed to update final status for job ${jobId}: ${finalStatusError.message}`,
         );
       } else {
-        console.log(`[@runner:processJob] Updated job ${jobId} to final status: ${overallStatus}`);
+        console.log(
+          `[@${runnerId}:processJob] Updated job ${jobId} to final status: ${overallStatus}`,
+        );
       }
 
       const reportUrl = await generateAndUploadReport(
@@ -305,39 +312,43 @@ async function processJob() {
           .eq('id', jobId);
         if (reportError) {
           console.error(
-            `[@runner:processJob] Failed to update report URL for job ${jobId}: ${reportError.message}`,
+            `[@${runnerId}:processJob] Failed to update report URL for job ${jobId}: ${reportError.message}`,
           );
         } else {
-          console.log(`[@runner:processJob] Updated job ${jobId} with report URL: ${reportUrl}`);
+          console.log(
+            `[@${runnerId}:processJob] Updated job ${jobId} with report URL: ${reportUrl}`,
+          );
         }
       }
     } else {
       const hosts = config.hosts;
       // Log current jobData state at the start of SSH section
       console.log(
-        `[@runner:processJob] Job data at start of SSH section: team_id=${team_id}, config_id=${config_id}`,
+        `[@${runnerId}:processJob] Job data at start of SSH section: team_id=${team_id}, config_id=${config_id}`,
       );
 
       for (const host of hosts) {
         console.log(
-          `[@runner:processJob] Host: ${host.ip}, OS: ${host.os}, Username: ${host.username}`,
+          `[@${runnerId}:processJob] Host: ${host.ip}, OS: ${host.os}, Username: ${host.username}`,
         );
         let sshKeyOrPass = host.key || host.password;
         if (!sshKeyOrPass) {
-          console.error(`[@runner:processJob] No key/password for ${host.ip}`);
+          console.error(`[@${runnerId}:processJob] No key/password for ${host.ip}`);
           return;
         }
 
         if (host.authType === 'privateKey' && sshKeyOrPass.includes(':')) {
           try {
             sshKeyOrPass = decrypt(sshKeyOrPass, process.env.ENCRYPTION_KEY);
-            console.log(`[@runner:processJob] Decrypted key: ${sshKeyOrPass.slice(0, 50)}...`);
+            console.log(`[@${runnerId}:processJob] Decrypted key: ${sshKeyOrPass.slice(0, 50)}...`);
           } catch (decryptError) {
-            console.error(`[@runner:processJob] Decryption failed: ${decryptError.message}`);
+            console.error(`[@${runnerId}:processJob] Decryption failed: ${decryptError.message}`);
             return;
           }
         } else {
-          console.log(`[@runner:processJob] Plain key/password: ${sshKeyOrPass.slice(0, 50)}...`);
+          console.log(
+            `[@${runnerId}:processJob] Plain key/password: ${sshKeyOrPass.slice(0, 50)}...`,
+          );
         }
 
         const scripts = (config.scripts || [])
@@ -348,12 +359,12 @@ async function processJob() {
           })
           .join(' && ');
 
-        console.log(`[@runner:processJob] Scripts: ${scripts}`);
+        console.log(`[@${runnerId}:processJob] Scripts: ${scripts}`);
 
         let repoCommands = '';
         let scriptFolder = config.script_folder || '';
         let repoDir = '';
-        console.log(`[@runner:processJob] Script folder: ${scriptFolder}`);
+        console.log(`[@${runnerId}:processJob] Script folder: ${scriptFolder}`);
 
         if (config.repository) {
           const repoUrl = config.repository;
@@ -362,7 +373,7 @@ async function processJob() {
           const isRepoAccessible = await pingRepository(repoUrl);
           if (!isRepoAccessible) {
             console.error(
-              `[@runner:processJob] Repository ${repoUrl} is not accessible, aborting job execution.`,
+              `[@${runnerId}:processJob] Repository ${repoUrl} is not accessible, aborting job execution.`,
             );
             const completed_at = new Date().toISOString();
             await supabase
@@ -378,7 +389,7 @@ async function processJob() {
               })
               .eq('id', jobId);
             console.log(
-              `[@runner:processJob] Updated job ${jobId} to failed status due to inaccessible repository.`,
+              `[@${runnerId}:processJob] Updated job ${jobId} to failed status due to inaccessible repository.`,
             );
             return;
           }
@@ -392,7 +403,7 @@ async function processJob() {
 
           if (host.os === 'windows') {
             console.log(
-              `[@runner:processJob] WARNING: Git must be installed on Windows host ${host.ip} for repository operations.`,
+              `[@${runnerId}:processJob] WARNING: Git must be installed on Windows host ${host.ip} for repository operations.`,
             );
             // Use PowerShell for repository check and operations on Windows
             let repoScript = `if (Test-Path '${repoDir}') { Write-Output 'Repository exists, pulling latest changes'; cd '${repoDir}'; git pull origin ${branch} } else { Write-Output 'Repository does not exist, cloning'; git clone -b ${branch} ${repoUrl} '${repoDir}'; cd '${repoDir}' }`;
@@ -407,17 +418,17 @@ async function processJob() {
             `;
           }
           console.log(
-            `[@runner:processJob] Repository setup: ${repoDir} exists ? git pull : clone ${repoUrl} branch ${branch}${scriptFolder ? `, then navigate to ${scriptFolder}` : ''}`,
+            `[@${runnerId}:processJob] Repository setup: ${repoDir} exists ? git pull : clone ${repoUrl} branch ${branch}${scriptFolder ? `, then navigate to ${scriptFolder}` : ''}`,
           );
         } else {
           if (config.scripts && config.scripts.length > 0 && config.scripts[0].folder) {
             scriptFolder = config.scripts[0].folder;
             console.log(
-              `[@runner:processJob] Using folder from script configuration as working directory: ${scriptFolder}`,
+              `[@${runnerId}:processJob] Using folder from script configuration as working directory: ${scriptFolder}`,
             );
           } else {
             console.log(
-              `[@runner:processJob] No folder specified in script configuration or repository, using default SSH directory (if any)`,
+              `[@${runnerId}:processJob] No folder specified in script configuration or repository, using default SSH directory (if any)`,
             );
             // Not setting a specific scriptFolder, letting SSH use its default directory
           }
@@ -436,11 +447,11 @@ async function processJob() {
                   .join(' && ');
           envSetup += host.os === 'windows' ? ' && ' : ' && ';
           console.log(
-            `[@runner:processJob] Environment variables setup for SSH: ${Object.keys(decryptedEnvVars).join(', ')}`,
+            `[@${runnerId}:processJob] Environment variables setup for SSH: ${Object.keys(decryptedEnvVars).join(', ')}`,
           );
         } else {
           console.log(
-            `[@runner:processJob] No environment variables to set for SSH host ${host.ip}`,
+            `[@${runnerId}:processJob] No environment variables to set for SSH host ${host.ip}`,
           );
         }
         const scriptCommand = `${scripts}`;
@@ -451,13 +462,13 @@ async function processJob() {
           fullScript = `${repoCommands} ${repoCommands ? '' : repoDir ? `cd ${repoDir} && ` : ''} cd ${scriptFolder} && if [ -f "requirements.txt" ]; then pip install -r requirements.txt; else echo "No requirements.txt file found, skipping pip install"; fi && ${envSetup}python --version && echo ============================= && ${scriptCommand}`;
         }
         console.log(
-          `[@local-runner:processJob] SSH command to be executed on ${host.ip}: ${fullScript}`,
+          `[@${runnerId}:processJob] SSH command to be executed on ${host.ip}: ${fullScript}`,
         );
 
         const conn = new Client();
         conn
           .on('ready', async () => {
-            console.log(`[@runner:processJob] Connected to ${host.ip}`);
+            console.log(`[@${runnerId}:processJob] Connected to ${host.ip}`);
 
             started_at = new Date().toISOString();
             await supabase
@@ -468,11 +479,11 @@ async function processJob() {
               })
               .eq('id', jobId);
 
-            console.log(`[@runner:processJob] Updated job ${jobId} status to 'in_progress'`);
+            console.log(`[@${runnerId}:processJob] Updated job ${jobId} status to 'in_progress'`);
 
             conn.exec(fullScript, async (err, stream) => {
               if (err) {
-                console.error(`[@runner:processJob] Exec error: ${err.message}`);
+                console.error(`[@${runnerId}:processJob] Exec error: ${err.message}`);
                 await supabase
                   .from('jobs_run')
                   .update({
@@ -486,7 +497,7 @@ async function processJob() {
                   })
                   .eq('id', jobId);
                 console.log(
-                  `[@runner:processJob] Updated job ${jobId} to failed status due to exec error`,
+                  `[@${runnerId}:processJob] Updated job ${jobId} to failed status due to exec error`,
                 );
                 conn.end();
                 return;
@@ -505,13 +516,13 @@ async function processJob() {
                 })
                 .stderr.on('data', (data) => {
                   scriptOutput.stderr += data;
-                  console.log(`[@runner:processJob] Stderr: ${data}`);
+                  console.log(`[@${runnerId}:processJob] Stderr: ${data}`);
                 })
                 .on('close', async (code, signal) => {
-                  console.log(`[@runner:processJob] Final stdout: ${scriptOutput.stdout}`);
-                  console.log(`[@runner:processJob] Final stderr: ${scriptOutput.stderr}`);
+                  console.log(`[@${runnerId}:processJob] Final stdout: ${scriptOutput.stdout}`);
+                  console.log(`[@${runnerId}:processJob] Final stderr: ${scriptOutput.stderr}`);
                   console.log(
-                    `[@runner:processJob] SSH connection closed: ${code}, signal: ${signal}`,
+                    `[@${runnerId}:processJob] SSH connection closed: ${code}, signal: ${signal}`,
                   );
 
                   const completed_at = new Date().toISOString();
@@ -534,7 +545,7 @@ async function processJob() {
                     .eq('id', jobId);
 
                   console.log(
-                    `[@runner:processJob] Updated job ${jobId} to final status: ${isSuccess ? 'success' : 'failed'}`,
+                    `[@${runnerId}:processJob] Updated job ${jobId} to final status: ${isSuccess ? 'success' : 'failed'}`,
                   );
 
                   const sshReportUrl = await generateAndUploadReport(
@@ -554,11 +565,11 @@ async function processJob() {
                       .eq('id', jobId);
                     if (sshReportError) {
                       console.error(
-                        `[@runner:processJob] Failed to update report URL for SSH job ${jobId}: ${sshReportError.message}`,
+                        `[@${runnerId}:processJob] Failed to update report URL for SSH job ${jobId}: ${sshReportError.message}`,
                       );
                     } else {
                       console.log(
-                        `[@runner:processJob] Updated job ${jobId} with SSH report URL: ${sshReportUrl}`,
+                        `[@${runnerId}:processJob] Updated job ${jobId} with SSH report URL: ${sshReportUrl}`,
                       );
                     }
                   }
@@ -569,7 +580,7 @@ async function processJob() {
           })
           .on('error', async (err) => {
             if (err.message.includes('ECONNRESET')) {
-              console.error(`[@runner:processJob] SSH connection closed due to ECONNRESET`);
+              console.error(`[@${runnerId}:processJob] SSH connection closed due to ECONNRESET`);
               const completed_at = new Date().toISOString();
               const isSuccess =
                 output.scripts.length > 0 &&
@@ -586,10 +597,10 @@ async function processJob() {
                 })
                 .eq('id', jobId);
               console.log(
-                `[@runner:processJob] Updated job ${jobId} to ${isSuccess ? 'success' : 'failed'} status despite ECONNRESET`,
+                `[@${runnerId}:processJob] Updated job ${jobId} to ${isSuccess ? 'success' : 'failed'} status despite ECONNRESET`,
               );
             } else {
-              console.error(`[@runner:processJob] SSH error: ${err.message}`);
+              console.error(`[@${runnerId}:processJob] SSH error: ${err.message}`);
               await supabase
                 .from('jobs_run')
                 .update({
@@ -600,7 +611,7 @@ async function processJob() {
                 })
                 .eq('id', jobId);
               console.log(
-                `[@runner:processJob] Updated job ${jobId} to failed status due to SSH error`,
+                `[@${runnerId}:processJob] Updated job ${jobId} to failed status due to SSH error`,
               );
             }
             conn.end();
@@ -614,7 +625,7 @@ async function processJob() {
       }
     }
   } catch (error) {
-    console.error(`[@runner:processJob] Error: ${error.message}`);
+    console.error(`[@${runnerId}:processJob] Error: ${error.message}`);
   }
 }
 
@@ -661,5 +672,5 @@ const server = http.createServer((req, res) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`[@runner:server] Server listening on port ${PORT}`);
+  console.log(`[@${runnerId}:server] Server listening on port ${PORT}`);
 });
