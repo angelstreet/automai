@@ -366,54 +366,6 @@ def upload_files_to_r2(job_id, created_at, associated_files, original_script_pat
             except Exception as e:
                 print(f"[@python-slave-runner:app] Error uploading file to R2: {file_info.get('name')}, Error: {str(e)}")
                 updated_files.append(file_info)
-        
-        # Check if the script file is available to upload
-        script_file_path = os.environ.get('SCRIPT_FILE_PATH', '')
-        
-        # First check the temp folder for the script file
-        if not script_file_path or not os.path.exists(script_file_path):
-            # First try to find the script in the temp folder
-            script_name = os.path.basename(script_file_path or (original_script_path or ''))
-            if script_name:
-                temp_script_path = os.path.join(temp_folder, script_name)
-                if os.path.exists(temp_script_path):
-                    script_file_path = temp_script_path
-                    print(f"[@python-slave-runner:app] Found script in temp folder: {script_file_path}", file=sys.stderr)
-                # Fall back to the original script path if temp version doesn't exist
-                elif original_script_path and os.path.exists(original_script_path):
-                    script_file_path = original_script_path
-                    print(f"[@python-slave-runner:app] Using original script path: {script_file_path}", file=sys.stderr)
-        
-        if script_file_path and os.path.exists(script_file_path):
-            script_file_name = os.path.basename(script_file_path)
-            script_r2_path = f"{folder_name}/{script_file_name}"
-            try:
-                with open(script_file_path, 'rb') as f:
-                    s3_client.upload_fileobj(
-                        f,
-                        bucket_name,
-                        script_r2_path,
-                        ExtraArgs={
-                            'ContentType': 'text/plain',
-                            'ContentDisposition': 'attachment'
-                        }
-                    )
-                script_url = s3_client.generate_presigned_url(
-                    'get_object',
-                    Params={'Bucket': bucket_name, 'Key': script_r2_path},
-                    ExpiresIn=604800  # 7 days in seconds
-                )
-                script_info = {
-                    'name': script_file_name,
-                    'path': script_file_path,
-                    'public_url': script_url
-                }
-                updated_files.append(script_info)
-                print(f"[@python-slave-runner:app] Uploaded script to R2: {script_file_name}, Public URL: {script_url[:50]}...")
-            except Exception as e:
-                print(f"[@python-slave-runner:app] Error uploading script to R2: {script_file_name}, Error: {str(e)}")
-        else:
-            print(f"[@python-slave-runner:app] No script file found to upload at: {script_file_path}")
 
         return updated_files
     except Exception as e:
