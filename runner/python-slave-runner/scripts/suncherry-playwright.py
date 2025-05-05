@@ -82,8 +82,8 @@ def login(page: Page, url: str, username: str, password: str):
         print(f"Reload failed: {str(e)}")
         print("Continuing despite reload failure...")
 
-    print("Wait for 1 second")
-    page.wait_for_timeout(1000)
+    print("Wait for 10 seconds")
+    page.wait_for_timeout(10000)
 
     activate_semantic_placeholder(page)
     page.wait_for_timeout(1000)
