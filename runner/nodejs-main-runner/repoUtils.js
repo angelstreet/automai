@@ -2,10 +2,8 @@ const fetch = require('node-fetch');
 
 async function pingRepository(repoUrl) {
   try {
-    const loggerPrefix = 'runner';
-    console.log(
-      `[@${loggerPrefix}:pingRepository] Checking availability of repository: ${repoUrl}`,
-    );
+    const runnerId = process.env.RUNNER_ID || 'default-runner';
+    console.log(`[@${runnerId}:pingRepository] Checking availability of repository: ${repoUrl}`);
     const response = await fetch(process.env.REPOSITORY_PING_URL, {
       method: 'POST',
       headers: {
@@ -17,15 +15,15 @@ async function pingRepository(repoUrl) {
 
     if (!response.ok) {
       console.error(
-        `[@${loggerPrefix}:pingRepository] Failed to check repository ${repoUrl}: ${response.status} ${response.statusText}`,
+        `[@${runnerId}:pingRepository] Failed to check repository ${repoUrl}: ${response.status} ${response.statusText}`,
       );
       return false;
     }
-    console.log(`[@${loggerPrefix}:pingRepository] Repository ${repoUrl} is accessible`);
+    console.log(`[@${runnerId}:pingRepository] Repository ${repoUrl} is accessible`);
     return true;
   } catch (error) {
     console.error(
-      `[@${loggerPrefix}:pingRepository] Error checking repository ${repoUrl}: ${error.message}`,
+      `[@${runnerId}:pingRepository] Error checking repository ${repoUrl}: ${error.message}`,
     );
     return false;
   }
