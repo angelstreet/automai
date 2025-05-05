@@ -145,7 +145,9 @@ const reportTemplate = `
           <td><a href="<%= file.public_url || '#' %>" target="_blank">Link</a></td>
           <td>
             <% if (file.name && file.name.match(/\.(jpg|jpeg|png|gif|bmp|webp)$/i)) { %>
-              <img src="<%= file.public_url || '#' %>" alt="Preview of <%= file.name %>" class="preview-img" />
+              <a href="<%= file.public_url || '#' %>" target="_blank">
+                <img src="<%= file.public_url || '#' %>" alt="Preview of <%= file.name %>" class="preview-img" />
+              </a>
             <% } else { %>
               N/A
             <% } %>
