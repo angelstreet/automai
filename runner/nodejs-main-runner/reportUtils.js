@@ -27,9 +27,9 @@ async function generateAndUploadReport(
   completed_at,
   status,
   decryptedEnvVars = {},
-  loggerPrefix = 'runner',
 ) {
   try {
+    const loggerPrefix = 'runner';
     console.log(`[@${loggerPrefix}:generateAndUploadReport] Generating report for job ${jobId}`);
     const runnerId = process.env.RUNNER_ID || 'default-runner';
     const startTime = started_at || 'N/A';
