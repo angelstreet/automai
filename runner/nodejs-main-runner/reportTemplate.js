@@ -127,35 +127,41 @@ const reportTemplate = `
   </table>
   <h2>Associated Files</h2>
   <% if (associatedFiles && associatedFiles.length > 0) { %>
-    <h3>Associated Files</h3>
-    <table border="1">
-      <thead>
+    <input type="text" id="filterInput" onkeyup="filterTable()" placeholder="Filter by filename or extension (use * for wildcard, e.g., *.png)">
+    <table id="filesTable">
+      <tr>
+        <th onclick="sortTable(0)">Creation Date</th>
+        <th onclick="sortTable(1)">Size</th>
+        <th onclick="sortTable(2)">File Name</th>
+        <th onclick="sortTable(3)">Link</th>
+        <th>Preview</th>
+      </tr>
+      <% associatedFiles.forEach(function(file) { %>
         <tr>
-          <th>File Name</th>
-          <th>Size (bytes)</th>
-          <th>Creation Date</th>
-          <th>Link</th>
+          <td data-sort="<%= file.creation_date || 'N/A' %>"><%= file.creation_date || 'N/A' %></td>
+          <td data-sort="<%= file.size %>">
+            <% if (file.size >= 1024 * 1024) { %>
+              <%= (file.size / (1024 * 1024)).toFixed(2) %> MB
+            <% } else if (file.size >= 1024) { %>
+              <%= (file.size / 1024).toFixed(2) %> KB
+            <% } else { %>
+              <%= file.size %> bytes
+            <% } %>
+          </td>
+          <td><%= file.name %></td>
+          <td><a href="<%= file.public_url || '#' %>" target="_blank">Link</a></td>
+          <td>
+            <% if (file.name && file.name.match(/\.(jpg|jpeg|png|gif|bmp|webp)$/i)) { %>
+              <img src="<%= file.public_url || '#' %>" alt="Preview of <%= file.name %>" class="preview-img" />
+            <% } else { %>
+              N/A
+            <% } %>
+          </td>
         </tr>
-      </thead>
-      <tbody>
-        <% associatedFiles.forEach(file => { %>
-          <tr>
-            <td><%= file.name %></td>
-            <td><%= file.size %></td>
-            <td><%= file.creation_date || 'N/A' %></td>
-            <td>
-              <% if (file.public_url) { %>
-                <a href="<%= file.public_url %>" target="_blank">View File</a>
-              <% } else { %>
-                N/A
-              <% } %>
-            </td>
-          </tr>
-        <% }); %>
-      </tbody>
+      <% }); %>
     </table>
   <% } else { %>
-    <p>No associated files.</p>
+    <p>No associated files uploaded.</p>
   <% } %>
 </body>
 </html>
