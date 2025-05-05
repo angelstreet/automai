@@ -77,10 +77,13 @@ def login(page: Page, url: str, username: str = None, password: str = None, trac
         if element.count() > 0:
             is_visible = element.is_visible()
             print('Login success')
+            return True
         else:
             print('Login failed')
+            return False
     except Exception as e:
         print('Login failed:', str(e))
+        return False
 
 
 def init_browser(playwright: Playwright, headless=False, debug: bool = False):
@@ -133,7 +136,7 @@ def run(playwright: Playwright, headless=False, debug: bool = False):
     url = "https://www.sunrisetv.ch/de/home"
     page.goto(url, timeout=20 * 1000)
     sleep(5)
-    login(page, url)
+    login_result = login(page, url)
     sleep(5)
     page.close()
     # Save tracing data to zip
@@ -147,7 +150,7 @@ def run(playwright: Playwright, headless=False, debug: bool = False):
     os.remove(trace_file)
     print(f"Zip file removed: {trace_file}")
     browser.close()
-    return True
+    return login_result
 
 def main():
     # Simple argument parsing
