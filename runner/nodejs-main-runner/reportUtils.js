@@ -29,8 +29,7 @@ async function generateAndUploadReport(
   decryptedEnvVars = {},
 ) {
   try {
-    const runnerId = process.env.RUNNER_ID || 'default-runner';
-    console.log(`[@${runnerId}:generateAndUploadReport] Generating report for job ${jobId}`);
+    console.log(`[generateAndUploadReport] Generating report for job ${jobId}`);
     const startTime = started_at || 'N/A';
     const endTime = completed_at || 'N/A';
     const duration =
@@ -93,7 +92,7 @@ async function generateAndUploadReport(
       await r2Client.send(putObjectCommand);
     } catch (uploadError) {
       console.error(
-        `[@${runnerId}:generateAndUploadReport] Failed to upload report for job ${jobId}: ${uploadError.message}`,
+        `[generateAndUploadReport] Failed to upload report for job ${jobId}: ${uploadError.message}`,
       );
       return null;
     }
@@ -111,7 +110,7 @@ async function generateAndUploadReport(
     return reportUrl;
   } catch (error) {
     console.error(
-      `[@${runnerId}:generateAndUploadReport] Error generating/uploading report for job ${jobId}: ${error.message}`,
+      `[generateAndUploadReport] Error generating/uploading report for job ${jobId}: ${error.message}`,
     );
     return null;
   }
