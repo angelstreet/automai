@@ -19,3 +19,4 @@ runner/.env
 runner/nodejs-main-runner/.env
 .env
 suncherry-playwright_trace/
+runner/python-slave-runner/files.py

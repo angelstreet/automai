@@ -17,6 +17,9 @@ import boto3
 from botocore.client import Config
 import requests
 
+# Import the new upload function
+from utils import upload_files_to_r2
+
 app = Flask(__name__)
 
 BASE_REPO_PATH = "/opt/render/project/src/repo"
@@ -389,30 +392,8 @@ def execute():
         associated_files = collect_file_metadata(temp_folder)
         print(f"DEBUG: Found {len(associated_files)} associated files in temporary folder", file=sys.stderr)
 
-        # Upload files to Cloudflare R2 if S3 client is initialized
-        if s3_client:
-            bucket_name = 'reports'  # Use the same bucket as reports or configure a different one
-            for file_info in associated_files:
-                file_path = file_info['path']
-                relative_path = file_info['relative_path']
-                job_id_str = job_id.replace(':', '_').replace('/', '_')  # Sanitize job_id for path
-                r2_key = f"{used_timestamp}_{job_id_str}/files/{relative_path}"
-                try:
-                    print(f"DEBUG: Uploading file to R2: {file_path} as {r2_key}", file=sys.stderr)
-                    with open(file_path, 'rb') as f:
-                        s3_client.upload_fileobj(f, bucket_name, r2_key)
-                    # Generate a presigned URL for the uploaded file (valid for 7 days)
-                    presigned_url = s3_client.generate_presigned_url(
-                        'get_object',
-                        Params={'Bucket': bucket_name, 'Key': r2_key},
-                        ExpiresIn=604800  # 7 days in seconds
-                    )
-                    file_info['public_url'] = presigned_url
-                    print(f"DEBUG: Generated presigned URL for {file_info['name']}", file=sys.stderr)
-                except Exception as e:
-                    print(f"ERROR: Failed to upload file {file_info['name']} to R2: {str(e)}", file=sys.stderr)
-        else:
-            print(f"WARNING: S3 client not initialized, cannot upload files to R2", file=sys.stderr)
+        # Upload files to Cloudflare R2 using the utility function
+        associated_files = upload_files_to_r2(s3_client, job_id, created_at, associated_files)
 
         # Clean up temporary folder after execution
         try:
