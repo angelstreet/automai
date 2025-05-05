@@ -189,9 +189,10 @@ def run_with_timeout(script_content, parameters, timeout=30, venv_path=None, env
             # Run the script in a subprocess - first attempt with parameters
             process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             stdout, stderr = process.communicate(timeout=timeout)
+            returncode = process.returncode
 
             # Check if the error is due to unrecognized arguments (argparse issue)
-            if process.returncode != 0 and "unrecognized arguments" in stderr.lower():
+            if returncode != 0 and "unrecognized arguments" in stderr.lower():
                 print(f"DEBUG: Unrecognized arguments error detected, retrying with critical parameters only", file=sys.stderr)
                 # Retry with only critical parameters like --headless
                 critical_params = [param for param in parameters if param == '--headless']
@@ -199,6 +200,7 @@ def run_with_timeout(script_content, parameters, timeout=30, venv_path=None, env
                 print(f"DEBUG: Executing command (retry with critical parameters): {cmd}", file=sys.stderr)
                 process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                 stdout, stderr = process.communicate(timeout=timeout)
+                returncode = process.returncode
 
             # Clean up temporary file
             os.unlink(temp_script_path)
@@ -207,7 +209,8 @@ def run_with_timeout(script_content, parameters, timeout=30, venv_path=None, env
             os.environ.clear()
             os.environ.update(original_env)
 
-            result = {"status": "success" if process.returncode == 0 else "error", "output": stdout, "message": stderr, "returncode": process.returncode}
+            status = "success" if returncode == 0 else "failure"
+            result = {"status": status, "output": stdout, "message": stderr, "returncode": returncode}
             result_queue.put(result)
         except subprocess.TimeoutExpired:
             process.kill()
