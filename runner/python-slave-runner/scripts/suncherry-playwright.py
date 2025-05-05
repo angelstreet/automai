@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 import re
 from datetime import datetime
 import zipfile
+USERNAME = None
+PASSWORD = None
 
 def activate_semantic_placeholder(page: Page):
     # Handle shadow DOM elements
@@ -39,7 +41,7 @@ def activate_semantic_placeholder(page: Page):
         return False
 
 
-def login(page: Page, url: str, username: str = None, password: str = None, trace_folder: str = None):
+def login(page: Page, url: str, trace_folder: str = None):
     activate_semantic_placeholder(page)
     page.wait_for_timeout(1000)
 
@@ -53,12 +55,12 @@ def login(page: Page, url: str, username: str = None, password: str = None, trac
 
     page.wait_for_selector("#username", state="visible")
     print("Fill username")
-    page.locator("#username").fill(username)
+    page.locator("#username").fill(USERNAME)
     page.locator("#username").press("Tab")
     
     page.wait_for_selector("#password", state="visible")
     print("Fill password")
-    page.locator("#password").fill(password)
+    page.locator("#password").fill(PASSWORD)
     
     page.wait_for_selector("#kc-login", state="visible")
     print("Click on login")
@@ -159,7 +161,7 @@ def run(playwright: Playwright, headless=False, debug: bool = False):
     page.set_default_timeout(5000)
     page.goto(url, timeout=30000)
     page.wait_for_timeout(10000) 
-    login_result = login(page, url, username, password)
+    login_result = login(page, url)
     page.wait_for_timeout(5000)
     page.close()
     # Save tracing data to zip
@@ -194,16 +196,16 @@ def main():
     print(f"Debug: Password from args: {args.password}")
     
     # Validate credentials at the very start
-    username = args.username
-    password = args.password
-    if not username or not password:
+    USERNAME = args.username
+    PASSWORD = args.password
+    if not USERNAME or not PASSWORD:
         load_dotenv()
-        username = os.getenv("login_username")
-        password = os.getenv("login_password")
-        print(f"Debug: Username from env: {username}")
-        print(f"Debug: Password from env: {password}")
+        USERNAME = os.getenv("login_username")
+        PASSWORD = os.getenv("login_password")
+        print(f"Debug: Username from env: {USERNAME}")
+        print(f"Debug: Password from env: {PASSWORD}")
 
-    if not username or not password:
+    if not USERNAME or not PASSWORD:
         raise ValueError("Username and password must be provided either as command-line arguments or in .env file")
     
     print(f"Running in {'headless' if args.headless else 'visible'} mode")
