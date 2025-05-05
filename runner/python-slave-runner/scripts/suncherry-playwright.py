@@ -166,7 +166,7 @@ def run(playwright: Playwright, headless=False, debug: bool = False):
     url = "https://www.sunrisetv.ch/de/home"
     page.set_default_timeout(5000)
     page.goto(url, timeout=30000)
-    page.wait_for_timeout(10000)
+    page.wait_for_timeout(20000)
     login_result = login(page, url)
     page.wait_for_timeout(5000)
     page.close()
