@@ -98,10 +98,15 @@ def init_browser(playwright: Playwright, headless=False, debug: bool = False, vi
     context = browser.new_context(
         viewport={
             "width": 1280,
-            "height": 1024
+            "height": 1024,
         },
         record_video_dir=video_dir,
-        record_video_size={"width": 1280, "height": 1024}
+        record_video_size={"width": 1280, "height": 1024},
+        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        locale="en-US",
+        timezone_id="America/New_York",
+        java_script_enabled=True,
+        ignore_https_errors=True
     )
     
     # Enable tracing with screenshots
