@@ -203,13 +203,13 @@ def run_with_timeout(script_content, parameters, timeout=30, venv_path=None, env
             os.environ.clear()
             os.environ.update(original_env)
 
-            result = {"status": "success" if process.returncode == 0 else "error", "output": stdout, "message": stderr}
+            result = {"status": "success" if process.returncode == 0 else "error", "output": stdout, "message": stderr, "returncode": process.returncode}
             result_queue.put(result)
         except subprocess.TimeoutExpired:
             process.kill()
-            result_queue.put({"status": "error", "message": f"Script execution timed out after {timeout} seconds"})
+            result_queue.put({"status": "error", "message": f"Script execution timed out after {timeout} seconds", "returncode": -1})
         except Exception as e:
-            result_queue.put({"status": "error", "message": f"Execution error: {str(e)}"})
+            result_queue.put({"status": "error", "message": f"Execution error: {str(e)}", "returncode": -1})
 
     thread = threading.Thread(target=target)
     thread.daemon = True
@@ -218,12 +218,12 @@ def run_with_timeout(script_content, parameters, timeout=30, venv_path=None, env
 
     if thread.is_alive():
         print(f"ERROR: Script execution timed out after {timeout} seconds", file=sys.stderr)
-        return {"status": "error", "message": "Script execution timed out"}
+        return {"status": "error", "message": "Script execution timed out", "returncode": -1}
     try:
         return result_queue.get_nowait()
     except queue.Empty:
         print(f"ERROR: No result returned from script execution", file=sys.stderr)
-        return {"status": "error", "message": "No result returned"}
+        return {"status": "error", "message": "No result returned", "returncode": -1}
 
 # Function to create a temporary folder with timestamp
 def create_temp_folder_with_timestamp(timestamp=None):

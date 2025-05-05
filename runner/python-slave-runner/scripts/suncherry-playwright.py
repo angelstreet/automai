@@ -127,7 +127,7 @@ def run(playwright: Playwright, headless=False, debug: bool = False):
         trace_folder = "suncherry-playwright_trace"
     trace_subfolder = f"{trace_folder}/{timestamp}"
     os.makedirs(trace_subfolder, exist_ok=True)
-    print(f"Trace subfolder created or already exists: {trace_subfolder}")
+    #print(f"Trace subfolder created or already exists: {trace_subfolder}")
     trace_file = f"{trace_subfolder}/{timestamp}.zip"
     
     page, context, browser = init_browser(playwright, headless, debug)
@@ -145,7 +145,7 @@ def run(playwright: Playwright, headless=False, debug: bool = False):
     # Unzip the trace file to the timestamped subfolder
     with zipfile.ZipFile(trace_file, 'r') as zip_ref:
         zip_ref.extractall(trace_subfolder)
-    print(f"Trace data extracted to: {trace_subfolder}")
+    #print(f"Trace data extracted to: {trace_subfolder}")
     # Optionally, remove the zip file to keep only the extracted data
     os.remove(trace_file)
     print(f"Zip file removed: {trace_file}")
