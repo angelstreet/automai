@@ -54,7 +54,7 @@ def login(page: Page, url: str, username: str = None, password: str = None, trac
 
     activate_semantic_placeholder(page)
 
-    random_delay(1)
+    random_delay(2)
     page.locator("#onetrust-accept-btn-handler").click()
     page.locator("#flt-semantic-node-6").click()
     random_delay(3)
@@ -68,7 +68,7 @@ def login(page: Page, url: str, username: str = None, password: str = None, trac
     page.locator("#kc-login").click()
     sleep(5)
     page.reload()
-    sleep(5)
+    sleep(10)
     activate_semantic_placeholder(page)
     sleep(1)
     try:
