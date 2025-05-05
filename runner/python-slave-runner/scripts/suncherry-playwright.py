@@ -82,10 +82,18 @@ def login(page: Page, url: str, username: str = None, password: str = None, trac
     page.wait_for_load_state("networkidle", timeout=20000)
     sleep(2)
     print("Reload page")
-    page.reload(timeout=20000)
+    try:
+        page.reload(timeout=30000)
+    except Exception as e:
+        print(f"Reload failed: {str(e)}")
+        print("Continuing despite reload failure...")
     sleep(2)
     print("Wait for networkidle")
-    page.wait_for_load_state("networkidle", timeout=20000)
+    try:
+        page.wait_for_load_state("networkidle", timeout=30000)
+    except Exception as e:
+        print(f"Network idle wait failed after reload: {str(e)}")
+        print("Continuing despite network idle wait failure...")
     sleep(2)
 
     activate_semantic_placeholder(page)
