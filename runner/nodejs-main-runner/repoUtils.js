@@ -1,17 +1,10 @@
 const fetch = require('node-fetch');
 
-async function pingRepository(jobId, status, reportUrl = null, loggerPrefix = 'runner') {
+async function pingRepository(repoUrl) {
   try {
+    const loggerPrefix = 'runner';
     console.log(
-      `[@${loggerPrefix}:pingRepository] Pinging repository for job ${jobId} with status ${status}`,
-    );
-    const payload = { job_id: jobId, status };
-    if (reportUrl) {
-      payload.report_url = reportUrl;
-    }
-    console.log(
-      `[@${loggerPrefix}:pingRepository] Sending payload to repository for job ${jobId}:`,
-      JSON.stringify(payload, null, 2),
+      `[@${loggerPrefix}:pingRepository] Checking availability of repository: ${repoUrl}`,
     );
     const response = await fetch(process.env.REPOSITORY_PING_URL, {
       method: 'POST',
@@ -19,22 +12,20 @@ async function pingRepository(jobId, status, reportUrl = null, loggerPrefix = 'r
         'Content-Type': 'application/json',
         Authorization: `Bearer ${process.env.REPOSITORY_PING_TOKEN}`,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ repo_url: repoUrl }),
     });
 
     if (!response.ok) {
       console.error(
-        `[@${loggerPrefix}:pingRepository] Failed to ping repository for job ${jobId}: ${response.status} ${response.statusText}`,
+        `[@${loggerPrefix}:pingRepository] Failed to check repository ${repoUrl}: ${response.status} ${response.statusText}`,
       );
       return false;
     }
-    console.log(
-      `[@${loggerPrefix}:pingRepository] Successfully pinged repository for job ${jobId}`,
-    );
+    console.log(`[@${loggerPrefix}:pingRepository] Repository ${repoUrl} is accessible`);
     return true;
   } catch (error) {
     console.error(
-      `[@${loggerPrefix}:pingRepository] Error pinging repository for job ${jobId}: ${error.message}`,
+      `[@${loggerPrefix}:pingRepository] Error checking repository ${repoUrl}: ${error.message}`,
     );
     return false;
   }
