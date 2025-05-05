@@ -75,12 +75,8 @@ def login(page: Page, url: str, username: str, password: str):
     print("Wait for 10 seconds")
     page.wait_for_timeout(10000)
 
-    try:
-        print("Reload page")
-        page.reload(timeout=30000)
-    except Exception as e:
-        print(f"Reload failed: {str(e)}")
-        print("Continuing despite reload failure...")
+    print("Reload page")
+    page.reload()
 
     print("Wait for 10 seconds")
     page.wait_for_timeout(10000)
