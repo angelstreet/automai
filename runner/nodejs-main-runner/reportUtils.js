@@ -57,7 +57,12 @@ async function generateAndUploadReport(
       status,
       scripts,
       envVars,
-      associatedFiles,
+      associatedFiles: associatedFiles.map((file) => ({
+        name: file.name,
+        relative_path: file.relative_path,
+        size: file.size,
+        creation_date: file.creation_date,
+      })),
     };
 
     const htmlReport = ejs.render(reportTemplate, reportData).trim();
