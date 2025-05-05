@@ -148,6 +148,13 @@ const reportTemplate = `
               <a href="<%= file.public_url || '#' %>" target="_blank">
                 <img src="<%= file.public_url || '#' %>" alt="Preview of <%= file.name %>" class="preview-img" />
               </a>
+            <% } else if (file.name && file.name.match(/\.webm$/i)) { %>
+              <a href="<%= file.public_url || '#' %>" target="_blank">
+                <video width="100" height="100" controls>
+                  <source src="<%= file.public_url || '#' %>" type="video/webm">
+                  Preview not supported
+                </video>
+              </a>
             <% } else { %>
               N/A
             <% } %>
