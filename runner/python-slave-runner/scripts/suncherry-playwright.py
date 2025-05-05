@@ -17,7 +17,7 @@ def activate_semantic_placeholder(page: Page):
     # Handle shadow DOM elements
     shadow_root_selector = 'body > flutter-view > flt-glass-pane'
     element_inside_shadow_dom_selector = 'flt-semantics-placeholder'
-    page.wait_for_selector(shadow_root_selector, state="visible", timeout=10000)
+    page.wait_for_selector(shadow_root_selector, state="hidden", timeout=10000)
     clicked = page.evaluate(
         '''
             ([shadowRootSelector, elementSelector]) => {
@@ -57,27 +57,35 @@ def login(page: Page, url: str, username: str = None, password: str = None, trac
     sleep(2)
 
     page.wait_for_selector("#onetrust-accept-btn-handler", state="visible")
+    print("Accept cookies")
     page.locator("#onetrust-accept-btn-handler").click()
 
     page.wait_for_selector("#flt-semantic-node-6", state="visible")
+    print("Click on username")
     page.locator("#flt-semantic-node-6").click()
 
     page.wait_for_selector("#username", state="visible")
+    print("Fill username")
     page.locator("#username").fill(username)
     page.locator("#username").press("Tab")
     
     page.wait_for_selector("#password", state="visible")
+    print("Fill password")
     page.locator("#password").fill(password)
     
     page.wait_for_selector("#kc-login", state="visible")
+    print("Click on login")
     page.locator("#kc-login").click()
 
     sleep(2)
-    page.wait_for_load_state("networkidle")
+    print("Wait for networkidle")
+    page.wait_for_load_state("networkidle", timeout=20000)
     sleep(2)
-    page.reload()
+    print("Reload page")
+    page.reload(timeout=20000)
     sleep(2)
-    page.wait_for_load_state("networkidle")
+    print("Wait for networkidle")
+    page.wait_for_load_state("networkidle", timeout=20000)
     sleep(2)
 
     activate_semantic_placeholder(page)
@@ -153,6 +161,7 @@ def run(playwright: Playwright, headless=False, debug: bool = False):
     load_dotenv()
 
     url = "https://www.sunrisetv.ch/de/home"
+    page.set_default_timeout(5000)  # 30 seconds
     page.goto(url, timeout=20 * 1000)
     sleep(15)
     login_result = login(page, url)
