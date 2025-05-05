@@ -1,12 +1,27 @@
 // ... existing code ...
 // Upload the executed script if available
 if (scripts.length > 0 && scripts[0].script_path) {
-  const scriptPath = scripts[0].script_path;
+  let scriptPath = scripts[0].script_path;
   const scriptName = path.basename(scriptPath);
   const scriptUploadPath = `${folderName}/${scriptName}`;
   const tempScriptPath = path.join('/tmp', `script_${jobId}_${scriptName}`);
   try {
     // Attempt to copy the script file to a temporary location in /tmp
+    if (!fs.existsSync(scriptPath)) {
+      // If the script path does not exist, try prepending the runner script folder
+      let runnerScriptFolder =
+        process.env.RUNNER_SCRIPT_FOLDER || 'runner/python-slave-runner/scripts';
+      // Check if script_folder is available in jobData or config
+      if (jobData && jobData.script_folder) {
+        runnerScriptFolder = jobData.script_folder;
+      } else if (config && config.script_folder) {
+        runnerScriptFolder = config.script_folder;
+      }
+      scriptPath = path.join(runnerScriptFolder, scriptName);
+      console.log(
+        `[@${loggerPrefix}:generateAndUploadReport] Script not found at original path, trying runner script folder: ${scriptPath}`,
+      );
+    }
     if (fs.existsSync(scriptPath)) {
       fs.copyFileSync(scriptPath, tempScriptPath);
       console.log(
