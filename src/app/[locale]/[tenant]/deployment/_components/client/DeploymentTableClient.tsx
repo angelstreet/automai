@@ -174,6 +174,12 @@ export function DeploymentTableClient({
                 scope="col"
                 className="px-2 py-0.5 text-center text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
               >
+                Run
+              </th>
+              <th
+                scope="col"
+                className="px-2 py-0.5 text-center text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+              >
                 View
               </th>
               <th
@@ -212,6 +218,23 @@ export function DeploymentTableClient({
                         ? getFormattedTime(deployment.startedAt) + ' (Running)'
                         : new Date(deployment.startedAt).toLocaleString() + ' (Running)'
                       : '-'}
+                </td>
+                <td className="px-2 py-0.5 whitespace-nowrap text-xs">
+                  <div className="flex justify-center">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 flex items-center justify-center"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRunDeployment(deployment);
+                      }}
+                      disabled={isRunning === deployment.id || actionInProgress === deployment.id}
+                    >
+                      <PlayCircle className="h-3.5 w-3.5" />
+                      {isRunning === deployment.id ? 'Running...' : ''}
+                    </Button>
+                  </div>
                 </td>
                 <td className="px-2 py-0.5 whitespace-nowrap text-xs">
                   <div className="flex justify-center">
@@ -298,19 +321,6 @@ export function DeploymentTableClient({
                       <DropdownMenuContent align="end" className="text-xs">
                         {(deployment as any).is_active === true ? (
                           <>
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRunDeployment(deployment);
-                              }}
-                              disabled={
-                                isRunning === deployment.id || actionInProgress === deployment.id
-                              }
-                              className="text-xs py-1.5 h-7"
-                            >
-                              <PlayCircle className="mr-2 h-3.5 w-3.5" />
-                              {isRunning === deployment.id ? 'Running...' : 'Run'}
-                            </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={(e) => {
                                 e.stopPropagation();
