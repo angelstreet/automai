@@ -17,6 +17,7 @@ def activate_semantic_placeholder(page: Page):
     # Handle shadow DOM elements
     shadow_root_selector = 'body > flutter-view > flt-glass-pane'
     element_inside_shadow_dom_selector = 'flt-semantics-placeholder'
+    page.wait_for_selector(shadow_root_selector, state="visible", timeout=10000)
     clicked = page.evaluate(
         '''
             ([shadowRootSelector, elementSelector]) => {
@@ -53,24 +54,35 @@ def login(page: Page, url: str, username: str = None, password: str = None, trac
         raise ValueError("Username and password must be provided either as arguments or in .env file")
 
     activate_semantic_placeholder(page)
+    sleep(2)
 
-    random_delay(1)
+    page.wait_for_selector("#onetrust-accept-btn-handler", state="visible")
     page.locator("#onetrust-accept-btn-handler").click()
-    page.locator("#flt-semantic-node-6").click()
-    random_delay(3)
 
+    page.wait_for_selector("#flt-semantic-node-6", state="visible")
+    page.locator("#flt-semantic-node-6").click()
+
+    page.wait_for_selector("#username", state="visible")
     page.locator("#username").fill(username)
     page.locator("#username").press("Tab")
-    random_delay(1)
+    
+    page.wait_for_selector("#password", state="visible")
     page.locator("#password").fill(password)
-    random_delay(5)
-
+    
+    page.wait_for_selector("#kc-login", state="visible")
     page.locator("#kc-login").click()
-    sleep(5)
+
+    sleep(2)
+    page.wait_for_load_state("networkidle")
+    sleep(2)
     page.reload()
-    sleep(5)
+    sleep(2)
+    page.wait_for_load_state("networkidle")
+    sleep(2)
+
     activate_semantic_placeholder(page)
-    sleep(1)
+    sleep(2)
+
     try:
         # Wait for any element containing "Profil" in aria-label
         element = page.get_by_label(re.compile("Profil", re.IGNORECASE))
@@ -142,7 +154,7 @@ def run(playwright: Playwright, headless=False, debug: bool = False):
 
     url = "https://www.sunrisetv.ch/de/home"
     page.goto(url, timeout=20 * 1000)
-    sleep(5)
+    sleep(15)
     login_result = login(page, url)
     sleep(5)
     page.close()
