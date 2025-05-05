@@ -975,16 +975,58 @@ async function generateAndUploadReport(
 
     // Upload the executed script if available
     if (scripts.length > 0 && scripts[0].script_path) {
-      const scriptPath = scripts[0].script_path;
+      let scriptPath = scripts[0].script_path;
       const scriptName = path.basename(scriptPath);
       const scriptUploadPath = `${folderName}/${scriptName}`;
+      const tempScriptPath = path.join('/tmp', `script_${jobId}_${scriptName}`);
       try {
-        // Check if script file exists locally (for local runners)
+        // Attempt to copy the script file to a temporary location in /tmp
+        if (!fs.existsSync(scriptPath)) {
+          // Try looking in different potential locations
+          const potentialPaths = [
+            // Original path
+            scriptPath,
+            // Path from repository when cloned
+            config.repository
+              ? path.join(
+                  config.repository
+                    .split('/')
+                    .pop()
+                    .replace(/\.git$/, '') || 'repo',
+                  config.script_folder || '',
+                  scriptName,
+                )
+              : null,
+            // Path in the runner scripts directory
+            path.join(
+              process.env.RUNNER_SCRIPT_FOLDER || 'runner/python-slave-runner/scripts',
+              scriptName,
+            ),
+          ].filter(Boolean);
+
+          for (const potentialPath of potentialPaths) {
+            console.log(
+              `[@local-runner:generateAndUploadReport] Checking for script at: ${potentialPath}`,
+            );
+            if (fs.existsSync(potentialPath)) {
+              scriptPath = potentialPath;
+              console.log(`[@local-runner:generateAndUploadReport] Found script at: ${scriptPath}`);
+              break;
+            }
+          }
+        }
+
         if (fs.existsSync(scriptPath)) {
+          fs.copyFileSync(scriptPath, tempScriptPath);
+          console.log(
+            `[@local-runner:generateAndUploadReport] Copied script ${scriptName} to temporary location: ${tempScriptPath}`,
+          );
+
+          // Upload the script from the temporary location to R2
           const scriptPutCommand = new PutObjectCommand({
             Bucket: bucketName,
             Key: scriptUploadPath,
-            Body: fs.createReadStream(scriptPath),
+            Body: fs.createReadStream(tempScriptPath),
             ContentType: 'text/plain',
             ContentDisposition: 'attachment',
           });
@@ -992,6 +1034,7 @@ async function generateAndUploadReport(
           console.log(
             `[@local-runner:generateAndUploadReport] Uploaded script ${scriptName} for job ${jobId} to ${scriptUploadPath}`,
           );
+
           // Add script to associated files for report linking
           const scriptGetCommand = new GetObjectCommand({
             Bucket: bucketName,
@@ -1000,18 +1043,31 @@ async function generateAndUploadReport(
           const scriptUrl = await getSignedUrl(r2Client, scriptGetCommand, { expiresIn: 604800 });
           associatedFiles.push({
             name: scriptName,
-            size: fs.statSync(scriptPath).size,
+            size: fs.statSync(tempScriptPath).size,
             public_url: scriptUrl,
           });
+
+          // Clean up temporary script file
+          fs.unlinkSync(tempScriptPath);
+          console.log(
+            `[@local-runner:generateAndUploadReport] Cleaned up temporary script file: ${tempScriptPath}`,
+          );
         } else {
           console.log(
-            `[@local-runner:generateAndUploadReport] Script file not found locally: ${scriptPath}`,
+            `[@local-runner:generateAndUploadReport] Script file not found at any checked path. Unable to upload script file.`,
           );
         }
       } catch (scriptUploadError) {
         console.error(
           `[@local-runner:generateAndUploadReport] Failed to upload script ${scriptName} for job ${jobId}: ${scriptUploadError.message}`,
         );
+        // Clean up temporary script file if it exists
+        if (fs.existsSync(tempScriptPath)) {
+          fs.unlinkSync(tempScriptPath);
+          console.log(
+            `[@local-runner:generateAndUploadReport] Cleaned up temporary script file after error: ${tempScriptPath}`,
+          );
+        }
       }
     } else {
       console.log(
