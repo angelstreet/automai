@@ -37,7 +37,16 @@ function decrypt(encryptedData, keyBase64) {
 async function processJob() {
   try {
     // Check if -payload argument is provided
-    const usePayload = process.argv.includes('-payload');
+    const usePayload = process.argv.includes('-p') || process.argv.includes('--payload');
+    const showHelp = process.argv.includes('-h') || process.argv.includes('--help');
+
+    if (showHelp) {
+      console.log(`[@local-runner:help] Available command-line options for local.js:`);
+      console.log(`  -p, --payload    Use a custom payload from the PAYLOAD environment variable`);
+      console.log(`  -h, --help       Display this help message`);
+      process.exit(0);
+    }
+
     let jobData;
     let config;
 
