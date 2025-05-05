@@ -532,18 +532,6 @@ async function processJob() {
         const retryOnFailure = script.retry_on_failure || 0;
         const iterations = script.iterations || 1;
 
-        if (!scriptPath) {
-          console.error(`[@local-runner:processJob] No script path provided for script`);
-          overallStatus = 'failed';
-          output.scripts.push({
-            script_path: null,
-            iteration: null,
-            stdout: '',
-            stderr: 'No script path provided',
-          });
-          continue;
-        }
-
         // Execute each iteration
         for (let i = 1; i <= iterations; i++) {
           let retries = retryOnFailure + 1;

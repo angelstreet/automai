@@ -249,129 +249,6 @@ def collect_file_metadata(directory):
             })
     return files
 
-# Function to upload files to Cloudflare R2 using S3-compatible API
-def upload_files_to_cloudflare(files, bucket_name, folder_path):
-    if not s3_client:
-        print(f"ERROR: S3 client not initialized, cannot upload files", file=sys.stderr)
-        return []
-    
-    uploaded_files = []
-    for file in files:
-        file_path = file['path']
-        remote_path = f"{folder_path}/{file['relative_path']}"
-        try:
-            with open(file_path, 'rb') as f:
-                s3_client.upload_fileobj(f, bucket_name, remote_path, ExtraArgs={'ContentType': 'application/octet-stream'})
-            # Construct public URL (assuming bucket is public)
-            public_url = f"{CLOUDFLARE_R2_ENDPOINT}/{bucket_name}/{remote_path}"
-            uploaded_files.append({
-                'name': file['name'],
-                'path': file_path,
-                'relative_path': file['relative_path'],
-                'size': file['size'],
-                'public_url': public_url
-            })
-            print(f"DEBUG: Uploaded file to Cloudflare R2: {remote_path}, URL: {public_url}", file=sys.stderr)
-        except Exception as e:
-            print(f"ERROR: Failed to upload file to Cloudflare R2: {remote_path}, Error: {str(e)}", file=sys.stderr)
-    return uploaded_files
-
-def upload_files_to_r2(job_id, created_at, associated_files, original_script_path=None, temp_folder=None):
-    """
-    Upload associated files to Cloudflare R2 and return a list of file info with public URLs.
-    :param job_id: The job ID
-    :param created_at: The creation timestamp of the job
-    :param associated_files: List of file info dictionaries to upload
-    :param original_script_path: The original path of the script file
-    :param temp_folder: The temporary folder where files were created
-    :return: List of file info dictionaries with public URLs added
-    """
-    try:
-        # Use date_HHMMSS format for folder naming
-        date_str = datetime.strptime(created_at[:19], "%Y-%m-%dT%H:%M:%S").strftime("%Y%m%d_%H%M%S")
-        folder_name = f"{date_str}_{job_id if job_id != 'unknown_job_id' else 'no_job_id'}"
-        bucket_name = 'reports'
-
-        updated_files = []
-        for file_info in associated_files:
-            try:
-                file_path = file_info.get('path')
-                file_name = file_info.get('name')
-                if not file_path or not os.path.exists(file_path):
-                    print(f"[@python-slave-runner:app] File not found for upload: {file_name}, path: {file_path}")
-                    updated_files.append(file_info)
-                    continue
-
-                # Determine content type based on file extension
-                _, ext = os.path.splitext(file_name)
-                content_type = {
-                    '.html': 'text/html',
-                    '.json': 'application/json',
-                    '.txt': 'text/plain',
-                    '.log': 'text/plain',
-                    '.png': 'image/png',
-                    '.jpg': 'image/jpeg',
-                    '.jpeg': 'image/jpeg',
-                    '.zip': 'application/zip',
-                    '.js': 'application/javascript',
-                    '.css': 'text/css',
-                    '.pdf': 'application/pdf',
-                    '.xml': 'application/xml',
-                    '.csv': 'text/csv',
-                    '.gif': 'image/gif',
-                    '.bmp': 'image/bmp',
-                    '.webp': 'image/webp',
-                    '.mp3': 'audio/mpeg',
-                    '.wav': 'audio/wav',
-                    '.ogg': 'audio/ogg',
-                    '.mp4': 'video/mp4',
-                    '.webm': 'video/webm',
-                    '.mpeg': 'video/mpeg',
-                    '.bin': 'application/octet-stream'
-                }.get(ext.lower(), 'application/octet-stream')
-
-                content_disposition = 'inline' if content_type.startswith('text') or content_type.startswith('image') or content_type.startswith('video') or content_type.startswith('audio') else 'attachment'
-
-                # Organize files in subfolders based on their type or path
-                relative_path = file_info.get('relative_path', file_name)
-                if 'suncherry-playwright_trace' in relative_path:
-                    r2_path = f"{folder_name}/trace/{relative_path.split('suncherry-playwright_trace/')[1]}"
-                else:
-                    r2_path = f"{folder_name}/assets/{relative_path}"
-                print(f"[@python-slave-runner:app] Uploading file to R2: {file_name} -> {r2_path} with Content-Type: {content_type}")
-
-                # Upload file to R2
-                with open(file_path, 'rb') as f:
-                    s3_client.upload_fileobj(
-                        f,
-                        bucket_name,
-                        r2_path,
-                        ExtraArgs={
-                            'ContentType': content_type,
-                            'ContentDisposition': content_disposition
-                        }
-                    )
-
-                # Generate presigned URL (valid for 7 days)
-                url = s3_client.generate_presigned_url(
-                    'get_object',
-                    Params={'Bucket': bucket_name, 'Key': r2_path},
-                    ExpiresIn=604800  # 7 days in seconds
-                )
-
-                # Add the public URL to the file info
-                file_info['public_url'] = url
-                print(f"[@python-slave-runner:app] Uploaded file to R2: {file_name}, Public URL: {url[:50]}...")
-                updated_files.append(file_info)
-            except Exception as e:
-                print(f"[@python-slave-runner:app] Error uploading file to R2: {file_info.get('name')}, Error: {str(e)}")
-                updated_files.append(file_info)
-
-        return updated_files
-    except Exception as e:
-        print(f"[@python-slave-runner:app] Error in upload_files_to_r2: {str(e)}")
-        return associated_files
-
 @app.route('/execute', methods=['POST'])
 def execute():
     try:
@@ -510,10 +387,6 @@ def execute():
         associated_files = collect_file_metadata(temp_folder)
         print(f"DEBUG: Found {len(associated_files)} associated files in temporary folder", file=sys.stderr)
 
-        # Upload associated files to Cloudflare R2
-        uploaded_files = upload_files_to_r2(job_id, created_at, associated_files, full_script_path, temp_folder)
-        print(f"DEBUG: Uploaded {len(uploaded_files)} files to Cloudflare R2", file=sys.stderr)
-
         # Clean up temporary folder after execution
         try:
             shutil.rmtree(temp_folder)
@@ -533,7 +406,7 @@ def execute():
             "end_time": end_time_str,
             "duration_seconds": duration,
             "created_at": created_at,
-            "associated_files": uploaded_files,
+            "associated_files": associated_files,
             "job_id": job_id
         })
 

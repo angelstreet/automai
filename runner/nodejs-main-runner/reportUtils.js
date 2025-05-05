@@ -1,6 +1,7 @@
 // ... existing code ...
 const fs = require('fs');
 const path = require('path');
+
 const { S3Client, PutObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const ejs = require('ejs');
@@ -138,61 +139,71 @@ async function generateAndUploadReport(
     if (scripts.length > 0 && scripts[0].script_path) {
       let scriptPath = scripts[0].script_path;
       const scriptName = path.basename(scriptPath);
-      const scriptUploadPath = `${folderName}/${scriptName}`;
-      const tempScriptPath = path.join('/tmp', `script_${jobId}_${scriptName}`);
-      try {
-        // Use the provided script path directly
-        if (fs.existsSync(scriptPath)) {
-          fs.copyFileSync(scriptPath, tempScriptPath);
-          console.log(
-            `[@${loggerPrefix}:generateAndUploadReport] Copied script ${scriptName} to temporary location: ${tempScriptPath}`,
-          );
-
-          // Upload the script from the temporary location to R2
-          const scriptPutCommand = new PutObjectCommand({
-            Bucket: bucketName,
-            Key: scriptUploadPath,
-            Body: fs.createReadStream(tempScriptPath),
-            ContentType: 'text/plain',
-            ContentDisposition: 'attachment',
-          });
-          await r2Client.send(scriptPutCommand);
-          console.log(
-            `[@${loggerPrefix}:generateAndUploadReport] Uploaded script ${scriptName} for job ${jobId} to ${scriptUploadPath}`,
-          );
-
-          // Add script to associated files for report linking
-          const scriptGetCommand = new GetObjectCommand({
-            Bucket: bucketName,
-            Key: scriptUploadPath,
-          });
-          const scriptUrl = await getSignedUrl(r2Client, scriptGetCommand, { expiresIn: 604800 });
-          associatedFiles.push({
-            name: scriptName,
-            size: fs.statSync(tempScriptPath).size,
-            public_url: scriptUrl,
-          });
-
-          // Clean up temporary script file
-          fs.unlinkSync(tempScriptPath);
-          console.log(
-            `[@${loggerPrefix}:generateAndUploadReport] Cleaned up temporary script file: ${tempScriptPath}`,
-          );
-        } else {
-          console.log(
-            `[@${loggerPrefix}:generateAndUploadReport] Script file not found at provided path: ${scriptPath}. Unable to upload script file.`,
-          );
-        }
-      } catch (scriptUploadError) {
-        console.error(
-          `[@${loggerPrefix}:generateAndUploadReport] Failed to upload script ${scriptName} for job ${jobId}: ${scriptUploadError.message}`,
+      // Check if the script is already in associatedFiles with a public_url
+      const existingScript = associatedFiles.find(
+        (file) => file.name === scriptName && file.public_url,
+      );
+      if (existingScript) {
+        console.log(
+          `[@${loggerPrefix}:generateAndUploadReport] Script ${scriptName} already uploaded by Python runner with URL: ${existingScript.public_url}. Skipping upload.`,
         );
-        // Clean up temporary script file if it exists
-        if (fs.existsSync(tempScriptPath)) {
-          fs.unlinkSync(tempScriptPath);
-          console.log(
-            `[@${loggerPrefix}:generateAndUploadReport] Cleaned up temporary script file after error: ${tempScriptPath}`,
+      } else {
+        const scriptUploadPath = `${folderName}/${scriptName}`;
+        const tempScriptPath = path.join('/tmp', `script_${jobId}_${scriptName}`);
+        try {
+          // Use the provided script path directly
+          if (fs.existsSync(scriptPath)) {
+            fs.copyFileSync(scriptPath, tempScriptPath);
+            console.log(
+              `[@${loggerPrefix}:generateAndUploadReport] Copied script ${scriptName} to temporary location: ${tempScriptPath}`,
+            );
+
+            // Upload the script from the temporary location to R2
+            const scriptPutCommand = new PutObjectCommand({
+              Bucket: bucketName,
+              Key: scriptUploadPath,
+              Body: fs.createReadStream(tempScriptPath),
+              ContentType: 'text/plain',
+              ContentDisposition: 'attachment',
+            });
+            await r2Client.send(scriptPutCommand);
+            console.log(
+              `[@${loggerPrefix}:generateAndUploadReport] Uploaded script ${scriptName} for job ${jobId} to ${scriptUploadPath}`,
+            );
+
+            // Add script to associated files for report linking
+            const scriptGetCommand = new GetObjectCommand({
+              Bucket: bucketName,
+              Key: scriptUploadPath,
+            });
+            const scriptUrl = await getSignedUrl(r2Client, scriptGetCommand, { expiresIn: 604800 });
+            associatedFiles.push({
+              name: scriptName,
+              size: fs.statSync(tempScriptPath).size,
+              public_url: scriptUrl,
+            });
+
+            // Clean up temporary script file
+            fs.unlinkSync(tempScriptPath);
+            console.log(
+              `[@${loggerPrefix}:generateAndUploadReport] Cleaned up temporary script file: ${tempScriptPath}`,
+            );
+          } else {
+            console.log(
+              `[@${loggerPrefix}:generateAndUploadReport] Script file not found at provided path: ${scriptPath}. Unable to upload script file.`,
+            );
+          }
+        } catch (scriptUploadError) {
+          console.error(
+            `[@${loggerPrefix}:generateAndUploadReport] Failed to upload script ${scriptName} for job ${jobId}: ${scriptUploadError.message}`,
           );
+          // Clean up temporary script file if it exists
+          if (fs.existsSync(tempScriptPath)) {
+            fs.unlinkSync(tempScriptPath);
+            console.log(
+              `[@${loggerPrefix}:generateAndUploadReport] Cleaned up temporary script file after error: ${tempScriptPath}`,
+            );
+          }
         }
       }
     } else {
