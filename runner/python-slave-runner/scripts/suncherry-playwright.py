@@ -135,7 +135,7 @@ def run(playwright: Playwright, headless=False, debug: bool = False):
 
     url = "https://www.sunrisetv.ch/de/home"
     page.goto(url, timeout=20 * 1000)
-    sleep(5)
+    sleep(10)
     login_result = login(page, url)
     sleep(5)
     page.close()
