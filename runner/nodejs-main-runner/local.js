@@ -567,7 +567,18 @@ async function processJob() {
 
               scriptOutput.stdout = response.data.output.stdout || '';
               scriptOutput.stderr = response.data.output.stderr || '';
-              scriptStatus = response.data.status;
+              // Check for exit code in response to determine success
+              if (response.data.output && typeof response.data.output.exitCode === 'number') {
+                scriptStatus = response.data.output.exitCode === 0 ? 'success' : 'failed';
+                console.log(
+                  `[@local-runner:processJob] Script status determined by exit code: ${scriptStatus} (exitCode: ${response.data.output.exitCode})`,
+                );
+              } else {
+                scriptStatus = response.data.status;
+                console.log(
+                  `[@local-runner:processJob] Script status determined by response status: ${scriptStatus} (no exit code available)`,
+                );
+              }
 
               // Add associated files to output if available
               if (response.data.associated_files) {
