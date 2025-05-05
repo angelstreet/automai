@@ -595,6 +595,10 @@ async function processJob() {
               }
             } catch (err) {
               scriptOutput.stderr = err.response?.data?.message || err.message;
+              // Check if the error is due to script not found
+              if (scriptOutput.stderr.includes('Script not found')) {
+                scriptStatus = 'error';
+              }
               console.log(
                 `[@local-runner:processJob] Script error, attempt ${attempt}/${retries}: ${scriptOutput.stderr}`,
               );
