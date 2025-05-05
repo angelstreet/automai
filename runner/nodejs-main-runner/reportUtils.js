@@ -62,6 +62,7 @@ async function generateAndUploadReport(
         relative_path: file.relative_path,
         size: file.size,
         creation_date: file.creation_date,
+        public_url: file.public_url || 'N/A',
       })),
     };
 
