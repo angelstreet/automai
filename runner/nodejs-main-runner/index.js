@@ -663,7 +663,3 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`[@runner:server] Server listening on port ${PORT}`);
 });
-
-async function pingRepository(repoUrl) {
-  return await pingRepository(repoUrl, 'runner');
-}
