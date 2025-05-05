@@ -583,6 +583,11 @@ async function processJob() {
               scriptOutput.stderr = response.data.output.stderr || '';
               scriptStatus = response.data.status;
 
+              // Add associated files to output if available
+              if (response.data.associated_files) {
+                output.associated_files = response.data.associated_files;
+              }
+
               if (scriptStatus === 'success') {
                 break;
               } else {

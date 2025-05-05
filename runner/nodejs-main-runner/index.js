@@ -516,6 +516,7 @@ async function processJob() {
           );
         }
         const scriptCommand = `${scripts}`;
+        let fullScript;
         if (host.os === 'windows') {
           fullScript = `${repoCommands}${repoCommands ? ' && ' : ''}${repoDir ? `cd /d ${repoDir} && ` : ''} cd ${scriptFolder} && powershell -Command "if (Test-Path 'requirements.txt') { pip install -r requirements.txt } else { Write-Output 'No requirements.txt file found, skipping pip install' }" && ${envSetup}python --version && echo ============================= && ${scriptCommand}`;
         } else {
@@ -530,7 +531,7 @@ async function processJob() {
           .on('ready', async () => {
             console.log(`[@runner:processJob] Connected to ${host.ip}`);
 
-            const started_at = new Date().toISOString();
+            started_at = new Date().toISOString();
             await supabase
               .from('jobs_run')
               .update({
@@ -548,7 +549,11 @@ async function processJob() {
                   .from('jobs_run')
                   .update({
                     status: 'failed',
-                    output: { stderr: err.message },
+                    output: {
+                      scripts: [
+                        { script_path: 'N/A', iteration: 1, stdout: '', stderr: err.message },
+                      ],
+                    },
                     completed_at: new Date().toISOString(),
                   })
                   .eq('id', jobId);
@@ -559,25 +564,37 @@ async function processJob() {
                 return;
               }
 
+              let scriptOutput = {
+                script_path: config.scripts[0]?.path || 'N/A',
+                iteration: 1,
+                stdout: '',
+                stderr: '',
+              };
               stream
                 .on('data', (data) => {
-                  output.stdout += data;
+                  scriptOutput.stdout += data;
                   console.log(`${data}`);
                 })
                 .stderr.on('data', (data) => {
-                  output.stderr += data;
+                  scriptOutput.stderr += data;
                   console.log(`[@runner:processJob] Stderr: ${data}`);
                 })
                 .on('close', async (code, signal) => {
-                  console.log(`[@runner:processJob] Final stdout: ${output.stdout}`);
-                  console.log(`[@runner:processJob] Final stderr: ${output.stderr}`);
+                  console.log(`[@runner:processJob] Final stdout: ${scriptOutput.stdout}`);
+                  console.log(`[@runner:processJob] Final stderr: ${scriptOutput.stderr}`);
                   console.log(
                     `[@runner:processJob] SSH connection closed: ${code}, signal: ${signal}`,
                   );
 
                   const completed_at = new Date().toISOString();
                   const isSuccess =
-                    (output.stdout && output.stdout.includes('Test Success')) || code === 0;
+                    (scriptOutput.stdout && scriptOutput.stdout.includes('Test Success')) ||
+                    code === 0;
+
+                  output.scripts.push(scriptOutput);
+                  if (!isSuccess) {
+                    overallStatus = 'failed';
+                  }
 
                   await supabase
                     .from('jobs_run')
@@ -626,7 +643,10 @@ async function processJob() {
             if (err.message.includes('ECONNRESET')) {
               console.error(`[@runner:processJob] SSH connection closed due to ECONNRESET`);
               const completed_at = new Date().toISOString();
-              const isSuccess = output.stdout && output.stdout.includes('Test Success');
+              const isSuccess =
+                output.scripts.length > 0 &&
+                output.scripts[0].stdout &&
+                output.scripts[0].stdout.includes('Test Success');
 
               await supabase
                 .from('jobs_run')
