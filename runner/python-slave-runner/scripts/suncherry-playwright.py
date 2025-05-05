@@ -164,8 +164,8 @@ def run(playwright: Playwright, headless=False, debug: bool = False):
     load_dotenv()
 
     url = "https://www.sunrisetv.ch/de/home"
-    page.set_default_timeout(5000)  # 30 seconds
-    page.goto(url, timeout=20 * 1000)
+    page.set_default_timeout(5000)
+    page.goto(url, timeout=30000)
     page.wait_for_timeout(10000)
     login_result = login(page, url)
     page.wait_for_timeout(5000)
