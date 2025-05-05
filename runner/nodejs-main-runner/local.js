@@ -980,42 +980,7 @@ async function generateAndUploadReport(
       const scriptUploadPath = `${folderName}/${scriptName}`;
       const tempScriptPath = path.join('/tmp', `script_${jobId}_${scriptName}`);
       try {
-        // Attempt to copy the script file to a temporary location in /tmp
-        if (!fs.existsSync(scriptPath)) {
-          // Try looking in different potential locations
-          const potentialPaths = [
-            // Original path
-            scriptPath,
-            // Path from repository when cloned
-            config.repository
-              ? path.join(
-                  config.repository
-                    .split('/')
-                    .pop()
-                    .replace(/\.git$/, '') || 'repo',
-                  config.script_folder || '',
-                  scriptName,
-                )
-              : null,
-            // Path in the runner scripts directory
-            path.join(
-              process.env.RUNNER_SCRIPT_FOLDER || 'runner/python-slave-runner/scripts',
-              scriptName,
-            ),
-          ].filter(Boolean);
-
-          for (const potentialPath of potentialPaths) {
-            console.log(
-              `[@local-runner:generateAndUploadReport] Checking for script at: ${potentialPath}`,
-            );
-            if (fs.existsSync(potentialPath)) {
-              scriptPath = potentialPath;
-              console.log(`[@local-runner:generateAndUploadReport] Found script at: ${scriptPath}`);
-              break;
-            }
-          }
-        }
-
+        // Use the provided script path directly
         if (fs.existsSync(scriptPath)) {
           fs.copyFileSync(scriptPath, tempScriptPath);
           console.log(
@@ -1054,7 +1019,7 @@ async function generateAndUploadReport(
           );
         } else {
           console.log(
-            `[@local-runner:generateAndUploadReport] Script file not found at any checked path. Unable to upload script file.`,
+            `[@local-runner:generateAndUploadReport] Script file not found at provided path: ${scriptPath}. Unable to upload script file.`,
           );
         }
       } catch (scriptUploadError) {

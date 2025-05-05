@@ -984,16 +984,20 @@ async function generateAndUploadReport(
           const potentialPaths = [
             // Original path
             scriptPath,
-            // Path from repository when cloned
-            config.repository
-              ? path.join(repoDir || 'repo', config.script_folder || '', scriptName)
-              : null,
             // Path in the runner scripts directory
             path.join(
               process.env.RUNNER_SCRIPT_FOLDER || 'runner/python-slave-runner/scripts',
               scriptName,
             ),
+            // Python slave runner scripts directory
+            path.join('runner/python-slave-runner/scripts', scriptName),
+            // Relative to current directory
+            path.join('scripts', scriptName),
           ].filter(Boolean);
+
+          console.log(
+            `[@runner:generateAndUploadReport] Checking ${potentialPaths.length} potential script locations for ${scriptName}`,
+          );
 
           for (const potentialPath of potentialPaths) {
             console.log(
