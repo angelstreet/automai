@@ -1,5 +1,4 @@
 from playwright.sync_api import sync_playwright, Page, Playwright
-from time import sleep
 import random
 import os
 import sys
@@ -8,10 +7,6 @@ from dotenv import load_dotenv
 import re
 from datetime import datetime
 import zipfile
-
-
-def random_delay(min_seconds=1, max_seconds=3):
-    sleep(random.uniform(min_seconds, max_seconds))
 
 def activate_semantic_placeholder(page: Page):
     # Handle shadow DOM elements
@@ -54,7 +49,7 @@ def login(page: Page, url: str, username: str = None, password: str = None, trac
         raise ValueError("Username and password must be provided either as arguments or in .env file")
 
     activate_semantic_placeholder(page)
-    sleep(2)
+    page.wait_for_timeout(1000)
 
     page.wait_for_selector("#onetrust-accept-btn-handler", state="visible")
     print("Accept cookies")
@@ -77,27 +72,27 @@ def login(page: Page, url: str, username: str = None, password: str = None, trac
     print("Click on login")
     page.locator("#kc-login").click()
 
-    sleep(2)
+    page.wait_for_timeout(1000)
     print("Wait for networkidle")
     page.wait_for_load_state("networkidle", timeout=20000)
-    sleep(2)
+    page.wait_for_timeout(1000)
     print("Reload page")
     try:
         page.reload(timeout=30000)
     except Exception as e:
         print(f"Reload failed: {str(e)}")
         print("Continuing despite reload failure...")
-    sleep(2)
+    page.wait_for_timeout(1000)
     print("Wait for networkidle")
     try:
         page.wait_for_load_state("networkidle", timeout=30000)
     except Exception as e:
         print(f"Network idle wait failed after reload: {str(e)}")
         print("Continuing despite network idle wait failure...")
-    sleep(2)
+    page.wait_for_timeout(1000)
 
     activate_semantic_placeholder(page)
-    sleep(2)
+    page.wait_for_timeout(1000)
 
     try:
         # Wait for any element containing "Profil" in aria-label
@@ -171,9 +166,9 @@ def run(playwright: Playwright, headless=False, debug: bool = False):
     url = "https://www.sunrisetv.ch/de/home"
     page.set_default_timeout(5000)  # 30 seconds
     page.goto(url, timeout=20 * 1000)
-    sleep(15)
+    page.wait_for_timeout(10000)
     login_result = login(page, url)
-    sleep(5)
+    page.wait_for_timeout(5000)
     page.close()
     # Save tracing data to zip
     context.tracing.stop(path=trace_file)
