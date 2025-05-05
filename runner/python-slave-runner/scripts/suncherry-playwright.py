@@ -166,7 +166,7 @@ def run(playwright: Playwright, headless=False, debug: bool = False):
     url = "https://www.sunrisetv.ch/de/home"
     page.set_default_timeout(5000)
     page.goto(url, timeout=30000)
-    page.wait_for_timeout(20000)
+    page.wait_for_timeout(10000) 
     login_result = login(page, url)
     page.wait_for_timeout(5000)
     page.close()
@@ -197,6 +197,10 @@ def main():
     # Ignore any additional arguments to prevent errors
     args, _ = parser.parse_known_args()
     
+    # Debug argument values
+    print(f"Debug: Username from args: {args.username}")
+    print(f"Debug: Password from args: {args.password}")
+    
     # Validate credentials at the very start
     username = args.username
     password = args.password
@@ -204,6 +208,8 @@ def main():
         load_dotenv()
         username = os.getenv("login_username")
         password = os.getenv("login_password")
+        print(f"Debug: Username from env: {username}")
+        print(f"Debug: Password from env: {password}")
 
     if not username or not password:
         raise ValueError("Username and password must be provided either as command-line arguments or in .env file")
