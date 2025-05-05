@@ -167,11 +167,7 @@ export async function createJob(formData: JobFormData, hostDetails?: any[]) {
     // If is_active is true, queue the job for execution
     if (formData.is_active) {
       console.log('[@action:jobsAction:createJob] Auto-starting job run');
-      const jobRunResult = await startJob(
-        jobConfigResult.data.id,
-        formData.creator_id,
-        {}, // Empty object instead of null for override parameters
-      );
+      const jobRunResult = await startJob(jobConfigResult.data.id, formData.creator_id);
 
       if (!jobRunResult.success) {
         console.error('[@action:jobsAction:createJob] Failed to queue job:', jobRunResult.error);
@@ -210,11 +206,7 @@ export async function createJob(formData: JobFormData, hostDetails?: any[]) {
  * Runs a job by its configuration ID
  * This simply pushes the job ID to Redis queue for the runner to process
  */
-export async function startJob(
-  configId: string,
-  userId: string,
-  overrideParameters?: Record<string, any>,
-) {
+export async function startJob(configId: string, userId: string) {
   try {
     console.log(`[@action:jobsAction:startJob] Queueing job with config ID: "${configId}"`);
 
@@ -397,7 +389,7 @@ export async function getAllJobs(providedUser?: any) {
         // Use non-mutating approach with a new array to avoid issues
         const latestRun =
           config.jobs_run && config.jobs_run.length > 0
-            ? [...config.jobs_run].sort((a, b) => {
+            ? [...config.jobs_run].sort((a: any, b: any) => {
                 const timeA = new Date(a.created_at).getTime();
                 const timeB = new Date(b.created_at).getTime();
                 return timeB - timeA; // Descending order - newer runs first
@@ -426,7 +418,7 @@ export async function getAllJobs(providedUser?: any) {
           updatedAt: config.updated_at,
           startedAt: latestRun?.started_at || null,
           completedAt: latestRun?.completed_at || null,
-          scheduledTime: config.scheduled_time || null,
+          scheduledTime: config.schedule_type || 'now',
           scheduleType: config.schedule_type || 'now',
           // Add report_url from latestRun
           report_url: latestRun?.report_url || null,
@@ -497,27 +489,28 @@ export async function getJobRunsForConfig(configId: string) {
       return { success: false, error: `Failed to get job runs: ${jobRunsResult.error}`, data: [] };
     }
 
-    // Transform job runs to desired format if needed
-    const transformedJobRuns = jobRunsResult.data.map((run) => ({
-      id: run.id,
-      configId: run.config_id,
-      status: run.status,
-      output: run.output,
-      logs: run.logs,
-      error: run.error,
-      createdAt: run.created_at,
-      updatedAt: run.updated_at,
-      queuedAt: run.queued_at,
-      startedAt: run.started_at,
-      completedAt: run.completed_at,
-      executionParameters: run.execution_parameters,
-      scheduledTime: run.scheduled_time,
-      workerId: run.worker_id,
-      executionAttempt: run.execution_attempt,
-      executionNumber: run.execution_number,
-      // Add the config name for reference
-      configName: configResult.data.name,
-    }));
+    // Transform job runs to desired format with null check
+    const transformedJobRuns =
+      jobRunsResult.data?.map((run) => ({
+        id: run.id,
+        configId: run.config_id,
+        status: run.status,
+        output: run.output,
+        logs: run.logs,
+        error: run.error,
+        createdAt: run.created_at,
+        updatedAt: run.updated_at,
+        queuedAt: run.queued_at,
+        startedAt: run.started_at,
+        completedAt: run.completed_at,
+        executionParameters: run.execution_parameters,
+        scheduledTime: run.scheduled_time,
+        workerId: run.worker_id,
+        executionAttempt: run.execution_attempt,
+        executionNumber: run.execution_number,
+        // Add the config name for reference with null check
+        configName: configResult.data?.name || 'Unknown',
+      })) || [];
 
     console.log(
       `[@action:jobsAction:getJobRunsForConfig] Successfully fetched ${transformedJobRuns.length} job runs`,
@@ -526,7 +519,7 @@ export async function getJobRunsForConfig(configId: string) {
     return {
       success: true,
       data: transformedJobRuns,
-      configName: configResult.data.name,
+      configName: configResult.data?.name || 'Unknown',
     };
   } catch (error: any) {
     console.error('[@action:jobsAction:getJobRunsForConfig] CAUGHT ERROR:', {
@@ -665,6 +658,8 @@ export async function duplicateDeployment(deploymentId: string) {
       is_active: existingDeployment.is_active || false,
       config: existingDeployment.config || {},
       created_at: new Date().toISOString(),
+      scripts_path: [],
+      host_ids: [],
     };
 
     const newDeploymentResult = await createJob(formData);

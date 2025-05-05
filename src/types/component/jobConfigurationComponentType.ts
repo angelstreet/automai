@@ -36,6 +36,8 @@ export interface JobConfiguration {
   // Timestamps
   created_at: string;
   updated_at?: string;
+
+  jobs_run?: any[];
 }
 
 // Type for job run status
