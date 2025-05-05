@@ -151,8 +151,8 @@ const reportTemplate = `
             <% } else if (file.name && file.name.match(/\.webm$/i)) { %>
               <a href="<%= file.public_url || '#' %>" target="_blank">
                 <video width="100" height="100" controls>
-                  <source src="<%= file.public_url || '#' %>" type="video/webm">
-                  Preview not supported
+                  <source src="<%= (file.public_url || '#').split('?')[0] %>" type="video/webm">
+                  Your browser does not support the video tag or the file may not be accessible.
                 </video>
               </a>
             <% } else { %>
