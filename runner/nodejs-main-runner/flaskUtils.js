@@ -4,6 +4,11 @@ const path = require('path');
 const axios = require('axios');
 
 const { createScriptExecution, updateScriptExecution } = require('./jobUtils');
+const {
+  prepareJobInitializationPayload,
+  prepareJobFinalizationPayload,
+  collectEnvironmentVariables,
+} = require('./utils');
 
 async function executeFlaskScripts(
   config,
@@ -26,19 +31,16 @@ async function executeFlaskScripts(
   const uploadScriptContent = fs.readFileSync(uploadScriptPath, 'utf8');
 
   try {
+    const payload = prepareJobInitializationPayload(
+      jobId,
+      started_at,
+      uploadScriptContent,
+      decryptedEnvVars,
+    );
     const initResponse = await fetch(`${FLASK_SERVICE_URL}/initialize_job`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        job_id: jobId,
-        created_at: started_at,
-        upload_script_content: uploadScriptContent,
-        r2_credentials: {
-          endpoint: decryptedEnvVars['CLOUDFLARE_R2_ENDPOINT'] || '',
-          access_key_id: decryptedEnvVars['CLOUDFLARE_R2_ACCESS_KEY_ID'] || '',
-          secret_access_key: decryptedEnvVars['CLOUDFLARE_R2_SECRET_ACCESS_KEY'] || '',
-        },
-      }),
+      body: JSON.stringify(payload),
     });
     if (!initResponse.ok) {
       console.error(
@@ -90,11 +92,12 @@ async function executeFlaskScripts(
       while (attempt < retries) {
         attempt++;
         try {
+          const envVars = collectEnvironmentVariables(decryptedEnvVars);
           const payload = {
             script_path: scriptPath,
             parameters: parameters ? `${parameters} ${i}` : `${i}`,
             timeout: timeout,
-            environment_variables: decryptedEnvVars,
+            environment_variables: envVars,
             created_at: started_at,
             job_id: jobId,
             script_id: scriptExecutionId,
@@ -230,10 +233,11 @@ async function executeFlaskScripts(
 
   // Finalize job for upload and report generation
   try {
+    const finalizePayload = prepareJobFinalizationPayload(jobId, started_at);
     const finalizeResponse = await fetch(`${FLASK_SERVICE_URL}/finalize_job`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ job_id: jobId, created_at: started_at }),
+      body: JSON.stringify(finalizePayload),
     });
     if (!finalizeResponse.ok) {
       console.error(

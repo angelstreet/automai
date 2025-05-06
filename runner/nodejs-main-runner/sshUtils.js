@@ -3,7 +3,7 @@ const { v4: uuidv4 } = require('uuid');
 
 const { createScriptExecution, updateScriptExecution, updateJobStatus } = require('./jobUtils');
 const { pingRepository } = require('./repoUtils');
-const { decrypt } = require('./utils');
+const { decrypt, formatEnvVarsForSSH, collectEnvironmentVariables } = require('./utils');
 
 async function executeSSHScripts(
   config,
@@ -154,19 +154,11 @@ async function executeSSHScripts(
       }
 
       // Add environment variables to the SSH script
-      let envSetup = '';
-      if (Object.keys(decryptedEnvVars).length > 0) {
-        envSetup =
-          host.os === 'windows'
-            ? Object.entries(decryptedEnvVars)
-                .map(([key, value]) => `set ${key}=${value}`)
-                .join(' && ')
-            : Object.entries(decryptedEnvVars)
-                .map(([key, value]) => `export ${key}=${value}`)
-                .join(' && ');
-        envSetup += host.os === 'windows' ? ' && ' : ' && ';
+      const envVars = collectEnvironmentVariables(decryptedEnvVars);
+      let envSetup = formatEnvVarsForSSH(envVars, host.os);
+      if (envSetup) {
         console.log(
-          `[executeSSHScripts] Environment variables setup for SSH: ${Object.keys(decryptedEnvVars).join(', ')}`,
+          `[executeSSHScripts] Environment variables setup for SSH: ${Object.keys(envVars).join(', ')}`,
         );
       } else {
         console.log(`[executeSSHScripts] No environment variables to set for SSH host ${host.ip}`);
