@@ -42,19 +42,27 @@ async function executeOnFlask(
     team_id,
     creator_id,
   );
-  const output = results.map((result, index) => ({
-    script_path: config.scripts[index].path,
-    parameters: config.scripts[index].parameters,
-    iteration: 1,
-    status: result.status,
-    stdout: result.stdout,
-    stderr: result.stderr,
-    report_url: result.report_url || '',
-  }));
-  const overallStatus = results.every((result) => result.status === 'completed')
+
+  // Ensure results is an array, even if a single result is returned
+  const resultsArray = Array.isArray(results) ? results : [results];
+
+  const output = {
+    scripts: resultsArray.map((result, index) => ({
+      script_path: config.scripts[index]?.path || 'Unknown',
+      parameters: config.scripts[index]?.parameters || 'None',
+      iteration: 1,
+      status: result.status || 'unknown',
+      stdout: result.stdout || '',
+      stderr: result.stderr || '',
+      report_url: result.report_url || '',
+    })),
+  };
+
+  const overallStatus = resultsArray.every((result) => result.status === 'completed')
     ? 'completed'
     : 'in-progress';
-  started_at = results[results.length - 1].started_at;
+  started_at =
+    resultsArray.length > 0 ? resultsArray[resultsArray.length - 1].started_at : started_at;
 
   // Update final status and generate report
   const completed_at = new Date().toISOString();
