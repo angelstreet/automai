@@ -127,7 +127,23 @@ def initialize_job():
     upload_script_path = os.path.join(job_folder_path, 'upload_and_report.py')
     with open(upload_script_path, 'w') as f:
         f.write(upload_script_content)
-    print(f"[initialize_job] Saved upload script for job {job_id} to {upload_script_path}", file=sys.stderr)
+    print(f"[initialize_job] Saved upload_and_report.py for job {job_id} to {upload_script_path}", file=sys.stderr)
+
+    # Save requirements.txt to job folder for dependency installation
+    requirements_content = "boto3\npython-dotenv\n"
+    requirements_path = os.path.join(job_folder_path, 'requirements.txt')
+    with open(requirements_path, 'w') as f:
+        f.write(requirements_content)
+    print(f"[initialize_job] Saved requirements.txt for job {job_id} to {requirements_path}", file=sys.stderr)
+
+    # Install dependencies from requirements.txt
+    try:
+        subprocess.run([sys.executable, '-m', 'pip', 'install', '-r', requirements_path], check=True, capture_output=True, text=True, cwd=job_folder_path)
+        print(f"[initialize_job] Successfully installed dependencies for job {job_id} from {requirements_path}", file=sys.stderr)
+    except subprocess.CalledProcessError as e:
+        print(f"[initialize_job] ERROR: Failed to install dependencies for job {job_id}: {e.stderr}", file=sys.stderr)
+    except Exception as e:
+        print(f"[initialize_job] ERROR: Unexpected error while installing dependencies for job {job_id}: {str(e)}", file=sys.stderr)
 
     # Save R2 credentials to a .env file for this job
     credentials_file = os.path.join(job_folder_path, '.env')
