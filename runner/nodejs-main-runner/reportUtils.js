@@ -95,6 +95,11 @@ async function generateAndUploadReport(
       reportData.parameters = extra_data.parameters || '';
       reportData.parent_job_id = extra_data.parent_job_id || '';
       reportData.host_info = extra_data.host_info || '';
+      // Add script position and total count if available
+      reportData.script_index =
+        extra_data.script_index !== undefined ? extra_data.script_index + 1 : 'N/A';
+      reportData.total_scripts =
+        extra_data.total_scripts !== undefined ? extra_data.total_scripts : 'N/A';
     }
 
     const htmlReport = ejs.render(reportTemplate, reportData).trim();
