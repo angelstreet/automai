@@ -271,6 +271,8 @@ def main():
     job_folders = [f for f in os.listdir(upload_folder) if os.path.isdir(os.path.join(upload_folder, f))]
     if not job_folders:
         print(f"[@upload_and_report:main] ERROR: No job folders found in uploadFolder", file=sys.stderr)
+        output = {'status': 'failure', 'job_id': 'unknown', 'error': 'No job folders found'}
+        print(json.dumps(output, indent=2))
         sys.exit(1)
 
     if len(job_folders) > 1:
@@ -289,6 +291,8 @@ def main():
         print(f"[@upload_and_report:main] DEBUG: SUPABASE_SERVICE_ROLE_KEY = {'***' if os.environ.get('SUPABASE_SERVICE_ROLE_KEY') else 'NOT FOUND'}", file=sys.stderr)
     else:
         print(f"[@upload_and_report:main] ERROR: .env file not found at {env_file_path}.", file=sys.stderr)
+        output = {'status': 'failure', 'job_id': job_folder_name.split('_')[-1] if '_' in job_folder_name else job_folder_name, 'error': '.env file not found'}
+        print(json.dumps(output, indent=2))
         sys.exit(1)
 
     # Initialize S3 client for Cloudflare R2
@@ -308,9 +312,13 @@ def main():
             print(f"[@upload_and_report:main] Successfully initialized S3 client for Cloudflare R2.", file=sys.stderr)
         else:
             print(f"[@upload_and_report:main] ERROR: Cloudflare R2 credentials not found in environment variables.", file=sys.stderr)
+            output = {'status': 'failure', 'job_id': job_folder_name.split('_')[-1] if '_' in job_folder_name else job_folder_name, 'error': 'Cloudflare R2 credentials not found'}
+            print(json.dumps(output, indent=2))
             sys.exit(1)
     except Exception as e:
         print(f"[@upload_and_report:main] ERROR: Failed to initialize S3 client for Cloudflare R2: {str(e)}", file=sys.stderr)
+        output = {'status': 'failure', 'job_id': job_folder_name.split('_')[-1] if '_' in job_folder_name else job_folder_name, 'error': f'Failed to initialize S3 client: {str(e)}'}
+        print(json.dumps(output, indent=2))
         sys.exit(1)
 
     # Check for Supabase credentials
@@ -318,6 +326,8 @@ def main():
     supabase_key = os.environ.get('SUPABASE_SERVICE_ROLE_KEY', '')
     if not supabase_url or not supabase_key:
         print(f"[@upload_and_report:main] ERROR: Supabase credentials not found in environment variables.", file=sys.stderr)
+        output = {'status': 'failure', 'job_id': job_folder_name.split('_')[-1] if '_' in job_folder_name else job_folder_name, 'error': 'Supabase credentials not found'}
+        print(json.dumps(output, indent=2))
         sys.exit(1)
     else:
         print(f"[@upload_and_report:main] Supabase credentials loaded successfully.", file=sys.stderr)
@@ -325,6 +335,8 @@ def main():
     # Look for uploadFolder in the current directory
     if not os.path.exists(upload_folder):
         print(f"[@upload_and_report:main] ERROR: uploadFolder not found at {upload_folder}", file=sys.stderr)
+        output = {'status': 'failure', 'job_id': job_folder_name.split('_')[-1] if '_' in job_folder_name else job_folder_name, 'error': 'uploadFolder not found'}
+        print(json.dumps(output, indent=2))
         sys.exit(1)
 
     print(f"[@upload_and_report:main] Scanning uploadFolder at {upload_folder}", file=sys.stderr)
@@ -333,6 +345,8 @@ def main():
     job_folders = [f for f in os.listdir(upload_folder) if os.path.isdir(os.path.join(upload_folder, f))]
     if not job_folders:
         print(f"[@upload_and_report:main] ERROR: No job folders found in uploadFolder", file=sys.stderr)
+        output = {'status': 'failure', 'job_id': 'unknown', 'error': 'No job folders found'}
+        print(json.dumps(output, indent=2))
         sys.exit(1)
 
     if len(job_folders) > 1:
@@ -506,6 +520,12 @@ def main():
             update_supabase_job_status(job_id, job_status, job_output, end_time, job_report_url)
         else:
             print(f"[@upload_and_report:main] WARNING: Job report URL not found for job {job_id}", file=sys.stderr)
+            job_output = {
+                'scripts': list(script_reports.values()),
+                'stdout': '',
+                'stderr': ''
+            }
+            update_supabase_job_status(job_id, job_status, job_output, end_time, '')
 
         for script_id, script_data in script_reports.items():
             script_report_url = next((file['public_url'] for file in uploaded_files if file['name'] == 'script_report.html' and script_id in file['relative_path']), '')
@@ -518,6 +538,12 @@ def main():
                 update_supabase_script_execution(script_id, script_data['status'], script_output, end_time, script_report_url)
             else:
                 print(f"[@upload_and_report:main] WARNING: Script report URL not found for script {script_id}", file=sys.stderr)
+                script_output = {
+                    'stdout': next((file['stdout'] for file in uploaded_files if file['name'] == 'stdout.txt' and script_id in file['relative_path']), ''),
+                    'stderr': next((file['stderr'] for file in uploaded_files if file['name'] == 'stderr.txt' and script_id in file['relative_path']), ''),
+                    'exitCode': 0 if script_data['status'] == 'success' else 1
+                }
+                update_supabase_script_execution(script_id, script_data['status'], script_output, end_time, '')
 
         # Regenerate job report with updated URLs
         job_report_path = create_job_report_html(job_folder_path, job_id, start_time, end_time, script_reports, job_status)
@@ -549,6 +575,20 @@ def main():
             'uploaded_files': uploaded_files,
             'error': f'Failed to upload files: {str(e)}'
         }
+        # Still attempt to update Supabase with job status even if upload fails
+        job_output = {
+            'scripts': list(script_reports.values()),
+            'stdout': '',
+            'stderr': str(e)
+        }
+        update_supabase_job_status(job_id, job_status, job_output, end_time, '')
+        for script_id, script_data in script_reports.items():
+            script_output = {
+                'stdout': '',
+                'stderr': str(e),
+                'exitCode': 1
+            }
+            update_supabase_script_execution(script_id, script_data['status'], script_output, end_time, '')
 
     # Clean up uploadFolder after upload
     cleanup_folder(upload_folder)

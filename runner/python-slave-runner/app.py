@@ -242,10 +242,12 @@ def finalize_job():
         else:
             print(f"[finalize_job] ERROR: upload_and_report.py failed with return code {result.returncode}", file=sys.stderr)
             print(f"[finalize_job] Stderr: {result.stderr}", file=sys.stderr)
-            return jsonify({'status': 'error', 'message': 'Upload script execution failed'}), 500
+            # Return a response indicating failure but still attempt to continue
+            return jsonify({'status': 'error', 'message': 'Upload script execution failed', 'job_id': job_id, 'error_details': result.stderr}), 200
     except Exception as e:
         print(f"[finalize_job] ERROR: Failed to execute upload_and_report.py: {str(e)}", file=sys.stderr)
-        return jsonify({'status': 'error', 'message': f'Failed to execute upload script: {str(e)}'}), 500
+        # Return a response indicating failure but still attempt to continue
+        return jsonify({'status': 'error', 'message': f'Failed to execute upload script: {str(e)}', 'job_id': job_id}), 200
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=10000)

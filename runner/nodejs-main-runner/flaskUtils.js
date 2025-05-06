@@ -263,6 +263,20 @@ async function executeFlaskScripts(
       console.error(
         `[executeFlaskScripts] Failed to finalize job ${jobId} on Flask server: ${finalizeResponse.statusText}`,
       );
+      // Still attempt to update job status in Supabase even if finalize fails
+      const { error: updateError } = await supabase
+        .from('jobs_run')
+        .update({
+          status: overallStatus,
+          completed_at: new Date().toISOString(),
+          output: output,
+        })
+        .eq('id', jobId);
+      if (updateError) {
+        console.error(
+          `[executeFlaskScripts] Failed to update job ${jobId} status in Supabase after finalize failure: ${updateError.message}`,
+        );
+      }
     } else {
       const finalizeData = await finalizeResponse.json();
       console.log(
@@ -280,9 +294,37 @@ async function executeFlaskScripts(
           );
         }
       }
+      // Update job status in Supabase with the results
+      const { error: updateError } = await supabase
+        .from('jobs_run')
+        .update({
+          status: overallStatus,
+          completed_at: new Date().toISOString(),
+          output: output,
+        })
+        .eq('id', jobId);
+      if (updateError) {
+        console.error(
+          `[executeFlaskScripts] Failed to update job ${jobId} status in Supabase: ${updateError.message}`,
+        );
+      }
     }
   } catch (error) {
     console.error(`[executeFlaskScripts] Error finalizing job ${jobId}: ${error.message}`);
+    // Still attempt to update job status in Supabase even if finalize throws an error
+    const { error: updateError } = await supabase
+      .from('jobs_run')
+      .update({
+        status: overallStatus,
+        completed_at: new Date().toISOString(),
+        output: output,
+      })
+      .eq('id', jobId);
+    if (updateError) {
+      console.error(
+        `[executeFlaskScripts] Failed to update job ${jobId} status in Supabase after finalize error: ${updateError.message}`,
+      );
+    }
   }
 
   return { output, overallStatus, started_at };
