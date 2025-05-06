@@ -138,7 +138,6 @@ async function processJob() {
         supabase,
         FLASK_SERVICE_URL,
         config_id,
-        created_at,
         team_id,
         creator_id,
       );
@@ -150,7 +149,6 @@ async function processJob() {
         decryptedEnvVars,
         supabase,
         config_id,
-        created_at,
         team_id,
         creator_id,
       );

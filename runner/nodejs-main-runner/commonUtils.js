@@ -1,6 +1,5 @@
-const { updateJobStatus } = require('./jobUtils');
-const { generateAndUploadReport } = require('./reportUtils');
 const { executeFlaskScripts } = require('./flaskUtils');
+const { updateJobStatus } = require('./jobUtils');
 const { executeSSHScripts } = require('./sshUtils');
 
 async function executeOnFlask(
@@ -11,7 +10,6 @@ async function executeOnFlask(
   supabase,
   FLASK_SERVICE_URL,
   config_id,
-  created_at,
   team_id,
   creator_id,
 ) {
@@ -31,33 +29,10 @@ async function executeOnFlask(
   const overallStatus = result.overallStatus;
   started_at = result.started_at;
 
-  // Update final status and generate report
+  // Update final status
   const completed_at = new Date().toISOString();
   await updateJobStatus(supabase, jobId, overallStatus, output, completed_at);
 
-  const reportUrl = await generateAndUploadReport(
-    jobId,
-    config_id,
-    output,
-    created_at,
-    started_at,
-    completed_at,
-    overallStatus,
-    decryptedEnvVars,
-  );
-  if (reportUrl) {
-    const { error: reportError } = await supabase
-      .from('jobs_run')
-      .update({ report_url: reportUrl })
-      .eq('id', jobId);
-    if (reportError) {
-      console.error(
-        `[executeOnFlask] Failed to update report URL for job ${jobId}: ${reportError.message}`,
-      );
-    } else {
-      console.log(`[executeOnFlask] Updated job ${jobId} with report URL: ${reportUrl}`);
-    }
-  }
   return { output, overallStatus, started_at };
 }
 
@@ -68,7 +43,6 @@ async function executeOnSSH(
   decryptedEnvVars,
   supabase,
   config_id,
-  created_at,
   team_id,
   creator_id,
 ) {
@@ -81,40 +55,17 @@ async function executeOnSSH(
     supabase,
     team_id,
     config_id,
-    created_at,
+    team_id,
     creator_id,
   );
   const output = result.output;
   const overallStatus = result.overallStatus;
   started_at = result.started_at;
 
-  // Update final status and generate report
+  // Update final status
   const completed_at = new Date().toISOString();
   await updateJobStatus(supabase, jobId, overallStatus, output, completed_at);
 
-  const reportUrl = await generateAndUploadReport(
-    jobId,
-    config_id,
-    output,
-    created_at,
-    started_at,
-    completed_at,
-    overallStatus,
-    decryptedEnvVars,
-  );
-  if (reportUrl) {
-    const { error: reportError } = await supabase
-      .from('jobs_run')
-      .update({ report_url: reportUrl })
-      .eq('id', jobId);
-    if (reportError) {
-      console.error(
-        `[executeOnSSH] Failed to update report URL for job ${jobId}: ${reportError.message}`,
-      );
-    } else {
-      console.log(`[executeOnSSH] Updated job ${jobId} with report URL: ${reportUrl}`);
-    }
-  }
   return { output, overallStatus, started_at };
 }
 
