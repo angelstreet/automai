@@ -4,7 +4,7 @@ const reportTemplate = `
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Job Run Report - <%= jobId %></title>
+  <title><%= isScriptReport ? 'Script Execution Report' : 'Job Run Report' %> - <%= jobId %></title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
     h1 { color: #333; }
@@ -17,6 +17,8 @@ const reportTemplate = `
     .status-failed { color: #ef4444; font-weight: bold; }
     .preview-img { max-width: 100px; max-height: 100px; }
     #filterInput { width: 100%; padding: 8px; margin-bottom: 10px; box-sizing: border-box; }
+    .report-link { background-color: #4682b4; color: white; padding: 3px 8px; text-decoration: none; border-radius: 4px; margin-left: 8px; }
+    .report-link:hover { background-color: #36648b; }
   </style>
   <script>
     function sortTable(n) {
@@ -68,7 +70,6 @@ const reportTemplate = `
       let input = document.getElementById("filterInput").value.toLowerCase();
       let table = document.getElementById("filesTable");
       let rows = table.getElementsByTagName("TR");
-      console.log("Filtering with input: " + input); // Debug log to confirm function call
       
       try {
         let regex = new RegExp(input, 'i');
@@ -93,32 +94,58 @@ const reportTemplate = `
       }
     }
     window.onload = function() {
-      sortTable(0); // Sort by timestamp (oldest first) by default
+      if (document.getElementById("filesTable")) {
+        sortTable(0); // Sort by timestamp (oldest first) by default
+      }
     };
   </script>
 </head>
 <body>
-  <h1>Job Run Report</h1>
+  <h1><%= isScriptReport ? 'Script Execution Report' : 'Job Run Report' %></h1>
   <table>
-    <tr><th>Job Run ID</th><td><%= jobId %></td></tr>
-    <tr><th>Config ID</th><td><%= configId %></td></tr>
-    <tr><th>Start Time</th><td><%= startTime %></td></tr>
-    <tr><th>End Time</th><td><%= endTime %></td></tr>
-    <tr><th>Duration (s)</th><td><%= duration %></td></tr>
-    <tr><th>Status</th><td class="status-<%= status.toLowerCase() %>"><%= status %></td></tr>
-    <tr><th>Scripts</th><td>
-      <% scripts.forEach(function(script, index) { %>
-        <strong>Script <%= index + 1 %>: <%= script.script_path %></strong><br>
-        Parameters: <%= script.parameters || 'None' %><br>
-        Iteration: <%= script.iteration || 'N/A' %><br>
-        Stdout: <pre><%= script.stdout %></pre><br>
-        Stderr: <pre><%= script.stderr %></pre><br>
-      <% }); %>
-    </td></tr>
-    <tr><th>Environment Variables</th><td><%= envVars %></td></tr>
+    <% if (!isScriptReport) { %>
+      <tr><th>Job Run ID</th><td><%= jobId %></td></tr>
+      <tr><th>Config ID</th><td><%= configId %></td></tr>
+      <tr><th>Start Time</th><td><%= startTime %></td></tr>
+      <tr><th>End Time</th><td><%= endTime %></td></tr>
+      <tr><th>Duration (s)</th><td><%= duration %></td></tr>
+      <tr><th>Status</th><td class="status-<%= status.toLowerCase() %>"><%= status %></td></tr>
+      <tr><th>Scripts</th><td>
+        <% scripts.forEach(function(script, index) { %>
+          <strong>Script <%= index + 1 %>: <%= script.script_path %></strong>
+          <% if (script.report_url) { %>
+            <a href="<%= script.report_url %>" target="_blank" class="report-link">View Script Report</a>
+          <% } %>
+          <br>
+          Parameters: <%= script.parameters || 'None' %><br>
+          Iteration: <%= script.iteration || 'N/A' %><br>
+          Status: <span class="status-<%= script.status ? script.status.toLowerCase() : 'success' %>"><%= script.status || 'Success' %></span><br>
+          Stdout: <pre><%= script.stdout %></pre><br>
+          Stderr: <pre><%= script.stderr %></pre><br>
+        <% }); %>
+      </td></tr>
+      <tr><th>Environment Variables</th><td><%= envVars %></td></tr>
+    <% } else { %>
+      <tr><th>Script ID</th><td><%= jobId %></td></tr>
+      <tr><th>Job ID</th><td><%= parent_job_id || 'N/A' %></td></tr>
+      <tr><th>Script Name</th><td><%= script_name || 'Unknown' %></td></tr>
+      <tr><th>Script Path</th><td><%= script_path || 'Unknown' %></td></tr>
+      <tr><th>Parameters</th><td><%= parameters || 'None' %></td></tr>
+      <tr><th>Start Time</th><td><%= startTime %></td></tr>
+      <tr><th>End Time</th><td><%= endTime %></td></tr>
+      <tr><th>Duration (s)</th><td><%= duration %></td></tr>
+      <tr><th>Status</th><td class="status-<%= status.toLowerCase() %>"><%= status %></td></tr>
+      <tr><th>Stdout</th><td><pre><%= stdout || 'No output' %></pre></td></tr>
+      <tr><th>Stderr</th><td><pre><%= stderr || 'No errors' %></pre></td></tr>
+      <% if (host_info) { %>
+        <tr><th>Host Information</th><td><%= host_info %></td></tr>
+      <% } %>
+      <tr><th>Environment Variables</th><td><%= envVars %></td></tr>
+    <% } %>
   </table>
-  <h2>Associated Files</h2>
-  <% if (associatedFiles && associatedFiles.length > 0) { %>
+
+  <% if (isScriptReport && associatedFiles && associatedFiles.length > 0) { %>
+    <h2>Associated Files</h2>
     <input type="text" id="filterInput" onkeyup="filterTable()" placeholder="Filter by filename or extension (use * for wildcard, e.g., *.png)">
     <table id="filesTable">
       <tr>
@@ -161,7 +188,8 @@ const reportTemplate = `
         </tr>
       <% }); %>
     </table>
-  <% } else { %>
+  <% } else if (isScriptReport) { %>
+    <h2>Associated Files</h2>
     <p>No associated files uploaded.</p>
   <% } %>
 </body>

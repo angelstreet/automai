@@ -3,6 +3,7 @@ import sys
 from datetime import datetime
 import io
 import shutil
+import requests
 
 # Assuming s3_client is imported or passed from app.py
 # This will be updated in app.py to pass the client if needed
@@ -34,12 +35,95 @@ def create_script_report_html(script_name, stdout, stderr, script_id, job_id, st
     h1 {{ color: #333; }}
     table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
     th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
-    th {{ background-color: #f2f2f2; }}
+    th {{ background-color: #f2f2f2; cursor: pointer; }}
+    th:hover {{ background-color: #ddd; }}
     pre {{ background-color: #f9f9f9; padding: 10px; overflow-x: auto; }}
     .status-success {{ color: #22c55e; font-weight: bold; }}
     .status-failed {{ color: #ef4444; font-weight: bold; }}
     .preview-img {{ max-width: 100px; max-height: 100px; }}
+    #filterInput {{ width: 100%; padding: 8px; margin-bottom: 10px; box-sizing: border-box; }}
+    .report-link {{ background-color: #4682b4; color: white; padding: 3px 8px; text-decoration: none; border-radius: 4px; margin-left: 8px; }}
+    .report-link:hover {{ background-color: #36648b; }}
   </style>
+  <script>
+    function sortTable(n) {{
+      let table = document.getElementById("filesTable");
+      let rows, switching = true;
+      let i, shouldSwitch, dir = "asc";
+      let switchcount = 0;
+      while (switching) {{
+        switching = false;
+        rows = table.rows;
+        for (i = 1; i < (rows.length - 1); i++) {{
+          shouldSwitch = false;
+          let x = rows[i].getElementsByTagName("TD")[n];
+          let y = rows[i + 1].getElementsByTagName("TD")[n];
+          let xVal = x.innerHTML.toLowerCase();
+          let yVal = y.innerHTML.toLowerCase();
+          if (n === 2 || n === 1) {{ // Size or Timestamp column
+            xVal = parseFloat(x.getAttribute('data-sort') || xVal);
+            yVal = parseFloat(y.getAttribute('data-sort') || yVal);
+          }} else if (n === 0) {{ // Timestamp column
+            xVal = new Date(x.getAttribute('data-sort') || xVal).getTime();
+            yVal = new Date(y.getAttribute('data-sort') || yVal).getTime();
+          }}
+          if (dir == "asc") {{
+            if (xVal > yVal) {{
+              shouldSwitch = true;
+              break;
+            }}
+          }} else if (dir == "desc") {{
+            if (xVal < yVal) {{
+              shouldSwitch = true;
+              break;
+            }}
+          }}
+        }}
+        if (shouldSwitch) {{
+          rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+          switching = true;
+          switchcount++;
+        }} else {{
+          if (switchcount == 0 && dir == "asc") {{
+            dir = "desc";
+            switching = true;
+          }}
+        }}
+      }}
+    }}
+    function filterTable() {{
+      let input = document.getElementById("filterInput").value.toLowerCase();
+      let table = document.getElementById("filesTable");
+      let rows = table.getElementsByTagName("TR");
+      
+      try {{
+        let regex = new RegExp(input, 'i');
+        for (let i = 1; i < rows.length; i++) {{
+          let name = rows[i].getElementsByTagName("TD")[2].innerHTML.toLowerCase();
+          if (regex.test(name)) {{
+            rows[i].style.display = "";
+          }} else {{
+            rows[i].style.display = "none";
+          }}
+        }}
+      }} catch (e) {{
+        // Fallback to substring search if regex is invalid
+        for (let i = 1; i < rows.length; i++) {{
+          let name = rows[i].getElementsByTagName("TD")[2].innerHTML.toLowerCase();
+          if (name.indexOf(input) > -1) {{
+            rows[i].style.display = "";
+          }} else {{
+            rows[i].style.display = "none";
+          }}
+        }}
+      }}
+    }}
+    window.onload = function() {{
+      if (document.getElementById("filesTable")) {{
+        sortTable(0); // Sort by timestamp (oldest first) by default
+      }}
+    }};
+  </script>
 </head>
 <body>
   <h1>Script Execution Report</h1>
@@ -53,70 +137,88 @@ def create_script_report_html(script_name, stdout, stderr, script_id, job_id, st
     <tr><th>End Time</th><td>{end_time}</td></tr>
     <tr><th>Duration (s)</th><td>{duration}</td></tr>
     <tr><th>Status</th><td class="status-{status.lower()}">{status}</td></tr>
+    <tr><th>Stdout</th><td><pre>{stdout or "No output"}</pre></td></tr>
+    <tr><th>Stderr</th><td><pre>{stderr or "No errors"}</pre></td></tr>
   </table>
   
-  <h2>Standard Output</h2>
-  <pre>{stdout or "No output"}</pre>
-  
-  <h2>Standard Error</h2>
-  <pre>{stderr or "No errors"}</pre>
-  
   <h2>Associated Files</h2>
-  <div id="files">
-    <p>Loading associated files...</p>
-    <script>
-      // This will be populated with links to associated files if any are available
-      document.addEventListener('DOMContentLoaded', function() {{
-        const filesDiv = document.getElementById('files');
-        if (window.associatedFiles && window.associatedFiles.length > 0) {{
-          const table = document.createElement('table');
-          table.innerHTML = `
-            <tr>
-              <th>File Name</th>
-              <th>Size</th>
-              <th>Link</th>
-              <th>Preview</th>
-            </tr>
-          `;
-          window.associatedFiles.forEach(file => {{
-            const row = document.createElement('tr');
-            row.innerHTML = `
-              <td>${{file.name}}</td>
-              <td>${{formatFileSize(file.size)}}</td>
-              <td><a href="${{file.url}}" target="_blank">Link</a></td>
-              <td>${{createPreview(file)}}</td>
-            `;
-            table.appendChild(row);
-          }});
-          filesDiv.innerHTML = '';
-          filesDiv.appendChild(table);
-        }} else {{
-          filesDiv.innerHTML = '<p>No associated files uploaded.</p>';
-        }}
-      }});
-      
-      function formatFileSize(size) {{
-        if (size >= 1024 * 1024) {{
-          return (size / (1024 * 1024)).toFixed(2) + ' MB';
-        }} else if (size >= 1024) {{
-          return (size / 1024).toFixed(2) + ' KB';
-        }} else {{
-          return size + ' bytes';
-        }}
-      }}
-      
-      function createPreview(file) {{
-        const name = file.name.toLowerCase();
-        if (name.match(/\\.(jpg|jpeg|png|gif|bmp|webp)$/)) {{
-          return `<a href="${{file.url}}" target="_blank"><img src="${{file.url}}" alt="Preview of ${{file.name}}" class="preview-img" /></a>`;
-        }} else if (name.match(/\\.webm$/)) {{
-          return `<a href="${{file.url}}" target="_blank"><video width="100" height="100" controls><source src="${{file.url.split('?')[0]}}" type="video/webm">Your browser does not support the video tag.</video></a>`;
-        }} else {{
-          return 'N/A';
-        }}
-      }}
-    </script>
+  <div id="filesContainer">
+    <p>Associated files will be listed here when available.</p>
+    <div id="files">
+      <!-- This section will be populated by JavaScript with file listings -->
+    </div>
   </div>
+
+  <script>
+    // Load files data if available
+    document.addEventListener('DOMContentLoaded', function() {{
+      if (window.filesData && window.filesData.length > 0) {{
+        const filesContainer = document.getElementById('filesContainer');
+        
+        // Create filter input
+        const filterInput = document.createElement('input');
+        filterInput.type = 'text';
+        filterInput.id = 'filterInput';
+        filterInput.placeholder = 'Filter by filename or extension';
+        filterInput.onkeyup = filterTable;
+        
+        // Create table
+        const table = document.createElement('table');
+        table.id = 'filesTable';
+        
+        // Add table header
+        const headerRow = document.createElement('tr');
+        headerRow.innerHTML = `
+          <th onclick="sortTable(0)">Creation Date</th>
+          <th onclick="sortTable(1)">Size</th>
+          <th onclick="sortTable(2)">File Name</th>
+          <th onclick="sortTable(3)">Link</th>
+          <th>Preview</th>
+        `;
+        table.appendChild(headerRow);
+        
+        // Add file rows
+        window.filesData.forEach(file => {{
+          const row = document.createElement('tr');
+          
+          // Format size
+          let sizeStr;
+          if (file.size >= 1024 * 1024) {{
+            sizeStr = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
+          }} else if (file.size >= 1024) {{
+            sizeStr = (file.size / 1024).toFixed(2) + ' KB';
+          }} else {{
+            sizeStr = file.size + ' bytes';
+          }}
+          
+          // Create preview based on file type
+          let preview = 'N/A';
+          if (file.name.match(/\\.(jpg|jpeg|png|gif|bmp|webp)$/i)) {{
+            preview = `<a href="${{file.url}}" target="_blank"><img src="${{file.url}}" alt="Preview of ${{file.name}}" class="preview-img" /></a>`;
+          }} else if (file.name.match(/\\.webm$/i)) {{
+            preview = `<a href="${{file.url}}" target="_blank"><video width="100" height="100" controls><source src="${{file.url.split('?')[0]}}" type="video/webm">Your browser does not support the video tag.</video></a>`;
+          }}
+          
+          row.innerHTML = `
+            <td data-sort="${{file.creation_date || 'N/A'}}">${{file.creation_date || 'N/A'}}</td>
+            <td data-sort="${{file.size}}">${{sizeStr}}</td>
+            <td>${{file.name}}</td>
+            <td><a href="${{file.url || '#'}}" target="_blank">Link</a></td>
+            <td>${{preview}}</td>
+          `;
+          table.appendChild(row);
+        }});
+        
+        // Update the DOM
+        filesContainer.innerHTML = '';
+        filesContainer.appendChild(filterInput);
+        filesContainer.appendChild(table);
+        
+        // Sort the table by default
+        sortTable(0);
+      }}
+    }});
+  </script>
 </body>
 </html>"""
     return html
@@ -208,6 +310,21 @@ def upload_files_to_r2(s3_client, job_id, created_at, associated_files, script_i
                 # Create a temporary file
                 temp_report_path = os.path.join(os.path.dirname(script_file.get('path')), 'script_report.html')
                 try:
+                    # Replace the filesData placeholder with actual file data JavaScript
+                    file_data_js = []
+                    for file in associated_files:
+                        if file.get('name') != 'script_report.html':
+                            file_data_js.append({
+                                'name': file.get('name', ''),
+                                'size': file.get('size', 0),
+                                'creation_date': file.get('creation_date', ''),
+                                'url': '#'  # Will be replaced after upload
+                            })
+                    
+                    # Insert a script tag that defines the filesData array
+                    filesdata_script = f"<script>window.filesData = {str(file_data_js).replace("'", '"')};</script>"
+                    report_html = report_html.replace('</head>', f'{filesdata_script}</head>')
+                    
                     with open(temp_report_path, 'w') as f:
                         f.write(report_html)
                     
@@ -297,16 +414,27 @@ def upload_files_to_r2(s3_client, job_id, created_at, associated_files, script_i
 
         # Generate a main report link that points to the folder
         report_link = None
-        if len(updated_files) > 0:
-            # First look for a report.html or script_report.html file
+        
+        # If this is a script execution, find the script report
+        script_report_file = None
+        if script_id:
+            for file_info in updated_files:
+                if file_info.get('name') == 'script_report.html':
+                    report_link = file_info.get('public_url')
+                    script_report_file = file_info
+                    print(f"[@python-slave-runner:utils] Found script report file", file=sys.stderr)
+                    break
+        
+        # If no script report found (or not a script execution), look for other reports
+        if not report_link:
             for file_info in updated_files:
                 name = file_info.get('name', '')
-                if name == 'script_report.html' or name == 'report.html':
+                if name == 'report.html':
                     report_link = file_info.get('public_url')
-                    print(f"[@python-slave-runner:utils] Found report file: {name}", file=sys.stderr)
+                    print(f"[@python-slave-runner:utils] Found job report file", file=sys.stderr)
                     break
             
-            # If no report file found, look for any HTML or TXT file
+            # If still no report found, look for any HTML or TXT file
             if not report_link:
                 for file_info in updated_files:
                     if file_info.get('name', '').endswith('.html') or file_info.get('name', '').endswith('.txt'):
@@ -316,6 +444,55 @@ def upload_files_to_r2(s3_client, job_id, created_at, associated_files, script_i
             # If still no appropriate file found, just use the first file
             if not report_link and len(updated_files) > 0:
                 report_link = updated_files[0].get('public_url')
+
+        # If we have a script report, update its file URLs
+        if script_id and script_report_file:
+            try:
+                # Download the HTML content
+                response = requests.get(script_report_file.get('public_url'))
+                if response.status_code == 200:
+                    html_content = response.text
+                    
+                    # Create updated file data with correct URLs
+                    file_data_js = []
+                    for file in updated_files:
+                        if file.get('name') != 'script_report.html':
+                            file_data_js.append({
+                                'name': file.get('name', ''),
+                                'size': file.get('size', 0),
+                                'creation_date': file.get('creation_date', ''),
+                                'url': file.get('public_url', '#')
+                            })
+                    
+                    # Update the window.filesData array
+                    filesdata_script = f"<script>window.filesData = {str(file_data_js).replace('"', '\\"').replace("'", '"')};</script>"
+                    updated_html = html_content.replace('window.filesData = [];', f'window.filesData = {str(file_data_js).replace("'", '"')};')
+                    updated_html = html_content.replace('</head>', f'{filesdata_script}</head>')
+                    
+                    # Write the updated HTML to a temporary file
+                    temp_updated_path = os.path.join(os.path.dirname(temp_folder), 'updated_script_report.html')
+                    with open(temp_updated_path, 'w') as f:
+                        f.write(updated_html)
+                    
+                    # Re-upload the updated HTML
+                    r2_path = script_report_file.get('r2_path')
+                    with open(temp_updated_path, 'rb') as f:
+                        s3_client.upload_fileobj(
+                            f,
+                            bucket_name,
+                            r2_path,
+                            ExtraArgs={
+                                'ContentType': 'text/html',
+                                'ContentDisposition': 'inline'
+                            }
+                        )
+                    
+                    print(f"[@python-slave-runner:utils] Updated script report with file URLs: {r2_path}", file=sys.stderr)
+                    
+                    # Clean up
+                    os.remove(temp_updated_path)
+            except Exception as e:
+                print(f"[@python-slave-runner:utils] Error updating script report with file URLs: {str(e)}", file=sys.stderr)
 
         if report_link:
             # Add information about report URL

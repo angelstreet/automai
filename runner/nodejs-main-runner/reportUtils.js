@@ -27,9 +27,15 @@ async function generateAndUploadReport(
   completed_at,
   status,
   decryptedEnvVars = {},
+  customJobFolder = null,
+  customScriptFolder = null,
+  isScriptReport = false,
+  extra_data = {},
 ) {
   try {
-    console.log(`[generateAndUploadReport] Generating report for job ${jobId}`);
+    console.log(
+      `[generateAndUploadReport] Generating report for ${isScriptReport ? 'script' : 'job'} ${jobId}`,
+    );
     const startTime = started_at || 'N/A';
     const endTime = completed_at || 'N/A';
     const duration =
@@ -44,7 +50,11 @@ async function generateAndUploadReport(
         .join(', ') || 'None';
 
     const scripts = output.scripts || [];
-    const associatedFiles = output.associated_files || [];
+
+    // Only include associated files for script reports, not for job reports
+    const associatedFiles = isScriptReport ? output.associated_files || [] : [];
+
+    // Build the report data with the isScriptReport flag
     const reportData = {
       jobId,
       configId: config_id,
@@ -54,6 +64,7 @@ async function generateAndUploadReport(
       status,
       scripts,
       envVars,
+      isScriptReport,
       associatedFiles: associatedFiles.map((file) => ({
         name: file.name,
         relative_path: file.relative_path,
@@ -61,18 +72,46 @@ async function generateAndUploadReport(
         creation_date: file.creation_date,
         public_url: file.public_url || 'N/A',
       })),
+      ...extra_data,
     };
 
+    // If this is a script report, include additional script-specific fields
+    if (isScriptReport) {
+      reportData.stdout = output.stdout || '';
+      reportData.stderr = output.stderr || '';
+      reportData.script_path = extra_data.script_path || '';
+      reportData.script_name = extra_data.script_name || '';
+      reportData.parameters = extra_data.parameters || '';
+      reportData.parent_job_id = extra_data.parent_job_id || '';
+      reportData.host_info = extra_data.host_info || '';
+    }
+
     const htmlReport = ejs.render(reportTemplate, reportData).trim();
-    // Use a simpler date_time format for folder naming with underscores
-    const dateStr = new Date(created_at)
-      .toISOString()
-      .replace(/[:.]/g, '_')
-      .slice(0, 19)
-      .replace('T', '_');
-    const folderName = `${dateStr}_${jobId}`;
-    // Correct the path to avoid duplicating 'reports'
-    const reportPath = `${folderName}/report.html`;
+
+    // Use custom folder path if provided, otherwise generate from date
+    let folderName;
+    if (customJobFolder) {
+      folderName = customJobFolder;
+      console.log(`[generateAndUploadReport] Using custom job folder: ${folderName}`);
+    } else {
+      // Use a simpler date_time format for folder naming with underscores
+      const dateStr = new Date(created_at)
+        .toISOString()
+        .replace(/[:.]/g, '_')
+        .slice(0, 19)
+        .replace('T', '_');
+      folderName = `${dateStr}_${jobId}`;
+    }
+
+    // Determine the report path based on whether this is a job or script report
+    let reportPath;
+    if (isScriptReport && customScriptFolder) {
+      reportPath = `${folderName}/scripts/${customScriptFolder}/script_report.html`;
+      console.log(`[generateAndUploadReport] Using script subfolder: ${customScriptFolder}`);
+    } else {
+      reportPath = `${folderName}/report.html`;
+    }
+
     // Write report temporarily to disk
     const tempReportPath = path.join('/tmp', `report_${jobId}.html`);
     fs.writeFileSync(tempReportPath, htmlReport);
@@ -91,7 +130,7 @@ async function generateAndUploadReport(
       await r2Client.send(putObjectCommand);
     } catch (uploadError) {
       console.error(
-        `[generateAndUploadReport] Failed to upload report for job ${jobId}: ${uploadError.message}`,
+        `[generateAndUploadReport] Failed to upload report for ${isScriptReport ? 'script' : 'job'} ${jobId}: ${uploadError.message}`,
       );
       return null;
     }
@@ -109,7 +148,7 @@ async function generateAndUploadReport(
     return reportUrl;
   } catch (error) {
     console.error(
-      `[generateAndUploadReport] Error generating/uploading report for job ${jobId}: ${error.message}`,
+      `[generateAndUploadReport] Error generating/uploading report for ${isScriptReport ? 'script' : 'job'} ${jobId}: ${error.message}`,
     );
     return null;
   }
