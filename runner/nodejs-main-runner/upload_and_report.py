@@ -11,8 +11,10 @@ import argparse
 import boto3
 from botocore.client import Config
 from dotenv import load_dotenv
+# Add Supabase client library
+import supabase
 
-print(f"[@upload_and_report:main] boto3 and dotenv modules imported successfully.", file=sys.stderr)
+print(f"[@upload_and_report:main] boto3, dotenv, and supabase modules imported successfully.", file=sys.stderr)
 
 def build_script_report_html_content(script_name, script_id, job_id, script_path, parameters, start_time, end_time, duration, status, stdout_content, stderr_content):
     """Build HTML content for script execution report."""
@@ -182,6 +184,52 @@ def cleanup_folder(folder_path):
         print(f"[@upload_and_report:cleanup_folder] ERROR: Failed to clean up folder at {folder_path}: {str(e)}", file=sys.stderr)
         return False
 
+def update_supabase_job_status(job_id, status, output, completed_at, report_url):
+    """Update job status in Supabase."""
+    try:
+        supabase_client = supabase.create_client(
+            os.environ.get('SUPABASE_URL', ''),
+            os.environ.get('SUPABASE_SERVICE_ROLE_KEY', '')
+        )
+        response = supabase_client.from_('jobs_run').update({
+            'status': status,
+            'output': output,
+            'completed_at': completed_at,
+            'report_url': report_url
+        }).eq('id', job_id).execute()
+        if response.data:
+            print(f"[@upload_and_report:update_supabase_job_status] Successfully updated job {job_id} status to {status}", file=sys.stderr)
+            return True
+        else:
+            print(f"[@upload_and_report:update_supabase_job_status] Failed to update job {job_id} status: {response.error}", file=sys.stderr)
+            return False
+    except Exception as e:
+        print(f"[@upload_and_report:update_supabase_job_status] ERROR: Failed to update job {job_id} status: {str(e)}", file=sys.stderr)
+        return False
+
+def update_supabase_script_execution(script_id, status, output, completed_at, report_url):
+    """Update script execution status in Supabase."""
+    try:
+        supabase_client = supabase.create_client(
+            os.environ.get('SUPABASE_URL', ''),
+            os.environ.get('SUPABASE_SERVICE_ROLE_KEY', '')
+        )
+        response = supabase_client.from_('script_executions').update({
+            'status': status,
+            'output': output,
+            'completed_at': completed_at,
+            'report_url': report_url
+        }).eq('id', script_id).execute()
+        if response.data:
+            print(f"[@upload_and_report:update_supabase_script_execution] Successfully updated script execution {script_id} status to {status}", file=sys.stderr)
+            return True
+        else:
+            print(f"[@upload_and_report:update_supabase_script_execution] Failed to update script execution {script_id} status: {response.error}", file=sys.stderr)
+            return False
+    except Exception as e:
+        print(f"[@upload_and_report:update_supabase_script_execution] ERROR: Failed to update script execution {script_id} status: {str(e)}", file=sys.stderr)
+        return False
+
 def main():
     # Load environment variables from .env file
     load_dotenv()
@@ -208,6 +256,15 @@ def main():
     except Exception as e:
         print(f"[@upload_and_report:main] ERROR: Failed to initialize S3 client for Cloudflare R2: {str(e)}", file=sys.stderr)
         sys.exit(1)
+
+    # Check for Supabase credentials
+    supabase_url = os.environ.get('SUPABASE_URL', '')
+    supabase_key = os.environ.get('SUPABASE_SERVICE_ROLE_KEY', '')
+    if not supabase_url or not supabase_key:
+        print(f"[@upload_and_report:main] ERROR: Supabase credentials not found in environment variables.", file=sys.stderr)
+        sys.exit(1)
+    else:
+        print(f"[@upload_and_report:main] Supabase credentials loaded successfully.", file=sys.stderr)
 
     # Look for uploadFolder in the current directory
     upload_folder = os.path.join(os.getcwd(), 'uploadFolder')
@@ -282,6 +339,15 @@ def main():
             'script_path': script_path,
             'report_path': script_report_path
         }
+        
+        # Update script execution status in Supabase
+        script_output = {
+            'stdout': stdout_content,
+            'stderr': stderr_content,
+            'exitCode': 0 if status == 'success' else 1
+        }
+        script_report_url = ""  # This will be updated after file upload
+        update_supabase_script_execution(script_id, status, script_output, end_time, script_report_url)
 
     # Create job report
     job_status = "success" if all(sr['status'] == 'success' for sr in script_reports.values()) else "failed"
@@ -353,6 +419,31 @@ def main():
             'job_id': job_id,
             'uploaded_files': uploaded_files
         }
+
+        # Update report URLs for job and scripts after upload
+        job_report_url = next((file['public_url'] for file in uploaded_files if file['name'] == 'report.html'), '')
+        if job_report_url:
+            job_output = {
+                'scripts': list(script_reports.values()),
+                'stdout': '',
+                'stderr': ''
+            }
+            update_supabase_job_status(job_id, job_status, job_output, end_time, job_report_url)
+        else:
+            print(f"[@upload_and_report:main] WARNING: Job report URL not found for job {job_id}", file=sys.stderr)
+
+        for script_id, script_data in script_reports.items():
+            script_report_url = next((file['public_url'] for file in uploaded_files if file['name'] == 'script_report.html' and script_id in file['relative_path']), '')
+            if script_report_url:
+                script_output = {
+                    'stdout': next((file['stdout'] for file in uploaded_files if file['name'] == 'stdout.txt' and script_id in file['relative_path']), ''),
+                    'stderr': next((file['stderr'] for file in uploaded_files if file['name'] == 'stderr.txt' and script_id in file['relative_path']), ''),
+                    'exitCode': 0 if script_data['status'] == 'success' else 1
+                }
+                update_supabase_script_execution(script_id, script_data['status'], script_output, end_time, script_report_url)
+            else:
+                print(f"[@upload_and_report:main] WARNING: Script report URL not found for script {script_id}", file=sys.stderr)
+
     except Exception as e:
         print(f"[@upload_and_report:main] ERROR: Failed to upload files to R2 for job {job_id}: {str(e)}", file=sys.stderr)
         output = {

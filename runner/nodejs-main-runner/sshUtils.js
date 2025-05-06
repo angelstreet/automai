@@ -1,15 +1,8 @@
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
-
-const ejs = require('ejs');
 const { Client } = require('ssh2');
 const { v4: uuidv4 } = require('uuid');
 
 const { createScriptExecution, updateScriptExecution, updateJobStatus } = require('./jobUtils');
 const { pingRepository } = require('./repoUtils');
-const reportTemplate = require('./reportTemplate');
-const { generateAndUploadReport } = require('./reportUtils');
 const { decrypt } = require('./utils');
 
 async function executeSSHScripts(
@@ -291,66 +284,7 @@ async function executeSSHScripts(
         // Update script output with results
         const scriptCompletedAt = new Date().toISOString();
 
-        // Create a simple report using the existing template
-        // Prepare report data
-        const scriptReportData = {
-          jobId: scriptExecutionId,
-          configId: config_id,
-          startTime: scriptStartedAt,
-          endTime: scriptCompletedAt,
-          duration: ((new Date(scriptCompletedAt) - new Date(scriptStartedAt)) / 1000).toFixed(2),
-          status: scriptResult.isSuccess ? 'success' : 'failed',
-          scripts: [
-            {
-              script_path: scriptPath,
-              parameters: parameters,
-              stdout: scriptResult.stdout,
-              stderr: scriptResult.stderr,
-            },
-          ],
-          envVars:
-            Object.keys(decryptedEnvVars || {})
-              .map((key) => `${key}=***MASKED***`)
-              .join(', ') || 'None',
-          associatedFiles: [],
-        };
-
-        // Generate HTML using the existing template
-        const htmlReport = ejs.render(reportTemplate, scriptReportData).trim();
-
-        // Create a temporary file for the report
-        const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'script-report-'));
-        const reportFilePath = path.join(tempDir, `${scriptName}-report.html`);
-        fs.writeFileSync(reportFilePath, htmlReport);
-
-        // Use the existing generateAndUploadReport helper for consistency
-        // but simplified for our specific script execution case
-        const reportUrl = await generateAndUploadReport(
-          scriptExecutionId,
-          config_id,
-          {
-            scripts: [
-              { script_path: scriptPath, stdout: scriptResult.stdout, stderr: scriptResult.stderr },
-            ],
-          },
-          scriptStartedAt,
-          scriptStartedAt,
-          scriptCompletedAt,
-          scriptResult.isSuccess ? 'success' : 'failed',
-          decryptedEnvVars,
-        );
-
-        // Clean up temporary files
-        try {
-          fs.unlinkSync(reportFilePath);
-          fs.rmdirSync(tempDir);
-        } catch (cleanupError) {
-          console.error(
-            `[executeSSHScripts] Failed to clean up temporary files: ${cleanupError.message}`,
-          );
-        }
-
-        // Update script execution in database with report URL
+        // Update script execution in database without report URL (handled by upload_and_report.py)
         await updateScriptExecution(supabase, {
           script_id: scriptExecutionId,
           status: scriptResult.isSuccess ? 'success' : 'failed',
@@ -359,7 +293,6 @@ async function executeSSHScripts(
             stderr: scriptResult.stderr,
             exitCode: scriptResult.exitCode,
           },
-          report_url: reportUrl,
           completed_at: scriptCompletedAt,
         });
 
@@ -401,9 +334,7 @@ async function executeSSHScripts(
     }
   }
 
-  const completed_at = new Date().toISOString();
-  await updateJobStatus(supabase, jobId, overallStatus, output, completed_at);
-
+  // Return output and status without final job update (handled by upload_and_report.py)
   return { output, overallStatus, started_at };
 }
 
@@ -574,6 +505,8 @@ async function finalizeJobOnSSH(jobId, host) {
             `export CLOUDFLARE_R2_ENDPOINT=${escapeShellArg(process.env.CLOUDFLARE_R2_ENDPOINT || '')}`,
             `export CLOUDFLARE_R2_ACCESS_KEY_ID=${escapeShellArg(process.env.CLOUDFLARE_R2_ACCESS_KEY_ID || '')}`,
             `export CLOUDFLARE_R2_SECRET_ACCESS_KEY=${escapeShellArg(process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY || '')}`,
+            `export SUPABASE_URL=${escapeShellArg(process.env.SUPABASE_URL || '')}`,
+            `export SUPABASE_SERVICE_ROLE_KEY=${escapeShellArg(process.env.SUPABASE_SERVICE_ROLE_KEY || '')}`,
           ].join('; ');
 
           // Execute upload_and_report.py
