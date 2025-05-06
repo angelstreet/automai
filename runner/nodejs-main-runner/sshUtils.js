@@ -1,7 +1,8 @@
 const { Client } = require('ssh2');
-const { decrypt } = require('./utils');
+
 const { pingRepository } = require('./repoUtils');
 const { generateAndUploadReport } = require('./reportUtils');
+const { decrypt } = require('./utils');
 
 async function executeSSHScripts(
   config,
