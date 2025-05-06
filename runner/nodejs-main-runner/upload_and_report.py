@@ -375,8 +375,12 @@ def main():
 
     # Collect all files to upload
     associated_files = []
+    excluded_files = {'.env', 'requirements.txt', 'upload_and_report.py'}
     for root, _, filenames in os.walk(upload_folder):
         for filename in filenames:
+            if filename in excluded_files:
+                print(f"[@upload_and_report:main] Excluding sensitive file from upload: {filename}", file=sys.stderr)
+                continue
             file_path = os.path.join(root, filename)
             relative_path = os.path.relpath(file_path, upload_folder)
             creation_time = os.path.getctime(file_path)
@@ -409,7 +413,8 @@ def main():
 
             content_disposition = 'inline' if content_type.startswith('text') or content_type.startswith('image') else 'attachment'
 
-            r2_path = os.path.join(job_folder_name, relative_path)
+            # Correct the path to avoid duplication of job folder name
+            r2_path = relative_path
             print(f"[@upload_and_report:main] Uploading file to R2: {file_name} -> {r2_path}", file=sys.stderr)
 
             with open(file_path, 'rb') as f:
@@ -478,6 +483,15 @@ def main():
 
     # Output the result as JSON
     print(json.dumps(output, indent=2))
+    
+    # Print Job Report URL and Script Report URLs for user access
+    print(f"[@upload_and_report:main] Job Run Report URL for job {job_id}: {job_report_url}", file=sys.stderr)
+    for script_id, script_data in script_reports.items():
+        script_report_url = next((file['public_url'] for file in uploaded_files if file['name'] == 'script_report.html' and script_id in file['relative_path']), '')
+        if script_report_url:
+            print(f"[@upload_and_report:main] Script Report URL for script {script_id}: {script_report_url}", file=sys.stderr)
+        else:
+            print(f"[@upload_and_report:main] WARNING: Script Report URL not found for script {script_id}", file=sys.stderr)
 
 if __name__ == '__main__':
     main() 
