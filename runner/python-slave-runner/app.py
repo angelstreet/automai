@@ -118,9 +118,6 @@ def initialize_job():
     if not upload_script_content:
         return jsonify({'status': 'error', 'message': 'Missing upload script content'}), 400
 
-    # Log the full request payload for debugging
-    print(f"[initialize_job] Full request payload for job {job_id}: {json.dumps(data, indent=2)}", file=sys.stderr)
-
     # Create job folder structure
     upload_folder = os.path.join(os.getcwd(), 'uploadFolder')
     # Clean existing uploadFolder if it exists to avoid clutter
