@@ -136,7 +136,29 @@ async function executeFlaskScripts(
           console.log(`[executeFlaskScripts] Updated job ${jobId} status to 'in_progress'`);
 
           console.log(
-            `[executeFlaskScripts] Sending payload to Flask (attempt ${attempt}/${retries}, iteration ${i}/${iterations}): ${JSON.stringify({ ...payload, environment_variables: payload.environment_variables ? Object.keys(payload.environment_variables).reduce((acc, key) => ({ ...acc, [key]: '***MASKED***' }), {}) : {} })}`,
+            `[executeFlaskScripts] Sending payload to Flask (attempt ${attempt}/${retries}, iteration ${i}/${iterations}): ` +
+              JSON.stringify(
+                {
+                  script_path: payload.script_path,
+                  parameters: payload.parameters,
+                  timeout: payload.timeout,
+                  created_at: payload.created_at,
+                  job_id: payload.job_id,
+                  script_id: payload.script_id,
+                  env: payload.env,
+                  repo_url: payload.repo_url || 'N/A',
+                  script_folder: payload.script_folder || 'N/A',
+                  branch: payload.branch || 'N/A',
+                  environment_variables: payload.environment_variables
+                    ? Object.keys(payload.environment_variables).reduce(
+                        (acc, key) => ({ ...acc, [key]: '***MASKED***' }),
+                        {},
+                      )
+                    : {},
+                },
+                null,
+                2,
+              ),
           );
           const response = await axios.post(`${FLASK_SERVICE_URL}/execute`, payload, {
             timeout: (payload.timeout + 5) * 1000,

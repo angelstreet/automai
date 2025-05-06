@@ -219,6 +219,22 @@ def finalize_job():
             print(f"[finalize_job] Upload and report generation successful for job {job_id}", file=sys.stderr)
             try:
                 output_json = json.loads(result.stdout)
+                # Extract and log Job Run URL
+                job_report_url = next((file['public_url'] for file in output_json.get('uploaded_files', []) if file['name'] == 'report.html'), '')
+                if job_report_url:
+                    print(f"[finalize_job] Job Run Report URL for job {job_id}: {job_report_url}", file=sys.stderr)
+                else:
+                    print(f"[finalize_job] WARNING: Job Run Report URL not found for job {job_id}", file=sys.stderr)
+                
+                # Extract and log Script Report URLs
+                uploaded_files = output_json.get('uploaded_files', [])
+                for file in uploaded_files:
+                    if file['name'] == 'script_report.html':
+                        script_id = file['relative_path'].split('/')[1].split('_')[-1] if '/' in file['relative_path'] else 'unknown'
+                        if script_id != 'unknown':
+                            print(f"[finalize_job] Script Report URL for script {script_id}: {file['public_url']}", file=sys.stderr)
+                        else:
+                            print(f"[finalize_job] WARNING: Script ID could not be determined for script report {file['relative_path']}", file=sys.stderr)
                 return jsonify(output_json)
             except json.JSONDecodeError:
                 print(f"[finalize_job] ERROR: Failed to parse JSON output from upload_and_report.py", file=sys.stderr)
