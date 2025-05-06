@@ -42,6 +42,7 @@ async function executeOnFlask(
     supabase,
     FLASK_SERVICE_URL,
     config_id,
+    created_at,
     team_id,
     creator_id,
   );
@@ -91,16 +92,7 @@ async function executeOnSSH(
   creator_id,
 ) {
   // Execute scripts via SSH on hosts
-  const result = await executeSSHScripts(
-    config,
-    jobId,
-    started_at,
-    decryptedEnvVars,
-    supabase,
-    team_id,
-    config_id,
-    creator_id,
-  );
+  const result = await executeSSHScripts(jobId, config.scripts, created_at, config.hosts[0].id);
   const output = result.output;
   const overallStatus = result.overallStatus;
   started_at = result.started_at;

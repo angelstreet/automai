@@ -1,6 +1,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { v4: uuidv4 } = require('uuid');
 
 const ejs = require('ejs');
 const { Client } = require('ssh2');
@@ -406,4 +407,252 @@ async function executeSSHScripts(
   return { output, overallStatus, started_at };
 }
 
-module.exports = { executeSSHScripts };
+async function executeScriptOnSSH(jobId, script, createdAt, host) {
+  const scriptExecutionId = uuidv4();
+  console.log(
+    `[executeScriptOnSSH] Executing script ${script.path} for job ${jobId} on host ${host.hostname}, script execution ID: ${scriptExecutionId}`,
+  );
+
+  await jobUtils.createScriptExecution(
+    jobId,
+    scriptExecutionId,
+    script.path,
+    script.parameters || '',
+    createdAt,
+  );
+  await jobUtils.updateScriptExecution(scriptExecutionId, 'in_progress', createdAt);
+
+  const client = new SSHClient();
+  let status = 'success';
+  let stdout = '';
+  let stderr = '';
+  let startTime = new Date().toISOString();
+
+  // Create uploadFolder structure on SSH host
+  const uploadFolder = '/tmp/uploadFolder';
+  const jobFolderName = `${createdAt.split('T')[0].replace(/-/g, '')}_${createdAt.split('T')[1].split('.')[0].replace(/:/g, '')}_${jobId}`;
+  const jobFolderPath = `${uploadFolder}/${jobFolderName}`;
+  const scriptFolderName = `${createdAt.split('T')[0].replace(/-/g, '')}_${createdAt.split('T')[1].split('.')[0].replace(/:/g, '')}_${scriptExecutionId}`;
+  const scriptFolderPath = `${jobFolderPath}/${scriptFolderName}`;
+
+  try {
+    await new Promise((resolve, reject) => {
+      client.on('ready', async () => {
+        console.log(
+          `[executeScriptOnSSH] SSH connection established for job ${jobId} on host ${host.hostname}`,
+        );
+
+        try {
+          // Create uploadFolder structure
+          await execCommand(client, `mkdir -p ${scriptFolderPath}`);
+          console.log(
+            `[executeScriptOnSSH] Created script folder on host ${host.hostname}: ${scriptFolderPath}`,
+          );
+
+          // Save script to script folder
+          const scriptContentPath = path.join('scripts', script.path);
+          if (fs.existsSync(scriptContentPath)) {
+            const scriptContent = fs.readFileSync(scriptContentPath, 'utf8');
+            await execCommand(
+              client,
+              `echo "${escapeShellArg(scriptContent)}" > ${scriptFolderPath}/script.py`,
+            );
+            console.log(
+              `[executeScriptOnSSH] Saved script content to ${scriptFolderPath}/script.py on host ${host.hostname}`,
+            );
+          }
+
+          // Prepare command to execute the script and save outputs
+          const scriptCommand = `python3 ${scriptFolderPath}/script.py ${script.parameters || ''}`;
+          const fullCommand = `${scriptCommand} > ${scriptFolderPath}/stdout.txt 2> ${scriptFolderPath}/stderr.txt`;
+          const result = await execCommand(client, fullCommand, 360);
+
+          stdout = await execCommand(client, `cat ${scriptFolderPath}/stdout.txt`);
+          stderr = await execCommand(client, `cat ${scriptFolderPath}/stderr.txt`);
+
+          console.log(
+            `[executeScriptOnSSH] Script execution completed for job ${jobId} on host ${host.hostname}`,
+          );
+
+          if (result.code !== 0) {
+            status = 'failed';
+            console.error(
+              `[executeScriptOnSSH] Script execution failed with exit code ${result.code} for job ${jobId} on host ${host.hostname}`,
+            );
+          } else {
+            status = 'success';
+            console.log(
+              `[executeScriptOnSSH] Script executed successfully for job ${jobId} on host ${host.hostname}`,
+            );
+          }
+
+          client.end();
+          resolve();
+        } catch (error) {
+          console.error(
+            `[executeScriptOnSSH] Error during SSH execution for job ${jobId} on host ${host.hostname}:`,
+            error,
+          );
+          status = 'failed';
+          stderr = error.message;
+          client.end();
+          reject(error);
+        }
+      });
+
+      client.on('error', (err) => {
+        console.error(
+          `[executeScriptOnSSH] SSH connection error for job ${jobId} on host ${host.hostname}:`,
+          err,
+        );
+        status = 'failed';
+        stderr = err.message;
+        client.end();
+        reject(err);
+      });
+
+      client.connect({
+        host: host.hostname,
+        port: host.port || 22,
+        username: host.username,
+        password: host.password,
+      });
+    });
+  } catch (error) {
+    console.error(
+      `[executeScriptOnSSH] Error executing script for job ${jobId} on host ${host.hostname}:`,
+      error,
+    );
+    status = 'failed';
+    stderr = error.message;
+  } finally {
+    client.end();
+  }
+
+  const endTime = new Date().toISOString();
+  await jobUtils.updateScriptExecution(
+    scriptExecutionId,
+    status,
+    createdAt,
+    startTime,
+    endTime,
+    stdout,
+    stderr,
+  );
+  return { status, stdout, stderr };
+}
+
+async function finalizeJobOnSSH(jobId, createdAt, host) {
+  console.log(
+    `[finalizeJobOnSSH] Finalizing job ${jobId} on host ${host.hostname} for upload and report generation`,
+  );
+  const client = new SSHClient();
+
+  try {
+    await new Promise((resolve, reject) => {
+      client.on('ready', async () => {
+        console.log(
+          `[finalizeJobOnSSH] SSH connection established for finalizing job ${jobId} on host ${host.hostname}`,
+        );
+
+        try {
+          const uploadFolder = '/tmp/uploadFolder';
+          const jobFolderName = `${createdAt.split('T')[0].replace(/-/g, '')}_${createdAt.split('T')[1].split('.')[0].replace(/:/g, '')}_${jobId}`;
+          const jobFolderPath = `${uploadFolder}/${jobFolderName}`;
+
+          // Check if upload_and_report.py exists, if not, copy it to the host
+          const uploadScriptPath = path.join(os.cwd(), 'upload_and_report.py');
+          if (fs.existsSync(uploadScriptPath)) {
+            const uploadScriptContent = fs.readFileSync(uploadScriptPath, 'utf8');
+            await execCommand(
+              client,
+              `echo "${escapeShellArg(uploadScriptContent)}" > /tmp/upload_and_report.py`,
+            );
+            console.log(
+              `[finalizeJobOnSSH] Uploaded upload_and_report.py to /tmp on host ${host.hostname}`,
+            );
+          }
+
+          // Set environment variables for Cloudflare R2
+          const envVars = [
+            `export CLOUDFLARE_R2_ENDPOINT=${escapeShellArg(process.env.CLOUDFLARE_R2_ENDPOINT || '')}`,
+            `export CLOUDFLARE_R2_ACCESS_KEY_ID=${escapeShellArg(process.env.CLOUDFLARE_R2_ACCESS_KEY_ID || '')}`,
+            `export CLOUDFLARE_R2_SECRET_ACCESS_KEY=${escapeShellArg(process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY || '')}`,
+          ].join('; ');
+
+          // Execute upload_and_report.py
+          const command = `${envVars}; cd /tmp; python3 /tmp/upload_and_report.py`;
+          const result = await execCommand(client, command);
+
+          console.log(
+            `[finalizeJobOnSSH] Upload and report generation command executed for job ${jobId} on host ${host.hostname}`,
+          );
+
+          if (result.code === 0) {
+            console.log(
+              `[finalizeJobOnSSH] Successfully finalized job ${jobId} on host ${host.hostname}`,
+            );
+            try {
+              const outputJson = JSON.parse(result.stdout);
+              const reportUrl = outputJson.uploaded_files?.find(
+                (file) => file.name === 'report.html',
+              )?.public_url;
+              if (reportUrl) {
+                console.log(`[finalizeJobOnSSH] Job report URL: ${reportUrl}`);
+                await updateJobStatus(jobId, 'success', reportUrl);
+              }
+              resolve(outputJson);
+            } catch (e) {
+              console.error(
+                `[finalizeJobOnSSH] Failed to parse JSON output from upload_and_report.py for job ${jobId} on host ${host.hostname}:`,
+                e,
+              );
+              resolve({ status: 'error', message: 'Failed to parse upload script output' });
+            }
+          } else {
+            console.error(
+              `[finalizeJobOnSSH] Failed to execute upload_and_report.py for job ${jobId} on host ${host.hostname}, exit code: ${result.code}`,
+            );
+            console.error(`[finalizeJobOnSSH] Stderr: ${result.stderr}`);
+            resolve({ status: 'error', message: 'Upload script execution failed' });
+          }
+
+          client.end();
+        } catch (error) {
+          console.error(
+            `[finalizeJobOnSSH] Error finalizing job ${jobId} on host ${host.hostname}:`,
+            error,
+          );
+          client.end();
+          reject(error);
+        }
+      });
+
+      client.on('error', (err) => {
+        console.error(
+          `[finalizeJobOnSSH] SSH connection error for job ${jobId} on host ${host.hostname}:`,
+          err,
+        );
+        client.end();
+        reject(err);
+      });
+
+      client.connect({
+        host: host.hostname,
+        port: host.port || 22,
+        username: host.username,
+        password: host.password,
+      });
+    });
+  } catch (error) {
+    console.error(
+      `[finalizeJobOnSSH] Error finalizing job ${jobId} on host ${host.hostname}:`,
+      error,
+    );
+    throw error;
+  } finally {
+    client.end();
+  }
+}
+
+module.exports = { executeSSHScripts, executeScriptOnSSH, finalizeJobOnSSH };
