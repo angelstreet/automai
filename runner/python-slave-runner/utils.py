@@ -22,19 +22,25 @@ def upload_files_to_r2(s3_client, job_id, created_at, associated_files, script_i
         return associated_files
 
     try:
-        # Use timestamp for folder naming
-        used_timestamp = created_at.replace(':', '-').replace('.', '-')
-        bucket_name = 'reports'
-        job_id_str = job_id.replace(':', '_').replace('/', '_')  # Sanitize job_id for path
+        # Format dates for folder structure
+        timestamp = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+        date_prefix = f"{timestamp.year}{str(timestamp.month).zfill(2)}{str(timestamp.day).zfill(2)}_{str(timestamp.hour).zfill(2)}{str(timestamp.minute).zfill(2)}"
         
-        # Create hierarchical folder structure
-        # Format: jobs/{job_id}/{timestamp}/
-        #   OR    jobs/{job_id}/{timestamp}/scripts/{script_id}/
+        bucket_name = 'reports'
+        job_id_str = str(job_id).replace(':', '_').replace('/', '_')  # Sanitize job_id for path
+        
+        # Create folder names with datetime_id format
+        job_folder = f"{date_prefix}_{job_id_str}"
+        
+        # For script-specific files, use the script subfolder
         if script_id:
             script_id_str = str(script_id).replace(':', '_').replace('/', '_')  # Sanitize script_id for path
-            base_folder = f"jobs/{job_id_str}/{used_timestamp}/scripts/{script_id_str}"
+            script_folder = f"{date_prefix}_{script_id_str}"
+            base_folder = f"{job_folder}/scripts/{script_folder}"
+            print(f"[@python-slave-runner:utils] Using folder structure: {base_folder}", file=sys.stderr)
         else:
-            base_folder = f"jobs/{job_id_str}/{used_timestamp}"
+            base_folder = job_folder
+            print(f"[@python-slave-runner:utils] Using job folder: {base_folder}", file=sys.stderr)
 
         updated_files = []
         for file_info in associated_files:
@@ -111,12 +117,22 @@ def upload_files_to_r2(s3_client, job_id, created_at, associated_files, script_i
         # Generate a main report link that points to the folder
         report_link = None
         if len(updated_files) > 0:
+            # First look for a report.html or script_report.html file
             for file_info in updated_files:
-                if file_info.get('name', '').endswith('.html') or file_info.get('name', '').endswith('.txt'):
+                name = file_info.get('name', '')
+                if name.endswith('report.html') or name.endswith('_report.html'):
                     report_link = file_info.get('public_url')
+                    print(f"[@python-slave-runner:utils] Found report file: {name}", file=sys.stderr)
                     break
             
-            # If no HTML or TXT file found, just use the first file
+            # If no report file found, look for any HTML or TXT file
+            if not report_link:
+                for file_info in updated_files:
+                    if file_info.get('name', '').endswith('.html') or file_info.get('name', '').endswith('.txt'):
+                        report_link = file_info.get('public_url')
+                        break
+            
+            # If still no appropriate file found, just use the first file
             if not report_link and len(updated_files) > 0:
                 report_link = updated_files[0].get('public_url')
 
