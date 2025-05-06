@@ -19,8 +19,16 @@ print(f"[@upload_and_report:main] boto3, dotenv, and supabase modules imported s
 def build_script_report_html_content(script_name, script_id, job_id, script_path, parameters, start_time, end_time, duration, status, stdout_content, stderr_content):
     """Build HTML content for script execution report."""
     # Format start_time and end_time to YYYY-MM-DD_HH:MM:SS
-    formatted_start_time = datetime.fromisoformat(start_time.replace('Z', '+00:00')).strftime('%Y-%m-%d_%H:%M:%S') if start_time else "N/A"
-    formatted_end_time = datetime.fromisoformat(end_time.replace('Z', '+00:00')).strftime('%Y-%m-%d_%H:%M:%S') if end_time else "N/A"
+    try:
+        formatted_start_time = datetime.fromisoformat(start_time.replace('Z', '+00:00')).strftime('%Y-%m-%d_%H:%M:%S') if start_time and start_time != "unknown" else "N/A"
+    except Exception as e:
+        print(f"[@upload_and_report:build_script_report_html_content] Error formatting start_time: {str(e)}", file=sys.stderr)
+        formatted_start_time = "N/A"
+    try:
+        formatted_end_time = datetime.fromisoformat(end_time.replace('Z', '+00:00')).strftime('%Y-%m-%d_%H:%M:%S') if end_time else "N/A"
+    except Exception as e:
+        print(f"[@upload_and_report:build_script_report_html_content] Error formatting end_time: {str(e)}", file=sys.stderr)
+        formatted_end_time = "N/A"
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -86,8 +94,16 @@ def create_script_report_html(script_folder, stdout_content, stderr_content, scr
 def build_job_report_html_content(job_id, start_time, end_time, duration, status, script_summary, total_scripts):
     """Build HTML content for job run report."""
     # Format start_time and end_time to YYYY-MM-DD_HH:MM:SS
-    formatted_start_time = datetime.fromisoformat(start_time.replace('Z', '+00:00')).strftime('%Y-%m-%d_%H:%M:%S') if start_time else "N/A"
-    formatted_end_time = datetime.fromisoformat(end_time.replace('Z', '+00:00')).strftime('%Y-%m-%d_%H:%M:%S') if end_time else "N/A"
+    try:
+        formatted_start_time = datetime.fromisoformat(start_time.replace('Z', '+00:00')).strftime('%Y-%m-%d_%H:%M:%S') if start_time and start_time != "unknown" else "N/A"
+    except Exception as e:
+        print(f"[@upload_and_report:build_job_report_html_content] Error formatting start_time: {str(e)}", file=sys.stderr)
+        formatted_start_time = "N/A"
+    try:
+        formatted_end_time = datetime.fromisoformat(end_time.replace('Z', '+00:00')).strftime('%Y-%m-%d_%H:%M:%S') if end_time else "N/A"
+    except Exception as e:
+        print(f"[@upload_and_report:build_job_report_html_content] Error formatting end_time: {str(e)}", file=sys.stderr)
+        formatted_end_time = "N/A"
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -330,11 +346,20 @@ def main():
     start_time = job_datetime.replace('_', ':') + ":00.000Z" if job_datetime != "unknown" else "unknown"
     # Format start_time to YYYY-MM-DD_HH:MM:SS
     try:
-        start_time_formatted = datetime.fromisoformat(start_time.replace('Z', '+00:00')).strftime('%Y-%m-%d_%H:%M:%S') if start_time != "unknown" else "N/A"
+        if start_time != "unknown":
+            start_dt = datetime.strptime(job_datetime, '%Y%m%d_%H%M%S')
+            start_time_formatted = start_dt.strftime('%Y-%m-%d_%H:%M:%S')
+            start_time_iso = start_dt.isoformat() + 'Z'
+        else:
+            start_time_formatted = "N/A"
+            start_time_iso = "unknown"
     except Exception as e:
         print(f"[@upload_and_report:main] Error formatting start_time: {str(e)}", file=sys.stderr)
         start_time_formatted = "N/A"
+        start_time_iso = "unknown"
     end_time = datetime.utcnow().isoformat() + 'Z'
+    # Use the ISO format for further calculations
+    start_time = start_time_iso
 
     # Collect script folders within the job folder
     script_folders = [f for f in os.listdir(job_folder_path) if os.path.isdir(os.path.join(job_folder_path, f))]
