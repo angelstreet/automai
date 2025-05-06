@@ -41,6 +41,7 @@ async function processJob() {
     let team_id;
     let creator_id;
     let FLASK_SERVICE_URL;
+    let config_name = '';
 
     if (usePayload) {
       console.log(
@@ -68,7 +69,7 @@ async function processJob() {
           const defaultConfigId = 'b0238c60-fc08-4008-a445-6ee35b99e83c';
           const { data: configData, error: configError } = await supabase
             .from('jobs_configuration')
-            .select('team_id, creator_id')
+            .select('team_id, creator_id, name')
             .eq('id', defaultConfigId)
             .single();
 
@@ -88,6 +89,13 @@ async function processJob() {
               creator_id = configData.creator_id;
               console.log(
                 `[@local-runner:processJob] Retrieved creator_id from default config: ${jobData.creator_id}`,
+              );
+            }
+
+            if (configData.name) {
+              config_name = configData.name;
+              console.log(
+                `[@local-runner:processJob] Retrieved config name from default config: ${config_name}`,
               );
             }
           } else {
@@ -145,6 +153,21 @@ async function processJob() {
       console.log(
         `[@local-runner:processJob] Using Flask service URL for env ${config.env}: ${FLASK_SERVICE_URL}`,
       );
+
+      // Fetch config name
+      const { data: configData, error: configError } = await supabase
+        .from('jobs_configuration')
+        .select('name')
+        .eq('id', config_id)
+        .single();
+      if (!configError && configData && configData.name) {
+        config_name = configData.name;
+        console.log(`[@local-runner:processJob] Retrieved config name: ${config_name}`);
+      } else {
+        console.log(
+          `[@local-runner:processJob] Could not retrieve config name: ${configError?.message}`,
+        );
+      }
     }
 
     // Fetch and decrypt environment variables
@@ -157,6 +180,8 @@ async function processJob() {
     const hasHosts = config.hosts && config.hosts.length > 0;
 
     if (!hasHosts) {
+      // Include config_name in the job initialization payload
+      config.config_name = config_name;
       await commonUtils.executeOnFlask(
         config,
         jobId,

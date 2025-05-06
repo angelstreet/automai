@@ -132,7 +132,7 @@ def create_script_report_html(script_folder, stdout_content, stderr_content, scr
         print(f"[@upload_and_report:create_script_report_html] Error creating script report: {str(e)}", file=sys.stderr)
         return None
 
-def build_job_report_html_content(job_id, start_time, end_time, duration, status, script_summary, total_scripts):
+def build_job_report_html_content(job_id, start_time, end_time, duration, status, script_summary, total_scripts, config_name=''):
     """Build HTML content for job run report."""
     # Format start_time and end_time to YYYY-MM-DD_HH:MM:SS
     try:
@@ -167,6 +167,7 @@ def build_job_report_html_content(job_id, start_time, end_time, duration, status
   <h1>Job Run Report</h1>
   <table>
     <tr><th>Job ID</th><td>{job_id}</td></tr>
+    <tr><th>Configuration Name</th><td>{config_name if config_name else 'N/A'}</td></tr>
     <tr><th>Start Time</th><td>{formatted_start_time}</td></tr>
     <tr><th>End Time</th><td>{formatted_end_time}</td></tr>
     <tr><th>Duration (s)</th><td>{duration}</td></tr>
@@ -181,7 +182,7 @@ def build_job_report_html_content(job_id, start_time, end_time, duration, status
 </body>
 </html>"""
 
-def create_job_report_html(job_folder, job_id, start_time, end_time, script_reports, status="success", uploaded_files=None):
+def create_job_report_html(job_folder, job_id, start_time, end_time, script_reports, status="success", uploaded_files=None, config_name=''):
     """Create an HTML report for the entire job run."""
     duration = "N/A"
     if start_time and end_time:
@@ -206,7 +207,7 @@ def create_job_report_html(job_folder, job_id, start_time, end_time, script_repo
         order += 1
     
     total_scripts = len(script_reports)
-    html_content = build_job_report_html_content(job_id, start_time, end_time, duration, status, script_summary, total_scripts)
+    html_content = build_job_report_html_content(job_id, start_time, end_time, duration, status, script_summary, total_scripts, config_name)
     report_path = os.path.join(job_folder, 'report.html')
     try:
         with open(report_path, 'w') as f:
@@ -473,11 +474,23 @@ def main():
 
     # Create job report (initially without URLs, will update after upload)
     job_status = "success" if all(sr['status'] == 'success' for sr in script_reports.values()) else "failed"
-    job_report_path = create_job_report_html(job_folder_path, job_id, start_time, end_time, script_reports, job_status, None)
+    # Read config_name from config_name.txt if it exists
+    config_name = ''
+    config_name_file = os.path.join(job_folder_path, 'config_name.txt')
+    if os.path.exists(config_name_file):
+        try:
+            with open(config_name_file, 'r') as f:
+                config_name = f.read().strip()
+            print(f"[@upload_and_report:main] Read config_name '{config_name}' from {config_name_file}", file=sys.stderr)
+        except Exception as e:
+            print(f"[@upload_and_report:main] Error reading config_name.txt: {str(e)}", file=sys.stderr)
+    else:
+        print(f"[@upload_and_report:main] config_name.txt not found at {config_name_file}", file=sys.stderr)
+    job_report_path = create_job_report_html(job_folder_path, job_id, start_time, end_time, script_reports, job_status, None, config_name=config_name)
 
     # Collect all files to upload
     associated_files = []
-    excluded_files = {'.env', 'requirements.txt', 'upload_and_report.py'}
+    excluded_files = {'.env', 'requirements.txt', 'upload_and_report.py', 'config_name.txt'}
     for root, _, filenames in os.walk(upload_folder):
         for filename in filenames:
             if filename in excluded_files:
@@ -630,7 +643,7 @@ def main():
                     print(f"[@upload_and_report:main] Error uploading updated script report for script {script_id}: {str(e)}", file=sys.stderr)
         
         # Regenerate job report with updated URLs
-        job_report_path = create_job_report_html(job_folder_path, job_id, start_time, end_time, script_reports, job_status, uploaded_files)
+        job_report_path = create_job_report_html(job_folder_path, job_id, start_time, end_time, script_reports, job_status, uploaded_files, config_name=config_name)
         # Upload the updated job report
         with open(job_report_path, 'rb') as f:
             s3_client.upload_fileobj(
