@@ -132,6 +132,7 @@ def initialize_job():
     # Save R2 credentials to a .env file for this job
     credentials_file = os.path.join(job_folder_path, '.env')
     with open(credentials_file, 'w') as f:
+        f.write(f"# Environment variables for Cloudflare R2\n")
         f.write(f"CLOUDFLARE_R2_ENDPOINT={r2_credentials.get('endpoint', '')}\n")
         f.write(f"CLOUDFLARE_R2_ACCESS_KEY_ID={r2_credentials.get('access_key_id', '')}\n")
         f.write(f"CLOUDFLARE_R2_SECRET_ACCESS_KEY={r2_credentials.get('secret_access_key', '')}\n")
