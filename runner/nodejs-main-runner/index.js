@@ -16,7 +16,13 @@ const redis = new Redis({
   token: process.env.UPSTASH_REDIS_REST_TOKEN,
 });
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-const FLASK_SERVICE_URL = process.env.PYTHON_SLAVE_RUNNER_FLASK_SERVICE_URL;
+
+// Dynamically set Flask service URL based on environment
+const getFlaskServiceUrl = (env) => {
+  return env === 'prod'
+    ? process.env.PYTHON_SLAVE_RUNNER_PROD_FLASK_SERVICE_URL
+    : process.env.PYTHON_SLAVE_RUNNER_PREPROD_FLASK_SERVICE_URL;
+};
 
 async function processJob() {
   try {
@@ -33,6 +39,12 @@ async function processJob() {
       console.log(`[processJob] Config ${config_id} is inactive, skipping execution`);
       return;
     }
+
+    // Set Flask service URL based on environment, default to preprod if not specified
+    const FLASK_SERVICE_URL = getFlaskServiceUrl(config.env);
+    console.log(
+      `[processJob] Using Flask service URL for env ${config.env || 'not specified (defaulting to preprod)'}: ${FLASK_SERVICE_URL}`,
+    );
 
     // Fetch and decrypt environment variables
     const decryptedEnvVars = await fetchAndDecryptEnvVars(supabase, team_id);

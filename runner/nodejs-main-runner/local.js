@@ -14,7 +14,13 @@ const redis = new Redis({
 });
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-const FLASK_SERVICE_URL = process.env.PYTHON_SLAVE_RUNNER_FLASK_SERVICE_URL;
+
+// Dynamically set Flask service URL based on environment
+const getFlaskServiceUrl = (env) => {
+  return env === 'prod'
+    ? process.env.PYTHON_SLAVE_RUNNER_PROD_FLASK_SERVICE_URL
+    : process.env.PYTHON_SLAVE_RUNNER_PREPROD_FLASK_SERVICE_URL;
+};
 
 async function processJob() {
   try {
@@ -34,6 +40,7 @@ async function processJob() {
     let config_id;
     let team_id;
     let creator_id;
+    let FLASK_SERVICE_URL;
 
     if (usePayload) {
       console.log(
@@ -48,8 +55,12 @@ async function processJob() {
         jobData = JSON.parse(payloadStr);
         config = jobData;
         config_id = jobData.config_id || 'b0238c60-fc08-4008-a445-6ee35b99e83c'; // Default testing config ID
+        FLASK_SERVICE_URL = getFlaskServiceUrl(jobData.env);
         console.log(
           `[@local-runner:processJob] Custom payload parsed successfully: ${JSON.stringify(jobData, null, 2)}`,
+        );
+        console.log(
+          `[@local-runner:processJob] Using Flask service URL for env ${jobData.env}: ${FLASK_SERVICE_URL}`,
         );
 
         // For custom payload, always fetch team_id from the default config if not provided
@@ -118,6 +129,10 @@ async function processJob() {
       creator_id = fetchedCreatorId;
       jobData.team_id = team_id;
       jobData.creator_id = creator_id;
+      FLASK_SERVICE_URL = getFlaskServiceUrl(config.env);
+      console.log(
+        `[@local-runner:processJob] Using Flask service URL for env ${config.env}: ${FLASK_SERVICE_URL}`,
+      );
     }
 
     // Fetch and decrypt environment variables
