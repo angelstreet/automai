@@ -39,7 +39,15 @@ async function executeFlaskScripts(
       supabase_api_url: process.env.SUPABASE_URL || '',
       supabase_service_role_key: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
     };
-    console.log(`[executeFlaskScripts] Credentials: ${JSON.stringify(credentials)}`);
+    console.log(
+      `[executeFlaskScripts] Credentials: ${JSON.stringify({
+        cloudflare_r2_endpoint: credentials.cloudflare_r2_endpoint,
+        cloudflare_r2_access_key_id: '***MASKED***',
+        cloudflare_r2_secret_access_key: '***MASKED***',
+        supabase_api_url: credentials.supabase_api_url,
+        supabase_service_role_key: '***MASKED***',
+      })}`,
+    );
     console.log(`[executeFlaskScripts] Prepared unified credentials for job ${jobId}`);
 
     const payload = prepareJobInitializationPayload(
