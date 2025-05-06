@@ -1,7 +1,13 @@
 const { Client } = require('ssh2');
 const { v4: uuidv4 } = require('uuid');
 
-const { createScriptExecution, updateScriptExecution, updateJobStatus } = require('./jobUtils');
+const {
+  createScriptExecution,
+  updateScriptExecution,
+  updateJobStatus,
+  initializeJobOnHost,
+  finalizeJobOnHost,
+} = require('./jobUtils');
 const { pingRepository } = require('./repoUtils');
 const { decrypt, formatEnvVarsForSSH, collectEnvironmentVariables } = require('./utils');
 
@@ -49,6 +55,24 @@ async function executeSSHScripts(
       console.log(`[executeSSHScripts] Plain key/password: ${sshKeyOrPass.slice(0, 50)}...`);
     }
 
+    // Initialize job on SSH host using jobUtils function
+    let jobFolderPath;
+    try {
+      jobFolderPath = await initializeJobOnHost(
+        supabase,
+        jobId,
+        started_at,
+        config,
+        host,
+        sshKeyOrPass,
+      );
+    } catch (error) {
+      console.error(
+        `[executeSSHScripts] Failed to initialize job on host ${host.ip}: ${error.message}`,
+      );
+      throw error;
+    }
+
     // Process each script separately for tracking purposes
     for (const script of config.scripts || []) {
       const scriptPath = script.path;
@@ -69,6 +93,17 @@ async function executeSSHScripts(
         host_ip: host.ip,
         env: env,
       });
+
+      // Create script folder within job folder
+      const scriptFolderName = `${started_at.split('T')[0].replace(/-/g, '')}_${started_at.split('T')[1].split('.')[0].replace(/:/g, '')}_${scriptExecutionId}`;
+      const scriptFolderPath = `${jobFolderPath}/${scriptFolderName}`;
+      let scriptSetupCommand =
+        host.os === 'windows'
+          ? `powershell -Command "if (-not (Test-Path '${scriptFolderPath}')) { New-Item -ItemType Directory -Path '${scriptFolderPath}' }"`
+          : `mkdir -p ${scriptFolderPath}`;
+      console.log(
+        `[executeSSHScripts] Creating script folder on host ${host.ip}: ${scriptFolderPath}`,
+      );
 
       // Format command for this script
       const ext = scriptPath.split('.').pop().toLowerCase();
@@ -170,12 +205,12 @@ async function executeSSHScripts(
         console.log(`[executeSSHScripts] No environment variables to set for SSH host ${host.ip}`);
       }
 
-      // Build the full script command with all setup
+      // Build the full script command with all setup including script folder creation
       let fullScript;
       if (host.os === 'windows') {
-        fullScript = `${repoCommands}${repoCommands ? ' && ' : ''}${repoDir ? `cd ${repoDir} && ` : ''} cd ${scriptFolder} && powershell -Command "if (Test-Path 'requirements.txt') { pip install -r requirements.txt } else { Write-Output 'No requirements.txt file found, skipping pip install' }" && ${envSetup}python --version && echo ============================= && ${scriptCommand}`;
+        fullScript = `${repoCommands}${repoCommands ? ' && ' : ''}${repoDir ? `cd ${repoDir} && ` : ''} cd ${scriptFolder} && ${scriptSetupCommand} && powershell -Command "if (Test-Path 'requirements.txt') { pip install -r requirements.txt } else { Write-Output 'No requirements.txt file found, skipping pip install' }" && ${envSetup}python --version && echo ============================= && ${scriptCommand} > ${scriptFolderPath}/stdout.txt 2> ${scriptFolderPath}/stderr.txt`;
       } else {
-        fullScript = `${repoCommands} ${repoCommands ? '' : repoDir ? `cd ${repoDir} && ` : ''} cd ${scriptFolder} && if [ -f "requirements.txt" ]; then pip install -r requirements.txt; else echo "No requirements.txt file found, skipping pip install"; fi && ${envSetup}python --version && echo ============================= && ${scriptCommand}`;
+        fullScript = `${repoCommands} ${repoCommands ? '' : repoDir ? `cd ${repoDir} && ` : ''} cd ${scriptFolder} && ${scriptSetupCommand} && if [ -f "requirements.txt" ]; then pip install -r requirements.txt; else echo "No requirements.txt file found, skipping pip install"; fi && ${envSetup}python --version && echo ============================= && ${scriptCommand} > ${scriptFolderPath}/stdout.txt 2> ${scriptFolderPath}/stderr.txt`;
       }
       console.log(`[executeSSHScripts] SSH command to be executed on ${host.ip}: ${fullScript}`);
 
@@ -279,6 +314,86 @@ async function executeSSHScripts(
           conn.connect(sshConfig);
         });
 
+        // Read stdout and stderr from files
+        const stdoutFileCommand =
+          host.os === 'windows'
+            ? `powershell -Command "Get-Content -Path '${scriptFolderPath}/stdout.txt'"`
+            : `cat ${scriptFolderPath}/stdout.txt`;
+        const stderrFileCommand =
+          host.os === 'windows'
+            ? `powershell -Command "Get-Content -Path '${scriptFolderPath}/stderr.txt'"`
+            : `cat ${scriptFolderPath}/stderr.txt`;
+
+        const connRead = new Client();
+        let stdoutFromFile = '';
+        let stderrFromFile = '';
+        try {
+          await new Promise((resolve, reject) => {
+            const connectionTimeout = setTimeout(() => {
+              connRead.end();
+              reject(new Error('SSH connection timeout for reading output files'));
+            }, 60000);
+
+            connRead.on('ready', () => {
+              clearTimeout(connectionTimeout);
+              console.log(`[executeSSHScripts] Connected to ${host.ip} for reading output files`);
+              connRead.exec(stdoutFileCommand, (err, stream) => {
+                if (err) {
+                  connRead.end();
+                  reject(err);
+                  return;
+                }
+                stream.on('data', (data) => {
+                  stdoutFromFile += data;
+                });
+                stream.stderr.on('data', (data) => {
+                  console.log(`[executeSSHScripts] Stderr while reading stdout file: ${data}`);
+                });
+                stream.on('close', () => {
+                  connRead.exec(stderrFileCommand, (err, stream2) => {
+                    if (err) {
+                      connRead.end();
+                      reject(err);
+                      return;
+                    }
+                    stream2.on('data', (data) => {
+                      stderrFromFile += data;
+                    });
+                    stream2.stderr.on('data', (data) => {
+                      console.log(`[executeSSHScripts] Stderr while reading stderr file: ${data}`);
+                    });
+                    stream2.on('close', () => {
+                      connRead.end();
+                      resolve();
+                    });
+                  });
+                });
+              });
+            });
+            connRead.on('error', (err) => {
+              clearTimeout(connectionTimeout);
+              reject(err);
+            });
+            const sshConfig = {
+              host: host.ip,
+              port: host.port || 22,
+              username: host.username,
+            };
+            if (host.authType === 'privateKey') {
+              sshConfig.privateKey = sshKeyOrPass;
+            } else {
+              sshConfig.password = sshKeyOrPass;
+            }
+            connRead.connect(sshConfig);
+          });
+        } catch (error) {
+          console.error(
+            `[executeSSHScripts] Error reading output files on host ${host.ip}: ${error.message}`,
+          );
+          stdoutFromFile = scriptResult.stdout;
+          stderrFromFile = scriptResult.stderr;
+        }
+
         // Update script output with results
         const scriptCompletedAt = new Date().toISOString();
 
@@ -287,8 +402,8 @@ async function executeSSHScripts(
           script_id: scriptExecutionId,
           status: scriptResult.isSuccess ? 'success' : 'failed',
           output: {
-            stdout: scriptResult.stdout,
-            stderr: scriptResult.stderr,
+            stdout: stdoutFromFile,
+            stderr: stderrFromFile,
             exitCode: scriptResult.exitCode,
           },
           completed_at: scriptCompletedAt,
@@ -298,8 +413,8 @@ async function executeSSHScripts(
         const scriptOutputRecord = {
           script_path: scriptPath,
           iteration: 1,
-          stdout: scriptResult.stdout,
-          stderr: scriptResult.stderr,
+          stdout: stdoutFromFile,
+          stderr: stderrFromFile,
         };
 
         output.scripts.push(scriptOutputRecord);
@@ -329,6 +444,32 @@ async function executeSSHScripts(
 
         overallStatus = 'failed';
       }
+    }
+
+    // Finalize job on SSH host using jobUtils function
+    try {
+      await finalizeJobOnHost(
+        supabase,
+        jobId,
+        overallStatus,
+        output,
+        host,
+        sshKeyOrPass,
+        jobFolderPath,
+      );
+    } catch (error) {
+      console.error(
+        `[executeSSHScripts] Failed to finalize job on host ${host.ip}: ${error.message}`,
+      );
+      // Fallback to updating job status without report URL if finalization fails
+      await supabase
+        .from('jobs_run')
+        .update({
+          status: overallStatus,
+          output: output,
+          completed_at: new Date().toISOString(),
+        })
+        .eq('id', jobId);
     }
   }
 

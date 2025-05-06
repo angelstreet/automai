@@ -176,6 +176,228 @@ async function updateScriptExecution(
   }
 }
 
+async function initializeJobOnHost(_supabase, jobId, started_at, config, host, sshKeyOrPass) {
+  console.log(`[initializeJobOnHost] Initializing job ${jobId} on host ${host.ip}`);
+  const { Client } = require('ssh2');
+  const fs = require('fs');
+
+  // Initialize job folder structure on SSH host
+  const uploadFolder = '/tmp/uploadFolder';
+  const jobFolderName = `${started_at.split('T')[0].replace(/-/g, '')}_${started_at.split('T')[1].split('.')[0].replace(/:/g, '')}_${jobId}`;
+  const jobFolderPath = `${uploadFolder}/${jobFolderName}`;
+  let initCommand =
+    host.os === 'windows'
+      ? `powershell -Command "if (-not (Test-Path '${jobFolderPath}')) { New-Item -ItemType Directory -Path '${jobFolderPath}' }"`
+      : `mkdir -p ${jobFolderPath}`;
+  console.log(`[initializeJobOnHost] Initializing job folder on host ${host.ip}: ${jobFolderPath}`);
+
+  // Save upload_and_report.py and requirements.txt to job folder
+  const uploadScriptContent = fs.readFileSync('upload_and_report.py', 'utf8');
+  const requirementsContent = 'boto3\npython-dotenv\nsupabase\n';
+  const uploadScriptPath = `${jobFolderPath}/upload_and_report.py`;
+  const requirementsPath = `${jobFolderPath}/requirements.txt`;
+  const configNamePath = `${jobFolderPath}/config_name.txt`;
+  const envFilePath = `${jobFolderPath}/.env`;
+  initCommand +=
+    host.os === 'windows'
+      ? ` && powershell -Command "Set-Content -Path '${uploadScriptPath}' -Value @'\n${uploadScriptContent}\n'@" && powershell -Command "Set-Content -Path '${requirementsPath}' -Value @'\n${requirementsContent}\n'@" && powershell -Command "Set-Content -Path '${configNamePath}' -Value '${config.config_name || ''}'" && powershell -Command "Set-Content -Path '${envFilePath}' -Value @'\nCLOUDFLARE_R2_ENDPOINT=${process.env.CLOUDFLARE_R2_ENDPOINT || ''}\nCLOUDFLARE_R2_ACCESS_KEY_ID=${process.env.CLOUDFLARE_R2_ACCESS_KEY_ID || ''}\nCLOUDFLARE_R2_SECRET_ACCESS_KEY=${process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY || ''}\nSUPABASE_URL=${process.env.SUPABASE_URL || ''}\nSUPABASE_SERVICE_ROLE_KEY=${process.env.SUPABASE_SERVICE_ROLE_KEY || ''}\n'@"`
+      : ` && echo "${uploadScriptContent.replace(/"/g, '\\"')}" > ${uploadScriptPath} && echo "${requirementsContent.replace(/"/g, '\\"')}" > ${requirementsPath} && echo "${config.config_name || ''}" > ${configNamePath} && echo "CLOUDFLARE_R2_ENDPOINT=${process.env.CLOUDFLARE_R2_ENDPOINT || ''}\nCLOUDFLARE_R2_ACCESS_KEY_ID=${process.env.CLOUDFLARE_R2_ACCESS_KEY_ID || ''}\nCLOUDFLARE_R2_SECRET_ACCESS_KEY=${process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY || ''}\nSUPABASE_URL=${process.env.SUPABASE_URL || ''}\nSUPABASE_SERVICE_ROLE_KEY=${process.env.SUPABASE_SERVICE_ROLE_KEY || ''}" > ${envFilePath}`;
+  console.log(
+    `[initializeJobOnHost] Saving upload_and_report.py, requirements.txt, config name, and credentials to job folder on host ${host.ip}`,
+  );
+
+  // Install dependencies
+  initCommand +=
+    host.os === 'windows'
+      ? ` && powershell -Command "pip install -r '${requirementsPath}'"`
+      : ` && pip install -r ${requirementsPath}`;
+  console.log(`[initializeJobOnHost] Installing dependencies on host ${host.ip}`);
+
+  const connInit = new Client();
+  try {
+    await new Promise((resolve, reject) => {
+      const connectionTimeout = setTimeout(() => {
+        connInit.end();
+        reject(new Error('SSH connection timeout for initialization'));
+      }, 60000);
+
+      connInit.on('ready', () => {
+        clearTimeout(connectionTimeout);
+        console.log(`[initializeJobOnHost] Connected to ${host.ip} for initialization`);
+        connInit.exec(initCommand, (err, stream) => {
+          if (err) {
+            connInit.end();
+            reject(err);
+            return;
+          }
+          let stdout = '';
+          let stderr = '';
+          stream.on('data', (data) => {
+            stdout += data;
+            console.log(`${data}`);
+          });
+          stream.stderr.on('data', (data) => {
+            stderr += data;
+            console.log(`[initializeJobOnHost] Stderr during init: ${data}`);
+          });
+          stream.on('close', (code, signal) => {
+            console.log(
+              `[initializeJobOnHost] Initialization command completed with code: ${code}, signal: ${signal}`,
+            );
+            connInit.end();
+            if (code === 0) {
+              resolve({ stdout, stderr });
+            } else {
+              reject(new Error(`Initialization failed with code ${code}`));
+            }
+          });
+        });
+      });
+      connInit.on('error', (err) => {
+        clearTimeout(connectionTimeout);
+        reject(err);
+      });
+      const sshConfig = {
+        host: host.ip,
+        port: host.port || 22,
+        username: host.username,
+      };
+      if (host.authType === 'privateKey') {
+        sshConfig.privateKey = sshKeyOrPass;
+      } else {
+        sshConfig.password = sshKeyOrPass;
+      }
+      connInit.connect(sshConfig);
+    });
+    console.log(`[initializeJobOnHost] Job initialization completed on host ${host.ip}`);
+    return jobFolderPath;
+  } catch (error) {
+    console.error(
+      `[initializeJobOnHost] Error initializing job on host ${host.ip}: ${error.message}`,
+    );
+    throw error;
+  }
+}
+
+async function finalizeJobOnHost(
+  supabase,
+  jobId,
+  overallStatus,
+  output,
+  host,
+  sshKeyOrPass,
+  jobFolderPath,
+) {
+  console.log(
+    `[finalizeJobOnHost] Finalizing job ${jobId} on host ${host.ip} with upload_and_report.py`,
+  );
+  const { Client } = require('ssh2');
+  const finalizeCommand =
+    host.os === 'windows'
+      ? `powershell -Command "cd '${jobFolderPath}' && python upload_and_report.py"`
+      : `cd ${jobFolderPath} && python upload_and_report.py`;
+  const connFinalize = new Client();
+  let reportUrl = '';
+  try {
+    const finalizeResult = await new Promise((resolve, reject) => {
+      const connectionTimeout = setTimeout(() => {
+        connFinalize.end();
+        reject(new Error('SSH connection timeout for finalization'));
+      }, 120000); // 120 seconds timeout for finalization
+
+      connFinalize.on('ready', () => {
+        clearTimeout(connectionTimeout);
+        console.log(`[finalizeJobOnHost] Connected to ${host.ip} for finalization`);
+        connFinalize.exec(finalizeCommand, (err, stream) => {
+          if (err) {
+            connFinalize.end();
+            reject(err);
+            return;
+          }
+          let stdout = '';
+          let stderr = '';
+          stream.on('data', (data) => {
+            stdout += data;
+            console.log(`${data}`);
+            // Extract report URL from output if available
+            const reportUrlMatch = stdout.match(
+              /Job Run Report URL for job [^:]+: (https?:\/\/[^\s]+)/,
+            );
+            if (reportUrlMatch && reportUrlMatch[1]) {
+              reportUrl = reportUrlMatch[1];
+            }
+          });
+          stream.stderr.on('data', (data) => {
+            stderr += data;
+            console.log(`[finalizeJobOnHost] Stderr during finalize: ${data}`);
+          });
+          stream.on('close', (code, signal) => {
+            console.log(
+              `[finalizeJobOnHost] Finalization command completed with code: ${code}, signal: ${signal}`,
+            );
+            connFinalize.end();
+            resolve({ stdout, stderr, exitCode: code });
+          });
+        });
+      });
+      connFinalize.on('error', (err) => {
+        clearTimeout(connectionTimeout);
+        reject(err);
+      });
+      const sshConfig = {
+        host: host.ip,
+        port: host.port || 22,
+        username: host.username,
+      };
+      if (host.authType === 'privateKey') {
+        sshConfig.privateKey = sshKeyOrPass;
+      } else {
+        sshConfig.password = sshKeyOrPass;
+      }
+      connFinalize.connect(sshConfig);
+    });
+    console.log(`[finalizeJobOnHost] Job finalization completed on host ${host.ip}`);
+    // Use finalizeResult to avoid linter error, even if just logging
+    console.log(
+      `[finalizeJobOnHost] Finalization result: ${JSON.stringify(finalizeResult, null, 2)}`,
+    );
+    // Update job status with report URL if available
+    if (reportUrl) {
+      await supabase
+        .from('jobs_run')
+        .update({
+          status: overallStatus,
+          output: output,
+          completed_at: new Date().toISOString(),
+          report_url: reportUrl,
+        })
+        .eq('id', jobId);
+      console.log(`[finalizeJobOnHost] Updated job ${jobId} with report URL: ${reportUrl}`);
+    } else {
+      console.log(`[finalizeJobOnHost] No report URL found in finalize output for job ${jobId}`);
+      await supabase
+        .from('jobs_run')
+        .update({
+          status: overallStatus,
+          output: output,
+          completed_at: new Date().toISOString(),
+        })
+        .eq('id', jobId);
+    }
+  } catch (error) {
+    console.error(`[finalizeJobOnHost] Error finalizing job on host ${host.ip}: ${error.message}`);
+    // Update job status without report URL
+    await supabase
+      .from('jobs_run')
+      .update({
+        status: overallStatus,
+        output: output,
+        completed_at: new Date().toISOString(),
+      })
+      .eq('id', jobId);
+  }
+}
+
 module.exports = {
   getJobFromQueue,
   fetchJobConfig,
@@ -183,4 +405,6 @@ module.exports = {
   updateJobStatus,
   createScriptExecution,
   updateScriptExecution,
+  initializeJobOnHost,
+  finalizeJobOnHost,
 };
