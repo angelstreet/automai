@@ -344,6 +344,7 @@ async function executeScriptOnSSH(jobId, script, createdAt, host) {
     script.path,
     script.parameters || '',
     createdAt,
+    env,
   );
   await jobUtils.updateScriptExecution(scriptExecutionId, 'in_progress', createdAt);
 

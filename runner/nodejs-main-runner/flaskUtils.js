@@ -98,6 +98,7 @@ async function executeFlaskScripts(
             created_at: started_at,
             job_id: jobId,
             script_id: scriptExecutionId,
+            env: env,
           };
 
           if (config.repository) {
