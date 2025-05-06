@@ -36,9 +36,10 @@ def execute_script():
     if os.path.exists(script_content_path):
         with open(script_content_path, 'r') as f:
             script_content = f.read()
-        with open(os.path.join(script_folder_path, 'script.py'), 'w') as f:
+        original_script_name = os.path.basename(script_path)
+        with open(os.path.join(script_folder_path, original_script_name), 'w') as f:
             f.write(script_content)
-        print(f"[execute_script] Saved script content to {script_folder_path}/script.py", file=sys.stderr)
+        print(f"[execute_script] Saved script content to {script_folder_path}/{original_script_name}", file=sys.stderr)
 
     # Prepare command
     command = [sys.executable, script_content_path] + (parameters.split() if parameters else [])
