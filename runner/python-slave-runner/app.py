@@ -150,14 +150,14 @@ def initialize_job():
         print(f"[initialize_job] ERROR: Unexpected error while installing dependencies for job {job_id}: {str(e)}", file=sys.stderr)
 
     # Step 1: Fetch Cloudflare R2 credentials from provided data with correct key names
-    cloudflare_r2_endpoint = credentials.get('cloudflare_r2_endpoint', '')
-    cloudflare_r2_access_key_id = credentials.get('cloudflare_r2_access_key_id', '')
-    cloudflare_r2_secret_access_key = credentials.get('cloudflare_r2_secret_access_key', '')
+    cloudflare_r2_endpoint = credentials.get('CLOUDFLARE_R2_ENDPOINT', '')
+    cloudflare_r2_access_key_id = credentials.get('CLOUDFLARE_R2_ACCESS_KEY_ID', '')
+    cloudflare_r2_secret_access_key = credentials.get('CLOUDFLARE_R2_SECRET_ACCESS_KEY', '')
     print(f"[initialize_job] Fetched Cloudflare R2 credentials for job {job_id}: endpoint={cloudflare_r2_endpoint[:10]}... (partial), access_key_id={cloudflare_r2_access_key_id[:5]}... (partial), secret_access_key={cloudflare_r2_secret_access_key[:5]}... (partial)", file=sys.stderr)
 
     # Step 2: Fetch Supabase credentials from provided data with correct key names
-    supabase_api_url = credentials.get('supabase_api_url', '')
-    supabase_service_role_key = credentials.get('supabase_service_role_key', '')
+    supabase_api_url = credentials.get('SUPABASE_URL', '')
+    supabase_service_role_key = credentials.get('SUPABASE_SERVICE_ROLE_KEY', '')
     print(f"[initialize_job] Fetched Supabase credentials for job {job_id}: api_url={supabase_api_url[:10]}... (partial), service_role_key={supabase_service_role_key[:5]}... (partial)", file=sys.stderr)
 
     # Step 3: Save Cloudflare R2 and Supabase credentials to a .env file for this job
