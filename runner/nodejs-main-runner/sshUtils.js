@@ -1,9 +1,7 @@
 const { Client } = require('ssh2');
 const { v4: uuidv4 } = require('uuid');
 
-const {
-  /* createScriptExecution, updateScriptExecution, */ updateJobStatus,
-} = require('./jobUtils');
+const { createScriptExecution, updateScriptExecution, updateJobStatus } = require('./jobUtils');
 const { pingRepository } = require('./repoUtils');
 const { decrypt, formatEnvVarsForSSH, collectEnvironmentVariables } = require('./utils');
 
@@ -54,24 +52,19 @@ async function executeSSHScripts(
       const parameters = script.parameters || '';
 
       // Create a script execution record for this specific script on this host
-      const scriptExecutionId = await supabase
-        .from('scripts_run')
-        .insert({
-          job_run_id: jobId,
-          config_id: config_id,
-          team_id: team_id,
-          creator_id: creator_id,
-          script_name: scriptName,
-          script_path: scriptPath,
-          script_parameters: { parameters },
-          host_id: host.id,
-          host_name: host.name,
-          host_ip: host.ip,
-          env: env,
-        })
-        .select('id')
-        .single()
-        .then((response) => response.data.id);
+      const scriptExecutionId = await createScriptExecution(supabase, {
+        job_run_id: jobId,
+        config_id: config_id,
+        team_id: team_id,
+        creator_id: creator_id,
+        script_name: scriptName,
+        script_path: scriptPath,
+        script_parameters: { parameters },
+        host_id: host.id,
+        host_name: host.name,
+        host_ip: host.ip,
+        env: env,
+      });
 
       // Format command for this script
       const ext = scriptPath.split('.').pop().toLowerCase();
@@ -97,14 +90,12 @@ async function executeSSHScripts(
           const completed_at = new Date().toISOString();
 
           // Update the script execution to 'failed'
-          await supabase
-            .from('scripts_run')
-            .update({
-              status: 'failed',
-              error: `Repository ${repoUrl} is not accessible, job aborted.`,
-              completed_at: completed_at,
-            })
-            .eq('id', scriptExecutionId);
+          await updateScriptExecution(supabase, {
+            script_id: scriptExecutionId,
+            status: 'failed',
+            error: `Repository ${repoUrl} is not accessible, job aborted.`,
+            completed_at: completed_at,
+          });
 
           await supabase
             .from('jobs_run')
@@ -186,13 +177,11 @@ async function executeSSHScripts(
 
       // Update the script execution to 'in_progress'
       const scriptStartedAt = new Date().toISOString();
-      await supabase
-        .from('scripts_run')
-        .update({
-          status: 'in_progress',
-          started_at: scriptStartedAt,
-        })
-        .eq('id', scriptExecutionId);
+      await updateScriptExecution(supabase, {
+        script_id: scriptExecutionId,
+        status: 'in_progress',
+        started_at: scriptStartedAt,
+      });
 
       const conn = new Client();
 
@@ -290,18 +279,16 @@ async function executeSSHScripts(
         const scriptCompletedAt = new Date().toISOString();
 
         // Update script execution in database without report URL (handled by upload_and_report.py)
-        await supabase
-          .from('scripts_run')
-          .update({
-            status: scriptResult.isSuccess ? 'success' : 'failed',
-            output: {
-              stdout: scriptResult.stdout,
-              stderr: scriptResult.stderr,
-              exitCode: scriptResult.exitCode,
-            },
-            completed_at: scriptCompletedAt,
-          })
-          .eq('id', scriptExecutionId);
+        await updateScriptExecution(supabase, {
+          script_id: scriptExecutionId,
+          status: scriptResult.isSuccess ? 'success' : 'failed',
+          output: {
+            stdout: scriptResult.stdout,
+            stderr: scriptResult.stderr,
+            exitCode: scriptResult.exitCode,
+          },
+          completed_at: scriptCompletedAt,
+        });
 
         // Add to the overall output collection
         const scriptOutputRecord = {
@@ -321,14 +308,12 @@ async function executeSSHScripts(
         console.error(`[executeSSHScripts] Error executing script: ${error.message}`);
 
         // Update script execution with error
-        await supabase
-          .from('scripts_run')
-          .update({
-            status: 'failed',
-            error: error.message,
-            completed_at: new Date().toISOString(),
-          })
-          .eq('id', scriptExecutionId);
+        await updateScriptExecution(supabase, {
+          script_id: scriptExecutionId,
+          status: 'failed',
+          error: error.message,
+          completed_at: new Date().toISOString(),
+        });
 
         // Add error to output collection
         output.scripts.push({

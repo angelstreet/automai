@@ -3,9 +3,7 @@ const path = require('path');
 
 const axios = require('axios');
 
-const {
-  /* createScriptExecution, updateScriptExecution */
-} = require('./jobUtils');
+const { createScriptExecution, updateScriptExecution } = require('./jobUtils');
 const {
   prepareJobInitializationPayload,
   prepareJobFinalizationPayload,
@@ -70,30 +68,23 @@ async function executeFlaskScripts(
       let scriptStatus = 'failed';
 
       // Create script execution record in database
-      const scriptExecutionId = await supabase
-        .from('scripts_run')
-        .insert({
-          job_run_id: jobId,
-          config_id: config_id,
-          team_id: team_id,
-          creator_id: creator_id,
-          script_name: scriptName,
-          script_path: scriptPath,
-          script_parameters: { parameters, iteration: i },
-          env: env,
-        })
-        .select('id')
-        .single()
-        .then((response) => response.data.id);
+      const scriptExecutionId = await createScriptExecution(supabase, {
+        job_run_id: jobId,
+        config_id: config_id,
+        team_id: team_id,
+        creator_id: creator_id,
+        script_name: scriptName,
+        script_path: scriptPath,
+        script_parameters: { parameters, iteration: i },
+        env: env,
+      });
 
       // Update the script execution to 'in_progress'
-      await supabase
-        .from('scripts_run')
-        .update({
-          status: 'in_progress',
-          started_at: new Date().toISOString(),
-        })
-        .eq('id', scriptExecutionId);
+      await updateScriptExecution(supabase, {
+        script_id: scriptExecutionId,
+        status: 'in_progress',
+        started_at: new Date().toISOString(),
+      });
 
       while (attempt < retries) {
         attempt++;
