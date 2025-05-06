@@ -26,7 +26,7 @@ console.log(`[runner] Runner environment set to: ${RUNNER_ENV}`);
 
 async function processJob() {
   try {
-    // Get job from queue
+    // Peek at job from queue without removing it
     const job = await getJobFromQueue(redis);
     if (!job) return;
 
@@ -37,6 +37,8 @@ async function processJob() {
     const { config, team_id, creator_id, is_active } = await fetchJobConfig(supabase, config_id);
     if (!is_active) {
       console.log(`[processJob] Config ${config_id} is inactive, skipping execution`);
+      // Remove job from queue since it's inactive
+      await redis.rpop('jobs_queue');
       return;
     }
 
@@ -47,9 +49,13 @@ async function processJob() {
         `[processJob] Skipping job for config ${config_id} as job env (${jobEnv}) does not match runner env (${RUNNER_ENV})`,
       );
       // Remove job from queue to prevent reprocessing
-      await redis.lrem('jobs_queue', 1, JSON.stringify(jobData));
+      await redis.rpop('jobs_queue');
       return;
     }
+
+    // If we reach here, the job is active and environment matches, so now we can remove it from the queue
+    await redis.rpop('jobs_queue');
+    console.log(`[processJob] Processing job for config ${config_id}`);
 
     // Set Flask service URL based on environment, default to preprod if not specified
     const FLASK_SERVICE_URL = getFlaskServiceUrl(config.env);
@@ -94,6 +100,8 @@ async function processJob() {
     }
   } catch (error) {
     console.error(`[processJob] Error: ${error.message}`);
+    // In case of error, ensure the job is removed from the queue to prevent reprocessing
+    await redis.rpop('jobs_queue');
   }
 }
 

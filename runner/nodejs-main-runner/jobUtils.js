@@ -2,13 +2,14 @@ async function getJobFromQueue(redis) {
   const queueLength = await redis.llen('jobs_queue');
   console.log(`[getJobFromQueue] Queue length: ${queueLength} jobs`);
 
-  const job = await redis.rpop('jobs_queue');
+  // Peek at the last job without removing it
+  const job = await redis.lindex('jobs_queue', -1);
   if (!job) {
     console.log(`[getJobFromQueue] Queue is empty`);
     return null;
   }
 
-  console.log(`[getJobFromQueue] Processing job: ${job}`);
+  console.log(`[getJobFromQueue] Peeking at job: ${job}`);
   return job;
 }
 
