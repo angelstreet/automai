@@ -1,4 +1,5 @@
 const axios = require('axios');
+const { createScriptExecution, updateScriptExecution } = require('./jobUtils');
 
 async function executeFlaskScripts(
   config,
@@ -7,6 +8,9 @@ async function executeFlaskScripts(
   decryptedEnvVars,
   supabase,
   FLASK_SERVICE_URL,
+  config_id,
+  team_id,
+  creator_id,
 ) {
   console.log(`[executeFlaskScripts] No hosts found, forwarding to Flask service`);
 
@@ -15,6 +19,7 @@ async function executeFlaskScripts(
 
   for (const script of config.scripts || []) {
     const scriptPath = script.path;
+    const scriptName = scriptPath.split('/').pop();
     const parameters = script.parameters || '';
     const timeout = config.execution?.timeout || script.timeout || 30;
     const retryOnFailure = script.retry_on_failure || 0;
@@ -26,6 +31,24 @@ async function executeFlaskScripts(
       let scriptOutput = { script_path: scriptPath, iteration: i, stdout: '', stderr: '' };
       let scriptStatus = 'failed';
 
+      // Create script execution record in database
+      const scriptExecutionId = await createScriptExecution(supabase, {
+        job_run_id: jobId,
+        config_id: config_id,
+        team_id: team_id,
+        creator_id: creator_id,
+        script_name: scriptName,
+        script_path: scriptPath,
+        script_parameters: { parameters, iteration: i },
+      });
+
+      // Update the script execution to 'in_progress'
+      await updateScriptExecution(supabase, {
+        script_id: scriptExecutionId,
+        status: 'in_progress',
+        started_at: new Date().toISOString(),
+      });
+
       while (attempt < retries) {
         attempt++;
         try {
@@ -36,6 +59,7 @@ async function executeFlaskScripts(
             environment_variables: decryptedEnvVars,
             created_at: started_at,
             job_id: jobId,
+            script_id: scriptExecutionId,
           };
 
           if (config.repository) {
@@ -59,6 +83,14 @@ async function executeFlaskScripts(
             scriptOutput.stderr = `Failed to update job status: ${statusError.message}`;
             overallStatus = 'failed';
             output.scripts.push(scriptOutput);
+
+            // Update the script execution to 'failed'
+            await updateScriptExecution(supabase, {
+              script_id: scriptExecutionId,
+              status: 'failed',
+              error: `Failed to update job status: ${statusError.message}`,
+              completed_at: new Date().toISOString(),
+            });
             continue;
           }
 
@@ -91,6 +123,37 @@ async function executeFlaskScripts(
             output.associated_files = response.data.associated_files;
           }
 
+          // Get report URL if available
+          const reportUrl = response.data.report_url;
+          if (reportUrl) {
+            console.log(`[executeFlaskScripts] Script report URL: ${reportUrl}`);
+
+            // Update script execution with report URL
+            await updateScriptExecution(supabase, {
+              script_id: scriptExecutionId,
+              status: scriptStatus,
+              output: {
+                stdout: scriptOutput.stdout,
+                stderr: scriptOutput.stderr,
+                exitCode: response.data.output.exitCode || 0,
+              },
+              report_url: reportUrl,
+              completed_at: new Date().toISOString(),
+            });
+          } else {
+            // Update script execution without report URL
+            await updateScriptExecution(supabase, {
+              script_id: scriptExecutionId,
+              status: scriptStatus,
+              output: {
+                stdout: scriptOutput.stdout,
+                stderr: scriptOutput.stderr,
+                exitCode: response.data.output.exitCode || 0,
+              },
+              completed_at: new Date().toISOString(),
+            });
+          }
+
           console.log(
             `[executeFlaskScripts] Received response from Flask for job ${jobId}: status=${scriptStatus}, stdout=${scriptOutput.stdout}, stderr=${scriptOutput.stderr}`,
           );
@@ -107,6 +170,16 @@ async function executeFlaskScripts(
           console.log(
             `[executeFlaskScripts] Script error, attempt ${attempt}/${retries}: ${scriptOutput.stderr}`,
           );
+
+          // Update script execution with error information if this is the last attempt
+          if (attempt === retries) {
+            await updateScriptExecution(supabase, {
+              script_id: scriptExecutionId,
+              status: 'failed',
+              error: scriptOutput.stderr,
+              completed_at: new Date().toISOString(),
+            });
+          }
         }
       }
 

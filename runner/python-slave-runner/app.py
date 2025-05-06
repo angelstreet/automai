@@ -304,9 +304,10 @@ def execute():
         script_folder = data.get('script_folder', '')
         branch = data.get('branch')
 
-        # Ensure job_id is properly set
+        # Ensure job_id and script_id are properly set
         job_id = data.get('job_id', f"no_job_id_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}")
-        print(f"DEBUG: Using job_id: {job_id}", file=sys.stderr)
+        script_id = data.get('script_id')
+        print(f"DEBUG: Using job_id: {job_id}, script_id: {script_id or 'N/A'}", file=sys.stderr)
 
         if repo_url:
             print(f"DEBUG: Processing Git repo: url={repo_url}, folder={script_folder}, branch={branch}", file=sys.stderr)
@@ -395,8 +396,14 @@ def execute():
         associated_files = collect_file_metadata(temp_folder)
         print(f"DEBUG: Found {len(associated_files)} associated files in temporary folder", file=sys.stderr)
 
-        # Upload files to Cloudflare R2 using the utility function
-        associated_files = upload_files_to_r2(s3_client, job_id, created_at, associated_files)
+        # Upload files to Cloudflare R2 using the utility function, passing both job_id and script_id
+        associated_files = upload_files_to_r2(s3_client, job_id, created_at, associated_files, script_id)
+        
+        # Extract the main report URL if available
+        report_url = None
+        if associated_files and len(associated_files) > 0 and 'main_report_url' in associated_files[0]:
+            report_url = associated_files[0]['main_report_url']
+            print(f"DEBUG: Main report URL extracted: {report_url}", file=sys.stderr)
 
         # Clean up temporary folder after execution
         try:
@@ -407,7 +414,7 @@ def execute():
 
         print(f"DEBUG: Script execution result: {result}", file=sys.stderr)
 
-        return jsonify({
+        response_data = {
             "status": result["status"],
             "output": {
                 "stdout": result.get("output", ""),
@@ -420,7 +427,15 @@ def execute():
             "created_at": created_at,
             "associated_files": associated_files,
             "job_id": job_id
-        })
+        }
+        
+        # Add script_id and report_url if available
+        if script_id:
+            response_data["script_id"] = script_id
+        if report_url:
+            response_data["report_url"] = report_url
+
+        return jsonify(response_data)
 
     except FileNotFoundError as e:
         print(f"ERROR: FileNotFoundError: {str(e)}", file=sys.stderr)

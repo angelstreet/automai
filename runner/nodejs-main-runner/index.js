@@ -30,6 +30,8 @@ async function executeOnFlask(
   FLASK_SERVICE_URL,
   config_id,
   created_at,
+  team_id,
+  creator_id,
 ) {
   // Execute scripts via Flask service
   const result = await executeFlaskScripts(
@@ -39,6 +41,9 @@ async function executeOnFlask(
     decryptedEnvVars,
     supabase,
     FLASK_SERVICE_URL,
+    config_id,
+    team_id,
+    creator_id,
   );
   const output = result.output;
   const overallStatus = result.overallStatus;
@@ -83,6 +88,7 @@ async function executeOnSSH(
   team_id,
   config_id,
   created_at,
+  creator_id,
 ) {
   // Execute scripts via SSH on hosts
   const result = await executeSSHScripts(
@@ -93,6 +99,7 @@ async function executeOnSSH(
     supabase,
     team_id,
     config_id,
+    creator_id,
   );
   const output = result.output;
   const overallStatus = result.overallStatus;
@@ -138,7 +145,7 @@ async function processJob() {
     const { config_id } = jobData;
 
     // Fetch job configuration
-    const { config, team_id, is_active } = await fetchJobConfig(supabase, config_id);
+    const { config, team_id, creator_id, is_active } = await fetchJobConfig(supabase, config_id);
     if (!is_active) {
       console.log(`[processJob] Config ${config_id} is inactive, skipping execution`);
       return;
@@ -163,6 +170,8 @@ async function processJob() {
         FLASK_SERVICE_URL,
         config_id,
         created_at,
+        team_id,
+        creator_id,
       );
     } else {
       await executeOnSSH(
@@ -174,6 +183,7 @@ async function processJob() {
         team_id,
         config_id,
         created_at,
+        creator_id,
       );
     }
   } catch (error) {

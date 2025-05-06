@@ -27,6 +27,8 @@ async function executeOnFlask(
   FLASK_SERVICE_URL,
   config_id,
   created_at,
+  team_id,
+  creator_id,
 ) {
   // Execute scripts via Flask service
   const result = await executeFlaskScripts(
@@ -36,6 +38,9 @@ async function executeOnFlask(
     decryptedEnvVars,
     supabase,
     FLASK_SERVICE_URL,
+    config_id,
+    team_id,
+    creator_id,
   );
   const output = result.output;
   const overallStatus = result.overallStatus;
@@ -82,6 +87,7 @@ async function executeOnSSH(
   team_id,
   config_id,
   created_at,
+  creator_id,
 ) {
   // Execute scripts via SSH on hosts
   const result = await executeSSHScripts(
@@ -92,6 +98,7 @@ async function executeOnSSH(
     supabase,
     team_id,
     config_id,
+    creator_id,
   );
   const output = result.output;
   const overallStatus = result.overallStatus;
@@ -145,6 +152,8 @@ async function processJob() {
     let jobData;
     let config;
     let config_id;
+    let team_id;
+    let creator_id;
 
     if (usePayload) {
       console.log(
@@ -164,25 +173,40 @@ async function processJob() {
         );
 
         // For custom payload, always fetch team_id from the default config if not provided
-        if (!jobData.team_id) {
+        if (!jobData.team_id || !jobData.creator_id) {
           const defaultConfigId = 'b0238c60-fc08-4008-a445-6ee35b99e83c';
           const { data: configData, error: configError } = await supabase
             .from('jobs_configuration')
-            .select('team_id')
+            .select('team_id, creator_id')
             .eq('id', defaultConfigId)
             .single();
 
-          if (!configError && configData && configData.team_id) {
-            jobData.team_id = configData.team_id;
-            config.team_id = configData.team_id;
-            console.log(
-              `[@local-runner:processJob] Retrieved team_id from default config: ${jobData.team_id}`,
-            );
+          if (!configError && configData) {
+            if (configData.team_id && !jobData.team_id) {
+              jobData.team_id = configData.team_id;
+              config.team_id = configData.team_id;
+              team_id = configData.team_id;
+              console.log(
+                `[@local-runner:processJob] Retrieved team_id from default config: ${jobData.team_id}`,
+              );
+            }
+
+            if (configData.creator_id && !jobData.creator_id) {
+              jobData.creator_id = configData.creator_id;
+              config.creator_id = configData.creator_id;
+              creator_id = configData.creator_id;
+              console.log(
+                `[@local-runner:processJob] Retrieved creator_id from default config: ${jobData.creator_id}`,
+              );
+            }
           } else {
             console.log(
-              `[@local-runner:processJob] Failed to get team_id from default config: ${configError?.message}`,
+              `[@local-runner:processJob] Failed to get metadata from default config: ${configError?.message}`,
             );
           }
+        } else {
+          team_id = jobData.team_id;
+          creator_id = jobData.creator_id;
         }
       } catch (err) {
         console.error(`[@local-runner:processJob] Failed to parse PAYLOAD: ${err.message}`);
@@ -199,7 +223,8 @@ async function processJob() {
       // Fetch job configuration
       const {
         config: fetchedConfig,
-        team_id,
+        team_id: fetchedTeamId,
+        creator_id: fetchedCreatorId,
         is_active,
       } = await fetchJobConfig(supabase, config_id);
       if (!is_active) {
@@ -209,11 +234,14 @@ async function processJob() {
         return;
       }
       config = fetchedConfig;
+      team_id = fetchedTeamId;
+      creator_id = fetchedCreatorId;
       jobData.team_id = team_id;
+      jobData.creator_id = creator_id;
     }
 
     // Fetch and decrypt environment variables
-    const decryptedEnvVars = await fetchAndDecryptEnvVars(supabase, jobData.team_id);
+    const decryptedEnvVars = await fetchAndDecryptEnvVars(supabase, team_id);
 
     // Create job run entry
     const { jobId, created_at } = await createJobRun(supabase, config_id);
@@ -231,6 +259,8 @@ async function processJob() {
         FLASK_SERVICE_URL,
         config_id,
         created_at,
+        team_id,
+        creator_id,
       );
     } else {
       await executeOnSSH(
@@ -239,9 +269,10 @@ async function processJob() {
         started_at,
         decryptedEnvVars,
         supabase,
-        jobData.team_id,
+        team_id,
         config_id,
         created_at,
+        creator_id,
       );
     }
 

@@ -3,6 +3,7 @@ const path = require('path');
 
 const { S3Client, PutObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+const AWS = require('aws-sdk');
 const ejs = require('ejs');
 
 const reportTemplate = require('./reportTemplate');
@@ -115,4 +116,54 @@ async function generateAndUploadReport(
   }
 }
 
-module.exports = { generateAndUploadReport };
+// Function to upload a single file to R2
+async function uploadFileToR2(filePath, r2Path, contentType = 'application/octet-stream') {
+  console.log(`[reportUtils:uploadFileToR2] Uploading file to R2: ${filePath} -> ${r2Path}`);
+
+  try {
+    // Configure AWS S3 client for Cloudflare R2
+    const s3 = new AWS.S3({
+      endpoint: process.env.CLOUDFLARE_R2_ENDPOINT,
+      accessKeyId: process.env.CLOUDFLARE_R2_ACCESS_KEY_ID,
+      secretAccessKey: process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY,
+      s3ForcePathStyle: true,
+      signatureVersion: 'v4',
+    });
+
+    // Read file content
+    const fileContent = fs.readFileSync(filePath);
+
+    // Set upload parameters
+    const params = {
+      Bucket: 'reports',
+      Key: r2Path,
+      Body: fileContent,
+      ContentType: contentType,
+      ContentDisposition:
+        contentType.startsWith('text') || contentType.startsWith('image') ? 'inline' : 'attachment',
+    };
+
+    // Upload to R2
+    const uploadResult = await s3.upload(params).promise();
+    console.log(
+      `[reportUtils:uploadFileToR2] Successfully uploaded file to: ${uploadResult.Location}`,
+    );
+
+    // Generate a presigned URL valid for 7 days
+    const presignedUrl = s3.getSignedUrl('getObject', {
+      Bucket: 'reports',
+      Key: r2Path,
+      Expires: 604800, // 7 days in seconds
+    });
+
+    return presignedUrl;
+  } catch (error) {
+    console.error(`[reportUtils:uploadFileToR2] Error uploading file: ${error.message}`);
+    return null;
+  }
+}
+
+module.exports = {
+  generateAndUploadReport,
+  uploadFileToR2,
+};
