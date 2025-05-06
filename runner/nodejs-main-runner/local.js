@@ -18,6 +18,117 @@ const redis = new Redis({
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 const FLASK_SERVICE_URL = process.env.PYTHON_SLAVE_RUNNER_FLASK_SERVICE_URL;
 
+async function executeOnFlask(
+  config,
+  jobId,
+  started_at,
+  decryptedEnvVars,
+  supabase,
+  FLASK_SERVICE_URL,
+  config_id,
+  created_at,
+) {
+  // Execute scripts via Flask service
+  const result = await executeFlaskScripts(
+    config,
+    jobId,
+    started_at,
+    decryptedEnvVars,
+    supabase,
+    FLASK_SERVICE_URL,
+  );
+  const output = result.output;
+  const overallStatus = result.overallStatus;
+  started_at = result.started_at;
+
+  // Update final status and generate report
+  const completed_at = new Date().toISOString();
+  await updateJobStatus(supabase, jobId, overallStatus, output, completed_at);
+
+  const reportUrl = await generateAndUploadReport(
+    jobId,
+    config_id,
+    output,
+    created_at,
+    started_at,
+    completed_at,
+    overallStatus,
+    decryptedEnvVars,
+  );
+  if (reportUrl) {
+    const { error: reportError } = await supabase
+      .from('jobs_run')
+      .update({ report_url: reportUrl })
+      .eq('id', jobId);
+    if (reportError) {
+      console.error(
+        `[@local-runner:executeOnFlask] Failed to update report URL for job ${jobId}: ${reportError.message}`,
+      );
+    } else {
+      console.log(
+        `[@local-runner:executeOnFlask] Updated job ${jobId} with report URL: ${reportUrl}`,
+      );
+    }
+  }
+  return { output, overallStatus, started_at };
+}
+
+async function executeOnSSH(
+  config,
+  jobId,
+  started_at,
+  decryptedEnvVars,
+  supabase,
+  team_id,
+  config_id,
+  created_at,
+) {
+  // Execute scripts via SSH on hosts
+  const result = await executeSSHScripts(
+    config,
+    jobId,
+    started_at,
+    decryptedEnvVars,
+    supabase,
+    team_id,
+    config_id,
+  );
+  const output = result.output;
+  const overallStatus = result.overallStatus;
+  started_at = result.started_at;
+
+  // Update final status and generate report
+  const completed_at = new Date().toISOString();
+  await updateJobStatus(supabase, jobId, overallStatus, output, completed_at);
+
+  const reportUrl = await generateAndUploadReport(
+    jobId,
+    config_id,
+    output,
+    created_at,
+    started_at,
+    completed_at,
+    overallStatus,
+    decryptedEnvVars,
+  );
+  if (reportUrl) {
+    const { error: reportError } = await supabase
+      .from('jobs_run')
+      .update({ report_url: reportUrl })
+      .eq('id', jobId);
+    if (reportError) {
+      console.error(
+        `[@local-runner:executeOnSSH] Failed to update report URL for job ${jobId}: ${reportError.message}`,
+      );
+    } else {
+      console.log(
+        `[@local-runner:executeOnSSH] Updated job ${jobId} with report URL: ${reportUrl}`,
+      );
+    }
+  }
+  return { output, overallStatus, started_at };
+}
+
 async function processJob() {
   try {
     // Check if -payload argument is provided
@@ -107,57 +218,22 @@ async function processJob() {
     // Create job run entry
     const { jobId, created_at } = await createJobRun(supabase, config_id);
     let started_at = created_at;
-    let output = { scripts: [], stdout: '', stderr: '' };
-    let overallStatus = 'success';
 
     const hasHosts = config.hosts && config.hosts.length > 0;
 
     if (!hasHosts) {
-      // Execute scripts via Flask service
-      const result = await executeFlaskScripts(
+      await executeOnFlask(
         config,
         jobId,
         started_at,
         decryptedEnvVars,
         supabase,
         FLASK_SERVICE_URL,
-      );
-      output = result.output;
-      overallStatus = result.overallStatus;
-      started_at = result.started_at;
-
-      // Update final status and generate report
-      const completed_at = new Date().toISOString();
-      await updateJobStatus(supabase, jobId, overallStatus, output, completed_at);
-
-      const reportUrl = await generateAndUploadReport(
-        jobId,
         config_id,
-        output,
         created_at,
-        started_at,
-        completed_at,
-        overallStatus,
-        decryptedEnvVars,
       );
-      if (reportUrl) {
-        const { error: reportError } = await supabase
-          .from('jobs_run')
-          .update({ report_url: reportUrl })
-          .eq('id', jobId);
-        if (reportError) {
-          console.error(
-            `[@local-runner:processJob] Failed to update report URL for job ${jobId}: ${reportError.message}`,
-          );
-        } else {
-          console.log(
-            `[@local-runner:processJob] Updated job ${jobId} with report URL: ${reportUrl}`,
-          );
-        }
-      }
     } else {
-      // Execute scripts via SSH on hosts
-      const result = await executeSSHScripts(
+      await executeOnSSH(
         config,
         jobId,
         started_at,
@@ -165,40 +241,8 @@ async function processJob() {
         supabase,
         jobData.team_id,
         config_id,
-      );
-      output = result.output;
-      overallStatus = result.overallStatus;
-      started_at = result.started_at;
-
-      // Update final status and generate report
-      const completed_at = new Date().toISOString();
-      await updateJobStatus(supabase, jobId, overallStatus, output, completed_at);
-
-      const reportUrl = await generateAndUploadReport(
-        jobId,
-        config_id,
-        output,
         created_at,
-        started_at,
-        completed_at,
-        overallStatus,
-        decryptedEnvVars,
       );
-      if (reportUrl) {
-        const { error: reportError } = await supabase
-          .from('jobs_run')
-          .update({ report_url: reportUrl })
-          .eq('id', jobId);
-        if (reportError) {
-          console.error(
-            `[@local-runner:processJob] Failed to update report URL for job ${jobId}: ${reportError.message}`,
-          );
-        } else {
-          console.log(
-            `[@local-runner:processJob] Updated job ${jobId} with report URL: ${reportUrl}`,
-          );
-        }
-      }
     }
 
     // Remove job from queue after processing (only if not using custom payload)
