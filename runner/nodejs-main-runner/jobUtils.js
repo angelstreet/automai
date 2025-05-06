@@ -93,19 +93,23 @@ async function createScriptExecution(
   );
 
   try {
-    const { data, error } = await supabase.rpc('insert_script_execution', {
-      p_job_run_id: job_run_id,
-      p_config_id: config_id,
-      p_team_id: team_id,
-      p_creator_id: creator_id,
-      p_script_name: script_name,
-      p_script_path: script_path,
-      p_script_parameters: script_parameters,
-      p_host_id: host_id,
-      p_host_name: host_name,
-      p_host_ip: host_ip,
-      p_env: env,
-    });
+    const { data, error } = await supabase
+      .from('scripts_run')
+      .insert({
+        job_run_id: job_run_id,
+        config_id: config_id,
+        team_id: team_id,
+        creator_id: creator_id,
+        script_name: script_name,
+        script_path: script_path,
+        script_parameters: script_parameters,
+        host_id: host_id,
+        host_name: host_name,
+        host_ip: host_ip,
+        env: env,
+      })
+      .select('id')
+      .single();
 
     if (error) {
       console.error(
@@ -115,9 +119,9 @@ async function createScriptExecution(
     }
 
     console.log(
-      `[@db:jobUtils:createScriptExecution] Successfully created script execution with ID: ${data}`,
+      `[@db:jobUtils:createScriptExecution] Successfully created script execution with ID: ${data.id}`,
     );
-    return data; // Returns script execution ID
+    return data.id; // Returns script execution ID
   } catch (err) {
     console.error(`[@db:jobUtils:createScriptExecution] ERROR: Unexpected error: ${err.message}`);
     throw err;
@@ -134,6 +138,7 @@ async function updateScriptExecution(
     error = null,
     started_at = null,
     completed_at = null,
+    report_url = null,
   },
 ) {
   console.log(
@@ -141,15 +146,18 @@ async function updateScriptExecution(
   );
 
   try {
-    const { error: updateError } = await supabase.rpc('update_script_execution', {
-      p_script_id: script_id,
-      p_status: status,
-      p_output: output,
-      p_logs: logs,
-      p_error: error,
-      p_started_at: started_at,
-      p_completed_at: completed_at,
-    });
+    const updateData = { status };
+    if (output) updateData.output = output;
+    if (logs) updateData.logs = logs;
+    if (error) updateData.error = error;
+    if (started_at) updateData.started_at = started_at;
+    if (completed_at) updateData.completed_at = completed_at;
+    if (report_url) updateData.report_url = report_url;
+
+    const { error: updateError } = await supabase
+      .from('scripts_run')
+      .update(updateData)
+      .eq('id', script_id);
 
     if (updateError) {
       console.error(

@@ -214,7 +214,7 @@ def update_supabase_script_execution(script_id, status, output, completed_at, re
             os.environ.get('SUPABASE_URL', ''),
             os.environ.get('SUPABASE_SERVICE_ROLE_KEY', '')
         )
-        response = supabase_client.from_('script_executions').update({
+        response = supabase_client.from_('scripts_run').update({
             'status': status,
             'output': output,
             'completed_at': completed_at,
