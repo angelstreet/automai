@@ -231,9 +231,24 @@ def update_supabase_script_execution(script_id, status, output, completed_at, re
         return False
 
 def main():
-    # Load environment variables from .env file
-    load_dotenv()
-    print(f"[@upload_and_report:main] Loaded environment variables from .env file.", file=sys.stderr)
+    # Load environment variables from .env file explicitly from the job folder
+    upload_folder = os.path.join(os.getcwd(), 'uploadFolder')
+    job_folders = [f for f in os.listdir(upload_folder) if os.path.isdir(os.path.join(upload_folder, f))]
+    if not job_folders:
+        print(f"[@upload_and_report:main] ERROR: No job folders found in uploadFolder", file=sys.stderr)
+        sys.exit(1)
+
+    if len(job_folders) > 1:
+        print(f"[@upload_and_report:main] WARNING: Multiple job folders found, processing only the first one: {job_folders[0]}", file=sys.stderr)
+    job_folder_name = job_folders[0]
+    job_folder_path = os.path.join(upload_folder, job_folder_name)
+    env_file_path = os.path.join(job_folder_path, '.env')
+    if os.path.exists(env_file_path):
+        load_dotenv(dotenv_path=env_file_path)
+        print(f"[@upload_and_report:main] Loaded environment variables from {env_file_path}.", file=sys.stderr)
+    else:
+        print(f"[@upload_and_report:main] ERROR: .env file not found at {env_file_path}.", file=sys.stderr)
+        sys.exit(1)
 
     # Initialize S3 client for Cloudflare R2
     s3_client = None
@@ -267,7 +282,6 @@ def main():
         print(f"[@upload_and_report:main] Supabase credentials loaded successfully.", file=sys.stderr)
 
     # Look for uploadFolder in the current directory
-    upload_folder = os.path.join(os.getcwd(), 'uploadFolder')
     if not os.path.exists(upload_folder):
         print(f"[@upload_and_report:main] ERROR: uploadFolder not found at {upload_folder}", file=sys.stderr)
         sys.exit(1)
