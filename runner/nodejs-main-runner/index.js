@@ -41,7 +41,6 @@ async function executeOnFlask(
     supabase,
     FLASK_SERVICE_URL,
     config_id,
-    created_at,
     team_id,
     creator_id,
   );
