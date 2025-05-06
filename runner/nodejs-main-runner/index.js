@@ -86,9 +86,21 @@ async function executeOnSSH(
   supabase,
   config_id,
   created_at,
+  team_id,
+  creator_id,
 ) {
   // Execute scripts via SSH on hosts
-  const result = await executeSSHScripts(jobId, config.scripts, created_at, config.hosts[0].id);
+  const result = await executeSSHScripts(
+    config,
+    jobId,
+    started_at,
+    decryptedEnvVars,
+    supabase,
+    team_id,
+    config_id,
+    created_at,
+    creator_id,
+  );
   const output = result.output;
   const overallStatus = result.overallStatus;
   started_at = result.started_at;
@@ -170,6 +182,8 @@ async function processJob() {
         supabase,
         config_id,
         created_at,
+        team_id,
+        creator_id,
       );
     }
   } catch (error) {
