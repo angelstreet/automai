@@ -130,7 +130,7 @@ def initialize_job():
     print(f"[initialize_job] Saved upload_and_report.py for job {job_id} to {upload_script_path}", file=sys.stderr)
 
     # Save requirements.txt to job folder for dependency installation
-    requirements_content = "boto3\npython-dotenv\n"
+    requirements_content = "boto3\npython-dotenv\nsupabase\n"
     requirements_path = os.path.join(job_folder_path, 'requirements.txt')
     with open(requirements_path, 'w') as f:
         f.write(requirements_content)
