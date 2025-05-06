@@ -117,6 +117,9 @@ def initialize_job():
     if not upload_script_content:
         return jsonify({'status': 'error', 'message': 'Missing upload script content'}), 400
 
+    # Log the full request payload for debugging
+    print(f"[initialize_job] Full request payload for job {job_id}: {json.dumps(data, indent=2)}", file=sys.stderr)
+
     # Create job folder structure
     upload_folder = os.path.join(os.getcwd(), 'uploadFolder')
     job_folder_name = f"{created_at.split('T')[0].replace('-', '')}_{created_at.split('T')[1].split('.')[0].replace(':', '')}_{job_id}"
@@ -150,12 +153,12 @@ def initialize_job():
     cloudflare_r2_endpoint = credentials.get('cloudflare_r2_endpoint', '')
     cloudflare_r2_access_key_id = credentials.get('cloudflare_r2_access_key_id', '')
     cloudflare_r2_secret_access_key = credentials.get('cloudflare_r2_secret_access_key', '')
-    print(f"[initialize_job] Fetched Cloudflare R2 credentials for job {job_id}", file=sys.stderr)
+    print(f"[initialize_job] Fetched Cloudflare R2 credentials for job {job_id}: endpoint={cloudflare_r2_endpoint[:10]}... (partial), access_key_id={cloudflare_r2_access_key_id[:5]}... (partial), secret_access_key={cloudflare_r2_secret_access_key[:5]}... (partial)", file=sys.stderr)
 
     # Step 2: Fetch Supabase credentials from provided data with correct key names
     supabase_api_url = credentials.get('supabase_api_url', '')
     supabase_service_role_key = credentials.get('supabase_service_role_key', '')
-    print(f"[initialize_job] Fetched Supabase credentials for job {job_id}", file=sys.stderr)
+    print(f"[initialize_job] Fetched Supabase credentials for job {job_id}: api_url={supabase_api_url[:10]}... (partial), service_role_key={supabase_service_role_key[:5]}... (partial)", file=sys.stderr)
 
     # Step 3: Save Cloudflare R2 and Supabase credentials to a .env file for this job
     credentials_file = os.path.join(job_folder_path, '.env')
