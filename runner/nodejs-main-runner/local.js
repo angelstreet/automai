@@ -4,10 +4,9 @@ const { createClient } = require('@supabase/supabase-js');
 const { Redis } = require('@upstash/redis');
 
 // Import utility modules
+const commonUtils = require('./commonUtils');
 const { fetchAndDecryptEnvVars } = require('./envUtils');
-const { executeFlaskScripts } = require('./flaskUtils');
-const { getJobFromQueue, fetchJobConfig, createJobRun, updateJobStatus } = require('./jobUtils');
-const { executeSSHScripts } = require('./sshUtils');
+const { getJobFromQueue, fetchJobConfig, createJobRun } = require('./jobUtils');
 
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL,
@@ -16,76 +15,6 @@ const redis = new Redis({
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 const FLASK_SERVICE_URL = process.env.PYTHON_SLAVE_RUNNER_FLASK_SERVICE_URL;
-
-async function executeOnFlask(
-  config,
-  jobId,
-  started_at,
-  decryptedEnvVars,
-  supabase,
-  FLASK_SERVICE_URL,
-  config_id,
-  team_id,
-  creator_id,
-) {
-  // Execute scripts via Flask service
-  const result = await executeFlaskScripts(
-    config,
-    jobId,
-    started_at,
-    decryptedEnvVars,
-    supabase,
-    FLASK_SERVICE_URL,
-    config_id,
-    team_id,
-    creator_id,
-  );
-  const output = result.output;
-  const overallStatus = result.overallStatus;
-  started_at = result.started_at;
-
-  // Update final status
-  const completed_at = new Date().toISOString();
-  await updateJobStatus(supabase, jobId, overallStatus, output, completed_at);
-
-  // Report URL is already handled by Flask's finalize_job endpoint
-  return { output, overallStatus, started_at };
-}
-
-async function executeOnSSH(
-  config,
-  jobId,
-  started_at,
-  decryptedEnvVars,
-  supabase,
-  team_id,
-  config_id,
-  created_at,
-  creator_id,
-) {
-  // Execute scripts via SSH on hosts
-  const result = await executeSSHScripts(
-    config,
-    jobId,
-    started_at,
-    decryptedEnvVars,
-    supabase,
-    team_id,
-    config_id,
-    created_at,
-    creator_id,
-  );
-  const output = result.output;
-  const overallStatus = result.overallStatus;
-  started_at = result.started_at;
-
-  // Update final status
-  const completed_at = new Date().toISOString();
-  await updateJobStatus(supabase, jobId, overallStatus, output, completed_at);
-
-  // Report URL is already handled by SSH's finalizeJobOnSSH function
-  return { output, overallStatus, started_at };
-}
 
 async function processJob() {
   try {
@@ -201,7 +130,7 @@ async function processJob() {
     const hasHosts = config.hosts && config.hosts.length > 0;
 
     if (!hasHosts) {
-      await executeOnFlask(
+      await commonUtils.executeOnFlask(
         config,
         jobId,
         started_at,
@@ -209,19 +138,20 @@ async function processJob() {
         supabase,
         FLASK_SERVICE_URL,
         config_id,
+        created_at,
         team_id,
         creator_id,
       );
     } else {
-      await executeOnSSH(
+      await commonUtils.executeOnSSH(
         config,
         jobId,
         started_at,
         decryptedEnvVars,
         supabase,
-        team_id,
         config_id,
         created_at,
+        team_id,
         creator_id,
       );
     }
