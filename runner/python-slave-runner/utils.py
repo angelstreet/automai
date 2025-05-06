@@ -1,9 +1,125 @@
 import os
 import sys
 from datetime import datetime
+import io
+import shutil
 
 # Assuming s3_client is imported or passed from app.py
 # This will be updated in app.py to pass the client if needed
+
+def create_script_report_html(script_name, stdout, stderr, script_id, job_id, start_time, end_time, script_path, parameters, status="success"):
+    """
+    Create an HTML report for a script execution.
+    
+    Returns the HTML content as a string.
+    """
+    duration = "N/A"
+    if start_time and end_time:
+        try:
+            start_dt = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
+            end_dt = datetime.fromisoformat(end_time.replace('Z', '+00:00'))
+            duration = f"{(end_dt - start_dt).total_seconds():.2f}"
+        except Exception as e:
+            print(f"[@python-slave-runner:utils] Error calculating duration: {str(e)}", file=sys.stderr)
+    
+    # Simple HTML template for script report
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Script Execution Report - {script_name}</title>
+  <style>
+    body {{ font-family: Arial, sans-serif; margin: 20px; }}
+    h1 {{ color: #333; }}
+    table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
+    th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
+    th {{ background-color: #f2f2f2; }}
+    pre {{ background-color: #f9f9f9; padding: 10px; overflow-x: auto; }}
+    .status-success {{ color: #22c55e; font-weight: bold; }}
+    .status-failed {{ color: #ef4444; font-weight: bold; }}
+    .preview-img {{ max-width: 100px; max-height: 100px; }}
+  </style>
+</head>
+<body>
+  <h1>Script Execution Report</h1>
+  <table>
+    <tr><th>Script ID</th><td>{script_id}</td></tr>
+    <tr><th>Job ID</th><td>{job_id}</td></tr>
+    <tr><th>Script Name</th><td>{script_name}</td></tr>
+    <tr><th>Script Path</th><td>{script_path}</td></tr>
+    <tr><th>Parameters</th><td>{parameters or "None"}</td></tr>
+    <tr><th>Start Time</th><td>{start_time}</td></tr>
+    <tr><th>End Time</th><td>{end_time}</td></tr>
+    <tr><th>Duration (s)</th><td>{duration}</td></tr>
+    <tr><th>Status</th><td class="status-{status.lower()}">{status}</td></tr>
+  </table>
+  
+  <h2>Standard Output</h2>
+  <pre>{stdout or "No output"}</pre>
+  
+  <h2>Standard Error</h2>
+  <pre>{stderr or "No errors"}</pre>
+  
+  <h2>Associated Files</h2>
+  <div id="files">
+    <p>Loading associated files...</p>
+    <script>
+      // This will be populated with links to associated files if any are available
+      document.addEventListener('DOMContentLoaded', function() {{
+        const filesDiv = document.getElementById('files');
+        if (window.associatedFiles && window.associatedFiles.length > 0) {{
+          const table = document.createElement('table');
+          table.innerHTML = `
+            <tr>
+              <th>File Name</th>
+              <th>Size</th>
+              <th>Link</th>
+              <th>Preview</th>
+            </tr>
+          `;
+          window.associatedFiles.forEach(file => {{
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td>${{file.name}}</td>
+              <td>${{formatFileSize(file.size)}}</td>
+              <td><a href="${{file.url}}" target="_blank">Link</a></td>
+              <td>${{createPreview(file)}}</td>
+            `;
+            table.appendChild(row);
+          }});
+          filesDiv.innerHTML = '';
+          filesDiv.appendChild(table);
+        }} else {{
+          filesDiv.innerHTML = '<p>No associated files uploaded.</p>';
+        }}
+      }});
+      
+      function formatFileSize(size) {{
+        if (size >= 1024 * 1024) {{
+          return (size / (1024 * 1024)).toFixed(2) + ' MB';
+        }} else if (size >= 1024) {{
+          return (size / 1024).toFixed(2) + ' KB';
+        }} else {{
+          return size + ' bytes';
+        }}
+      }}
+      
+      function createPreview(file) {{
+        const name = file.name.toLowerCase();
+        if (name.match(/\\.(jpg|jpeg|png|gif|bmp|webp)$/)) {{
+          return `<a href="${{file.url}}" target="_blank"><img src="${{file.url}}" alt="Preview of ${{file.name}}" class="preview-img" /></a>`;
+        }} else if (name.match(/\\.webm$/)) {{
+          return `<a href="${{file.url}}" target="_blank"><video width="100" height="100" controls><source src="${{file.url.split('?')[0]}}" type="video/webm">Your browser does not support the video tag.</video></a>`;
+        }} else {{
+          return 'N/A';
+        }}
+      }}
+    </script>
+  </div>
+</body>
+</html>"""
+    return html
 
 
 def upload_files_to_r2(s3_client, job_id, created_at, associated_files, script_id=None):
@@ -43,6 +159,71 @@ def upload_files_to_r2(s3_client, job_id, created_at, associated_files, script_i
             print(f"[@python-slave-runner:utils] Using job folder: {base_folder}", file=sys.stderr)
 
         updated_files = []
+        
+        # If this is a script execution, create an HTML report
+        if script_id and len(associated_files) > 0:
+            # Find the script file to extract info
+            script_file = None
+            for file_info in associated_files:
+                if file_info.get('name', '').endswith('.py'):
+                    script_file = file_info
+                    break
+            
+            if script_file:
+                # Get execution details for the report
+                script_name = script_file.get('name', 'Unknown')
+                script_path = script_file.get('relative_path', script_name)
+                
+                # Attempt to read script output from files if available
+                stdout = ""
+                stderr = ""
+                for file_info in associated_files:
+                    if file_info.get('name', '').endswith('.out') or file_info.get('name', '').endswith('_output.txt'):
+                        try:
+                            with open(file_info.get('path'), 'r') as f:
+                                stdout = f.read()
+                        except Exception as e:
+                            print(f"[@python-slave-runner:utils] Error reading stdout file: {str(e)}", file=sys.stderr)
+                    
+                    if file_info.get('name', '').endswith('.err') or file_info.get('name', '').endswith('_error.txt'):
+                        try:
+                            with open(file_info.get('path'), 'r') as f:
+                                stderr = f.read()
+                        except Exception as e:
+                            print(f"[@python-slave-runner:utils] Error reading stderr file: {str(e)}", file=sys.stderr)
+                
+                # Create a temporary report file
+                report_html = create_script_report_html(
+                    script_name=script_name,
+                    stdout=stdout,
+                    stderr=stderr,
+                    script_id=script_id,
+                    job_id=job_id,
+                    start_time=created_at,
+                    end_time=datetime.utcnow().isoformat() + 'Z',
+                    script_path=script_path,
+                    parameters=""  # We don't have this info in the files
+                )
+                
+                # Create a temporary file
+                temp_report_path = os.path.join(os.path.dirname(script_file.get('path')), 'script_report.html')
+                try:
+                    with open(temp_report_path, 'w') as f:
+                        f.write(report_html)
+                    
+                    # Add the report file to the associated files
+                    report_file_info = {
+                        'name': 'script_report.html',
+                        'path': temp_report_path,
+                        'relative_path': 'script_report.html',
+                        'size': os.path.getsize(temp_report_path),
+                        'creation_date': datetime.utcnow().isoformat() + 'Z'
+                    }
+                    associated_files.append(report_file_info)
+                    print(f"[@python-slave-runner:utils] Created script report HTML: {temp_report_path}", file=sys.stderr)
+                except Exception as e:
+                    print(f"[@python-slave-runner:utils] Error creating script report file: {str(e)}", file=sys.stderr)
+
         for file_info in associated_files:
             file_path = file_info.get('path')
             file_name = file_info.get('name')
@@ -120,7 +301,7 @@ def upload_files_to_r2(s3_client, job_id, created_at, associated_files, script_i
             # First look for a report.html or script_report.html file
             for file_info in updated_files:
                 name = file_info.get('name', '')
-                if name.endswith('report.html') or name.endswith('_report.html'):
+                if name == 'script_report.html' or name == 'report.html':
                     report_link = file_info.get('public_url')
                     print(f"[@python-slave-runner:utils] Found report file: {name}", file=sys.stderr)
                     break

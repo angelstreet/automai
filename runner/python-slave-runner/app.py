@@ -386,11 +386,26 @@ def execute():
         # Set temporary folder as an environment variable for scripts to use if needed
         env_vars['SCRIPT_TEMP_FOLDER'] = temp_folder
 
+        # Run the script
         result = run_with_timeout(script_content, param_list, timeout, venv_path, env_vars)
 
         end_time = datetime.utcnow()
         end_time_str = end_time.isoformat() + 'Z'
         duration = (end_time - start_time).total_seconds()
+
+        # Save the script output to files for report generation
+        try:
+            stdout_file = os.path.join(temp_folder, f"{os.path.splitext(script_file_name)[0]}_output.txt")
+            with open(stdout_file, 'w') as f:
+                f.write(result.get("output", ""))
+            
+            stderr_file = os.path.join(temp_folder, f"{os.path.splitext(script_file_name)[0]}_error.txt")
+            with open(stderr_file, 'w') as f:
+                f.write(result.get("message", "") if result["status"] == "error" else "")
+                
+            print(f"DEBUG: Saved script output to files for report generation", file=sys.stderr)
+        except Exception as e:
+            print(f"DEBUG: Failed to save script output to files: {str(e)}", file=sys.stderr)
 
         # Collect metadata about files generated in the temporary folder
         associated_files = collect_file_metadata(temp_folder)
