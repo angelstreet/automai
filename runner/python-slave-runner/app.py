@@ -16,6 +16,7 @@ import tempfile
 import boto3
 from botocore.client import Config
 import requests
+import json
 
 # Import the new upload function
 from utils import upload_files_to_r2
@@ -309,6 +310,16 @@ def execute():
         script_id = data.get('script_id')
         print(f"DEBUG: Using job_id: {job_id}, script_id: {script_id or 'N/A'}", file=sys.stderr)
 
+        # Create uploadFolder structure
+        upload_folder = os.path.join(os.getcwd(), 'uploadFolder')
+        job_folder_name = f"{created_at.split('T')[0].replace('-', '')}_{created_at.split('T')[1].split('.')[0].replace(':', '')}_{job_id}"
+        job_folder_path = os.path.join(upload_folder, job_folder_name)
+        script_folder_name = f"{created_at.split('T')[0].replace('-', '')}_{created_at.split('T')[1].split('.')[0].replace(':', '')}_{script_id}"
+        script_folder_path = os.path.join(job_folder_path, script_folder_name)
+
+        os.makedirs(script_folder_path, exist_ok=True)
+        print(f"[execute] Created script folder: {script_folder_path}", file=sys.stderr)
+
         if repo_url:
             print(f"DEBUG: Processing Git repo: url={repo_url}, folder={script_folder}, branch={branch}", file=sys.stderr)
             repo_result = ensure_repo(repo_url, script_folder, branch)
@@ -372,19 +383,19 @@ def execute():
         with open(full_script_path, 'r') as f:
             script_content = f.read()
 
-        # Copy the script file to the temp folder for uploading later
+        # Copy the script file to the script folder for uploading later
         script_file_name = os.path.basename(full_script_path)
-        temp_script_path = os.path.join(temp_folder, script_file_name)
+        temp_script_path = os.path.join(script_folder_path, script_file_name)
         try:
             shutil.copy2(full_script_path, temp_script_path)
-            print(f"DEBUG: Copied script file to temp folder: {temp_script_path}", file=sys.stderr)
+            print(f"DEBUG: Copied script file to script folder: {temp_script_path}", file=sys.stderr)
             # Set the script file path in env vars for future reference
             env_vars['SCRIPT_FILE_PATH'] = temp_script_path
         except Exception as e:
-            print(f"DEBUG: Failed to copy script file to temp folder: {str(e)}", file=sys.stderr)
+            print(f"DEBUG: Failed to copy script file to script folder: {str(e)}", file=sys.stderr)
 
-        # Set temporary folder as an environment variable for scripts to use if needed
-        env_vars['SCRIPT_TEMP_FOLDER'] = temp_folder
+        # Set script folder as an environment variable for scripts to use if needed
+        env_vars['SCRIPT_TEMP_FOLDER'] = script_folder_path
 
         # Run the script
         result = run_with_timeout(script_content, param_list, timeout, venv_path, env_vars)
@@ -395,37 +406,17 @@ def execute():
 
         # Save the script output to files for report generation
         try:
-            stdout_file = os.path.join(temp_folder, f"{os.path.splitext(script_file_name)[0]}_output.txt")
+            stdout_file = os.path.join(script_folder_path, "stdout.txt")
             with open(stdout_file, 'w') as f:
                 f.write(result.get("output", ""))
             
-            stderr_file = os.path.join(temp_folder, f"{os.path.splitext(script_file_name)[0]}_error.txt")
+            stderr_file = os.path.join(script_folder_path, "stderr.txt")
             with open(stderr_file, 'w') as f:
                 f.write(result.get("message", "") if result["status"] == "error" else "")
                 
             print(f"DEBUG: Saved script output to files for report generation", file=sys.stderr)
         except Exception as e:
             print(f"DEBUG: Failed to save script output to files: {str(e)}", file=sys.stderr)
-
-        # Collect metadata about files generated in the temporary folder
-        associated_files = collect_file_metadata(temp_folder)
-        print(f"DEBUG: Found {len(associated_files)} associated files in temporary folder", file=sys.stderr)
-
-        # Upload files to Cloudflare R2 using the utility function, passing both job_id and script_id
-        associated_files = upload_files_to_r2(s3_client, job_id, created_at, associated_files, script_id)
-        
-        # Extract the main report URL if available
-        report_url = None
-        if associated_files and len(associated_files) > 0 and 'main_report_url' in associated_files[0]:
-            report_url = associated_files[0]['main_report_url']
-            print(f"DEBUG: Main report URL extracted: {report_url}", file=sys.stderr)
-
-        # Clean up temporary folder after execution
-        try:
-            shutil.rmtree(temp_folder)
-            print(f"DEBUG: Cleaned up temporary folder: {temp_folder}", file=sys.stderr)
-        except Exception as e:
-            print(f"DEBUG: Failed to clean up temporary folder {temp_folder}: {str(e)}", file=sys.stderr)
 
         print(f"DEBUG: Script execution result: {result}", file=sys.stderr)
 
@@ -440,15 +431,12 @@ def execute():
             "end_time": end_time_str,
             "duration_seconds": duration,
             "created_at": created_at,
-            "associated_files": associated_files,
             "job_id": job_id
         }
         
-        # Add script_id and report_url if available
+        # Add script_id if available
         if script_id:
             response_data["script_id"] = script_id
-        if report_url:
-            response_data["report_url"] = report_url
 
         return jsonify(response_data)
 
@@ -472,6 +460,51 @@ def execute():
             "end_time": end_time.isoformat() + 'Z',
             "duration_seconds": (end_time - start_time).total_seconds()
         }), 500
+
+@app.route('/finalize_job', methods=['POST'])
+def finalize_job():
+    data = request.get_json()
+    job_id = data.get('job_id')
+    created_at = data.get('created_at')
+
+    if not job_id or not created_at:
+        return jsonify({'status': 'error', 'message': 'Missing job_id or created_at'}), 400
+
+    print(f"[finalize_job] Finalizing job {job_id}", file=sys.stderr)
+
+    # Execute upload_and_report.py to scan uploadFolder and upload files
+    upload_folder = os.path.join(os.getcwd(), 'uploadFolder')
+    job_folder_name = f"{created_at.split('T')[0].replace('-', '')}_{created_at.split('T')[1].split('.')[0].replace(':', '')}_{job_id}"
+    job_folder_path = os.path.join(upload_folder, job_folder_name)
+
+    if not os.path.exists(job_folder_path):
+        print(f"[finalize_job] ERROR: Job folder {job_folder_path} not found", file=sys.stderr)
+        return jsonify({'status': 'error', 'message': f'Job folder for {job_id} not found'}), 404
+
+    try:
+        upload_script_path = os.path.join(os.getcwd(), 'upload_and_report.py')
+        if not os.path.exists(upload_script_path):
+            print(f"[finalize_job] ERROR: upload_and_report.py not found at {upload_script_path}", file=sys.stderr)
+            return jsonify({'status': 'error', 'message': 'Upload script not found'}), 500
+
+        print(f"[finalize_job] Executing upload_and_report.py for job {job_id}", file=sys.stderr)
+        result = subprocess.run([sys.executable, upload_script_path], capture_output=True, text=True)
+        
+        if result.returncode == 0:
+            print(f"[finalize_job] Upload and report generation successful for job {job_id}", file=sys.stderr)
+            try:
+                output_json = json.loads(result.stdout)
+                return jsonify(output_json)
+            except json.JSONDecodeError:
+                print(f"[finalize_job] ERROR: Failed to parse JSON output from upload_and_report.py", file=sys.stderr)
+                return jsonify({'status': 'error', 'message': 'Failed to parse upload script output'}), 500
+        else:
+            print(f"[finalize_job] ERROR: upload_and_report.py failed with return code {result.returncode}", file=sys.stderr)
+            print(f"[finalize_job] Stderr: {result.stderr}", file=sys.stderr)
+            return jsonify({'status': 'error', 'message': 'Upload script execution failed'}), 500
+    except Exception as e:
+        print(f"[finalize_job] ERROR: Failed to execute upload_and_report.py: {str(e)}", file=sys.stderr)
+        return jsonify({'status': 'error', 'message': f'Failed to execute upload script: {str(e)}'}), 500
 
 @app.route('/health', methods=['GET'])
 def health_check():
