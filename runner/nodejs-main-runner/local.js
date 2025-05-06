@@ -15,15 +15,11 @@ const redis = new Redis({
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-// Dynamically set Flask service URL based on environment
-const getFlaskServiceUrl = (env) => {
-  return env === 'prod'
-    ? process.env.PYTHON_SLAVE_RUNNER_PROD_FLASK_SERVICE_URL
-    : process.env.PYTHON_SLAVE_RUNNER_PREPROD_FLASK_SERVICE_URL;
-};
+// Use utility functions from commonUtils
+const { getRunnerEnv, getFlaskServiceUrl } = require('./commonUtils');
 
-// Get the runner environment from a custom environment variable
-const RUNNER_ENV = process.env.RUNNER_ENV || 'preprod';
+// Get the runner environment
+const RUNNER_ENV = getRunnerEnv();
 console.log(`[@local-runner] Runner environment set to: ${RUNNER_ENV}`);
 
 async function processJob() {

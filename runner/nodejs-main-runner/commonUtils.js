@@ -2,6 +2,22 @@ const { executeFlaskScripts } = require('./flaskUtils');
 const { updateJobStatus } = require('./jobUtils');
 const { executeSSHScripts } = require('./sshUtils');
 
+// Common utility functions for job processing
+
+// Get the runner environment from a custom environment variable
+function getRunnerEnv() {
+  const env = process.env.RUNNER_ENV || 'preprod';
+  console.log(`[utils] Runner environment set to: ${env}`);
+  return env;
+}
+
+// Dynamically set Flask service URL based on environment
+function getFlaskServiceUrl(env) {
+  return env === 'prod'
+    ? process.env.PYTHON_SLAVE_RUNNER_PROD_FLASK_SERVICE_URL
+    : process.env.PYTHON_SLAVE_RUNNER_PREPROD_FLASK_SERVICE_URL;
+}
+
 async function executeOnFlask(
   config,
   jobId,
@@ -69,53 +85,10 @@ async function executeOnSSH(
   return { output, overallStatus, started_at };
 }
 
-// Get the runner environment from a custom environment variable
-function getRunnerEnv() {
-  const env = process.env.RUNNER_ENV || 'preprod';
-  console.log(`[runner:commonUtils] Runner environment set to: ${env}`);
-  return env;
-}
-
-// Dynamically set Flask service URL based on environment
-function getFlaskServiceUrl(env) {
-  return env === 'prod'
-    ? process.env.PYTHON_SLAVE_RUNNER_PROD_FLASK_SERVICE_URL
-    : process.env.PYTHON_SLAVE_RUNNER_PREPROD_FLASK_SERVICE_URL;
-}
-
-// Export functions
+// Export utility functions
 module.exports = {
   getRunnerEnv,
   getFlaskServiceUrl,
   executeOnFlask,
   executeOnSSH,
-  executeOnFlask: async function (
-    config,
-    jobId,
-    started_at,
-    decryptedEnvVars,
-    supabase,
-    FLASK_SERVICE_URL,
-    config_id,
-    team_id,
-    creator_id,
-  ) {
-    // Placeholder for existing function
-    console.log(
-      `[commonUtils:executeOnFlask] Executing job ${jobId} on Flask with URL: ${FLASK_SERVICE_URL}`,
-    );
-  },
-  executeOnSSH: async function (
-    config,
-    jobId,
-    started_at,
-    decryptedEnvVars,
-    supabase,
-    config_id,
-    team_id,
-    creator_id,
-  ) {
-    // Placeholder for existing function
-    console.log(`[commonUtils:executeOnSSH] Executing job ${jobId} on SSH`);
-  },
 };
