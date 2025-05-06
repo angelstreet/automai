@@ -246,6 +246,12 @@ def main():
     if os.path.exists(env_file_path):
         load_dotenv(dotenv_path=env_file_path)
         print(f"[@upload_and_report:main] Loaded environment variables from {env_file_path}.", file=sys.stderr)
+        # Debug: Print the environment variables to verify they are loaded
+        print(f"[@upload_and_report:main] DEBUG: CLOUDFLARE_R2_ENDPOINT = {os.environ.get('CLOUDFLARE_R2_ENDPOINT', 'NOT FOUND')}", file=sys.stderr)
+        print(f"[@upload_and_report:main] DEBUG: CLOUDFLARE_R2_ACCESS_KEY_ID = {os.environ.get('CLOUDFLARE_R2_ACCESS_KEY_ID', 'NOT FOUND')}", file=sys.stderr)
+        print(f"[@upload_and_report:main] DEBUG: CLOUDFLARE_R2_SECRET_ACCESS_KEY = {os.environ.get('CLOUDFLARE_R2_SECRET_ACCESS_KEY', 'NOT FOUND')}", file=sys.stderr)
+        print(f"[@upload_and_report:main] DEBUG: SUPABASE_URL = {os.environ.get('SUPABASE_URL', 'NOT FOUND')}", file=sys.stderr)
+        print(f"[@upload_and_report:main] DEBUG: SUPABASE_SERVICE_ROLE_KEY = {os.environ.get('SUPABASE_SERVICE_ROLE_KEY', 'NOT FOUND')}", file=sys.stderr)
     else:
         print(f"[@upload_and_report:main] ERROR: .env file not found at {env_file_path}.", file=sys.stderr)
         sys.exit(1)

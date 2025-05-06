@@ -169,6 +169,14 @@ def initialize_job():
         f.write(f"SUPABASE_SERVICE_ROLE_KEY={supabase_service_role_key}\n")
     print(f"[initialize_job] Saved Cloudflare R2 and Supabase credentials for job {job_id} to {credentials_file}", file=sys.stderr)
 
+    # Debug: Print the contents of the .env file to verify
+    try:
+        with open(credentials_file, 'r') as f:
+            env_content = f.read()
+        print(f"[initialize_job] DEBUG: Contents of .env file for job {job_id}:\n{env_content}", file=sys.stderr)
+    except Exception as e:
+        print(f"[initialize_job] ERROR: Failed to read .env file for debugging: {str(e)}", file=sys.stderr)
+
     return jsonify({'status': 'success', 'message': f'Initialized job {job_id} with upload script and credentials'})
 
 @app.route('/finalize_job', methods=['POST'])
