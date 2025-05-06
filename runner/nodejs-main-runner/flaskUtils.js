@@ -104,13 +104,13 @@ async function executeFlaskScripts(
             timeout: (payload.timeout + 5) * 1000,
           });
 
-          scriptOutput.stdout = response.data.output.stdout || '';
-          scriptOutput.stderr = response.data.output.stderr || '';
+          scriptOutput.stdout = response.data.stdout || '';
+          scriptOutput.stderr = response.data.stderr || '';
           // Check for exit code in response to determine success
-          if (response.data.output && typeof response.data.output.exitCode === 'number') {
-            scriptStatus = response.data.output.exitCode === 0 ? 'success' : 'failed';
+          if (response.data && typeof response.data.exitCode === 'number') {
+            scriptStatus = response.data.exitCode === 0 ? 'success' : 'failed';
             console.log(
-              `[executeFlaskScripts] Script status determined by exit code: ${scriptStatus} (exitCode: ${response.data.output.exitCode})`,
+              `[executeFlaskScripts] Script status determined by exit code: ${scriptStatus} (exitCode: ${response.data.exitCode})`,
             );
           } else {
             scriptStatus = response.data.status;
@@ -136,7 +136,7 @@ async function executeFlaskScripts(
               output: {
                 stdout: scriptOutput.stdout,
                 stderr: scriptOutput.stderr,
-                exitCode: response.data.output.exitCode || 0,
+                exitCode: response.data.exitCode || 0,
               },
               report_url: reportUrl,
               completed_at: new Date().toISOString(),
@@ -149,7 +149,7 @@ async function executeFlaskScripts(
               output: {
                 stdout: scriptOutput.stdout,
                 stderr: scriptOutput.stderr,
-                exitCode: response.data.output.exitCode || 0,
+                exitCode: response.data.exitCode || 0,
               },
               completed_at: new Date().toISOString(),
             });
