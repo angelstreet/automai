@@ -182,11 +182,10 @@ def initialize_job():
         f.write(config_name if config_name else 'N/A')
     print(f"[initialize_job] Saved config_name '{config_name if config_name else 'N/A'}' for job {job_id} to {config_name_file}", file=sys.stderr)
 
-    # Debug: Print the contents of the .env file to verify
     try:
         with open(credentials_file, 'r') as f:
             env_content = f.read()
-        print(f"[initialize_job] DEBUG: Contents of .env file for job {job_id}:\n{env_content}", file=sys.stderr)
+        print(f"[initialize_job] DEBUG: Contents of .env file readfor job {job_id}", file=sys.stderr)
     except Exception as e:
         print(f"[initialize_job] ERROR: Failed to read .env file for debugging: {str(e)}", file=sys.stderr)
 
