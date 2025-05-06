@@ -114,9 +114,17 @@ const reportTemplate = `
         <% let scriptsHtml = '';
            if (scripts && scripts.length > 0) {
              scripts.forEach((script, index) => {
-               const scriptStatus = script.status === 'success' ? 'Success' : script.status === 'failed' ? 'Failed' : 'Unknown';
-               const statusClass = script.status === 'success' ? 'status-success' : script.status === 'failed' ? 'status-failed' : '';
-               scriptsHtml += "\n        <strong>Script " + (index + 1) + ": " + (script.script_path || script.name) + "</strong>\n        " + (script.report_url ? "<a href=\"" + script.report_url + "\" class=\"report-link\" target=\"_blank\">View Script Report</a>" : '') + "\n        <br>\n        Parameters: " + (script.parameters || 'None') + "<br>\n        Iteration: " + (script.iteration || 'N/A') + "<br>\n        Status: <span class=\"" + statusClass + "\">" + scriptStatus + "</span><br>\n        Stdout: <pre>" + (script.stdout || 'N/A') + "</pre><br>\n        Stderr: <pre>" + (script.stderr || '') + "</pre><br>\n      ";
+               var scriptStatus = script.status === 'success' ? 'Success' : (script.status === 'failed' ? 'Failed' : 'Unknown');
+               var statusClass = script.status === 'success' ? 'status-success' : (script.status === 'failed' ? 'status-failed' : '');
+               var reportLink = script.report_url ? '<a href="' + script.report_url + '" class="report-link" target="_blank">View Script Report</a>' : '';
+               scriptsHtml += '<strong>Script ' + (index + 1) + ': ' + (script.script_path || script.name || 'Unknown') + '</strong>';
+               scriptsHtml += reportLink ? ' ' + reportLink : '';
+               scriptsHtml += '<br>';
+               scriptsHtml += 'Parameters: ' + (script.parameters || 'None') + '<br>';
+               scriptsHtml += 'Iteration: ' + (script.iteration || 'N/A') + '<br>';
+               scriptsHtml += 'Status: <span class="' + statusClass + '">' + scriptStatus + '</span><br>';
+               scriptsHtml += 'Stdout: <pre>' + (script.stdout || 'N/A') + '</pre><br>';
+               scriptsHtml += 'Stderr: <pre>' + (script.stderr || '') + '</pre><br>';
              });
            } else {
              scriptsHtml = 'No scripts executed.';
