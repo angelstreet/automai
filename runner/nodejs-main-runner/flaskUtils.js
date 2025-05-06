@@ -1,3 +1,6 @@
+const fs = require('fs');
+const path = require('path');
+
 const axios = require('axios');
 
 const { createScriptExecution, updateScriptExecution } = require('./jobUtils');
@@ -17,6 +20,40 @@ async function executeFlaskScripts(
 
   let output = { scripts: [], stdout: '', stderr: '' };
   let overallStatus = 'success';
+
+  // Send upload_and_report.py script content and Cloudflare R2 environment variables to Flask server for job finalization
+  const uploadScriptPath = path.join(__dirname, 'upload_and_report.py');
+  const uploadScriptContent = fs.readFileSync(uploadScriptPath, 'utf8');
+
+  try {
+    const initResponse = await fetch(`${FLASK_SERVICE_URL}/initialize_job`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        job_id: jobId,
+        created_at: started_at,
+        upload_script_content: uploadScriptContent,
+        r2_credentials: {
+          endpoint: decryptedEnvVars['CLOUDFLARE_R2_ENDPOINT'] || '',
+          access_key_id: decryptedEnvVars['CLOUDFLARE_R2_ACCESS_KEY_ID'] || '',
+          secret_access_key: decryptedEnvVars['CLOUDFLARE_R2_SECRET_ACCESS_KEY'] || '',
+        },
+      }),
+    });
+    if (!initResponse.ok) {
+      console.error(
+        `[executeFlaskScripts] Failed to initialize job ${jobId} on Flask server: ${initResponse.statusText}`,
+      );
+    } else {
+      console.log(
+        `[executeFlaskScripts] Successfully initialized job ${jobId} on Flask server with upload script and R2 credentials.`,
+      );
+    }
+  } catch (error) {
+    console.error(
+      `[executeFlaskScripts] Error initializing job ${jobId} on Flask server: ${error.message}`,
+    );
+  }
 
   for (const script of config.scripts || []) {
     const scriptPath = script.path;
@@ -106,16 +143,16 @@ async function executeFlaskScripts(
 
           scriptOutput.stdout = response.data.stdout || '';
           scriptOutput.stderr = response.data.stderr || '';
-          // Check for exit code in response to determine success
-          if (response.data && typeof response.data.exitCode === 'number') {
-            scriptStatus = response.data.exitCode === 0 ? 'success' : 'failed';
+          // Check for status in response to determine success
+          if (response.data && typeof response.data.status === 'string') {
+            scriptStatus = response.data.status === 'success' ? 'success' : 'failed';
             console.log(
-              `[executeFlaskScripts] Script status determined by exit code: ${scriptStatus} (exitCode: ${response.data.exitCode})`,
+              `[executeFlaskScripts] Script status determined by response status: ${scriptStatus}`,
             );
           } else {
-            scriptStatus = response.data.status;
+            scriptStatus = 'failed';
             console.log(
-              `[executeFlaskScripts] Script status determined by response status: ${scriptStatus} (no exit code available)`,
+              `[executeFlaskScripts] Script status could not be determined, defaulting to failed`,
             );
           }
 
@@ -189,6 +226,39 @@ async function executeFlaskScripts(
         overallStatus = 'failed';
       }
     }
+  }
+
+  // Finalize job for upload and report generation
+  try {
+    const finalizeResponse = await fetch(`${FLASK_SERVICE_URL}/finalize_job`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ job_id: jobId, created_at: started_at }),
+    });
+    if (!finalizeResponse.ok) {
+      console.error(
+        `[executeFlaskScripts] Failed to finalize job ${jobId} on Flask server: ${finalizeResponse.statusText}`,
+      );
+    } else {
+      const finalizeData = await finalizeResponse.json();
+      console.log(
+        `[executeFlaskScripts] Successfully finalized job ${jobId} on Flask server. Report URL: ${finalizeData.report_url || 'N/A'}`,
+      );
+      // Update job record with report URL if available
+      if (finalizeData.report_url) {
+        const { error: reportError } = await supabase
+          .from('jobs_run')
+          .update({ report_url: finalizeData.report_url })
+          .eq('id', jobId);
+        if (reportError) {
+          console.error(
+            `[executeFlaskScripts] Failed to update job ${jobId} with report URL: ${reportError.message}`,
+          );
+        }
+      }
+    }
+  } catch (error) {
+    console.error(`[executeFlaskScripts] Error finalizing job ${jobId}: ${error.message}`);
   }
 
   return { output, overallStatus, started_at };
