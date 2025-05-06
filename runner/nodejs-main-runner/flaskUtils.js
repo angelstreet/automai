@@ -26,16 +26,37 @@ async function executeFlaskScripts(
   let output = { scripts: [], stdout: '', stderr: '' };
   let overallStatus = 'success';
 
-  // Send upload_and_report.py script content and Cloudflare R2 environment variables to Flask server for job finalization
+  // Send upload_and_report.py script content and environment variables to Flask server for job finalization
   const uploadScriptPath = path.join(__dirname, 'upload_and_report.py');
   const uploadScriptContent = fs.readFileSync(uploadScriptPath, 'utf8');
 
   try {
+    // Prepare credentials object with both Cloudflare R2 and Supabase credentials
+    const credentials = {
+      cloudflare_r2_endpoint:
+        decryptedEnvVars['CLOUDFLARE_R2_ENDPOINT'] || process.env.CLOUDFLARE_R2_ENDPOINT || '',
+      cloudflare_r2_access_key_id:
+        decryptedEnvVars['CLOUDFLARE_R2_ACCESS_KEY_ID'] ||
+        process.env.CLOUDFLARE_R2_ACCESS_KEY_ID ||
+        '',
+      cloudflare_r2_secret_access_key:
+        decryptedEnvVars['CLOUDFLARE_R2_SECRET_ACCESS_KEY'] ||
+        process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY ||
+        '',
+      supabase_api_url: decryptedEnvVars['SUPABASE_API_URL'] || process.env.SUPABASE_API_URL || '',
+      supabase_service_role_key:
+        decryptedEnvVars['SUPABASE_SERVICE_ROLE_KEY'] ||
+        process.env.SUPABASE_SERVICE_ROLE_KEY ||
+        '',
+    };
+    console.log(`[executeFlaskScripts] Prepared unified credentials for job ${jobId}`);
+
     const payload = prepareJobInitializationPayload(
       jobId,
       started_at,
       uploadScriptContent,
       decryptedEnvVars,
+      credentials,
     );
     const initResponse = await fetch(`${FLASK_SERVICE_URL}/initialize_job`, {
       method: 'POST',
@@ -48,7 +69,7 @@ async function executeFlaskScripts(
       );
     } else {
       console.log(
-        `[executeFlaskScripts] Successfully initialized job ${jobId} on Flask server with upload script and R2 credentials.`,
+        `[executeFlaskScripts] Successfully initialized job ${jobId} on Flask server with upload script and credentials.`,
       );
     }
   } catch (error) {

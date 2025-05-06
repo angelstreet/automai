@@ -109,7 +109,7 @@ def initialize_job():
     job_id = data.get('job_id')
     created_at = data.get('created_at')
     upload_script_content = data.get('upload_script_content')
-    r2_credentials = data.get('r2_credentials', {})
+    credentials = data.get('credentials', {})
 
     if not job_id or not created_at:
         return jsonify({'status': 'error', 'message': 'Missing job_id or created_at'}), 400
@@ -122,6 +122,7 @@ def initialize_job():
     job_folder_name = f"{created_at.split('T')[0].replace('-', '')}_{created_at.split('T')[1].split('.')[0].replace(':', '')}_{job_id}"
     job_folder_path = os.path.join(upload_folder, job_folder_name)
     os.makedirs(job_folder_path, exist_ok=True)
+    print(f"[initialize_job] Created job folder for {job_id} at {job_folder_path}", file=sys.stderr)
 
     # Save the upload script to the job folder
     upload_script_path = os.path.join(job_folder_path, 'upload_and_report.py')
@@ -145,14 +146,28 @@ def initialize_job():
     except Exception as e:
         print(f"[initialize_job] ERROR: Unexpected error while installing dependencies for job {job_id}: {str(e)}", file=sys.stderr)
 
-    # Save R2 credentials to a .env file for this job
+    # Step 1: Fetch Cloudflare R2 credentials from provided data
+    cloudflare_r2_endpoint = credentials.get('cloudflare_r2_endpoint', '')
+    cloudflare_r2_access_key_id = credentials.get('cloudflare_r2_access_key_id', '')
+    cloudflare_r2_secret_access_key = credentials.get('cloudflare_r2_secret_access_key', '')
+    print(f"[initialize_job] Fetched Cloudflare R2 credentials for job {job_id}", file=sys.stderr)
+
+    # Step 2: Fetch Supabase credentials from provided data
+    supabase_api_url = credentials.get('supabase_api_url', '')
+    supabase_service_role_key = credentials.get('supabase_service_role_key', '')
+    print(f"[initialize_job] Fetched Supabase credentials for job {job_id}", file=sys.stderr)
+
+    # Step 3: Save Cloudflare R2 and Supabase credentials to a .env file for this job
     credentials_file = os.path.join(job_folder_path, '.env')
     with open(credentials_file, 'w') as f:
         f.write(f"# Environment variables for Cloudflare R2\n")
-        f.write(f"CLOUDFLARE_R2_ENDPOINT={r2_credentials.get('endpoint', '')}\n")
-        f.write(f"CLOUDFLARE_R2_ACCESS_KEY_ID={r2_credentials.get('access_key_id', '')}\n")
-        f.write(f"CLOUDFLARE_R2_SECRET_ACCESS_KEY={r2_credentials.get('secret_access_key', '')}\n")
-    print(f"[initialize_job] Saved R2 credentials for job {job_id} to {credentials_file}", file=sys.stderr)
+        f.write(f"CLOUDFLARE_R2_ENDPOINT={cloudflare_r2_endpoint}\n")
+        f.write(f"CLOUDFLARE_R2_ACCESS_KEY_ID={cloudflare_r2_access_key_id}\n")
+        f.write(f"CLOUDFLARE_R2_SECRET_ACCESS_KEY={cloudflare_r2_secret_access_key}\n")
+        f.write(f"# Environment variables for Supabase\n")
+        f.write(f"SUPABASE_API_URL={supabase_api_url}\n")
+        f.write(f"SUPABASE_SERVICE_ROLE_KEY={supabase_service_role_key}\n")
+    print(f"[initialize_job] Saved Cloudflare R2 and Supabase credentials for job {job_id} to {credentials_file}", file=sys.stderr)
 
     return jsonify({'status': 'success', 'message': f'Initialized job {job_id} with upload script and credentials'})
 
