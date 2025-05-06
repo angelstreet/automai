@@ -51,13 +51,15 @@ async function generateAndUploadReport(
 
     const scripts = output.scripts || [];
 
-    // Add report_url to each script if available
-    const updatedScripts = scripts.map((script) => ({
+    // Include report_url for each script if available
+    const scriptsWithReportUrls = scripts.map((script) => ({
       ...script,
       report_url:
         script.report_url ||
-        (output.scriptReports && output.scriptReports[script.script_path]) ||
-        '',
+        (output.associated_files || []).find(
+          (f) => f.name === 'script_report.html' && f.script_id === script.script_id,
+        )?.public_url ||
+        null,
     }));
 
     // Only include associated files for script reports, not for job reports
@@ -71,7 +73,7 @@ async function generateAndUploadReport(
       endTime,
       duration,
       status,
-      scripts: updatedScripts,
+      scripts: scriptsWithReportUrls,
       envVars,
       isScriptReport,
       associatedFiles: associatedFiles.map((file) => ({

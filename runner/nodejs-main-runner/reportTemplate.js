@@ -111,25 +111,18 @@ const reportTemplate = `
       <tr><th>Duration (s)</th><td><%= duration %></td></tr>
       <tr><th>Status</th><td class="status-<%= status.toLowerCase() %>"><%= status %></td></tr>
       <tr><th>Scripts</th><td>
-        <% let scriptsHtml = '';
-           if (scripts && scripts.length > 0) {
-             scripts.forEach((script, index) => {
-               var scriptStatus = script.status === 'success' ? 'Success' : (script.status === 'failed' ? 'Failed' : 'Unknown');
-               var statusClass = script.status === 'success' ? 'status-success' : (script.status === 'failed' ? 'status-failed' : '');
-               var reportLink = script.report_url ? '<a href="' + script.report_url + '" class="report-link" target="_blank">View Script Report</a>' : '';
-               scriptsHtml += '<strong>Script ' + (index + 1) + ': ' + (script.script_path || script.name || 'Unknown') + '</strong>';
-               scriptsHtml += reportLink ? ' ' + reportLink : '';
-               scriptsHtml += '<br>';
-               scriptsHtml += 'Parameters: ' + (script.parameters || 'None') + '<br>';
-               scriptsHtml += 'Iteration: ' + (script.iteration || 'N/A') + '<br>';
-               scriptsHtml += 'Status: <span class="' + statusClass + '">' + scriptStatus + '</span><br>';
-               scriptsHtml += 'Stdout: <pre>' + (script.stdout || 'N/A') + '</pre><br>';
-               scriptsHtml += 'Stderr: <pre>' + (script.stderr || '') + '</pre><br>';
-             });
-           } else {
-             scriptsHtml = 'No scripts executed.';
-           } %>
-        <%= scriptsHtml %>
+        <% scripts.forEach(function(script, index) { %>
+          <strong>Script <%= index + 1 %>: <%= script.script_path %></strong>
+          <% if (script.report_url) { %>
+            <a href="<%= script.report_url %>" target="_blank" class="report-link">View Script Report</a>
+          <% } %>
+          <br>
+          Parameters: <%= script.parameters || 'None' %><br>
+          Iteration: <%= script.iteration || 'N/A' %><br>
+          Status: <span class="status-<%= script.status ? script.status.toLowerCase() : 'success' %>"><%= script.status || 'Success' %></span><br>
+          Stdout: <pre><%= script.stdout %></pre><br>
+          Stderr: <pre><%= script.stderr %></pre><br>
+        <% }); %>
       </td></tr>
       <tr><th>Environment Variables</th><td><%= envVars %></td></tr>
     <% } else { %>
