@@ -1,4 +1,3 @@
-const { Client } = require('ssh2');
 const { v4: uuidv4 } = require('uuid');
 
 const {
@@ -9,6 +8,7 @@ const {
   finalizeJobOnHost,
 } = require('./jobUtils');
 const { pingRepository } = require('./repoUtils');
+const { executeSSHCommand, readScriptOutputFiles } = require('./sshConnectionUtils');
 const { decrypt, formatEnvVarsForSSH, collectEnvironmentVariables } = require('./utils');
 
 async function executeSSHScripts(
@@ -26,7 +26,6 @@ async function executeSSHScripts(
   let output = { scripts: [], stdout: '', stderr: '' };
   let overallStatus = 'success';
 
-  // Log current jobData state at the start of SSH section
   console.log(
     `[executeSSHScripts] Job data at start of SSH section: team_id=${team_id}, config_id=${config_id}`,
   );
@@ -190,7 +189,6 @@ async function executeSSHScripts(
           console.log(
             `[executeSSHScripts] No folder specified in script configuration or repository, using default SSH directory (if any)`,
           );
-          // Not setting a specific scriptFolder, letting SSH use its default directory
         }
       }
 
@@ -222,210 +220,26 @@ async function executeSSHScripts(
         started_at: scriptStartedAt,
       });
 
-      const conn = new Client();
-
-      // Create a promise to handle the SSH connection and command execution
+      // Execute the script using the helper function
+      let scriptResult;
       try {
-        const scriptResult = await new Promise((resolve, reject) => {
-          // Set a timeout for the SSH connection
-          const connectionTimeout = setTimeout(() => {
-            conn.end();
-            reject(new Error('SSH connection timeout'));
-          }, 60000); // 60 seconds timeout
-
-          conn.on('ready', () => {
-            // Clear the connection timeout
-            clearTimeout(connectionTimeout);
-            console.log(`[executeSSHScripts] Connected to ${host.ip}`);
-
-            // Update main job status to in_progress if not already
-            supabase
-              .from('jobs_run')
-              .update({
-                status: 'in_progress',
-                started_at: started_at,
-              })
-              .eq('id', jobId)
-              .then(() => {
-                console.log(`[executeSSHScripts] Updated job ${jobId} status to 'in_progress'`);
-              })
-              .catch((err) => {
-                console.error(`[executeSSHScripts] Failed to update job status: ${err.message}`);
-              });
-
-            // Execute the script
-            conn.exec(fullScript, (err, stream) => {
-              if (err) {
-                conn.end();
-                reject(err);
-                return;
-              }
-
-              let stdout = '';
-              let stderr = '';
-
-              stream.on('data', (data) => {
-                stdout += data;
-                console.log(`${data}`);
-              });
-
-              stream.stderr.on('data', (data) => {
-                stderr += data;
-                console.log(`[executeSSHScripts] Stderr: ${data}`);
-              });
-
-              stream.on('close', (code, signal) => {
-                console.log(
-                  `[executeSSHScripts] SSH command completed with code: ${code}, signal: ${signal}`,
-                );
-
-                // Determine if script was successful based on output or exit code
-                const isSuccess = (stdout && stdout.includes('Test Success')) || code === 0;
-
-                conn.end();
-                resolve({
-                  stdout,
-                  stderr,
-                  exitCode: code,
-                  isSuccess,
-                });
-              });
-            });
+        scriptResult = await executeSSHCommand(host, sshKeyOrPass, fullScript);
+        // Update main job status to in_progress if not already
+        supabase
+          .from('jobs_run')
+          .update({
+            status: 'in_progress',
+            started_at: started_at,
+          })
+          .eq('id', jobId)
+          .then(() => {
+            console.log(`[executeSSHScripts] Updated job ${jobId} status to 'in_progress'`);
+          })
+          .catch((err) => {
+            console.error(`[executeSSHScripts] Failed to update job status: ${err.message}`);
           });
-
-          conn.on('error', (err) => {
-            clearTimeout(connectionTimeout);
-            reject(err);
-          });
-
-          // Connect to the SSH server
-          const sshConfig = {
-            host: host.ip,
-            port: host.port || 22,
-            username: host.username,
-          };
-
-          if (host.authType === 'privateKey') {
-            sshConfig.privateKey = sshKeyOrPass;
-          } else {
-            sshConfig.password = sshKeyOrPass;
-          }
-
-          conn.connect(sshConfig);
-        });
-
-        // Read stdout and stderr from files
-        const stdoutFileCommand =
-          host.os === 'windows'
-            ? `powershell -Command "Get-Content -Path '${scriptFolderPath}/stdout.txt'"`
-            : `cat ${scriptFolderPath}/stdout.txt`;
-        const stderrFileCommand =
-          host.os === 'windows'
-            ? `powershell -Command "Get-Content -Path '${scriptFolderPath}/stderr.txt'"`
-            : `cat ${scriptFolderPath}/stderr.txt`;
-
-        const connRead = new Client();
-        let stdoutFromFile = '';
-        let stderrFromFile = '';
-        try {
-          await new Promise((resolve, reject) => {
-            const connectionTimeout = setTimeout(() => {
-              connRead.end();
-              reject(new Error('SSH connection timeout for reading output files'));
-            }, 60000);
-
-            connRead.on('ready', () => {
-              clearTimeout(connectionTimeout);
-              console.log(`[executeSSHScripts] Connected to ${host.ip} for reading output files`);
-              connRead.exec(stdoutFileCommand, (err, stream) => {
-                if (err) {
-                  connRead.end();
-                  reject(err);
-                  return;
-                }
-                stream.on('data', (data) => {
-                  stdoutFromFile += data;
-                });
-                stream.stderr.on('data', (data) => {
-                  console.log(`[executeSSHScripts] Stderr while reading stdout file: ${data}`);
-                });
-                stream.on('close', () => {
-                  connRead.exec(stderrFileCommand, (err, stream2) => {
-                    if (err) {
-                      connRead.end();
-                      reject(err);
-                      return;
-                    }
-                    stream2.on('data', (data) => {
-                      stderrFromFile += data;
-                    });
-                    stream2.stderr.on('data', (data) => {
-                      console.log(`[executeSSHScripts] Stderr while reading stderr file: ${data}`);
-                    });
-                    stream2.on('close', () => {
-                      connRead.end();
-                      resolve();
-                    });
-                  });
-                });
-              });
-            });
-            connRead.on('error', (err) => {
-              clearTimeout(connectionTimeout);
-              reject(err);
-            });
-            const sshConfig = {
-              host: host.ip,
-              port: host.port || 22,
-              username: host.username,
-            };
-            if (host.authType === 'privateKey') {
-              sshConfig.privateKey = sshKeyOrPass;
-            } else {
-              sshConfig.password = sshKeyOrPass;
-            }
-            connRead.connect(sshConfig);
-          });
-        } catch (error) {
-          console.error(
-            `[executeSSHScripts] Error reading output files on host ${host.ip}: ${error.message}`,
-          );
-          stdoutFromFile = scriptResult.stdout;
-          stderrFromFile = scriptResult.stderr;
-        }
-
-        // Update script output with results
-        const scriptCompletedAt = new Date().toISOString();
-
-        // Update script execution in database without report URL (handled by upload_and_report.py)
-        await updateScriptExecution(supabase, {
-          script_id: scriptExecutionId,
-          status: scriptResult.isSuccess ? 'success' : 'failed',
-          output: {
-            stdout: stdoutFromFile,
-            stderr: stderrFromFile,
-            exitCode: scriptResult.exitCode,
-          },
-          completed_at: scriptCompletedAt,
-        });
-
-        // Add to the overall output collection
-        const scriptOutputRecord = {
-          script_path: scriptPath,
-          iteration: 1,
-          stdout: stdoutFromFile,
-          stderr: stderrFromFile,
-        };
-
-        output.scripts.push(scriptOutputRecord);
-
-        // Update overall status if any script fails
-        if (!scriptResult.isSuccess) {
-          overallStatus = 'failed';
-        }
       } catch (error) {
         console.error(`[executeSSHScripts] Error executing script: ${error.message}`);
-
         // Update script execution with error
         await updateScriptExecution(supabase, {
           script_id: scriptExecutionId,
@@ -433,7 +247,6 @@ async function executeSSHScripts(
           error: error.message,
           completed_at: new Date().toISOString(),
         });
-
         // Add error to output collection
         output.scripts.push({
           script_path: scriptPath,
@@ -441,7 +254,47 @@ async function executeSSHScripts(
           stdout: '',
           stderr: error.message,
         });
+        overallStatus = 'failed';
+        continue;
+      }
 
+      // Read stdout and stderr from files using the helper function
+      const { stdoutFromFile, stderrFromFile } = await readScriptOutputFiles(
+        host,
+        sshKeyOrPass,
+        scriptFolderPath,
+        scriptResult,
+        host.os,
+      );
+
+      // Update script output with results
+      const scriptCompletedAt = new Date().toISOString();
+      // Determine if script was successful based on output or exit code
+      const isSuccess =
+        (stdoutFromFile && stdoutFromFile.includes('Test Success')) || scriptResult.exitCode === 0;
+      // Update script execution in database without report URL (handled by upload_and_report.py)
+      await updateScriptExecution(supabase, {
+        script_id: scriptExecutionId,
+        status: isSuccess ? 'success' : 'failed',
+        output: {
+          stdout: stdoutFromFile,
+          stderr: stderrFromFile,
+          exitCode: scriptResult.exitCode,
+        },
+        completed_at: scriptCompletedAt,
+      });
+
+      // Add to the overall output collection
+      const scriptOutputRecord = {
+        script_path: scriptPath,
+        iteration: 1,
+        stdout: stdoutFromFile,
+        stderr: stderrFromFile,
+      };
+      output.scripts.push(scriptOutputRecord);
+
+      // Update overall status if any script fails
+      if (!isSuccess) {
         overallStatus = 'failed';
       }
     }
