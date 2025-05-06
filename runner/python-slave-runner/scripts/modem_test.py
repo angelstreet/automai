@@ -58,7 +58,7 @@ def main():
     parser = argparse.ArgumentParser(description="Test modem connectivity and speeds.")
     parser.add_argument("-ping_server", default="8.8.8.8", help="Ping server (default: 8.8.8.8).")
     parser.add_argument("-iperf_server", default="iperf.worldstream.nl", help="iperf3 server (default: iperf.worldstream.nl).")
-    args = parser.parse_args()
+    args, unknown = parser.parse_known_args()  # Ignore unrecognized arguments
 
     print("Starting modem test...")
     if not ping_test(args.ping_server):

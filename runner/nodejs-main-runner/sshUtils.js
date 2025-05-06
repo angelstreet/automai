@@ -329,7 +329,7 @@ async function executeSSHScripts(
   }
 
   // Return output and status without final job update (handled by upload_and_report.py)
-  return { output, overallStatus, started_at };
+  return { output, overallStatus, started_at, config_name: config.config_name || '' };
 }
 
 async function executeScriptOnSSH(jobId, script, createdAt, host) {
