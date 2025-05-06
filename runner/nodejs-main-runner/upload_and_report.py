@@ -16,7 +16,7 @@ import supabase
 
 print(f"[@upload_and_report:main] boto3, dotenv, and supabase modules imported successfully.", file=sys.stderr)
 
-def build_script_report_html_content(script_name, script_id, job_id, script_path, parameters, start_time, end_time, duration, status, stdout_content, stderr_content):
+def build_script_report_html_content(script_name, script_id, job_id, script_path, parameters, start_time, end_time, duration, status, stdout_content, stderr_content, associated_files=None):
     """Build HTML content for script execution report."""
     # Format start_time and end_time to YYYY-MM-DD_HH:MM:SS
     try:
@@ -29,6 +29,36 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
     except Exception as e:
         print(f"[@upload_and_report:build_script_report_html_content] Error formatting end_time: {str(e)}", file=sys.stderr)
         formatted_end_time = "N/A"
+        
+    # Build associated files table
+    associated_files_html = ""
+    if associated_files:
+        # Filter files to exclude stdout.txt, stderr.txt, and script_report.html
+        excluded_filenames = {'stdout.txt', 'stderr.txt', 'script_report.html'}
+        script_files = [file for file in associated_files 
+                        if script_id in file.get('relative_path', '') 
+                        and file.get('name') not in excluded_filenames]
+        
+        if script_files:
+            associated_files_html = """
+  <h2>Associated Files</h2>
+  <table>
+    <tr><th>#</th><th>Filename</th><th>Size</th><th>Download Link</th></tr>
+"""
+            for idx, file in enumerate(script_files, 1):
+                file_name = file.get('name', 'Unknown')
+                file_size = f"{file.get('size', 0) / 1024:.2f} KB" if 'size' in file else "N/A"
+                file_url = file.get('public_url', '')
+                download_link = f"<a href='{file_url}' target='_blank'>Download</a>" if file_url else "Not Available"
+                associated_files_html += f"    <tr><td>{idx}</td><td>{file_name}</td><td>{file_size}</td><td>{download_link}</td></tr>\n"
+            associated_files_html += "  </table>"
+        elif script_id in str(associated_files):
+            # If we filtered out all files but there were some associated with this script
+            associated_files_html = """
+  <h2>Associated Files</h2>
+  <p>All associated files are shown in the report content above.</p>
+"""
+    
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -37,13 +67,15 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
   <title>Script Execution Report - {script_name}</title>
   <style>
     body {{ font-family: Arial, sans-serif; margin: 20px; }}
-    h1 {{ color: #333; }}
+    h1, h2 {{ color: #333; }}
     table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
     th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
     th {{ background-color: #f2f2f2; }}
     pre {{ background-color: #f9f9f9; padding: 10px; overflow-x: auto; }}
     .status-success {{ color: #22c55e; font-weight: bold; }}
     .status-failed {{ color: #ef4444; font-weight: bold; }}
+    a {{ color: #007BFF; text-decoration: none; }}
+    a:hover {{ text-decoration: underline; }}
   </style>
 </head>
 <body>
@@ -61,10 +93,11 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
     <tr><th>Stdout</th><td><pre>{stdout_content or "No output"}</pre></td></tr>
     <tr><th>Stderr</th><td><pre>{stderr_content or "No errors"}</pre></td></tr>
   </table>
+  {associated_files_html}
 </body>
 </html>"""
 
-def create_script_report_html(script_folder, stdout_content, stderr_content, script_id, job_id, start_time, end_time, script_path, parameters, status="success"):
+def create_script_report_html(script_folder, stdout_content, stderr_content, script_id, job_id, start_time, end_time, script_path, parameters, status="success", associated_files=None):
     """Create an HTML report for a script execution."""
     duration = "N/A"
     if start_time and end_time:
@@ -80,7 +113,7 @@ def create_script_report_html(script_folder, stdout_content, stderr_content, scr
     if not script_name:
         script_name = next((f for f in os.listdir(script_folder) if f.endswith('.py')), f"Script_{script_id}")
     script_path_display = script_path if script_path and script_path != "Unknown" else "Unknown"
-    html_content = build_script_report_html_content(script_name, script_id, job_id, script_path_display, parameters, start_time, end_time, duration, status, stdout_content, stderr_content)
+    html_content = build_script_report_html_content(script_name, script_id, job_id, script_path_display, parameters, start_time, end_time, duration, status, stdout_content, stderr_content, associated_files)
     report_path = os.path.join(script_folder, 'script_report.html')
     try:
         with open(report_path, 'w') as f:
@@ -140,7 +173,7 @@ def build_job_report_html_content(job_id, start_time, end_time, duration, status
 </body>
 </html>"""
 
-def create_job_report_html(job_folder, job_id, start_time, end_time, script_reports, status="success"):
+def create_job_report_html(job_folder, job_id, start_time, end_time, script_reports, status="success", uploaded_files=None):
     """Create an HTML report for the entire job run."""
     duration = "N/A"
     if start_time and end_time:
@@ -156,7 +189,9 @@ def create_job_report_html(job_folder, job_id, start_time, end_time, script_repo
     for script_id, script_data in script_reports.items():
         script_status = script_data.get('status', 'unknown')
         script_name = os.path.basename(script_data.get('script_path', 'Unknown')) if script_data.get('script_path') != 'Unknown' else f"Script_{script_id}"
-        report_url = next((file['public_url'] for file in uploaded_files if file['name'] == 'script_report.html' and script_id in file['relative_path']), '') if 'uploaded_files' in globals() else ''
+        report_url = ""
+        if uploaded_files is not None:
+            report_url = next((file['public_url'] for file in uploaded_files if file['name'] == 'script_report.html' and script_id in file['relative_path']), '')
         report_link = f"<a href='{report_url}' target='_blank'>View Report</a>" if report_url else "Not Available"
         date_time = datetime.fromisoformat(start_time.replace('Z', '+00:00')).strftime('%Y-%m-%d_%H:%M:%S') if start_time else "N/A"  # Format date_time
         script_summary += f"<tr><td>{order}</td><td>{script_id}</td><td>{script_name}</td><td>{date_time}</td><td class=\"status-{script_status.lower()}\">{script_status}</td><td>{report_link}</td></tr>"
@@ -284,11 +319,6 @@ def main():
         load_dotenv(dotenv_path=env_file_path)
         print(f"[@upload_and_report:main] Loaded environment variables from {env_file_path}.", file=sys.stderr)
         # Debug: Print the environment variables to verify they are loaded, masking sensitive information
-        print(f"[@upload_and_report:main] DEBUG: CLOUDFLARE_R2_ENDPOINT = {os.environ.get('CLOUDFLARE_R2_ENDPOINT', 'NOT FOUND')}", file=sys.stderr)
-        print(f"[@upload_and_report:main] DEBUG: CLOUDFLARE_R2_ACCESS_KEY_ID = {'***' if os.environ.get('CLOUDFLARE_R2_ACCESS_KEY_ID') else 'NOT FOUND'}", file=sys.stderr)
-        print(f"[@upload_and_report:main] DEBUG: CLOUDFLARE_R2_SECRET_ACCESS_KEY = {'***' if os.environ.get('CLOUDFLARE_R2_SECRET_ACCESS_KEY') else 'NOT FOUND'}", file=sys.stderr)
-        print(f"[@upload_and_report:main] DEBUG: SUPABASE_URL = {os.environ.get('SUPABASE_URL', 'NOT FOUND')}", file=sys.stderr)
-        print(f"[@upload_and_report:main] DEBUG: SUPABASE_SERVICE_ROLE_KEY = {'***' if os.environ.get('SUPABASE_SERVICE_ROLE_KEY') else 'NOT FOUND'}", file=sys.stderr)
     else:
         print(f"[@upload_and_report:main] ERROR: .env file not found at {env_file_path}.", file=sys.stderr)
         output = {'status': 'failure', 'job_id': job_folder_name.split('_')[-1] if '_' in job_folder_name else job_folder_name, 'error': '.env file not found'}
@@ -435,7 +465,7 @@ def main():
 
     # Create job report (initially without URLs, will update after upload)
     job_status = "success" if all(sr['status'] == 'success' for sr in script_reports.values()) else "failed"
-    job_report_path = create_job_report_html(job_folder_path, job_id, start_time, end_time, script_reports, job_status)
+    job_report_path = create_job_report_html(job_folder_path, job_id, start_time, end_time, script_reports, job_status, None)
 
     # Collect all files to upload
     associated_files = []
@@ -528,25 +558,71 @@ def main():
             update_supabase_job_status(job_id, job_status, job_output, end_time, '')
 
         for script_id, script_data in script_reports.items():
-            script_report_url = next((file['public_url'] for file in uploaded_files if file['name'] == 'script_report.html' and script_id in file['relative_path']), '')
-            if script_report_url:
-                script_output = {
-                    'stdout': next((file['stdout'] for file in uploaded_files if file['name'] == 'stdout.txt' and script_id in file['relative_path']), ''),
-                    'stderr': next((file['stderr'] for file in uploaded_files if file['name'] == 'stderr.txt' and script_id in file['relative_path']), ''),
-                    'exitCode': 0 if script_data['status'] == 'success' else 1
-                }
-                update_supabase_script_execution(script_id, script_data['status'], script_output, end_time, script_report_url)
-            else:
-                print(f"[@upload_and_report:main] WARNING: Script report URL not found for script {script_id}", file=sys.stderr)
-                script_output = {
-                    'stdout': next((file['stdout'] for file in uploaded_files if file['name'] == 'stdout.txt' and script_id in file['relative_path']), ''),
-                    'stderr': next((file['stderr'] for file in uploaded_files if file['name'] == 'stderr.txt' and script_id in file['relative_path']), ''),
-                    'exitCode': 0 if script_data['status'] == 'success' else 1
-                }
-                update_supabase_script_execution(script_id, script_data['status'], script_output, end_time, '')
-
+            try:
+                script_folder_path = os.path.join(job_folder_path, next(folder for folder in script_folders if script_id in folder))
+            except StopIteration:
+                print(f"[@upload_and_report:main] WARNING: Could not find script folder for script {script_id}", file=sys.stderr)
+                continue
+                
+            stdout_path = os.path.join(script_folder_path, 'stdout.txt')
+            stderr_path = os.path.join(script_folder_path, 'stderr.txt')
+            
+            # Re-read stdout and stderr
+            stdout_content = ""
+            if os.path.exists(stdout_path):
+                try:
+                    with open(stdout_path, 'r') as f:
+                        stdout_content = f.read()
+                except Exception as e:
+                    print(f"[@upload_and_report:main] Error re-reading stdout.txt for script {script_id}: {str(e)}", file=sys.stderr)
+            
+            stderr_content = ""
+            if os.path.exists(stderr_path):
+                try:
+                    with open(stderr_path, 'r') as f:
+                        stderr_content = f.read()
+                except Exception as e:
+                    print(f"[@upload_and_report:main] Error re-reading stderr.txt for script {script_id}: {str(e)}", file=sys.stderr)
+            
+            # Create updated script report with file links
+            updated_script_report_path = create_script_report_html(
+                script_folder_path, stdout_content, stderr_content, script_id, job_id, 
+                start_time, end_time, script_data['script_path'], parameters, 
+                script_data['status'], uploaded_files
+            )
+            
+            # Upload the updated script report
+            if updated_script_report_path:
+                try:
+                    with open(updated_script_report_path, 'rb') as f:
+                        s3_client.upload_fileobj(
+                            f,
+                            bucket_name,
+                            os.path.relpath(updated_script_report_path, upload_folder),
+                            ExtraArgs={
+                                'ContentType': 'text/html',
+                                'ContentDisposition': 'inline'
+                            }
+                        )
+                    updated_script_report_url = s3_client.generate_presigned_url(
+                        'get_object',
+                        Params={'Bucket': bucket_name, 'Key': os.path.relpath(updated_script_report_path, upload_folder)},
+                        ExpiresIn=604800  # 7 days in seconds
+                    )
+                    print(f"[@upload_and_report:main] Updated Script Report uploaded with file links for script {script_id}", file=sys.stderr)
+                    
+                    # Update Supabase with the updated report URL
+                    script_output = {
+                        'stdout': next((file.get('stdout', '') for file in uploaded_files if file['name'] == 'stdout.txt' and script_id in file['relative_path']), ''),
+                        'stderr': next((file.get('stderr', '') for file in uploaded_files if file['name'] == 'stderr.txt' and script_id in file['relative_path']), ''),
+                        'exitCode': 0 if script_data['status'] == 'success' else 1
+                    }
+                    update_supabase_script_execution(script_id, script_data['status'], script_output, end_time, updated_script_report_url)
+                except Exception as e:
+                    print(f"[@upload_and_report:main] Error uploading updated script report for script {script_id}: {str(e)}", file=sys.stderr)
+        
         # Regenerate job report with updated URLs
-        job_report_path = create_job_report_html(job_folder_path, job_id, start_time, end_time, script_reports, job_status)
+        job_report_path = create_job_report_html(job_folder_path, job_id, start_time, end_time, script_reports, job_status, uploaded_files)
         # Upload the updated job report
         with open(job_report_path, 'rb') as f:
             s3_client.upload_fileobj(
