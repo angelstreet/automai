@@ -11,8 +11,8 @@ async function executeSSHScripts(
   started_at,
   decryptedEnvVars,
   supabase,
-  team_id,
   config_id,
+  team_id,
   creator_id,
   env,
 ) {
@@ -23,6 +23,10 @@ async function executeSSHScripts(
   // Log current jobData state at the start of SSH section
   console.log(
     `[executeSSHScripts] Job data at start of SSH section: team_id=${team_id}, config_id=${config_id}`,
+  );
+
+  console.log(
+    `[executeSSHScripts] Before creating script execution: team_id=${team_id}, creator_id=${creator_id}`,
   );
 
   for (const host of hosts) {

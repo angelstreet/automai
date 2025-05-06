@@ -3,6 +3,8 @@ require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 const { Redis } = require('@upstash/redis');
 
+// Use utility functions from commonUtils
+const { getRunnerEnv, getFlaskServiceUrl } = require('./commonUtils');
 // Import utility modules
 const commonUtils = require('./commonUtils');
 const { fetchAndDecryptEnvVars } = require('./envUtils');
@@ -14,9 +16,6 @@ const redis = new Redis({
 });
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-
-// Use utility functions from commonUtils
-const { getRunnerEnv, getFlaskServiceUrl } = require('./commonUtils');
 
 // Get the runner environment
 const RUNNER_ENV = getRunnerEnv();

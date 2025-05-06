@@ -90,7 +90,7 @@ async function createScriptExecution(
   },
 ) {
   console.log(
-    `[@db:jobUtils:createScriptExecution] Starting to create script execution for job: ${job_run_id}`,
+    `[@db:jobUtils:createScriptExecution] Starting to create script execution for job: ${job_run_id}, with creator_id: ${creator_id}`,
   );
 
   try {
