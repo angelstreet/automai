@@ -31,7 +31,7 @@ async function executeOnFlask(
   creator_id,
 ) {
   // Execute scripts via Flask service
-  const result = await executeFlaskScripts(
+  const results = await executeFlaskScripts(
     config,
     jobId,
     started_at,
@@ -42,9 +42,19 @@ async function executeOnFlask(
     team_id,
     creator_id,
   );
-  const output = result.output;
-  const overallStatus = result.overallStatus;
-  started_at = result.started_at;
+  const output = results.map((result, index) => ({
+    script_path: config.scripts[index].path,
+    parameters: config.scripts[index].parameters,
+    iteration: 1,
+    status: result.status,
+    stdout: result.stdout,
+    stderr: result.stderr,
+    report_url: result.report_url || '',
+  }));
+  const overallStatus = results.every((result) => result.status === 'completed')
+    ? 'completed'
+    : 'in-progress';
+  started_at = results[results.length - 1].started_at;
 
   // Update final status and generate report
   const completed_at = new Date().toISOString();

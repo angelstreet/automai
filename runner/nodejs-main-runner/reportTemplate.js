@@ -111,18 +111,17 @@ const reportTemplate = `
       <tr><th>Duration (s)</th><td><%= duration %></td></tr>
       <tr><th>Status</th><td class="status-<%= status.toLowerCase() %>"><%= status %></td></tr>
       <tr><th>Scripts</th><td>
-        <% scripts.forEach(function(script, index) { %>
-          <strong>Script <%= index + 1 %>: <%= script.script_path %></strong>
-          <% if (script.report_url) { %>
-            <a href="<%= script.report_url %>" target="_blank" class="report-link">View Script Report</a>
-          <% } %>
-          <br>
-          Parameters: <%= script.parameters || 'None' %><br>
-          Iteration: <%= script.iteration || 'N/A' %><br>
-          Status: <span class="status-<%= script.status ? script.status.toLowerCase() : 'success' %>"><%= script.status || 'Success' %></span><br>
-          Stdout: <pre><%= script.stdout %></pre><br>
-          Stderr: <pre><%= script.stderr %></pre><br>
-        <% }); %>
+        <% let scriptsHtml = '';
+           if (scripts && scripts.length > 0) {
+             scripts.forEach((script, index) => {
+               const scriptStatus = script.status === 'success' ? 'Success' : script.status === 'failed' ? 'Failed' : 'Unknown';
+               const statusClass = script.status === 'success' ? 'status-success' : script.status === 'failed' ? 'status-failed' : '';
+               scriptsHtml += "\n        <strong>Script " + (index + 1) + ": " + (script.script_path || script.name) + "</strong>\n        " + (script.report_url ? "<a href=\"" + script.report_url + "\" class=\"report-link\" target=\"_blank\">View Script Report</a>" : '') + "\n        <br>\n        Parameters: " + (script.parameters || 'None') + "<br>\n        Iteration: " + (script.iteration || 'N/A') + "<br>\n        Status: <span class=\"" + statusClass + "\">" + scriptStatus + "</span><br>\n        Stdout: <pre>" + (script.stdout || 'N/A') + "</pre><br>\n        Stderr: <pre>" + (script.stderr || '') + "</pre><br>\n      ";
+             });
+           } else {
+             scriptsHtml = 'No scripts executed.';
+           } %>
+        <%= scriptsHtml %>
       </td></tr>
       <tr><th>Environment Variables</th><td><%= envVars %></td></tr>
     <% } else { %>
