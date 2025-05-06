@@ -7,43 +7,16 @@ import subprocess
 from datetime import datetime
 import argparse
 
-# Attempt to import boto3, install if not available
-try:
-    import boto3
-    from botocore.client import Config
-    BOTOCORE_AVAILABLE = True
-    print(f"[@upload_and_report:main] boto3 module imported successfully.", file=sys.stderr)
-except ImportError:
-    BOTOCORE_AVAILABLE = False
-    print(f"[@upload_and_report:main] boto3 module not found, will attempt installation.", file=sys.stderr)
+# Import required libraries directly as they are installed via requirements.txt
+import boto3
+from botocore.client import Config
+from dotenv import load_dotenv
 
-def install_boto3():
-    """Attempt to install boto3 using pip with user-level permissions."""
-    try:
-        print(f"[@upload_and_report:install_boto3] Attempting to install boto3...", file=sys.stderr)
-        subprocess.run([sys.executable, '-m', 'pip', 'install', '--user', 'boto3'], check=True, capture_output=True, text=True)
-        print(f"[@upload_and_report:install_boto3] boto3 installed successfully.", file=sys.stderr)
-        return True
-    except subprocess.CalledProcessError as e:
-        print(f"[@upload_and_report:install_boto3] ERROR: Failed to install boto3: {e.stderr}", file=sys.stderr)
-        return False
-    except Exception as e:
-        print(f"[@upload_and_report:install_boto3] ERROR: Unexpected error while installing boto3: {str(e)}", file=sys.stderr)
-        return False
+print(f"[@upload_and_report:main] boto3 and dotenv modules imported successfully.", file=sys.stderr)
 
-def create_script_report_html(script_folder, stdout_content, stderr_content, script_id, job_id, start_time, end_time, script_path, parameters, status="success"):
-    """Create an HTML report for a script execution."""
-    duration = "N/A"
-    if start_time and end_time:
-        try:
-            start_dt = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
-            end_dt = datetime.fromisoformat(end_time.replace('Z', '+00:00'))
-            duration = f"{(end_dt - start_dt).total_seconds():.2f}"
-        except Exception as e:
-            print(f"[@upload_and_report:create_script_report_html] Error calculating duration: {str(e)}", file=sys.stderr)
-    
-    script_name = os.path.basename(script_path) if script_path else "Unknown"
-    html = f"""<!DOCTYPE html>
+def build_script_report_html_content(script_name, script_id, job_id, script_path, parameters, start_time, end_time, duration, status, stdout_content, stderr_content):
+    """Build HTML content for script execution report."""
+    return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -77,18 +50,9 @@ def create_script_report_html(script_folder, stdout_content, stderr_content, scr
   </table>
 </body>
 </html>"""
-    report_path = os.path.join(script_folder, 'script_report.html')
-    try:
-        with open(report_path, 'w') as f:
-            f.write(html)
-        print(f"[@upload_and_report:create_script_report_html] Created script report at {report_path}", file=sys.stderr)
-        return report_path
-    except Exception as e:
-        print(f"[@upload_and_report:create_script_report_html] Error creating script report: {str(e)}", file=sys.stderr)
-        return None
 
-def create_job_report_html(job_folder, job_id, start_time, end_time, script_reports, status="success"):
-    """Create an HTML report for the entire job run."""
+def create_script_report_html(script_folder, stdout_content, stderr_content, script_id, job_id, start_time, end_time, script_path, parameters, status="success"):
+    """Create an HTML report for a script execution."""
     duration = "N/A"
     if start_time and end_time:
         try:
@@ -96,15 +60,23 @@ def create_job_report_html(job_folder, job_id, start_time, end_time, script_repo
             end_dt = datetime.fromisoformat(end_time.replace('Z', '+00:00'))
             duration = f"{(end_dt - start_dt).total_seconds():.2f}"
         except Exception as e:
-            print(f"[@upload_and_report:create_job_report_html] Error calculating duration: {str(e)}", file=sys.stderr)
+            print(f"[@upload_and_report:create_script_report_html] Error calculating duration: {str(e)}", file=sys.stderr)
     
-    script_summary = ""
-    for script_id, script_data in script_reports.items():
-        script_status = script_data.get('status', 'unknown')
-        script_name = os.path.basename(script_data.get('script_path', 'Unknown'))
-        script_summary += f"<tr><td>{script_id}</td><td>{script_name}</td><td class=\"status-{script_status.lower()}\">{script_status}</td></tr>"
-    
-    html = f"""<!DOCTYPE html>
+    script_name = os.path.basename(script_path) if script_path else "Unknown"
+    html_content = build_script_report_html_content(script_name, script_id, job_id, script_path, parameters, start_time, end_time, duration, status, stdout_content, stderr_content)
+    report_path = os.path.join(script_folder, 'script_report.html')
+    try:
+        with open(report_path, 'w') as f:
+            f.write(html_content)
+        print(f"[@upload_and_report:create_script_report_html] Created script report at {report_path}", file=sys.stderr)
+        return report_path
+    except Exception as e:
+        print(f"[@upload_and_report:create_script_report_html] Error creating script report: {str(e)}", file=sys.stderr)
+        return None
+
+def build_job_report_html_content(job_id, start_time, end_time, duration, status, script_summary):
+    """Build HTML content for job run report."""
+    return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -136,53 +108,105 @@ def create_job_report_html(job_folder, job_id, start_time, end_time, script_repo
   </table>
 </body>
 </html>"""
+
+def create_job_report_html(job_folder, job_id, start_time, end_time, script_reports, status="success"):
+    """Create an HTML report for the entire job run."""
+    duration = "N/A"
+    if start_time and end_time:
+        try:
+            start_dt = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
+            end_dt = datetime.fromisoformat(end_time.replace('Z', '+00:00'))
+            duration = f"{(end_dt - start_dt).total_seconds():.2f}"
+        except Exception as e:
+            print(f"[@upload_and_report:create_job_report_html] Error calculating duration: {str(e)}", file=sys.stderr)
+    
+    script_summary = ""
+    for script_id, script_data in script_reports.items():
+        script_status = script_data.get('status', 'unknown')
+        script_name = os.path.basename(script_data.get('script_path', 'Unknown'))
+        script_summary += f"<tr><td>{script_id}</td><td>{script_name}</td><td class=\"status-{script_status.lower()}\">{script_status}</td></tr>"
+    
+    html_content = build_job_report_html_content(job_id, start_time, end_time, duration, status, script_summary)
     report_path = os.path.join(job_folder, 'report.html')
     try:
         with open(report_path, 'w') as f:
-            f.write(html)
+            f.write(html_content)
         print(f"[@upload_and_report:create_job_report_html] Created job report at {report_path}", file=sys.stderr)
         return report_path
     except Exception as e:
         print(f"[@upload_and_report:create_job_report_html] Error creating job report: {str(e)}", file=sys.stderr)
         return None
 
-def main():
-    # Initialize S3 client for Cloudflare R2 if boto3 is available
-    s3_client = None
-    global BOTOCORE_AVAILABLE
-    if not BOTOCORE_AVAILABLE:
-        if install_boto3():
-            try:
-                import boto3
-                from botocore.client import Config
-                BOTOCORE_AVAILABLE = True
-                print(f"[@upload_and_report:main] boto3 module imported successfully after installation.", file=sys.stderr)
-            except ImportError:
-                BOTOCORE_AVAILABLE = False
-                print(f"[@upload_and_report:main] boto3 module still not available after installation attempt.", file=sys.stderr)
+def get_content_type(file_extension):
+    """Determine the content type based on file extension."""
+    content_types = {
+        '.html': 'text/html',
+        '.json': 'application/json',
+        '.txt': 'text/plain',
+        '.log': 'text/plain',
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.gif': 'image/gif',
+        '.bmp': 'image/bmp',
+        '.webp': 'image/webp',
+        '.pdf': 'application/pdf',
+        '.doc': 'application/msword',
+        '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        '.xls': 'application/vnd.ms-excel',
+        '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        '.ppt': 'application/vnd.ms-powerpoint',
+        '.pptx': 'application/vnd.openxmlformats-officedocumen t.powerpointml.presentation',
+        '.webm': 'video/webm',
+        '.mp4': 'video/mp4',
+        '.avi': 'video/x-msvideo',
+        '.mov': 'video/quicktime',
+        '.py': 'text/plain',
+        '.js': 'application/javascript',
+        '.css': 'text/css',
+        '.xml': 'application/xml',
+        '.zip': 'application/zip',
+        '.rar': 'application/x-rar-compressed',
+        '.7z': 'application/x-7z-compressed'
+    }
+    return content_types.get(file_extension.lower(), 'application/octet-stream')
 
-    if BOTOCORE_AVAILABLE:
-        try:
-            r2_endpoint = os.environ.get('CLOUDFLARE_R2_ENDPOINT', '')
-            r2_access_key = os.environ.get('CLOUDFLARE_R2_ACCESS_KEY_ID', '')
-            r2_secret_key = os.environ.get('CLOUDFLARE_R2_SECRET_ACCESS_KEY', '')
-            if r2_endpoint and r2_access_key and r2_secret_key:
-                s3_client = boto3.client(
-                    's3',
-                    endpoint_url=r2_endpoint,
-                    aws_access_key_id=r2_access_key,
-                    aws_secret_access_key=r2_secret_key,
-                    config=Config(signature_version='s3v4'),
-                )
-                print(f"[@upload_and_report:main] Successfully initialized S3 client for Cloudflare R2.", file=sys.stderr)
-            else:
-                print(f"[@upload_and_report:main] ERROR: Cloudflare R2 credentials not found in environment variables.", file=sys.stderr)
-                sys.exit(1)
-        except Exception as e:
-            print(f"[@upload_and_report:main] ERROR: Failed to initialize S3 client for Cloudflare R2: {str(e)}", file=sys.stderr)
+def cleanup_folder(folder_path):
+    """Clean up the specified folder by removing it and its contents."""
+    try:
+        import shutil
+        shutil.rmtree(folder_path)
+        print(f"[@upload_and_report:cleanup_folder] Cleaned up folder at {folder_path}", file=sys.stderr)
+        return True
+    except Exception as e:
+        print(f"[@upload_and_report:cleanup_folder] ERROR: Failed to clean up folder at {folder_path}: {str(e)}", file=sys.stderr)
+        return False
+
+def main():
+    # Load environment variables from .env file
+    load_dotenv()
+    print(f"[@upload_and_report:main] Loaded environment variables from .env file.", file=sys.stderr)
+
+    # Initialize S3 client for Cloudflare R2
+    s3_client = None
+    try:
+        r2_endpoint = os.environ.get('CLOUDFLARE_R2_ENDPOINT', '')
+        r2_access_key = os.environ.get('CLOUDFLARE_R2_ACCESS_KEY_ID', '')
+        r2_secret_key = os.environ.get('CLOUDFLARE_R2_SECRET_ACCESS_KEY', '')
+        if r2_endpoint and r2_access_key and r2_secret_key:
+            s3_client = boto3.client(
+                's3',
+                endpoint_url=r2_endpoint,
+                aws_access_key_id=r2_access_key,
+                aws_secret_access_key=r2_secret_key,
+                config=Config(signature_version='s3v4'),
+            )
+            print(f"[@upload_and_report:main] Successfully initialized S3 client for Cloudflare R2.", file=sys.stderr)
+        else:
+            print(f"[@upload_and_report:main] ERROR: Cloudflare R2 credentials not found in environment variables.", file=sys.stderr)
             sys.exit(1)
-    else:
-        print(f"[@upload_and_report:main] ERROR: boto3 not available, cannot proceed with upload.", file=sys.stderr)
+    except Exception as e:
+        print(f"[@upload_and_report:main] ERROR: Failed to initialize S3 client for Cloudflare R2: {str(e)}", file=sys.stderr)
         sys.exit(1)
 
     # Look for uploadFolder in the current directory
@@ -293,18 +317,9 @@ def main():
                 uploaded_files.append(file_info)
                 continue
 
-            # Determine content type based on file extension (simplified)
+            # Determine content type based on file extension
             _, ext = os.path.splitext(file_name)
-            content_type = {
-                '.html': 'text/html',
-                '.json': 'application/json',
-                '.txt': 'text/plain',
-                '.log': 'text/plain',
-                '.png': 'image/png',
-                '.jpg': 'image/jpeg',
-                '.webm': 'video/webm',
-                '.py': 'text/plain'
-            }.get(ext.lower(), 'application/octet-stream')
+            content_type = get_content_type(ext)
 
             content_disposition = 'inline' if content_type.startswith('text') or content_type.startswith('image') else 'attachment'
 
@@ -348,12 +363,7 @@ def main():
         }
 
     # Clean up uploadFolder after upload
-    try:
-        import shutil
-        shutil.rmtree(upload_folder)
-        print(f"[@upload_and_report:main] Cleaned up uploadFolder at {upload_folder}", file=sys.stderr)
-    except Exception as e:
-        print(f"[@upload_and_report:main] ERROR: Failed to clean up uploadFolder: {str(e)}", file=sys.stderr)
+    cleanup_folder(upload_folder)
 
     # Output the result as JSON
     print(json.dumps(output, indent=2))
