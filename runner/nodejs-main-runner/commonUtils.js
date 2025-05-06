@@ -13,15 +13,9 @@ function getRunnerEnv() {
 
 // Dynamically set Flask service URL based on environment
 function getFlaskServiceUrl(env) {
-  let url =
-    env === 'prod'
-      ? process.env.PYTHON_SLAVE_RUNNER_PROD_FLASK_SERVICE_URL
-      : process.env.PYTHON_SLAVE_RUNNER_PREPROD_FLASK_SERVICE_URL;
-  // Append port 10000 if not already included in the URL
-  if (!url.includes(':')) {
-    url += ':10000';
-  }
-  return url;
+  return env === 'prod'
+    ? process.env.PYTHON_SLAVE_RUNNER_PROD_FLASK_SERVICE_URL
+    : process.env.PYTHON_SLAVE_RUNNER_PREPROD_FLASK_SERVICE_URL;
 }
 
 async function executeOnFlask(
