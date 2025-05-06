@@ -12,7 +12,7 @@ import {
   Copy,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import React from 'react';
+import React, { useState } from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import {
@@ -63,6 +63,19 @@ export function DeploymentTableClient({
   handleToggleActiveClick,
 }: DeploymentTableProps) {
   const c = useTranslations('common');
+
+  // State to manage dropdown visibility for each deployment
+  const [openViewDropdowns, setOpenViewDropdowns] = useState<Record<string, boolean>>({});
+  const [openActionsDropdowns, setOpenActionsDropdowns] = useState<Record<string, boolean>>({});
+
+  // Functions to toggle dropdown visibility
+  const toggleViewDropdown = (deploymentId: string, open: boolean) => {
+    setOpenViewDropdowns((prev) => ({ ...prev, [deploymentId]: open }));
+  };
+
+  const toggleActionsDropdown = (deploymentId: string, open: boolean) => {
+    setOpenActionsDropdowns((prev) => ({ ...prev, [deploymentId]: open }));
+  };
 
   const renderSkeletonRows = () => {
     return Array(5)
@@ -238,7 +251,10 @@ export function DeploymentTableClient({
                 </td>
                 <td className="px-2 py-0.5 whitespace-nowrap text-xs">
                   <div className="flex justify-center">
-                    <DropdownMenu>
+                    <DropdownMenu
+                      open={openViewDropdowns[deployment.id] || false}
+                      onOpenChange={(open) => toggleViewDropdown(deployment.id, open)}
+                    >
                       <DropdownMenuTrigger asChild>
                         <Button
                           variant="ghost"
@@ -254,6 +270,7 @@ export function DeploymentTableClient({
                           onClick={(e) => {
                             e.stopPropagation();
                             handleViewDeployment(deployment);
+                            toggleViewDropdown(deployment.id, false);
                           }}
                           disabled={actionInProgress === deployment.id}
                           className="text-xs py-1.5 h-7"
@@ -265,6 +282,7 @@ export function DeploymentTableClient({
                           onClick={(e) => {
                             e.stopPropagation();
                             handleConfigClick(deployment, e);
+                            toggleViewDropdown(deployment.id, false);
                           }}
                           disabled={actionInProgress === deployment.id}
                           className="text-xs py-1.5 h-7"
@@ -276,6 +294,7 @@ export function DeploymentTableClient({
                           onClick={(e) => {
                             e.stopPropagation();
                             handleOutputClick(deployment, e);
+                            toggleViewDropdown(deployment.id, false);
                           }}
                           disabled={actionInProgress === deployment.id}
                           className="text-xs py-1.5 h-7"
@@ -294,6 +313,7 @@ export function DeploymentTableClient({
                                 deployment.id,
                               );
                             }
+                            toggleViewDropdown(deployment.id, false);
                           }}
                           disabled={actionInProgress === deployment.id || !deployment.report_url}
                           className="text-xs py-1.5 h-7"
@@ -307,7 +327,10 @@ export function DeploymentTableClient({
                 </td>
                 <td className="px-2 py-0.5 whitespace-nowrap text-xs">
                   <div className="flex justify-center">
-                    <DropdownMenu>
+                    <DropdownMenu
+                      open={openActionsDropdowns[deployment.id] || false}
+                      onOpenChange={(open) => toggleActionsDropdown(deployment.id, open)}
+                    >
                       <DropdownMenuTrigger asChild>
                         <Button
                           variant="ghost"
@@ -325,6 +348,7 @@ export function DeploymentTableClient({
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleEditClick(deployment, e);
+                                toggleActionsDropdown(deployment.id, false);
                               }}
                               disabled={actionInProgress === deployment.id}
                               className="text-xs py-1.5 h-7"
@@ -336,6 +360,7 @@ export function DeploymentTableClient({
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDuplicateClick(deployment, e);
+                                toggleActionsDropdown(deployment.id, false);
                               }}
                               disabled={actionInProgress === deployment.id}
                               className="text-xs py-1.5 h-7"
@@ -348,6 +373,7 @@ export function DeploymentTableClient({
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDeleteClick(deployment, e);
+                                toggleActionsDropdown(deployment.id, false);
                               }}
                               disabled={actionInProgress === deployment.id}
                             >
@@ -358,6 +384,7 @@ export function DeploymentTableClient({
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleToggleActiveClick(deployment, e);
+                                toggleActionsDropdown(deployment.id, false);
                               }}
                               disabled={actionInProgress === deployment.id}
                               className="text-xs py-1.5 h-7"
@@ -371,6 +398,7 @@ export function DeploymentTableClient({
                             onClick={(e) => {
                               e.stopPropagation();
                               handleToggleActiveClick(deployment, e);
+                              toggleActionsDropdown(deployment.id, false);
                             }}
                             disabled={actionInProgress === deployment.id}
                             className="text-xs py-1.5 h-7"
