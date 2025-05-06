@@ -137,6 +137,51 @@ def create_job_report_html(job_folder, job_id, start_time, end_time, script_repo
         print(f"[@upload_and_report:create_job_report_html] Error creating job report: {str(e)}", file=sys.stderr)
         return None
 
+def get_content_type(file_extension):
+    """Determine the content type based on file extension."""
+    content_types = {
+        '.html': 'text/html',
+        '.json': 'application/json',
+        '.txt': 'text/plain',
+        '.log': 'text/plain',
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.gif': 'image/gif',
+        '.bmp': 'image/bmp',
+        '.webp': 'image/webp',
+        '.pdf': 'application/pdf',
+        '.doc': 'application/msword',
+        '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        '.xls': 'application/vnd.ms-excel',
+        '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        '.ppt': 'application/vnd.ms-powerpoint',
+        '.pptx': 'application/vnd.openxmlformats-officedocumen t.powerpointml.presentation',
+        '.webm': 'video/webm',
+        '.mp4': 'video/mp4',
+        '.avi': 'video/x-msvideo',
+        '.mov': 'video/quicktime',
+        '.py': 'text/plain',
+        '.js': 'application/javascript',
+        '.css': 'text/css',
+        '.xml': 'application/xml',
+        '.zip': 'application/zip',
+        '.rar': 'application/x-rar-compressed',
+        '.7z': 'application/x-7z-compressed'
+    }
+    return content_types.get(file_extension.lower(), 'application/octet-stream')
+
+def cleanup_folder(folder_path):
+    """Clean up the specified folder by removing it and its contents."""
+    try:
+        import shutil
+        shutil.rmtree(folder_path)
+        print(f"[@upload_and_report:cleanup_folder] Cleaned up folder at {folder_path}", file=sys.stderr)
+        return True
+    except Exception as e:
+        print(f"[@upload_and_report:cleanup_folder] ERROR: Failed to clean up folder at {folder_path}: {str(e)}", file=sys.stderr)
+        return False
+
 def main():
     # Load environment variables from .env file
     load_dotenv()
@@ -272,18 +317,9 @@ def main():
                 uploaded_files.append(file_info)
                 continue
 
-            # Determine content type based on file extension (simplified)
+            # Determine content type based on file extension
             _, ext = os.path.splitext(file_name)
-            content_type = {
-                '.html': 'text/html',
-                '.json': 'application/json',
-                '.txt': 'text/plain',
-                '.log': 'text/plain',
-                '.png': 'image/png',
-                '.jpg': 'image/jpeg',
-                '.webm': 'video/webm',
-                '.py': 'text/plain'
-            }.get(ext.lower(), 'application/octet-stream')
+            content_type = get_content_type(ext)
 
             content_disposition = 'inline' if content_type.startswith('text') or content_type.startswith('image') else 'attachment'
 
@@ -327,12 +363,7 @@ def main():
         }
 
     # Clean up uploadFolder after upload
-    try:
-        import shutil
-        shutil.rmtree(upload_folder)
-        print(f"[@upload_and_report:main] Cleaned up uploadFolder at {upload_folder}", file=sys.stderr)
-    except Exception as e:
-        print(f"[@upload_and_report:main] ERROR: Failed to clean up uploadFolder: {str(e)}", file=sys.stderr)
+    cleanup_folder(upload_folder)
 
     # Output the result as JSON
     print(json.dumps(output, indent=2))
