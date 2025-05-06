@@ -165,7 +165,7 @@ def initialize_job():
         f.write(f"CLOUDFLARE_R2_ACCESS_KEY_ID={cloudflare_r2_access_key_id}\n")
         f.write(f"CLOUDFLARE_R2_SECRET_ACCESS_KEY={cloudflare_r2_secret_access_key}\n")
         f.write(f"# Environment variables for Supabase\n")
-        f.write(f"SUPABASE_API_URL={supabase_api_url}\n")
+        f.write(f"SUPABASE_URL={supabase_api_url}\n")
         f.write(f"SUPABASE_SERVICE_ROLE_KEY={supabase_service_role_key}\n")
     print(f"[initialize_job] Saved Cloudflare R2 and Supabase credentials for job {job_id} to {credentials_file}", file=sys.stderr)
 
