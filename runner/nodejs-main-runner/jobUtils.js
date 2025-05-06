@@ -31,7 +31,7 @@ async function fetchJobConfig(supabase, config_id) {
   };
 }
 
-async function createJobRun(supabase, config_id) {
+async function createJobRun(supabase, config_id, env) {
   const created_at = new Date().toISOString();
   const { data: jobRunData, error: jobError } = await supabase
     .from('jobs_run')
@@ -40,6 +40,7 @@ async function createJobRun(supabase, config_id) {
       status: 'pending',
       output: { scripts: [] },
       created_at: created_at,
+      env: env,
     })
     .select('id')
     .single();
@@ -84,6 +85,7 @@ async function createScriptExecution(
     host_id = null,
     host_name = null,
     host_ip = null,
+    env = 'preprod',
   },
 ) {
   console.log(
@@ -102,6 +104,7 @@ async function createScriptExecution(
       p_host_id: host_id,
       p_host_name: host_name,
       p_host_ip: host_ip,
+      p_env: env,
     });
 
     if (error) {

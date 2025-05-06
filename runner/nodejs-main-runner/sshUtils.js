@@ -14,6 +14,7 @@ async function executeSSHScripts(
   team_id,
   config_id,
   creator_id,
+  env,
 ) {
   const hosts = config.hosts;
   let output = { scripts: [], stdout: '', stderr: '' };
@@ -62,6 +63,7 @@ async function executeSSHScripts(
         host_id: host.id,
         host_name: host.name,
         host_ip: host.ip,
+        env: env,
       });
 
       // Format command for this script

@@ -20,6 +20,7 @@ async function executeFlaskScripts(
   config_id,
   team_id,
   creator_id,
+  env,
 ) {
   console.log(`[executeFlaskScripts] No hosts found, forwarding to Flask service`);
 
@@ -75,6 +76,7 @@ async function executeFlaskScripts(
         script_name: scriptName,
         script_path: scriptPath,
         script_parameters: { parameters, iteration: i },
+        env: env,
       });
 
       // Update the script execution to 'in_progress'

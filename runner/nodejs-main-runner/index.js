@@ -61,7 +61,7 @@ async function processJob() {
     const decryptedEnvVars = await fetchAndDecryptEnvVars(supabase, team_id);
 
     // Create job run entry
-    const { jobId, created_at } = await createJobRun(supabase, config_id);
+    const { jobId, created_at } = await createJobRun(supabase, config_id, RUNNER_ENV);
     let started_at = created_at;
 
     const hasHosts = config.hosts && config.hosts.length > 0;
@@ -77,6 +77,7 @@ async function processJob() {
         config_id,
         team_id,
         creator_id,
+        RUNNER_ENV,
       );
     } else {
       await commonUtils.executeOnSSH(
@@ -88,6 +89,7 @@ async function processJob() {
         config_id,
         team_id,
         creator_id,
+        RUNNER_ENV,
       );
     }
   } catch (error) {

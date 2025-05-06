@@ -28,6 +28,7 @@ async function executeOnFlask(
   config_id,
   team_id,
   creator_id,
+  env,
 ) {
   // Execute scripts via Flask service
   const result = await executeFlaskScripts(
@@ -40,6 +41,7 @@ async function executeOnFlask(
     config_id,
     team_id,
     creator_id,
+    env,
   );
   const output = result.output;
   const overallStatus = result.overallStatus;
@@ -61,6 +63,7 @@ async function executeOnSSH(
   config_id,
   team_id,
   creator_id,
+  env,
 ) {
   // Execute scripts via SSH on hosts
   const result = await executeSSHScripts(
@@ -73,6 +76,7 @@ async function executeOnSSH(
     config_id,
     team_id,
     creator_id,
+    env,
   );
   const output = result.output;
   const overallStatus = result.overallStatus;
