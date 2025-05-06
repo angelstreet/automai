@@ -33,22 +33,13 @@ async function executeFlaskScripts(
   try {
     // Prepare credentials object with both Cloudflare R2 and Supabase credentials
     const credentials = {
-      cloudflare_r2_endpoint:
-        decryptedEnvVars['CLOUDFLARE_R2_ENDPOINT'] || process.env.CLOUDFLARE_R2_ENDPOINT || '',
-      cloudflare_r2_access_key_id:
-        decryptedEnvVars['CLOUDFLARE_R2_ACCESS_KEY_ID'] ||
-        process.env.CLOUDFLARE_R2_ACCESS_KEY_ID ||
-        '',
-      cloudflare_r2_secret_access_key:
-        decryptedEnvVars['CLOUDFLARE_R2_SECRET_ACCESS_KEY'] ||
-        process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY ||
-        '',
-      supabase_api_url: decryptedEnvVars['SUPABASE_API_URL'] || process.env.SUPABASE_API_URL || '',
-      supabase_service_role_key:
-        decryptedEnvVars['SUPABASE_SERVICE_ROLE_KEY'] ||
-        process.env.SUPABASE_SERVICE_ROLE_KEY ||
-        '',
+      cloudflare_r2_endpoint: process.env.CLOUDFLARE_R2_ENDPOINT || '',
+      cloudflare_r2_access_key_id: process.env.CLOUDFLARE_R2_ACCESS_KEY_ID || '',
+      cloudflare_r2_secret_access_key: process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY || '',
+      supabase_api_url: process.env.SUPABASE_URL || '',
+      supabase_service_role_key: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
     };
+    console.log(`[executeFlaskScripts] Credentials: ${JSON.stringify(credentials)}`);
     console.log(`[executeFlaskScripts] Prepared unified credentials for job ${jobId}`);
 
     const payload = prepareJobInitializationPayload(
