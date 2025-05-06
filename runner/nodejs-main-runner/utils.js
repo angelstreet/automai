@@ -14,11 +14,12 @@ function decrypt(encryptedData, keyBase64) {
   return decrypted;
 }
 
-function prepareJobInitializationPayload(jobId, started_at, uploadScriptContent) {
+function prepareJobInitializationPayload(jobId, started_at, uploadScriptContent, config = {}) {
   return {
     job_id: jobId,
     created_at: started_at,
     upload_script_content: uploadScriptContent,
+    config_name: config.config_name || '',
     credentials: {
       CLOUDFLARE_R2_ENDPOINT: process.env.CLOUDFLARE_R2_ENDPOINT || '',
       CLOUDFLARE_R2_ACCESS_KEY_ID: process.env.CLOUDFLARE_R2_ACCESS_KEY_ID || '',

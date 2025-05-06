@@ -32,7 +32,7 @@ async function executeFlaskScripts(
   const uploadScriptContent = fs.readFileSync(uploadScriptPath, 'utf8');
 
   try {
-    const payload = prepareJobInitializationPayload(jobId, started_at, uploadScriptContent);
+    const payload = prepareJobInitializationPayload(jobId, started_at, uploadScriptContent, config);
     const initResponse = await fetch(`${FLASK_SERVICE_URL}/initialize_job`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
