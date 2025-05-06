@@ -22,6 +22,10 @@ const getFlaskServiceUrl = (env) => {
     : process.env.PYTHON_SLAVE_RUNNER_PREPROD_FLASK_SERVICE_URL;
 };
 
+// Get the runner environment from a custom environment variable
+const RUNNER_ENV = process.env.RUNNER_ENV || 'preprod';
+console.log(`[@local-runner] Runner environment set to: ${RUNNER_ENV}`);
+
 async function processJob() {
   try {
     // Check if -payload argument is provided
@@ -124,6 +128,18 @@ async function processJob() {
         );
         return;
       }
+
+      // Check if the job's env matches the runner's environment
+      const jobEnv = fetchedConfig.env || 'preprod';
+      if (jobEnv !== RUNNER_ENV) {
+        console.log(
+          `[@local-runner:processJob] Skipping job for config ${config_id} as job env (${jobEnv}) does not match runner env (${RUNNER_ENV})`,
+        );
+        // Remove job from queue to prevent reprocessing
+        await redis.lrem('jobs_queue', 1, JSON.stringify(jobData));
+        return;
+      }
+
       config = fetchedConfig;
       team_id = fetchedTeamId;
       creator_id = fetchedCreatorId;
