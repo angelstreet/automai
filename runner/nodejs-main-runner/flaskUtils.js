@@ -160,6 +160,7 @@ async function executeFlaskScripts(
                 2,
               ),
           );
+          console.log(`[executeFlaskScripts] Full Flask Service URL: ${FLASK_SERVICE_URL}/execute`);
           const response = await axios.post(`${FLASK_SERVICE_URL}/execute`, payload, {
             timeout: (payload.timeout + 5) * 1000,
           });
@@ -231,6 +232,12 @@ async function executeFlaskScripts(
           console.log(
             `[executeFlaskScripts] Script error, attempt ${attempt}/${retries}: ${scriptOutput.stderr}`,
           );
+          console.log(`[executeFlaskScripts] Error details:`, {
+            status: err.response?.status,
+            headers: err.response?.headers,
+            data: err.response?.data,
+            message: err.message,
+          });
 
           // Update script execution with error information if this is the last attempt
           if (attempt === retries) {
