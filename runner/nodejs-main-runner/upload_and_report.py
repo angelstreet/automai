@@ -18,6 +18,9 @@ print(f"[@upload_and_report:main] boto3, dotenv, and supabase modules imported s
 
 def build_script_report_html_content(script_name, script_id, job_id, script_path, parameters, start_time, end_time, duration, status, stdout_content, stderr_content):
     """Build HTML content for script execution report."""
+    # Format start_time and end_time to YYYY-MM-DD_HH:MM:SS
+    formatted_start_time = datetime.fromisoformat(start_time.replace('Z', '+00:00')).strftime('%Y-%m-%d_%H:%M:%S') if start_time else "N/A"
+    formatted_end_time = datetime.fromisoformat(end_time.replace('Z', '+00:00')).strftime('%Y-%m-%d_%H:%M:%S') if end_time else "N/A"
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -43,8 +46,8 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
     <tr><th>Script Name</th><td>{script_name}</td></tr>
     <tr><th>Script Path</th><td>{script_path}</td></tr>
     <tr><th>Parameters</th><td>{parameters or "None"}</td></tr>
-    <tr><th>Start Time</th><td>{start_time}</td></tr>
-    <tr><th>End Time</th><td>{end_time}</td></tr>
+    <tr><th>Start Time</th><td>{formatted_start_time}</td></tr>
+    <tr><th>End Time</th><td>{formatted_end_time}</td></tr>
     <tr><th>Duration (s)</th><td>{duration}</td></tr>
     <tr><th>Status</th><td class="status-{status.lower()}">{status}</td></tr>
     <tr><th>Stdout</th><td><pre>{stdout_content or "No output"}</pre></td></tr>
@@ -64,8 +67,12 @@ def create_script_report_html(script_folder, stdout_content, stderr_content, scr
         except Exception as e:
             print(f"[@upload_and_report:create_script_report_html] Error calculating duration: {str(e)}", file=sys.stderr)
     
-    script_name = os.path.basename(script_path) if script_path else "Unknown"
-    html_content = build_script_report_html_content(script_name, script_id, job_id, script_path, parameters, start_time, end_time, duration, status, stdout_content, stderr_content)
+    # Extract script name from path or folder if available
+    script_name = os.path.basename(script_path) if script_path and script_path != "Unknown" else ""
+    if not script_name:
+        script_name = next((f for f in os.listdir(script_folder) if f.endswith('.py')), f"Script_{script_id}")
+    script_path_display = script_path if script_path and script_path != "Unknown" else "Unknown"
+    html_content = build_script_report_html_content(script_name, script_id, job_id, script_path_display, parameters, start_time, end_time, duration, status, stdout_content, stderr_content)
     report_path = os.path.join(script_folder, 'script_report.html')
     try:
         with open(report_path, 'w') as f:
@@ -76,8 +83,11 @@ def create_script_report_html(script_folder, stdout_content, stderr_content, scr
         print(f"[@upload_and_report:create_script_report_html] Error creating script report: {str(e)}", file=sys.stderr)
         return None
 
-def build_job_report_html_content(job_id, start_time, end_time, duration, status, script_summary):
+def build_job_report_html_content(job_id, start_time, end_time, duration, status, script_summary, total_scripts):
     """Build HTML content for job run report."""
+    # Format start_time and end_time to YYYY-MM-DD_HH:MM:SS
+    formatted_start_time = datetime.fromisoformat(start_time.replace('Z', '+00:00')).strftime('%Y-%m-%d_%H:%M:%S') if start_time else "N/A"
+    formatted_end_time = datetime.fromisoformat(end_time.replace('Z', '+00:00')).strftime('%Y-%m-%d_%H:%M:%S') if end_time else "N/A"
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -92,20 +102,23 @@ def build_job_report_html_content(job_id, start_time, end_time, duration, status
     th {{ background-color: #f2f2f2; }}
     .status-success {{ color: #22c55e; font-weight: bold; }}
     .status-failed {{ color: #ef4444; font-weight: bold; }}
+    a {{ color: #007BFF; text-decoration: none; }}
+    a:hover {{ text-decoration: underline; }}
   </style>
 </head>
 <body>
   <h1>Job Run Report</h1>
   <table>
     <tr><th>Job ID</th><td>{job_id}</td></tr>
-    <tr><th>Start Time</th><td>{start_time}</td></tr>
-    <tr><th>End Time</th><td>{end_time}</td></tr>
+    <tr><th>Start Time</th><td>{formatted_start_time}</td></tr>
+    <tr><th>End Time</th><td>{formatted_end_time}</td></tr>
     <tr><th>Duration (s)</th><td>{duration}</td></tr>
     <tr><th>Status</th><td class="status-{status.lower()}">{status}</td></tr>
+    <tr><th>Total Scripts Executed</th><td>{total_scripts}</td></tr>
   </table>
   <h2>Script Executions</h2>
   <table>
-    <tr><th>Script ID</th><th>Script Name</th><th>Status</th></tr>
+    <tr><th>#</th><th>Script ID</th><th>Script Name</th><th>Date_Time</th><th>Status</th><th>Report Link</th></tr>
     {script_summary}
   </table>
 </body>
@@ -123,12 +136,18 @@ def create_job_report_html(job_folder, job_id, start_time, end_time, script_repo
             print(f"[@upload_and_report:create_job_report_html] Error calculating duration: {str(e)}", file=sys.stderr)
     
     script_summary = ""
+    order = 1
     for script_id, script_data in script_reports.items():
         script_status = script_data.get('status', 'unknown')
-        script_name = os.path.basename(script_data.get('script_path', 'Unknown'))
-        script_summary += f"<tr><td>{script_id}</td><td>{script_name}</td><td class=\"status-{script_status.lower()}\">{script_status}</td></tr>"
+        script_name = os.path.basename(script_data.get('script_path', 'Unknown')) if script_data.get('script_path') != 'Unknown' else f"Script_{script_id}"
+        report_url = next((file['public_url'] for file in uploaded_files if file['name'] == 'script_report.html' and script_id in file['relative_path']), '') if 'uploaded_files' in globals() else ''
+        report_link = f"<a href='{report_url}' target='_blank'>View Report</a>" if report_url else "Not Available"
+        date_time = datetime.fromisoformat(start_time.replace('Z', '+00:00')).strftime('%Y-%m-%d_%H:%M:%S') if start_time else "N/A"  # Format date_time
+        script_summary += f"<tr><td>{order}</td><td>{script_id}</td><td>{script_name}</td><td>{date_time}</td><td class=\"status-{script_status.lower()}\">{script_status}</td><td>{report_link}</td></tr>"
+        order += 1
     
-    html_content = build_job_report_html_content(job_id, start_time, end_time, duration, status, script_summary)
+    total_scripts = len(script_reports)
+    html_content = build_job_report_html_content(job_id, start_time, end_time, duration, status, script_summary, total_scripts)
     report_path = os.path.join(job_folder, 'report.html')
     try:
         with open(report_path, 'w') as f:
@@ -309,6 +328,12 @@ def main():
     # Extract datetime from job folder name
     job_datetime = job_folder_name.split('_')[0] + '_' + job_folder_name.split('_')[1] if '_' in job_folder_name else "unknown"
     start_time = job_datetime.replace('_', ':') + ":00.000Z" if job_datetime != "unknown" else "unknown"
+    # Format start_time to YYYY-MM-DD_HH:MM:SS
+    try:
+        start_time_formatted = datetime.fromisoformat(start_time.replace('Z', '+00:00')).strftime('%Y-%m-%d_%H:%M:%S') if start_time != "unknown" else "N/A"
+    except Exception as e:
+        print(f"[@upload_and_report:main] Error formatting start_time: {str(e)}", file=sys.stderr)
+        start_time_formatted = "N/A"
     end_time = datetime.utcnow().isoformat() + 'Z'
 
     # Collect script folders within the job folder
@@ -346,7 +371,7 @@ def main():
         status = "success" if stdout_content and not stderr_content else "failed" if stderr_content else "unknown"
         
         # Placeholder for script_path and parameters as they might not be available in files
-        script_path = os.path.join(script_folder_path, 'script.py') if os.path.exists(os.path.join(script_folder_path, 'script.py')) else "Unknown"
+        script_path = next((os.path.join(script_folder_path, f) for f in os.listdir(script_folder_path) if f.endswith('.py')), "Unknown")
         parameters = ""
         
         # Create script report
@@ -369,7 +394,7 @@ def main():
         script_report_url = ""  # This will be updated after file upload
         update_supabase_script_execution(script_id, status, script_output, end_time, script_report_url)
 
-    # Create job report
+    # Create job report (initially without URLs, will update after upload)
     job_status = "success" if all(sr['status'] == 'success' for sr in script_reports.values()) else "failed"
     job_report_path = create_job_report_html(job_folder_path, job_id, start_time, end_time, script_reports, job_status)
 
@@ -469,6 +494,28 @@ def main():
             else:
                 print(f"[@upload_and_report:main] WARNING: Script report URL not found for script {script_id}", file=sys.stderr)
 
+        # Regenerate job report with updated URLs
+        job_report_path = create_job_report_html(job_folder_path, job_id, start_time, end_time, script_reports, job_status)
+        # Upload the updated job report
+        with open(job_report_path, 'rb') as f:
+            s3_client.upload_fileobj(
+                f,
+                bucket_name,
+                os.path.relpath(job_report_path, upload_folder),
+                ExtraArgs={
+                    'ContentType': 'text/html',
+                    'ContentDisposition': 'inline'
+                }
+            )
+        updated_job_report_url = s3_client.generate_presigned_url(
+            'get_object',
+            Params={'Bucket': bucket_name, 'Key': os.path.relpath(job_report_path, upload_folder)},
+            ExpiresIn=604800  # 7 days in seconds
+        )
+        print(f"[@upload_and_report:main] Updated Job Run Report uploaded with URLs for job {job_id}", file=sys.stderr)
+        if updated_job_report_url:
+            update_supabase_job_status(job_id, job_status, job_output, end_time, updated_job_report_url)
+
     except Exception as e:
         print(f"[@upload_and_report:main] ERROR: Failed to upload files to R2 for job {job_id}: {str(e)}", file=sys.stderr)
         output = {
@@ -485,7 +532,7 @@ def main():
     print(json.dumps(output, indent=2))
     
     # Print Job Report URL and Script Report URLs for user access
-    print(f"[@upload_and_report:main] Job Run Report URL for job {job_id}: {job_report_url}", file=sys.stderr)
+    print(f"[@upload_and_report:main] Job Run Report URL for job {job_id}: {updated_job_report_url if 'updated_job_report_url' in locals() else job_report_url}", file=sys.stderr)
     for script_id, script_data in script_reports.items():
         script_report_url = next((file['public_url'] for file in uploaded_files if file['name'] == 'script_report.html' and script_id in file['relative_path']), '')
         if script_report_url:
