@@ -72,7 +72,6 @@ async function executeOnSSH(
     started_at,
     decryptedEnvVars,
     supabase,
-    team_id,
     config_id,
     team_id,
     creator_id,
