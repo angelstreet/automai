@@ -109,6 +109,7 @@ def initialize_job():
     job_id = data.get('job_id')
     created_at = data.get('created_at')
     upload_script_content = data.get('upload_script_content')
+    decrypted_env_vars = data.get('decrypted_env_vars', {})
     credentials = data.get('credentials', {})
 
     if not job_id or not created_at:
@@ -122,6 +123,11 @@ def initialize_job():
 
     # Create job folder structure
     upload_folder = os.path.join(os.getcwd(), 'uploadFolder')
+    # Clean existing uploadFolder if it exists to avoid clutter
+    if os.path.exists(upload_folder):
+        import shutil
+        shutil.rmtree(upload_folder)
+        print(f"[initialize_job] Removed existing uploadFolder at {upload_folder}", file=sys.stderr)
     job_folder_name = f"{created_at.split('T')[0].replace('-', '')}_{created_at.split('T')[1].split('.')[0].replace(':', '')}_{job_id}"
     job_folder_path = os.path.join(upload_folder, job_folder_name)
     os.makedirs(job_folder_path, exist_ok=True)

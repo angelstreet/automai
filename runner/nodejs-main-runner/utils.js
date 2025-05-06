@@ -14,19 +14,17 @@ function decrypt(encryptedData, keyBase64) {
   return decrypted;
 }
 
-function prepareJobInitializationPayload(jobId, started_at, uploadScriptContent, decryptedEnvVars) {
+function prepareJobInitializationPayload(jobId, started_at, uploadScriptContent) {
   return {
     job_id: jobId,
     created_at: started_at,
     upload_script_content: uploadScriptContent,
-    r2_credentials: {
-      endpoint: decryptedEnvVars['CLOUDFLARE_R2_ENDPOINT'] || '',
-      access_key_id: decryptedEnvVars['CLOUDFLARE_R2_ACCESS_KEY_ID'] || '',
-      secret_access_key: decryptedEnvVars['CLOUDFLARE_R2_SECRET_ACCESS_KEY'] || '',
-    },
-    supabase_credentials: {
-      url: process.env.SUPABASE_URL || '',
-      service_role_key: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+    credentials: {
+      CLOUDFLARE_R2_ENDPOINT: process.env.CLOUDFLARE_R2_ENDPOINT || '',
+      CLOUDFLARE_R2_ACCESS_KEY_ID: process.env.CLOUDFLARE_R2_ACCESS_KEY_ID || '',
+      CLOUDFLARE_R2_SECRET_ACCESS_KEY: process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY || '',
+      SUPABASE_URL: process.env.SUPABASE_URL || '',
+      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
     },
   };
 }
