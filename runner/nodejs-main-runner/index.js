@@ -18,7 +18,6 @@ const redis = new Redis({
   token: process.env.UPSTASH_REDIS_REST_TOKEN,
 });
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-
 const FLASK_SERVICE_URL = process.env.PYTHON_SLAVE_RUNNER_FLASK_SERVICE_URL;
 
 async function executeOnFlask(
@@ -86,10 +85,8 @@ async function executeOnSSH(
   started_at,
   decryptedEnvVars,
   supabase,
-  team_id,
   config_id,
   created_at,
-  creator_id,
 ) {
   // Execute scripts via SSH on hosts
   const result = await executeSSHScripts(jobId, config.scripts, created_at, config.hosts[0].id);
@@ -172,10 +169,8 @@ async function processJob() {
         started_at,
         decryptedEnvVars,
         supabase,
-        team_id,
         config_id,
         created_at,
-        creator_id,
       );
     }
   } catch (error) {

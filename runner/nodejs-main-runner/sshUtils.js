@@ -1,10 +1,10 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { v4: uuidv4 } = require('uuid');
 
 const ejs = require('ejs');
 const { Client } = require('ssh2');
+const { v4: uuidv4 } = require('uuid');
 
 const { createScriptExecution, updateScriptExecution, updateJobStatus } = require('./jobUtils');
 const { pingRepository } = require('./repoUtils');
@@ -542,7 +542,7 @@ async function executeScriptOnSSH(jobId, script, createdAt, host) {
   return { status, stdout, stderr };
 }
 
-async function finalizeJobOnSSH(jobId, createdAt, host) {
+async function finalizeJobOnSSH(jobId, host) {
   console.log(
     `[finalizeJobOnSSH] Finalizing job ${jobId} on host ${host.hostname} for upload and report generation`,
   );
@@ -556,10 +556,6 @@ async function finalizeJobOnSSH(jobId, createdAt, host) {
         );
 
         try {
-          const uploadFolder = '/tmp/uploadFolder';
-          const jobFolderName = `${createdAt.split('T')[0].replace(/-/g, '')}_${createdAt.split('T')[1].split('.')[0].replace(/:/g, '')}_${jobId}`;
-          const jobFolderPath = `${uploadFolder}/${jobFolderName}`;
-
           // Check if upload_and_report.py exists, if not, copy it to the host
           const uploadScriptPath = path.join(os.cwd(), 'upload_and_report.py');
           if (fs.existsSync(uploadScriptPath)) {
