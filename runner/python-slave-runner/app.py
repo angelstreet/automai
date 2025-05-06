@@ -129,10 +129,12 @@ def initialize_job():
         f.write(upload_script_content)
     print(f"[initialize_job] Saved upload script for job {job_id} to {upload_script_path}", file=sys.stderr)
 
-    # Save R2 credentials as environment variables for this job
-    credentials_file = os.path.join(job_folder_path, 'r2_credentials.json')
+    # Save R2 credentials to a .env file for this job
+    credentials_file = os.path.join(job_folder_path, '.env')
     with open(credentials_file, 'w') as f:
-        json.dump(r2_credentials, f)
+        f.write(f"CLOUDFLARE_R2_ENDPOINT={r2_credentials.get('endpoint', '')}\n")
+        f.write(f"CLOUDFLARE_R2_ACCESS_KEY_ID={r2_credentials.get('access_key_id', '')}\n")
+        f.write(f"CLOUDFLARE_R2_SECRET_ACCESS_KEY={r2_credentials.get('secret_access_key', '')}\n")
     print(f"[initialize_job] Saved R2 credentials for job {job_id} to {credentials_file}", file=sys.stderr)
 
     return jsonify({'status': 'success', 'message': f'Initialized job {job_id} with upload script and credentials'})
@@ -163,30 +165,9 @@ def finalize_job():
         print(f"[finalize_job] ERROR: upload_and_report.py not found at {upload_script_path}", file=sys.stderr)
         return jsonify({'status': 'error', 'message': 'Upload script not found'}), 500
 
-    # Load R2 credentials
-    credentials_file = os.path.join(job_folder_path, 'r2_credentials.json')
-    r2_credentials = {}
-    if os.path.exists(credentials_file):
-        try:
-            with open(credentials_file, 'r') as f:
-                r2_credentials = json.load(f)
-            print(f"[finalize_job] Loaded R2 credentials for job {job_id}", file=sys.stderr)
-        except Exception as e:
-            print(f"[finalize_job] ERROR: Failed to load R2 credentials: {str(e)}", file=sys.stderr)
-            return jsonify({'status': 'error', 'message': f'Failed to load R2 credentials: {str(e)}'}), 500
-    else:
-        print(f"[finalize_job] WARNING: R2 credentials file not found at {credentials_file}", file=sys.stderr)
-
-    # Set environment variables for R2 credentials
-    script_env = os.environ.copy()
-    if r2_credentials:
-        script_env['CLOUDFLARE_R2_ENDPOINT'] = r2_credentials.get('endpoint', '')
-        script_env['CLOUDFLARE_R2_ACCESS_KEY_ID'] = r2_credentials.get('access_key_id', '')
-        script_env['CLOUDFLARE_R2_SECRET_ACCESS_KEY'] = r2_credentials.get('secret_access_key', '')
-
     try:
         print(f"[finalize_job] Executing upload_and_report.py for job {job_id}", file=sys.stderr)
-        result = subprocess.run([sys.executable, upload_script_path], capture_output=True, text=True, env=script_env)
+        result = subprocess.run([sys.executable, upload_script_path], capture_output=True, text=True)
         
         if result.returncode == 0:
             print(f"[finalize_job] Upload and report generation successful for job {job_id}", file=sys.stderr)
