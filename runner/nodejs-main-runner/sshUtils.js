@@ -86,6 +86,7 @@ async function executeSSHScripts(
 
     // Process each script separately for tracking purposes
     let i = 0;
+    let length = config.scripts.length;
     for (const script of config.scripts || []) {
       i++;
       const scriptPath = script.path;
@@ -135,7 +136,7 @@ async function executeSSHScripts(
       const scriptCommand = `${command} ${scriptPath} ${finalParameters} 2>&1`.trim();
 
       console.log(
-        `[executeSSHScripts] Script to execute (Iteration ${i}/${iterations}): ${scriptCommand}`,
+        `[executeSSHScripts] Script to execute (Iteration ${i}/${length}): ${scriptCommand}`,
       );
 
       let repoCommands = '';
