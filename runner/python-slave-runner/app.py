@@ -176,12 +176,6 @@ def initialize_job():
         f.write(f"SUPABASE_SERVICE_ROLE_KEY={supabase_service_role_key}\n")
     print(f"[initialize_job] Saved Cloudflare R2 and Supabase credentials for job {job_id} to {credentials_file}", file=sys.stderr)
 
-    # Step 4: Save config_name to a separate file for use by upload_and_report.py
-    config_name_file = os.path.join(job_folder_path, 'config_name.txt')
-    with open(config_name_file, 'w') as f:
-        f.write(config_name if config_name else 'N/A')
-    print(f"[initialize_job] Saved config_name '{config_name if config_name else 'N/A'}' for job {job_id} to {config_name_file}", file=sys.stderr)
-
     try:
         with open(credentials_file, 'r') as f:
             env_content = f.read()

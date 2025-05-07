@@ -314,7 +314,7 @@ async function executeSSHScripts(
         end_time: scriptCompletedAt,
         status,
         env: env || 'N/A',
-        job_name: config.config_name || 'N/A',
+        config_name: config.config_name || 'N/A',
         duration: duration,
       });
       const metadataRemote = path.join(scriptFolderPath, 'metadata.json');
@@ -360,6 +360,7 @@ async function executeSSHScripts(
         host,
         sshKeyOrPass,
         jobFolderPath,
+        config.config_name || 'N/A',
       );
     } catch (error) {
       console.error(

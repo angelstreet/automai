@@ -244,14 +244,6 @@ async function initializeJobOnHost(_supabase, jobId, started_at, config, host, s
   // 2. Use a temp directory for job files
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'job-'));
   try {
-    // Ensure config.config_name is set (fallback to config_name if available)
-    if (
-      !config.config_name &&
-      config.config_name !== undefined &&
-      typeof config_name !== 'undefined'
-    ) {
-      config.config_name = config_name;
-    }
     // Write files to tempDir
     const uploadScriptLocal = path.join(tempDir, 'upload_and_report.py');
     const requirementsLocal = path.join(tempDir, 'requirements.txt');
@@ -340,6 +332,7 @@ async function finalizeJobOnHost(
   host,
   sshKeyOrPass,
   jobFolderPath,
+  config_name,
 ) {
   console.log(
     `[finalizeJobOnHost] Finalizing job ${jobId} on host ${host.ip} with upload_and_report.py`,
@@ -353,6 +346,7 @@ async function finalizeJobOnHost(
     config_name: output.config_name || 'N/A',
     env: output.env || 'N/A',
     status: overallStatus,
+    config_name: output.config_name || 'N/A',
     duration: output.started_at
       ? ((new Date() - new Date(output.started_at)) / 1000).toFixed(2)
       : 'N/A',
