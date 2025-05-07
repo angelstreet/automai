@@ -213,6 +213,8 @@ async function initializeJobOnHost(_supabase, jobId, started_at, config, host, s
       : ` && pip install -r ${requirementsPath}`;
   console.log(`[initializeJobOnHost] Installing dependencies on host ${host.ip}`);
 
+  console.log(`[initializeJobOnHost] Executing command on host ${host.ip}: ${initCommand}`);
+
   const connInit = new Client();
   try {
     await new Promise((resolve, reject) => {
