@@ -74,6 +74,7 @@ async function executeSSHCommand(host, sshKeyOrPass, command, timeout = 60000) {
  * @returns {Promise<Object>} - Promise resolving to an object with stdout and stderr from files.
  */
 async function readScriptOutputFiles(host, sshKeyOrPass, scriptFolderPath, scriptResult, os) {
+  console.log(`[readScriptOutputFiles] Reading output files from ${scriptFolderPath}`);
   const stdoutFileCommand =
     os === 'windows'
       ? `powershell -Command "Get-Content -Path '${scriptFolderPath}/stdout.txt'"`

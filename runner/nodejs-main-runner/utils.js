@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const path = require('path');
 
 const { Client } = require('ssh2');
 
@@ -103,6 +104,83 @@ async function uploadFileViaSFTP(host, sshKeyOrPass, localPath, remotePath) {
   });
 }
 
+function determineScriptPaths(jobId, started_at, scriptExecutionId, host, scriptPath, config) {
+  const scriptName = scriptPath.split('/').pop();
+  let repoDir = '';
+  let scriptFolder = config.script_folder || '';
+
+  if (config.repository) {
+    const repoUrl = config.repository;
+    repoDir =
+      repoUrl
+        .split('/')
+        .pop()
+        .replace(/\.git$/, '') || 'repo';
+    console.log(`[@utils:determineScriptPaths] Using repository directory: ${repoDir}`);
+  } else if (config.scripts && config.scripts.length > 0 && config.scripts[0].folder) {
+    scriptFolder = config.scripts[0].folder;
+    console.log(
+      `[@utils:determineScriptPaths] Using folder from script configuration: ${scriptFolder}`,
+    );
+  } else {
+    console.log(
+      `[@utils:determineScriptPaths] No repository or folder specified, using default SSH directory`,
+    );
+  }
+
+  const uploadFolder = host.os === 'windows' ? 'C:/temp/uploadFolder' : '/tmp/uploadFolder';
+  const jobRunFolderName = `${started_at.split('T')[0].replace(/-/g, '')}_${started_at.split('T')[1].split('.')[0].replace(/:/g, '')}_${jobId}`;
+  const jobRunFolderPath = `${uploadFolder}/${jobRunFolderName}`;
+  const scriptRunFolderName = `${started_at.split('T')[0].replace(/-/g, '')}_${started_at.split('T')[1].split('.')[0].replace(/:/g, '')}_${scriptExecutionId}`;
+  const scriptRunFolderPath = `${jobRunFolderPath}/${scriptRunFolderName}`;
+
+  let scriptRelativePath = scriptPath;
+  let scriptAbsolutePath = scriptPath;
+  let scriptFolderAbsolutePath = scriptFolder;
+
+  if (repoDir) {
+    scriptRelativePath =
+      host.os === 'windows'
+        ? `${scriptFolder ? scriptFolder + '/' : ''}${scriptPath}`
+        : path.join(scriptFolder || '', scriptPath);
+    scriptAbsolutePath =
+      host.os === 'windows'
+        ? `${repoDir}/${scriptRelativePath}`
+        : path.join(repoDir, scriptRelativePath);
+    scriptFolderAbsolutePath =
+      host.os === 'windows' ? `${repoDir}/${scriptFolder}` : path.join(repoDir, scriptFolder);
+  } else if (scriptFolder) {
+    scriptRelativePath = scriptPath;
+    scriptAbsolutePath =
+      host.os === 'windows' ? `${scriptFolder}/${scriptPath}` : path.join(scriptFolder, scriptPath);
+    scriptFolderAbsolutePath = scriptFolder;
+  }
+
+  // Placeholder for base path resolution if needed
+  let basePath = '';
+  // If basePath is resolved, prepend it to absolute paths
+  // scriptAbsolutePath = basePath ? (host.os === 'windows' ? `${basePath}/${scriptAbsolutePath}` : path.join(basePath, scriptAbsolutePath)) : scriptAbsolutePath;
+  // scriptFolderAbsolutePath = basePath ? (host.os === 'windows' ? `${basePath}/${scriptFolderAbsolutePath}` : path.join(basePath, scriptFolderAbsolutePath)) : scriptFolderAbsolutePath;
+
+  console.log(`[@utils:determineScriptPaths] Determined paths for script ${scriptName}:`);
+  console.log(`[@utils:determineScriptPaths]   - scriptRelativePath: ${scriptRelativePath}`);
+  console.log(`[@utils:determineScriptPaths]   - scriptAbsolutePath: ${scriptAbsolutePath}`);
+  console.log(
+    `[@utils:determineScriptPaths]   - scriptFolderAbsolutePath: ${scriptFolderAbsolutePath}`,
+  );
+  console.log(`[@utils:determineScriptPaths]   - jobRunFolderPath: ${jobRunFolderPath}`);
+  console.log(`[@utils:determineScriptPaths]   - scriptRunFolderPath: ${scriptRunFolderPath}`);
+
+  return {
+    scriptName,
+    scriptRelativePath,
+    scriptAbsolutePath,
+    scriptFolderAbsolutePath,
+    jobRunFolderPath,
+    scriptRunFolderPath,
+  };
+}
+
 module.exports = {
   decrypt,
   ALGORITHM,
@@ -111,4 +189,5 @@ module.exports = {
   formatEnvVarsForSSH,
   collectEnvironmentVariables,
   uploadFileViaSFTP,
+  determineScriptPaths,
 };

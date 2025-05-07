@@ -11,13 +11,13 @@ const {
   finalizeJobOnHost,
 } = require('./jobUtils');
 const { writeScriptMetadata } = require('./metadataUtils');
-// const pingRepository = require('./pingRepository'); // Commented out as it is not used
 const { executeSSHCommand, readScriptOutputFiles } = require('./sshConnectionUtils');
 const {
   decrypt,
   formatEnvVarsForSSH,
   collectEnvironmentVariables,
   uploadFileViaSFTP,
+  determineScriptPaths,
 } = require('./utils');
 
 // SFTP upload helper function removed and imported from utils.js
@@ -90,7 +90,6 @@ async function executeSSHScripts(
     for (const script of config.scripts || []) {
       i++;
       const scriptPath = script.path;
-      const scriptName = scriptPath.split('/').pop();
       const parameters = script.parameters || '';
 
       // Create a script execution record for this specific script on this host
@@ -99,7 +98,7 @@ async function executeSSHScripts(
         config_id: config_id,
         team_id: team_id,
         creator_id: creator_id,
-        script_name: scriptName,
+        script_name: scriptPath.split('/').pop(),
         script_path: scriptPath,
         script_parameters: { parameters },
         host_id: host.id,
@@ -108,64 +107,44 @@ async function executeSSHScripts(
         env: env,
       });
 
+      // Determine all necessary paths using the helper function
+      const paths = determineScriptPaths(
+        jobId,
+        started_at,
+        scriptExecutionId,
+        host,
+        scriptPath,
+        config,
+      );
+
       // Create script folder within job folder
-      const scriptFolderName = `${started_at.split('T')[0].replace(/-/g, '')}_${started_at.split('T')[1].split('.')[0].replace(/:/g, '')}_${scriptExecutionId}`;
-      const scriptFolderPath = `${jobFolderPath}/${scriptFolderName}`;
       let scriptSetupCommand =
         host.os === 'windows'
-          ? `powershell -Command "if (-not (Test-Path '${scriptFolderPath}')) { New-Item -ItemType Directory -Path '${scriptFolderPath}' }"`
-          : `mkdir -p ${scriptFolderPath}`;
+          ? `powershell -Command "if (-not (Test-Path '${paths.scriptRunFolderPath}')) { New-Item -ItemType Directory -Path '${paths.scriptRunFolderPath}' }"`
+          : `mkdir -p ${paths.scriptRunFolderPath}`;
       console.log(
-        `[executeSSHScripts] Creating script folder on host ${host.ip}: ${scriptFolderPath}`,
+        `[executeSSHScripts] Creating script folder on host ${host.ip}: ${paths.scriptRunFolderPath}`,
       );
       // Add confirmation logging after folder creation
       let confirmFolderCommand =
         host.os === 'windows'
-          ? `powershell -Command "Test-Path '${scriptFolderPath}'"`
-          : `test -d ${scriptFolderPath} && echo 'Folder exists' || echo 'Folder does not exist'`;
+          ? `powershell -Command "Test-Path '${paths.scriptRunFolderPath}'"`
+          : `test -d ${paths.scriptRunFolderPath} && echo 'Folder exists' || echo 'Folder does not exist'`;
 
       // Format command for this script
       const ext = scriptPath.split('.').pop().toLowerCase();
       const command = ext === 'py' ? 'python' : ext === 'sh' ? './' : '';
       // Add required parameters for iteration and trace_folder
-      const iterationParam = '--iteration ${i}'; // Default to 1, will be updated in loop if needed
-      const traceFolderParam = `--trace_folder ${scriptFolderPath}`;
+      const iterationParam = `--iteration ${i}`;
+      const traceFolderParam = `--trace_folder ${paths.scriptRunFolderPath}`;
       const finalParameters = parameters
         ? `${parameters} ${iterationParam} ${traceFolderParam}`
         : `${iterationParam} ${traceFolderParam}`;
-      const scriptCommand = `${command} ${scriptPath} ${finalParameters} 2>&1`.trim();
+      const scriptCommand = `${command} ${paths.scriptAbsolutePath} ${finalParameters} 2>&1`.trim();
 
       console.log(
         `[executeSSHScripts] Script to execute (Iteration ${i}/${length}): ${scriptCommand}`,
       );
-
-      let repoCommands = '';
-      let scriptFolder = config.script_folder || '';
-      let repoDir = '';
-      console.log(`[executeSSHScripts] Script folder: ${scriptFolder}`);
-
-      if (config.repository) {
-        const repoUrl = config.repository;
-        repoDir =
-          repoUrl
-            .split('/')
-            .pop()
-            .replace(/\.git$/, '') || 'repo';
-        console.log(
-          `[executeSSHScripts] Using repository directory ${repoDir} set up by initializeJobOnHost`,
-        );
-      } else {
-        if (config.scripts && config.scripts.length > 0 && config.scripts[0].folder) {
-          scriptFolder = config.scripts[0].folder;
-          console.log(
-            `[executeSSHScripts] Using folder from script configuration as working directory: ${scriptFolder}`,
-          );
-        } else {
-          console.log(
-            `[executeSSHScripts] No folder specified in script configuration or repository, using default SSH directory (if any)`,
-          );
-        }
-      }
 
       // Add environment variables to the SSH script
       const envVars = collectEnvironmentVariables(decryptedEnvVars);
@@ -181,9 +160,9 @@ async function executeSSHScripts(
       // Build the full script command with all setup including script folder creation
       let fullScript;
       if (host.os === 'windows') {
-        fullScript = `${repoCommands}${repoCommands ? ' && ' : ''}${repoDir ? `cd ${repoDir} && ` : ''}cd ${scriptFolder} && ${scriptSetupCommand} && ${confirmFolderCommand} && powershell -Command "if (Test-Path 'requirements.txt') { pip install -r requirements.txt } else { Write-Output 'No requirements.txt file found, skipping pip install' }" && ${envSetup}python --version && echo ============================= && ${scriptCommand} > ${scriptFolderPath}/stdout.txt 2> ${scriptFolderPath}/stderr.txt`;
+        fullScript = `${paths.scriptFolderAbsolutePath ? `cd ${paths.scriptFolderAbsolutePath} && ` : ''}${scriptSetupCommand} && ${confirmFolderCommand} && powershell -Command "if (Test-Path 'requirements.txt') { pip install -r requirements.txt } else { Write-Output 'No requirements.txt file found, skipping pip install' }" && ${envSetup}python --version && echo ============================= && ${scriptCommand} > ${paths.scriptRunFolderPath}/stdout.txt 2> ${paths.scriptRunFolderPath}/stderr.txt`;
       } else {
-        fullScript = `${repoCommands} ${repoCommands ? '' : repoDir ? `cd ${repoDir} && ` : ''}cd ${scriptFolder} && ${scriptSetupCommand} && ${confirmFolderCommand} && if [ -f "requirements.txt" ]; then pip install -r requirements.txt; else echo "No requirements.txt file found, skipping pip install"; fi && ${envSetup}python --version && echo ============================= && ${scriptCommand} > ${scriptFolderPath}/stdout.txt 2> ${scriptFolderPath}/stderr.txt`;
+        fullScript = `${paths.scriptFolderAbsolutePath ? `cd ${paths.scriptFolderAbsolutePath} && ` : ''}${scriptSetupCommand} && ${confirmFolderCommand} && if [ -f "requirements.txt" ]; then pip install -r requirements.txt; else echo "No requirements.txt file found, skipping pip install"; fi && ${envSetup}python --version && echo ============================= && ${scriptCommand} > ${paths.scriptRunFolderPath}/stdout.txt 2> ${paths.scriptRunFolderPath}/stderr.txt`;
       }
       console.log(`[executeSSHScripts] SSH command to be executed on ${host.ip}: ${fullScript}`);
 
@@ -210,30 +189,6 @@ async function executeSSHScripts(
         basePath = '';
       }
 
-      let fullScriptPathOnHost = scriptPath;
-      if (repoDir) {
-        fullScriptPathOnHost =
-          host.os === 'windows'
-            ? `${repoDir}/${scriptFolder ? scriptFolder + '/' : ''}${scriptPath}`
-            : path.join(repoDir, scriptFolder || '', scriptPath);
-      } else if (scriptFolder) {
-        fullScriptPathOnHost =
-          host.os === 'windows'
-            ? `${scriptFolder}/${scriptPath}`
-            : path.join(scriptFolder, scriptPath);
-      }
-
-      // If basePath is available, prepend it to the fullScriptPathOnHost
-      if (basePath) {
-        fullScriptPathOnHost =
-          host.os === 'windows'
-            ? `${basePath}/${fullScriptPathOnHost}`
-            : path.join(basePath, fullScriptPathOnHost);
-      }
-      fullScriptPathOnHost = fullScriptPathOnHost.replace(/\\/g, '/');
-      console.log(
-        `[executeSSHScripts] Full script path on host ${host.ip}: ${fullScriptPathOnHost}`,
-      );
       // Update the script execution to 'in_progress'
       const scriptStartedAt = new Date().toISOString();
       await updateScriptExecution(supabase, {
@@ -284,7 +239,7 @@ async function executeSSHScripts(
       const { stdoutFromFile, stderrFromFile } = await readScriptOutputFiles(
         host,
         sshKeyOrPass,
-        scriptFolderPath,
+        paths.scriptFolderAbsolutePath,
         scriptResult,
         host.os,
       );
@@ -306,8 +261,8 @@ async function executeSSHScripts(
       writeScriptMetadata(metadataLocal, {
         job_id: jobId,
         script_id: scriptExecutionId,
-        script_name: scriptName,
-        script_path: fullScriptPathOnHost,
+        script_name: paths.scriptName,
+        script_path: paths.scriptAbsolutePath,
         parameters: finalParameters,
         start_time: scriptStartedAt,
         end_time: scriptCompletedAt,
@@ -316,7 +271,7 @@ async function executeSSHScripts(
         config_name: config_name || 'N/A',
         duration: duration,
       });
-      const metadataRemote = path.join(scriptFolderPath, 'metadata.json');
+      const metadataRemote = path.join(paths.scriptRunFolderPath, 'metadata.json');
       await uploadFileViaSFTP(host, sshKeyOrPass, metadataLocal, metadataRemote);
       console.log(
         `[executeSSHScripts] Uploaded script metadata to ${metadataRemote} for script ${scriptExecutionId}`,
@@ -405,10 +360,10 @@ async function executeScriptOnSSH(jobId, script, createdAt, host) {
 
   // Create uploadFolder structure on SSH host
   const uploadFolder = '/tmp/uploadFolder';
-  const jobFolderName = `${createdAt.split('T')[0].replace(/-/g, '')}_${createdAt.split('T')[1].split('.')[0].replace(/:/g, '')}_${jobId}`;
-  const jobFolderPath = `${uploadFolder}/${jobFolderName}`;
-  const scriptFolderName = `${createdAt.split('T')[0].replace(/-/g, '')}_${createdAt.split('T')[1].split('.')[0].replace(/:/g, '')}_${scriptExecutionId}`;
-  const scriptFolderPath = `${jobFolderPath}/${scriptFolderName}`;
+  const jobRunFolderName = `${createdAt.split('T')[0].replace(/-/g, '')}_${createdAt.split('T')[1].split('.')[0].replace(/:/g, '')}_${jobId}`;
+  const jobRunFolderPath = `${uploadFolder}/${jobRunFolderName}`;
+  const scriptRunFolderName = `${createdAt.split('T')[0].replace(/-/g, '')}_${createdAt.split('T')[1].split('.')[0].replace(/:/g, '')}_${scriptExecutionId}`;
+  const scriptRunFolderPath = `${jobRunFolderPath}/${scriptRunFolderName}`;
 
   try {
     await new Promise((resolve, _reject) => {
@@ -419,9 +374,9 @@ async function executeScriptOnSSH(jobId, script, createdAt, host) {
 
         try {
           // Create uploadFolder structure
-          await execCommand(client, `mkdir -p ${scriptFolderPath}`);
+          await execCommand(client, `mkdir -p ${scriptRunFolderPath}`);
           console.log(
-            `[executeScriptOnSSH] Created script folder on host ${host.hostname}: ${scriptFolderPath}`,
+            `[executeScriptOnSSH] Created script folder on host ${host.hostname}: ${scriptRunFolderPath}`,
           );
 
           // Save script to script folder
@@ -430,10 +385,10 @@ async function executeScriptOnSSH(jobId, script, createdAt, host) {
             const scriptContent = fs.readFileSync(scriptContentPath, 'utf8');
             await execCommand(
               client,
-              `echo "${escapeShellArg(scriptContent)}" > ${scriptFolderPath}/script.py`,
+              `echo "${escapeShellArg(scriptContent)}" > ${scriptRunFolderPath}/script.py`,
             );
             console.log(
-              `[executeScriptOnSSH] Saved script content to ${scriptFolderPath}/script.py on host ${host.hostname}`,
+              `[executeScriptOnSSH] Saved script content to ${scriptRunFolderPath}/script.py on host ${host.hostname}`,
             );
           }
 
