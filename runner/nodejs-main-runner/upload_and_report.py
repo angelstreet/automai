@@ -116,11 +116,27 @@ def create_script_report_html(script_folder, stdout_content, stderr_content, scr
         except Exception as e:
             print(f"[@upload_and_report:create_script_report_html] Error calculating duration: {str(e)}", file=sys.stderr)
     
-    # Extract script name from path or folder if available
+    # Read script metadata if available
+    metadata_path = os.path.join(script_folder, 'metadata.json')
     script_name = os.path.basename(script_path) if script_path and script_path != "Unknown" else ""
-    if not script_name:
-        script_name = next((f for f in os.listdir(script_folder) if f.endswith('.py')), f"Script_{script_id}")
-    script_path_display = script_path if script_path and script_path != "Unknown" else "Unknown"
+    if os.path.exists(metadata_path):
+        try:
+            with open(metadata_path, 'r') as f:
+                metadata = json.load(f)
+            script_name = metadata.get('script_name', script_name)
+            script_path_display = metadata.get('script_path', script_path if script_path and script_path != "Unknown" else "Unknown")
+            parameters = metadata.get('parameters', parameters)
+            start_time = metadata.get('start_time', start_time)
+            end_time = metadata.get('end_time', end_time)
+            status = metadata.get('status', status)
+            duration = metadata.get('duration', duration)
+        except Exception as e:
+            print(f"[@upload_and_report:create_script_report_html] Error reading script metadata: {str(e)}", file=sys.stderr)
+    else:
+        script_path_display = script_path if script_path and script_path != "Unknown" else "Unknown"
+        if not script_name:
+            script_name = next((f for f in os.listdir(script_folder) if f.endswith('.py')), f"Script_{script_id}")
+    
     html_content = build_script_report_html_content(script_name, script_id, job_id, script_path_display, parameters, start_time, end_time, duration, status, stdout_content, stderr_content, associated_files)
     report_path = os.path.join(script_folder, 'script_report.html')
     try:
@@ -192,6 +208,21 @@ def create_job_report_html(job_folder, job_id, start_time, end_time, script_repo
             duration = f"{(end_dt - start_dt).total_seconds():.2f}"
         except Exception as e:
             print(f"[@upload_and_report:create_job_report_html] Error calculating duration: {str(e)}", file=sys.stderr)
+    
+    # Read job metadata if available
+    metadata_path = os.path.join(job_folder, 'metadata.json')
+    if os.path.exists(metadata_path):
+        try:
+            with open(metadata_path, 'r') as f:
+                metadata = json.load(f)
+            job_id = metadata.get('job_id', job_id)
+            start_time = metadata.get('start_time', start_time)
+            end_time = metadata.get('end_time', end_time)
+            config_name = metadata.get('config_name', config_name)
+            status = metadata.get('status', status)
+            duration = metadata.get('duration', duration)
+        except Exception as e:
+            print(f"[@upload_and_report:create_job_report_html] Error reading job metadata: {str(e)}", file=sys.stderr)
     
     script_summary = ""
     order = 1
@@ -371,16 +402,29 @@ def main():
     for script_folder_name in script_folders:
         script_folder_path = os.path.join(job_folder_path, script_folder_name)
         metadata_path = os.path.join(script_folder_path, 'metadata.json')
-        with open(metadata_path) as f:
-            metadata = json.load(f)
-        script_id = metadata['script_id']
-        script_name = metadata['script_name']
-        script_path = metadata['script_path']
-        parameters = metadata['parameters']
-        start_time = metadata['start_time']
-        end_time = metadata['end_time']
-        status = metadata['status']
-        job_id = metadata['job_id']
+        script_id = script_folder_name  # Default if metadata not found
+        script_name = ""
+        script_path = "Unknown"
+        parameters = ""
+        start_time_script = "unknown"
+        end_time_script = ""
+        status = "success"
+        if os.path.exists(metadata_path):
+            try:
+                with open(metadata_path, 'r') as f:
+                    metadata = json.load(f)
+                script_id = metadata.get('script_id', script_id)
+                script_name = metadata.get('script_name', script_name)
+                script_path = metadata.get('script_path', script_path)
+                parameters = metadata.get('parameters', parameters)
+                start_time_script = metadata.get('start_time', start_time_script)
+                end_time_script = metadata.get('end_time', end_time_script)
+                status = metadata.get('status', status)
+                print(f"[@upload_and_report:main] Read script metadata for {script_id} from {metadata_path}", file=sys.stderr)
+            except Exception as e:
+                print(f"[@upload_and_report:main] Error reading script metadata for {script_folder_name}: {str(e)}", file=sys.stderr)
+        else:
+            print(f"[@upload_and_report:main] Metadata file not found for script folder {script_folder_name}", file=sys.stderr)
 
         # Read stdout.txt and stderr.txt if they exist
         stdout_content = ""
@@ -396,7 +440,7 @@ def main():
 
         # Create script report
         script_report_path = create_script_report_html(
-            script_folder_path, stdout_content, stderr_content, script_id, job_id, start_time, end_time, script_path, parameters, status
+            script_folder_path, stdout_content, stderr_content, script_id, job_id, start_time_script, end_time_script, script_path, parameters, status
         )
         script_reports[script_id] = {
             'status': status,
@@ -410,22 +454,22 @@ def main():
             'exitCode': 0 if status == 'success' else 1
         }
         script_report_url = ""  # This will be updated after file upload
-        update_supabase_script_execution(script_id, status, script_output, end_time, script_report_url)
-
+        update_supabase_script_execution(script_id, status, script_output, end_time_script, script_report_url)
+    
     # Create job report (initially without URLs, will update after upload)
     job_status = "success" if all(sr['status'] == 'success' for sr in script_reports.values()) else "failed"
-    # Read config_name from config_name.txt if it exists
-    config_name = ''
-    config_name_file = os.path.join(job_folder_path, 'config_name.txt')
-    if os.path.exists(config_name_file):
-        try:
-            with open(config_name_file, 'r') as f:
-                config_name = f.read().strip()
-            print(f"[@upload_and_report:main] Read config_name '{config_name}' from {config_name_file}", file=sys.stderr)
-        except Exception as e:
-            print(f"[@upload_and_report:main] Error reading config_name.txt: {str(e)}", file=sys.stderr)
-    else:
-        print(f"[@upload_and_report:main] config_name.txt not found at {config_name_file}", file=sys.stderr)
+    # Read config_name from config_name.txt if it exists or from metadata
+    if not config_name:
+        config_name_file = os.path.join(job_folder_path, 'config_name.txt')
+        if os.path.exists(config_name_file):
+            try:
+                with open(config_name_file, 'r') as f:
+                    config_name = f.read().strip()
+                print(f"[@upload_and_report:main] Read config_name '{config_name}' from {config_name_file}", file=sys.stderr)
+            except Exception as e:
+                print(f"[@upload_and_report:main] Error reading config_name.txt: {str(e)}", file=sys.stderr)
+        else:
+            print(f"[@upload_and_report:main] config_name.txt not found at {config_name_file}", file=sys.stderr)
     job_report_path = create_job_report_html(job_folder_path, job_id, start_time, end_time, script_reports, job_status, None, config_name=config_name)
 
     # Collect all files to upload

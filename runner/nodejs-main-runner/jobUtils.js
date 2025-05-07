@@ -1,3 +1,11 @@
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
+const { Client } = require('ssh2');
+
+const { writeJobMetadata } = require('./metadataUtils');
+
 async function getJobFromQueue(redis) {
   const queueLength = await redis.llen('jobs_queue');
   console.log(`[getJobFromQueue] Queue length: ${queueLength} jobs`);
@@ -176,12 +184,6 @@ async function updateScriptExecution(
   }
 }
 
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
-
-const { Client } = require('ssh2');
-
 // SFTP upload helper
 async function uploadFileViaSFTP(host, sshKeyOrPass, localPath, remotePath) {
   return new Promise((resolve, reject) => {
@@ -287,15 +289,20 @@ async function initializeJobOnHost(_supabase, jobId, started_at, config, host, s
     // Write files to tempDir
     const uploadScriptLocal = path.join(tempDir, 'upload_and_report.py');
     const requirementsLocal = path.join(tempDir, 'requirements.txt');
-    const configNameLocal = path.join(tempDir, 'config_name.txt');
+    const metadataLocal = path.join(tempDir, 'metadata.json');
     const envFileLocal = path.join(tempDir, '.env');
     // Copy or write content
     fs.copyFileSync('upload_and_report.py', uploadScriptLocal);
     if (!fs.existsSync(requirementsLocal)) {
       fs.writeFileSync(requirementsLocal, 'boto3\npython-dotenv\nsupabase\n');
     }
-    fs.writeFileSync(configNameLocal, config.config_name || '');
-    console.log(`[initializeJobOnHost] Wrote config_name.txt with value: ${config.config_name}`);
+    // Write job metadata to temporary local file
+    writeJobMetadata(metadataLocal, {
+      job_id: jobId,
+      start_time: started_at,
+      config_name: config.config_name || 'N/A',
+      env: config.env || 'N/A',
+    });
     fs.writeFileSync(
       envFileLocal,
       `CLOUDFLARE_R2_ENDPOINT=${process.env.CLOUDFLARE_R2_ENDPOINT || ''}\nCLOUDFLARE_R2_ACCESS_KEY_ID=${process.env.CLOUDFLARE_R2_ACCESS_KEY_ID || ''}\nCLOUDFLARE_R2_SECRET_ACCESS_KEY=${process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY || ''}\nSUPABASE_URL=${process.env.SUPABASE_URL || ''}\nSUPABASE_SERVICE_ROLE_KEY=${process.env.SUPABASE_SERVICE_ROLE_KEY || ''}\n`,
@@ -303,12 +310,12 @@ async function initializeJobOnHost(_supabase, jobId, started_at, config, host, s
     // Remote paths
     const uploadScriptRemote = `${jobFolderPath}/upload_and_report.py`;
     const requirementsRemote = `${jobFolderPath}/requirements.txt`;
-    const configNameRemote = `${jobFolderPath}/config_name.txt`;
+    const metadataRemote = `${jobFolderPath}/metadata.json`;
     const envFileRemote = `${jobFolderPath}/.env`;
     // Upload
     await uploadFileViaSFTP(host, sshKeyOrPass, uploadScriptLocal, uploadScriptRemote);
     await uploadFileViaSFTP(host, sshKeyOrPass, requirementsLocal, requirementsRemote);
-    await uploadFileViaSFTP(host, sshKeyOrPass, configNameLocal, configNameRemote);
+    await uploadFileViaSFTP(host, sshKeyOrPass, metadataLocal, metadataRemote);
     await uploadFileViaSFTP(host, sshKeyOrPass, envFileLocal, envFileRemote);
   } finally {
     // Cleanup temp directory
@@ -380,7 +387,18 @@ async function finalizeJobOnHost(
   console.log(
     `[finalizeJobOnHost] Finalizing job ${jobId} on host ${host.ip} with upload_and_report.py`,
   );
-  const { Client } = require('ssh2');
+  // Update job metadata with final details
+  writeJobMetadata(jobFolderPath, {
+    job_id: jobId,
+    start_time: output.started_at || new Date().toISOString(),
+    end_time: new Date().toISOString(),
+    config_name: output.config_name || 'N/A',
+    env: output.env || 'N/A',
+    status: overallStatus,
+    duration: output.started_at
+      ? ((new Date() - new Date(output.started_at)) / 1000).toFixed(2)
+      : 'N/A',
+  });
   const finalizeCommand =
     host.os === 'windows'
       ? `powershell -Command "cd '${jobFolderPath}'; python upload_and_report.py"`
