@@ -235,6 +235,62 @@ async function executeSSHScripts(
       }
       console.log(`[executeSSHScripts] SSH command to be executed on ${host.ip}: ${fullScript}`);
 
+      // Resolve the full script path on the host before execution
+      const resolvePathCommand = host.os === 'windows' ? `powershell -Command pwd` : `pwd`;
+      let basePath = '';
+      try {
+        const pathResult = await executeSSHCommand(host, sshKeyOrPass, resolvePathCommand);
+        if (pathResult.stdout) {
+          // Clean and trim basePath to remove extraneous text or formatting
+          basePath =
+            pathResult.stdout
+              .split('\n')
+              .find((line) => line.trim().length > 0)
+              ?.trim() || '';
+          if (host.os === 'windows' && basePath.includes('----')) {
+            basePath = basePath.split('----')[1]?.trim() || basePath.trim();
+          }
+          console.log(
+            `[executeSSHScripts] Resolved full script path on host ${host.ip}: ${basePath}`,
+          );
+        } else {
+          console.error(
+            `[executeSSHScripts] Failed to resolve full script path on host ${host.ip}, using empty path as fallback`,
+          );
+          basePath = '';
+        }
+      } catch (error) {
+        console.error(
+          `[executeSSHScripts] Error resolving full script path on host ${host.ip}: ${error.message}, using empty path as fallback`,
+        );
+        basePath = '';
+      }
+
+      let fullScriptPathOnHost = scriptPath;
+      if (repoDir) {
+        fullScriptPathOnHost =
+          host.os === 'windows'
+            ? `${repoDir}/${scriptFolder ? scriptFolder + '/' : ''}${scriptPath}`
+            : path.join(repoDir, scriptFolder || '', scriptPath);
+      } else if (scriptFolder) {
+        fullScriptPathOnHost =
+          host.os === 'windows'
+            ? `${scriptFolder}/${scriptPath}`
+            : path.join(scriptFolder, scriptPath);
+      }
+
+      // If basePath is available, prepend it to the fullScriptPathOnHost
+      if (basePath) {
+        fullScriptPathOnHost =
+          host.os === 'windows'
+            ? `${basePath}/${fullScriptPathOnHost}`
+            : path.join(basePath, fullScriptPathOnHost);
+      }
+
+      console.log(
+        `[executeSSHScripts] Full script path on host ${host.ip}: ${fullScriptPathOnHost}`,
+      );
+
       // Update the script execution to 'in_progress'
       const scriptStartedAt = new Date().toISOString();
       await updateScriptExecution(supabase, {
@@ -303,14 +359,6 @@ async function executeSSHScripts(
 
       const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'job-'));
       const metadataLocal = path.join(tempDir, 'metadata.json');
-
-      // Construct the full script path on the host
-      let fullScriptPathOnHost = scriptPath;
-      if (repoDir) {
-        fullScriptPathOnHost = host.os === 'windows' ? `${repoDir}/${scriptFolder ? scriptFolder + '/' : ''}${scriptPath}` : path.join(repoDir, scriptFolder ? scriptFolder : '', scriptPath);
-      } else if (scriptFolder) {
-        fullScriptPathOnHost = host.os === 'windows' ? `${scriptFolder}/${scriptPath}` : path.join(scriptFolder, scriptPath);
-      }
 
       writeScriptMetadata(metadataLocal, {
         job_id: jobId,
