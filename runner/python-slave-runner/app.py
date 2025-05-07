@@ -19,6 +19,9 @@ def execute_script():
     script_id = data.get('script_id')
     config_name = data.get('config_name', '')
     env = data.get('env', 'N/A')
+    repo_url = data.get('repo_url', '')
+    branch = data.get('branch', 'main')
+    script_folder = data.get('script_folder', '')
 
     if not script_path or not job_id or not script_id:
         return jsonify({'status': 'error', 'message': 'Missing required parameters'}), 400
@@ -33,12 +36,37 @@ def execute_script():
     os.makedirs(script_folder_path, exist_ok=True)
     print(f"[execute_script] Created script folder: {script_folder_path}", file=sys.stderr)
 
+    # Handle repository if provided
+    repo_dir = ''
+    if repo_url:
+        repo_name = repo_url.split('/').pop().replace('.git', '') or 'repo'
+        repo_dir = os.path.join(os.getcwd(), repo_name)
+        if os.path.exists(repo_dir):
+            print(f"[execute_script] Repository exists at {repo_dir}, pulling latest changes", file=sys.stderr)
+            try:
+                subprocess.run(['git', 'pull', 'origin', branch], cwd=repo_dir, check=True, capture_output=True, text=True)
+                print(f"[execute_script] Successfully pulled latest changes for {repo_url}", file=sys.stderr)
+            except subprocess.CalledProcessError as e:
+                print(f"[execute_script] Failed to pull repository {repo_url}: {e.stderr}", file=sys.stderr)
+                return jsonify({'status': 'error', 'message': f'Failed to pull repository: {e.stderr}'}), 500
+        else:
+            print(f"[execute_script] Cloning repository {repo_url} to {repo_dir}", file=sys.stderr)
+            try:
+                subprocess.run(['git', 'clone', '-b', branch, repo_url, repo_dir], check=True, capture_output=True, text=True)
+                print(f"[execute_script] Successfully cloned {repo_url} to {repo_dir}", file=sys.stderr)
+            except subprocess.CalledProcessError as e:
+                print(f"[execute_script] Failed to clone repository {repo_url}: {e.stderr}", file=sys.stderr)
+                return jsonify({'status': 'error', 'message': f'Failed to clone repository: {e.stderr}'}), 500
+
+    # Determine the correct script path based on repository and script folder
+    if repo_dir:
+        script_content_path = os.path.join(repo_dir, script_folder, script_path) if script_folder else os.path.join(repo_dir, script_path)
+    else:
+        script_content_path = os.path.join(os.getcwd(), script_path)
+
+    print(f"[execute_script] Script path resolved to: {script_content_path}", file=sys.stderr)
+
     # Save script to script folder if it exists
-    script_content_path = os.path.join('scripts', script_path)
-    print("[--------------------------------]")
-    print(f"[execute_script] Warning : if no repo base folder is << python-slave-runner/scripts >> folder -------------------------------");
-    print(f"[execute_script] Script path: {script_path}", file=sys.stderr)
-    print("[--------------------------------]")
     if os.path.exists(script_content_path):
         with open(script_content_path, 'r') as f:
             script_content = f.read()
@@ -46,6 +74,9 @@ def execute_script():
         with open(os.path.join(script_folder_path, original_script_name), 'w') as f:
             f.write(script_content)
         print(f"[execute_script] Saved script content to {script_folder_path}/{original_script_name}", file=sys.stderr)
+    else:
+        print(f"[execute_script] Script not found at {script_content_path}", file=sys.stderr)
+        return jsonify({'status': 'error', 'message': f'Script not found at {script_content_path}'}), 404
 
     # Prepare command with parameters including iteration and trace_folder
     command = [sys.executable, script_content_path] + (parameters.split() if parameters else [])
