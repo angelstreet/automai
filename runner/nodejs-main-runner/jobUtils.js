@@ -176,8 +176,9 @@ async function updateScriptExecution(
   }
 }
 
-const { Client } = require('ssh2');
 const fs = require('fs');
+
+const { Client } = require('ssh2');
 
 // SFTP upload helper
 async function uploadFileViaSFTP(host, sshKeyOrPass, localPath, remotePath) {
@@ -219,7 +220,6 @@ async function initializeJobOnHost(_supabase, jobId, started_at, config, host, s
   const uploadFolder = host.os === 'windows' ? 'C:/tmp/uploadFolder' : '/tmp/uploadFolder';
   const jobFolderName = `${started_at.split('T')[0].replace(/-/g, '')}_${started_at.split('T')[1].split('.')[0].replace(/:/g, '')}_${jobId}`;
   const jobFolderPath = `${uploadFolder}/${jobFolderName}`;
-
   // 1. Create directory (OS-specific)
   let createDirCmd;
   if (host.os === 'windows') {
@@ -247,9 +247,22 @@ async function initializeJobOnHost(_supabase, jobId, started_at, config, host, s
           return reject(err);
         }
         stream.on('close', (code) => {
+          console.log('[SSH stream close]', code);
           conn.end();
           if (code === 0) resolve();
           else reject(new Error(`Directory creation failed with code ${code}`));
+        });
+        stream.on('end', () => {
+          console.log('[SSH stream end]');
+        });
+        stream.on('exit', (code) => {
+          console.log('[SSH stream exit]', code);
+        });
+        stream.on('data', (data) => {
+          console.log('[SSH STDOUT]:', data.toString());
+        });
+        stream.stderr.on('data', (data) => {
+          console.log('[SSH STDERR]:', data.toString());
         });
       });
     });
@@ -306,9 +319,22 @@ async function initializeJobOnHost(_supabase, jobId, started_at, config, host, s
           return reject(err);
         }
         stream.on('close', (code) => {
+          console.log('[SSH stream close]', code);
           conn.end();
           if (code === 0) resolve();
           else reject(new Error(`pip install failed with code ${code}`));
+        });
+        stream.on('end', () => {
+          console.log('[SSH stream end]');
+        });
+        stream.on('exit', (code) => {
+          console.log('[SSH stream exit]', code);
+        });
+        stream.on('data', (data) => {
+          console.log('[SSH STDOUT]:', data.toString());
+        });
+        stream.stderr.on('data', (data) => {
+          console.log('[SSH STDERR]:', data.toString());
         });
       });
     });
