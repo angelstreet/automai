@@ -47,11 +47,11 @@ async function processJob() {
 
     // Check if the job's env matches the runner's environment
     const jobEnv = job_run_env || 'preprod';
-    if ((!RUNNER_ENV) in jobEnv) {
+    const baseJobEnv = jobEnv.split('-')[0]; // Extract base env (prod or preprod) before any suffix like '-playwright'
+    if (baseJobEnv.toLowerCase() !== RUNNER_ENV.toLowerCase()) {
       console.log(
         `[processJob] Skipping job for config ${config_id} as job env (${jobEnv}) does not match runner env (${RUNNER_ENV})`,
       );
-      // Remove job from queue to prevent reprocessing
       return;
     }
 
@@ -104,8 +104,6 @@ async function processJob() {
     }
   } catch (error) {
     console.error(`[processJob] Error: ${error.message}`);
-    // In case of error, ensure the job is removed from the queue to prevent reprocessing
-    await redis.lrem('jobs_queue', 1, JSON.stringify(jobData));
   }
 }
 
