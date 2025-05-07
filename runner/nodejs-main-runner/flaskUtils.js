@@ -4,7 +4,6 @@ const path = require('path');
 const axios = require('axios');
 
 const { createScriptExecution, updateScriptExecution } = require('./jobUtils');
-const { writeScriptMetadata } = require('./metadataUtils');
 const {
   prepareJobInitializationPayload,
   prepareJobFinalizationPayload,
@@ -197,6 +196,7 @@ async function executeFlaskScripts(
             job_id: jobId,
             script_id: scriptExecutionId,
             env: env,
+            config_name: config_name,
           };
 
           if (config.repository) {

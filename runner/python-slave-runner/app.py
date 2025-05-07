@@ -217,6 +217,10 @@ def finalize_job():
     data = request.get_json()
     job_id = data.get('job_id')
     created_at = data.get('created_at')
+    overall_status = data.get('overall_status', 'unknown')
+    env = data.get('env', 'N/A')
+    config_name = data.get('config_name', '')
+    start_time = data.get('start_time', datetime.utcnow().isoformat() + 'Z')
 
     if not job_id or not created_at:
         return jsonify({'status': 'error', 'message': 'Missing job_id or created_at'}), 400
@@ -239,29 +243,31 @@ def finalize_job():
         return jsonify({'status': 'error', 'message': 'Upload script not found'}), 500
 
     try:
-        print(f"[finalize_job] Executing upload_and_report.py for job {job_id}", file=sys.stderr)
-        result = subprocess.run([sys.executable, upload_script_path], capture_output=True, text=True)
+        end_time = datetime.utcnow().isoformat() + 'Z'
+        duration = ((datetime.fromisoformat(end_time[:-1]) - datetime.fromisoformat(start_time[:-1])).total_seconds()).__str__()
         
+        # Create job metadata JSON
+        job_metadata = {
+            'job_id': job_id,
+            'start_time': start_time,
+            'end_time': end_time,
+            'config_name': config_name,
+            'env': env,
+            'status': overall_status,
+            'duration': duration
+        }
+        metadata_path = os.path.join(job_folder_path, 'metadata.json')
+        with open(metadata_path, 'w') as f:
+            json.dump(job_metadata, f, indent=2)
+        print(f"[finalize_job] Saved job metadata to {metadata_path}, {job_metadata}", file=sys.stderr)
+        
+        print(f"[finalize_job] Executing upload_and_report.py for job {job_id}", file=sys.stderr)
+        result = subprocess.run([sys.executable, upload_script_path], capture_output=True, text=True, cwd=job_folder_path)
+        print(f"[finalize_job] Result: {result.stdout}", file=sys.stderr)
         if result.returncode == 0:
             print(f"[finalize_job] Upload and report generation successful for job {job_id}", file=sys.stderr)
             try:
                 output_json = json.loads(result.stdout)
-                # Extract and log Job Run URL
-                job_report_url = next((file['public_url'] for file in output_json.get('uploaded_files', []) if file['name'] == 'report.html'), '')
-                if job_report_url:
-                    print(f"[finalize_job] Job Run Report URL for job {job_id}: {job_report_url}", file=sys.stderr)
-                else:
-                    print(f"[finalize_job] WARNING: Job Run Report URL not found for job {job_id}", file=sys.stderr)
-                
-                # Extract and log Script Report URLs
-                uploaded_files = output_json.get('uploaded_files', [])
-                for file in uploaded_files:
-                    if file['name'] == 'script_report.html':
-                        script_id = file['relative_path'].split('/')[1].split('_')[-1] if '/' in file['relative_path'] else 'unknown'
-                        if script_id != 'unknown':
-                            print(f"[finalize_job] Script Report URL for script {script_id}: {file['public_url']}", file=sys.stderr)
-                        else:
-                            print(f"[finalize_job] WARNING: Script ID could not be determined for script report {file['relative_path']}", file=sys.stderr)
                 return jsonify(output_json)
             except json.JSONDecodeError:
                 print(f"[finalize_job] ERROR: Failed to parse JSON output from upload_and_report.py", file=sys.stderr)
@@ -269,11 +275,9 @@ def finalize_job():
         else:
             print(f"[finalize_job] ERROR: upload_and_report.py failed with return code {result.returncode}", file=sys.stderr)
             print(f"[finalize_job] Stderr: {result.stderr}", file=sys.stderr)
-            # Return a response indicating failure but still attempt to continue
             return jsonify({'status': 'error', 'message': 'Upload script execution failed', 'job_id': job_id, 'error_details': result.stderr}), 200
     except Exception as e:
         print(f"[finalize_job] ERROR: Failed to execute upload_and_report.py: {str(e)}", file=sys.stderr)
-        # Return a response indicating failure but still attempt to continue
         return jsonify({'status': 'error', 'message': f'Failed to execute upload script: {str(e)}', 'job_id': job_id}), 200
 
 if __name__ == '__main__':
