@@ -220,167 +220,103 @@ async function initializeJobOnHost(_supabase, jobId, started_at, config, host, s
   const jobFolderName = `${started_at.split('T')[0].replace(/-/g, '')}_${started_at.split('T')[1].split('.')[0].replace(/:/g, '')}_${jobId}`;
   const jobFolderPath = `${uploadFolder}/${jobFolderName}`;
 
+  // 1. Create directory (OS-specific)
+  let createDirCmd;
   if (host.os === 'windows') {
-    // 1. Create directory
-    const createDirCmd = `powershell -Command "if (-not (Test-Path '${jobFolderPath}')) { New-Item -ItemType Directory -Path '${jobFolderPath}' }"`;
-    console.log(`[initializeJobOnHost] Executing command on host ${host.ip}: ${createDirCmd}`);
-    await new Promise((resolve, reject) => {
-      const conn = new Client();
-      const sshConfig = {
-        host: host.ip,
-        port: host.port || 22,
-        username: host.username,
-      };
-      if (host.authType === 'privateKey') {
-        sshConfig.privateKey = sshKeyOrPass;
-      } else {
-        sshConfig.password = sshKeyOrPass;
-      }
-      conn.on('ready', () => {
-        conn.exec(createDirCmd, (err, stream) => {
-          if (err) {
-            conn.end();
-            return reject(err);
-          }
-          stream.on('close', (code) => {
-            conn.end();
-            if (code === 0) resolve();
-            else reject(new Error(`Directory creation failed with code ${code}`));
-          });
-        });
-      });
-      conn.on('error', (err) => reject(err));
-      conn.connect(sshConfig);
-    });
-
-    // 2. Upload files via SFTP
-    // Prepare local file paths
-    const uploadScriptLocal = 'upload_and_report.py';
-    const requirementsLocal = 'requirements.txt';
-    // Write requirements.txt locally if not present
-    if (!fs.existsSync(requirementsLocal)) {
-      fs.writeFileSync(requirementsLocal, 'boto3\npython-dotenv\nsupabase\n');
+    createDirCmd = `powershell -Command "if (-not (Test-Path '${jobFolderPath}')) { New-Item -ItemType Directory -Path '${jobFolderPath}' }"`;
+  } else {
+    createDirCmd = `mkdir -p ${jobFolderPath}`;
+  }
+  console.log(`[initializeJobOnHost] Executing command on host ${host.ip}: ${createDirCmd}`);
+  await new Promise((resolve, reject) => {
+    const conn = new Client();
+    const sshConfig = {
+      host: host.ip,
+      port: host.port || 22,
+      username: host.username,
+    };
+    if (host.authType === 'privateKey') {
+      sshConfig.privateKey = sshKeyOrPass;
+    } else {
+      sshConfig.password = sshKeyOrPass;
     }
-    const configNameLocal = './config_name.txt';
-    fs.writeFileSync(configNameLocal, config.config_name || '');
-    const envFileLocal = './.env';
-    fs.writeFileSync(
-      envFileLocal,
-      `CLOUDFLARE_R2_ENDPOINT=${process.env.CLOUDFLARE_R2_ENDPOINT || ''}\nCLOUDFLARE_R2_ACCESS_KEY_ID=${process.env.CLOUDFLARE_R2_ACCESS_KEY_ID || ''}\nCLOUDFLARE_R2_SECRET_ACCESS_KEY=${process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY || ''}\nSUPABASE_URL=${process.env.SUPABASE_URL || ''}\nSUPABASE_SERVICE_ROLE_KEY=${process.env.SUPABASE_SERVICE_ROLE_KEY || ''}\n`,
-    );
-    // Remote paths
-    const uploadScriptRemote = `${jobFolderPath}/upload_and_report.py`;
-    const requirementsRemote = `${jobFolderPath}/requirements.txt`;
-    const configNameRemote = `${jobFolderPath}/config_name.txt`;
-    const envFileRemote = `${jobFolderPath}/.env`;
-    // Upload
-    await uploadFileViaSFTP(host, sshKeyOrPass, uploadScriptLocal, uploadScriptRemote);
-    await uploadFileViaSFTP(host, sshKeyOrPass, requirementsLocal, requirementsRemote);
-    await uploadFileViaSFTP(host, sshKeyOrPass, configNameLocal, configNameRemote);
-    await uploadFileViaSFTP(host, sshKeyOrPass, envFileLocal, envFileRemote);
-
-    // 3. Install dependencies
-    const pipInstallCmd = `powershell -Command "pip install -r '${requirementsRemote}'"`;
-    console.log(`[initializeJobOnHost] Executing command on host ${host.ip}: ${pipInstallCmd}`);
-    await new Promise((resolve, reject) => {
-      const conn = new Client();
-      const sshConfig = {
-        host: host.ip,
-        port: host.port || 22,
-        username: host.username,
-      };
-      if (host.authType === 'privateKey') {
-        sshConfig.privateKey = sshKeyOrPass;
-      } else {
-        sshConfig.password = sshKeyOrPass;
-      }
-      conn.on('ready', () => {
-        conn.exec(pipInstallCmd, (err, stream) => {
-          if (err) {
-            conn.end();
-            return reject(err);
-          }
-          stream.on('close', (code) => {
-            conn.end();
-            if (code === 0) resolve();
-            else reject(new Error(`pip install failed with code ${code}`));
-          });
+    conn.on('ready', () => {
+      conn.exec(createDirCmd, (err, stream) => {
+        if (err) {
+          conn.end();
+          return reject(err);
+        }
+        stream.on('close', (code) => {
+          conn.end();
+          if (code === 0) resolve();
+          else reject(new Error(`Directory creation failed with code ${code}`));
         });
       });
-      conn.on('error', (err) => reject(err));
-      conn.connect(sshConfig);
     });
-    console.log(`[initializeJobOnHost] Job initialization completed on host ${host.ip}`);
-    return jobFolderPath;
+    conn.on('error', (err) => reject(err));
+    conn.connect(sshConfig);
+  });
+
+  // 2. Upload files via SFTP (all OSes)
+  const uploadScriptLocal = 'upload_and_report.py';
+  const requirementsLocal = 'requirements.txt';
+  if (!fs.existsSync(requirementsLocal)) {
+    fs.writeFileSync(requirementsLocal, 'boto3\npython-dotenv\nsupabase\n');
   }
+  const configNameLocal = './config_name.txt';
+  fs.writeFileSync(configNameLocal, config.config_name || '');
+  const envFileLocal = './.env';
+  fs.writeFileSync(
+    envFileLocal,
+    `CLOUDFLARE_R2_ENDPOINT=${process.env.CLOUDFLARE_R2_ENDPOINT || ''}\nCLOUDFLARE_R2_ACCESS_KEY_ID=${process.env.CLOUDFLARE_R2_ACCESS_KEY_ID || ''}\nCLOUDFLARE_R2_SECRET_ACCESS_KEY=${process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY || ''}\nSUPABASE_URL=${process.env.SUPABASE_URL || ''}\nSUPABASE_SERVICE_ROLE_KEY=${process.env.SUPABASE_SERVICE_ROLE_KEY || ''}\n`,
+  );
+  const uploadScriptRemote = `${jobFolderPath}/upload_and_report.py`;
+  const requirementsRemote = `${jobFolderPath}/requirements.txt`;
+  const configNameRemote = `${jobFolderPath}/config_name.txt`;
+  const envFileRemote = `${jobFolderPath}/.env`;
+  await uploadFileViaSFTP(host, sshKeyOrPass, uploadScriptLocal, uploadScriptRemote);
+  await uploadFileViaSFTP(host, sshKeyOrPass, requirementsLocal, requirementsRemote);
+  await uploadFileViaSFTP(host, sshKeyOrPass, configNameLocal, configNameRemote);
+  await uploadFileViaSFTP(host, sshKeyOrPass, envFileLocal, envFileRemote);
 
-  // Non-Windows: keep existing logic
-  let initCommand = `mkdir -p ${jobFolderPath}`;
-  console.log(`[initializeJobOnHost] Executing command on host ${host.ip}: ${initCommand}`);
-  const connInit = new Client();
-  try {
-    await new Promise((resolve, reject) => {
-      const connectionTimeout = setTimeout(() => {
-        connInit.end();
-        reject(new Error('SSH connection timeout for initialization'));
-      }, 60000);
-
-      connInit.on('ready', () => {
-        clearTimeout(connectionTimeout);
-        console.log(`[initializeJobOnHost] Connected to ${host.ip} for initialization`);
-        connInit.exec(initCommand, (err, stream) => {
-          if (err) {
-            connInit.end();
-            reject(err);
-            return;
-          }
-          let stdout = '';
-          let stderr = '';
-          stream.on('data', (data) => {
-            stdout += data;
-            console.log(`${data}`);
-          });
-          stream.stderr.on('data', (data) => {
-            stderr += data;
-            console.log(`[initializeJobOnHost] Stderr during init: ${data}`);
-          });
-          stream.on('close', (code, signal) => {
-            console.log(
-              `[initializeJobOnHost] Initialization command completed with code: ${code}, signal: ${signal}`,
-            );
-            connInit.end();
-            if (code === 0) {
-              resolve({ stdout, stderr });
-            } else {
-              reject(new Error(`Initialization failed with code ${code}`));
-            }
-          });
+  // 3. Install dependencies (OS-specific)
+  let pipInstallCmd;
+  if (host.os === 'windows') {
+    pipInstallCmd = `powershell -Command "pip install -r '${requirementsRemote}'"`;
+  } else {
+    pipInstallCmd = `pip install -r ${requirementsRemote}`;
+  }
+  console.log(`[initializeJobOnHost] Executing command on host ${host.ip}: ${pipInstallCmd}`);
+  await new Promise((resolve, reject) => {
+    const conn = new Client();
+    const sshConfig = {
+      host: host.ip,
+      port: host.port || 22,
+      username: host.username,
+    };
+    if (host.authType === 'privateKey') {
+      sshConfig.privateKey = sshKeyOrPass;
+    } else {
+      sshConfig.password = sshKeyOrPass;
+    }
+    conn.on('ready', () => {
+      conn.exec(pipInstallCmd, (err, stream) => {
+        if (err) {
+          conn.end();
+          return reject(err);
+        }
+        stream.on('close', (code) => {
+          conn.end();
+          if (code === 0) resolve();
+          else reject(new Error(`pip install failed with code ${code}`));
         });
       });
-      connInit.on('error', (err) => {
-        clearTimeout(connectionTimeout);
-        reject(err);
-      });
-      const sshConfig = {
-        host: host.ip,
-        port: host.port || 22,
-        username: host.username,
-      };
-      if (host.authType === 'privateKey') {
-        sshConfig.privateKey = sshKeyOrPass;
-      } else {
-        sshConfig.password = sshKeyOrPass;
-      }
-      connInit.connect(sshConfig);
     });
-    console.log(`[initializeJobOnHost] Job initialization completed on host ${host.ip}`);
-    return jobFolderPath;
-  } catch (error) {
-    console.error(
-      `[initializeJobOnHost] Error initializing job on host ${host.ip}: ${error.message}`,
-    );
-    throw error;
-  }
+    conn.on('error', (err) => reject(err));
+    conn.connect(sshConfig);
+  });
+  console.log(`[initializeJobOnHost] Job initialization completed on host ${host.ip}`);
+  return jobFolderPath;
 }
 
 async function finalizeJobOnHost(
