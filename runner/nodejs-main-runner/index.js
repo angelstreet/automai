@@ -46,18 +46,18 @@ async function processJob() {
     }
 
     // Check if the job's env matches the runner's environment
-    const jobEnv = config.env || 'preprod';
-    if (jobEnv !== RUNNER_ENV) {
+    const jobEnv = job_run_env || 'preprod';
+    if ((!RUNNER_ENV) in jobEnv) {
       console.log(
         `[processJob] Skipping job for config ${config_id} as job env (${jobEnv}) does not match runner env (${RUNNER_ENV})`,
       );
       // Remove job from queue to prevent reprocessing
-      await redis.lrem('jobs_queue', 1, JSON.stringify(jobData));
       return;
     }
 
     // If we reach here, the job is active and environment matches, so now we can remove it from the queue
     console.log(`[processJob] Processing job for config ${config_id}`);
+    await redis.lrem('jobs_queue', 1, JSON.stringify(jobData));
 
     // Set Flask service URL based on job env environment, default to preprod if not specified
     const FLASK_SERVICE_URL = getFlaskServiceUrl(job_run_env);
