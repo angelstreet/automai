@@ -1,4 +1,4 @@
-FROM python:3.9-slim
+FROM mcr.microsoft.com/playwright
 
 # Update and install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -16,11 +16,7 @@ COPY requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install playwright python-dotenv requests
-
-# Install Playwright browsers
-RUN playwright install-deps
-RUN playwright install
+RUN pip install python-dotenv requests
 
 # Copy the application code
 COPY . .
