@@ -73,7 +73,6 @@ def execute_script():
 
     # Ensure we have a precise timestamp for start time
     start_time_iso = datetime.utcnow().isoformat() + 'Z'
-    start_time_formatted = start_time_iso.split('T')[0].replace('-', '') + '_' + start_time_iso.split('T')[1].split('.')[0].replace(':', '')
     status = 'success'
     stdout_data = ''
     stderr_data = ''
@@ -120,7 +119,6 @@ def execute_script():
 
     # Ensure that end_time is different from start_time
     end_time_iso = datetime.utcnow().isoformat() + 'Z'
-    end_time_formatted = end_time_iso.split('T')[0].replace('-', '') + '_' + end_time_iso.split('T')[1].split('.')[0].replace(':', '')
     
     # Calculate duration
     try:
@@ -139,8 +137,8 @@ def execute_script():
         'script_name': os.path.basename(script_path),
         'script_path': script_path,
         'parameters': parameters,
-        'start_time': start_time_formatted,
-        'end_time': end_time_formatted,
+        'start_time': start_time_iso,
+        'end_time': end_time_iso,
         'status': status,
         'env': env,
         'config_name': config_name or 'Default Config',

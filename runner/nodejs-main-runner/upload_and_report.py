@@ -23,12 +23,12 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
         formatted_start_time = datetime.fromisoformat(start_time.replace('Z', '+00:00')).strftime('%Y-%m-%d_%H:%M:%S') if start_time and start_time != "unknown" else "N/A"
     except Exception as e:
         print(f"[@upload_and_report:build_script_report_html_content] Error formatting start_time: {str(e)}", file=sys.stderr)
-        formatted_start_time = "N/A"
+        formatted_start_time = start_time if start_time else "N/A"
     try:
         formatted_end_time = datetime.fromisoformat(end_time.replace('Z', '+00:00')).strftime('%Y-%m-%d_%H:%M:%S') if end_time else "N/A"
     except Exception as e:
         print(f"[@upload_and_report:build_script_report_html_content] Error formatting end_time: {str(e)}", file=sys.stderr)
-        formatted_end_time = "N/A"
+        formatted_end_time = end_time if end_time else "N/A"
         
     # Build associated files table
     associated_files_html = ""
@@ -155,12 +155,12 @@ def build_job_report_html_content(job_id, start_time, end_time, duration, status
         formatted_start_time = datetime.fromisoformat(start_time.replace('Z', '+00:00')).strftime('%Y-%m-%d_%H:%M:%S') if start_time and start_time != "unknown" else "N/A"
     except Exception as e:
         print(f"[@upload_and_report:build_job_report_html_content] Error formatting start_time: {str(e)}", file=sys.stderr)
-        formatted_start_time = "N/A"
+        formatted_start_time = start_time if start_time else "N/A"
     try:
         formatted_end_time = datetime.fromisoformat(end_time.replace('Z', '+00:00')).strftime('%Y-%m-%d_%H:%M:%S') if end_time else "N/A"
     except Exception as e:
         print(f"[@upload_and_report:build_job_report_html_content] Error formatting end_time: {str(e)}", file=sys.stderr)
-        formatted_end_time = "N/A"
+        formatted_end_time = end_time if end_time else "N/A"
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -215,12 +215,12 @@ def create_job_report_html(job_folder, job_id, start_time, end_time, script_repo
         try:
             with open(metadata_path, 'r') as f:
                 metadata = json.load(f)
-            job_id = metadata.get('job_id', "")
-            start_time = metadata.get('start_time',"")
-            end_time = metadata.get('end_time',"")
-            config_name = metadata.get('config_name',"")
-            status = metadata.get('status',"")
-            duration = metadata.get('duration',"")
+            job_id = metadata.get('job_id', job_id)
+            start_time = metadata.get('start_time', start_time)
+            end_time = metadata.get('end_time', end_time)
+            config_name = metadata.get('config_name', config_name)
+            status = metadata.get('status', status)
+            duration = metadata.get('duration', duration)
         except Exception as e:
             print(f"[@upload_and_report:create_job_report_html] Error reading job metadata: {str(e)}", file=sys.stderr)
     
@@ -233,7 +233,8 @@ def create_job_report_html(job_folder, job_id, start_time, end_time, script_repo
         if uploaded_files is not None:
             report_url = next((file['public_url'] for file in uploaded_files if file['name'] == 'script_report.html' and script_id in file['relative_path']), '')
         report_link = f"<a href='{report_url}' target='_blank'>View Report</a>" if report_url else "Not Available"
-        date_time = datetime.fromisoformat(start_time.replace('Z', '+00:00')).strftime('%Y-%m-%d_%H:%M:%S') if start_time else "N/A"  # Format date_time
+        script_start_time = script_data.get('start_time', start_time)
+        date_time = datetime.fromisoformat(script_start_time.replace('Z', '+00:00')).strftime('%Y-%m-%d_%H:%M:%S') if script_start_time and script_start_time != 'unknown' else "N/A"  # Format date_time
         script_summary += f"<tr><td>{order}</td><td>{script_id}</td><td>{script_name}</td><td>{date_time}</td><td class=\"status-{script_status.lower()}\">{script_status}</td><td>{report_link}</td></tr>"
         order += 1
     
