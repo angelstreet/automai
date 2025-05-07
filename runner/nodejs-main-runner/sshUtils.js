@@ -239,7 +239,7 @@ async function executeSSHScripts(
       const { stdoutFromFile, stderrFromFile } = await readScriptOutputFiles(
         host,
         sshKeyOrPass,
-        paths.scriptFolderAbsolutePath,
+        paths.scriptRunFolderPath,
         scriptResult,
         host.os,
       );
