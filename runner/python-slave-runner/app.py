@@ -158,8 +158,16 @@ def initialize_job():
     if not upload_script_content:
         return jsonify({'status': 'error', 'message': 'Missing upload script content'}), 400
 
+     # List contents of /app folder for debugging
+    print(f"[initialize_job] Listing contents of /app folder", file=sys.stderr)
+    try:
+        output = subprocess.run(['os.getcwd()'], capture_output=True, text=True)
+        print(f"[initialize_job] Contents of /app: {output.stdout}", file=sys.stderr)
+    except Exception as e:
+        print(f"[initialize_job] ERROR: Failed to os.getcwd() : {str(e)}", file=sys.stderr)
+        
     # Create job folder structure
-    upload_folder = os.path.join("/app/" 'uploadFolder')
+    upload_folder = os.path.join(os.getcwd(), 'uploadFolder')
     # Clean existing uploadFolder if it exists to avoid clutter
     if os.path.exists(upload_folder):
         import shutil
