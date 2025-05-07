@@ -257,11 +257,12 @@ async function initializeJobOnHost(_supabase, jobId, started_at, config, host, s
       envFileLocal,
       `CLOUDFLARE_R2_ENDPOINT=${process.env.CLOUDFLARE_R2_ENDPOINT || ''}\nCLOUDFLARE_R2_ACCESS_KEY_ID=${process.env.CLOUDFLARE_R2_ACCESS_KEY_ID || ''}\nCLOUDFLARE_R2_SECRET_ACCESS_KEY=${process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY || ''}\nSUPABASE_URL=${process.env.SUPABASE_URL || ''}\nSUPABASE_SERVICE_ROLE_KEY=${process.env.SUPABASE_SERVICE_ROLE_KEY || ''}\n`,
     );
+
     // Remote paths
     const uploadScriptRemote = `${jobFolderPath}/upload_and_report.py`;
     const requirementsRemote = `${jobFolderPath}/requirements.txt`;
-
     const envFileRemote = `${jobFolderPath}/.env`;
+
     // Upload
     await uploadFileViaSFTP(host, sshKeyOrPass, uploadScriptLocal, uploadScriptRemote);
     await uploadFileViaSFTP(host, sshKeyOrPass, requirementsLocal, requirementsRemote);
@@ -335,7 +336,7 @@ async function finalizeJobOnHost(
   config_name,
 ) {
   console.log(
-    `[finalizeJobOnHost] Finalizing job ${jobId} on host ${host.ip} with upload_and_report.py`,
+    `[finalizeJobOnHost] Finalizing job ${jobId} on host ${host.ip} with upload_and_report.py for config ${config_name}`,
   );
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'job-'));
   const metadataLocal = path.join(tempDir, 'metadata.json');
@@ -346,13 +347,13 @@ async function finalizeJobOnHost(
     config_name: output.config_name || 'N/A',
     env: output.env || 'N/A',
     status: overallStatus,
-    config_name: output.config_name || 'N/A',
     duration: output.started_at
       ? ((new Date() - new Date(output.started_at)) / 1000).toFixed(2)
       : 'N/A',
   });
   const metadataRemote = path.join(jobFolderPath, 'metadata.json');
   await uploadFileViaSFTP(host, sshKeyOrPass, metadataLocal, metadataRemote);
+  // Ensure upload_and_report.py handles all files in the job folder
   const finalizeCommand =
     host.os === 'windows'
       ? `powershell -Command "cd '${jobFolderPath}'; python upload_and_report.py"`

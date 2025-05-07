@@ -370,7 +370,7 @@ def main():
             )
             print(f"[@upload_and_report:main] Successfully initialized S3 client for Cloudflare R2.", file=sys.stderr)
         else:
-            print(f"[@upload_and_report:main] ERROR: Cloudflare R2 credentials not found in environment variables.", file=sys.stderr)
+            print(f"[@upload_and_report:main] ERROR: Cloudflare R2 credentials not found in environment variables.", file=sys)
             output = {'status': 'failure', 'job_id': os.path.basename(job_folder_path), 'error': 'Cloudflare R2 credentials not found'}
             print(json.dumps(output, indent=2))
             sys.exit(1)
@@ -403,7 +403,6 @@ def main():
     for script_folder_name in script_folders:
         script_folder_path = os.path.join(job_folder_path, script_folder_name)
         metadata_path = os.path.join(script_folder_path, 'metadata.json')
-        status = "success"
         if os.path.exists(metadata_path):
             try:
                 with open(metadata_path, 'r') as f:
@@ -498,7 +497,7 @@ def main():
 
             # Correct the path to avoid duplication of job folder name
             r2_path = relative_path
-            print(f"[@upload_and_report:main] Uploading file to R2: {file_name} -> {r2_path}", file=sys.stderr)
+            print(f"[@upload_and_report:main] Uploading file to R2: {file_name} -> {r2_path}", file=sys)
 
             with open(file_path, 'rb') as f:
                 s3_client.upload_fileobj(
@@ -575,7 +574,7 @@ def main():
             
             # Create updated script report with file links
             updated_script_report_path = create_script_report_html(
-                script_folder_path, stdout_content, stderr_content, script_id, script_id, 
+                script_folder_path, stdout_content, stderr_content, script_id, job_id, 
                 datetime.now(timezone.utc).isoformat(), datetime.now(timezone.utc).isoformat(), script_data['script_path'], parameters, 
                 script_data['status'], uploaded_files
             )

@@ -1,7 +1,5 @@
 const crypto = require('crypto');
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
+
 const { Client } = require('ssh2');
 
 const ALGORITHM = 'aes-256-gcm';
@@ -80,7 +78,7 @@ async function uploadFileViaSFTP(host, sshKeyOrPass, localPath, remotePath) {
           conn.end();
           return reject(err);
         }
-        console.log(`[initializeJobOnHost] SFTP uploading ${localPath} to ${remotePath}`);
+        console.log(`[@utils:uploadFileViaSFTP] SFTP uploading ${localPath} to ${remotePath}`);
         sftp.fastPut(localPath, remotePath, (err) => {
           conn.end();
           if (err) return reject(err);
