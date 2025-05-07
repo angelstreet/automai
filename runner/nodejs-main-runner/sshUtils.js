@@ -76,7 +76,7 @@ async function executeSSHScripts(
     // Initialize job on SSH host using jobUtils function
     let jobFolderPath;
     try {
-      jobFolderPath = await initializeJobOnHost(jobId, started_at, host, sshKeyOrPass);
+      jobFolderPath = await initializeJobOnHost(jobId, started_at, host, sshKeyOrPass, config);
     } catch (error) {
       console.error(
         `[executeSSHScripts] Failed to initialize job on host ${host.ip}: ${error.message}`,
@@ -144,9 +144,8 @@ async function executeSSHScripts(
       let repoDir = '';
       console.log(`[executeSSHScripts] Script folder: ${scriptFolder}`);
 
-      if (config.repository && config.repository.url && config.repository.branch) {
-        const repoUrl = config.repository.url;
-        // const branch = config.repository.branch; // Commented out as it is not used in this context
+      if (config.repository) {
+        const repoUrl = config.repository;
         repoDir =
           repoUrl
             .split('/')

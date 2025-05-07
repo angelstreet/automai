@@ -193,10 +193,10 @@ async function initializeJobOnHost(jobId, started_at, host, sshKeyOrPass, config
   let command;
   let repoCommands = '';
   let repoDir = '';
-
-  if (config && config.repository && config.repository.url && config.repository.branch) {
-    const repoUrl = config.repository.url;
-    const branch = config.repository.branch;
+  console.log(`[initializeJobOnHost] Config: ${JSON.stringify(config)}`);
+  if (config && config.repository) {
+    const repoUrl = config.repository;
+    const branch = config.branch;
     repoDir =
       repoUrl
         .split('/')
