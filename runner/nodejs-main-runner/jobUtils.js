@@ -25,7 +25,7 @@ async function getJobFromQueue(redis) {
 async function fetchJobConfig(supabase, config_id) {
   const { data, error } = await supabase
     .from('jobs_configuration')
-    .select('config, is_active, team_id, creator_id, name, env')
+    .select('config, is_active, team_id, creator_id, name')
     .eq('id', config_id)
     .single();
   if (error || !data) {
@@ -39,7 +39,7 @@ async function fetchJobConfig(supabase, config_id) {
     creator_id: data.creator_id,
     is_active: data.is_active,
     name: data.name,
-    env: data.env,
+    env: data.config.env,
   };
 }
 
