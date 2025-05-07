@@ -60,6 +60,7 @@ def execute_script():
 
     # Determine the correct script path based on repository and script folder
     if repo_dir:
+        print(f"[execute_script] Repository directory: {repo_dir}, script_folder: {script_folder}, script_path: {script_path}", file=sys.stderr)
         script_content_path = os.path.join(repo_dir, script_folder, script_path) if script_folder else os.path.join(repo_dir, script_path)
     else:
         script_content_path = os.path.join(os.getcwd(), script_path)
