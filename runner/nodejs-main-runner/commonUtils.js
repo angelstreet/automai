@@ -64,6 +64,7 @@ async function executeOnSSH(
   team_id,
   creator_id,
   env,
+  config_name,
 ) {
   // Execute scripts via SSH on hosts
   const result = await executeSSHScripts(
@@ -76,6 +77,7 @@ async function executeOnSSH(
     team_id,
     creator_id,
     env,
+    config_name,
   );
   const output = result.output;
   const overallStatus = result.overallStatus;

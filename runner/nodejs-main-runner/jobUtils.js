@@ -344,7 +344,7 @@ async function finalizeJobOnHost(
     job_id: jobId,
     start_time: output.started_at,
     end_time: new Date().toISOString(),
-    config_name: output.config_name || 'N/A',
+    config_name: config_name || 'N/A',
     env: output.env || 'N/A',
     status: overallStatus,
     duration: output.started_at

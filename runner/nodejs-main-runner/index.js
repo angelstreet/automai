@@ -34,7 +34,10 @@ async function processJob() {
     const { config_id } = jobData;
 
     // Fetch job configuration
-    const { config, team_id, creator_id, is_active } = await fetchJobConfig(supabase, config_id);
+    const { config, team_id, creator_id, is_active, name } = await fetchJobConfig(
+      supabase,
+      config_id,
+    );
     if (!is_active) {
       console.log(`[processJob] Config ${config_id} is inactive, skipping execution`);
       // Remove job from queue since it's inactive
@@ -84,6 +87,7 @@ async function processJob() {
         team_id,
         creator_id,
         RUNNER_ENV,
+        name,
       );
     } else {
       await commonUtils.executeOnSSH(
@@ -96,6 +100,7 @@ async function processJob() {
         team_id,
         creator_id,
         RUNNER_ENV,
+        name,
       );
     }
   } catch (error) {

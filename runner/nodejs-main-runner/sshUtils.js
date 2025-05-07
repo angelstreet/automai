@@ -32,6 +32,7 @@ async function executeSSHScripts(
   team_id,
   creator_id,
   env,
+  config_name,
 ) {
   const hosts = config.hosts;
   let output = {
@@ -39,7 +40,7 @@ async function executeSSHScripts(
     stdout: '',
     stderr: '',
     started_at: started_at,
-    config_name: config.config_name || 'N/A',
+    config_name: config_name || 'N/A',
     env: env || 'N/A',
   };
   let overallStatus = 'success';
@@ -241,7 +242,7 @@ async function executeSSHScripts(
       try {
         const pathResult = await executeSSHCommand(host, sshKeyOrPass, resolvePathCommand);
         if (pathResult.stdout) {
-          basePath = pathResult.stdout.trim();
+          basePath = parsePowerShellPath(pathResult.stdout);
           console.log(
             `[executeSSHScripts] Resolved full script path on host ${host.ip}: ${basePath}`,
           );
@@ -278,7 +279,7 @@ async function executeSSHScripts(
             ? `${basePath}/${fullScriptPathOnHost}`
             : path.join(basePath, fullScriptPathOnHost);
       }
-      fullScriptPathOnHost = fullScriptPathOnHost.replace;
+      fullScriptPathOnHost = fullScriptPathOnHost.replace(/\\/g, '/');
       console.log(
         `[executeSSHScripts] Full script path on host ${host.ip}: ${fullScriptPathOnHost}`,
       );
@@ -361,7 +362,7 @@ async function executeSSHScripts(
         end_time: scriptCompletedAt,
         status,
         env: env || 'N/A',
-        config_name: config.config_name || 'N/A',
+        config_name: config_name || 'N/A',
         duration: duration,
       });
       const metadataRemote = path.join(scriptFolderPath, 'metadata.json');
@@ -407,7 +408,7 @@ async function executeSSHScripts(
         host,
         sshKeyOrPass,
         jobFolderPath,
-        config.config_name || 'N/A',
+        config_name || 'N/A',
       );
     } catch (error) {
       console.error(
@@ -426,7 +427,7 @@ async function executeSSHScripts(
   }
 
   // Return output and status without final job update (handled by upload_and_report.py)
-  return { output, overallStatus, started_at, config_name: config.config_name || '' };
+  return { output, overallStatus, started_at, config_name: config_name || '' };
 }
 
 async function executeScriptOnSSH(jobId, script, createdAt, host) {
@@ -502,5 +503,11 @@ async function executeScriptOnSSH(jobId, script, createdAt, host) {
 
   return { status, stdout, stderr, startTime, endTime: new Date().toISOString() };
 }
+
+// Utility to parse PowerShell output and extract the path
+const parsePowerShellPath = (output) => {
+  const lines = output.split('\r\n');
+  return lines[lines.length - 1].trim();
+};
 
 module.exports = { executeSSHScripts, executeScriptOnSSH, uploadFileViaSFTP };
