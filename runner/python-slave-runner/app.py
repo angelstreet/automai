@@ -48,13 +48,14 @@ def execute_script():
             f.write(script_content)
         print(f"[execute_script] Saved script content to {script_folder_path}/{original_script_name}", file=sys.stderr)
 
-    # Prepare command
+    # Prepare command with parameters including iteration and trace_folder
     command = [sys.executable, script_content_path] + (parameters.split() if parameters else [])
 
     # Set environment variables
     script_env = os.environ.copy()
     script_env.update(env_vars)
 
+    # Ensure we have a precise timestamp for start time
     start_time = datetime.utcnow().isoformat() + 'Z'
     status = 'success'
     stdout_data = ''
@@ -100,8 +101,18 @@ def execute_script():
         with open(os.path.join(script_folder_path, 'stderr.txt'), 'w') as f:
             f.write(stderr_data)
 
+    # Ensure that end_time is different from start_time
     end_time = datetime.utcnow().isoformat() + 'Z'
-    duration = ((datetime.fromisoformat(end_time[:-1]) - datetime.fromisoformat(start_time[:-1])).total_seconds()).__str__()
+    
+    # Calculate duration
+    try:
+        duration = ((datetime.fromisoformat(end_time[:-1]) - datetime.fromisoformat(start_time[:-1])).total_seconds()).__str__()
+        if float(duration) <= 0:
+            # If duration is 0 or negative, set a small positive value
+            duration = "0.001"
+    except Exception as e:
+        print(f"[execute_script] Error calculating duration: {str(e)}, using default", file=sys.stderr)
+        duration = "0.001"  # Default duration if calculation fails
 
     # Create metadata JSON for this script execution
     metadata = {
@@ -114,7 +125,7 @@ def execute_script():
         'end_time': end_time,
         'status': status,
         'env': env,
-        'config_name': config_name,
+        'config_name': config_name or 'Default Config',
         'duration': duration
     }
     metadata_path = os.path.join(script_folder_path, 'metadata.json')
@@ -127,7 +138,8 @@ def execute_script():
         'stdout': stdout_data,
         'stderr': stderr_data,
         'start_time': start_time,
-        'end_time': end_time
+        'end_time': end_time,
+        'duration': duration
     })
 
 @app.route('/initialize_job', methods=['POST'])

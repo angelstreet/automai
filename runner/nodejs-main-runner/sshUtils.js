@@ -85,7 +85,9 @@ async function executeSSHScripts(
     }
 
     // Process each script separately for tracking purposes
+    let i = 0;
     for (const script of config.scripts || []) {
+      i++;
       const scriptPath = script.path;
       const scriptName = scriptPath.split('/').pop();
       const parameters = script.parameters || '';
@@ -124,9 +126,17 @@ async function executeSSHScripts(
       // Format command for this script
       const ext = scriptPath.split('.').pop().toLowerCase();
       const command = ext === 'py' ? 'python' : ext === 'sh' ? './' : '';
-      const scriptCommand = `${command} ${scriptPath} ${parameters || ''} 2>&1`.trim();
+      // Add required parameters for iteration and trace_folder
+      const iterationParam = '--iteration ${i}'; // Default to 1, will be updated in loop if needed
+      const traceFolderParam = `--trace_folder ${scriptFolderPath}`;
+      const finalParameters = parameters
+        ? `${parameters} ${iterationParam} ${traceFolderParam}`
+        : `${iterationParam} ${traceFolderParam}`;
+      const scriptCommand = `${command} ${scriptPath} ${finalParameters} 2>&1`.trim();
 
-      console.log(`[executeSSHScripts] Script to execute: ${scriptCommand}`);
+      console.log(
+        `[executeSSHScripts] Script to execute (Iteration ${i}/${iterations}): ${scriptCommand}`,
+      );
 
       let repoCommands = '';
       let scriptFolder = config.script_folder || '';
@@ -186,12 +196,12 @@ async function executeSSHScripts(
           repoCommands = `powershell -Command "${repoScript}"; cd '${scriptFolder}'`;
         } else {
           repoCommands = `
-            if [ -d "${repoDir}" ]; then
-              cd ${repoDir} && git pull origin ${branch} || exit 1
-            else
-              rm -rf ${repoDir} && git clone -b ${branch} ${repoUrl} ${repoDir} && cd ${repoDir} || exit 1
-            fi
-          `;
+              if [ -d "${repoDir}" ]; then
+                cd ${repoDir} && git pull origin ${branch} || exit 1
+              else
+                rm -rf ${repoDir} && git clone -b ${branch} ${repoUrl} ${repoDir} && cd ${repoDir} || exit 1
+              fi
+            `;
         }
         console.log(
           `[executeSSHScripts] Repository setup: ${repoDir} exists ? git pull : clone ${repoUrl} branch ${branch}${scriptFolder ? `, then navigate to ${scriptFolder}` : ''}`,
@@ -314,7 +324,7 @@ async function executeSSHScripts(
         // Add error to output collection
         output.scripts.push({
           script_path: scriptPath,
-          iteration: 1,
+          iteration: i,
           stdout: '',
           stderr: error.message,
         });
@@ -379,7 +389,7 @@ async function executeSSHScripts(
       // Add to the overall output collection
       const scriptOutputRecord = {
         script_path: scriptPath,
-        iteration: 1,
+        iteration: i,
         stdout: stdoutFromFile,
         stderr: stderrFromFile,
       };

@@ -193,9 +193,15 @@ async function executeFlaskScripts(
         attempt++;
         try {
           const envVars = collectEnvironmentVariables(decryptedEnvVars);
+          // Add iteration and trace_folder parameters
+          const iterationParam = `--iteration ${i}`;
+          const traceFolderParam = `--trace_folder uploadFolder/${started_at.split('T')[0].replace('-', '')}_${started_at.split('T')[1].split('.')[0].replace(':', '')}_${jobId}/${started_at.split('T')[0].replace('-', '')}_${started_at.split('T')[1].split('.')[0].replace(':', '')}_${scriptExecutionId}`;
+          const finalParameters = parameters
+            ? `${parameters} ${iterationParam} ${traceFolderParam}`
+            : `${iterationParam} ${traceFolderParam}`;
           const payload = {
             script_path: fullScriptPath,
-            parameters: parameters ? `${parameters} ${i}` : `${i}`,
+            parameters: finalParameters,
             timeout: timeout,
             environment_variables: envVars,
             created_at: started_at,
