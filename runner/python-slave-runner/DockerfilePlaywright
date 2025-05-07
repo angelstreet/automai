@@ -1,0 +1,26 @@
+FROM python:3.9-slim
+
+# Set working directory
+WORKDIR /app
+
+# Update and install system dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir python-dotenv requests gunicorn
+
+# Install additional system dependencies if needed
+RUN apt-get update && apt-get install -y \
+    iperf3 \
+    git \
+    iputils-ping \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+    
+# Copy the application code
+COPY . .
+
+# Expose the port for Flask
+EXPOSE 10000
+
+# Command to run the Flask application
+CMD ["python", "app.py"] 

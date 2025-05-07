@@ -34,7 +34,7 @@ async function processJob() {
     const { config_id } = jobData;
 
     // Fetch job configuration
-    const { config, team_id, creator_id, is_active, name, _env } = await fetchJobConfig(
+    const { config, team_id, creator_id, is_active, name, job_run_env } = await fetchJobConfig(
       supabase,
       config_id,
     );
@@ -60,10 +60,10 @@ async function processJob() {
     await redis.rpop('jobs_queue');
     console.log(`[processJob] Processing job for config ${config_id}`);
 
-    // Set Flask service URL based on environment, default to preprod if not specified
-    const FLASK_SERVICE_URL = getFlaskServiceUrl(config.env);
+    // Set Flask service URL based on job env environment, default to preprod if not specified
+    const FLASK_SERVICE_URL = getFlaskServiceUrl(job_run_env);
     console.log(
-      `[processJob] Using Flask service URL for env ${config.env || 'not specified (defaulting to preprod)'}: ${FLASK_SERVICE_URL}`,
+      `[processJob] Using Flask service URL for env ${job_run_env || 'not specified (defaulting to preprod)'}: ${FLASK_SERVICE_URL}`,
     );
 
     // Fetch and decrypt environment variables

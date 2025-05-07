@@ -12,12 +12,12 @@ function getRunnerEnv() {
 }
 
 // Dynamically set Flask service URL based on environment
-function getFlaskServiceUrl(env) {
-  if (env === 'prod-playwright') {
+function getFlaskServiceUrl(job_run_env) {
+  if (job_run_env === 'prod-playwright') {
     return process.env.PYTHON_SLAVE_RUNNER_PROD_PLAYWRIGHT_FLASK_SERVICE_URL;
-  } else if (env === 'preprod-playwright') {
+  } else if (job_run_env === 'preprod-playwright') {
     return process.env.PYTHON_SLAVE_RUNNER_PREPROD_PLAYWRIGHT_FLASK_SERVICE_URL;
-  } else if (env === 'preprod') {
+  } else if (job_run_env === 'preprod') {
     return process.env.PYTHON_SLAVE_RUNNER_PREPROD_FLASK_SERVICE_URL;
   } else {
     return process.env.PYTHON_SLAVE_RUNNER_PROD_FLASK_SERVICE_URL;

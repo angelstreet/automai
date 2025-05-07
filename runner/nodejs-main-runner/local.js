@@ -55,12 +55,13 @@ async function processJob() {
         jobData = JSON.parse(payloadStr);
         config = jobData;
         config_id = jobData.config_id || 'b0238c60-fc08-4008-a445-6ee35b99e83c'; // Default testing config ID
-        FLASK_SERVICE_URL = getFlaskServiceUrl(jobData.env);
+        job_run_env = jobData.env || 'preprod';
+        FLASK_SERVICE_URL = getFlaskServiceUrl(job_run_env);
         console.log(
           `[@local-runner:processJob] Custom payload parsed successfully: ${JSON.stringify(jobData, null, 2)}`,
         );
         console.log(
-          `[@local-runner:processJob] Using Flask service URL for env ${jobData.env}: ${FLASK_SERVICE_URL}`,
+          `[@local-runner:processJob] Using Flask service URL for env ${job_run_env}: ${FLASK_SERVICE_URL}`,
         );
 
         // For custom payload, always fetch team_id from the default config if not provided
