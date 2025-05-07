@@ -506,8 +506,7 @@ async function executeScriptOnSSH(jobId, script, createdAt, host) {
 
 // Utility to parse PowerShell output and extract the path
 const parsePowerShellPath = (output) => {
-  const lines = output.split('\r\n');
-  return lines[lines.length - 1].trim();
+  return output.trim().split('\r\n')[-1];
 };
 
 module.exports = { executeSSHScripts, executeScriptOnSSH, uploadFileViaSFTP };

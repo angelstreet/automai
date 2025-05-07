@@ -34,7 +34,7 @@ async function processJob() {
     const { config_id } = jobData;
 
     // Fetch job configuration
-    const { config, team_id, creator_id, is_active, name } = await fetchJobConfig(
+    const { config, team_id, creator_id, is_active, name, env } = await fetchJobConfig(
       supabase,
       config_id,
     );

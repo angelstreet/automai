@@ -124,6 +124,8 @@ async function processJob() {
         team_id: fetchedTeamId,
         creator_id: fetchedCreatorId,
         is_active,
+        name,
+        env,
       } = await fetchJobConfig(supabase, config_id);
       if (!is_active) {
         console.log(
@@ -152,21 +154,6 @@ async function processJob() {
       console.log(
         `[@local-runner:processJob] Using Flask service URL for env ${config.env}: ${FLASK_SERVICE_URL}`,
       );
-
-      // Fetch config name
-      const { data: configData, error: configError } = await supabase
-        .from('jobs_configuration')
-        .select('name')
-        .eq('id', config_id)
-        .single();
-      if (!configError && configData && configData.name) {
-        config_name = configData.name;
-        console.log(`[@local-runner:processJob] Retrieved config name: ${config_name}`);
-      } else {
-        console.log(
-          `[@local-runner:processJob] Could not retrieve config name: ${configError?.message}`,
-        );
-      }
     }
 
     // Fetch and decrypt environment variables
@@ -180,7 +167,6 @@ async function processJob() {
 
     if (!hasHosts) {
       // Include config_name in the job initialization payload
-      config.config_name = config_name;
       await commonUtils.executeOnFlask(
         config,
         jobId,
@@ -192,6 +178,7 @@ async function processJob() {
         team_id,
         creator_id,
         RUNNER_ENV,
+        config_name,
       );
     } else {
       await commonUtils.executeOnSSH(
@@ -204,6 +191,7 @@ async function processJob() {
         team_id,
         creator_id,
         RUNNER_ENV,
+        config_name,
       );
     }
 
