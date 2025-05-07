@@ -120,10 +120,8 @@ def init_browser(playwright: Playwright, headless=False, debug: bool = False, vi
         page.on("requestfailed", lambda request: print(f"Request failed: {request.url} {request.failure}"))
     return page, context, browser
 
-def run(playwright: Playwright, username: str, password: str, headless=False, debug: bool = False):
+def run(playwright: Playwright, username: str, password: str, headless=False, debug: bool = False, trace_folder: str = 'suncherry-playwright_trace'):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    temp_folder = os.environ.get('SCRIPT_TEMP_FOLDER', None)
-    trace_folder = "suncherry-playwright_trace"
     trace_subfolder = f"{trace_folder}/{timestamp}"
     os.makedirs(trace_subfolder, exist_ok=True)
     trace_file = f"{trace_subfolder}/{timestamp}.zip"
@@ -157,6 +155,7 @@ def main():
     parser.add_argument('--debug', action='store_true', help='Enable debug mode')
     parser.add_argument('--username', type=str, help='Login username')
     parser.add_argument('--password', type=str, help='Login password')
+    parser.add_argument('--trace_folder', type=str, default='suncherry-playwright_trace', help='Folder for storing trace data')
     args, _ = parser.parse_known_args()
 
     print(f"Debug: Username from args: {args.username}")
@@ -178,7 +177,7 @@ def main():
 
     try:
         with sync_playwright() as playwright:
-            success = run(playwright, username, password, headless=args.headless, debug=args.debug)
+            success = run(playwright, username, password, headless=args.headless, debug=args.debug, trace_folder=args.trace_folder)
             if success:
                 print("Login successful")
                 sys.exit(0)
