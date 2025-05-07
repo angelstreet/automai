@@ -195,7 +195,11 @@ async function executeFlaskScripts(
           const envVars = collectEnvironmentVariables(decryptedEnvVars);
           // Add iteration and trace_folder parameters
           const iterationParam = `--iteration ${i}`;
-          const traceFolderParam = `--trace_folder uploadFolder/${started_at.split('T')[0].replace('-', '')}_${started_at.split('T')[1].split('.')[0].replace(':', '')}_${jobId}/${started_at.split('T')[0].replace('-', '')}_${started_at.split('T')[1].split('.')[0].replace(':', '')}_${scriptExecutionId}`;
+          const formattedDateTime =
+            started_at.split('T')[0].replace(/-/g, '') +
+            '_' +
+            started_at.split('T')[1].split('.')[0].replace(/:/g, '');
+          const traceFolderParam = `--trace_folder uploadFolder/${formattedDateTime}_${jobId}/${formattedDateTime}_${scriptExecutionId}`;
           const finalParameters = parameters
             ? `${parameters} ${iterationParam} ${traceFolderParam}`
             : `${iterationParam} ${traceFolderParam}`;

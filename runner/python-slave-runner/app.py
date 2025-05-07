@@ -86,7 +86,8 @@ def execute_script():
     script_env.update(env_vars)
 
     # Ensure we have a precise timestamp for start time
-    start_time = datetime.utcnow().isoformat() + 'Z'
+    start_time_iso = datetime.utcnow().isoformat() + 'Z'
+    start_time_formatted = start_time_iso.split('T')[0].replace('-', '') + '_' + start_time_iso.split('T')[1].split('.')[0].replace(':', '')
     status = 'success'
     stdout_data = ''
     stderr_data = ''
@@ -132,11 +133,12 @@ def execute_script():
             f.write(stderr_data)
 
     # Ensure that end_time is different from start_time
-    end_time = datetime.utcnow().isoformat() + 'Z'
+    end_time_iso = datetime.utcnow().isoformat() + 'Z'
+    end_time_formatted = end_time_iso.split('T')[0].replace('-', '') + '_' + end_time_iso.split('T')[1].split('.')[0].replace(':', '')
     
     # Calculate duration
     try:
-        duration = ((datetime.fromisoformat(end_time[:-1]) - datetime.fromisoformat(start_time[:-1])).total_seconds()).__str__()
+        duration = ((datetime.fromisoformat(end_time_iso[:-1]) - datetime.fromisoformat(start_time_iso[:-1])).total_seconds()).__str__()
         if float(duration) <= 0:
             # If duration is 0 or negative, set a small positive value
             duration = "0.001"
@@ -151,8 +153,8 @@ def execute_script():
         'script_name': os.path.basename(script_path),
         'script_path': script_path,
         'parameters': parameters,
-        'start_time': start_time,
-        'end_time': end_time,
+        'start_time': start_time_formatted,
+        'end_time': end_time_formatted,
         'status': status,
         'env': env,
         'config_name': config_name or 'Default Config',
@@ -167,8 +169,8 @@ def execute_script():
         'status': status,
         'stdout': stdout_data,
         'stderr': stderr_data,
-        'start_time': start_time,
-        'end_time': end_time,
+        'start_time': start_time_iso,
+        'end_time': end_time_iso,
         'duration': duration
     })
 
