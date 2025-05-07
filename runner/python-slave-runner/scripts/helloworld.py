@@ -6,7 +6,10 @@ def main():
     # Parse command line arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('--trace_folder', default="", help='Folder path to write trace files')
-    args = parser.parse_args()
+    # Use parse_known_args() instead of parse_args() to ignore unknown arguments
+    args, unknown = parser.parse_known_args()
+    if unknown:
+        print(f"Warning: Ignoring unknown arguments: {unknown}")
 
     print("Hello, World!")
     print(f"Requests version: {requests.__version__}")
