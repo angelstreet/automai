@@ -510,7 +510,7 @@ def main():
 
             # Correct the path to avoid duplication of job folder name
             r2_path = relative_path
-            print(f"[@upload_and_report:main] Uploading file to R2: {file_name} -> {r2_path}", file=sys)
+            print(f"[@upload_and_report:main] Uploading file to R2: {file_name} -> {r2_path}", file=sys.stderr)
 
             # Check if the file is likely a script file (based on extension or name)
             if ext.lower() in ['.py', '.sh']:
@@ -541,7 +541,8 @@ def main():
         output = {
             'status': 'success',
             'job_id': job_id,
-            'uploaded_files': uploaded_files
+            'uploaded_files': uploaded_files,
+            'report_url': updated_job_report_url if 'updated_job_report_url' in locals() else job_report_url if 'job_report_url' in locals() else ''
         }
 
         # Update report URLs for job and scripts after upload
@@ -552,7 +553,9 @@ def main():
                 'stdout': '',
                 'stderr': ''
             }
-            update_supabase_job_status(job_id, job_status, job_output, datetime.now(timezone.utc).isoformat(), job_report_url)
+            # Extract UUID from job_id if it contains a timestamp prefix
+            job_uuid = job_id.split('_')[-1] if '_' in job_id else job_id
+            update_supabase_job_status(job_uuid, job_status, job_output, datetime.now(timezone.utc).isoformat(), job_report_url)
         else:
             print(f"[@upload_and_report:main] WARNING: Job report URL not found for job {job_id}", file=sys.stderr)
             job_output = {
@@ -560,7 +563,9 @@ def main():
                 'stdout': '',
                 'stderr': ''
             }
-            update_supabase_job_status(job_id, job_status, job_output, datetime.now(timezone.utc).isoformat(), '')
+            # Extract UUID from job_id if it contains a timestamp prefix
+            job_uuid = job_id.split('_')[-1] if '_' in job_id else job_id
+            update_supabase_job_status(job_uuid, job_status, job_output, datetime.now(timezone.utc).isoformat(), '')
 
         for script_id, script_data in script_reports.items():
             try:
@@ -646,7 +651,7 @@ def main():
         )
         print(f"[@upload_and_report:main] Updated Job Run Report uploaded with URLs for job {job_id}", file=sys.stderr)
         if updated_job_report_url:
-            update_supabase_job_status(job_id, job_status, job_output, datetime.now(timezone.utc).isoformat(), updated_job_report_url)
+            update_supabase_job_status(job_uuid, job_status, job_output, datetime.now(timezone.utc).isoformat(), updated_job_report_url)
 
     except Exception as e:
         print(f"[@upload_and_report:main] ERROR: Failed to upload files to R2 for job {job_id}: {str(e)}", file=sys.stderr)
@@ -662,7 +667,9 @@ def main():
             'stdout': '',
             'stderr': str(e)
         }
-        update_supabase_job_status(job_id, job_status, job_output, datetime.now(timezone.utc).isoformat(), '')
+        # Extract UUID from job_id if it contains a timestamp prefix
+        job_uuid = job_id.split('_')[-1] if '_' in job_id else job_id
+        update_supabase_job_status(job_uuid, job_status, job_output, datetime.now(timezone.utc).isoformat(), job_report_url if 'job_report_url' in locals() else '')
         for script_id, script_data in script_reports.items():
             script_output = {
                 'stdout': '',
@@ -680,7 +687,7 @@ def main():
     print(json.dumps(output, indent=2))
     
     # Print Job Report URL and Script Report URLs for user access
-    print(f"[@upload_and_report:main] Job Run Report URL for job {job_id}: {updated_job_report_url if 'updated_job_report_url' in locals() else job_report_url}", file=sys.stderr)
+    print(f"[@upload_and_report:main] Job Run Report URL for job {job_id}: {updated_job_report_url if 'updated_job_report_url' in locals() else job_report_url if 'job_report_url' in locals() else ''}", file=sys.stderr)
     for script_id, script_data in script_reports.items():
         script_report_url = next((file['public_url'] for file in uploaded_files if file['name'] == 'script_report.html' and script_id in file['relative_path']), '')
         if script_report_url:
