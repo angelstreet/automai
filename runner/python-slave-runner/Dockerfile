@@ -1,20 +1,20 @@
-FROM mcr.microsoft.com/playwright/python:v1.50.0-noble
+FROM python:3.9-slim
 
+# Set working directory
+WORKDIR /app
 # Update and install system dependencies
 RUN apt-get update && apt-get install -y \
     iperf3 \
     git \
-    iputils-ping
-
-# Set working directory
-WORKDIR /app
+    iputils-ping \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements file
 COPY requirements.txt .
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install python-dotenv requests
+RUN pip install --no-cache-dir -r requirements.txt      
 
 # Copy the application code
 COPY . .
