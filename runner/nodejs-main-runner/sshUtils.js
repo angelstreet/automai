@@ -241,15 +241,7 @@ async function executeSSHScripts(
       try {
         const pathResult = await executeSSHCommand(host, sshKeyOrPass, resolvePathCommand);
         if (pathResult.stdout) {
-          // Clean and trim basePath to remove extraneous text or formatting
-          basePath =
-            pathResult.stdout
-              .split('\n')
-              .find((line) => line.trim().length > 0)
-              ?.trim() || '';
-          if (host.os === 'windows' && basePath.includes('----')) {
-            basePath = basePath.split('----')[1]?.trim() || basePath.trim();
-          }
+          basePath = pathResult.stdout.trim();
           console.log(
             `[executeSSHScripts] Resolved full script path on host ${host.ip}: ${basePath}`,
           );
@@ -286,11 +278,10 @@ async function executeSSHScripts(
             ? `${basePath}/${fullScriptPathOnHost}`
             : path.join(basePath, fullScriptPathOnHost);
       }
-
+      fullScriptPathOnHost = fullScriptPathOnHost.replace;
       console.log(
         `[executeSSHScripts] Full script path on host ${host.ip}: ${fullScriptPathOnHost}`,
       );
-
       // Update the script execution to 'in_progress'
       const scriptStartedAt = new Date().toISOString();
       await updateScriptExecution(supabase, {
