@@ -159,7 +159,7 @@ def initialize_job():
         return jsonify({'status': 'error', 'message': 'Missing upload script content'}), 400
 
     # Create job folder structure
-    upload_folder = os.path.join(os.getcwd(), 'uploadFolder')
+    upload_folder = os.path.join("/app" 'uploadFolder')
     # Clean existing uploadFolder if it exists to avoid clutter
     if os.path.exists(upload_folder):
         import shutil

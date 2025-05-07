@@ -159,9 +159,6 @@ async function executeFlaskScripts(
     const fullScriptPath = config.script_folder
       ? `${config.script_folder}/${scriptName}`
       : scriptPath;
-    console.log(
-      `[executeFlaskScripts] Processing script: ${scriptName}, Full Path: ${fullScriptPath}`,
-    );
     const parameters = script.parameters || '';
     const timeout = config.execution?.timeout || script.timeout || 30;
     const retryOnFailure = script.retry_on_failure || 0;
@@ -218,9 +215,6 @@ async function executeFlaskScripts(
             payload.repo_url = config.repository;
             payload.script_folder = config.script_folder || '';
             payload.branch = config.branch || 'main';
-            console.log(
-              `[executeFlaskScripts] Repository URL: ${payload.repo_url}, Script Folder: ${payload.script_folder}, Branch: ${payload.branch}`,
-            );
           }
 
           const { error: statusError } = await supabase
