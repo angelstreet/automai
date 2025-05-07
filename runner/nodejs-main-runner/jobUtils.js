@@ -276,6 +276,14 @@ async function initializeJobOnHost(_supabase, jobId, started_at, config, host, s
   // 2. Use a temp directory for job files
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'job-'));
   try {
+    // Ensure config.config_name is set (fallback to config_name if available)
+    if (
+      !config.config_name &&
+      config.config_name !== undefined &&
+      typeof config_name !== 'undefined'
+    ) {
+      config.config_name = config_name;
+    }
     // Write files to tempDir
     const uploadScriptLocal = path.join(tempDir, 'upload_and_report.py');
     const requirementsLocal = path.join(tempDir, 'requirements.txt');
@@ -287,6 +295,7 @@ async function initializeJobOnHost(_supabase, jobId, started_at, config, host, s
       fs.writeFileSync(requirementsLocal, 'boto3\npython-dotenv\nsupabase\n');
     }
     fs.writeFileSync(configNameLocal, config.config_name || '');
+    console.log(`[initializeJobOnHost] Wrote config_name.txt with value: ${config.config_name}`);
     fs.writeFileSync(
       envFileLocal,
       `CLOUDFLARE_R2_ENDPOINT=${process.env.CLOUDFLARE_R2_ENDPOINT || ''}\nCLOUDFLARE_R2_ACCESS_KEY_ID=${process.env.CLOUDFLARE_R2_ACCESS_KEY_ID || ''}\nCLOUDFLARE_R2_SECRET_ACCESS_KEY=${process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY || ''}\nSUPABASE_URL=${process.env.SUPABASE_URL || ''}\nSUPABASE_SERVICE_ROLE_KEY=${process.env.SUPABASE_SERVICE_ROLE_KEY || ''}\n`,
