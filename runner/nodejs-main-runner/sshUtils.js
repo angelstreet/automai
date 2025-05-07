@@ -2,7 +2,6 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { Client } = require('ssh2');
 const { v4: uuidv4 } = require('uuid');
 
 const {
@@ -35,7 +34,14 @@ async function executeSSHScripts(
   env,
 ) {
   const hosts = config.hosts;
-  let output = { scripts: [], stdout: '', stderr: '' };
+  let output = {
+    scripts: [],
+    stdout: '',
+    stderr: '',
+    started_at: started_at,
+    config_name: config.config_name || 'N/A',
+    env: env || 'N/A',
+  };
   let overallStatus = 'success';
 
   console.log(
@@ -115,6 +121,11 @@ async function executeSSHScripts(
       console.log(
         `[executeSSHScripts] Creating script folder on host ${host.ip}: ${scriptFolderPath}`,
       );
+      // Add confirmation logging after folder creation
+      let confirmFolderCommand =
+        host.os === 'windows'
+          ? `powershell -Command "Test-Path '${scriptFolderPath}'"`
+          : `test -d ${scriptFolderPath} && echo 'Folder exists' || echo 'Folder does not exist'`;
 
       // Format command for this script
       const ext = scriptPath.split('.').pop().toLowerCase();
@@ -218,9 +229,9 @@ async function executeSSHScripts(
       // Build the full script command with all setup including script folder creation
       let fullScript;
       if (host.os === 'windows') {
-        fullScript = `${repoCommands}${repoCommands ? ' && ' : ''}${repoDir ? `cd ${repoDir} && ` : ''} cd ${scriptFolder} && ${scriptSetupCommand} && powershell -Command "if (Test-Path 'requirements.txt') { pip install -r requirements.txt } else { Write-Output 'No requirements.txt file found, skipping pip install' }" && ${envSetup}python --version && echo ============================= && ${scriptCommand} > ${scriptFolderPath}/stdout.txt 2> ${scriptFolderPath}/stderr.txt`;
+        fullScript = `${repoCommands}${repoCommands ? ' && ' : ''}${repoDir ? `cd ${repoDir} && ` : ''} cd ${scriptFolder} && ${scriptSetupCommand} && ${confirmFolderCommand} && powershell -Command "if (Test-Path 'requirements.txt') { pip install -r requirements.txt } else { Write-Output 'No requirements.txt file found, skipping pip install' }" && ${envSetup}python --version && echo ============================= && ${scriptCommand} > ${scriptFolderPath}/stdout.txt 2> ${scriptFolderPath}/stderr.txt`;
       } else {
-        fullScript = `${repoCommands} ${repoCommands ? '' : repoDir ? `cd ${repoDir} && ` : ''} cd ${scriptFolder} && ${scriptSetupCommand} && if [ -f "requirements.txt" ]; then pip install -r requirements.txt; else echo "No requirements.txt file found, skipping pip install"; fi && ${envSetup}python --version && echo ============================= && ${scriptCommand} > ${scriptFolderPath}/stdout.txt 2> ${scriptFolderPath}/stderr.txt`;
+        fullScript = `${repoCommands} ${repoCommands ? '' : repoDir ? `cd ${repoDir} && ` : ''} cd ${scriptFolder} && ${scriptSetupCommand} && ${confirmFolderCommand} && if [ -f "requirements.txt" ]; then pip install -r requirements.txt; else echo "No requirements.txt file found, skipping pip install"; fi && ${envSetup}python --version && echo ============================= && ${scriptCommand} > ${scriptFolderPath}/stdout.txt 2> ${scriptFolderPath}/stderr.txt`;
       }
       console.log(`[executeSSHScripts] SSH command to be executed on ${host.ip}: ${fullScript}`);
 
@@ -235,8 +246,6 @@ async function executeSSHScripts(
       // Execute the script using the helper function
       let scriptResult;
       try {
-        scriptResult = await executeSSHCommand(host, sshKeyOrPass, fullScript);
-        // Update main job status to in_progress if not already
         supabase
           .from('jobs_run')
           .update({
@@ -250,6 +259,8 @@ async function executeSSHScripts(
           .catch((err) => {
             console.error(`[executeSSHScripts] Failed to update job status: ${err.message}`);
           });
+        scriptResult = await executeSSHCommand(host, sshKeyOrPass, fullScript);
+        // Update main job status to in_progress if not already
       } catch (error) {
         console.error(`[executeSSHScripts] Error executing script: ${error.message}`);
         // Update script execution with error
@@ -292,11 +303,12 @@ async function executeSSHScripts(
 
       const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'job-'));
       const metadataLocal = path.join(tempDir, 'metadata.json');
-      writeScriptMetadata(scriptFolderPath, {
+
+      writeScriptMetadata(metadataLocal, {
         job_id: jobId,
         script_id: scriptExecutionId,
         script_name: scriptName,
-        script_path: scriptPath,
+        script_path: scriptFolder ? `${scriptFolder}/${scriptPath}` : scriptPath,
         parameters,
         start_time: scriptStartedAt,
         end_time: scriptCompletedAt,
@@ -305,8 +317,11 @@ async function executeSSHScripts(
         job_name: config.config_name || 'N/A',
         duration: duration,
       });
-      const metadataRemote = path.join(jobFolderPath, 'metadata.json');
+      const metadataRemote = path.join(scriptFolderPath, 'metadata.json');
       await uploadFileViaSFTP(host, sshKeyOrPass, metadataLocal, metadataRemote);
+      console.log(
+        `[executeSSHScripts] Uploaded script metadata to ${metadataRemote} for script ${scriptExecutionId}`,
+      );
 
       // Update script execution in database without report URL (handled by upload_and_report.py)
       await updateScriptExecution(supabase, {

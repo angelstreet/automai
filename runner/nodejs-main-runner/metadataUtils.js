@@ -6,6 +6,7 @@ const fs = require('fs');
  * @param {object} metadata - The metadata object (job_id, script_id, script_name, script_path, parameters, start_time, end_time, status).
  */
 function writeScriptMetadata(metadataPath, metadata) {
+  console.log(`[metadataUtils] Writing metadata to ${metadataPath}`, metadata);
   fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
   console.log(`[@metadataUtils] Wrote script metadata to ${metadataPath}`);
 }
@@ -16,6 +17,7 @@ function writeScriptMetadata(metadataPath, metadata) {
  * @param {object} metadata - The metadata object (job_id, start_time, config_name, env, etc.).
  */
 function writeJobMetadata(metadataPath, metadata) {
+  console.log(`[metadataUtils] Writing job metadata to ${metadataPath}`, metadata);
   fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
   console.log(`[@metadataUtils] Wrote job metadata to ${metadataPath}`);
 }

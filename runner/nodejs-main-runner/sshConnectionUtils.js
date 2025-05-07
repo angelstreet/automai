@@ -152,6 +152,10 @@ async function readScriptOutputFiles(host, sshKeyOrPass, scriptFolderPath, scrip
     stdoutFromFile = scriptResult.stdout;
     stderrFromFile = scriptResult.stderr;
   }
+  console.log(
+    `[readScriptOutputFiles] stdoutFromFile: ${stdoutFromFile}`,
+    `stderrFromFile: ${stderrFromFile}`,
+  );
   return { stdoutFromFile, stderrFromFile };
 }
 
