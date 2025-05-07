@@ -124,8 +124,8 @@ async function processJob() {
         team_id: fetchedTeamId,
         creator_id: fetchedCreatorId,
         is_active,
-        name,
-        env,
+        _name,
+        _env,
       } = await fetchJobConfig(supabase, config_id);
       if (!is_active) {
         console.log(

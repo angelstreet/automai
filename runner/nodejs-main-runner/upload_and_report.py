@@ -694,6 +694,8 @@ def main():
             print(f"[@upload_and_report:main] Script Report URL for script {script_id}: {script_report_url}", file=sys.stderr)
         else:
             print(f"[@upload_and_report:main] WARNING: Script Report URL not found for script {script_id}", file=sys.stderr)
+    return output
+
 
 if __name__ == '__main__':
     main() 

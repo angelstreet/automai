@@ -29,6 +29,7 @@ async function executeOnFlask(
   team_id,
   creator_id,
   env,
+  config_name,
 ) {
   // Execute scripts via Flask service
   const result = await executeFlaskScripts(
@@ -42,6 +43,7 @@ async function executeOnFlask(
     team_id,
     creator_id,
     env,
+    config_name,
   );
   const output = result.output;
   const overallStatus = result.overallStatus;

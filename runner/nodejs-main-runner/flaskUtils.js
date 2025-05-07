@@ -22,6 +22,7 @@ async function executeFlaskScripts(
   team_id,
   creator_id,
   env,
+  config_name,
 ) {
   console.log(`[executeFlaskScripts] No hosts found, forwarding to Flask service`);
 
@@ -57,6 +58,9 @@ async function executeFlaskScripts(
   for (const script of config.scripts || []) {
     const scriptPath = script.path;
     const scriptName = scriptPath.split('/').pop();
+    const fullScriptPath = config.script_folder
+      ? `${config.script_folder}/${scriptName}`
+      : scriptPath;
     const parameters = script.parameters || '';
     const timeout = config.execution?.timeout || script.timeout || 30;
     const retryOnFailure = script.retry_on_failure || 0;
@@ -65,7 +69,7 @@ async function executeFlaskScripts(
     for (let i = 1; i <= iterations; i++) {
       let retries = retryOnFailure + 1;
       let attempt = 0;
-      let scriptOutput = { script_path: scriptPath, iteration: i, stdout: '', stderr: '' };
+      let scriptOutput = { script_path: fullScriptPath, iteration: i, stdout: '', stderr: '' };
       let scriptStatus = 'failed';
 
       // Create script execution record in database
@@ -75,7 +79,7 @@ async function executeFlaskScripts(
         team_id: team_id,
         creator_id: creator_id,
         script_name: scriptName,
-        script_path: scriptPath,
+        script_path: fullScriptPath,
         script_parameters: { parameters, iteration: i },
         env: env,
       });
@@ -92,7 +96,7 @@ async function executeFlaskScripts(
         try {
           const envVars = collectEnvironmentVariables(decryptedEnvVars);
           const payload = {
-            script_path: scriptPath,
+            script_path: fullScriptPath,
             parameters: parameters ? `${parameters} ${i}` : `${i}`,
             timeout: timeout,
             environment_variables: envVars,
@@ -265,11 +269,11 @@ async function executeFlaskScripts(
       const duration = ((endDate - startDate) / 1000).toFixed(2); // Duration in seconds
 
       // Write metadata.json for this script execution
-      writeScriptMetadata(scriptPath, {
+      writeScriptMetadata(fullScriptPath, {
         job_id: jobId,
         script_id: scriptExecutionId,
         script_name: scriptName,
-        script_path: scriptPath,
+        script_path: fullScriptPath,
         parameters: parameters || '',
         start_time: started_at,
         end_time: scriptCompletedAt,
@@ -277,6 +281,7 @@ async function executeFlaskScripts(
         env: env || 'N/A',
         job_name: config.name || 'N/A',
         duration: duration,
+        config_name: config_name || 'N/A',
       });
     }
   }
