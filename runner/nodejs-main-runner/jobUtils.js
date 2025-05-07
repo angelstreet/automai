@@ -176,45 +176,147 @@ async function updateScriptExecution(
   }
 }
 
+const { Client } = require('ssh2');
+const fs = require('fs');
+
+// SFTP upload helper
+async function uploadFileViaSFTP(host, sshKeyOrPass, localPath, remotePath) {
+  return new Promise((resolve, reject) => {
+    const conn = new Client();
+    const sshConfig = {
+      host: host.ip,
+      port: host.port || 22,
+      username: host.username,
+    };
+    if (host.authType === 'privateKey') {
+      sshConfig.privateKey = sshKeyOrPass;
+    } else {
+      sshConfig.password = sshKeyOrPass;
+    }
+    conn.on('ready', () => {
+      conn.sftp((err, sftp) => {
+        if (err) {
+          conn.end();
+          return reject(err);
+        }
+        console.log(`[initializeJobOnHost] SFTP uploading ${localPath} to ${remotePath}`);
+        sftp.fastPut(localPath, remotePath, (err) => {
+          conn.end();
+          if (err) return reject(err);
+          resolve();
+        });
+      });
+    });
+    conn.on('error', (err) => {
+      reject(err);
+    });
+    conn.connect(sshConfig);
+  });
+}
+
 async function initializeJobOnHost(_supabase, jobId, started_at, config, host, sshKeyOrPass) {
   console.log(`[initializeJobOnHost] Initializing job ${jobId} on host ${host.ip}`);
-  const { Client } = require('ssh2');
-  const fs = require('fs');
-
-  // Initialize job folder structure on SSH host
-  const uploadFolder = '/tmp/uploadFolder';
+  const uploadFolder = host.os === 'windows' ? 'C:/tmp/uploadFolder' : '/tmp/uploadFolder';
   const jobFolderName = `${started_at.split('T')[0].replace(/-/g, '')}_${started_at.split('T')[1].split('.')[0].replace(/:/g, '')}_${jobId}`;
   const jobFolderPath = `${uploadFolder}/${jobFolderName}`;
-  let initCommand =
-    host.os === 'windows'
-      ? `powershell -Command "if (-not (Test-Path '${jobFolderPath}')) { New-Item -ItemType Directory -Path '${jobFolderPath}' }"`
-      : `mkdir -p ${jobFolderPath}`;
-  console.log(`[initializeJobOnHost] Initializing job folder on host ${host.ip}: ${jobFolderPath}`);
 
-  // Save upload_and_report.py and requirements.txt to job folder
-  const uploadScriptContent = fs.readFileSync('upload_and_report.py', 'utf8');
-  const requirementsContent = 'boto3\npython-dotenv\nsupabase\n';
-  const uploadScriptPath = `${jobFolderPath}/upload_and_report.py`;
-  const requirementsPath = `${jobFolderPath}/requirements.txt`;
-  const configNamePath = `${jobFolderPath}/config_name.txt`;
-  const envFilePath = `${jobFolderPath}/.env`;
-  initCommand +=
-    host.os === 'windows'
-      ? ` && powershell -Command "Set-Content -Path '${uploadScriptPath}' -Value @'\n${uploadScriptContent}\n'@" && powershell -Command "Set-Content -Path '${requirementsPath}' -Value @'\n${requirementsContent}\n'@" && powershell -Command "Set-Content -Path '${configNamePath}' -Value '${config.config_name || ''}'" && powershell -Command "Set-Content -Path '${envFilePath}' -Value @'\nCLOUDFLARE_R2_ENDPOINT=${process.env.CLOUDFLARE_R2_ENDPOINT || ''}\nCLOUDFLARE_R2_ACCESS_KEY_ID=${process.env.CLOUDFLARE_R2_ACCESS_KEY_ID || ''}\nCLOUDFLARE_R2_SECRET_ACCESS_KEY=${process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY || ''}\nSUPABASE_URL=${process.env.SUPABASE_URL || ''}\nSUPABASE_SERVICE_ROLE_KEY=${process.env.SUPABASE_SERVICE_ROLE_KEY || ''}\n'@"`
-      : ` && echo "${uploadScriptContent.replace(/"/g, '\\"')}" > ${uploadScriptPath} && echo "${requirementsContent.replace(/"/g, '\\"')}" > ${requirementsPath} && echo "${config.config_name || ''}" > ${configNamePath} && echo "CLOUDFLARE_R2_ENDPOINT=${process.env.CLOUDFLARE_R2_ENDPOINT || ''}\nCLOUDFLARE_R2_ACCESS_KEY_ID=${process.env.CLOUDFLARE_R2_ACCESS_KEY_ID || ''}\nCLOUDFLARE_R2_SECRET_ACCESS_KEY=${process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY || ''}\nSUPABASE_URL=${process.env.SUPABASE_URL || ''}\nSUPABASE_SERVICE_ROLE_KEY=${process.env.SUPABASE_SERVICE_ROLE_KEY || ''}" > ${envFilePath}`;
-  console.log(
-    `[initializeJobOnHost] Saving upload_and_report.py, requirements.txt, config name, and credentials to job folder on host ${host.ip}`,
-  );
+  if (host.os === 'windows') {
+    // 1. Create directory
+    const createDirCmd = `powershell -Command "if (-not (Test-Path '${jobFolderPath}')) { New-Item -ItemType Directory -Path '${jobFolderPath}' }"`;
+    console.log(`[initializeJobOnHost] Executing command on host ${host.ip}: ${createDirCmd}`);
+    await new Promise((resolve, reject) => {
+      const conn = new Client();
+      const sshConfig = {
+        host: host.ip,
+        port: host.port || 22,
+        username: host.username,
+      };
+      if (host.authType === 'privateKey') {
+        sshConfig.privateKey = sshKeyOrPass;
+      } else {
+        sshConfig.password = sshKeyOrPass;
+      }
+      conn.on('ready', () => {
+        conn.exec(createDirCmd, (err, stream) => {
+          if (err) {
+            conn.end();
+            return reject(err);
+          }
+          stream.on('close', (code) => {
+            conn.end();
+            if (code === 0) resolve();
+            else reject(new Error(`Directory creation failed with code ${code}`));
+          });
+        });
+      });
+      conn.on('error', (err) => reject(err));
+      conn.connect(sshConfig);
+    });
 
-  // Install dependencies
-  initCommand +=
-    host.os === 'windows'
-      ? ` && powershell -Command "pip install -r '${requirementsPath}'"`
-      : ` && pip install -r ${requirementsPath}`;
-  console.log(`[initializeJobOnHost] Installing dependencies on host ${host.ip}`);
+    // 2. Upload files via SFTP
+    // Prepare local file paths
+    const uploadScriptLocal = 'upload_and_report.py';
+    const requirementsLocal = 'requirements.txt';
+    // Write requirements.txt locally if not present
+    if (!fs.existsSync(requirementsLocal)) {
+      fs.writeFileSync(requirementsLocal, 'boto3\npython-dotenv\nsupabase\n');
+    }
+    const configNameLocal = './config_name.txt';
+    fs.writeFileSync(configNameLocal, config.config_name || '');
+    const envFileLocal = './.env';
+    fs.writeFileSync(
+      envFileLocal,
+      `CLOUDFLARE_R2_ENDPOINT=${process.env.CLOUDFLARE_R2_ENDPOINT || ''}\nCLOUDFLARE_R2_ACCESS_KEY_ID=${process.env.CLOUDFLARE_R2_ACCESS_KEY_ID || ''}\nCLOUDFLARE_R2_SECRET_ACCESS_KEY=${process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY || ''}\nSUPABASE_URL=${process.env.SUPABASE_URL || ''}\nSUPABASE_SERVICE_ROLE_KEY=${process.env.SUPABASE_SERVICE_ROLE_KEY || ''}\n`,
+    );
+    // Remote paths
+    const uploadScriptRemote = `${jobFolderPath}/upload_and_report.py`;
+    const requirementsRemote = `${jobFolderPath}/requirements.txt`;
+    const configNameRemote = `${jobFolderPath}/config_name.txt`;
+    const envFileRemote = `${jobFolderPath}/.env`;
+    // Upload
+    await uploadFileViaSFTP(host, sshKeyOrPass, uploadScriptLocal, uploadScriptRemote);
+    await uploadFileViaSFTP(host, sshKeyOrPass, requirementsLocal, requirementsRemote);
+    await uploadFileViaSFTP(host, sshKeyOrPass, configNameLocal, configNameRemote);
+    await uploadFileViaSFTP(host, sshKeyOrPass, envFileLocal, envFileRemote);
 
+    // 3. Install dependencies
+    const pipInstallCmd = `powershell -Command "pip install -r '${requirementsRemote}'"`;
+    console.log(`[initializeJobOnHost] Executing command on host ${host.ip}: ${pipInstallCmd}`);
+    await new Promise((resolve, reject) => {
+      const conn = new Client();
+      const sshConfig = {
+        host: host.ip,
+        port: host.port || 22,
+        username: host.username,
+      };
+      if (host.authType === 'privateKey') {
+        sshConfig.privateKey = sshKeyOrPass;
+      } else {
+        sshConfig.password = sshKeyOrPass;
+      }
+      conn.on('ready', () => {
+        conn.exec(pipInstallCmd, (err, stream) => {
+          if (err) {
+            conn.end();
+            return reject(err);
+          }
+          stream.on('close', (code) => {
+            conn.end();
+            if (code === 0) resolve();
+            else reject(new Error(`pip install failed with code ${code}`));
+          });
+        });
+      });
+      conn.on('error', (err) => reject(err));
+      conn.connect(sshConfig);
+    });
+    console.log(`[initializeJobOnHost] Job initialization completed on host ${host.ip}`);
+    return jobFolderPath;
+  }
+
+  // Non-Windows: keep existing logic
+  let initCommand = `mkdir -p ${jobFolderPath}`;
   console.log(`[initializeJobOnHost] Executing command on host ${host.ip}: ${initCommand}`);
-
   const connInit = new Client();
   try {
     await new Promise((resolve, reject) => {
