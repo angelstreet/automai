@@ -11,6 +11,107 @@ const {
   collectEnvironmentVariables,
 } = require('./utils');
 
+async function initializeJobOnFlask(jobId, started_at, config, FLASK_SERVICE_URL) {
+  console.log(`[initializeJobOnFlask] Initializing job ${jobId} on Flask service`);
+  try {
+    const uploadScriptPath = path.join(__dirname, 'upload_and_report.py');
+    const uploadScriptContent = fs.readFileSync(uploadScriptPath, 'utf8');
+    const payload = prepareJobInitializationPayload(jobId, started_at, uploadScriptContent, config);
+    const initResponse = await fetch(`${FLASK_SERVICE_URL}/initialize_job`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!initResponse.ok) {
+      console.error(
+        `[initializeJobOnFlask] Failed to initialize job ${jobId}: ${initResponse.statusText}`,
+      );
+      throw new Error(`Failed to initialize job on Flask: ${initResponse.statusText}`);
+    }
+    console.log(`[initializeJobOnFlask] Successfully initialized job ${jobId} on Flask service`);
+    return true;
+  } catch (error) {
+    console.error(`[initializeJobOnFlask] Error initializing job ${jobId}: ${error.message}`);
+    throw error;
+  }
+}
+
+async function finalizeJobOnFlask(
+  jobId,
+  started_at,
+  overallStatus,
+  output,
+  supabase,
+  FLASK_SERVICE_URL,
+) {
+  console.log(`[finalizeJobOnFlask] Finalizing job ${jobId} on Flask service`);
+  try {
+    const finalizePayload = prepareJobFinalizationPayload(jobId, started_at);
+    const finalizeResponse = await fetch(`${FLASK_SERVICE_URL}/finalize_job`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(finalizePayload),
+    });
+    if (!finalizeResponse.ok) {
+      console.error(
+        `[finalizeJobOnFlask] Failed to finalize job ${jobId}: ${finalizeResponse.statusText}`,
+      );
+      throw new Error(`Failed to finalize job on Flask: ${finalizeResponse.statusText}`);
+    }
+    const finalizeData = await finalizeResponse.json();
+    console.log(
+      `[finalizeJobOnFlask] Successfully finalized job ${jobId}. Report URL: ${finalizeData.report_url || 'N/A'}`,
+    );
+
+    // Update job record with report URL if available
+    if (finalizeData.report_url) {
+      const { error: reportError } = await supabase
+        .from('jobs_run')
+        .update({ report_url: finalizeData.report_url })
+        .eq('id', jobId);
+      if (reportError) {
+        console.error(
+          `[finalizeJobOnFlask] Failed to update job ${jobId} with report URL: ${reportError.message}`,
+        );
+      }
+    }
+
+    // Update job status in Supabase
+    const { error: updateError } = await supabase
+      .from('jobs_run')
+      .update({
+        status: overallStatus,
+        completed_at: new Date().toISOString(),
+        output: output,
+      })
+      .eq('id', jobId);
+    if (updateError) {
+      console.error(
+        `[finalizeJobOnFlask] Failed to update job ${jobId} status in Supabase: ${updateError.message}`,
+      );
+      throw new Error(`Failed to update job status: ${updateError.message}`);
+    }
+    return finalizeData.report_url || null;
+  } catch (error) {
+    console.error(`[finalizeJobOnFlask] Error finalizing job ${jobId}: ${error.message}`);
+    // Fallback to updating job status without report URL
+    const { error: updateError } = await supabase
+      .from('jobs_run')
+      .update({
+        status: overallStatus,
+        completed_at: new Date().toISOString(),
+        output: output,
+      })
+      .eq('id', jobId);
+    if (updateError) {
+      console.error(
+        `[finalizeJobOnFlask] Failed to update job ${jobId} status after error: ${updateError.message}`,
+      );
+    }
+    throw error;
+  }
+}
+
 async function executeFlaskScripts(
   config,
   jobId,
@@ -29,30 +130,22 @@ async function executeFlaskScripts(
   let output = { scripts: [], stdout: '', stderr: '' };
   let overallStatus = 'success';
 
-  // Send upload_and_report.py script content and environment variables to Flask server for job finalization
-  const uploadScriptPath = path.join(__dirname, 'upload_and_report.py');
-  const uploadScriptContent = fs.readFileSync(uploadScriptPath, 'utf8');
-
+  // Initialize job on Flask service
   try {
-    const payload = prepareJobInitializationPayload(jobId, started_at, uploadScriptContent, config);
-    const initResponse = await fetch(`${FLASK_SERVICE_URL}/initialize_job`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    if (!initResponse.ok) {
-      console.error(
-        `[executeFlaskScripts] Failed to initialize job ${jobId} on Flask server: ${initResponse.statusText}`,
-      );
-    } else {
-      console.log(
-        `[executeFlaskScripts] Successfully initialized job ${jobId} on Flask server with upload script and credentials.`,
-      );
-    }
+    await initializeJobOnFlask(jobId, started_at, config, FLASK_SERVICE_URL);
   } catch (error) {
-    console.error(
-      `[executeFlaskScripts] Error initializing job ${jobId} on Flask server: ${error.message}`,
-    );
+    console.error(`[executeFlaskScripts] Initialization failed for job ${jobId}: ${error.message}`);
+    output.stderr = `Initialization failed: ${error.message}`;
+    overallStatus = 'failed';
+    await supabase
+      .from('jobs_run')
+      .update({
+        status: overallStatus,
+        completed_at: new Date().toISOString(),
+        output: output,
+      })
+      .eq('id', jobId);
+    return { output, overallStatus, started_at };
   }
 
   for (const script of config.scripts || []) {
@@ -151,9 +244,10 @@ async function executeFlaskScripts(
                   job_id: payload.job_id,
                   script_id: payload.script_id,
                   env: payload.env,
-                  repo_url: payload.repo_url || 'N/A',
-                  script_folder: payload.script_folder || 'N/A',
-                  branch: payload.branch || 'N/A',
+                  config_name: payload.config_name || '',
+                  repo_url: payload.repo_url || '',
+                  script_folder: payload.script_folder || '',
+                  branch: payload.branch || '',
                   environment_variables: payload.environment_variables
                     ? Object.keys(payload.environment_variables).reduce(
                         (acc, key) => ({ ...acc, [key]: '***MASKED***' }),
@@ -260,109 +354,17 @@ async function executeFlaskScripts(
       if (scriptStatus !== 'success') {
         overallStatus = 'failed';
       }
-
-      const scriptCompletedAt = new Date().toISOString();
-      const status = scriptStatus === 'success' ? 'success' : 'failed';
-      //const exitCode = response.data.exitCode || 0;
-      const startDate = new Date(started_at);
-      const endDate = new Date(scriptCompletedAt);
-      const duration = ((endDate - startDate) / 1000).toFixed(2); // Duration in seconds
-
-      // Write metadata.json for this script execution
-      writeScriptMetadata(fullScriptPath, {
-        job_id: jobId,
-        script_id: scriptExecutionId,
-        script_name: scriptName,
-        script_path: fullScriptPath,
-        parameters: parameters || '',
-        start_time: started_at,
-        end_time: scriptCompletedAt,
-        status,
-        env: env || 'N/A',
-        job_name: config.name || 'N/A',
-        duration: duration,
-        config_name: config_name || 'N/A',
-      });
     }
   }
 
-  // Finalize job for upload and report generation
+  // Finalize job on Flask service
   try {
-    const finalizePayload = prepareJobFinalizationPayload(jobId, started_at);
-    const finalizeResponse = await fetch(`${FLASK_SERVICE_URL}/finalize_job`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(finalizePayload),
-    });
-    if (!finalizeResponse.ok) {
-      console.error(
-        `[executeFlaskScripts] Failed to finalize job ${jobId} on Flask server: ${finalizeResponse.statusText}`,
-      );
-      // Still attempt to update job status in Supabase even if finalize fails
-      const { error: updateError } = await supabase
-        .from('jobs_run')
-        .update({
-          status: overallStatus,
-          completed_at: new Date().toISOString(),
-          output: output,
-        })
-        .eq('id', jobId);
-      if (updateError) {
-        console.error(
-          `[executeFlaskScripts] Failed to update job ${jobId} status in Supabase after finalize failure: ${updateError.message}`,
-        );
-      }
-    } else {
-      const finalizeData = await finalizeResponse.json();
-      console.log(
-        `[executeFlaskScripts] Successfully finalized job ${jobId} on Flask server. Report URL: ${finalizeData.report_url || 'N/A'}`,
-      );
-      // Update job record with report URL if available
-      if (finalizeData.report_url) {
-        const { error: reportError } = await supabase
-          .from('jobs_run')
-          .update({ report_url: finalizeData.report_url })
-          .eq('id', jobId);
-        if (reportError) {
-          console.error(
-            `[executeFlaskScripts] Failed to update job ${jobId} with report URL: ${reportError.message}`,
-          );
-        }
-      }
-      // Update job status in Supabase with the results
-      const { error: updateError } = await supabase
-        .from('jobs_run')
-        .update({
-          status: overallStatus,
-          completed_at: new Date().toISOString(),
-          output: output,
-        })
-        .eq('id', jobId);
-      if (updateError) {
-        console.error(
-          `[executeFlaskScripts] Failed to update job ${jobId} status in Supabase: ${updateError.message}`,
-        );
-      }
-    }
+    await finalizeJobOnFlask(jobId, started_at, overallStatus, output, supabase, FLASK_SERVICE_URL);
   } catch (error) {
-    console.error(`[executeFlaskScripts] Error finalizing job ${jobId}: ${error.message}`);
-    // Still attempt to update job status in Supabase even if finalize throws an error
-    const { error: updateError } = await supabase
-      .from('jobs_run')
-      .update({
-        status: overallStatus,
-        completed_at: new Date().toISOString(),
-        output: output,
-      })
-      .eq('id', jobId);
-    if (updateError) {
-      console.error(
-        `[executeFlaskScripts] Failed to update job ${jobId} status in Supabase after finalize error: ${updateError.message}`,
-      );
-    }
+    console.error(`[executeFlaskScripts] Finalization failed for job ${jobId}: ${error.message}`);
   }
 
   return { output, overallStatus, started_at };
 }
 
-module.exports = { executeFlaskScripts };
+module.exports = { executeFlaskScripts, initializeJobOnFlask, finalizeJobOnFlask };

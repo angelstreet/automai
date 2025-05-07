@@ -17,6 +17,8 @@ def execute_script():
     created_at = data.get('created_at')
     job_id = data.get('job_id')
     script_id = data.get('script_id')
+    config_name = data.get('config_name', '')
+    env = data.get('env', 'N/A')
 
     if not script_path or not job_id or not script_id:
         return jsonify({'status': 'error', 'message': 'Missing required parameters'}), 400
@@ -32,7 +34,12 @@ def execute_script():
     print(f"[execute_script] Created script folder: {script_folder_path}", file=sys.stderr)
 
     # Save script to script folder if it exists
+    
     script_content_path = os.path.join('scripts', script_path)
+    print("[--------------------------------]")
+    print(f"[execute_script] Warning : if no repo base folder is << python-slave-runner/scripts >> folder -------------------------------");
+    print(f"[execute_script] Script path: {script_path}", file=sys.stderr)
+    print("[--------------------------------]")
     if os.path.exists(script_content_path):
         with open(script_content_path, 'r') as f:
             script_content = f.read()
@@ -94,6 +101,26 @@ def execute_script():
             f.write(stderr_data)
 
     end_time = datetime.utcnow().isoformat() + 'Z'
+    duration = ((datetime.fromisoformat(end_time[:-1]) - datetime.fromisoformat(start_time[:-1])).total_seconds()).__str__()
+
+    # Create metadata JSON for this script execution
+    metadata = {
+        'job_id': job_id,
+        'script_id': script_id,
+        'script_name': os.path.basename(script_path),
+        'script_path': script_path,
+        'parameters': parameters,
+        'start_time': start_time,
+        'end_time': end_time,
+        'status': status,
+        'env': env,
+        'config_name': config_name,
+        'duration': duration
+    }
+    metadata_path = os.path.join(script_folder_path, 'metadata.json')
+    with open(metadata_path, 'w') as f:
+        json.dump(metadata, f, indent=2)
+    print(f"[execute_script] Saved metadata to {metadata_path}", file=sys.stderr)
 
     return jsonify({
         'status': status,
