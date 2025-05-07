@@ -243,15 +243,29 @@ def finalize_job():
         return jsonify({'status': 'error', 'message': 'Upload script not found'}), 500
 
     try:
+        # Ensure start_time and end_time are different
+        if not start_time or start_time == 'undefined':
+            # Use created_at as fallback start time
+            start_time = created_at
+            
         end_time = datetime.utcnow().isoformat() + 'Z'
-        duration = ((datetime.fromisoformat(end_time[:-1]) - datetime.fromisoformat(start_time[:-1])).total_seconds()).__str__()
+        
+        # Calculate the duration, ensuring we have valid datetimes
+        try:
+            duration = ((datetime.fromisoformat(end_time[:-1]) - datetime.fromisoformat(start_time[:-1])).total_seconds()).__str__()
+            if float(duration) <= 0:
+                # If duration is 0 or negative, set a small positive value to avoid issues
+                duration = "0.001"
+        except Exception as e:
+            print(f"[finalize_job] Error calculating duration: {str(e)}, using default", file=sys.stderr)
+            duration = "0.001"  # Default duration if calculation fails
         
         # Create job metadata JSON
         job_metadata = {
             'job_id': job_id,
             'start_time': start_time,
             'end_time': end_time,
-            'config_name': config_name,
+            'config_name': config_name or 'Default Config',  # Use a default if empty
             'env': env,
             'status': overall_status,
             'duration': duration

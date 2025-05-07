@@ -45,7 +45,13 @@ async function finalizeJobOnFlask(
 ) {
   console.log(`[finalizeJobOnFlask] Finalizing job ${jobId} on Flask service`);
   try {
-    const finalizePayload = prepareJobFinalizationPayload(jobId, started_at);
+    const finalizePayload = prepareJobFinalizationPayload(
+      jobId,
+      started_at,
+      overallStatus,
+      output.env || 'prod',
+      output.config_name || '',
+    );
     const finalizeResponse = await fetch(`${FLASK_SERVICE_URL}/finalize_job`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -126,7 +132,7 @@ async function executeFlaskScripts(
 ) {
   console.log(`[executeFlaskScripts] No hosts found, forwarding to Flask service`);
 
-  let output = { scripts: [], stdout: '', stderr: '' };
+  let output = { scripts: [], stdout: '', stderr: '', env: env, config_name: config_name };
   let overallStatus = 'success';
 
   // Initialize job on Flask service

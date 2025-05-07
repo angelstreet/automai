@@ -32,10 +32,20 @@ function prepareJobInitializationPayload(jobId, started_at, uploadScriptContent,
   };
 }
 
-function prepareJobFinalizationPayload(jobId, started_at) {
+function prepareJobFinalizationPayload(
+  jobId,
+  started_at,
+  overallStatus = 'success',
+  env = 'prod',
+  config_name = '',
+) {
   return {
     job_id: jobId,
     created_at: started_at,
+    overall_status: overallStatus,
+    env: env,
+    config_name: config_name,
+    start_time: started_at, // Using the real start time
   };
 }
 
