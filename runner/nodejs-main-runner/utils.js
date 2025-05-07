@@ -1,4 +1,8 @@
 const crypto = require('crypto');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { Client } = require('ssh2');
 
 const ALGORITHM = 'aes-256-gcm';
 
@@ -56,6 +60,41 @@ function collectEnvironmentVariables(decryptedEnvVars) {
   return Object.keys(decryptedEnvVars).length > 0 ? decryptedEnvVars : {};
 }
 
+// SFTP upload helper
+async function uploadFileViaSFTP(host, sshKeyOrPass, localPath, remotePath) {
+  return new Promise((resolve, reject) => {
+    const conn = new Client();
+    const sshConfig = {
+      host: host.ip,
+      port: host.port || 22,
+      username: host.username,
+    };
+    if (host.authType === 'privateKey') {
+      sshConfig.privateKey = sshKeyOrPass;
+    } else {
+      sshConfig.password = sshKeyOrPass;
+    }
+    conn.on('ready', () => {
+      conn.sftp((err, sftp) => {
+        if (err) {
+          conn.end();
+          return reject(err);
+        }
+        console.log(`[initializeJobOnHost] SFTP uploading ${localPath} to ${remotePath}`);
+        sftp.fastPut(localPath, remotePath, (err) => {
+          conn.end();
+          if (err) return reject(err);
+          resolve();
+        });
+      });
+    });
+    conn.on('error', (err) => {
+      reject(err);
+    });
+    conn.connect(sshConfig);
+  });
+}
+
 module.exports = {
   decrypt,
   ALGORITHM,
@@ -63,4 +102,5 @@ module.exports = {
   prepareJobFinalizationPayload,
   formatEnvVarsForSSH,
   collectEnvironmentVariables,
+  uploadFileViaSFTP,
 };

@@ -1,3 +1,8 @@
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
+const { Client } = require('ssh2');
 const { v4: uuidv4 } = require('uuid');
 
 const {
@@ -9,7 +14,14 @@ const {
 const { writeScriptMetadata } = require('./metadataUtils');
 const { pingRepository } = require('./repoUtils');
 const { executeSSHCommand, readScriptOutputFiles } = require('./sshConnectionUtils');
-const { decrypt, formatEnvVarsForSSH, collectEnvironmentVariables } = require('./utils');
+const {
+  decrypt,
+  formatEnvVarsForSSH,
+  collectEnvironmentVariables,
+  uploadFileViaSFTP,
+} = require('./utils');
+
+// SFTP upload helper function removed and imported from utils.js
 
 async function executeSSHScripts(
   config,
@@ -277,6 +289,9 @@ async function executeSSHScripts(
       const startDate = new Date(scriptStartedAt);
       const endDate = new Date(scriptCompletedAt);
       const duration = ((endDate - startDate) / 1000).toFixed(2); // Duration in seconds
+
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'job-'));
+      const metadataLocal = path.join(tempDir, 'metadata.json');
       writeScriptMetadata(scriptFolderPath, {
         job_id: jobId,
         script_id: scriptExecutionId,
@@ -290,6 +305,9 @@ async function executeSSHScripts(
         job_name: config.config_name || 'N/A',
         duration: duration,
       });
+      const metadataRemote = path.join(jobFolderPath, 'metadata.json');
+      await uploadFileViaSFTP(host, sshKeyOrPass, metadataLocal, metadataRemote);
+
       // Update script execution in database without report URL (handled by upload_and_report.py)
       await updateScriptExecution(supabase, {
         script_id: scriptExecutionId,
@@ -378,7 +396,7 @@ async function executeScriptOnSSH(jobId, script, createdAt, host) {
   const scriptFolderPath = `${jobFolderPath}/${scriptFolderName}`;
 
   try {
-    await new Promise((resolve, reject) => {
+    await new Promise((resolve, _reject) => {
       client.on('ready', async () => {
         console.log(
           `[executeScriptOnSSH] SSH connection established for job ${jobId} on host ${host.hostname}`,
@@ -422,4 +440,4 @@ async function executeScriptOnSSH(jobId, script, createdAt, host) {
   return { status, stdout, stderr, startTime, endTime: new Date().toISOString() };
 }
 
-module.exports = { executeSSHScripts, executeScriptOnSSH };
+module.exports = { executeSSHScripts, executeScriptOnSSH, uploadFileViaSFTP };
