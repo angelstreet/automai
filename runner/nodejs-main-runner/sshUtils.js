@@ -304,11 +304,19 @@ async function executeSSHScripts(
       const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'job-'));
       const metadataLocal = path.join(tempDir, 'metadata.json');
 
+      // Construct the full script path on the host
+      let fullScriptPathOnHost = scriptPath;
+      if (repoDir) {
+        fullScriptPathOnHost = host.os === 'windows' ? `${repoDir}/${scriptFolder ? scriptFolder + '/' : ''}${scriptPath}` : path.join(repoDir, scriptFolder ? scriptFolder : '', scriptPath);
+      } else if (scriptFolder) {
+        fullScriptPathOnHost = host.os === 'windows' ? `${scriptFolder}/${scriptPath}` : path.join(scriptFolder, scriptPath);
+      }
+
       writeScriptMetadata(metadataLocal, {
         job_id: jobId,
         script_id: scriptExecutionId,
         script_name: scriptName,
-        script_path: scriptFolder ? `${scriptFolder}/${scriptPath}` : scriptPath,
+        script_path: fullScriptPathOnHost,
         parameters,
         start_time: scriptStartedAt,
         end_time: scriptCompletedAt,

@@ -421,6 +421,19 @@ def main():
         else:
             print(f"[@upload_and_report:main] Metadata file not found for script folder {script_folder_name}", file=sys.stderr)
 
+        # Copy script file to upload folder if it exists
+        if script_path and os.path.exists(script_path):
+            try:
+                import shutil
+                script_filename = os.path.basename(script_path)
+                destination_path = os.path.join(script_folder_path, script_filename)
+                shutil.copy2(script_path, destination_path)
+                print(f"[@upload_and_report:main] Copied script file from {script_path} to {destination_path} for script {script_id}", file=sys.stderr)
+            except Exception as e:
+                print(f"[@upload_and_report:main] Error copying script file from {script_path} for script {script_id}: {str(e)}", file=sys.stderr)
+        else:
+            print(f"[@upload_and_report:main] Script file not found at {script_path} for script {script_id}", file=sys.stderr)
+
         # Read stdout.txt and stderr.txt if they exist
         stdout_content = ""
         stderr_content = ""
@@ -498,6 +511,10 @@ def main():
             # Correct the path to avoid duplication of job folder name
             r2_path = relative_path
             print(f"[@upload_and_report:main] Uploading file to R2: {file_name} -> {r2_path}", file=sys)
+
+            # Check if the file is likely a script file (based on extension or name)
+            if ext.lower() in ['.py', '.sh']:
+                print(f"[@upload_and_report:main] Detected script file for upload: {file_name}", file=sys.stderr)
 
             with open(file_path, 'rb') as f:
                 s3_client.upload_fileobj(
