@@ -16,6 +16,17 @@ async function initializeJobOnFlask(jobId, started_at, config, FLASK_SERVICE_URL
     const uploadScriptPath = path.join(__dirname, 'upload_and_report.py');
     const uploadScriptContent = fs.readFileSync(uploadScriptPath, 'utf8');
     const payload = prepareJobInitializationPayload(jobId, started_at, uploadScriptContent, config);
+
+    // Add repository information if available in config
+    if (config.repository) {
+      payload.repo_url = config.repository;
+      payload.script_folder = config.script_folder || '';
+      payload.branch = config.branch || 'main';
+      console.log(
+        `[initializeJobOnFlask] Added repository information to payload: ${config.repository}, branch: ${payload.branch}`,
+      );
+    }
+
     const initResponse = await fetch(`${FLASK_SERVICE_URL}/initialize_job`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

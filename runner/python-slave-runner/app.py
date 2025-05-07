@@ -36,32 +36,17 @@ def execute_script():
     os.makedirs(script_folder_path, exist_ok=True)
     print(f"[execute_script] Created script folder: {script_folder_path}", file=sys.stderr)
 
-    # Handle repository if provided
+    # Determine repo directory if repo_url is provided
     repo_dir = ''
     if repo_url:
         repo_name = repo_url.split('/').pop().replace('.git', '') or 'repo'
         repo_dir = os.path.join(os.getcwd(), repo_name)
-        if os.path.exists(repo_dir):
-            print(f"[execute_script] Repository exists at {repo_dir}, pulling latest changes", file=sys.stderr)
-            try:
-                subprocess.run(['git', 'pull', 'origin', branch], cwd=repo_dir, check=True, capture_output=True, text=True)
-                print(f"[execute_script] Successfully pulled latest changes for {repo_url}", file=sys.stderr)
-            except subprocess.CalledProcessError as e:
-                print(f"[execute_script] Failed to pull repository {repo_url}: {e.stderr}", file=sys.stderr)
-                return jsonify({'status': 'error', 'message': f'Failed to pull repository: {e.stderr}'}), 500
-        else:
-            print(f"[execute_script] Cloning repository {repo_url} to {repo_dir}", file=sys.stderr)
-            try:
-                subprocess.run(['git', 'clone', '-b', branch, repo_url, repo_dir], check=True, capture_output=True, text=True)
-                print(f"[execute_script] Successfully cloned {repo_url} to {repo_dir}", file=sys.stderr)
-            except subprocess.CalledProcessError as e:
-                print(f"[execute_script] Failed to clone repository {repo_url}: {e.stderr}", file=sys.stderr)
-                return jsonify({'status': 'error', 'message': f'Failed to clone repository: {e.stderr}'}), 500
+        print(f"[execute_script] Using repository directory: {repo_dir}", file=sys.stderr)
 
-    # Determine the correct script path based on repository and script folder
+    # Determine the correct script path based on repository
     if repo_dir:
-        print(f"[execute_script] Repository directory: {repo_dir}, script_folder: {script_folder}, script_path: {script_path}", file=sys.stderr)
-        script_content_path = os.path.join(repo_dir, script_folder, script_path) if script_folder else os.path.join(repo_dir, script_path)
+        print(f"[execute_script] Repository directory: {repo_dir}, script_path: {script_path}", file=sys.stderr)
+        script_content_path = os.path.join(repo_dir, script_path)
     else:
         script_content_path = os.path.join(os.getcwd(), script_path)
 
@@ -184,6 +169,9 @@ def initialize_job():
     decrypted_env_vars = data.get('decrypted_env_vars', {})
     credentials = data.get('credentials', {})
     config_name = data.get('config_name', '')
+    repo_url = data.get('repo_url', '')
+    branch = data.get('branch', 'main')
+    script_folder = data.get('script_folder', '')
 
     if not job_id or not created_at:
         return jsonify({'status': 'error', 'message': 'Missing job_id or created_at'}), 400
@@ -192,7 +180,6 @@ def initialize_job():
         return jsonify({'status': 'error', 'message': 'Missing upload script content'}), 400
 
      # Debug current directory
-    print(f"[initialize_job] Get current working directory", file=sys.stderr)
     try:
         current_dir = os.getcwd()
         print(f"[initialize_job] Current working directory: {current_dir}", file=sys.stderr)
@@ -210,6 +197,25 @@ def initialize_job():
     job_folder_path = os.path.join(upload_folder, job_folder_name)
     os.makedirs(job_folder_path, exist_ok=True)
     print(f"[initialize_job] Created job folder for {job_id} at {job_folder_path}", file=sys.stderr)
+
+    # Clone repository if URL is provided
+    if repo_url:
+        repo_name = repo_url.split('/').pop().replace('.git', '')
+        repo_dir = os.path.join(os.getcwd(), repo_name)
+        if os.path.exists(repo_dir):
+            try:
+                subprocess.run(['git', 'pull', 'origin', branch], cwd=repo_dir, check=True, capture_output=True, text=True)
+                print(f"[initialize_job] Successfully pulled latest changes for {repo_url}", file=sys.stderr)
+            except subprocess.CalledProcessError as e:
+                print(f"[initialize_job] Failed to pull repository {repo_url}: {e.stderr}", file=sys.stderr)
+                return jsonify({'status': 'error', 'message': f'Failed to pull repository: {e.stderr}'}), 500
+        else:
+            try:
+                subprocess.run(['git', 'clone', '-b', branch, repo_url, repo_dir], check=True, capture_output=True, text=True)
+                print(f"[initialize_job] Successfully cloned {repo_url} to {repo_dir}", file=sys.stderr)
+            except subprocess.CalledProcessError as e:
+                print(f"[initialize_job] Failed to clone repository {repo_url}: {e.stderr}", file=sys.stderr)
+                return jsonify({'status': 'error', 'message': f'Failed to clone repository: {e.stderr}'}), 500
 
     # Save the upload script to the job folder
     upload_script_path = os.path.join(job_folder_path, 'upload_and_report.py')
