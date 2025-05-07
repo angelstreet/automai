@@ -34,7 +34,7 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
     associated_files_html = ""
     if associated_files:
         # Filter files to exclude stdout.txt, stderr.txt, and script_report.html
-        excluded_filenames = {'stdout.txt', 'stderr.txt', 'script_report.html'}
+        excluded_filenames = {'stdout.txt', 'stderr.txt', 'script_report.html', 'metadata.json'}
         script_files = [file for file in associated_files 
                         if script_id in file.get('relative_path', '') 
                         and file.get('name') not in excluded_filenames]
@@ -370,46 +370,39 @@ def main():
     # Process each script folder for reports
     for script_folder_name in script_folders:
         script_folder_path = os.path.join(job_folder_path, script_folder_name)
-        script_id = script_folder_name.split('_')[-1] if '_' in script_folder_name else script_folder_name
-        
+        metadata_path = os.path.join(script_folder_path, 'metadata.json')
+        with open(metadata_path) as f:
+            metadata = json.load(f)
+        script_id = metadata['script_id']
+        script_name = metadata['script_name']
+        script_path = metadata['script_path']
+        parameters = metadata['parameters']
+        start_time = metadata['start_time']
+        end_time = metadata['end_time']
+        status = metadata['status']
+        job_id = metadata['job_id']
+
         # Read stdout.txt and stderr.txt if they exist
         stdout_content = ""
         stderr_content = ""
         stdout_path = os.path.join(script_folder_path, 'stdout.txt')
         stderr_path = os.path.join(script_folder_path, 'stderr.txt')
-        
         if os.path.exists(stdout_path):
-            try:
-                with open(stdout_path, 'r') as f:
-                    stdout_content = f.read()
-            except Exception as e:
-                print(f"[@upload_and_report:main] Error reading stdout.txt for script {script_id}: {str(e)}", file=sys.stderr)
-        
+            with open(stdout_path, 'r') as f:
+                stdout_content = f.read()
         if os.path.exists(stderr_path):
-            try:
-                with open(stderr_path, 'r') as f:
-                    stderr_content = f.read()
-            except Exception as e:
-                print(f"[@upload_and_report:main] Error reading stderr.txt for script {script_id}: {str(e)}", file=sys.stderr)
-        
-        # Determine status based on content or file presence (simplified logic)
-        status = "success" if stdout_content and not stderr_content else "failed" if stderr_content else "unknown"
-        
-        # Placeholder for script_path and parameters as they might not be available in files
-        script_path = next((os.path.join(script_folder_path, f) for f in os.listdir(script_folder_path) if f.endswith('.py')), "Unknown")
-        parameters = ""
-        
+            with open(stderr_path, 'r') as f:
+                stderr_content = f.read()
+
         # Create script report
         script_report_path = create_script_report_html(
-            script_folder_path, stdout_content, stderr_content, script_id, script_id, datetime.now(timezone.utc).isoformat(), datetime.now(timezone.utc).isoformat(), script_path, parameters, status
+            script_folder_path, stdout_content, stderr_content, script_id, job_id, start_time, end_time, script_path, parameters, status
         )
-        
         script_reports[script_id] = {
             'status': status,
             'script_path': script_path,
             'report_path': script_report_path
         }
-        
         # Update script execution status in Supabase
         script_output = {
             'stdout': stdout_content,
@@ -417,7 +410,7 @@ def main():
             'exitCode': 0 if status == 'success' else 1
         }
         script_report_url = ""  # This will be updated after file upload
-        update_supabase_script_execution(script_id, status, script_output, datetime.now(timezone.utc).isoformat(), script_report_url)
+        update_supabase_script_execution(script_id, status, script_output, end_time, script_report_url)
 
     # Create job report (initially without URLs, will update after upload)
     job_status = "success" if all(sr['status'] == 'success' for sr in script_reports.values()) else "failed"
@@ -433,11 +426,11 @@ def main():
             print(f"[@upload_and_report:main] Error reading config_name.txt: {str(e)}", file=sys.stderr)
     else:
         print(f"[@upload_and_report:main] config_name.txt not found at {config_name_file}", file=sys.stderr)
-    job_report_path = create_job_report_html(job_folder_path, script_id, datetime.now(timezone.utc).isoformat(), datetime.now(timezone.utc).isoformat(), script_reports, job_status, None, config_name=config_name)
+    job_report_path = create_job_report_html(job_folder_path, job_id, start_time, end_time, script_reports, job_status, None, config_name=config_name)
 
     # Collect all files to upload
     associated_files = []
-    excluded_files = {'.env', 'requirements.txt', 'upload_and_report.py', 'config_name.txt'}
+    excluded_files = {'.env', 'requirements.txt', 'upload_and_report.py'}
     for root, _, filenames in os.walk(job_folder_path):
         for filename in filenames:
             if filename in excluded_files:
@@ -503,7 +496,7 @@ def main():
         print(f"[@upload_and_report:main] Successfully uploaded {len(uploaded_files)} files to R2 for job: {os.path.basename(job_folder_path)}", file=sys.stderr)
         output = {
             'status': 'success',
-            'job_id': script_id,
+            'job_id': job_id,
             'uploaded_files': uploaded_files
         }
 
@@ -515,15 +508,15 @@ def main():
                 'stdout': '',
                 'stderr': ''
             }
-            update_supabase_job_status(script_id, job_status, job_output, datetime.now(timezone.utc).isoformat(), job_report_url)
+            update_supabase_job_status(job_id, job_status, job_output, datetime.now(timezone.utc).isoformat(), job_report_url)
         else:
-            print(f"[@upload_and_report:main] WARNING: Job report URL not found for job {script_id}", file=sys.stderr)
+            print(f"[@upload_and_report:main] WARNING: Job report URL not found for job {job_id}", file=sys.stderr)
             job_output = {
                 'scripts': list(script_reports.values()),
                 'stdout': '',
                 'stderr': ''
             }
-            update_supabase_job_status(script_id, job_status, job_output, datetime.now(timezone.utc).isoformat(), '')
+            update_supabase_job_status(job_id, job_status, job_output, datetime.now(timezone.utc).isoformat(), '')
 
         for script_id, script_data in script_reports.items():
             try:
@@ -590,7 +583,7 @@ def main():
                     print(f"[@upload_and_report:main] Error uploading updated script report for script {script_id}: {str(e)}", file=sys.stderr)
         
         # Regenerate job report with updated URLs
-        job_report_path = create_job_report_html(job_folder_path, script_id, datetime.now(timezone.utc).isoformat(), datetime.now(timezone.utc).isoformat(), script_reports, job_status, uploaded_files, config_name=config_name)
+        job_report_path = create_job_report_html(job_folder_path, job_id, datetime.now(timezone.utc).isoformat(), datetime.now(timezone.utc).isoformat(), script_reports, job_status, uploaded_files, config_name=config_name)
         # Upload the updated job report
         with open(job_report_path, 'rb') as f:
             s3_client.upload_fileobj(
@@ -607,15 +600,15 @@ def main():
             Params={'Bucket': bucket_name, 'Key': os.path.relpath(job_report_path, job_folder_path)},
             ExpiresIn=604800  # 7 days in seconds
         )
-        print(f"[@upload_and_report:main] Updated Job Run Report uploaded with URLs for job {script_id}", file=sys.stderr)
+        print(f"[@upload_and_report:main] Updated Job Run Report uploaded with URLs for job {job_id}", file=sys.stderr)
         if updated_job_report_url:
-            update_supabase_job_status(script_id, job_status, job_output, datetime.now(timezone.utc).isoformat(), updated_job_report_url)
+            update_supabase_job_status(job_id, job_status, job_output, datetime.now(timezone.utc).isoformat(), updated_job_report_url)
 
     except Exception as e:
-        print(f"[@upload_and_report:main] ERROR: Failed to upload files to R2 for job {script_id}: {str(e)}", file=sys.stderr)
+        print(f"[@upload_and_report:main] ERROR: Failed to upload files to R2 for job {job_id}: {str(e)}", file=sys.stderr)
         output = {
             'status': 'failure',
-            'job_id': script_id,
+            'job_id': job_id,
             'uploaded_files': uploaded_files,
             'error': f'Failed to upload files: {str(e)}'
         }
@@ -625,7 +618,7 @@ def main():
             'stdout': '',
             'stderr': str(e)
         }
-        update_supabase_job_status(script_id, job_status, job_output, datetime.now(timezone.utc).isoformat(), '')
+        update_supabase_job_status(job_id, job_status, job_output, datetime.now(timezone.utc).isoformat(), '')
         for script_id, script_data in script_reports.items():
             script_output = {
                 'stdout': '',
@@ -643,7 +636,7 @@ def main():
     print(json.dumps(output, indent=2))
     
     # Print Job Report URL and Script Report URLs for user access
-    print(f"[@upload_and_report:main] Job Run Report URL for job {script_id}: {updated_job_report_url if 'updated_job_report_url' in locals() else job_report_url}", file=sys.stderr)
+    print(f"[@upload_and_report:main] Job Run Report URL for job {job_id}: {updated_job_report_url if 'updated_job_report_url' in locals() else job_report_url}", file=sys.stderr)
     for script_id, script_data in script_reports.items():
         script_report_url = next((file['public_url'] for file in uploaded_files if file['name'] == 'script_report.html' and script_id in file['relative_path']), '')
         if script_report_url:

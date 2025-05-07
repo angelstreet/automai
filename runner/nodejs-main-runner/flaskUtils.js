@@ -4,6 +4,7 @@ const path = require('path');
 const axios = require('axios');
 
 const { createScriptExecution, updateScriptExecution } = require('./jobUtils');
+const { writeScriptMetadata } = require('./metadataUtils');
 const {
   prepareJobInitializationPayload,
   prepareJobFinalizationPayload,
@@ -255,6 +256,28 @@ async function executeFlaskScripts(
       if (scriptStatus !== 'success') {
         overallStatus = 'failed';
       }
+
+      const scriptCompletedAt = new Date().toISOString();
+      const status = scriptStatus === 'success' ? 'success' : 'failed';
+      //const exitCode = response.data.exitCode || 0;
+      const startDate = new Date(started_at);
+      const endDate = new Date(scriptCompletedAt);
+      const duration = ((endDate - startDate) / 1000).toFixed(2); // Duration in seconds
+
+      // Write metadata.json for this script execution
+      writeScriptMetadata(scriptPath, {
+        job_id: jobId,
+        script_id: scriptExecutionId,
+        script_name: scriptName,
+        script_path: scriptPath,
+        parameters: parameters || '',
+        start_time: started_at,
+        end_time: scriptCompletedAt,
+        status,
+        env: env || 'N/A',
+        job_name: config.name || 'N/A',
+        duration: duration,
+      });
     }
   }
 
