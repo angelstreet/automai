@@ -7,10 +7,10 @@ const {
   initializeJobOnHost,
   finalizeJobOnHost,
 } = require('./jobUtils');
+const { writeScriptMetadata } = require('./metadataUtils');
 const { pingRepository } = require('./repoUtils');
 const { executeSSHCommand, readScriptOutputFiles } = require('./sshConnectionUtils');
 const { decrypt, formatEnvVarsForSSH, collectEnvironmentVariables } = require('./utils');
-const { writeScriptMetadata } = require('./metadataUtils');
 
 async function executeSSHScripts(
   config,
@@ -423,4 +423,4 @@ async function executeScriptOnSSH(jobId, script, createdAt, host) {
   return { status, stdout, stderr, startTime, endTime: new Date().toISOString() };
 }
 
-module.exports = { executeSSHScripts, executeScriptOnSSH, finalizeJobOnSSH };
+module.exports = { executeSSHScripts, executeScriptOnSSH };
