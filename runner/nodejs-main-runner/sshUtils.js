@@ -11,7 +11,7 @@ const {
   finalizeJobOnHost,
 } = require('./jobUtils');
 const { writeScriptMetadata } = require('./metadataUtils');
-const { pingRepository } = require('./repoUtils');
+// const pingRepository = require('./pingRepository'); // Commented out as it is not used
 const { executeSSHCommand, readScriptOutputFiles } = require('./sshConnectionUtils');
 const {
   decrypt,
@@ -144,68 +144,16 @@ async function executeSSHScripts(
       let repoDir = '';
       console.log(`[executeSSHScripts] Script folder: ${scriptFolder}`);
 
-      if (config.repository) {
-        const repoUrl = config.repository;
-        const branch = config.branch || 'main';
-
-        const isRepoAccessible = await pingRepository(repoUrl);
-        if (!isRepoAccessible) {
-          console.error(
-            `[executeSSHScripts] Repository ${repoUrl} is not accessible, aborting job execution.`,
-          );
-          const completed_at = new Date().toISOString();
-
-          // Update the script execution to 'failed'
-          await updateScriptExecution(supabase, {
-            script_id: scriptExecutionId,
-            status: 'failed',
-            error: `Repository ${repoUrl} is not accessible, job aborted.`,
-            completed_at: completed_at,
-          });
-
-          await supabase
-            .from('jobs_run')
-            .update({
-              status: 'failed',
-              output: {
-                scripts: [],
-                stdout: '',
-                stderr: `Repository ${repoUrl} is not accessible, job aborted.`,
-              },
-              completed_at: completed_at,
-            })
-            .eq('id', jobId);
-          console.log(
-            `[executeSSHScripts] Updated job ${jobId} to failed status due to inaccessible repository.`,
-          );
-          throw new Error(`Repository ${repoUrl} is not accessible`);
-        }
-
-        // Derive repository directory name from the URL for meaningful identification
+      if (config.repository && config.repository.url && config.repository.branch) {
+        const repoUrl = config.repository.url;
+        // const branch = config.repository.branch; // Commented out as it is not used in this context
         repoDir =
           repoUrl
             .split('/')
             .pop()
             .replace(/\.git$/, '') || 'repo';
-
-        if (host.os === 'windows') {
-          console.log(
-            `[executeSSHScripts] WARNING: Git must be installed on Windows host ${host.ip} for repository operations.`,
-          );
-          // Use PowerShell for repository check and operations on Windows
-          let repoScript = `if (Test-Path '${repoDir}') { Write-Output 'Repository exists, pulling latest changes'; cd '${repoDir}'; git pull origin ${branch} } else { Write-Output 'Repository does not exist, cloning'; git clone -b ${branch} ${repoUrl} '${repoDir}'; cd '${repoDir}' }`;
-          repoCommands = `powershell -Command "${repoScript}"; cd '${scriptFolder}'`;
-        } else {
-          repoCommands = `
-              if [ -d "${repoDir}" ]; then
-                cd ${repoDir} && git pull origin ${branch} || exit 1
-              else
-                rm -rf ${repoDir} && git clone -b ${branch} ${repoUrl} ${repoDir} && cd ${repoDir} || exit 1
-              fi
-            `;
-        }
         console.log(
-          `[executeSSHScripts] Repository setup: ${repoDir} exists ? git pull : clone ${repoUrl} branch ${branch}${scriptFolder ? `, then navigate to ${scriptFolder}` : ''}`,
+          `[executeSSHScripts] Using repository directory ${repoDir} set up by initializeJobOnHost`,
         );
       } else {
         if (config.scripts && config.scripts.length > 0 && config.scripts[0].folder) {

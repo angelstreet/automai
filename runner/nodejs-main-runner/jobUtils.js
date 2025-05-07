@@ -187,20 +187,47 @@ async function updateScriptExecution(
   }
 }
 
-async function initializeJobOnHost(jobId, started_at, host, sshKeyOrPass) {
-  console.log(`[initializeJobOnHost] Initializing job ${jobId} on host ${host.ip}`);
-  const uploadFolder = host.os === 'windows' ? 'C:/tmp/uploadFolder' : '/tmp/uploadFolder';
+async function initializeJobOnHost(jobId, started_at, host, sshKeyOrPass, config) {
   const jobFolderName = `${started_at.split('T')[0].replace(/-/g, '')}_${started_at.split('T')[1].split('.')[0].replace(/:/g, '')}_${jobId}`;
-  const jobFolderPath = `${uploadFolder}/${jobFolderName}`;
+  const jobFolderPath = `${jobFolderName}`;
+  let command;
+  let repoCommands = '';
+  let repoDir = '';
 
-  // 1. Create directory (OS-specific)
-  let createDirCmd;
-  if (host.os === 'windows') {
-    createDirCmd = `powershell -Command "if (-not (Test-Path '${jobFolderPath}')) { New-Item -ItemType Directory -Path '${jobFolderPath}' }"`;
-  } else {
-    createDirCmd = `mkdir -p ${jobFolderPath}`;
+  if (config && config.repository && config.repository.url && config.repository.branch) {
+    const repoUrl = config.repository.url;
+    const branch = config.repository.branch;
+    repoDir =
+      repoUrl
+        .split('/')
+        .pop()
+        .replace(/\.git$/, '') || 'repo';
+    console.log(`[initializeJobOnHost] Setting up repository ${repoDir} on host ${host.ip}`);
+
+    if (host.os === 'windows') {
+      console.log(
+        `[initializeJobOnHost] WARNING: Git must be installed on Windows host ${host.ip} for repository operations.`,
+      );
+      let repoScript = `if (Test-Path '${repoDir}') { Write-Output 'Repository exists, pulling latest changes'; cd '${repoDir}'; git pull origin ${branch} } else { Write-Output 'Repository does not exist, cloning'; git clone -b ${branch} ${repoUrl} '${repoDir}'; cd '${repoDir}' }`;
+      repoCommands = `powershell -Command "${repoScript}"`;
+    } else {
+      repoCommands = `if [ -d "${repoDir}" ]; then cd ${repoDir} && git pull origin ${branch} || exit 1; else rm -rf ${repoDir} && git clone -b ${branch} ${repoUrl} ${repoDir} && cd ${repoDir} || exit 1; fi`;
+    }
+    console.log(`[initializeJobOnHost] Repository setup command: ${repoCommands}`);
   }
-  console.log(`[initializeJobOnHost] Executing command on host ${host.ip}: ${createDirCmd}`);
+
+  if (host.os === 'windows') {
+    command = `powershell -Command "if (-not (Test-Path '${jobFolderPath}')) { New-Item -ItemType Directory -Path '${jobFolderPath}' }"`;
+    if (repoCommands) {
+      command = `${command} && ${repoCommands}`;
+    }
+  } else {
+    command = `mkdir -p ${jobFolderPath}`;
+    if (repoCommands) {
+      command = `${command} && ${repoCommands}`;
+    }
+  }
+  console.log(`[initializeJobOnHost] Executing command on host ${host.ip}: ${command}`);
   await new Promise((resolve, reject) => {
     const conn = new Client();
     const sshConfig = {
@@ -214,7 +241,7 @@ async function initializeJobOnHost(jobId, started_at, host, sshKeyOrPass) {
       sshConfig.password = sshKeyOrPass;
     }
     conn.on('ready', () => {
-      conn.exec(createDirCmd, (err, stream) => {
+      conn.exec(command, (err, stream) => {
         if (err) {
           conn.end();
           return reject(err);
