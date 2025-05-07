@@ -177,6 +177,8 @@ async function updateScriptExecution(
 }
 
 const fs = require('fs');
+const os = require('os');
+const path = require('path');
 
 const { Client } = require('ssh2');
 
@@ -220,6 +222,7 @@ async function initializeJobOnHost(_supabase, jobId, started_at, config, host, s
   const uploadFolder = host.os === 'windows' ? 'C:/tmp/uploadFolder' : '/tmp/uploadFolder';
   const jobFolderName = `${started_at.split('T')[0].replace(/-/g, '')}_${started_at.split('T')[1].split('.')[0].replace(/:/g, '')}_${jobId}`;
   const jobFolderPath = `${uploadFolder}/${jobFolderName}`;
+
   // 1. Create directory (OS-specific)
   let createDirCmd;
   if (host.os === 'windows') {
@@ -270,34 +273,45 @@ async function initializeJobOnHost(_supabase, jobId, started_at, config, host, s
     conn.connect(sshConfig);
   });
 
-  // 2. Upload files via SFTP (all OSes)
-  const uploadScriptLocal = 'upload_and_report.py';
-  const requirementsLocal = 'requirements.txt';
-  if (!fs.existsSync(requirementsLocal)) {
-    fs.writeFileSync(requirementsLocal, 'boto3\npython-dotenv\nsupabase\n');
+  // 2. Use a temp directory for job files
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'job-'));
+  try {
+    // Write files to tempDir
+    const uploadScriptLocal = path.join(tempDir, 'upload_and_report.py');
+    const requirementsLocal = path.join(tempDir, 'requirements.txt');
+    const configNameLocal = path.join(tempDir, 'config_name.txt');
+    const envFileLocal = path.join(tempDir, '.env');
+    // Copy or write content
+    fs.copyFileSync('upload_and_report.py', uploadScriptLocal);
+    if (!fs.existsSync(requirementsLocal)) {
+      fs.writeFileSync(requirementsLocal, 'boto3\npython-dotenv\nsupabase\n');
+    }
+    fs.writeFileSync(configNameLocal, config.config_name || '');
+    fs.writeFileSync(
+      envFileLocal,
+      `CLOUDFLARE_R2_ENDPOINT=${process.env.CLOUDFLARE_R2_ENDPOINT || ''}\nCLOUDFLARE_R2_ACCESS_KEY_ID=${process.env.CLOUDFLARE_R2_ACCESS_KEY_ID || ''}\nCLOUDFLARE_R2_SECRET_ACCESS_KEY=${process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY || ''}\nSUPABASE_URL=${process.env.SUPABASE_URL || ''}\nSUPABASE_SERVICE_ROLE_KEY=${process.env.SUPABASE_SERVICE_ROLE_KEY || ''}\n`,
+    );
+    // Remote paths
+    const uploadScriptRemote = `${jobFolderPath}/upload_and_report.py`;
+    const requirementsRemote = `${jobFolderPath}/requirements.txt`;
+    const configNameRemote = `${jobFolderPath}/config_name.txt`;
+    const envFileRemote = `${jobFolderPath}/.env`;
+    // Upload
+    await uploadFileViaSFTP(host, sshKeyOrPass, uploadScriptLocal, uploadScriptRemote);
+    await uploadFileViaSFTP(host, sshKeyOrPass, requirementsLocal, requirementsRemote);
+    await uploadFileViaSFTP(host, sshKeyOrPass, configNameLocal, configNameRemote);
+    await uploadFileViaSFTP(host, sshKeyOrPass, envFileLocal, envFileRemote);
+  } finally {
+    // Cleanup temp directory
+    fs.rmSync(tempDir, { recursive: true, force: true });
   }
-  const configNameLocal = './config_name.txt';
-  fs.writeFileSync(configNameLocal, config.config_name || '');
-  const envFileLocal = './.env';
-  fs.writeFileSync(
-    envFileLocal,
-    `CLOUDFLARE_R2_ENDPOINT=${process.env.CLOUDFLARE_R2_ENDPOINT || ''}\nCLOUDFLARE_R2_ACCESS_KEY_ID=${process.env.CLOUDFLARE_R2_ACCESS_KEY_ID || ''}\nCLOUDFLARE_R2_SECRET_ACCESS_KEY=${process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY || ''}\nSUPABASE_URL=${process.env.SUPABASE_URL || ''}\nSUPABASE_SERVICE_ROLE_KEY=${process.env.SUPABASE_SERVICE_ROLE_KEY || ''}\n`,
-  );
-  const uploadScriptRemote = `${jobFolderPath}/upload_and_report.py`;
-  const requirementsRemote = `${jobFolderPath}/requirements.txt`;
-  const configNameRemote = `${jobFolderPath}/config_name.txt`;
-  const envFileRemote = `${jobFolderPath}/.env`;
-  await uploadFileViaSFTP(host, sshKeyOrPass, uploadScriptLocal, uploadScriptRemote);
-  await uploadFileViaSFTP(host, sshKeyOrPass, requirementsLocal, requirementsRemote);
-  await uploadFileViaSFTP(host, sshKeyOrPass, configNameLocal, configNameRemote);
-  await uploadFileViaSFTP(host, sshKeyOrPass, envFileLocal, envFileRemote);
 
   // 3. Install dependencies (OS-specific)
   let pipInstallCmd;
   if (host.os === 'windows') {
-    pipInstallCmd = `powershell -Command "pip install -r '${requirementsRemote}'"`;
+    pipInstallCmd = `powershell -Command "pip install -r '${jobFolderPath}/requirements.txt'"`;
   } else {
-    pipInstallCmd = `pip install -r ${requirementsRemote}`;
+    pipInstallCmd = `pip install -r ${jobFolderPath}/requirements.txt`;
   }
   console.log(`[initializeJobOnHost] Executing command on host ${host.ip}: ${pipInstallCmd}`);
   await new Promise((resolve, reject) => {
@@ -360,7 +374,7 @@ async function finalizeJobOnHost(
   const { Client } = require('ssh2');
   const finalizeCommand =
     host.os === 'windows'
-      ? `powershell -Command "cd '${jobFolderPath}' && python upload_and_report.py"`
+      ? `powershell -Command "cd '${jobFolderPath}'; python upload_and_report.py"`
       : `cd ${jobFolderPath} && python upload_and_report.py`;
   const connFinalize = new Client();
   let reportUrl = '';
