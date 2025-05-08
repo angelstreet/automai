@@ -1,35 +1,38 @@
-# docker buildx build --platform linux/amd64 -f DockerfilePlaywright -t ghcr.io/angelstreet/automai:v1.0.2 .
-# echo $GITHUB_PAT | docker login ghcr.io -u angelstreet --password-stdin
-# docker push ghcr.io/angelstreet/automai:v1.0.4
-
 FROM python:3.9-slim
 
 # Set working directory
 WORKDIR /app
 
-# Update and install system dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt \
-    && pip install --no-cache-dir python-dotenv requests playwright
+# Set non-interactive frontend to avoid debconf prompts
+ENV DEBIAN_FRONTEND=noninteractive
 
-# Install additional system dependencies if needed
+# Install Python dependencies directly
+RUN pip install --no-cache-dir \
+    flask==2.3.3 \
+    flask-sock==0.7.0 \
+    playwright==1.47.0 \
+    python-dotenv==1.0.1 \
+    requests==2.32.3 \
+    gunicorn==23.0.0 \
+    gevent==24.2.1
+
+# Install system dependencies including Xvfb
 RUN apt-get update && apt-get install -y \
-    iperf3 \
+    xvfb \
     git \
     iputils-ping \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
- # Install Playwright browsers
+# Install Playwright dependencies and Chromium
 RUN playwright install-deps \
-&& playwright install chromium  # Install only Chromium to reduce size
+    && playwright install chromium
 
-
-# Copy the application code
+# Copy application code
 COPY . .
 
-# Expose the port for Flask
+# Expose port for Flask (Render will override with PORT env var)
 EXPOSE 10000
 
-# Command to run the Flask application
-CMD ["python", "app.py"] 
+# Run Flask app with Xvfb and Gunicorn, binding to Render's PORT
+CMD ["xvfb-run", "--auto-servernum", "--server-args=-screen 0 1280x720x24", "gunicorn", "--worker-class", "gevent", "--bind", "0.0.0.0:${PORT:-10000}", "app:app"]
