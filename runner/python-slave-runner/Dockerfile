@@ -1,7 +1,5 @@
 FROM python:3.9-slim
 
-# Set working directory
-WORKDIR /app
 # Update and install system dependencies
 RUN apt-get update && apt-get install -y \
     iperf3 \
@@ -9,6 +7,9 @@ RUN apt-get update && apt-get install -y \
     iputils-ping \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
 
 # Copy requirements file
 COPY requirements.txt .
