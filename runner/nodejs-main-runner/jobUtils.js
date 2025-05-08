@@ -65,7 +65,7 @@ async function fetchJobConfig(supabase, config_id) {
     creator_id: data.creator_id,
     is_active: data.is_active,
     name: data.name,
-    env: data.env,
+    env: data.config.env || 'preprod',
   };
 }
 
