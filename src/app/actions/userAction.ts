@@ -1,12 +1,17 @@
 'use server';
 
 import { cache } from 'react';
-import { cookies } from 'next/headers';
 
 import teamMemberDb from '@/lib/db/teamMemberDb';
 import userDb from '@/lib/db/userDb';
 import cacheUtils from '@/lib/utils/cacheUtils';
 import type { User } from '@/types/service/userServiceType';
+
+/**
+ * Custom cache storage with TTL for server-side caching
+ */
+const userCache = new Map<string, { data: User | null; timestamp: number }>();
+const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes in milliseconds
 
 /**
  * Invalidate user-related cache
@@ -15,6 +20,10 @@ import type { User } from '@/types/service/userServiceType';
 export async function invalidateUserCache() {
   // Clear the cache using the cacheUtils
   cacheUtils.clearCache();
+
+  // Clear the server-side user cache
+  userCache.clear();
+  console.log('[@action:user:invalidateUserCache] Server-side user cache cleared');
 
   return {
     success: true,
@@ -28,18 +37,85 @@ export async function invalidateUserCache() {
  */
 export const getUser = cache(async (): Promise<User | null> => {
   try {
-    const cookieStore = await cookies();
-    const userDataCookie = cookieStore.get('user-data');
-
-    if (userDataCookie) {
-      const userData = JSON.parse(userDataCookie.value);
-      console.log('[@action:user:getUser] User data retrieved from cookie');
-      return userData as User;
+    // Check if cached data exists and is within TTL
+    const cacheKey = 'currentUser';
+    const cachedEntry = userCache.get(cacheKey);
+    const now = Date.now();
+    if (cachedEntry && now - cachedEntry.timestamp < CACHE_TTL_MS) {
+      console.log('[@action:user:getUser] Using cached user data');
+      return cachedEntry.data;
     }
 
-    // No fallback to Supabase; rely on middleware to set cookie
-    console.log('[@action:user:getUser] No user data in cookie, user not authenticated');
-    return null;
+    console.log('[@action:user:getUser] Fetching fresh user data from Supabase');
+    const authUserResult = await userDb.getCurrentUser();
+    if (!authUserResult.success || !authUserResult.data) {
+      console.error('[@action:user:getUser] Auth error: User not found');
+      userCache.set(cacheKey, { data: null, timestamp: now });
+      return null;
+    }
+
+    const authUser = authUserResult.data;
+
+    // Get profile data
+    const profileResult = await userDb.findUnique({ where: { id: authUser.id } });
+    if (!profileResult.success || !profileResult.data) {
+      console.error('[@action:user:getUser] Profile error:', profileResult.error);
+      userCache.set(cacheKey, { data: null, timestamp: now });
+      return null;
+    }
+
+    const profile = profileResult.data;
+
+    // Create a userTeams array from authUser.teams data or fetch it if needed
+    let userTeams = authUser.teams || [];
+
+    // If no teams were found in authUser, we need to find all teams the user belongs to
+    if (userTeams.length === 0) {
+      console.log('[@action:user:getUser] No teams found in authUser, fetching from teamMemberDb');
+      const teamsResult = await teamMemberDb.getTeamsByUserId(authUser.id);
+
+      if (!teamsResult.success) {
+        console.error('[@action:user:getUser] Error fetching teams:', teamsResult.error);
+      } else {
+        userTeams = teamsResult.data || [];
+      }
+    }
+
+    // Get selected team
+    const selectedTeamId = profile.active_team;
+
+    // Get role from team_members for active team
+    let role: string | null = null;
+    if (selectedTeamId) {
+      const roleResult = await teamMemberDb.getTeamMemberRole(authUser.id, selectedTeamId);
+      if (!roleResult.success) {
+        console.error(
+          '[@action:user:getUser] Error fetching role from team_members:',
+          roleResult.error,
+        );
+      }
+      role = roleResult.data ? roleResult.data : null;
+    }
+
+    // Construct user object with role (may be null)
+    const userData: User = {
+      id: authUser.id,
+      email: authUser.email || '',
+      name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Guest',
+      role: role as any, // casting to Role type
+      tenant_id: profile.tenant_id,
+      avatar_url: authUser.user_metadata?.avatar_url || profile.avatar_url || '',
+      user_metadata: authUser.user_metadata,
+      teams: userTeams,
+      selectedTeamId,
+      teamMembers: [],
+    };
+
+    // Update cache with fresh data
+    userCache.set(cacheKey, { data: userData, timestamp: now });
+    console.log('[@action:user:getUser] User data cached for 30 minutes');
+
+    return userData;
   } catch (error) {
     console.error('[@action:user:getUser] Error:', error);
     return null;
@@ -75,21 +151,13 @@ export async function updateProfile(formData: FormData | Record<string, any>) {
       if (formData.role) metadata.role = formData.role;
     }
 
-    // Get user ID from cookie instead of Supabase call
-    const cookieStore = await cookies();
-    const userDataCookie = cookieStore.get('user-data');
-    if (!userDataCookie) {
-      throw new Error('User not authenticated');
-    }
-    const userData = JSON.parse(userDataCookie.value);
-    const userId = userData.id;
-
-    if (!userId) {
-      throw new Error('User ID not found in cookie');
+    const userResult = await userDb.getCurrentUser();
+    if (!userResult.success || !userResult.data) {
+      throw new Error('User not found');
     }
 
     // Call the db-users module to handle the update
-    return userDb.updateProfile(userId, metadata);
+    return userDb.updateProfile(userResult.data.id, metadata);
   } catch (error) {
     console.error('Error updating profile:', error);
     throw new Error(error instanceof Error ? error.message : 'Failed to update profile');

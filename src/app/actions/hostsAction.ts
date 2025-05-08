@@ -115,8 +115,8 @@ export async function createHost(
     }
 
     // Process authentication data based on authType
-    let password = null;
-    let private_key = null;
+    let password: string | undefined = undefined;
+    let private_key: string | undefined = undefined;
 
     // Log the auth type for debugging
     console.log('[@action:hosts:createHost] Processing auth type:', (data as any).authType);
@@ -153,8 +153,8 @@ export async function createHost(
     // Log a sanitized version of the host data for debugging
     console.log('[@action:hosts:createHost] Host data being sent to database:', {
       ...hostData,
-      password: hostData.password ? '[ENCRYPTED DATA]' : null,
-      private_key: hostData.private_key ? '[ENCRYPTED DATA]' : null,
+      password: hostData.password ? '[ENCRYPTED DATA]' : undefined,
+      private_key: hostData.private_key ? '[ENCRYPTED DATA]' : undefined,
       // Add relevant checks that the RLS policy looks for
       hasUser: !!hostData.user,
       userLength: hostData.user?.length || 0,
@@ -375,7 +375,7 @@ export async function testHostConnection(
           ip: host.ip,
           port: host.port,
           username: host.user,
-          authType: 'privateKey',
+          authType: 'privateKey' as const,
           privateKey: decryptedKey,
           hostId: id,
         };
@@ -390,7 +390,7 @@ export async function testHostConnection(
           ip: host.ip,
           port: host.port,
           username: host.user,
-          authType: 'password',
+          authType: 'password' as const,
           password: decryptedPassword,
           hostId: id,
         };

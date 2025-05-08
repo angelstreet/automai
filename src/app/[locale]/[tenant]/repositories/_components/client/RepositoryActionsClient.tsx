@@ -7,8 +7,6 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/shadcn/tooltip';
-import { useToast } from '@/components/shadcn/use-toast';
-import { useRepository } from '@/hooks/useRepository';
 
 import { RepositoryFormDialogClient } from './RepositoryFormDialogClient';
 
@@ -22,7 +20,6 @@ export function RepositoryActionsClient({ repositoryCount = 0 }: RepositoryActio
   const [currentRepositoryCount, setCurrentRepositoryCount] = useState(repositoryCount);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const { toast } = useToast();
 
   // Update repository count when prop changes
   useEffect(() => {

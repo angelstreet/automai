@@ -351,10 +351,7 @@ export async function getAllJobs(providedUser?: any) {
       user = await getUser();
     }
 
-    if (!user) {
-      console.error('[@action:jobsAction:getAllJobs] User not authenticated');
-      return { success: false, error: 'User not authenticated', data: [] };
-    }
+    
 
     // Get the user's active team ID
     const { getUserActiveTeam } = await import('@/app/actions/teamAction');
