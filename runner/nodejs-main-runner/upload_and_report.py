@@ -344,10 +344,7 @@ def update_supabase_script_execution(script_id, status, output, completed_at, re
 def main():
     # Always use the current working directory as the job folder
     job_folder_path = os.getcwd()
-    print(f"[@upload_and_report:main] Current working directory: {job_folder_path}", file=sys.stderr)
-    print(f"[@upload_and_report:main] Parent directory: {os.path.dirname(job_folder_path)}", file=sys.stderr)
     job_id = os.path.basename(job_folder_path)  # Extract job_id from folder name as fallback
-    print(f"[@upload_and_report:main] Extracted job_id from folder name: {job_id}", file=sys.stderr)
     env_file_path = os.path.join(job_folder_path, '.env')
     if os.path.exists(env_file_path):
         load_dotenv(dotenv_path=env_file_path)
