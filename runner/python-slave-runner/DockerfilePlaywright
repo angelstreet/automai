@@ -10,7 +10,7 @@ WORKDIR /app
 # Update and install system dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt \
-    && pip install --no-cache-dir python-dotenv requests gunicorn
+    && pip install --no-cache-dir python-dotenv requests playwright
 
 # Install additional system dependencies if needed
 RUN apt-get update && apt-get install -y \
@@ -19,7 +19,12 @@ RUN apt-get update && apt-get install -y \
     iputils-ping \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
-    
+
+ # Install Playwright browsers
+RUN playwright install-deps \
+&& playwright install chromium  # Install only Chromium to reduce size
+
+
 # Copy the application code
 COPY . .
 
