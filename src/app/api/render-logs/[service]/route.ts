@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
 
-export async function GET(_request: Request, context: { params: { service: string } }) {
+export async function GET(_request: Request, { params }: { params: { service: string } }) {
   try {
-    const params = await context.params;
-    const service = params.service;
+    const service = (await params).service;
     console.log(`[@api:render-logs] Starting to fetch logs from Render ${service} service`);
     const renderApiEndpoint = process.env.RENDER_API_ENDPOINT;
     const renderApiKey = process.env.RENDER_API_KEY;
@@ -11,11 +10,17 @@ export async function GET(_request: Request, context: { params: { service: strin
 
     let serviceId;
     switch (service) {
-      case 'main':
-        serviceId = process.env.RENDER_MAIN_SERVICE_ID;
+      case 'main-prod':
+        serviceId = process.env.NODEJS_MAIN_RUNNER_PROD_SERVICE_ID;
         break;
-      case 'python':
-        serviceId = process.env.RENDER_SLAVE_PYTHON_SERVICE_ID;
+      case 'python-prod':
+        serviceId = process.env.PYTHON_DOCKER_RUNNER_PROD_SERVICE_ID;
+        break;
+      case 'main-preprod':
+        serviceId = process.env.NODEJS_MAIN_RUNNER_PREPROD_SERVICE_ID;
+        break;
+      case 'python-preprod':
+        serviceId = process.env.PYTHON_DOCKER_RUNNER_PREPROD_SERVICE_ID;
         break;
       default:
         console.error('[@api:render-logs] Invalid service specified:', service);

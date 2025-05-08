@@ -1,19 +1,23 @@
 import { NextResponse } from 'next/server';
 
-export async function GET(_request: Request, context: { params: { service: string } }) {
+export async function GET(_request: Request, { params }: { params: { service: string } }) {
   try {
-    const params = await context.params;
-    console.log('[@api:render-health] Params object:', params);
-    const service = params.service;
+    const service = (await params).service;
     console.log(`[@api:render-health] Sending request to wake up Render ${service} service`);
 
     let renderUrl;
     switch (service) {
-      case 'main':
-        renderUrl = process.env.RENDER_MAIN_URL;
+      case 'main-prod':
+        renderUrl = process.env.NODEJS_MAIN_RUNNER_PROD_URL;
         break;
-      case 'python':
-        renderUrl = process.env.RENDER_SLAVE_PYTHON_URL;
+      case 'python-prod':
+        renderUrl = process.env.PYTHON_DOCKER_RUNNER_PROD_URL;
+        break;
+      case 'main-preprod':
+        renderUrl = process.env.NODEJS_MAIN_RUNNER_PREPROD_URL;
+        break;
+      case 'python-preprod':
+        renderUrl = process.env.PYTHON_DOCKER_RUNNER_PREPROD_URL;
         break;
       default:
         console.error('[@api:render-health] Invalid service specified:', service);
@@ -47,12 +51,9 @@ export async function GET(_request: Request, context: { params: { service: strin
     }
   } catch (error: any) {
     console.error(`[@api:render-health] Error waking up Render service:`, error.message);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to wake up Render service',
-      },
-      { status: 503 },
-    );
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to wake up Render service',
+    });
   }
 }

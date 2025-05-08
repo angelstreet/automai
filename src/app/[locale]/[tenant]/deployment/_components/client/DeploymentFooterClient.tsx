@@ -8,138 +8,158 @@ import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
 import { cn } from '@/lib/utils';
 
-// Custom hook for fetching Render health
-function useRenderHealth(type: 'main' | 'python') {
-  const [health, setHealth] = useState<{ success: boolean; message: string } | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+type ServiceStatus = {
+  loading: boolean;
+  status: string | null;
+};
 
-  useEffect(() => {
-    const fetchHealth = async () => {
-      try {
-        console.log(`[@component:DeploymentFooterClient] Fetching Render ${type} health status`);
-        setLoading(true);
-        const response = await fetch(`/api/render-health/${type}`);
-        if (!response.ok) {
-          throw new Error(`Health check failed with status: ${response.status}`);
-        }
-        const data = await response.json();
-        setHealth(data);
-        console.log(
-          `[@component:DeploymentFooterClient] Render ${type} health status fetched:`,
-          data.message,
-        );
-      } catch (err: any) {
-        console.error(
-          `[@component:DeploymentFooterClient] Error fetching Render ${type} health:`,
-          err.message,
-        );
-        setError(err.message || 'Failed to fetch health status');
-        setHealth(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchHealth();
-  }, [type]);
-
-  return { health, loading, error };
-}
-
-// Custom hook for fetching Upstash Redis health
-function useUpstashHealth() {
-  const [health, setHealth] = useState<{ success: boolean; message: string } | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchHealth = async () => {
-      try {
-        console.log(`[@component:DeploymentFooterClient] Fetching Upstash Redis health status`);
-        setLoading(true);
-        const response = await fetch(`/api/upstash-health`);
-        if (!response.ok) {
-          throw new Error(`Health check failed with status: ${response.status}`);
-        }
-        const data = await response.json();
-        setHealth(data);
-        console.log(
-          `[@component:DeploymentFooterClient] Upstash Redis health status fetched:`,
-          data.message,
-        );
-      } catch (err: any) {
-        console.error(
-          `[@component:DeploymentFooterClient] Error fetching Upstash Redis health:`,
-          err.message,
-        );
-        setError(err.message || 'Failed to fetch health status');
-        setHealth(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchHealth();
-  }, []);
-
-  return { health, loading, error };
-}
+type LogsData = {
+  logs?: Array<{
+    timestamp?: string;
+    message?: string;
+  }>;
+  [key: string]: any;
+};
 
 export function DeploymentFooterClient() {
-  const { health: mainHealth, loading: mainHealthLoading } = useRenderHealth('main');
-  const { health: slaveHealth, loading: slaveHealthLoading } = useRenderHealth('python');
-  const { health: upstashHealth, loading: upstashHealthLoading } = useUpstashHealth();
-  const [mainModalOpen, setMainModalOpen] = useState(false);
-  const [slaveModalOpen, setSlaveModalOpen] = useState(false);
-  const [upstashModalOpen, setUpstashModalOpen] = useState(false);
+  const t = useTranslations('deployment');
+  const c = useTranslations('common');
 
-  // Data states for each service
-  const [mainLogs, setMainLogs] = useState<any>(null);
-  const [mainLogsLoading, setMainLogsLoading] = useState(false);
-  const [mainLogsError, setMainLogsError] = useState<string | null>(null);
+  // Simple state for health status
+  const [healthStatus, setHealthStatus] = useState<Record<string, ServiceStatus>>({
+    'main-prod': { loading: true, status: null },
+    'main-preprod': { loading: true, status: null },
+    'python-prod': { loading: true, status: null },
+    'python-preprod': { loading: true, status: null },
+  });
 
-  const [slaveLogs, setSlaveLogs] = useState<any>(null);
-  const [slaveLogsLoading, setSlaveLogsLoading] = useState(false);
-  const [slaveLogsError, setSlaveLogsError] = useState<string | null>(null);
-
+  // Simple state for logs
+  const [logs, setLogs] = useState<LogsData | null>(null);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logsError, setLogsError] = useState<string | null>(null);
+  const [activeService, setActiveService] = useState('');
+  const [logsModalOpen, setLogsModalOpen] = useState(false);
   const [upstashLogs, setUpstashLogs] = useState<any>(null);
   const [upstashLogsLoading, setUpstashLogsLoading] = useState(false);
   const [upstashLogsError, setUpstashLogsError] = useState<string | null>(null);
+  const [upstashModalOpen, setUpstashModalOpen] = useState(false);
 
-  const t = useTranslations('deployment');
-  const c = useTranslations('common');
-  // Determine status dot colors for all services
-  const isMainHealthy = mainHealth && mainHealth.success;
-  const isSlaveHealthy = slaveHealth && slaveHealth.success;
-  const isUpstashHealthy = upstashHealth && upstashHealth.success;
+  // Upstash health
+  const [upstashHealth, setUpstashHealth] = useState<ServiceStatus>({
+    loading: true,
+    status: null,
+  });
 
-  const mainStatusColor = mainHealthLoading
-    ? 'bg-yellow-500 animate-blink'
-    : isMainHealthy
-      ? 'bg-green-500'
-      : 'bg-red-500';
+  // Fetch health status on component load for all services
+  useEffect(() => {
+    const fetchHealthStatus = async (service: string) => {
+      try {
+        console.log(`[@component:DeploymentFooterClient] Fetching health for ${service}`);
+        const response = await fetch(`/api/render-health/${service}`, { cache: 'no-store' });
+        if (!response.ok) {
+          throw new Error(`Health check failed: ${response.status}`);
+        }
+        const data = await response.json();
+        setHealthStatus((prev) => ({
+          ...prev,
+          [service]: { loading: false, status: data.status === 'ok' ? 'ok' : 'error' },
+        }));
+      } catch (error) {
+        console.error(
+          `[@component:DeploymentFooterClient] Error fetching ${service} health:`,
+          error,
+        );
+        setHealthStatus((prev) => ({
+          ...prev,
+          [service]: { loading: false, status: 'error' },
+        }));
+      }
+    };
 
-  const slaveStatusColor = slaveHealthLoading
-    ? 'bg-yellow-500 animate-blink'
-    : isSlaveHealthy
-      ? 'bg-green-500'
-      : 'bg-red-500';
+    const fetchUpstashHealth = async () => {
+      try {
+        console.log('[@component:DeploymentFooterClient] Fetching Upstash health');
+        const response = await fetch('/api/upstash-health', { cache: 'no-store' });
+        if (!response.ok) {
+          throw new Error(`Health check failed: ${response.status}`);
+        }
+        const data = await response.json();
+        setUpstashHealth({ loading: false, status: data.status === 'ok' ? 'ok' : 'error' });
+      } catch (error: any) {
+        console.error('[@component:DeploymentFooterClient] Error fetching Upstash health:', error);
+        setUpstashHealth({ loading: false, status: 'error' });
+      }
+    };
 
-  const upstashStatusColor = upstashHealthLoading
-    ? 'bg-yellow-500 animate-blink'
-    : isUpstashHealthy
-      ? 'bg-green-500'
-      : 'bg-red-500';
+    // Fetch all services health on load
+    fetchHealthStatus('main-prod');
+    fetchHealthStatus('main-preprod');
+    fetchHealthStatus('python-prod');
+    fetchHealthStatus('python-preprod');
+    fetchUpstashHealth();
+  }, []);
+
+  // Function to fetch logs when button is clicked
+  const fetchLogs = async (service: string) => {
+    try {
+      setLogsLoading(true);
+      setLogsError(null);
+      setActiveService(service);
+
+      console.log(`[@component:DeploymentFooterClient] Fetching logs for ${service}`);
+      const response = await fetch(`/api/render-logs/${service}`, { cache: 'no-store' });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch logs: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setLogs(data.logs);
+      setLogsModalOpen(true);
+    } catch (error: any) {
+      console.error(
+        `[@component:DeploymentFooterClient] Error fetching logs for ${service}:`,
+        error,
+      );
+      setLogsError(error.message);
+      setLogsModalOpen(true);
+    } finally {
+      setLogsLoading(false);
+    }
+  };
+
+  // Function to fetch Upstash logs
+  const fetchUpstashLogs = async () => {
+    try {
+      setUpstashLogsLoading(true);
+      setUpstashLogsError(null);
+
+      console.log('[@component:DeploymentFooterClient] Fetching Upstash logs');
+      const response = await fetch('/api/upstash-logs', { cache: 'no-store' });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch Upstash logs: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setUpstashLogs(data.data);
+      setUpstashModalOpen(true);
+    } catch (error: any) {
+      console.error('[@component:DeploymentFooterClient] Error fetching Upstash logs:', error);
+      setUpstashLogsError(error.message);
+      setUpstashModalOpen(true);
+    } finally {
+      setUpstashLogsLoading(false);
+    }
+  };
 
   // Function to copy logs to clipboard
-  const copyLogs = (logs: any) => {
-    if (logs) {
+  const copyLogs = (logsData: any) => {
+    if (logsData) {
       navigator.clipboard
-        .writeText(JSON.stringify(logs, null, 2))
+        .writeText(JSON.stringify(logsData, null, 2))
         .then(() => {
           console.log('[@component:DeploymentFooterClient] Logs copied to clipboard');
-          // Use a local state or ref for button text change to avoid full modal re-render
           const copyButton = document.querySelector('.copy-button');
           if (copyButton) {
             copyButton.textContent = 'Copied';
@@ -156,17 +176,14 @@ export function DeploymentFooterClient() {
     }
   };
 
-  // Parse logs to extract only timestamps and messages
-  const parseLogsForDisplay = (logs: any) => {
-    if (!logs) return '';
+  // Parse logs for display
+  const parseLogsForDisplay = (logsData: LogsData | null) => {
+    if (!logsData) return '';
 
     try {
-      // Check if logs.logs is an array (assuming the API response structure)
-      if (logs.logs && Array.isArray(logs.logs)) {
-        // Extract and format timestamp and message from each log entry
-        return logs.logs
-          .map((log: any) => {
-            // Format the timestamp as DD/MM/YYYY, HH:MM:SS
+      if (logsData.logs && Array.isArray(logsData.logs)) {
+        return logsData.logs
+          .map((log) => {
             let timestamp = 'Unknown time';
             if (log.timestamp) {
               const date = new Date(log.timestamp);
@@ -180,211 +197,29 @@ export function DeploymentFooterClient() {
                 .toString()
                 .padStart(2, '0')}`;
             }
-
-            // Get the message
             const message = log.message || 'No message';
-
-            // Return formatted log entry
             return `${timestamp}\n${message}`;
           })
           .join('\n\n');
       }
-
-      // Fallback for unexpected log structure
-      return JSON.stringify(logs, null, 2);
+      return JSON.stringify(logsData, null, 2);
     } catch (error) {
       console.error('[@component:DeploymentFooterClient] Error parsing logs:', error);
-      return JSON.stringify(logs, null, 2);
+      return JSON.stringify(logsData, null, 2);
     }
   };
 
-  // Fetch handlers for each service - these fetch data THEN open the modal
-  const fetchMainLogs = async () => {
-    try {
-      console.log(
-        '[@component:DeploymentFooterClient] Fetching Render Main logs before opening modal',
-      );
-      setMainLogsLoading(true);
-      setMainLogsError(null);
-
-      const response = await fetch('/api/render-logs/main');
-      if (!response.ok) {
-        throw new Error(`Logs fetch failed with status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setMainLogs(data.data);
-      console.log('[@component:DeploymentFooterClient] Render Main logs fetched successfully');
-
-      // Only open modal after data is fetched
-      setMainModalOpen(true);
-    } catch (err: any) {
-      console.error(
-        '[@component:DeploymentFooterClient] Error fetching Render Main logs:',
-        err.message,
-      );
-      setMainLogsError(err.message || 'Failed to fetch logs');
-      setMainLogs(null);
-    } finally {
-      setMainLogsLoading(false);
+  // Helper function to determine status color
+  const getStatusColor = (service: string) => {
+    const status = service === 'upstash' ? upstashHealth : healthStatus[service];
+    if (status.loading) {
+      return 'bg-yellow-500 animate-blink';
     }
+    return status.status === 'ok' ? 'bg-green-500' : 'bg-red-500';
   };
 
-  const fetchSlaveLogs = async () => {
-    try {
-      console.log(
-        '[@component:DeploymentFooterClient] Fetching Render Python logs before opening modal',
-      );
-      setSlaveLogsLoading(true);
-      setSlaveLogsError(null);
-
-      const response = await fetch('/api/render-logs/python');
-      if (!response.ok) {
-        throw new Error(`Logs fetch failed with status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setSlaveLogs(data.data);
-      console.log('[@component:DeploymentFooterClient] Render Python logs fetched successfully');
-
-      // Only open modal after data is fetched
-      setSlaveModalOpen(true);
-    } catch (err: any) {
-      console.error(
-        '[@component:DeploymentFooterClient] Error fetching Render Python logs:',
-        err.message,
-      );
-      setSlaveLogsError(err.message || 'Failed to fetch logs');
-      setSlaveLogs(null);
-    } finally {
-      setSlaveLogsLoading(false);
-    }
-  };
-
-  const fetchUpstashLogs = async () => {
-    try {
-      console.log(
-        '[@component:DeploymentFooterClient] Fetching Upstash Redis logs before opening modal',
-      );
-      setUpstashLogsLoading(true);
-      setUpstashLogsError(null);
-
-      const response = await fetch('/api/upstash-logs');
-      if (!response.ok) {
-        throw new Error(`Logs fetch failed with status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setUpstashLogs(data.data);
-      console.log('[@component:DeploymentFooterClient] Upstash Redis logs fetched successfully');
-
-      // Only open modal after data is successfully fetched
-      if (data.data) {
-        setUpstashModalOpen(true);
-      }
-    } catch (err: any) {
-      console.error(
-        '[@component:DeploymentFooterClient] Error fetching Upstash Redis logs:',
-        err.message,
-      );
-      setUpstashLogsError(err.message || 'Failed to fetch logs');
-      setUpstashLogs(null);
-    } finally {
-      setUpstashLogsLoading(false);
-    }
-  };
-
-  // Refresh handlers - only for the refresh button inside the modal
-  const refreshMainLogs = async () => {
-    try {
-      console.log('[@component:DeploymentFooterClient] Refreshing Render Main logs');
-      setMainLogsLoading(true);
-      setMainLogsError(null);
-
-      const response = await fetch('/api/render-logs/main');
-      if (!response.ok) {
-        throw new Error(`Logs fetch failed with status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setMainLogs(data.data);
-      console.log('[@component:DeploymentFooterClient] Render Main logs refreshed successfully');
-    } catch (err: any) {
-      console.error(
-        '[@component:DeploymentFooterClient] Error refreshing Render Main logs:',
-        err.message,
-      );
-      setMainLogsError(err.message || 'Failed to fetch logs');
-    } finally {
-      setMainLogsLoading(false);
-    }
-  };
-
-  const refreshSlaveLogs = async () => {
-    try {
-      console.log('[@component:DeploymentFooterClient] Refreshing Render Python logs');
-      setSlaveLogsLoading(true);
-      setSlaveLogsError(null);
-
-      const response = await fetch('/api/render-logs/python');
-      if (!response.ok) {
-        throw new Error(`Logs fetch failed with status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setSlaveLogs(data.data);
-      console.log('[@component:DeploymentFooterClient] Render Python logs refreshed successfully');
-    } catch (err: any) {
-      console.error(
-        '[@component:DeploymentFooterClient] Error refreshing Render Python logs:',
-        err.message,
-      );
-      setSlaveLogsError(err.message || 'Failed to fetch logs');
-    } finally {
-      setSlaveLogsLoading(false);
-    }
-  };
-
-  const refreshUpstashLogs = async () => {
-    try {
-      console.log('[@component:DeploymentFooterClient] Refreshing Upstash Redis logs');
-      setUpstashLogsLoading(true);
-      setUpstashLogsError(null);
-
-      const response = await fetch('/api/upstash-logs');
-      if (!response.ok) {
-        throw new Error(`Logs fetch failed with status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setUpstashLogs(data.data);
-      console.log('[@component:DeploymentFooterClient] Upstash Redis logs refreshed successfully');
-    } catch (err: any) {
-      console.error(
-        '[@component:DeploymentFooterClient] Error refreshing Upstash Redis logs:',
-        err.message,
-      );
-      setUpstashLogsError(err.message || 'Failed to fetch logs');
-    } finally {
-      setUpstashLogsLoading(false);
-    }
-  };
-
-  const LogsDialog = ({
-    onOpenChange,
-    logs,
-    loading,
-    error,
-    refreshLogs,
-    title,
-  }: {
-    onOpenChange: (open: boolean) => void;
-    logs: any;
-    loading: boolean;
-    error: string | null;
-    refreshLogs: () => void;
-    title: string;
-  }) => (
+  // Generic dialog component for displaying logs
+  const LogsDialog = ({ title }: { title: string }) => (
     <DialogContent
       className="max-w-[90%] min-w-[75vw] w-[1000px] max-h-[80vh] overflow-hidden bg-gray-900 dark:bg-gray-900 flex flex-col relative"
       style={{
@@ -395,7 +230,7 @@ export function DeploymentFooterClient() {
       }}
     >
       <button
-        onClick={() => onOpenChange(false)}
+        onClick={() => setLogsModalOpen(false)}
         className="absolute top-3 right-3 z-20 rounded-full p-1 bg-gray-800 hover:bg-gray-700 text-gray-100 focus:outline-none"
         aria-label="Close"
       >
@@ -407,10 +242,12 @@ export function DeploymentFooterClient() {
       </DialogHeader>
 
       <div className="flex-grow overflow-y-auto px-4">
-        {loading ? (
+        {logsLoading ? (
           <p className="text-gray-400 dark:text-gray-400">{t('loading_logs')}</p>
-        ) : error ? (
-          <p className="text-red-400 dark:text-red-400">{t('error_logs', { message: error })}</p>
+        ) : logsError ? (
+          <p className="text-red-400 dark:text-red-400">
+            {t('error_logs', { message: logsError })}
+          </p>
         ) : logs ? (
           <div className="bg-gray-800 p-2 rounded-md text-xs text-gray-100 dark:text-white">
             <pre
@@ -433,7 +270,12 @@ export function DeploymentFooterClient() {
 
       <div className="sticky z-10 bg-gray-900 dark:bg-gray-900 py-1 border-t border-gray-800 px-4">
         <div className="flex justify-end space-x-2">
-          <Button onClick={refreshLogs} variant="secondary" size="sm" disabled={loading}>
+          <Button
+            onClick={() => fetchLogs(activeService)}
+            variant="secondary"
+            size="sm"
+            disabled={logsLoading}
+          >
             <RefreshCw className="w-4 h-4 mr-1" />
             {t('refresh_logs')}
           </Button>
@@ -441,7 +283,85 @@ export function DeploymentFooterClient() {
             onClick={() => copyLogs(logs)}
             variant="secondary"
             size="sm"
-            disabled={!logs || loading}
+            disabled={!logs || logsLoading}
+            className="copy-button"
+          >
+            <Copy className="w-4 h-4 mr-1" />
+            {c('copy')}
+          </Button>
+        </div>
+      </div>
+    </DialogContent>
+  );
+
+  // Similar dialog for Upstash
+  const UpstashLogsDialog = () => (
+    <DialogContent
+      className="max-w-[90%] min-w-[75vw] w-[1000px] max-h-[80vh] overflow-hidden bg-gray-900 dark:bg-gray-900 flex flex-col relative"
+      style={{
+        position: 'fixed',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+      }}
+    >
+      <button
+        onClick={() => setUpstashModalOpen(false)}
+        className="absolute top-3 right-3 z-20 rounded-full p-1 bg-gray-800 hover:bg-gray-700 text-gray-100 focus:outline-none"
+        aria-label="Close"
+      >
+        <X className="h-5 w-5" />
+      </button>
+
+      <DialogHeader className="sticky top-0 z-10 bg-gray-900 dark:bg-gray-900 py-1 border-b border-gray-800">
+        <DialogTitle className="text-gray-100 dark:text-white">
+          Upstash Redis Queue List
+        </DialogTitle>
+      </DialogHeader>
+
+      <div className="flex-grow overflow-y-auto px-4">
+        {upstashLogsLoading ? (
+          <p className="text-gray-400 dark:text-gray-400">{t('loading_logs')}</p>
+        ) : upstashLogsError ? (
+          <p className="text-red-400 dark:text-red-400">
+            {t('error_logs', { message: upstashLogsError })}
+          </p>
+        ) : upstashLogs ? (
+          <div className="bg-gray-800 p-2 rounded-md text-xs text-gray-100 dark:text-white">
+            <pre
+              style={{
+                whiteSpace: 'pre-wrap',
+                wordWrap: 'break-word',
+                maxWidth: '100%',
+                overflow: 'hidden',
+                fontFamily: 'monospace',
+                lineHeight: '1.3',
+              }}
+            >
+              {JSON.stringify(upstashLogs, null, 2)}
+            </pre>
+          </div>
+        ) : (
+          <p className="text-gray-400 dark:text-gray-400">{t('no_logs')}</p>
+        )}
+      </div>
+
+      <div className="sticky z-10 bg-gray-900 dark:bg-gray-900 py-1 border-t border-gray-800 px-4">
+        <div className="flex justify-end space-x-2">
+          <Button
+            onClick={fetchUpstashLogs}
+            variant="secondary"
+            size="sm"
+            disabled={upstashLogsLoading}
+          >
+            <RefreshCw className="w-4 h-4 mr-1" />
+            {t('refresh_logs')}
+          </Button>
+          <Button
+            onClick={() => copyLogs(upstashLogs)}
+            variant="secondary"
+            size="sm"
+            disabled={!upstashLogs || upstashLogsLoading}
             className="copy-button"
           >
             <Copy className="w-4 h-4 mr-1" />
@@ -454,46 +374,62 @@ export function DeploymentFooterClient() {
 
   return (
     <footer className="flex items-center justify-end p-4 border-t border-gray-200">
-      <div className="flex items-center space-x-4">
-        {/* Main Logs Section */}
+      <div className="flex items-center space-x-4 flex-wrap gap-y-2">
+        {/* Main Prod */}
         <div className="flex items-center space-x-2">
-          <span className={cn('w-3 h-3 rounded-full', mainStatusColor)} />
-          <Button variant="outline" size="sm" onClick={fetchMainLogs} disabled={mainLogsLoading}>
-            Render Main
+          <span className={cn('w-3 h-3 rounded-full', getStatusColor('main-prod'))} />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchLogs('main-prod')}
+            disabled={logsLoading}
+          >
+            Render Main (Prod)
           </Button>
-          <Dialog open={mainModalOpen} onOpenChange={setMainModalOpen}>
-            <LogsDialog
-              onOpenChange={setMainModalOpen}
-              logs={mainLogs}
-              loading={mainLogsLoading}
-              error={mainLogsError}
-              refreshLogs={refreshMainLogs}
-              title="Render Main Service Logs"
-            />
-          </Dialog>
         </div>
 
-        {/* Slave Python Logs Section */}
+        {/* Python Prod */}
         <div className="flex items-center space-x-2">
-          <span className={cn('w-3 h-3 rounded-full', slaveStatusColor)} />
-          <Button variant="outline" size="sm" onClick={fetchSlaveLogs} disabled={slaveLogsLoading}>
-            Render Python
+          <span className={cn('w-3 h-3 rounded-full', getStatusColor('python-prod'))} />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchLogs('python-prod')}
+            disabled={logsLoading}
+          >
+            Render Python (Prod)
           </Button>
-          <Dialog open={slaveModalOpen} onOpenChange={setSlaveModalOpen}>
-            <LogsDialog
-              onOpenChange={setSlaveModalOpen}
-              logs={slaveLogs}
-              loading={slaveLogsLoading}
-              error={slaveLogsError}
-              refreshLogs={refreshSlaveLogs}
-              title="Render Python Service Logs"
-            />
-          </Dialog>
         </div>
 
-        {/* Upstash Redis Logs Section */}
+        {/* Main Preprod */}
         <div className="flex items-center space-x-2">
-          <span className={cn('w-3 h-3 rounded-full', upstashStatusColor)} />
+          <span className={cn('w-3 h-3 rounded-full', getStatusColor('main-preprod'))} />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchLogs('main-preprod')}
+            disabled={logsLoading}
+          >
+            Render Main (Preprod)
+          </Button>
+        </div>
+
+        {/* Python Preprod */}
+        <div className="flex items-center space-x-2">
+          <span className={cn('w-3 h-3 rounded-full', getStatusColor('python-preprod'))} />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchLogs('python-preprod')}
+            disabled={logsLoading}
+          >
+            Render Python (Preprod)
+          </Button>
+        </div>
+
+        {/* Upstash Redis */}
+        <div className="flex items-center space-x-2">
+          <span className={cn('w-3 h-3 rounded-full', getStatusColor('upstash'))} />
           <Button
             variant="outline"
             size="sm"
@@ -502,18 +438,35 @@ export function DeploymentFooterClient() {
           >
             Upstash Redis
           </Button>
-          <Dialog open={upstashModalOpen} onOpenChange={setUpstashModalOpen}>
-            <LogsDialog
-              onOpenChange={setUpstashModalOpen}
-              logs={upstashLogs}
-              loading={upstashLogsLoading}
-              error={upstashLogsError}
-              refreshLogs={refreshUpstashLogs}
-              title="Upstash Redis Queue List"
-            />
-          </Dialog>
         </div>
       </div>
+
+      {/* Modal for Render logs */}
+      <Dialog open={logsModalOpen} onOpenChange={setLogsModalOpen}>
+        <LogsDialog
+          title={
+            activeService
+              ? `Render ${
+                  activeService.split('-')[0]
+                    ? activeService.split('-')[0].charAt(0).toUpperCase() +
+                      activeService.split('-')[0].slice(1)
+                    : 'Service'
+                } Logs (${
+                  activeService.split('-')[1]
+                    ? activeService.split('-')[1].charAt(0).toUpperCase() +
+                      activeService.split('-')[1].slice(1)
+                    : ''
+                })`
+              : 'Render Service Logs'
+          }
+        />
+      </Dialog>
+
+      {/* Modal for Upstash logs */}
+      <Dialog open={upstashModalOpen} onOpenChange={setUpstashModalOpen}>
+        <UpstashLogsDialog />
+      </Dialog>
+
       <style jsx>{`
         @keyframes blink {
           0%,
