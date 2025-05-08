@@ -41,6 +41,10 @@ async function processJob() {
     const job = await getJobFromQueue(redis_queue);
     if (!job) return;
 
+    console.log(
+      `[processJob] Job data type: ${typeof job}, Is Array: ${Array.isArray(job)}, Value: ${JSON.stringify(job).substring(0, 100)}...`,
+    );
+
     const jobData = typeof job === 'string' ? JSON.parse(job) : job;
     const { config_id } = jobData;
     console.log(`[processJob] Processing job for config ${config_id}`);
