@@ -120,19 +120,27 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Script Execution Report - {script_name}</title>
   <style>
-    body {{ font-family: Arial, sans-serif; margin: 20px; }}
-    h1, h2 {{ color: #333; }}
+    body {{ font-family: Arial, sans-serif; margin: 20px; transition: background-color 0.3s, color 0.3s; }}
+    body.light-theme {{ background-color: #ffffff; color: #333333; }}
+    body.dark-theme {{ background-color: #333333; color: #ffffff; }}
+    h1, h2 {{ color: inherit; }}
     table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
     th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
-    th {{ background-color: #f2f2f2; }}
+    body.light-theme th {{ background-color: #f2f2f2; }}
+    body.dark-theme th {{ background-color: #444444; }}
     pre {{ background-color: #f9f9f9; padding: 10px; overflow-x: auto; }}
+    body.dark-theme pre {{ background-color: #444444; }}
     .status-success {{ color: #22c55e; font-weight: bold; }}
     .status-failed {{ color: #ef4444; font-weight: bold; }}
     a {{ color: #007BFF; text-decoration: none; }}
+    body.dark-theme a {{ color: #4da6ff; }}
     a:hover {{ text-decoration: underline; }}
+    .theme-toggle {{ position: fixed; top: 20px; right: 20px; cursor: pointer; padding: 10px; background-color: #ccc; border: none; border-radius: 5px; }}
+    body.dark-theme .theme-toggle {{ background-color: #555; color: #fff; }}
   </style>
 </head>
-<body>
+<body class="light-theme">
+  <button class="theme-toggle" onclick="toggleTheme()">Toggle Theme</button>
   <h1>Script Execution Report</h1>
   <table>
     <tr><th>Script ID</th><td>{script_id}</td></tr>
@@ -148,6 +156,22 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
     <tr><th>Stderr</th><td><pre>{stderr_content or "No errors"}</pre></td></tr>
   </table>
   {associated_files_html}
+  <script>
+    function toggleTheme() {{
+      document.body.classList.toggle('light-theme');
+      document.body.classList.toggle('dark-theme');
+      localStorage.setItem('theme', document.body.classList.contains('dark-theme') ? 'dark' : 'light');
+    }}
+    
+    // Check for saved theme preference
+    window.onload = function() {{
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark') {{
+        document.body.classList.remove('light-theme');
+        document.body.classList.add('dark-theme');
+      }}
+    }};
+  </script>
 </body>
 </html>"""
 
@@ -214,18 +238,25 @@ def build_job_report_html_content(job_id, start_time, end_time, duration, status
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Job Run Report - {job_id}</title>
   <style>
-    body {{ font-family: Arial, sans-serif; margin: 20px; }}
-    h1 {{ color: #333; }}
+    body {{ font-family: Arial, sans-serif; margin: 20px; transition: background-color 0.3s, color 0.3s; }}
+    body.light-theme {{ background-color: #ffffff; color: #333333; }}
+    body.dark-theme {{ background-color: #333333; color: #ffffff; }}
+    h1 {{ color: inherit; }}
     table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
     th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
-    th {{ background-color: #f2f2f2; }}
+    body.light-theme th {{ background-color: #f2f2f2; }}
+    body.dark-theme th {{ background-color: #444444; }}
     .status-success {{ color: #22c55e; font-weight: bold; }}
     .status-failed {{ color: #ef4444; font-weight: bold; }}
     a {{ color: #007BFF; text-decoration: none; }}
+    body.dark-theme a {{ color: #4da6ff; }}
     a:hover {{ text-decoration: underline; }}
+    .theme-toggle {{ position: fixed; top: 20px; right: 20px; cursor: pointer; padding: 10px; background-color: #ccc; border: none; border-radius: 5px; }}
+    body.dark-theme .theme-toggle {{ background-color: #555; color: #fff; }}
   </style>
 </head>
-<body>
+<body class="light-theme">
+  <button class="theme-toggle" onclick="toggleTheme()">Toggle Theme</button>
   <h1>Job Run Report</h1>
   <table>
     <tr><th>Job ID</th><td>{job_id}</td></tr>
@@ -241,6 +272,22 @@ def build_job_report_html_content(job_id, start_time, end_time, duration, status
     <tr><th>#</th><th>Script ID</th><th>Script Name</th><th>Date_Time</th><th>Status</th><th>Report Link</th></tr>
     {script_summary}
   </table>
+  <script>
+    function toggleTheme() {{
+      document.body.classList.toggle('light-theme');
+      document.body.classList.toggle('dark-theme');
+      localStorage.setItem('theme', document.body.classList.contains('dark-theme') ? 'dark' : 'light');
+    }}
+    
+    // Check for saved theme preference
+    window.onload = function() {{
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark') {{
+        document.body.classList.remove('light-theme');
+        document.body.classList.add('dark-theme');
+      }}
+    }};
+  </script>
 </body>
 </html>"""
 

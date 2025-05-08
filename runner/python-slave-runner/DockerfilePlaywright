@@ -1,3 +1,7 @@
+# docker buildx build --platform linux/amd64 -f DockerfilePlaywright -t ghcr.io/angelstreet/automai:v1.0.2 .
+# echo $GITHUB_PAT | docker login ghcr.io -u angelstreet --password-stdin
+# docker push ghcr.io/angelstreet/automai:v1.0.4
+
 FROM python:3.9-slim
 
 # Set working directory
