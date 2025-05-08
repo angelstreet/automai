@@ -21,13 +21,13 @@ async function getJobFromQueue(redis_queue) {
   console.log(
     `[@db:jobUtils:getJobFromQueue] Current environment: ${process.env.RUNNER_ENV || 'preprod'}`,
   );
-  // Retrieve all jobs as a list
-  const jobs = await redis_queue.lrange(queueName, 0, -1);
-  if (!jobs || jobs.length === 0) {
+  // Retrieve last job
+  const job = await redis_queue.lindex(queueName, -1);
+  if (!job) {
     console.log(`[@db:jobUtils:getJobFromQueue] Queue ${queueName} is empty`);
-    return [];
+    return null;
   }
-  return jobs;
+  return job;
 }
 
 async function removeJobFromQueue(redis_queue, jobData) {
