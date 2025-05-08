@@ -11,30 +11,39 @@ import zipfile
 def activate_semantic_placeholder(page: Page):
     shadow_root_selector = 'body > flutter-view > flt-glass-pane'
     element_inside_shadow_dom_selector = 'flt-semantics-placeholder'
-    page.wait_for_selector(shadow_root_selector, state="hidden", timeout=10000)
-    clicked = page.evaluate(
-        '''
-            ([shadowRootSelector, elementSelector]) => {
-                const shadowHost = document.querySelector(shadowRootSelector);
-                if (shadowHost) {
-                    const shadowRoot = shadowHost.shadowRoot;
-                    if (shadowRoot) {
-                        const element = shadowRoot.querySelector(elementSelector);
-                        if (element) {
-                            element.click();
-                            return true;
+    try:
+        flutter_view_present = page.locator(shadow_root_selector).count() > 0
+        print(f"Page state check: Flutter view present: {flutter_view_present}")
+        if not flutter_view_present:
+            print("Skipping semantic placeholder activation as flutter view is not present.")
+            return False
+        page.wait_for_selector(shadow_root_selector, state="hidden", timeout=10000)
+        clicked = page.evaluate(
+            '''
+                ([shadowRootSelector, elementSelector]) => {
+                    const shadowHost = document.querySelector(shadowRootSelector);
+                    if (shadowHost) {
+                        const shadowRoot = shadowHost.shadowRoot;
+                        if (shadowRoot) {
+                            const element = shadowRoot.querySelector(elementSelector);
+                            if (element) {
+                                element.click();
+                                return true;
+                            }
                         }
                     }
+                    return false;
                 }
-                return false;
-            }
-        ''', [shadow_root_selector, element_inside_shadow_dom_selector])
+            ''', [shadow_root_selector, element_inside_shadow_dom_selector])
 
-    if clicked:
-        print("Semantic placeholder activated.")
-        return True
-    else:
-        print("Error activating semantic placeholder")
+        if clicked:
+            print("Semantic placeholder activated.")
+            return True
+        else:
+            print("Error activating semantic placeholder")
+            return False
+    except Exception as e:
+        print(f"Error in semantic placeholder activation: {str(e)}")
         return False
 
 def login(page: Page, url: str, username: str, password: str):
@@ -84,14 +93,8 @@ def login(page: Page, url: str, username: str, password: str):
     print("Reload page")
     page.reload()
 
-    print("Wait for 20 seconds after reload")
-    page.wait_for_timeout(20000)
-
-    # Log cookies after reload for debugging
-    cookies_after = page.context.cookies()
-    print(f"Cookies after reload: {len(cookies_after)} cookies found")
-    for cookie in cookies_after:
-        print(f"Cookie: {cookie.get('name', 'Unknown')} - {cookie.get('value', 'No value')}")
+    print("Wait for 10 seconds after reload")
+    page.wait_for_timeout(10000)
 
     activate_semantic_placeholder(page)
     page.wait_for_timeout(1000)
