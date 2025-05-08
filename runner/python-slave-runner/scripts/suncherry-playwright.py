@@ -81,14 +81,20 @@ def login(page: Page, url: str, username: str, password: str):
     print("Click on login")
     page.locator("#kc-login").click()
     
-    print("Wait for 20 seconds")
-    page.wait_for_timeout(20000)
+    print("Wait for 10 seconds")
+    page.wait_for_timeout(10000)
+
+    # Log cookies before reload for debugging
+    cookies_before = page.context.cookies()
+    print(f"Cookies before reload: {len(cookies_before)} cookies found")
+    for cookie in cookies_before:
+        print(f"Cookie: {cookie.get('name', 'Unknown')} - {cookie.get('value', 'No value')}")
 
     print("Reload page")
     page.reload()
 
-    print("Wait for 20 seconds after reload")
-    page.wait_for_timeout(20000)
+    print("Wait for 10 seconds after reload")
+    page.wait_for_timeout(10000)
 
     activate_semantic_placeholder(page)
     page.wait_for_timeout(1000)
