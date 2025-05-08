@@ -79,7 +79,7 @@ def login(page: Page, url: str, username: str, password: str):
     page.reload()
 
     print("Wait for 10 seconds")
-    page.wait_for_timeout(10000)
+    page.wait_for_timeout(20000)
 
     activate_semantic_placeholder(page)
     page.wait_for_timeout(1000)
@@ -183,7 +183,7 @@ def main():
     if not username or not password:
         raise ValueError("Username and password must be provided either as command-line arguments or in .env file")
 
-    print(f"Running in {'headless' if args.headless else 'visible'} mode")
+    print(f"Running in {'headless' if args.headless else 'visible'} mode with {'no-video' if args.no_video else 'video'}, {'no-screenshots' if args.no_screenshots else 'screenshots'}, {'no-trace' if args.no_trace else 'trace'}")
 
     try:
         with sync_playwright() as playwright:
