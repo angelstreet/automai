@@ -56,9 +56,8 @@ async function processJob() {
       return;
     }
 
-    // Check if the job's env matches the runner's environment
-    const jobEnv = job_run_env || 'preprod';
-    const baseJobEnv = jobEnv.split('-')[0]; // Extract base env (prod or preprod) before any suffix like '-playwright'
+    console.log(`[processJob] Job env: ${job_run_env}`);
+    const baseJobEnv = job_run_env.split('-')[0]; // Extract base env (prod or preprod) before any suffix like '-playwright'
     if (baseJobEnv.toLowerCase() !== RUNNER_ENV.toLowerCase()) {
       console.log(
         `[processJob] Skipping job for config ${config_id} as job env (${jobEnv}) does not match runner env (${RUNNER_ENV})`,

@@ -11,7 +11,6 @@ const { fetchAndDecryptEnvVars } = require('./envUtils');
 const {
   getJobFromQueue,
   removeJobFromQueue,
-  addJobToQueue,
   getQueueName,
   fetchJobConfig,
   createJobRun,
@@ -137,7 +136,7 @@ async function processJob() {
         creator_id: fetchedCreatorId,
         is_active,
         _name,
-        _env,
+        job_run_env,
       } = await fetchJobConfig(supabase, config_id);
       if (!is_active) {
         console.log(
@@ -145,15 +144,12 @@ async function processJob() {
         );
         return;
       }
-
-      // Check if the job's env matches the runner's environment
-      const jobEnv = fetchedConfig.env || 'preprod';
-      if (jobEnv !== RUNNER_ENV) {
+      console.log(`[@local-runner:processJob] Job env: ${job_run_env}`);
+      const baseJobEnv = job_run_env.split('-')[0]; // Extract base env (prod or preprod) before any suffix like '-playwright'
+      if (baseJobEnv.toLowerCase() !== RUNNER_ENV.toLowerCase()) {
         console.log(
-          `[@local-runner:processJob] Skipping job for config ${config_id} as job env (${jobEnv}) does not match runner env (${RUNNER_ENV})`,
+          `[processJob] Skipping job for config ${config_id} as job env (${jobEnv}) does not match runner env (${RUNNER_ENV})`,
         );
-        // Remove job from queue to prevent reprocessing
-        await removeJobFromQueue(redis_queue, jobData);
         return;
       }
 
