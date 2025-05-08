@@ -148,7 +148,7 @@ async function processJob() {
       const baseJobEnv = job_run_env.split('-')[0]; // Extract base env (prod or preprod) before any suffix like '-playwright'
       if (baseJobEnv.toLowerCase() !== RUNNER_ENV.toLowerCase()) {
         console.log(
-          `[processJob] Skipping job for config ${config_id} as job env (${jobEnv}) does not match runner env (${RUNNER_ENV})`,
+          `[@local-runner:processJob] Skipping job for config ${config_id} as job env (${baseJobEnv}) does not match runner env (${RUNNER_ENV})`,
         );
         return;
       }
@@ -158,9 +158,9 @@ async function processJob() {
       creator_id = fetchedCreatorId;
       jobData.team_id = team_id;
       jobData.creator_id = creator_id;
-      FLASK_SERVICE_URL = getFlaskServiceUrl(config.env);
+      FLASK_SERVICE_URL = getFlaskServiceUrl(job_run_env);
       console.log(
-        `[@local-runner:processJob] Using Flask service URL for env ${config.env}: ${FLASK_SERVICE_URL}`,
+        `[@local-runner:processJob] Using Flask service URL for env ${job_run_env}: ${FLASK_SERVICE_URL}`,
       );
     }
 

@@ -60,7 +60,7 @@ async function processJob() {
     const baseJobEnv = job_run_env.split('-')[0]; // Extract base env (prod or preprod) before any suffix like '-playwright'
     if (baseJobEnv.toLowerCase() !== RUNNER_ENV.toLowerCase()) {
       console.log(
-        `[processJob] Skipping job for config ${config_id} as job env (${jobEnv}) does not match runner env (${RUNNER_ENV})`,
+        `[processJob] Skipping job for config ${config_id} as job env (${baseJobEnv}) does not match runner env (${RUNNER_ENV})`,
       );
       return;
     }
