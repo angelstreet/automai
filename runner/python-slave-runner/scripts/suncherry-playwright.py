@@ -129,24 +129,27 @@ def run(playwright: Playwright, username: str, password: str, headless=False, de
     page, context, browser = init_browser(playwright, headless, debug, trace_subfolder)
     url = "https://www.sunrisetv.ch/de/home"
     page.set_default_timeout(5000)
-    page.goto(url, timeout=30000)
-    page.wait_for_timeout(10000)
+    
+    try:
+        page.goto(url, timeout=30000)
+        page.wait_for_timeout(10000)
 
-    login_result = login(page, url, username, password)
-    page.wait_for_timeout(5000)
-    page.close()
+        login_result = login(page, url, username, password)
+        page.wait_for_timeout(5000)
+    finally:
+        page.close()
+        context.tracing.stop(path=trace_file)
+        print(f"Tracing data saved to: {trace_file}")
+        with zipfile.ZipFile(trace_file, 'r') as zip_ref:
+            zip_ref.extractall(trace_subfolder)
+        os.remove(trace_file)
+        print(f"Zip file removed: {trace_file}")
 
-    context.tracing.stop(path=trace_file)
-    print(f"Tracing data saved to: {trace_file}")
-    with zipfile.ZipFile(trace_file, 'r') as zip_ref:
-        zip_ref.extractall(trace_subfolder)
-    os.remove(trace_file)
-    print(f"Zip file removed: {trace_file}")
-
-    video_path = page.video.path() if page.video else None
-    if video_path:
-        print(f"Video saved to: {video_path}")
-    browser.close()
+        video_path = page.video.path() if page.video else None
+        if video_path:
+            print(f"Video saved to: {video_path}")
+        browser.close()
+    
     return login_result
 
 def main():
