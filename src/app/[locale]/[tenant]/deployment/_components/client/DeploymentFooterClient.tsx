@@ -114,7 +114,7 @@ export function DeploymentFooterClient() {
       }
 
       const data = await response.json();
-      setLogs(data.logs);
+      setLogs(data.data);
       setLogsModalOpen(true);
     } catch (error: any) {
       console.error(
