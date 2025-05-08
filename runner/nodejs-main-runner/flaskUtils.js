@@ -12,6 +12,7 @@ const {
 
 async function initializeJobOnFlask(jobId, started_at, config, FLASK_SERVICE_URL) {
   console.log(`[initializeJobOnFlask] Initializing job ${jobId} on Flask service`);
+  console.log(`[initializeJobOnFlask] Flask Service URL: ${FLASK_SERVICE_URL}`);
   try {
     const uploadScriptPath = path.join(__dirname, 'upload_and_report.py');
     const uploadScriptContent = fs.readFileSync(uploadScriptPath, 'utf8');
@@ -42,6 +43,7 @@ async function initializeJobOnFlask(jobId, started_at, config, FLASK_SERVICE_URL
     return true;
   } catch (error) {
     console.error(`[initializeJobOnFlask] Error initializing job ${jobId}: ${error.message}`);
+    console.error(`[initializeJobOnFlask] Full error details:`, error);
     throw error;
   }
 }

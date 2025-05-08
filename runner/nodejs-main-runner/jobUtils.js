@@ -18,6 +18,12 @@ async function getJobFromQueue(redis_queue) {
 
   const queueLength = await redis_queue.llen(queueName);
   console.log(`[@db:jobUtils:getJobFromQueue] Queue length for ${queueName}: ${queueLength} jobs`);
+  console.log(
+    `[@db:jobUtils:getJobFromQueue] Current environment: ${process.env.RUNNER_ENV || 'preprod'}`,
+  );
+  console.log(
+    `[@db:jobUtils:getJobFromQueue] Redis connection details: ${JSON.stringify(redis_queue.options, null, 2)}`,
+  );
 
   // Peek at the last job without removing it
   const job = await redis_queue.lindex(queueName, -1);
