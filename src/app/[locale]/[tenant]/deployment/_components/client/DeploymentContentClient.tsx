@@ -83,8 +83,6 @@ export function DeploymentContentClient({
         const result = await refreshDeployments();
         if (result?.success) {
           console.log('[DeploymentList] Auto-refresh successful');
-          // The router.refresh() will happen inside refreshDeployments()
-          // which will trigger a re-render with new props
         }
       } catch (error) {
         console.error('[DeploymentList] Auto-refresh error:', error);

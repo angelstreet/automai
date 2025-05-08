@@ -739,3 +739,14 @@ export async function toggleJobActiveStatus(id: string, isActive: boolean) {
     };
   }
 }
+
+/**
+ * Revalidate the job runs path for a specific configuration
+ */
+export async function revalidateJobRunsPath() {
+  console.log('[@action:jobsAction:revalidateJobRunsPath] Starting path revalidation for job runs');
+  const cookieStore = await cookies();
+  // Revalidate the current path to refresh job runs data
+  revalidatePath('/[locale]/[tenant]/deployment/job-runs/[configId]', 'page');
+  console.log('[@action:jobsAction:revalidateJobRunsPath] Successfully revalidated job runs path');
+}

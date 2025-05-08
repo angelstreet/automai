@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import React, { useState, useEffect, useRef } from 'react';
 
 import { JobRunOutputDialogClient } from '@/app/[locale]/[tenant]/deployment/_components/client/JobRunOutputDialogClient';
+import { revalidateJobRunsPath } from '@/app/actions/jobsAction';
 import { Button } from '@/components/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
 import {
@@ -79,16 +80,20 @@ export function JobRunsContent({ jobRuns, configId: _configId, configName }: Job
   };
 
   // Handle refresh button click
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true);
 
-    // Refresh the page
-    router.refresh();
-
-    // Reset the refreshing state after a short delay
-    setTimeout(() => {
-      setIsRefreshing(false);
-    }, 1000);
+    try {
+      // Call the server action to revalidate the path
+      await revalidateJobRunsPath();
+    } catch (error) {
+      console.error('[@component:JobRunsContent] Error during refresh:', error);
+    } finally {
+      // Reset the refreshing state after a short delay
+      setTimeout(() => {
+        setIsRefreshing(false);
+      }, 1000);
+    }
   };
 
   // Toggle auto-refresh
@@ -109,9 +114,13 @@ export function JobRunsContent({ jobRuns, configId: _configId, configName }: Job
       }
 
       // Set up new interval for 30 seconds
-      refreshIntervalRef.current = setInterval(() => {
+      refreshIntervalRef.current = setInterval(async () => {
         console.log('[@component:JobRunsContent] Auto-refreshing job runs data');
-        router.refresh();
+        try {
+          await revalidateJobRunsPath();
+        } catch (error) {
+          console.error('[@component:JobRunsContent] Error during auto-refresh:', error);
+        }
       }, 30000); // 30 seconds
     } else if (refreshIntervalRef.current) {
       // Clear interval if auto-refresh is disabled
@@ -127,7 +136,7 @@ export function JobRunsContent({ jobRuns, configId: _configId, configName }: Job
         refreshIntervalRef.current = null;
       }
     };
-  }, [autoRefreshEnabled, router]);
+  }, [autoRefreshEnabled]);
 
   // Handle view job run details
   const handleViewJobRun = (jobRun: JobRun) => {

@@ -47,13 +47,7 @@ export function DeploymentWizardDialogClient({
     // Close the dialog
     onOpenChange(false);
 
-    // Server actions handle revalidation internally - no need for router.refresh()
-
-    // Call success callback if provided
     if (onSuccess) {
-      // Since we don't have the actual deployment data here,
-      // we'll pass a placeholder. The recipient can refresh
-      // to get the actual data.
       onSuccess({} as Deployment);
     }
   };
