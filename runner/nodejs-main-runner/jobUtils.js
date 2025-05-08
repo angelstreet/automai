@@ -25,15 +25,15 @@ async function getJobFromQueue(redis_queue) {
     `[@db:jobUtils:getJobFromQueue] Redis connection details: ${JSON.stringify(redis_queue.options, null, 2)}`,
   );
 
-  // Peek at the last job without removing it
-  const job = await redis_queue.lindex(queueName, -1);
-  if (!job) {
+  // Retrieve all jobs as a list
+  const jobs = await redis_queue.lrange(queueName, 0, -1);
+  if (!jobs || jobs.length === 0) {
     console.log(`[@db:jobUtils:getJobFromQueue] Queue ${queueName} is empty`);
-    return null;
+    return [];
   }
 
-  console.log(`[@db:jobUtils:getJobFromQueue] Peeking at job from ${queueName}: ${job}`);
-  return job;
+  console.log(`[@db:jobUtils:getJobFromQueue] Retrieved ${jobs.length} jobs from ${queueName}`);
+  return jobs;
 }
 
 async function removeJobFromQueue(redis_queue, jobData) {
