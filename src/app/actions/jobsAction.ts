@@ -346,6 +346,7 @@ export async function getAllJobs(providedUser?: any) {
     // Get current user or use provided user
     let user = providedUser;
     if (!user) {
+      console.log('[@action:jobsAction:getAllJobs] No user provided, fetching user data');
       const { getUser } = await import('@/app/actions/userAction');
       user = await getUser();
     }
