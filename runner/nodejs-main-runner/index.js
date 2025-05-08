@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 // Built-in Node.js modules
 const http = require('http');
 
