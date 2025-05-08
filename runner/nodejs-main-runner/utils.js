@@ -104,6 +104,14 @@ async function uploadFileViaSFTP(host, sshKeyOrPass, localPath, remotePath) {
   });
 }
 
+// Add this utility function to format dates in YYYY-MM-DD_HHMMSS format
+function formatDate(isoDateString) {
+  const dateStr = isoDateString.split('T')[0]; // YYYY-MM-DD format with hyphens
+  const timeStr = isoDateString.split('T')[1].split('.')[0].replace(/:/g, ''); // HHMMSS format without colons
+  return `${dateStr}_${timeStr}`;
+}
+
+// Update the determineScriptPaths function to use the formatDate utility
 function determineScriptPaths(
   jobId,
   started_at,
@@ -113,82 +121,45 @@ function determineScriptPaths(
   config,
   basePath = '',
 ) {
-  const scriptName = scriptPath.split('/').pop();
-  let repoDir = '';
-  let scriptFolder = config.script_folder || '';
-
-  if (config.repository) {
-    const repoUrl = config.repository;
-    repoDir =
-      repoUrl
-        .split('/')
-        .pop()
-        .replace(/\.git$/, '') || 'repo';
-    console.log(`[@utils:determineScriptPaths] Using repository directory: ${repoDir}`);
-  } else if (config.scripts && config.scripts.length > 0 && config.scripts[0].folder) {
-    scriptFolder = config.scripts[0].folder;
-    console.log(
-      `[@utils:determineScriptPaths] Using folder from script configuration: ${scriptFolder}`,
-    );
-  } else {
-    console.log(
-      `[@utils:determineScriptPaths] No repository or folder specified, using default SSH directory`,
-    );
-  }
-
+  const formattedDateTime = formatDate(started_at);
   const uploadFolder = host.os === 'windows' ? 'C:/temp/uploadFolder' : '/tmp/uploadFolder';
-  const jobRunFolderName = `${started_at.split('T')[0].replace(/-/g, '')}_${started_at.split('T')[1].split('.')[0].replace(/:/g, '')}_${jobId}`;
-  const jobRunFolderPath = `${uploadFolder}/${jobRunFolderName}`;
-  const scriptRunFolderName = `${started_at.split('T')[0].replace(/-/g, '')}_${started_at.split('T')[1].split('.')[0].replace(/:/g, '')}_${scriptExecutionId}`;
-  const scriptRunFolderPath = `${jobRunFolderPath}/${scriptRunFolderName}`;
+  const scriptName = scriptPath.split('/').pop();
+  const scriptFolderPath =
+    config && config.repository && config.repository_path
+      ? path.posix.join(config.repository_path, path.dirname(scriptPath))
+      : path.dirname(scriptPath);
 
-  let scriptRelativePath = scriptPath;
-  let scriptAbsolutePath = scriptPath;
-  let scriptFolderAbsolutePath = scriptFolder;
+  const jobFolderName = `${formattedDateTime}_${jobId}`;
+  const jobFolderPath = path.posix.join(uploadFolder, jobFolderName);
+  const scriptRunFolderName = `${formattedDateTime}_${scriptExecutionId}`;
+  const scriptRunFolderPath = path.posix.join(jobFolderPath, scriptRunFolderName);
 
-  if (repoDir) {
-    scriptRelativePath =
-      host.os === 'windows'
-        ? `${scriptFolder ? scriptFolder + '/' : ''}${scriptPath}`
-        : path.join(scriptFolder || '', scriptPath);
-    scriptAbsolutePath =
-      host.os === 'windows'
-        ? `${basePath}/${repoDir}/${scriptRelativePath}`.replace(/\\/g, '/')
-        : path.join(basePath, repoDir, scriptRelativePath).replace(/\\/g, '/');
-    scriptFolderAbsolutePath =
-      host.os === 'windows'
-        ? `${basePath}/${repoDir}/${scriptFolder}`.replace(/\\/g, '/')
-        : path.join(basePath, repoDir, scriptFolder).replace(/\\/g, '/');
-  } else if (scriptFolder) {
-    scriptRelativePath = scriptPath;
-    scriptAbsolutePath =
-      host.os === 'windows'
-        ? `${basePath}/${scriptFolder}/${scriptPath}`.replace(/\\/g, '/')
-        : path.join(basePath, scriptFolder, scriptPath).replace(/\\/g, '/');
-    scriptFolderAbsolutePath = `${basePath}/${scriptFolder}`.replace(/\\/g, '/');
-  } else {
-    scriptAbsolutePath =
-      host.os === 'windows'
-        ? `${basePath}/${scriptPath}`.replace(/\\/g, '/')
-        : path.join(basePath, scriptPath).replace(/\\/g, '/');
-  }
+  // Determine absolute paths based on OS type
+  const scriptAbsolutePath =
+    host.os === 'windows'
+      ? basePath
+        ? path.win32.join(basePath, scriptPath.replace(/\//g, '\\'))
+        : 'C:\\' + scriptPath.replace(/\//g, '\\')
+      : basePath
+        ? path.posix.join(basePath, scriptPath)
+        : '/' + scriptPath;
 
-  console.log(`[@utils:determineScriptPaths] Determined paths for script ${scriptName}:`);
-  console.log(`[@utils:determineScriptPaths]   - scriptRelativePath: ${scriptRelativePath}`);
-  console.log(`[@utils:determineScriptPaths]   - scriptAbsolutePath: ${scriptAbsolutePath}`);
-  console.log(
-    `[@utils:determineScriptPaths]   - scriptFolderAbsolutePath: ${scriptFolderAbsolutePath}`,
-  );
-  console.log(`[@utils:determineScriptPaths]   - jobRunFolderPath: ${jobRunFolderPath}`);
-  console.log(`[@utils:determineScriptPaths]   - scriptRunFolderPath: ${scriptRunFolderPath}`);
+  const scriptFolderAbsolutePath =
+    host.os === 'windows'
+      ? basePath
+        ? path.win32.join(basePath, scriptFolderPath.replace(/\//g, '\\'))
+        : 'C:\\' + scriptFolderPath.replace(/\//g, '\\')
+      : basePath
+        ? path.posix.join(basePath, scriptFolderPath)
+        : '/' + scriptFolderPath;
 
   return {
     scriptName,
-    scriptRelativePath,
+    scriptFolderPath,
+    jobFolderPath,
+    scriptRunFolderPath,
     scriptAbsolutePath,
     scriptFolderAbsolutePath,
-    jobRunFolderPath,
-    scriptRunFolderPath,
   };
 }
 
@@ -200,5 +171,6 @@ module.exports = {
   formatEnvVarsForSSH,
   collectEnvironmentVariables,
   uploadFileViaSFTP,
+  formatDate,
   determineScriptPaths,
 };

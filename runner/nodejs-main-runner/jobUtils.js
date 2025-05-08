@@ -188,8 +188,13 @@ async function updateScriptExecution(
 }
 
 async function initializeJobOnHost(jobId, started_at, host, sshKeyOrPass, config) {
-  const jobFolderName = `${started_at.split('T')[0].replace(/-/g, '')}_${started_at.split('T')[1].split('.')[0].replace(/:/g, '')}_${jobId}`;
-  const jobFolderPath = `${jobFolderName}`;
+  // Format date as YYYY-MM-DD_HHMMSS
+  const dateStr = started_at.split('T')[0]; // Keep hyphens in date YYYY-MM-DD
+  const timeStr = started_at.split('T')[1].split('.')[0].replace(/:/g, ''); // Remove colons from time
+  const jobFolderName = `${dateStr}_${timeStr}_${jobId}`;
+  // Include the upload folder path to match what's used in determineScriptPaths
+  const uploadFolder = host.os === 'windows' ? 'C:/temp/uploadFolder' : '/tmp/uploadFolder';
+  const jobFolderPath = `${uploadFolder}/${jobFolderName}`;
   let command;
   let repoCommands = '';
   let repoDir = '';
@@ -366,14 +371,18 @@ async function finalizeJobOnHost(
   scriptStartedAt,
 ) {
   console.log(
-    `[finalizeJobOnHost] Finalizing job ${jobId} on host ${host.ip} with upload_and_report.py for config ${config_name}`,
+    `[finalizeJobOnHost] Finalizing job ${jobId} on host ${host.ip} with upload_and_report.py for config ${config_name} in folder ${jobFolderPath}`,
   );
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'job-'));
   const metadataLocal = path.join(tempDir, 'metadata.json');
+
+  // Get current time for job completion
+  const endTime = new Date().toISOString();
+
   writeJobMetadata(metadataLocal, {
     job_id: jobId,
     start_time: scriptStartedAt,
-    end_time: new Date().toISOString(),
+    end_time: endTime,
     config_name: config_name || 'N/A',
     env: output.env || 'N/A',
     status: overallStatus,
@@ -383,7 +392,9 @@ async function finalizeJobOnHost(
   });
   const metadataRemote = path.join(jobFolderPath, 'metadata.json');
   await uploadFileViaSFTP(host, sshKeyOrPass, metadataLocal, metadataRemote);
+
   // Ensure upload_and_report.py handles all files in the job folder
+  // We need to use the full path for cd command to work correctly
   const finalizeCommand =
     host.os === 'windows'
       ? `powershell -Command "cd '${jobFolderPath}'; python upload_and_report.py"`

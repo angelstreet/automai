@@ -364,9 +364,12 @@ async function executeScriptOnSSH(jobId, script, createdAt, host) {
 
   // Create uploadFolder structure on SSH host
   const uploadFolder = '/tmp/uploadFolder';
-  const jobRunFolderName = `${createdAt.split('T')[0].replace(/-/g, '')}_${createdAt.split('T')[1].split('.')[0].replace(/:/g, '')}_${jobId}`;
+  // Format date as YYYY-MM-DD_HHMMSS (without colons)
+  const dateStr = createdAt.split('T')[0];
+  const timeStr = createdAt.split('T')[1].split('.')[0].replace(/:/g, '');
+  const jobRunFolderName = `${dateStr}_${timeStr}_${jobId}`;
   const jobRunFolderPath = `${uploadFolder}/${jobRunFolderName}`;
-  const scriptRunFolderName = `${createdAt.split('T')[0].replace(/-/g, '')}_${createdAt.split('T')[1].split('.')[0].replace(/:/g, '')}_${scriptExecutionId}`;
+  const scriptRunFolderName = `${dateStr}_${timeStr}_${scriptExecutionId}`;
   const scriptRunFolderPath = `${jobRunFolderPath}/${scriptRunFolderName}`;
 
   try {
