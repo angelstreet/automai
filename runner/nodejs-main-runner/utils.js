@@ -161,11 +161,28 @@ function determineScriptPaths(
         : path.join(basePath, repoDir, scriptFolder).replace(/\\/g, '/');
   } else if (scriptFolder) {
     scriptRelativePath = scriptPath;
-    scriptAbsolutePath =
-      host.os === 'windows'
-        ? `${basePath}/${scriptFolder}/${scriptPath}`.replace(/\\/g, '/')
-        : path.join(basePath, scriptFolder, scriptPath).replace(/\\/g, '/');
-    scriptFolderAbsolutePath = `${basePath}/${scriptFolder}`.replace(/\\/g, '/');
+    // Check if scriptFolder is a full path
+    const isFullPath =
+      host.os === 'windows' ? /[a-zA-Z]:/.test(scriptFolder) : scriptFolder.startsWith('/');
+    if (isFullPath) {
+      scriptAbsolutePath =
+        host.os === 'windows'
+          ? `${scriptFolder}/${scriptPath}`.replace(/\\/g, '/')
+          : path.join(scriptFolder, scriptPath).replace(/\\/g, '/');
+      scriptFolderAbsolutePath = scriptFolder.replace(/\\/g, '/');
+      console.log(
+        `[@utils:determineScriptPaths] Detected full path for scriptFolder: ${scriptFolder}`,
+      );
+    } else {
+      scriptAbsolutePath =
+        host.os === 'windows'
+          ? `${basePath}/${scriptFolder}/${scriptPath}`.replace(/\\/g, '/')
+          : path.join(basePath, scriptFolder, scriptPath).replace(/\\/g, '/');
+      scriptFolderAbsolutePath = `${basePath}/${scriptFolder}`.replace(/\\/g, '/');
+      console.log(
+        `[@utils:determineScriptPaths] Using relative path for scriptFolder: ${scriptFolder}`,
+      );
+    }
   } else {
     scriptAbsolutePath =
       host.os === 'windows'
