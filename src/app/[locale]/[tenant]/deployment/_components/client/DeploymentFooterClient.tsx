@@ -62,7 +62,7 @@ export function DeploymentFooterClient() {
         const data = await response.json();
         setHealthStatus((prev) => ({
           ...prev,
-          [service]: { loading: false, status: data.status === 'ok' ? 'ok' : 'error' },
+          [service]: { loading: false, status: data.success ? 'ok' : 'error' },
         }));
       } catch (error) {
         console.error(
