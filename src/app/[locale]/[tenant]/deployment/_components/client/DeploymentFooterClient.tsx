@@ -93,7 +93,6 @@ export function DeploymentFooterClient() {
   const [mainModalOpen, setMainModalOpen] = useState(false);
   const [slaveModalOpen, setSlaveModalOpen] = useState(false);
   const [upstashModalOpen, setUpstashModalOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   // Data states for each service
   const [mainLogs, setMainLogs] = useState<any>(null);
@@ -139,9 +138,17 @@ export function DeploymentFooterClient() {
       navigator.clipboard
         .writeText(JSON.stringify(logs, null, 2))
         .then(() => {
-          setCopied(true);
           console.log('[@component:DeploymentFooterClient] Logs copied to clipboard');
-          setTimeout(() => setCopied(false), 2000);
+          // Use a local state or ref for button text change to avoid full modal re-render
+          const copyButton = document.querySelector('.copy-button');
+          if (copyButton) {
+            copyButton.textContent = 'Copied';
+            setTimeout(() => {
+              if (copyButton) {
+                copyButton.textContent = 'Copy';
+              }
+            }, 2000);
+          }
         })
         .catch((err) => {
           console.error('[@component:DeploymentFooterClient] Failed to copy logs:', err);
@@ -271,8 +278,10 @@ export function DeploymentFooterClient() {
       setUpstashLogs(data.data);
       console.log('[@component:DeploymentFooterClient] Upstash Redis logs fetched successfully');
 
-      // Only open modal after data is fetched
-      setUpstashModalOpen(true);
+      // Only open modal after data is successfully fetched
+      if (data.data) {
+        setUpstashModalOpen(true);
+      }
     } catch (err: any) {
       console.error(
         '[@component:DeploymentFooterClient] Error fetching Upstash Redis logs:',
@@ -433,9 +442,10 @@ export function DeploymentFooterClient() {
             variant="secondary"
             size="sm"
             disabled={!logs || loading}
+            className="copy-button"
           >
             <Copy className="w-4 h-4 mr-1" />
-            {copied ? c('copied') : c('copy')}
+            {c('copy')}
           </Button>
         </div>
       </div>
