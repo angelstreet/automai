@@ -28,6 +28,7 @@ export async function GET(_request: Request) {
         console.log(`[@api:upstash-health] Upstash Redis responded with PONG`);
         return NextResponse.json({
           success: true,
+          status: 'ok',
           message: 'Upstash Redis is responsive',
         });
       } else {
