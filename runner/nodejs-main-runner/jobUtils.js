@@ -189,7 +189,8 @@ async function updateScriptExecution(
 
 async function initializeJobOnHost(jobId, started_at, host, sshKeyOrPass, config) {
   const jobFolderName = `${started_at.split('T')[0].replace(/-/g, '')}_${started_at.split('T')[1].split('.')[0].replace(/:/g, '')}_${jobId}`;
-  const jobFolderPath = `${jobFolderName}`;
+  const uploadFolder = host.os === 'windows' ? 'C:/temp/uploadFolder' : '/tmp/uploadFolder';
+  const jobFolderPath = `${uploadFolder}/${jobFolderName}`;
   let command;
   let repoCommands = '';
   let repoDir = '';
