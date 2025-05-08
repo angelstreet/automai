@@ -21,7 +21,8 @@ export async function GET(_request: Request) {
     for (const queue of queues) {
       try {
         // Fetch data for each queue key
-        const response = await fetch(`${upstashUrl}/get/${queue}`, {
+        // Use LRANGE for lists, fetching first 10 elements
+        const response = await fetch(`${upstashUrl}/lrange/${queue}/0/9`, {
           method: 'GET',
           headers: {
             Authorization: `Bearer ${upstashToken}`,
@@ -29,12 +30,24 @@ export async function GET(_request: Request) {
           },
         });
 
+        // Log the full response details for debugging
+        console.log(
+          `[@api:upstash-logs] Fetch response for ${queue}: Status ${response.status}, Headers:`,
+          JSON.stringify([...response.headers]),
+        );
+
         if (response.ok) {
           const data = await response.json();
-          console.log(`[@api:upstash-logs] Successfully fetched ${queue} data from Upstash Redis`);
+          console.log(
+            `[@api:upstash-logs] Successfully fetched ${queue} data from Upstash Redis. Raw data:`,
+            JSON.stringify(data),
+          );
           results[queue] = data.result;
         } else {
-          console.error(`[@api:upstash-logs] Failed to fetch ${queue} data:`, response.status);
+          console.error(
+            `[@api:upstash-logs] Failed to fetch ${queue} data: ${response.status}. Error details:`,
+            await response.text(),
+          );
           errors[queue] = `Failed to fetch ${queue} data: ${response.status}`;
           results[queue] = null;
         }
