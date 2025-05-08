@@ -351,8 +351,6 @@ export async function getAllJobs(providedUser?: any) {
       user = await getUser();
     }
 
-    
-
     // Get the user's active team ID
     const { getUserActiveTeam } = await import('@/app/actions/teamAction');
     const activeTeamResult = await getUserActiveTeam(user.id);
