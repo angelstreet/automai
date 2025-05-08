@@ -50,15 +50,33 @@ export async function GET(_request: Request, { params }: { params: { service: st
     // Ensure no trailing slash in the endpoint to prevent double slashes
     const cleanedEndpoint = renderApiEndpoint.replace(/\/+$/, '');
 
+    // Replace underscore with hyphen in serviceId to match Render API format
+    const formattedServiceId = serviceId.replace('srv_', 'srv-');
+
     // Construct the URL with query parameters
-    const url = `${cleanedEndpoint}/logs?ownerId=${renderApiOwner}&direction=backward&resource=${serviceId}&limit=100`;
+    const url = `${cleanedEndpoint}/logs?ownerId=${renderApiOwner}&direction=backward&resource=${formattedServiceId}&limit=100`;
 
     console.log(
       `[@api:render-logs] Fetching logs for ${service} service:`,
       serviceId,
+      'with formatted ID:',
+      formattedServiceId,
       'with URL:',
       url,
     );
+    console.log(
+      `[@api:render-logs] Request headers:`,
+      JSON.stringify(
+        {
+          Authorization: `Bearer ${renderApiKey}`,
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        null,
+        2,
+      ),
+    );
+
     const response = await fetch(url, {
       method: 'GET',
       headers: {
