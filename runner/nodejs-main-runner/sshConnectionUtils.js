@@ -10,6 +10,7 @@ const { Client } = require('ssh2');
  */
 async function executeSSHCommand(host, sshKeyOrPass, command, timeout = 60000) {
   const conn = new Client();
+  console.log(`[executeSSHCommand] Using timeout of ${timeout}ms for connection to ${host.ip}`);
   return new Promise((resolve, reject) => {
     const connectionTimeout = setTimeout(() => {
       conn.end();

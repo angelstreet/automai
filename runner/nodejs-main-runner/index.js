@@ -51,8 +51,7 @@ async function processJob() {
       config_id,
     );
     if (!is_active) {
-      console.log(`[processJob] Config ${config_id} is inactive, skipping execution`);
-      // Remove job from queue since it's inactive
+      console.log(`[processJob] Config ${config_id} is inactive, skipping and removing job`);
       await removeJobFromQueue(redis_queue, jobData);
       return;
     }
@@ -67,11 +66,9 @@ async function processJob() {
       return;
     }
 
-    // If we reach here, the job is active and environment matches, so now we can remove it from the queue
-    console.log(`[processJob] Processing job for config ${config_id}`);
+    console.log(`[processJob] Processing job for config ${config_id} and removing it from queue`);
     await removeJobFromQueue(redis_queue, jobData);
 
-    // Set Flask service URL based on job env environment, default to preprod if not specified
     const FLASK_SERVICE_URL = getFlaskServiceUrl(job_run_env);
     console.log(
       `[processJob] Using Flask service URL for env ${job_run_env || 'not specified (defaulting to preprod)'}: ${FLASK_SERVICE_URL}`,
