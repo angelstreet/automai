@@ -10,11 +10,18 @@ const cron = require('node-cron');
 const commonUtils = require('./commonUtils');
 const { getRunnerEnv, getFlaskServiceUrl } = require('./commonUtils');
 const { fetchAndDecryptEnvVars } = require('./envUtils');
-const { getJobFromQueue, fetchJobConfig, createJobRun } = require('./jobUtils');
+const {
+  getJobFromQueue,
+  removeJobFromQueue,
+  addJobToQueue,
+  getQueueName,
+  fetchJobConfig,
+  createJobRun,
+} = require('./jobUtils');
 
 // Use utility functions from commonUtils
 
-const redis = new Redis({
+const redis_queue = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL,
   token: process.env.UPSTASH_REDIS_REST_TOKEN,
 });
@@ -24,10 +31,14 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 const RUNNER_ENV = getRunnerEnv();
 console.log(`[runner] Runner environment set to: ${RUNNER_ENV}`);
 
+// Log the queue name we're using
+const QUEUE_NAME = getQueueName(RUNNER_ENV);
+console.log(`[runner] Using queue: ${QUEUE_NAME}`);
+
 async function processJob() {
   try {
     // Peek at job from queue without removing it
-    const job = await getJobFromQueue(redis);
+    const job = await getJobFromQueue(redis_queue);
     if (!job) return;
 
     const jobData = typeof job === 'string' ? JSON.parse(job) : job;
@@ -41,7 +52,7 @@ async function processJob() {
     if (!is_active) {
       console.log(`[processJob] Config ${config_id} is inactive, skipping execution`);
       // Remove job from queue since it's inactive
-      await redis.lrem('jobs_queue', 1, JSON.stringify(jobData));
+      await removeJobFromQueue(redis_queue, jobData);
       return;
     }
 
@@ -57,7 +68,7 @@ async function processJob() {
 
     // If we reach here, the job is active and environment matches, so now we can remove it from the queue
     console.log(`[processJob] Processing job for config ${config_id}`);
-    await redis.lrem('jobs_queue', 1, JSON.stringify(jobData));
+    await removeJobFromQueue(redis_queue, jobData);
 
     // Set Flask service URL based on job env environment, default to preprod if not specified
     const FLASK_SERVICE_URL = getFlaskServiceUrl(job_run_env);
@@ -127,7 +138,7 @@ async function setupSchedules() {
     });
     if (config.schedule !== 'now') {
       cron.schedule(config.schedule, async () => {
-        await redis.lpush('jobs_queue', job);
+        await addJobToQueue(redis_queue, job);
         console.log(`Scheduled job queued for config ${id}`);
       });
     }

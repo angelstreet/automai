@@ -8,9 +8,16 @@ const { getRunnerEnv, getFlaskServiceUrl } = require('./commonUtils');
 // Import utility modules
 const commonUtils = require('./commonUtils');
 const { fetchAndDecryptEnvVars } = require('./envUtils');
-const { getJobFromQueue, fetchJobConfig, createJobRun } = require('./jobUtils');
+const {
+  getJobFromQueue,
+  removeJobFromQueue,
+  addJobToQueue,
+  getQueueName,
+  fetchJobConfig,
+  createJobRun,
+} = require('./jobUtils');
 
-const redis = new Redis({
+const redis_queue = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL,
   token: process.env.UPSTASH_REDIS_REST_TOKEN,
 });
@@ -20,6 +27,10 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 // Get the runner environment
 const RUNNER_ENV = getRunnerEnv();
 console.log(`[@local-runner] Runner environment set to: ${RUNNER_ENV}`);
+
+// Log the queue name we're using
+const QUEUE_NAME = getQueueName(RUNNER_ENV);
+console.log(`[@local-runner] Using queue: ${QUEUE_NAME}`);
 
 async function processJob() {
   try {
@@ -113,7 +124,7 @@ async function processJob() {
       }
     } else {
       // Get job from queue
-      const job = await getJobFromQueue(redis);
+      const job = await getJobFromQueue(redis_queue);
       if (!job) return;
 
       jobData = typeof job === 'string' ? JSON.parse(job) : job;
@@ -142,7 +153,7 @@ async function processJob() {
           `[@local-runner:processJob] Skipping job for config ${config_id} as job env (${jobEnv}) does not match runner env (${RUNNER_ENV})`,
         );
         // Remove job from queue to prevent reprocessing
-        await redis.lrem('jobs_queue', 1, JSON.stringify(jobData));
+        await removeJobFromQueue(redis_queue, jobData);
         return;
       }
 
@@ -198,7 +209,7 @@ async function processJob() {
 
     // Remove job from queue after processing (only if not using custom payload)
     if (!usePayload) {
-      await redis.lrem('jobs_queue', 1, JSON.stringify(jobData));
+      await removeJobFromQueue(redis_queue, jobData);
       console.log(`[@local-runner:processJob] Removed job from queue`);
     }
   } catch (error) {

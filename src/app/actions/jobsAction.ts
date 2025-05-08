@@ -9,13 +9,20 @@ import { JobConfiguration } from '@/types/component/jobConfigurationComponentTyp
 
 // Initialize Redis client using environment variables
 // Works both in Vercel and locally when .env.local has the credentials
-const redis = new Redis({
+const redis_queue = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL || '',
   token: process.env.UPSTASH_REDIS_REST_TOKEN || '',
 });
 
-// Queue name for jobs
-const JOBS_QUEUE = 'jobs_queue';
+// Helper function to get the queue name based on environment
+function getQueueName(env = process.env.NEXT_PUBLIC_ENV) {
+  const runnerEnv = env || 'preprod';
+  return runnerEnv === 'prod' ? 'jobs_queue_prod' : 'jobs_queue_preprod';
+}
+
+// Get queue name based on current environment
+const JOBS_QUEUE = getQueueName();
+console.log(`[@action:jobsAction] Using job queue: ${JOBS_QUEUE}`);
 
 export interface JobFormData {
   name: string;
@@ -236,6 +243,15 @@ export async function startJob(configId: string, userId: string) {
       `[@action:jobsAction:startJob] Found valid job configuration: ${configId}, pushing to queue`,
     );
 
+    // Determine the environment from the job configuration
+    const jobEnv = jobConfigResult.data.config?.env || 'preprod';
+
+    // Use the appropriate queue based on the job's environment
+    const queueName = jobEnv === 'prod' ? 'jobs_queue_prod' : 'jobs_queue_preprod';
+    console.log(
+      `[@action:jobsAction:startJob] Using queue: ${queueName} for job with env: ${jobEnv}`,
+    );
+
     // Simple job payload for the queue
     const queuePayload = {
       config_id: configId,
@@ -247,34 +263,25 @@ export async function startJob(configId: string, userId: string) {
     const payloadString = JSON.stringify(queuePayload);
 
     // Push to Redis queue
-    console.log(`[@action:jobsAction:startJob] About to push job to Redis queue:`, {
-      queue: JOBS_QUEUE,
-      config_id: configId,
-      payload_size: payloadString.length,
+    console.log(`[@action:jobsAction:startJob] About to push job to Redis queue ${queueName}:`, {
+      queue: queueName,
+      payload: queuePayload,
     });
-    const redisResult = await redis.lpush(JOBS_QUEUE, payloadString);
-    console.log(`[@action:jobsAction:startJob] Redis push result:`, redisResult);
 
-    // Revalidate paths to refresh UI
-    console.log(`[@action:jobsAction:startJob] Revalidating paths`);
-    revalidatePath('/[locale]/[tenant]/deployment', 'page');
+    const redisResult = await redis_queue.lpush(queueName, payloadString);
 
+    // Return success with queue information
     return {
       success: true,
       data: {
-        config_id: configId,
         queued: true,
+        queue: queueName,
+        timestamp: queuePayload.timestamp,
+        redis_result: redisResult,
       },
-      message: 'Job queued successfully',
     };
   } catch (error: any) {
-    console.error('[@action:jobsAction:startJob] CAUGHT ERROR:', {
-      id: configId,
-      userId,
-      message: error.message,
-      stack: error.stack,
-    });
-
+    console.error('[@action:jobsAction:startJob] ERROR:', error.message);
     return {
       success: false,
       error: error.message || 'Failed to queue job',

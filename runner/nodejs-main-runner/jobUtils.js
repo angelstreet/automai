@@ -7,19 +7,43 @@ const { Client } = require('ssh2');
 const { writeJobMetadata } = require('./metadataUtils');
 const { uploadFileViaSFTP } = require('./utils');
 
-async function getJobFromQueue(redis) {
-  const queueLength = await redis.llen('jobs_queue');
-  console.log(`[getJobFromQueue] Queue length: ${queueLength} jobs`);
+// Helper function to get the queue name based on environment
+function getQueueName(env = process.env.RUNNER_ENV) {
+  const runnerEnv = env || 'preprod';
+  return runnerEnv === 'prod' ? 'jobs_queue_prod' : 'jobs_queue_preprod';
+}
+
+async function getJobFromQueue(redis_queue) {
+  const queueName = getQueueName();
+
+  const queueLength = await redis_queue.llen(queueName);
+  console.log(`[@db:jobUtils:getJobFromQueue] Queue length for ${queueName}: ${queueLength} jobs`);
 
   // Peek at the last job without removing it
-  const job = await redis.lindex('jobs_queue', -1);
+  const job = await redis_queue.lindex(queueName, -1);
   if (!job) {
-    console.log(`[getJobFromQueue] Queue is empty`);
+    console.log(`[@db:jobUtils:getJobFromQueue] Queue ${queueName} is empty`);
     return null;
   }
 
-  console.log(`[getJobFromQueue] Peeking at job: ${job}`);
+  console.log(`[@db:jobUtils:getJobFromQueue] Peeking at job from ${queueName}: ${job}`);
   return job;
+}
+
+async function removeJobFromQueue(redis_queue, jobData) {
+  const queueName = getQueueName();
+  const jobString = typeof jobData === 'string' ? jobData : JSON.stringify(jobData);
+
+  await redis_queue.lrem(queueName, 1, jobString);
+  console.log(`[@db:jobUtils:removeJobFromQueue] Removed job from ${queueName}`);
+}
+
+async function addJobToQueue(redis_queue, jobData) {
+  const queueName = getQueueName();
+  const jobString = typeof jobData === 'string' ? jobData : JSON.stringify(jobData);
+
+  await redis_queue.lpush(queueName, jobString);
+  console.log(`[@db:jobUtils:addJobToQueue] Added job to ${queueName}`);
 }
 
 async function fetchJobConfig(supabase, config_id) {
@@ -29,10 +53,12 @@ async function fetchJobConfig(supabase, config_id) {
     .eq('id', config_id)
     .single();
   if (error || !data) {
-    console.error(`[fetchJobConfig] Failed to fetch config ${config_id}: ${error?.message}`);
+    console.error(
+      `[@db:jobUtils:fetchJobConfig] Failed to fetch config ${config_id}: ${error?.message}`,
+    );
     throw new Error(`Failed to fetch config ${config_id}: ${error?.message}`);
   }
-  console.log(`[fetchJobConfig] Config: ${JSON.stringify(data.config)}`);
+  console.log(`[@db:jobUtils:fetchJobConfig] Config: ${JSON.stringify(data.config)}`);
   return {
     config: data.config,
     team_id: data.team_id,
@@ -469,7 +495,10 @@ async function finalizeJobOnHost(
 }
 
 module.exports = {
+  getQueueName,
   getJobFromQueue,
+  removeJobFromQueue,
+  addJobToQueue,
   fetchJobConfig,
   createJobRun,
   updateJobStatus,
