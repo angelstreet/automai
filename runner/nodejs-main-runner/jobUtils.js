@@ -362,72 +362,108 @@ async function finalizeJobOnHost(
   host,
   sshKeyOrPass,
   jobFolderPath,
-  config_name = '',
+  config_name,
+  scriptStartedAt,
 ) {
   console.log(
     `[finalizeJobOnHost] Finalizing job ${jobId} on host ${host.ip} with upload_and_report.py for config ${config_name}`,
   );
-
-  const startedAt = output.started_at || new Date().toISOString();
-  const completedAt = new Date().toISOString();
-
-  // Write job metadata with start_time included
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'job-'));
   const metadataLocal = path.join(tempDir, 'metadata.json');
   writeJobMetadata(metadataLocal, {
     job_id: jobId,
-    start_time: startedAt,
-    end_time: completedAt,
+    start_time: scriptStartedAt,
+    end_time: new Date().toISOString(),
     config_name: config_name || 'N/A',
     env: output.env || 'N/A',
     status: overallStatus,
-    duration: ((new Date(completedAt) - new Date(startedAt)) / 1000).toFixed(2),
+    duration: output.started_at
+      ? ((new Date() - new Date(output.started_at)) / 1000).toFixed(2)
+      : 'N/A',
   });
   const metadataRemote = path.join(jobFolderPath, 'metadata.json');
   await uploadFileViaSFTP(host, sshKeyOrPass, metadataLocal, metadataRemote);
-
-  // Command to execute upload_and_report.py for finalization
+  // Ensure upload_and_report.py handles all files in the job folder
   const finalizeCommand =
     host.os === 'windows'
-      ? `cd ${jobFolderPath} && python upload_and_report.py`
+      ? `powershell -Command "cd '${jobFolderPath}'; python upload_and_report.py"`
       : `cd ${jobFolderPath} && python upload_and_report.py`;
-
-  console.log(
-    `[finalizeJobOnHost] Executing finalization command on host ${host.ip}: ${finalizeCommand}`,
-  );
+  const connFinalize = new Client();
 
   try {
-    const result = await executeSSHCommand(host, sshKeyOrPass, finalizeCommand);
-    console.log(
-      `[finalizeJobOnHost] Finalization command completed with code: ${result.exitCode}, signal: ${result.signal}`,
-    );
+    const finalizeResult = await new Promise((resolve, reject) => {
+      const connectionTimeout = setTimeout(() => {
+        connFinalize.end();
+        reject(new Error('SSH connection timeout for finalization'));
+      }, 120000); // 120 seconds timeout for finalization
+
+      connFinalize.on('ready', () => {
+        clearTimeout(connectionTimeout);
+        console.log(`[finalizeJobOnHost] Connected to ${host.ip} for finalization`);
+        connFinalize.exec(finalizeCommand, (err, stream) => {
+          if (err) {
+            connFinalize.end();
+            reject(err);
+            return;
+          }
+          let stdout = '';
+          let stderr = '';
+          stream.on('data', (data) => {
+            stdout += data;
+            console.log(`${data}`);
+            // Extract report URL from output if available
+            const reportUrlMatch = stdout.match(
+              /Job Run Report URL for job [^:]+: (https?:\/\/[^\s]+)/,
+            );
+            if (reportUrlMatch && reportUrlMatch[1]) {
+              reportUrl = reportUrlMatch[1];
+            }
+          });
+          stream.stderr.on('data', (data) => {
+            stderr += data;
+            console.log(`[finalizeJobOnHost] Stderr during finalize: ${data}`);
+          });
+          stream.on('close', (code, signal) => {
+            console.log(
+              `[finalizeJobOnHost] Finalization command completed with code: ${code}, signal: ${signal}`,
+            );
+            connFinalize.end();
+            resolve({ stdout, stderr, exitCode: code });
+          });
+        });
+      });
+      connFinalize.on('error', (err) => {
+        clearTimeout(connectionTimeout);
+        reject(err);
+      });
+      const sshConfig = {
+        host: host.ip,
+        port: host.port || 22,
+        username: host.username,
+      };
+      if (host.authType === 'privateKey') {
+        sshConfig.privateKey = sshKeyOrPass;
+      } else {
+        sshConfig.password = sshKeyOrPass;
+      }
+      connFinalize.connect(sshConfig);
+    });
     console.log(`[finalizeJobOnHost]--------------------------------`);
     console.log(`[finalizeJobOnHost] Job finalization completed on host ${host.ip}`);
-    console.log(`[finalizeJobOnHost] Finalization result:`, {
-      stdout: result.stdout,
-      stderr: result.stderr,
-      exitCode: result.exitCode,
-    });
-
-    // Check if finalization was successful
-    if (result.exitCode !== 0) {
-      console.error(`[finalizeJobOnHost] Finalization failed with exit code ${result.exitCode}`);
-      console.error(`[finalizeJobOnHost] Stderr during finalize: ${result.stderr}`);
-      // Fallback to updating job status without report URL if finalization fails
-      await updateJobStatus(supabase, jobId, overallStatus, output, completedAt);
-    } else {
-      // Update job status in Supabase with the final output
-      await updateJobStatus(supabase, jobId, overallStatus, output, completedAt);
-    }
-
-    return result;
-  } catch (error) {
-    console.error(
-      `[finalizeJobOnHost] Error during job finalization on host ${host.ip}: ${error.message}`,
+    console.log(
+      `[finalizeJobOnHost] Finalization result: ${JSON.stringify(finalizeResult, null, 2)}`,
     );
-    // Fallback to updating job status without report URL if finalization fails
-    await updateJobStatus(supabase, jobId, overallStatus, output, completedAt);
-    throw error;
+  } catch (error) {
+    console.error(`[finalizeJobOnHost] Error finalizing job on host ${host.ip}: ${error.message}`);
+    // Update job status without report URL
+    await supabase
+      .from('jobs_run')
+      .update({
+        status: overallStatus,
+        output: output,
+        completed_at: new Date().toISOString(),
+      })
+      .eq('id', jobId);
   }
 }
 

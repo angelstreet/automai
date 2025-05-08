@@ -317,6 +317,7 @@ async function executeSSHScripts(
         sshKeyOrPass,
         jobFolderPath,
         config_name || 'N/A',
+        scriptStartedAt,
       );
     } catch (error) {
       console.error(
