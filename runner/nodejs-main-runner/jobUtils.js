@@ -409,7 +409,11 @@ async function finalizeJobOnHost(
       : 'N/A',
   });
   const metadataRemote = path.join(jobFolderPath, 'metadata.json');
-  await uploadFileViaSFTP(host, sshKeyOrPass, metadataLocal, metadataRemote);
+  try {
+    await uploadFileViaSFTP(host, sshKeyOrPass, metadataLocal, metadataRemote);
+  } catch (uploadError) {
+    console.error(`[finalizeJobOnHost] Error uploading metadata: ${uploadError.message}`);
+  }
   // Ensure upload_and_report.py handles all files in the job folder
   const finalizeCommand =
     host.os === 'windows'

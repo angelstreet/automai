@@ -17,6 +17,7 @@ const {
   getQueueName,
   fetchJobConfig,
   createJobRun,
+  updateJobStatus,
 } = require('./jobUtils');
 
 // Use utility functions from commonUtils
@@ -84,32 +85,44 @@ async function processJob() {
 
     const hasHosts = config.hosts && config.hosts.length > 0;
 
-    if (!hasHosts) {
-      await commonUtils.executeOnFlask(
-        config,
-        jobId,
-        started_at,
-        decryptedEnvVars,
+    try {
+      if (!hasHosts) {
+        await commonUtils.executeOnFlask(
+          config,
+          jobId,
+          started_at,
+          decryptedEnvVars,
+          supabase,
+          FLASK_SERVICE_URL,
+          config_id,
+          team_id,
+          creator_id,
+          RUNNER_ENV,
+          name,
+        );
+      } else {
+        await commonUtils.executeOnSSH(
+          config,
+          jobId,
+          started_at,
+          decryptedEnvVars,
+          supabase,
+          config_id,
+          team_id,
+          creator_id,
+          RUNNER_ENV,
+          name,
+        );
+      }
+    } catch (executionError) {
+      console.error(`[processJob] Execution error for job ${jobId}: ${executionError.message}`);
+      // Ensure finalization happens even if execution fails
+      await updateJobStatus(
         supabase,
-        FLASK_SERVICE_URL,
-        config_id,
-        team_id,
-        creator_id,
-        RUNNER_ENV,
-        name,
-      );
-    } else {
-      await commonUtils.executeOnSSH(
-        config,
         jobId,
-        started_at,
-        decryptedEnvVars,
-        supabase,
-        config_id,
-        team_id,
-        creator_id,
-        RUNNER_ENV,
-        name,
+        'failed',
+        { error: executionError.message },
+        new Date().toISOString(),
       );
     }
   } catch (error) {
