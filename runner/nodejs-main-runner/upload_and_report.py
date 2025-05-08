@@ -44,7 +44,6 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
             <h2>Associated Files</h2>
             <div style="margin-bottom: 10px;">
                 <input type="text" id="fileSearch" placeholder="Search files (use /regex/ for regex)..." style="width: 100%; padding: 5px;">
-                <button onclick="clearSearch()" style="padding: 5px 10px;">Clear</button>
             </div>
             <table id="filesTable">
                 <tr><th>#</th><th>Filename</th><th>Size</th><th>Download</th><th>Preview</th></tr>

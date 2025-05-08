@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, Eye, Filter, RefreshCw, Search } from 'lucide-react';
+import { ArrowLeft, Eye, Filter, RefreshCw, Search, MoreHorizontal } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import React, { useState, useEffect, useRef } from 'react';
@@ -45,6 +45,7 @@ interface JobRun {
   executionAttempt?: number;
   executionNumber?: number;
   configName?: string;
+  report_url?: string;
 }
 
 interface JobRunsContentProps {
@@ -264,14 +265,35 @@ export function JobRunsContent({ jobRuns, configId: _configId, configName }: Job
                             : 'N/A'}
                       </TableCell>
                       <TableCell className="py-0.5 text-xs text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewJobRun(jobRun)}
-                          className="h-6 w-6 p-0"
-                        >
-                          <Eye className="h-3 w-3" />
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                              <MoreHorizontal className="h-3 w-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleViewJobRun(jobRun)}>
+                              <Eye className="h-3 w-3 mr-2" />
+                              {c('view_output')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                if (jobRun.report_url) {
+                                  window.open(jobRun.report_url, '_blank');
+                                } else {
+                                  console.log(
+                                    '[@component:JobRunsContent] No report URL available for job run:',
+                                    jobRun.id,
+                                  );
+                                }
+                              }}
+                              disabled={!jobRun.report_url}
+                            >
+                              <Eye className="h-3 w-3 mr-2" />
+                              {c('view_report')}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))}
