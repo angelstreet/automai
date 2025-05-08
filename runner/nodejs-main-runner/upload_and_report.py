@@ -41,10 +41,14 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
         
         if script_files:
             associated_files_html = """
-  <h2>Associated Files</h2>
-  <table>
-    <tr><th>#</th><th>Filename</th><th>Size</th><th>Download</th><th>Preview</th></tr>
-"""
+            <h2>Associated Files</h2>
+            <div style="margin-bottom: 10px;">
+                <input type="text" id="fileSearch" placeholder="Search files (use /regex/ for regex)..." style="width: 100%; padding: 5px;">
+                <button onclick="clearSearch()" style="padding: 5px 10px;">Clear</button>
+            </div>
+            <table id="filesTable">
+                <tr><th>#</th><th>Filename</th><th>Size</th><th>Download</th><th>Preview</th></tr>
+            """
             for idx, file in enumerate(script_files, 1):
                 file_name = file.get('name', 'Unknown')
                 file_size = f"{file.get('size', 0) / 1024:.2f} KB" if 'size' in file else "N/A"
@@ -63,6 +67,46 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
                     preview = "N/A"
                 associated_files_html += f"    <tr><td>{idx}</td><td>{file_name}</td><td>{file_size}</td><td>{download_link}</td><td>{preview}</td></tr>\n"
             associated_files_html += "  </table>"
+            associated_files_html += """
+  <script>
+    function filterTable() {
+      var input = document.getElementById('fileSearch');
+      var filter = input.value;
+      var table = document.getElementById('filesTable');
+      var tr = table.getElementsByTagName('tr');
+      var isRegex = filter.startsWith('/') && filter.endsWith('/');
+      var regex = null;
+      if (isRegex) {
+        try {
+          filter = filter.slice(1, -1);
+          regex = new RegExp(filter);
+        } catch (e) {
+          console.error('Invalid regex: ' + e.message);
+          return;
+        }
+      }
+      for (var i = 1; i < tr.length; i++) {
+        var td = tr[i].getElementsByTagName('td')[1]; // Filename column
+        if (td) {
+          var txtValue = td.textContent || td.innerText;
+          if (isRegex) {
+            tr[i].style.display = regex.test(txtValue) ? '' : 'none';
+          } else {
+            tr[i].style.display = txtValue.toUpperCase().indexOf(filter.toUpperCase()) > -1 ? '' : 'none';
+          }
+        }
+      }
+    }
+    
+    function clearSearch() {
+      var input = document.getElementById('fileSearch');
+      input.value = '';
+      filterTable();
+    }
+    
+    document.getElementById('fileSearch').addEventListener('keyup', filterTable);
+  </script>
+"""
         elif script_id in str(associated_files):
             # If we filtered out all files but there were some associated with this script
             associated_files_html = """
