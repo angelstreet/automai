@@ -5,8 +5,8 @@ import React from 'react';
 
 import { getJobRunsForConfig } from '@/app/actions/jobsAction';
 
-import { JobRunsContent } from './_components/client/JobRunsContent';
 import { JobRunsSkeleton } from './_components/JobRunsSkeleton';
+import { JobRunsContent } from './_components/client/JobRunsContent';
 
 // Metadata function moved to a separate file
 
@@ -21,7 +21,7 @@ export default async function JobRunsPage({ params }: { params: { configId: stri
 
   // Fetch job runs data
   const jobRunsResult = await getJobRunsForConfig(configId);
-
+  console.log('[@page:JobRunsPage] Job runs result:', jobRunsResult.data);
   if (!jobRunsResult.success) {
     // You might want to handle this error differently
     return (

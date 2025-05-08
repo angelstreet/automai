@@ -202,6 +202,8 @@
     "update_error": "Failed to update deployment",
     "update_success": "Deployment updated successfully",
     "view_config": "View Configuration",
+    "view_output": "View Output",
+    "view_report": "View Report",
     "wizard_auto_start": "Auto Start",
     "wizard_create_button": "Create Deployment",
     "wizard_create_deployment": "Create Deployment",

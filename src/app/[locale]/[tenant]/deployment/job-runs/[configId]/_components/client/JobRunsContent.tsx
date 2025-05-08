@@ -274,10 +274,16 @@ export function JobRunsContent({ jobRuns, configId: _configId, configName }: Job
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => handleViewJobRun(jobRun)}>
                               <Eye className="h-3 w-3 mr-2" />
-                              {c('view_output')}
+                              {t('view_output')}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => {
+                                console.log(
+                                  '[@component:JobRunsContent] Checking report URL for job run:',
+                                  jobRun.id,
+                                  'URL:',
+                                  jobRun.report_url,
+                                );
                                 if (jobRun.report_url) {
                                   window.open(jobRun.report_url, '_blank');
                                 } else {
@@ -290,7 +296,7 @@ export function JobRunsContent({ jobRuns, configId: _configId, configName }: Job
                               disabled={!jobRun.report_url}
                             >
                               <Eye className="h-3 w-3 mr-2" />
-                              {c('view_report')}
+                              {t('view_report')}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

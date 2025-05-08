@@ -509,6 +509,7 @@ export async function getJobRunsForConfig(configId: string) {
         executionNumber: run.execution_number,
         // Add the config name for reference with null check
         configName: configResult.data?.name || 'Unknown',
+        report_url: run.report_url,
       })) || [];
 
     console.log(

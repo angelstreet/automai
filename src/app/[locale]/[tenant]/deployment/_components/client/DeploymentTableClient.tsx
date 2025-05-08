@@ -63,6 +63,7 @@ export function DeploymentTableClient({
   handleToggleActiveClick,
 }: DeploymentTableProps) {
   const c = useTranslations('common');
+  const t = useTranslations('deployment');
 
   // State to manage dropdown visibility for each deployment
   const [openViewDropdowns, setOpenViewDropdowns] = useState<Record<string, boolean>>({});
@@ -288,7 +289,7 @@ export function DeploymentTableClient({
                           className="text-xs py-1.5 h-7"
                         >
                           <Eye className="mr-2 h-3.5 w-3.5" />
-                          {c('view_config')}
+                          {t('view_config')}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={(e) => {
@@ -300,7 +301,7 @@ export function DeploymentTableClient({
                           className="text-xs py-1.5 h-7"
                         >
                           <Eye className="mr-2 h-3.5 w-3.5" />
-                          View Output
+                          {t('view_output')}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={(e) => {
@@ -319,7 +320,7 @@ export function DeploymentTableClient({
                           className="text-xs py-1.5 h-7"
                         >
                           <Eye className="mr-2 h-3.5 w-3.5" />
-                          View Report
+                          {t('view_report')}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
