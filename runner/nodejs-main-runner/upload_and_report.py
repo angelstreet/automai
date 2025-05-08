@@ -465,6 +465,14 @@ def main():
         script_report_url = ""  # This will be updated after file upload
         update_supabase_script_execution(script_id, status, script_output, end_time, script_report_url)
     
+    # Initialize start_time and end_time if not set yet (if no script folders were processed)
+    if 'start_time' not in locals():
+        start_time = datetime.now(timezone.utc).isoformat()
+    if 'end_time' not in locals():
+        end_time = datetime.now(timezone.utc).isoformat()
+    if 'config_name' not in locals():
+        config_name = ""
+    
     # Create job report (initially without URLs, will update after upload)
     job_status = "success" if all(sr['status'] == 'success' for sr in script_reports.values()) else "failed"
     job_report_path = create_job_report_html(job_folder_path, job_id, start_time, end_time, script_reports, job_status, None, config_name=config_name)

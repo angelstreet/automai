@@ -53,6 +53,8 @@ async function executeSSHScripts(
     `[executeSSHScripts] Before creating script execution: team_id=${team_id}, creator_id=${creator_id}`,
   );
 
+  let scriptStartedAt = new Date().toISOString();
+
   for (const host of hosts) {
     console.log(`[executeSSHScripts] Host: ${host.ip}, OS: ${host.os}, Username: ${host.username}`);
     let sshKeyOrPass = host.key || host.password;
@@ -192,7 +194,6 @@ async function executeSSHScripts(
       console.log(`[executeSSHScripts] SSH command to be executed on ${host.ip}: ${fullScript}`);
 
       // Update the script execution to 'in_progress'
-      const scriptStartedAt = new Date().toISOString();
       await updateScriptExecution(supabase, {
         script_id: scriptExecutionId,
         status: 'in_progress',
