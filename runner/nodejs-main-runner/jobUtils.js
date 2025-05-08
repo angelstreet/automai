@@ -17,22 +17,16 @@ async function getJobFromQueue(redis_queue) {
   const queueName = getQueueName();
 
   const queueLength = await redis_queue.llen(queueName);
-  console.log(`[@db:jobUtils:getJobFromQueue] Queue length for ${queueName}: ${queueLength} jobs`);
+  console.log(`[@ db:jobUtils:getJobFromQueue] Queue length for ${queueName}: ${queueLength} jobs`);
   console.log(
     `[@db:jobUtils:getJobFromQueue] Current environment: ${process.env.RUNNER_ENV || 'preprod'}`,
   );
-  console.log(
-    `[@db:jobUtils:getJobFromQueue] Redis connection details: ${JSON.stringify(redis_queue.options, null, 2)}`,
-  );
-
   // Retrieve all jobs as a list
   const jobs = await redis_queue.lrange(queueName, 0, -1);
   if (!jobs || jobs.length === 0) {
     console.log(`[@db:jobUtils:getJobFromQueue] Queue ${queueName} is empty`);
     return [];
   }
-
-  console.log(`[@db:jobUtils:getJobFromQueue] Retrieved ${jobs.length} jobs from ${queueName}`);
   return jobs;
 }
 
