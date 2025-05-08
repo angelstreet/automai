@@ -14,7 +14,7 @@ export async function GET(_request: Request) {
       });
     }
 
-    const queues = ['queue_list', 'queue_list_prod', 'queue_list_preprod'];
+    const queues = ['jobs_queue', 'jobs_queue_prod', 'jobs_queue_preprod'];
     const results: { [key: string]: any } = {};
     const errors: { [key: string]: string } = {};
 

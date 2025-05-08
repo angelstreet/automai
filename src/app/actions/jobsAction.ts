@@ -15,14 +15,10 @@ const redis_queue = new Redis({
 });
 
 // Helper function to get the queue name based on environment
-function getQueueName(env = process.env.NEXT_PUBLIC_ENV) {
+function getQueueName(env = 'preprod') {
   const runnerEnv = env || 'preprod';
   return runnerEnv === 'prod' ? 'jobs_queue_prod' : 'jobs_queue_preprod';
 }
-
-// Get queue name based on current environment
-const JOBS_QUEUE = getQueueName();
-console.log(`[@action:jobsAction] Using job queue: ${JOBS_QUEUE}`);
 
 export interface JobFormData {
   name: string;
@@ -247,7 +243,7 @@ export async function startJob(configId: string, userId: string) {
     const jobEnv = jobConfigResult.data.config?.env || 'preprod';
 
     // Use the appropriate queue based on the job's environment
-    const queueName = jobEnv === 'prod' ? 'jobs_queue_prod' : 'jobs_queue_preprod';
+    const queueName = getQueueName(jobEnv);
     console.log(
       `[@action:jobsAction:startJob] Using queue: ${queueName} for job with env: ${jobEnv}`,
     );
