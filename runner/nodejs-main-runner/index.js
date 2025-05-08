@@ -42,7 +42,7 @@ async function processJob() {
     if (!job) return;
 
     const jobData = typeof job === 'string' ? JSON.parse(job) : job;
-    const { config_id } = jobData.config_id;
+    const { config_id } = jobData;
     console.log(`[processJob] Processing job for config ${config_id}`);
     // Fetch job configuration
     const { config, team_id, creator_id, is_active, name, job_run_env } = await fetchJobConfig(
