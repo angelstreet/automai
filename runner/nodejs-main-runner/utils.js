@@ -104,7 +104,15 @@ async function uploadFileViaSFTP(host, sshKeyOrPass, localPath, remotePath) {
   });
 }
 
-function determineScriptPaths(jobId, started_at, scriptExecutionId, host, scriptPath, config) {
+function determineScriptPaths(
+  jobId,
+  started_at,
+  scriptExecutionId,
+  host,
+  scriptPath,
+  config,
+  basePath = '',
+) {
   const scriptName = scriptPath.split('/').pop();
   let repoDir = '';
   let scriptFolder = config.script_folder || '';
@@ -145,22 +153,25 @@ function determineScriptPaths(jobId, started_at, scriptExecutionId, host, script
         : path.join(scriptFolder || '', scriptPath);
     scriptAbsolutePath =
       host.os === 'windows'
-        ? `${repoDir}/${scriptRelativePath}`
-        : path.join(repoDir, scriptRelativePath);
+        ? `${basePath}/${repoDir}/${scriptRelativePath}`.replace(/\\/g, '/')
+        : path.join(basePath, repoDir, scriptRelativePath).replace(/\\/g, '/');
     scriptFolderAbsolutePath =
-      host.os === 'windows' ? `${repoDir}/${scriptFolder}` : path.join(repoDir, scriptFolder);
+      host.os === 'windows'
+        ? `${basePath}/${repoDir}/${scriptFolder}`.replace(/\\/g, '/')
+        : path.join(basePath, repoDir, scriptFolder).replace(/\\/g, '/');
   } else if (scriptFolder) {
     scriptRelativePath = scriptPath;
     scriptAbsolutePath =
-      host.os === 'windows' ? `${scriptFolder}/${scriptPath}` : path.join(scriptFolder, scriptPath);
-    scriptFolderAbsolutePath = scriptFolder;
+      host.os === 'windows'
+        ? `${basePath}/${scriptFolder}/${scriptPath}`.replace(/\\/g, '/')
+        : path.join(basePath, scriptFolder, scriptPath).replace(/\\/g, '/');
+    scriptFolderAbsolutePath = `${basePath}/${scriptFolder}`.replace(/\\/g, '/');
+  } else {
+    scriptAbsolutePath =
+      host.os === 'windows'
+        ? `${basePath}/${scriptPath}`.replace(/\\/g, '/')
+        : path.join(basePath, scriptPath).replace(/\\/g, '/');
   }
-
-  // Placeholder for base path resolution if needed
-  let basePath = '';
-  // If basePath is resolved, prepend it to absolute paths
-  // scriptAbsolutePath = basePath ? (host.os === 'windows' ? `${basePath}/${scriptAbsolutePath}` : path.join(basePath, scriptAbsolutePath)) : scriptAbsolutePath;
-  // scriptFolderAbsolutePath = basePath ? (host.os === 'windows' ? `${basePath}/${scriptFolderAbsolutePath}` : path.join(basePath, scriptFolderAbsolutePath)) : scriptFolderAbsolutePath;
 
   console.log(`[@utils:determineScriptPaths] Determined paths for script ${scriptName}:`);
   console.log(`[@utils:determineScriptPaths]   - scriptRelativePath: ${scriptRelativePath}`);

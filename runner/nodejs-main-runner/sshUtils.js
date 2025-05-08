@@ -107,6 +107,29 @@ async function executeSSHScripts(
         env: env,
       });
 
+      // Resolve the full script path on the host before execution
+      const resolvePathCommand = host.os === 'windows' ? `powershell -Command pwd` : `pwd`;
+      let basePath = '';
+      try {
+        const pathResult = await executeSSHCommand(host, sshKeyOrPass, resolvePathCommand);
+        if (pathResult.stdout) {
+          basePath = parsePowerShellPath(pathResult.stdout);
+          console.log(
+            `[executeSSHScripts] Resolved full script path on host ${host.ip}: ${basePath}`,
+          );
+        } else {
+          console.error(
+            `[executeSSHScripts] Failed to resolve full script path on host ${host.ip}, using empty path as fallback`,
+          );
+          basePath = '';
+        }
+      } catch (error) {
+        console.error(
+          `[executeSSHScripts] Error resolving full script path on host ${host.ip}: ${error.message}, using empty path as fallback`,
+        );
+        basePath = '';
+      }
+
       // Determine all necessary paths using the helper function
       const paths = determineScriptPaths(
         jobId,
@@ -115,6 +138,7 @@ async function executeSSHScripts(
         host,
         scriptPath,
         config,
+        basePath,
       );
 
       // Create script folder within job folder
@@ -140,7 +164,8 @@ async function executeSSHScripts(
       const finalParameters = parameters
         ? `${parameters} ${iterationParam} ${traceFolderParam}`
         : `${iterationParam} ${traceFolderParam}`;
-      const scriptCommand = `${command} ${paths.scriptAbsolutePath} ${finalParameters} 2>&1`.trim();
+      const scriptCommand =
+        `${command} "${paths.scriptAbsolutePath}" ${finalParameters} 2>&1`.trim();
 
       console.log(
         `[executeSSHScripts] Script to execute (Iteration ${i}/${length}): ${scriptCommand}`,
@@ -165,29 +190,6 @@ async function executeSSHScripts(
         fullScript = `${paths.scriptFolderAbsolutePath ? `cd ${paths.scriptFolderAbsolutePath} && ` : ''}${scriptSetupCommand} && ${confirmFolderCommand} && if [ -f "requirements.txt" ]; then pip install -r requirements.txt; else echo "No requirements.txt file found, skipping pip install"; fi && ${envSetup}python --version && echo ============================= && ${scriptCommand} > ${paths.scriptRunFolderPath}/stdout.txt 2> ${paths.scriptRunFolderPath}/stderr.txt`;
       }
       console.log(`[executeSSHScripts] SSH command to be executed on ${host.ip}: ${fullScript}`);
-
-      // Resolve the full script path on the host before execution
-      const resolvePathCommand = host.os === 'windows' ? `powershell -Command pwd` : `pwd`;
-      let basePath = '';
-      try {
-        const pathResult = await executeSSHCommand(host, sshKeyOrPass, resolvePathCommand);
-        if (pathResult.stdout) {
-          basePath = parsePowerShellPath(pathResult.stdout);
-          console.log(
-            `[executeSSHScripts] Resolved full script path on host ${host.ip}: ${basePath}`,
-          );
-        } else {
-          console.error(
-            `[executeSSHScripts] Failed to resolve full script path on host ${host.ip}, using empty path as fallback`,
-          );
-          basePath = '';
-        }
-      } catch (error) {
-        console.error(
-          `[executeSSHScripts] Error resolving full script path on host ${host.ip}: ${error.message}, using empty path as fallback`,
-        );
-        basePath = '';
-      }
 
       // Update the script execution to 'in_progress'
       const scriptStartedAt = new Date().toISOString();
