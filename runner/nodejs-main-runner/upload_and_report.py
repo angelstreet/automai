@@ -43,19 +43,22 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
             associated_files_html = """
   <h2>Associated Files</h2>
   <table>
-    <tr><th>#</th><th>Filename</th><th>Size</th><th>Download Link</th><th>Preview</th></tr>
+    <tr><th>#</th><th>Filename</th><th>Size</th><th>Download</th><th>Preview</th></tr>
 """
             for idx, file in enumerate(script_files, 1):
                 file_name = file.get('name', 'Unknown')
                 file_size = f"{file.get('size', 0) / 1024:.2f} KB" if 'size' in file else "N/A"
                 file_url = file.get('public_url', '')
                 download_link = f"<a href='{file_url}' target='_blank'>Download</a>" if file_url else "Not Available"
-                # Check if file is an image for preview
+                # Check if file is an image or text for preview
                 image_extensions = {'.png', '.jpg', '.jpeg', '.gif', '.webp'}
+                text_extensions = {'.json', '.trace', '.txt'}
                 _, ext = os.path.splitext(file_name.lower())
                 preview = ""
                 if ext in image_extensions and file_url:
                     preview = f"<a href='{file_url}' target='_blank'><img src='{file_url}' style='max-width: 100px; max-height: 100px;' alt='Preview'></a>"
+                elif ext in text_extensions and file_url:
+                    preview = f"<a href='{file_url}' target='_blank'>View Content</a>"
                 else:
                     preview = "N/A"
                 associated_files_html += f"    <tr><td>{idx}</td><td>{file_name}</td><td>{file_size}</td><td>{download_link}</td><td>{preview}</td></tr>\n"
