@@ -120,8 +120,8 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
       var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
       table = document.getElementById("filesTable");
       switching = true;
-      // Set the sorting direction to ascending:
-      dir = "asc";
+      // Set the sorting direction to descending for date column by default:
+      dir = n === 1 ? "desc" : "asc";
       /* Make a loop that will continue until
       no switching has been done: */
       while (switching) {
