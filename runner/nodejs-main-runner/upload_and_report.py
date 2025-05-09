@@ -39,6 +39,9 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
                         if script_id in file.get('relative_path', '') 
                         and file.get('name') not in excluded_filenames]
         
+        # Sort files by creation date, newest first
+        script_files.sort(key=lambda x: x.get('creation_date', ''), reverse=True)
+        
         if script_files:
             associated_files_html = """
             <h2>Associated Files</h2>
@@ -191,6 +194,8 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
           headers[i].innerHTML += ' ↕️';
         }
       }
+      // Set default sort to descending (newest first) for Date column (index 1)
+      sortTable(1);
     });
     
     document.getElementById('fileSearch').addEventListener('keyup', filterTable);
