@@ -1,4 +1,4 @@
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import React from 'react';
 
@@ -51,47 +51,67 @@ export default function PlaywrightContent({ searchParams }: PlaywrightContentPro
           Playwright Run: {unwrappedSearchParams.configName || 'N/A'}
         </h1>
       </div>
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        <div>
-          <p>
-            <strong>Job ID:</strong> {unwrappedSearchParams.jobId || 'N/A'}
-          </p>
-          <p>
-            <strong>Configuration Name:</strong> {unwrappedSearchParams.configName || 'N/A'}
-          </p>
-          <p>
-            <strong>Environment:</strong> {unwrappedSearchParams.env || 'N/A'}
-          </p>
-          <p>
-            <strong>Host Name:</strong> {unwrappedSearchParams.hostName || 'N/A'}
-          </p>
-          <p>
-            <strong>Host IP:</strong> {unwrappedSearchParams.hostIp || 'N/A'}
-          </p>
-          <p>
-            <strong>Host Port:</strong> {unwrappedSearchParams.hostPort || 'N/A'}
-          </p>
-          <p>
-            <strong>Repository:</strong> {unwrappedSearchParams.repository || 'N/A'}
-          </p>
-          <p>
-            <strong>Script Folder:</strong> {unwrappedSearchParams.scriptFolder || 'N/A'}
-          </p>
-          <p>
-            <strong>Start Time:</strong> {unwrappedSearchParams.startTime || 'N/A'}
-          </p>
-          <p>
-            <strong>End Time:</strong> N/A
-          </p>
-        </div>
-        <div>
-          <p>
-            <strong>Current Script Running:</strong> N/A
-          </p>
-          {/* Connection Status will be handled by the client component */}
+
+      {/* Primary Info Card - Most Important Info */}
+      <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-4 shadow-sm">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <p className="font-semibold text-lg">
+              <strong>Job ID:</strong> {unwrappedSearchParams.jobId || 'N/A'}
+            </p>
+            <p className="font-semibold">
+              <strong>Configuration:</strong> {unwrappedSearchParams.configName || 'N/A'}
+            </p>
+            <p>
+              <strong>Environment:</strong> {unwrappedSearchParams.env || 'N/A'}
+            </p>
+          </div>
+          <div>
+            <p className="text-lg">
+              <strong>Current Script:</strong>{' '}
+              <span className="text-blue-600 dark:text-blue-400">Running playwright tests</span>
+            </p>
+            <p>
+              <strong>Start Time:</strong> {unwrappedSearchParams.startTime || 'N/A'}
+            </p>
+            <p>
+              <strong>End Time:</strong> N/A
+            </p>
+          </div>
         </div>
       </div>
+
       <PlaywrightContentClient websocketUrl={unwrappedSearchParams.websocketUrl || ''} />
+
+      {/* Details Accordion - Expandable section with additional details */}
+      <details className="mt-4 bg-gray-50 dark:bg-gray-800 rounded-lg p-4 shadow-sm">
+        <summary className="flex items-center cursor-pointer font-medium text-lg">
+          <ChevronDown className="h-5 w-5 inline mr-2 summary-closed" />
+          <ChevronUp className="h-5 w-5 inline mr-2 summary-open hidden" />
+          Additional Details
+        </summary>
+        <div className="pt-4 grid grid-cols-2 gap-4">
+          <div>
+            <p>
+              <strong>Host Name:</strong> {unwrappedSearchParams.hostName || 'N/A'}
+            </p>
+            <p>
+              <strong>Host IP:</strong> {unwrappedSearchParams.hostIp || 'N/A'}
+            </p>
+            <p>
+              <strong>Host Port:</strong> {unwrappedSearchParams.hostPort || 'N/A'}
+            </p>
+          </div>
+          <div>
+            <p>
+              <strong>Repository:</strong> {unwrappedSearchParams.repository || 'N/A'}
+            </p>
+            <p>
+              <strong>Script Folder:</strong> {unwrappedSearchParams.scriptFolder || 'N/A'}
+            </p>
+          </div>
+        </div>
+      </details>
     </div>
   );
 }
