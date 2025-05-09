@@ -81,7 +81,7 @@ export function HeaderClient({
             </div>
 
             {/* Center section - Display tenant name */}
-            <div className="flex items-center justify-start mx-10 min-w-[26rem]">
+            <div className="flex items-center justify-start mx-10 min-w-[14rem]">
               {currentTeam?.tenant_name && (
                 <div className="text-lg font-semibold ml-4 flex items-center">
                   <Building2 className="mr-2 h-5 w-5" />
@@ -92,7 +92,7 @@ export function HeaderClient({
 
             {/* Right section */}
             <div className="flex-1 flex items-center gap-4 px-4 h-full pr-14 justify-end">
-              <div className="flex-none w-36 mr-4">
+              <div className="flex-none w-30 mr-4">
                 {user ? (
                   <RoleSwitcher
                     key={`role-switcher-${user.role || 'default'}`}
@@ -100,7 +100,7 @@ export function HeaderClient({
                     instanceId="header"
                   />
                 ) : (
-                  <div className="w-[180px] h-10 bg-muted animate-pulse rounded-md"></div>
+                  <div className="w-[100px] h-10 bg-muted animate-pulse rounded-md"></div>
                 )}
               </div>
 

@@ -145,7 +145,7 @@ function RoleSwitcherComponent({
 
   return (
     <Select value={currentRole} onValueChange={handleRoleChange} disabled={isUpdating}>
-      <SelectTrigger className={cn('w-[180px]', className)}>
+      <SelectTrigger className={cn('w-[140px]', className)}>
         <SelectValue placeholder="Select a role">
           {roles.find((r) => r.value === currentRole)?.label || 'Select a role'}
         </SelectValue>
