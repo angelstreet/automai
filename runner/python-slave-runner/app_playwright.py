@@ -151,6 +151,7 @@ async def execute_script():
 
     # Add WebSocket URL to response
     websocket_url = f"ws://{request.host}/ws/{session_id}"
+    print(f"[execute_script] Generated WebSocket URL: {websocket_url}", file=sys.stderr)
     return jsonify({
         'status': status,
         'sessionId': session_id,

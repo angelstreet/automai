@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import useWebSocket from 'react-use-websocket';
 
 export function usePlaywrightStream(websocketUrl: string) {
+  console.log(`[@hook:usePlaywrightStream] Connecting to WebSocket URL: ${websocketUrl}`);
   const [streamImage, setStreamImage] = useState<string | null>(null);
   const { lastMessage, readyState } = useWebSocket(websocketUrl, {
     shouldReconnect: () => true,
@@ -13,6 +14,7 @@ export function usePlaywrightStream(websocketUrl: string) {
 
   useEffect(() => {
     if (lastMessage && lastMessage.data) {
+      console.log('[@hook:usePlaywrightStream] Received message from WebSocket');
       // Check if the message is a base64 encoded image
       if (typeof lastMessage.data === 'string' && lastMessage.data.startsWith('data:image')) {
         setStreamImage(lastMessage.data);
