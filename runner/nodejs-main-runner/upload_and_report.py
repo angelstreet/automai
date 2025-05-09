@@ -3,15 +3,10 @@
 import os
 import sys
 import json
-import subprocess
 from datetime import datetime, timezone
-import argparse
-
-# Import required libraries directly as they are installed via requirements.txt
 import boto3
 from botocore.client import Config
 from dotenv import load_dotenv
-# Add Supabase client library
 import supabase
 
 print(f"[@upload_and_report:main] boto3, dotenv, and supabase modules imported successfully.", file=sys.stderr)
@@ -34,7 +29,7 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
     associated_files_html = ""
     if associated_files:
         # Filter files to exclude stdout.txt, stderr.txt, and script_report.html
-        excluded_filenames = {'stdout.txt', 'stderr.txt', 'script_report.html', 'metadata.json'}
+        excluded_filenames = {'stdout.txt', 'stderr.txt', 'metadata.json'}
         script_files = [file for file in associated_files 
                         if script_id in file.get('relative_path', '') 
                         and file.get('name') not in excluded_filenames]
