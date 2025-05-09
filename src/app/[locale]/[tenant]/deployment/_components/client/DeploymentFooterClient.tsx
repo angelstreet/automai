@@ -405,6 +405,19 @@ export function DeploymentFooterClient() {
           </Button>
         </div>
 
+        {/* Playwright Prod */}
+        <div className="flex items-center space-x-2">
+          <span className={cn('w-3 h-3 rounded-full', getStatusColor('playwright-prod'))} />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchLogs('playwright-prod')}
+            disabled={logsLoading}
+          >
+            Playwright (Prod)
+          </Button>
+        </div>
+
         {/* Main Preprod */}
         <div className="flex items-center space-x-2">
           <span className={cn('w-3 h-3 rounded-full', getStatusColor('main-preprod'))} />
@@ -431,19 +444,6 @@ export function DeploymentFooterClient() {
           </Button>
         </div>
 
-        {/* Playwright Prod */}
-        <div className="flex items-center space-x-2">
-          <span className={cn('w-3 h-3 rounded-full', getStatusColor('playwright-prod'))} />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => fetchLogs('playwright-prod')}
-            disabled={logsLoading}
-          >
-            Playwright (Prod)
-          </Button>
-        </div>
-
         {/* Playwright Preprod */}
         <div className="flex items-center space-x-2">
           <span className={cn('w-3 h-3 rounded-full', getStatusColor('playwright-preprod'))} />
@@ -466,7 +466,7 @@ export function DeploymentFooterClient() {
             onClick={fetchUpstashLogs}
             disabled={upstashLogsLoading}
           >
-            Upstash Redis
+            Redis
           </Button>
         </div>
       </div>
