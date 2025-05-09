@@ -325,7 +325,7 @@ def create_script_report_html(script_folder, stdout_content, stderr_content, scr
         print(f"[@upload_and_report:create_script_report_html] Error creating script report: {str(e)}", file=sys.stderr)
         return None
 
-def build_job_report_html_content(job_id, start_time, end_time, duration, status, script_summary, total_scripts, config_name=''):
+def build_job_report_html_content(job_id, start_time, end_time, duration, status, script_summary, total_scripts, config_name='', host_name='N/A', host_ip='N/A', host_port='N/A', repository='N/A', script_folder='N/A', env='N/A'):
     """Build HTML content for job run report."""
     # Format start_time and end_time to YYYY-MM-DD_HH:MM:SS
     try:
@@ -368,6 +368,12 @@ def build_job_report_html_content(job_id, start_time, end_time, duration, status
   <table>
     <tr><th>Job ID</th><td>{job_id}</td></tr>
     <tr><th>Configuration Name</th><td>{config_name if config_name else 'N/A'}</td></tr>
+    <tr><th>Environment</th><td>{env}</td></tr>
+    <tr><th>Host Name</th><td>{host_name}</td></tr>
+    <tr><th>Host IP</th><td>{host_ip}</td></tr>
+    <tr><th>Host Port</th><td>{host_port}</td></tr>
+    <tr><th>Repository</th><td>{repository}</td></tr>
+    <tr><th>Script Folder</th><td>{script_folder}</td></tr>
     <tr><th>Start Time</th><td>{formatted_start_time}</td></tr>
     <tr><th>End Time</th><td>{formatted_end_time}</td></tr>
     <tr><th>Duration (s)</th><td>{duration}</td></tr>
@@ -398,7 +404,7 @@ def build_job_report_html_content(job_id, start_time, end_time, duration, status
 </body>
 </html>"""
 
-def create_job_report_html(job_folder, job_id, start_time, end_time, script_reports, status="success", uploaded_files=None, config_name=''):
+def create_job_report_html(job_folder, job_id, start_time, end_time, script_reports, status="success", uploaded_files=None, config_name='', host_name='N/A', host_ip='N/A', host_port='N/A', repository='N/A', script_folder='N/A', env='N/A'):
     """Create an HTML report for the entire job run."""
     duration = "N/A"
     if start_time and end_time:
@@ -421,6 +427,12 @@ def create_job_report_html(job_folder, job_id, start_time, end_time, script_repo
             config_name = metadata.get('config_name', config_name)
             status = metadata.get('status', status)
             duration = metadata.get('duration', duration)
+            host_name = metadata.get('host_name', host_name)
+            host_ip = metadata.get('host_ip', host_ip)
+            host_port = metadata.get('host_port', host_port)
+            repository = metadata.get('repository', repository)
+            script_folder = metadata.get('script_folder', script_folder)
+            env = metadata.get('env', env)
         except Exception as e:
             print(f"[@upload_and_report:create_job_report_html] Error reading job metadata: {str(e)}", file=sys.stderr)
     
@@ -439,7 +451,7 @@ def create_job_report_html(job_folder, job_id, start_time, end_time, script_repo
         order += 1
     
     total_scripts = len(script_reports)
-    html_content = build_job_report_html_content(job_id, start_time, end_time, duration, status, script_summary, total_scripts, config_name)
+    html_content = build_job_report_html_content(job_id, start_time, end_time, duration, status, script_summary, total_scripts, config_name, host_name, host_ip, host_port, repository, script_folder, env)
     report_path = os.path.join(job_folder, 'report.html')
     try:
         with open(report_path, 'w', encoding='utf-8') as f:

@@ -319,6 +319,7 @@ async function executeSSHScripts(
         jobFolderPath,
         config_name || 'N/A',
         scriptStartedAt,
+        config,
       );
     } catch (error) {
       console.error(

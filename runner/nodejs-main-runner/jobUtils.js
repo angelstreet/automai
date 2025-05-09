@@ -391,6 +391,7 @@ async function finalizeJobOnHost(
   jobFolderPath,
   config_name,
   scriptStartedAt,
+  config,
 ) {
   console.log(
     `[finalizeJobOnHost] Finalizing job ${jobId} on host ${host.ip} with upload_and_report.py for config ${config_name}`,
@@ -407,6 +408,11 @@ async function finalizeJobOnHost(
     duration: output.started_at
       ? ((new Date() - new Date(output.started_at)) / 1000).toFixed(2)
       : 'N/A',
+    host_name: host.name || 'N/A',
+    host_ip: host.ip || 'N/A',
+    host_port: host.port || 'N/A',
+    repository: config && config.repository ? config.repository : 'N/A',
+    script_folder: config && config.script_folder ? config.script_folder : 'N/A',
   });
   const metadataRemote = path.join(jobFolderPath, 'metadata.json');
   try {
