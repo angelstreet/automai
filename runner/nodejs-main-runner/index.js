@@ -19,8 +19,6 @@ const {
   updateJobStatus,
 } = require('./jobUtils');
 
-const DEBUG = false;
-
 const redis_queue = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL,
   token: process.env.UPSTASH_REDIS_REST_TOKEN,
@@ -156,23 +154,18 @@ async function setupSchedules() {
 
 setInterval(processJob, 10000);
 console.log('Worker running...');
-if (DEBUG) {
-  // In debug mode, we only process jobs on-demand, without scheduling or server
-  console.log('[DEBUG MODE] Skipping schedules and server initialization');
-} else {
-  setupSchedules().catch((err) => console.error('Setup schedules failed:', err));
-  const server = http.createServer((req, res) => {
-    if (req.url === '/healthz') {
-      res.writeHead(200, { 'Content-Type': 'text/plain' });
-      res.end('OK');
-    } else {
-      res.writeHead(404, { 'Content-Type': 'text/plain' });
-      res.end('Not Found');
-    }
-  });
+setupSchedules().catch((err) => console.error('Setup schedules failed:', err));
+const server = http.createServer((req, res) => {
+  if (req.url === '/healthz') {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('OK');
+  } else {
+    res.writeHead(404, { 'Content-Type': 'text/plain' });
+    res.end('Not Found');
+  }
+});
 
-  const PORT = process.env.PORT || 10000;
-  server.listen(PORT, () => {
-    console.log(`[server] Server listening on port ${PORT}`);
-  });
-}
+const PORT = process.env.PORT || 10000;
+server.listen(PORT, () => {
+  console.log(`[server] Server listening on port ${PORT}`);
+});
