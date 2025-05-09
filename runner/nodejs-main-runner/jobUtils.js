@@ -481,6 +481,27 @@ async function finalizeJobOnHost(
     });
     console.log(`[finalizeJobOnHost]--------------------------------`);
     console.log(`[finalizeJobOnHost] Job finalization completed on host ${host.ip}`);
+    // Suppress the detailed finalize result output
+    console.log(
+      `[finalizeJobOnHost] Finalization result status: ${(() => {
+        try {
+          // Parse the JSON response from stdout
+          const jsonStart = finalizeResult.stdout.indexOf('{');
+          const jsonEnd = finalizeResult.stdout.lastIndexOf('}') + 1;
+          if (jsonStart >= 0 && jsonEnd > jsonStart) {
+            const jsonStr = finalizeResult.stdout.substring(jsonStart, jsonEnd);
+            const parsedResult = JSON.parse(jsonStr);
+            return parsedResult.status || 'unknown';
+          }
+          return 'unknown';
+        } catch (error) {
+          console.error(`[finalizeJobOnHost] Error parsing finalize result: ${error.message}`);
+          return 'unknown';
+        }
+      })()}`,
+    );
+    // Do not log the full finalizeResult to avoid printing sensitive or verbose data
+    // console.log(`[finalizeJobOnHost] Full finalize result:`, finalizeResult);
   } catch (error) {
     console.error(`[finalizeJobOnHost] Error finalizing job on host ${host.ip}: ${error.message}`);
     // Update job status without report URL
