@@ -379,12 +379,14 @@ export function DeploymentFooterClient() {
   return (
     <footer className="flex items-center justify-end p-4 border-t border-gray-200">
       <div className="flex items-center space-x-4 flex-wrap gap-y-2">
+       
         {/* Main Prod */}
         <div className="flex items-center space-x-2">
           <span className={cn('w-3 h-3 rounded-full', getStatusColor('main-prod'))} />
           <Button
             variant="outline"
             size="sm"
+            className="text-xs"
             onClick={() => fetchLogs('main-prod')}
             disabled={logsLoading}
           >
@@ -393,11 +395,12 @@ export function DeploymentFooterClient() {
         </div>
 
         {/* Python Prod */}
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 ">
           <span className={cn('w-3 h-3 rounded-full', getStatusColor('python-prod'))} />
           <Button
             variant="outline"
             size="sm"
+            className="text-xs"
             onClick={() => fetchLogs('python-prod')}
             disabled={logsLoading}
           >
@@ -411,6 +414,7 @@ export function DeploymentFooterClient() {
           <Button
             variant="outline"
             size="sm"
+            className="text-xs"
             onClick={() => fetchLogs('playwright-prod')}
             disabled={logsLoading}
           >
@@ -424,6 +428,7 @@ export function DeploymentFooterClient() {
           <Button
             variant="outline"
             size="sm"
+            className="text-xs"
             onClick={() => fetchLogs('main-preprod')}
             disabled={logsLoading}
           >
@@ -437,6 +442,7 @@ export function DeploymentFooterClient() {
           <Button
             variant="outline"
             size="sm"
+            className="text-xs"
             onClick={() => fetchLogs('python-preprod')}
             disabled={logsLoading}
           >
@@ -450,6 +456,7 @@ export function DeploymentFooterClient() {
           <Button
             variant="outline"
             size="sm"
+            className="text-xs"
             onClick={() => fetchLogs('playwright-preprod')}
             disabled={logsLoading}
           >
@@ -463,6 +470,7 @@ export function DeploymentFooterClient() {
           <Button
             variant="outline"
             size="sm"
+            className="text-xs"
             onClick={fetchUpstashLogs}
             disabled={upstashLogsLoading}
           >
