@@ -400,7 +400,9 @@ export async function getAllJobs(providedUser?: any) {
           console.log(
             `[@action:jobsAction:getAllJobs] Found ${config.jobs_run.length} runs for job '${config.name}'`,
           );
-          console.log(`[@action:jobsAction:getAllJobs] Latest run: ${latestRun?.created_at}`);
+          console.log(
+            `[@action:jobsAction:getAllJobs] Latest run: ${latestRun?.created_at}, report URL: ${latestRun?.report_url || 'none'}`,
+          );
         }
 
         return {
@@ -419,7 +421,7 @@ export async function getAllJobs(providedUser?: any) {
           completedAt: latestRun?.completed_at || null,
           scheduledTime: config.schedule_type || 'now',
           scheduleType: config.schedule_type || 'now',
-          // Add report_url from latestRun
+          // Get report_url from latestRun if available
           report_url: latestRun?.report_url || null,
           // Additional fields if needed
           scriptsPath: Array.isArray(config.scripts_path) ? config.scripts_path : [],
@@ -745,7 +747,6 @@ export async function toggleJobActiveStatus(id: string, isActive: boolean) {
  */
 export async function revalidateJobRunsPath() {
   console.log('[@action:jobsAction:revalidateJobRunsPath] Starting path revalidation for job runs');
-  const cookieStore = await cookies();
   // Revalidate the current path to refresh job runs data
   revalidatePath('/[locale]/[tenant]/deployment/job-runs/[configId]', 'page');
   console.log('[@action:jobsAction:revalidateJobRunsPath] Successfully revalidated job runs path');

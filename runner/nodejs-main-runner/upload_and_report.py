@@ -3,12 +3,16 @@
 import os
 import sys
 import json
-import boto3
-import supabase
+import subprocess
 from datetime import datetime, timezone
+import argparse
+
+# Import required libraries directly as they are installed via requirements.txt
+import boto3
 from botocore.client import Config
 from dotenv import load_dotenv
-
+# Add Supabase client library
+import supabase
 
 print(f"[@upload_and_report:main] boto3, dotenv, and supabase modules imported successfully.", file=sys.stderr)
 
@@ -308,7 +312,7 @@ def create_script_report_html(script_folder, stdout_content, stderr_content, scr
     html_content = build_script_report_html_content(script_name, script_id, job_id, script_path_display, parameters, start_time, end_time, duration, status, stdout_content, stderr_content, associated_files)
     report_path = os.path.join(script_folder, 'script_report.html')
     try:
-        with open(report_path, 'w') as f:
+        with open(report_path, 'w', encoding='utf-8') as f:
             f.write(html_content)
         print(f"[@upload_and_report:create_script_report_html] Created script report at {report_path}", file=sys.stderr)
         return report_path
@@ -433,7 +437,7 @@ def create_job_report_html(job_folder, job_id, start_time, end_time, script_repo
     html_content = build_job_report_html_content(job_id, start_time, end_time, duration, status, script_summary, total_scripts, config_name)
     report_path = os.path.join(job_folder, 'report.html')
     try:
-        with open(report_path, 'w') as f:
+        with open(report_path, 'w', encoding='utf-8') as f:
             f.write(html_content)
         print(f"[@upload_and_report:create_job_report_html] Created job report at {report_path}", file=sys.stderr)
         return report_path

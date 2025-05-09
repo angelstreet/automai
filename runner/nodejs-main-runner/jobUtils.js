@@ -482,7 +482,7 @@ async function finalizeJobOnHost(
     console.log(`[finalizeJobOnHost]--------------------------------`);
     console.log(`[finalizeJobOnHost] Job finalization completed on host ${host.ip}`);
     console.log(
-      `[finalizeJobOnHost] Finalization result: ${JSON.stringify(finalizeResult, null, 2)}`,
+      `[finalizeJobOnHost] Finalization result status: ${finalizeResult?.status || 'unknown'}`,
     );
   } catch (error) {
     console.error(`[finalizeJobOnHost] Error finalizing job on host ${host.ip}: ${error.message}`);
