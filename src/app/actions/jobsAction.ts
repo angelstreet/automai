@@ -398,9 +398,6 @@ export async function getAllJobs(providedUser?: any) {
           console.log(
             `[@action:jobsAction:getAllJobs] Found ${config.jobs_run.length} runs for job '${config.name}'`,
           );
-          console.log(
-            `[@action:jobsAction:getAllJobs] Latest run: ${latestRun?.created_at}, report URL: ${latestRun?.report_url || 'none'}`,
-          );
         }
 
         return {
