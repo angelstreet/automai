@@ -334,7 +334,6 @@ def finalize_job():
         
         print(f"[finalize_job] Executing upload_and_report.py for job {job_id}", file=sys.stderr)
         result = subprocess.run([sys.executable, upload_script_path], capture_output=True, text=True, cwd=job_folder_path)
-        print(f"[finalize_job] Result: {result.stdout}", file=sys.stderr)
         if result.returncode == 0:
             print(f"[finalize_job] Upload and report generation successful for job {job_id}", file=sys.stderr)
             try:
