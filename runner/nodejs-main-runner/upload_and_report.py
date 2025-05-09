@@ -3,11 +3,12 @@
 import os
 import sys
 import json
-from datetime import datetime, timezone
 import boto3
+import supabase
+from datetime import datetime, timezone
 from botocore.client import Config
 from dotenv import load_dotenv
-import supabase
+
 
 print(f"[@upload_and_report:main] boto3, dotenv, and supabase modules imported successfully.", file=sys.stderr)
 

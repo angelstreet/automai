@@ -35,7 +35,7 @@ export async function GET(_request: Request, { params }: { params: { service: st
       });
     }
 
-    const response = await fetch(`${renderUrl}/health`, { method: 'GET' });
+    const response = await fetch(`${renderUrl}/healthz`, { method: 'GET' });
     if (response.ok) {
       console.log(`[@api:render-health] Render ${service} service is awake`);
       return NextResponse.json({
