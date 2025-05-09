@@ -31,6 +31,8 @@ export function DeploymentFooterClient() {
     'main-preprod': { loading: true, status: null },
     'python-prod': { loading: true, status: null },
     'python-preprod': { loading: true, status: null },
+    'playwright-prod': { loading: true, status: null },
+    'playwright-preprod': { loading: true, status: null },
   });
 
   // Simple state for logs
@@ -96,6 +98,8 @@ export function DeploymentFooterClient() {
     fetchHealthStatus('main-preprod');
     fetchHealthStatus('python-prod');
     fetchHealthStatus('python-preprod');
+    fetchHealthStatus('playwright-prod');
+    fetchHealthStatus('playwright-preprod');
     fetchUpstashHealth();
   }, []);
 
@@ -384,7 +388,7 @@ export function DeploymentFooterClient() {
             onClick={() => fetchLogs('main-prod')}
             disabled={logsLoading}
           >
-            Render Main (Prod)
+            Main (Prod)
           </Button>
         </div>
 
@@ -397,7 +401,7 @@ export function DeploymentFooterClient() {
             onClick={() => fetchLogs('python-prod')}
             disabled={logsLoading}
           >
-            Render Python (Prod)
+            Python (Prod)
           </Button>
         </div>
 
@@ -410,7 +414,7 @@ export function DeploymentFooterClient() {
             onClick={() => fetchLogs('main-preprod')}
             disabled={logsLoading}
           >
-            Render Main (Preprod)
+            Main (Preprod)
           </Button>
         </div>
 
@@ -423,7 +427,33 @@ export function DeploymentFooterClient() {
             onClick={() => fetchLogs('python-preprod')}
             disabled={logsLoading}
           >
-            Render Python (Preprod)
+            Python (Preprod)
+          </Button>
+        </div>
+
+        {/* Playwright Prod */}
+        <div className="flex items-center space-x-2">
+          <span className={cn('w-3 h-3 rounded-full', getStatusColor('playwright-prod'))} />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchLogs('playwright-prod')}
+            disabled={logsLoading}
+          >
+            Playwright (Prod)
+          </Button>
+        </div>
+
+        {/* Playwright Preprod */}
+        <div className="flex items-center space-x-2">
+          <span className={cn('w-3 h-3 rounded-full', getStatusColor('playwright-preprod'))} />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchLogs('playwright-preprod')}
+            disabled={logsLoading}
+          >
+            Playwright (Preprod)
           </Button>
         </div>
 

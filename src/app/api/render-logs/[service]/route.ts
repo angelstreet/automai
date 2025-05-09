@@ -22,6 +22,12 @@ export async function GET(_request: Request, { params }: { params: { service: st
       case 'python-preprod':
         serviceId = process.env.PYTHON_DOCKER_RUNNER_PREPROD_SERVICE_ID;
         break;
+      case 'playwright-prod':
+        serviceId = process.env.PYTHON_PLAYWRIGHT_RUNNER_PROD_SERVICE_ID;
+        break;
+      case 'playwright-preprod':
+        serviceId = process.env.PYTHON_PLAYWRIGHT_RUNNER_PREPROD_SERVICE_ID;
+        break;
       default:
         console.error('[@api:render-logs] Invalid service specified:', service);
         return NextResponse.json({

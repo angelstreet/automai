@@ -19,6 +19,12 @@ export async function GET(_request: Request, { params }: { params: { service: st
       case 'python-preprod':
         renderUrl = process.env.PYTHON_DOCKER_RUNNER_PREPROD_URL;
         break;
+      case 'playwright-prod':
+        renderUrl = process.env.PYTHON_PLAYWRIGHT_RUNNER_PROD_URL;
+        break;
+      case 'playwright-preprod':
+        renderUrl = process.env.PYTHON_PLAYWRIGHT_RUNNER_PREPROD_URL;
+        break;
       default:
         console.error('[@api:render-health] Invalid service specified:', service);
         return NextResponse.json({
