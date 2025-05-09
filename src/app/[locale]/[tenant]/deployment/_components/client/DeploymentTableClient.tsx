@@ -11,6 +11,7 @@ import {
   Edit2,
   Copy,
 } from 'lucide-react';
+import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import React, { useState } from 'react';
 
@@ -64,6 +65,7 @@ export function DeploymentTableClient({
 }: DeploymentTableProps) {
   const c = useTranslations('common');
   const t = useTranslations('deployment');
+  const params = useParams();
 
   // State to manage dropdown visibility for each deployment
   const [openViewDropdowns, setOpenViewDropdowns] = useState<Record<string, boolean>>({});
@@ -76,6 +78,41 @@ export function DeploymentTableClient({
 
   const toggleActionsDropdown = (deploymentId: string, open: boolean) => {
     setOpenActionsDropdowns((prev) => ({ ...prev, [deploymentId]: open }));
+  };
+
+  // Custom handler to run deployment and redirect if playwright is in env
+  const customHandleRunDeployment = async (deployment: Deployment) => {
+    try {
+      // Execute the original run logic
+      await handleRunDeployment(deployment);
+
+      // Check if config.env contains 'playwright'
+      if (
+        deployment.config &&
+        deployment.config.env &&
+        deployment.config.env.toLowerCase().includes('playwright')
+      ) {
+        console.log(
+          '[@component:DeploymentTableClient:customHandleRunDeployment] Redirecting to Playwright Run page for deployment:',
+          deployment.id,
+        );
+        const queryParams = new URLSearchParams({
+          jobId: deployment.id || 'N/A',
+          configName: deployment.name || 'N/A',
+          env: deployment.config.env || 'N/A',
+          startTime: deployment.startedAt || new Date().toISOString(),
+          // WebSocket URL will be updated post-run if available
+        });
+        // Use dynamic locale and tenant from props or context
+        const url = `/${params.locale}/${params.tenant}/deployment/playwright-run?${queryParams.toString()}`;
+        window.open(url, '_blank');
+      }
+    } catch (error) {
+      console.error(
+        '[@component:DeploymentTableClient:customHandleRunDeployment] Error running deployment:',
+        error,
+      );
+    }
   };
 
   const renderSkeletonRows = () => {
@@ -241,7 +278,7 @@ export function DeploymentTableClient({
                       className="h-6 w-6 p-0 flex items-center justify-center"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleRunDeployment(deployment);
+                        customHandleRunDeployment(deployment);
                       }}
                       disabled={isRunning === deployment.id || actionInProgress === deployment.id}
                     >
