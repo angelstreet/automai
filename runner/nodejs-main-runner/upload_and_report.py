@@ -46,12 +46,21 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
                 <input type="text" id="fileSearch" placeholder="Search files (use /regex/ for regex)..." style="width: 100%; padding: 5px;">
             </div>
             <table id="filesTable">
-                <tr><th>#</th><th>Filename</th><th>Size</th><th>Download</th><th>Preview</th></tr>
+                <tr><th>#</th><th>Date</th><th>Filename</th><th>Size</th><th>Download</th><th>Preview</th></tr>
             """
             for idx, file in enumerate(script_files, 1):
                 file_name = file.get('name', 'Unknown')
                 file_size = f"{file.get('size', 0) / 1024:.2f} KB" if 'size' in file else "N/A"
                 file_url = file.get('public_url', '')
+                file_date = file.get('creation_date', '')
+                # Format the date if it exists
+                formatted_date = "N/A"
+                if file_date:
+                    try:
+                        date_obj = datetime.fromisoformat(file_date.replace('Z', '+00:00'))
+                        formatted_date = date_obj.strftime('%Y-%m-%d %H:%M:%S')
+                    except Exception:
+                        formatted_date = file_date
                 download_link = f"<a href='{file_url}' target='_blank'>Download</a>" if file_url else "Not Available"
                 # Check if file is an image or text for preview
                 image_extensions = {'.png', '.jpg', '.jpeg', '.gif', '.webp'}
@@ -64,7 +73,7 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
                     preview = f"<a href='{file_url}' target='_blank'>View Content</a>"
                 else:
                     preview = "N/A"
-                associated_files_html += f"    <tr><td>{idx}</td><td>{file_name}</td><td>{file_size}</td><td>{download_link}</td><td>{preview}</td></tr>\n"
+                associated_files_html += f"    <tr><td>{idx}</td><td data-sort='{file_date}'>{formatted_date}</td><td>{file_name}</td><td>{file_size}</td><td>{download_link}</td><td>{preview}</td></tr>\n"
             associated_files_html += "  </table>"
             associated_files_html += """
   <script>
@@ -85,7 +94,7 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
         }
       }
       for (var i = 1; i < tr.length; i++) {
-        var td = tr[i].getElementsByTagName('td')[1]; // Filename column
+        var td = tr[i].getElementsByTagName('td')[2]; // Filename column (index 2 now with date added)
         if (td) {
           var txtValue = td.textContent || td.innerText;
           if (isRegex) {
@@ -103,8 +112,101 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
       filterTable();
     }
     
+    // Add table sorting functionality
+    function sortTable(n) {
+      var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+      table = document.getElementById("filesTable");
+      switching = true;
+      // Set the sorting direction to ascending:
+      dir = "asc";
+      /* Make a loop that will continue until
+      no switching has been done: */
+      while (switching) {
+        // Start by saying: no switching is done:
+        switching = false;
+        rows = table.rows;
+        /* Loop through all table rows (except the
+        first, which contains table headers): */
+        for (i = 1; i < (rows.length - 1); i++) {
+          // Start by saying there should be no switching:
+          shouldSwitch = false;
+          /* Get the two elements you want to compare,
+          one from current row and one from the next: */
+          x = rows[i].getElementsByTagName("TD")[n];
+          y = rows[i + 1].getElementsByTagName("TD")[n];
+          
+          // Check if the column has a data-sort attribute (for dates)
+          if (n === 1) { // Date column
+            x = rows[i].getElementsByTagName("TD")[n].getAttribute("data-sort") || "";
+            y = rows[i + 1].getElementsByTagName("TD")[n].getAttribute("data-sort") || "";
+          } else {
+            x = x.innerHTML.toLowerCase();
+            y = y.innerHTML.toLowerCase();
+          }
+          
+          /* Check if the two rows should switch place,
+          based on the direction, asc or desc: */
+          if (dir == "asc") {
+            if (x > y) {
+              // If so, mark as a switch and break the loop:
+              shouldSwitch = true;
+              break;
+            }
+          } else if (dir == "desc") {
+            if (x < y) {
+              // If so, mark as a switch and break the loop:
+              shouldSwitch = true;
+              break;
+            }
+          }
+        }
+        if (shouldSwitch) {
+          /* If a switch has been marked, make the switch
+          and mark that a switch has been done: */
+          rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+          switching = true;
+          // Each time a switch is done, increase this count by 1:
+          switchcount ++;
+        } else {
+          /* If no switching has been done AND the direction is "asc",
+          set the direction to "desc" and run the while loop again. */
+          if (switchcount == 0 && dir == "asc") {
+            dir = "desc";
+            switching = true;
+          }
+        }
+      }
+    }
+    
+    // Add click event listeners to table headers for sorting
+    document.addEventListener('DOMContentLoaded', function() {
+      var headers = document.getElementById('filesTable').getElementsByTagName('th');
+      for (var i = 0; i < headers.length; i++) {
+        if (i !== 4 && i !== 5) { // Skip Download and Preview columns
+          headers[i].style.cursor = 'pointer';
+          headers[i].addEventListener('click', function() {
+            var index = Array.from(this.parentNode.children).indexOf(this);
+            sortTable(index);
+          });
+          headers[i].innerHTML += ' ↕️';
+        }
+      }
+    });
+    
     document.getElementById('fileSearch').addEventListener('keyup', filterTable);
   </script>
+  <style>
+    #filesTable th {
+      cursor: pointer;
+      position: relative;
+    }
+    #filesTable th:hover {
+      background-color: #d4d4d4;
+    }
+    body.dark-theme #filesTable th:hover {
+      background-color: #555;
+    }
+  </style>
 """
         elif script_id in str(associated_files):
             # If we filtered out all files but there were some associated with this script
@@ -612,10 +714,14 @@ def main():
 
             # Correct the path to avoid duplication of job folder name
             r2_path = relative_path
-            print(f"[@upload_and_report:main] Uploading file to R2: {file_name} -> {r2_path}", file=sys.stderr)
+            
+            # Only print upload progress for report files and .trace files
+            should_print = file_name in ['report.html', 'script_report.html'] or ext.lower() == '.trace'
+            if should_print:
+                print(f"[@upload_and_report:main] Uploading file to R2: {file_name} -> {r2_path}", file=sys.stderr)
 
             # Check if the file is likely a script file (based on extension or name)
-            if ext.lower() in ['.py', '.sh']:
+            if ext.lower() in ['.py', '.sh'] and should_print:
                 print(f"[@upload_and_report:main] Detected script file for upload: {file_name}", file=sys.stderr)
 
             with open(file_path, 'rb') as f:
@@ -636,7 +742,8 @@ def main():
             )
 
             file_info['public_url'] = presigned_url
-            print(f"[@upload_and_report:main] Uploaded file to R2: {file_name}, URL generated", file=sys.stderr)
+            if should_print:
+                print(f"[@upload_and_report:main] Uploaded file to R2: {file_name}, URL generated", file=sys.stderr)
             uploaded_files.append(file_info)
 
         print(f"[@upload_and_report:main] Successfully uploaded {len(uploaded_files)} files to R2 for job: {os.path.basename(job_folder_path)}", file=sys.stderr)
