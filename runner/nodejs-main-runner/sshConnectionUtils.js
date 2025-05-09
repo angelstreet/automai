@@ -30,11 +30,21 @@ async function executeSSHCommand(host, sshKeyOrPass, command, timeout = 60000) {
         let stderr = '';
         stream.on('data', (data) => {
           stdout += data;
-          console.log(`${data}`);
+          const lines = data.toString().split('\n');
+          lines.forEach((line) => {
+            if (line.trim()) {
+              console.log(`${line}`);
+            }
+          });
         });
         stream.stderr.on('data', (data) => {
           stderr += data;
-          console.log(`[executeSSHCommand] Stderr: ${data}`);
+          const lines = data.toString().split('\n');
+          lines.forEach((line) => {
+            if (line.trim()) {
+              console.log(`[executeSSHCommand] Stderr: ${line}`);
+            }
+          });
         });
         stream.on('close', (code, signal) => {
           console.log(
@@ -108,7 +118,12 @@ async function readScriptOutputFiles(host, sshKeyOrPass, scriptFolderPath, scrip
             stdoutFromFile += data;
           });
           stream.stderr.on('data', (data) => {
-            console.log(`[readScriptOutputFiles] Stderr while reading stdout file: ${data}`);
+            const lines = data.toString().split('\n');
+            lines.forEach((line) => {
+              if (line.trim()) {
+                console.log(`[readScriptOutputFiles] Stderr while reading stdout file: ${line}`);
+              }
+            });
           });
           stream.on('close', () => {
             connRead.exec(stderrFileCommand, (err, stream2) => {
@@ -121,7 +136,14 @@ async function readScriptOutputFiles(host, sshKeyOrPass, scriptFolderPath, scrip
                 stderrFromFile += data;
               });
               stream2.stderr.on('data', (data) => {
-                console.log(`[readScriptOutputFiles] Stderr while reading stderr file: ${data}`);
+                const lines = data.toString().split('\n');
+                lines.forEach((line) => {
+                  if (line.trim()) {
+                    console.log(
+                      `[readScriptOutputFiles] Stderr while reading stderr file: ${line}`,
+                    );
+                  }
+                });
               });
               stream2.on('close', () => {
                 connRead.end();
