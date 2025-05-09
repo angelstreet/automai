@@ -7,6 +7,10 @@ import json
 
 app = Flask(__name__)
 
+@app.route('/healthz', methods=['GET'])
+def healthz():
+    return "OK", 200, {'Content-Type': 'text/plain'}
+
 @app.route('/execute', methods=['POST'])
 def execute_script():
     data = request.get_json()
