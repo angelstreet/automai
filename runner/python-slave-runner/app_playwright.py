@@ -1,3 +1,5 @@
+import uvicorn
+import argparse
 from flask import Flask, request, jsonify
 from flask_sock import Sock
 from playwright.async_api import async_playwright
@@ -9,6 +11,7 @@ import json
 import asyncio
 import base64
 from uuid import uuid4
+from asgiref.wsgi import WsgiToAsgi
 
 app = Flask(__name__)
 sock = Sock(app)
@@ -337,3 +340,20 @@ def finalize_job():
     except Exception as e:
         print(f"[finalize_job] ERROR: Failed to execute upload_and_report.py: {str(e)}", file=sys.stderr)
         return jsonify({'status': 'error', 'message': f'Failed to execute upload script: {str(e)}', 'job_id': job_id}), 200
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({'status': 'healthy'}), 200
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Run Flask server with custom port')
+    parser.add_argument('--port', type=int, default=int(os.getenv('PORT', 10000)), help='Port to run the server on')
+    parser.add_argument('--debug', action='store_true', default=False, help='Enable debug mode')
+    args = parser.parse_args()
+    port = args.port
+    debug = args.debug
+    print(f"[app_playwright] Running on port {port}", file=sys.stderr)
+    
+    # Wrap the Flask app with WsgiToAsgi adapter for Uvicorn compatibility
+    asgi_app = WsgiToAsgi(app)
+    uvicorn.run(asgi_app, host='0.0.0.0', port=port, log_level="debug" if debug else "info")

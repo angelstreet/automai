@@ -1,3 +1,6 @@
+# docker build -f DockerfilePlaywright -t app-playwright . 
+# docker run -p 10000:10000 --env PORT=10000 app-playwright
+
 FROM python:3.9-slim
 
 # Set working directory
@@ -12,7 +15,10 @@ RUN pip install --no-cache-dir \
     flask-sock==0.7.0 \
     playwright==1.47.0 \
     python-dotenv==1.0.1 \
-    requests==2.32.3
+    requests==2.32.3 \
+    uvicorn==0.28.0 \
+    argparse==1.4.0 \
+    asgiref==3.7.2
 
 # Install system dependencies including Xvfb
 RUN apt-get update && apt-get install -y \
@@ -33,4 +39,4 @@ COPY . .
 EXPOSE 10000
 
 # Run Flask app with Xvfb, binding to Render's PORT
-CMD ["xvfb-run", "--auto-servernum", "--server-args=-screen 0 1280x720x24", "python", "app.py"]
+CMD ["sh", "-c", "xvfb-run --auto-servernum --server-args='-screen 0 1280x720x24' python app_playwright.py --debug --port $PORT"]
