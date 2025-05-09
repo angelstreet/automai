@@ -11,7 +11,6 @@ import {
   Edit2,
   Copy,
 } from 'lucide-react';
-import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import React, { useState } from 'react';
 
@@ -62,10 +61,10 @@ export function DeploymentTableClient({
   handleOutputClick,
   handleDuplicateClick,
   handleToggleActiveClick,
-}: DeploymentTableProps) {
+  params,
+}: DeploymentTableProps & { params: { locale: string; tenant: string } }) {
   const c = useTranslations('common');
   const t = useTranslations('deployment');
-  const params = useParams();
 
   // State to manage dropdown visibility for each deployment
   const [openViewDropdowns, setOpenViewDropdowns] = useState<Record<string, boolean>>({});
@@ -99,12 +98,18 @@ export function DeploymentTableClient({
         const queryParams = new URLSearchParams({
           jobId: deployment.id || 'N/A',
           configName: deployment.name || 'N/A',
-          env: deployment.config.env || 'N/A',
-          startTime: deployment.startedAt || new Date().toISOString(),
+          env: deployment.config?.env || 'N/A',
+          hostName: 'N/A', // Placeholder as host property does not exist
+          hostIp: 'N/A', // Placeholder as host property does not exist
+          hostPort: 'N/A', // Placeholder as host property does not exist
+          repository: deployment.repositoryId || 'N/A', // Corrected property name
+          scriptFolder: 'N/A', // Placeholder as scriptFolder property does not exist
+          startTime: deployment.createdAt || 'N/A', // Corrected property name
           // WebSocket URL will be updated post-run if available
         });
-        // Use dynamic locale and tenant from props or context
-        const url = `/${params.locale}/${params.tenant}/deployment/playwright-run?${queryParams.toString()}`;
+        // Use the current URL and append the playwright-run path
+        const currentPath = window.location.pathname;
+        const url = `${currentPath}/playwright-run?${queryParams.toString()}`;
         window.open(url, '_blank');
       }
     } catch (error) {

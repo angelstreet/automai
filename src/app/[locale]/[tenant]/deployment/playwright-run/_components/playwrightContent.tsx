@@ -1,0 +1,68 @@
+import React from 'react';
+import PlaywrightContentClient from '../client/playwrightContentClient';
+
+interface PlaywrightContentProps {
+  searchParams: {
+    jobId?: string;
+    configName?: string;
+    env?: string;
+    hostName?: string;
+    hostIp?: string;
+    hostPort?: string;
+    repository?: string;
+    scriptFolder?: string;
+    startTime?: string;
+    websocketUrl?: string;
+  };
+}
+
+export default function PlaywrightContent({ searchParams }: PlaywrightContentProps) {
+  return (
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">
+        Playwright Run: {searchParams.configName || 'N/A'}
+      </h1>
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <div>
+          <p>
+            <strong>Job ID:</strong> {searchParams.jobId || 'N/A'}
+          </p>
+          <p>
+            <strong>Configuration Name:</strong> {searchParams.configName || 'N/A'}
+          </p>
+          <p>
+            <strong>Environment:</strong> {searchParams.env || 'N/A'}
+          </p>
+          <p>
+            <strong>Host Name:</strong> {searchParams.hostName || 'N/A'}
+          </p>
+          <p>
+            <strong>Host IP:</strong> {searchParams.hostIp || 'N/A'}
+          </p>
+          <p>
+            <strong>Host Port:</strong> {searchParams.hostPort || 'N/A'}
+          </p>
+          <p>
+            <strong>Repository:</strong> {searchParams.repository || 'N/A'}
+          </p>
+          <p>
+            <strong>Script Folder:</strong> {searchParams.scriptFolder || 'N/A'}
+          </p>
+          <p>
+            <strong>Start Time:</strong> {searchParams.startTime || 'N/A'}
+          </p>
+          <p>
+            <strong>End Time:</strong> N/A
+          </p>
+        </div>
+        <div>
+          <p>
+            <strong>Current Script Running:</strong> N/A
+          </p>
+          {/* Connection Status will be handled by the client component */}
+        </div>
+      </div>
+      <PlaywrightContentClient websocketUrl={searchParams.websocketUrl || ''} />
+    </div>
+  );
+}
