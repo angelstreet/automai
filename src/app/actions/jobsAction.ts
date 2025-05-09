@@ -265,8 +265,6 @@ export async function startJob(configId: string, userId: string) {
     });
 
     const redisResult = await redis_queue.lpush(queueName, payloadString);
-
-    // Return success with queue information
     return {
       success: true,
       data: {

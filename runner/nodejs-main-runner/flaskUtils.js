@@ -40,6 +40,24 @@ async function initializeJobOnFlask(jobId, started_at, config, FLASK_SERVICE_URL
       throw new Error(`Failed to initialize job on Flask: ${initResponse.statusText}`);
     }
     console.log(`[initializeJobOnFlask] Successfully initialized job ${jobId} on Flask service`);
+
+    // Update job status to 'in_progress' in Supabase
+    const { error: statusError } = await supabase
+      .from('jobs_run')
+      .update({
+        status: 'in_progress',
+        started_at: started_at,
+      })
+      .eq('id', jobId);
+
+    if (statusError) {
+      console.error(
+        `[initializeJobOnFlask] Failed to update job ${jobId} to in_progress: ${statusError.message}`,
+      );
+      throw new Error(`Failed to update job status: ${statusError.message}`);
+    }
+    console.log(`[initializeJobOnFlask] Updated job ${jobId} status to 'in_progress'`);
+
     return true;
   } catch (error) {
     console.error(`[initializeJobOnFlask] Error initializing job ${jobId}: ${error.message}`);

@@ -34,25 +34,44 @@ async function executeSSHScripts(
   env,
   config_name,
 ) {
-  const hosts = config.hosts;
-  let output = {
-    scripts: [],
-    stdout: '',
-    stderr: '',
-    started_at: started_at,
-    config_name: config_name || 'N/A',
-    env: env || 'N/A',
-  };
+  console.log(`[executeSSHScripts] Starting SSH script execution for job ${jobId}`);
+
+  let output = { scripts: [], stdout: '', stderr: '', env: env, config_name: config_name };
   let overallStatus = 'success';
 
-  console.log(
-    `[executeSSHScripts] Job data at start of SSH section: team_id=${team_id}, config_id=${config_id}`,
-  );
+  // Update job status to 'in_progress' before starting script executions
+  try {
+    const { error: statusError } = await supabase
+      .from('jobs_run')
+      .update({
+        status: 'in_progress',
+        started_at: started_at,
+      })
+      .eq('id', jobId);
 
-  console.log(
-    `[executeSSHScripts] Before creating script execution: team_id=${team_id}, creator_id=${creator_id}`,
-  );
+    if (statusError) {
+      console.error(
+        `[executeSSHScripts] Failed to update job ${jobId} to in_progress: ${statusError.message}`,
+      );
+      throw new Error(`Failed to update job status: ${statusError.message}`);
+    }
+    console.log(`[executeSSHScripts] Updated job ${jobId} status to 'in_progress'`);
+  } catch (error) {
+    console.error(`[executeSSHScripts] Initialization failed for job ${jobId}: ${error.message}`);
+    output.stderr = `Initialization failed: ${error.message}`;
+    overallStatus = 'failed';
+    await supabase
+      .from('jobs_run')
+      .update({
+        status: overallStatus,
+        completed_at: new Date().toISOString(),
+        output: output,
+      })
+      .eq('id', jobId);
+    return { output, overallStatus, started_at };
+  }
 
+  const hosts = config.hosts;
   let scriptStartedAt = new Date().toISOString();
 
   for (const host of hosts) {
@@ -203,19 +222,6 @@ async function executeSSHScripts(
       // Execute the script using the helper function
       let scriptResult;
       try {
-        supabase
-          .from('jobs_run')
-          .update({
-            status: 'in_progress',
-            started_at: started_at,
-          })
-          .eq('id', jobId)
-          .then(() => {
-            console.log(`[executeSSHScripts] Updated job ${jobId} status to 'in_progress'`);
-          })
-          .catch((err) => {
-            console.error(`[executeSSHScripts] Failed to update job status: ${err.message}`);
-          });
         scriptResult = await executeSSHCommand(host, sshKeyOrPass, fullScript);
         // Update main job status to in_progress if not already
       } catch (error) {
