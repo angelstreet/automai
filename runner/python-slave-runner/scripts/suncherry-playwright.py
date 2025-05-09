@@ -146,7 +146,7 @@ def run(playwright: Playwright, username: str, password: str, headless=False, de
     
     try:
         page.goto(url, timeout=60000)
-        page.wait_for_timeout(20000)
+        page.wait_for_timeout(10000)
 
         login_result = login(page, url, username, password)
         page.wait_for_timeout(10000)

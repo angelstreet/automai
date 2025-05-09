@@ -81,7 +81,7 @@ export function HeaderClient({
             </div>
 
             {/* Center section - Display tenant name */}
-            <div className="flex items-center justify-start mx-6 min-w-[16rem]">
+            <div className="flex items-center justify-start mx-10 min-w-[26rem]">
               {currentTeam?.tenant_name && (
                 <div className="text-lg font-semibold ml-4 flex items-center">
                   <Building2 className="mr-2 h-5 w-5" />
@@ -91,9 +91,8 @@ export function HeaderClient({
             </div>
 
             {/* Right section */}
-            <div className="flex-1 flex items-center justify-end gap-2 px-2 h-full pr-14">
-              {/* Role Switcher */}
-              <div className="flex-none w-32">
+            <div className="flex-1 flex items-center gap-4 px-4 h-full pr-14 justify-end">
+              <div className="flex-none w-36 mr-4">
                 {user ? (
                   <RoleSwitcher
                     key={`role-switcher-${user.role || 'default'}`}
@@ -101,26 +100,17 @@ export function HeaderClient({
                     instanceId="header"
                   />
                 ) : (
-                  <div className="w-[150px] h-10 bg-muted animate-pulse rounded-md"></div>
+                  <div className="w-[180px] h-10 bg-muted animate-pulse rounded-md"></div>
                 )}
               </div>
 
-              <Separator orientation="vertical" className="h-8 opacity-30" />
-
-              {/* Workspace Selector */}
-              <div className="flex-none w-52">
-                <WorkspaceSelector />
-              </div>
+              <WorkspaceSelector />
 
               <Separator orientation="vertical" className="h-8 opacity-30" />
-
-              {/* Search Bar - Flexible width */}
-              <div className="flex-1 max-w-[24rem] min-w-[10rem]">
+              <div className="flex-1 max-w-[26rem] min-w-[12.5rem]">
                 <Search />
               </div>
-
-              {/* Utilities section - fixed width */}
-              <div className="flex items-center gap-1 flex-none">
+              <div className="flex items-center gap-1">
                 <Separator orientation="vertical" className="h-8 opacity-30" />
                 <LanguageSwitcher />
                 <Separator orientation="vertical" className="h-8 opacity-30" />
@@ -131,6 +121,7 @@ export function HeaderClient({
                 >
                   <ProfileDropDown user={user} activeTeam={currentTeam} />
                 </Suspense>
+                <Separator orientation="vertical" className="h-8 opacity-30" />
               </div>
             </div>
           </>
