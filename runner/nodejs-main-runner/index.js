@@ -1,9 +1,6 @@
 require('dotenv').config();
-
-// Built-in Node.js modules
 const http = require('http');
 
-// Third-party modules
 const { createClient } = require('@supabase/supabase-js');
 const { Redis } = require('@upstash/redis');
 const cron = require('node-cron');
@@ -22,7 +19,7 @@ const {
   updateJobStatus,
 } = require('./jobUtils');
 
-// Use utility functions from commonUtils
+const DEBUG = false;
 
 const redis_queue = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL,
@@ -158,20 +155,24 @@ async function setupSchedules() {
 }
 
 setInterval(processJob, 10000);
-setupSchedules().catch((err) => console.error('Setup schedules failed:', err));
 console.log('Worker running...');
+if (DEBUG) {
+  // In debug mode, we only process jobs on-demand, without scheduling or server
+  console.log('[DEBUG MODE] Skipping schedules and server initialization');
+} else {
+  setupSchedules().catch((err) => console.error('Setup schedules failed:', err));
+  const server = http.createServer((req, res) => {
+    if (req.url === '/healthz') {
+      res.writeHead(200, { 'Content-Type': 'text/plain' });
+      res.end('OK');
+    } else {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('Not Found');
+    }
+  });
 
-const server = http.createServer((req, res) => {
-  if (req.url === '/healthz') {
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('OK');
-  } else {
-    res.writeHead(404, { 'Content-Type': 'text/plain' });
-    res.end('Not Found');
-  }
-});
-
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`[server] Server listening on port ${PORT}`);
-});
+  const PORT = process.env.PORT || 3000;
+  server.listen(PORT, () => {
+    console.log(`[server] Server listening on port ${PORT}`);
+  });
+}
