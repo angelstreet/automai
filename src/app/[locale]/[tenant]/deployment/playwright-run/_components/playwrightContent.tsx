@@ -1,5 +1,6 @@
 import React from 'react';
-import PlaywrightContentClient from '../client/playwrightContentClient';
+
+import PlaywrightContentClient from './client/playwrightContentClient';
 
 interface PlaywrightContentProps {
   searchParams: {
@@ -17,39 +18,40 @@ interface PlaywrightContentProps {
 }
 
 export default function PlaywrightContent({ searchParams }: PlaywrightContentProps) {
+  const unwrappedSearchParams = React.use(searchParams);
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">
-        Playwright Run: {searchParams.configName || 'N/A'}
+        Playwright Run: {unwrappedSearchParams.configName || 'N/A'}
       </h1>
       <div className="grid grid-cols-2 gap-4 mb-6">
         <div>
           <p>
-            <strong>Job ID:</strong> {searchParams.jobId || 'N/A'}
+            <strong>Job ID:</strong> {unwrappedSearchParams.jobId || 'N/A'}
           </p>
           <p>
-            <strong>Configuration Name:</strong> {searchParams.configName || 'N/A'}
+            <strong>Configuration Name:</strong> {unwrappedSearchParams.configName || 'N/A'}
           </p>
           <p>
-            <strong>Environment:</strong> {searchParams.env || 'N/A'}
+            <strong>Environment:</strong> {unwrappedSearchParams.env || 'N/A'}
           </p>
           <p>
-            <strong>Host Name:</strong> {searchParams.hostName || 'N/A'}
+            <strong>Host Name:</strong> {unwrappedSearchParams.hostName || 'N/A'}
           </p>
           <p>
-            <strong>Host IP:</strong> {searchParams.hostIp || 'N/A'}
+            <strong>Host IP:</strong> {unwrappedSearchParams.hostIp || 'N/A'}
           </p>
           <p>
-            <strong>Host Port:</strong> {searchParams.hostPort || 'N/A'}
+            <strong>Host Port:</strong> {unwrappedSearchParams.hostPort || 'N/A'}
           </p>
           <p>
-            <strong>Repository:</strong> {searchParams.repository || 'N/A'}
+            <strong>Repository:</strong> {unwrappedSearchParams.repository || 'N/A'}
           </p>
           <p>
-            <strong>Script Folder:</strong> {searchParams.scriptFolder || 'N/A'}
+            <strong>Script Folder:</strong> {unwrappedSearchParams.scriptFolder || 'N/A'}
           </p>
           <p>
-            <strong>Start Time:</strong> {searchParams.startTime || 'N/A'}
+            <strong>Start Time:</strong> {unwrappedSearchParams.startTime || 'N/A'}
           </p>
           <p>
             <strong>End Time:</strong> N/A
@@ -62,7 +64,7 @@ export default function PlaywrightContent({ searchParams }: PlaywrightContentPro
           {/* Connection Status will be handled by the client component */}
         </div>
       </div>
-      <PlaywrightContentClient websocketUrl={searchParams.websocketUrl || ''} />
+      <PlaywrightContentClient websocketUrl={unwrappedSearchParams.websocketUrl || ''} />
     </div>
   );
 }
