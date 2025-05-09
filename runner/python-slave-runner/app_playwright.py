@@ -149,9 +149,12 @@ async def execute_script():
         json.dump(metadata, f, indent=2)
     print(f"[execute_script] Saved metadata to {metadata_path}", file=sys.stderr)
 
+    # Add WebSocket URL to response
+    websocket_url = f"ws://{request.host}/ws/{session_id}"
     return jsonify({
         'status': status,
         'sessionId': session_id,
+        'websocketUrl': websocket_url,
         'stdout': stdout_data,
         'stderr': stderr_data,
         'start_time': start_time_iso,
