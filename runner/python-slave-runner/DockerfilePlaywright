@@ -12,9 +12,7 @@ RUN pip install --no-cache-dir \
     flask-sock==0.7.0 \
     playwright==1.47.0 \
     python-dotenv==1.0.1 \
-    requests==2.32.3 \
-    gunicorn==23.0.0 \
-    gevent==24.2.1
+    requests==2.32.3
 
 # Install system dependencies including Xvfb
 RUN apt-get update && apt-get install -y \
@@ -34,5 +32,5 @@ COPY . .
 # Expose port for Flask (Render will override with PORT env var)
 EXPOSE 10000
 
-# Run Flask app with Xvfb and Gunicorn, binding to Render's PORT
-CMD ["xvfb-run", "--auto-servernum", "--server-args=-screen 0 1280x720x24", "gunicorn", "--worker-class", "gevent", "--bind", "0.0.0.0:${PORT:-10000}", "app:app"]
+# Run Flask app with Xvfb, binding to Render's PORT
+CMD ["xvfb-run", "--auto-servernum", "--server-args=-screen 0 1280x720x24", "python", "app.py"]
