@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+
 import { useHeaderStore } from '@/store/headerStore';
 
 // Define constants in an object to avoid Fast Refresh issues

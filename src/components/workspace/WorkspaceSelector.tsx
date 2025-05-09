@@ -1,12 +1,33 @@
 'use client';
 
+import { Check, ChevronDown, Home, Plus, Star, Trash } from 'lucide-react';
+import { useEffect, useState } from 'react';
+
 import {
   addWorkspace,
   getWorkspaces,
   makeDefaultWorkspace,
   removeWorkspace,
 } from '@/app/actions/workspaceAction';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/shadcn/alert-dialog';
 import { Button } from '@/components/shadcn/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/shadcn/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,28 +39,6 @@ import {
 import { Input } from '@/components/shadcn/input';
 import { Label } from '@/components/shadcn/label';
 import { Workspace } from '@/types/component/workspaceComponentType';
-import { Check, ChevronDown, Home, Plus, Star, Trash } from 'lucide-react';
-import { useEffect, useState } from 'react';
-
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/shadcn/dialog';
-
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/shadcn/alert-dialog';
 
 export default function WorkspaceSelector({ className = '' }) {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);

@@ -11,7 +11,7 @@ import { Separator } from '@/components/shadcn/separator';
 import { SidebarTrigger } from '@/components/sidebar';
 import { ThemeToggleStatic } from '@/components/theme';
 import { Search } from '@/components/ui/Search';
-import { WorkspaceSelector } from '@/components/workspace';
+import WorkspaceSelector from '@/components/workspace/WorkspaceSelector';
 import { cn } from '@/lib/utils';
 import { useHeaderStore } from '@/store/headerStore';
 import { Team } from '@/types/context/teamContextType';
