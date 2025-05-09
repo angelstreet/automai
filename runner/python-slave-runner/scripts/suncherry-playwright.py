@@ -91,7 +91,7 @@ def login(page: Page, url: str, username: str, password: str):
         print(f"Cookie: {cookie.get('name', 'Unknown')} - {cookie.get('value', 'No value')}")
 
     print("Reload page")
-    page.reload()
+    page.reload(timeout=30000)
 
     print("Wait for 10 seconds after reload")
     page.wait_for_timeout(10000)
