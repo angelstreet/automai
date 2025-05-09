@@ -34,13 +34,22 @@ console.log(`[@local-runner] Using queue: ${QUEUE_NAME}`);
 async function processJob() {
   try {
     // Check if -payload argument is provided
-    const usePayload = process.argv.includes('-p') || process.argv.includes('--payload');
+    const payloadIndex = process.argv.findIndex((arg) => arg === '-p' || arg === '--payload');
+    const usePayload = payloadIndex !== -1;
+    const payloadKey =
+      payloadIndex !== -1 &&
+      payloadIndex + 1 < process.argv.length &&
+      !process.argv[payloadIndex + 1].startsWith('-')
+        ? process.argv[payloadIndex + 1]
+        : 'PAYLOAD';
     const showHelp = process.argv.includes('-h') || process.argv.includes('--help');
 
     if (showHelp) {
       console.log(`[@local-runner:help] Available command-line options for local.js:`);
-      console.log(`  -p, --payload    Use a custom payload from the PAYLOAD environment variable`);
-      console.log(`  -h, --help       Display this help message`);
+      console.log(
+        `  -p, --payload [key]    Use a custom payload from the environment variable with the specified key (default: PAYLOAD)`,
+      );
+      console.log(`  -h, --help             Display this help message`);
       process.exit(0);
     }
 
@@ -54,11 +63,11 @@ async function processJob() {
 
     if (usePayload) {
       console.log(
-        `[@local-runner:processJob] Using custom payload from environment variable PAYLOAD`,
+        `[@local-runner:processJob] Using custom payload from environment variable ${payloadKey}`,
       );
-      const payloadStr = process.env.PAYLOAD;
+      const payloadStr = process.env[payloadKey];
       if (!payloadStr) {
-        console.error(`[@local-runner:processJob] PAYLOAD environment variable not set`);
+        console.error(`[@local-runner:processJob] ${payloadKey} environment variable not set`);
         return;
       }
       try {
@@ -118,7 +127,7 @@ async function processJob() {
           creator_id = jobData.creator_id;
         }
       } catch (err) {
-        console.error(`[@local-runner:processJob] Failed to parse PAYLOAD: ${err.message}`);
+        console.error(`[@local-runner:processJob] Failed to parse ${payloadKey}: ${err.message}`);
         return;
       }
     } else {

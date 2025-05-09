@@ -864,7 +864,7 @@ def main():
             s3_client.upload_fileobj(
                 f,
                 bucket_name,
-                os.path.relpath(job_report_path, job_folder_path),
+                os.path.join(os.path.basename(job_folder_path), os.path.basename(job_report_path)),
                 ExtraArgs={
                     'ContentType': 'text/html',
                     'ContentDisposition': 'inline'
@@ -872,7 +872,7 @@ def main():
             )
         updated_job_report_url = s3_client.generate_presigned_url(
             'get_object',
-            Params={'Bucket': bucket_name, 'Key': os.path.relpath(job_report_path, job_folder_path)},
+            Params={'Bucket': bucket_name, 'Key': os.path.join(os.path.basename(job_folder_path), os.path.basename(job_report_path))},
             ExpiresIn=604800  # 7 days in seconds
         )
         print(f"[@upload_and_report:main] Updated Job Run Report uploaded with URLs for job {job_id}", file=sys.stderr)
