@@ -162,7 +162,7 @@ setupSchedules().catch((err) => console.error('Setup schedules failed:', err));
 console.log('Worker running...');
 
 const server = http.createServer((req, res) => {
-  if (req.url === '/health') {
+  if (req.url === '/healthz') {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('OK');
   } else {

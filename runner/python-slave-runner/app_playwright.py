@@ -341,7 +341,7 @@ def finalize_job():
         print(f"[finalize_job] ERROR: Failed to execute upload_and_report.py: {str(e)}", file=sys.stderr)
         return jsonify({'status': 'error', 'message': f'Failed to execute upload script: {str(e)}', 'job_id': job_id}), 200
 
-@app.route('/health', methods=['GET'])
+@app.route('/healthz', methods=['GET'])
 def health_check():
     return jsonify({'status': 'healthy'}), 200
 
