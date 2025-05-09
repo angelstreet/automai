@@ -11,6 +11,9 @@ export default function PlaywrightContentClient({ websocketUrl }: PlaywrightCont
 
   return (
     <>
+      <p>
+        <strong>Connection Status:</strong> {connectionStatus}
+      </p>
       <div className="mb-6">
         <h2 className="text-xl font-semibold mb-2">Streamed View</h2>
         {streamImage ? (
@@ -28,9 +31,6 @@ export default function PlaywrightContentClient({ websocketUrl }: PlaywrightCont
           <p>Logs will be displayed here.</p>
         </div>
       </div>
-      <p>
-        <strong>Connection Status:</strong> {connectionStatus}
-      </p>
     </>
   );
 }
