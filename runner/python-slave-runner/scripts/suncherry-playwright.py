@@ -8,6 +8,32 @@ import re
 from datetime import datetime
 import zipfile
 
+def save_session(context, storage_path: str):
+    """Save the browser session state in both Playwright and browser-use formats"""
+    os.makedirs(storage_path, exist_ok=True)
+    
+    try:
+        # Get state data directly instead of saving to file first
+        state_data = context.storage_state()
+        
+        # Save complete state in Playwright format
+        storage_state_path = os.path.join(storage_path, "cookies.json")
+        with open(storage_state_path, 'w') as f:
+            json.dump(state_data, f)
+        print(f"Session saved to {storage_state_path}")
+        
+        # Extract just the cookies array for browser-use format
+        cookies = state_data.get('cookies', [])
+        
+        # Save only cookies array in browser-use format
+        browser_use_path = os.path.join(storage_path, "cookies.txt")
+        with open(browser_use_path, 'w') as f:
+            json.dump(cookies, f)
+        print(f"Browser-use format saved to {browser_use_path}")
+            
+    except Exception as e:
+        print(f"Warning: Failed to save session: {str(e)}")
+        
 def activate_semantic_placeholder(page: Page):
     shadow_root_selector = 'body > flutter-view > flt-glass-pane'
     element_inside_shadow_dom_selector = 'flt-semantics-placeholder'
