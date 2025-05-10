@@ -356,7 +356,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     port = args.port
     debug = args.debug
-    print(f"[app_playwright] Running on port {port}", file=sys.stderr)
+    print(f"[app_browser-use] Running on port {port}", file=sys.stderr)
     
     # Wrap the Flask app with WsgiToAsgi adapter for Uvicorn compatibility
     asgi_app = WsgiToAsgi(app)
