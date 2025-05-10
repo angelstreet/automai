@@ -10,3 +10,5 @@ docker buildx build --platform linux/amd64 -f DockerfilePlaywright -t ghcr.io/an
 
 echo $GITHUB_PAT | docker login ghcr.io -u angelstreet --password-stdin
 docker push ghcr.io/angelstreet/automai:v1.0.10
+docker push ghcr.io/angelstreet/browser-use:v1.0.1
+
