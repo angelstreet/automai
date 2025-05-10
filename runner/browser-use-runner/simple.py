@@ -1,23 +1,16 @@
 import os
 import sys
 import logging
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 import asyncio
 import argparse
-
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
-from browser_use import BrowserConfig, Browser
-from browser_use import Agent
-import os 
+from browser_use import BrowserConfig, Browser, Agent
 
 load_dotenv()
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
-
 
 # Set up argument parser
 parser = argparse.ArgumentParser(description='Run a browser automation task')
@@ -27,19 +20,23 @@ parser.add_argument('--cookies_path', type=str, default='', help='The path to th
 args, _ = parser.parse_known_args()
 
 task = args.task
-trace_path = os.path.join(os.path.dirname(__file__), args.trace_folder)
+# Use os.getcwd() instead of __file__ for trace_path
+trace_path = os.path.join(os.getcwd(), args.trace_folder)
+
+# Modify sys.path to include parent directory of current working directory
+sys.path.append(os.path.dirname(os.getcwd()))
 
 # Initialize the model
 llm = ChatOpenAI(
-	model='gpt-4o',
-	temperature=0.0
+    model='gpt-4o',
+    temperature=0.0
 )
 
 # Force headless mode
 os.environ["PLAYWRIGHT_HEADLESS"] = "1"
 
-# Set default cookies path if not provided
-cookies_file = args.cookies_path if args.cookies_path else os.path.join(os.path.dirname(__file__), 'cookies', 'cookies.json')
+# Set default cookies path if not provided, using os.getcwd()
+cookies_file = args.cookies_path if args.cookies_path else os.path.join(os.getcwd(), 'cookies', 'cookies.json')
 
 # Ensure the cookies directory exists
 os.makedirs(os.path.dirname(cookies_file), exist_ok=True)
@@ -48,7 +45,7 @@ os.makedirs(os.path.dirname(cookies_file), exist_ok=True)
 config = BrowserConfig(
     headless=True,
     disable_security=False,
-	cookies_file=cookies_file,
+    cookies_file=cookies_file,
 )
 
 logger.info(f"BrowserConfig headless: {config.headless}")
@@ -57,8 +54,7 @@ browser = Browser(config=config)
 agent = Agent(task=task, llm=llm)
 
 async def main():
-	await agent.run()
-
+    await agent.run()
 
 if __name__ == '__main__':
-	asyncio.run(main())
+    asyncio.run(main())
