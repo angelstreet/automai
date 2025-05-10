@@ -13,6 +13,7 @@ import {
   Server,
   GitBranch,
   Key,
+  Globe,
 } from 'lucide-react';
 
 import { Role } from '@/types/service/userServiceType';
@@ -67,6 +68,12 @@ export const sidebarNavigationData: SidebarNavigationData = {
     {
       title: 'Main',
       items: [
+        {
+          title: 'Browser',
+          href: '/browser',
+          icon: Globe,
+          roles: ['admin', 'developer', 'tester', 'viewer'],
+        },
         {
           title: 'Deployment',
           href: '/deployment',

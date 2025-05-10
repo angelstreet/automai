@@ -150,19 +150,28 @@ def run(playwright: Playwright, username: str, password: str, headless=False, de
 
         login_result = login(page, url, username, password)
         page.wait_for_timeout(10000)
+    except Exception as e:
+        print(f"An error occurred during execution: {str(e)}")
+        login_result = False
     finally:
         # Take a screenshot before closing the page for debugging purposes
-        screenshot_path = f"{trace_subfolder}/final_state_{timestamp}.png"
-        page.screenshot(path=screenshot_path, full_page=True)
-        print(f"Screenshot saved to: {screenshot_path}")
+        try:
+            screenshot_path = f"{trace_subfolder}/final_state_{timestamp}.png"
+            page.screenshot(path=screenshot_path, full_page=True, timeout=20000)
+            print(f"Screenshot saved to: {screenshot_path}")
+        except Exception as e:
+            print(f"Error taking final screenshot: {str(e)}")
         
         page.close()
-        context.tracing.stop(path=trace_file)
-        print(f"Tracing data saved to: {trace_file}")
-        with zipfile.ZipFile(trace_file, 'r') as zip_ref:
-            zip_ref.extractall(trace_subfolder)
-        os.remove(trace_file)
-        print(f"Zip file removed: {trace_file}")
+        try:
+            context.tracing.stop(path=trace_file)
+            print(f"Tracing data saved to: {trace_file}")
+            with zipfile.ZipFile(trace_file, 'r') as zip_ref:
+                zip_ref.extractall(trace_subfolder)
+            os.remove(trace_file)
+            print(f"Zip file removed: {trace_file}")
+        except Exception as e:
+            print(f"Error saving or extracting trace data: {str(e)}")
 
         video_path = page.video.path() if page.video else None
         if video_path:
