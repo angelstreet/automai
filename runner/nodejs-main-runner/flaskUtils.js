@@ -10,7 +10,7 @@ const {
   collectEnvironmentVariables,
 } = require('./utils');
 
-async function initializeJobOnFlask(jobId, started_at, config, FLASK_SERVICE_URL) {
+async function initializeJobOnFlask(jobId, started_at, config, FLASK_SERVICE_URL, supabase) {
   console.log(`[initializeJobOnFlask] Initializing job ${jobId} on Flask service`);
   console.log(`[initializeJobOnFlask] Flask Service URL: ${FLASK_SERVICE_URL}`);
   try {
@@ -168,7 +168,7 @@ async function executeFlaskScripts(
 
   // Initialize job on Flask service
   try {
-    await initializeJobOnFlask(jobId, started_at, config, FLASK_SERVICE_URL);
+    await initializeJobOnFlask(jobId, started_at, config, FLASK_SERVICE_URL, supabase);
   } catch (error) {
     console.error(`[executeFlaskScripts] Initialization failed for job ${jobId}: ${error.message}`);
     output.stderr = `Initialization failed: ${error.message}`;
