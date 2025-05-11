@@ -32,17 +32,17 @@ RUN pip install --upgrade pip && \
     playwright \
     python-dotenv==1.0.1 \
     requests==2.32.3 \
-    uvicorn==0.28.0 \
-    argparse==1.4.0 \
-    asgiref==3.7.2 \
     gunicorn==21.2.0 \
-    supabase==1.1.0
+    supabase==1.1.0 \
+    gevent==24.2.1 \
+    boto3==1.35.24
 
 # Install Playwright dependencies and browser
 RUN playwright install-deps && playwright install chromium
 
-# Copy project files
+# Copy project files, including .env
 COPY . .
+COPY .env .env
 
 # Install the package from the current directory
 RUN pip install -e .
@@ -54,5 +54,5 @@ EXPOSE 10000 6080
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:$PORT/healthz || exit 1
 
-# Run Flask and browser_use with xvfb-run
-CMD ["sh", "-c", "xvfb-run --auto-servernum --server-args='-screen 0 1280x720x24' python app.py --debug --port $PORT"]
+# Run Flask with Gunicorn and xvfb-run
+CMD ["sh", "-c", "xvfb-run --auto-servernum --server-args='-screen 0 1280x720x24' gunicorn -w 4 -b 0.0.0.0:$PORT app:app"]

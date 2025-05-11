@@ -13,6 +13,10 @@ import base64
 from uuid import uuid4
 from asgiref.wsgi import WsgiToAsgi
 import supabase
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = Flask(__name__, static_folder='/noVNC')
 sock = Sock(app)
@@ -21,8 +25,12 @@ sock = Sock(app)
 SUPABASE_URL = os.getenv('SUPABASE_URL', '')
 SUPABASE_KEY = os.getenv('SUPABASE_SERVICE_ROLE_KEY', '')
 if SUPABASE_URL and SUPABASE_KEY:
-    supabase_client = supabase.create_client(SUPABASE_URL, SUPABASE_KEY)
-    print(f"[app] Supabase client initialized with URL: {SUPABASE_URL}", file=sys.stderr)
+    try:
+        supabase_client = supabase.create_client(SUPABASE_URL, SUPABASE_KEY)
+        print(f"[app] Supabase client initialized with URL: {SUPABASE_URL}", file=sys.stderr)
+    except Exception as e:
+        supabase_client = None
+        print(f"[app] Error initializing Supabase client: {str(e)}", file=sys.stderr)
 else:
     supabase_client = None
     print("[app] Warning: Supabase credentials not found. Database updates will not be performed.", file=sys.stderr)
@@ -517,11 +525,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run Flask server with custom port')
     parser.add_argument('--port', type=int, default=int(os.getenv('PORT', 10000)), help='Port to run the server on')
     parser.add_argument('--debug', action='store_true', default=False, help='Enable debug mode')
+    parser.add_argument('--workers', type=int, default=int(os.getenv('UVICORN_WORKERS', 4)), help='Number of Uvicorn worker processes')
     args = parser.parse_args()
     port = args.port
     debug = args.debug
-    print(f"[app_browser-use] Running on port {port}", file=sys.stderr)
+    workers = args.workers
+    print(f"[app_browser-use] Running on port {port} with {workers} workers", file=sys.stderr)
     
     # Wrap the Flask app with WsgiToAsgi adapter for Uvicorn compatibility
     asgi_app = WsgiToAsgi(app)
-    uvicorn.run(asgi_app, host='0.0.0.0', port=port, log_level="debug" if debug else "info")
+    uvicorn.run(asgi_app, host='0.0.0.0', port=port, log_level="debug" if debug else "info", workers=workers)
