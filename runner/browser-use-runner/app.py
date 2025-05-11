@@ -1,6 +1,6 @@
 import uvicorn
 import argparse
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_sock import Sock
 from playwright.async_api import async_playwright
 import os
@@ -13,7 +13,7 @@ import base64
 from uuid import uuid4
 from asgiref.wsgi import WsgiToAsgi
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='/noVNC')
 sock = Sock(app)
 
 @app.route('/execute', methods=['POST'])
@@ -79,10 +79,22 @@ async def execute_script():
     stderr_data = ''
     result = {}
 
+    # Start VNC server with session_id as password
+    vnc_password_file = os.path.join(script_folder_path, 'vncpasswd')
+    with open(vnc_password_file, 'w') as f:
+        f.write(session_id)
+    vnc_process = subprocess.Popen(['vncserver', ':1', '-geometry', '1280x720', '-depth', '24', '-passwd', vnc_password_file], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    vnc_process.wait()
+    print(f"[execute_script] Started VNC server for session {session_id}", file=sys.stderr)
+
+    # Start websockify for noVNC
+    websockify_process = subprocess.Popen(['websockify', '6080', 'localhost:5901'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    print(f"[execute_script] Started websockify for VNC streaming on port 6080", file=sys.stderr)
+
     # Execute Playwright script with streaming
     try:
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
+            browser = await p.chromium.launch(headless=False)  # Run in non-headless mode for VNC
             context = await browser.new_context()
             page = await context.new_page()
             try:
@@ -149,13 +161,16 @@ async def execute_script():
         json.dump(metadata, f, indent=2)
     print(f"[execute_script] Saved metadata to {metadata_path}", file=sys.stderr)
 
-    # Add WebSocket URL to response
+    # Add WebSocket URL and VNC streaming URL to response
     websocket_url = f"ws://{request.host}/ws/{session_id}"
+    vnc_stream_url = f"http://{request.host}/vnc.html?host={request.host.split(':')[0]}&port=6080&password={session_id}"
     print(f"[execute_script] Generated WebSocket URL: {websocket_url}", file=sys.stderr)
+    print(f"[execute_script] Generated VNC Stream URL: {vnc_stream_url}", file=sys.stderr)
     return jsonify({
         'status': status,
         'sessionId': session_id,
         'websocketUrl': websocket_url,
+        'vncStreamUrl': vnc_stream_url,
         'stdout': stdout_data,
         'stderr': stderr_data,
         'start_time': start_time_iso,
@@ -168,7 +183,7 @@ async def execute_script():
 @sock.route('/ws/<session_id>')
 async def stream(ws, session_id):
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
+        browser = await p.chromium.launch(headless=False)  # Run in non-headless mode for VNC
         page = await browser.new_page()
         try:
             ws.send(f"Started streaming for session {session_id}")
@@ -181,6 +196,14 @@ async def stream(ws, session_id):
             ws.send(f"Error: {str(e)}")
         finally:
             await browser.close()
+
+@app.route('/vnc.html', methods=['GET'])
+def serve_vnc_html():
+    return send_from_directory('/noVNC', 'vnc.html')
+
+@app.route('/<path:path>', methods=['GET'])
+def serve_vnc_files(path):
+    return send_from_directory('/noVNC', path)
 
 @app.route('/initialize_job', methods=['POST'])
 def initialize_job():

@@ -16,23 +16,14 @@ interface PlaywrightContentProps {
     scriptFolder?: string;
     startTime?: string;
     websocketUrl?: string;
+    vncStreamUrl?: string;
+    sessionId?: string;
   };
 }
 
 export default function PlaywrightContent({ searchParams }: PlaywrightContentProps) {
-  const unwrappedSearchParams = React.use(searchParams) as {
-    jobId?: string;
-    configName?: string;
-    env?: string;
-    hostName?: string;
-    hostIp?: string;
-    hostPort?: string;
-    repository?: string;
-    scriptFolder?: string;
-    startTime?: string;
-    websocketUrl?: string;
-  };
   const router = useRouter();
+  const params = React.use(searchParams);
 
   const handleBackClick = () => {
     router.back();
@@ -48,7 +39,7 @@ export default function PlaywrightContent({ searchParams }: PlaywrightContentPro
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h1 className="text-2xl font-bold">
-          Playwright Run: {unwrappedSearchParams.configName || 'N/A'}
+          Playwright Run: {params.configName || 'N/A'}
         </h1>
       </div>
 
@@ -57,13 +48,13 @@ export default function PlaywrightContent({ searchParams }: PlaywrightContentPro
         <div className="grid grid-cols-2 gap-4">
           <div>
             <p className="font-semibold text-lg">
-              <strong>Job ID:</strong> {unwrappedSearchParams.jobId || 'N/A'}
+              <strong>Job ID:</strong> {params.jobId || 'N/A'}
             </p>
             <p className="font-semibold">
-              <strong>Configuration:</strong> {unwrappedSearchParams.configName || 'N/A'}
+              <strong>Configuration:</strong> {params.configName || 'N/A'}
             </p>
             <p>
-              <strong>Environment:</strong> {unwrappedSearchParams.env || 'N/A'}
+              <strong>Environment:</strong> {params.env || 'N/A'}
             </p>
           </div>
           <div>
@@ -72,7 +63,7 @@ export default function PlaywrightContent({ searchParams }: PlaywrightContentPro
               <span className="text-blue-600 dark:text-blue-400">Running playwright tests</span>
             </p>
             <p>
-              <strong>Start Time:</strong> {unwrappedSearchParams.startTime || 'N/A'}
+              <strong>Start Time:</strong> {params.startTime || 'N/A'}
             </p>
             <p>
               <strong>End Time:</strong> N/A
@@ -81,7 +72,24 @@ export default function PlaywrightContent({ searchParams }: PlaywrightContentPro
         </div>
       </div>
 
-      <PlaywrightContentClient websocketUrl={unwrappedSearchParams.websocketUrl || ''} />
+      {params.vncStreamUrl ? (
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold mb-2">VNC Stream</h2>
+          <iframe
+            src={params.vncStreamUrl}
+            width="1280"
+            height="720"
+            style={{ border: 'none' }}
+            title="VNC Stream"
+          />
+        </div>
+      ) : (
+        <PlaywrightContentClient 
+          websocketUrl={params.websocketUrl || ''} 
+          vncStreamUrl={params.vncStreamUrl || ''} 
+          sessionId={params.sessionId || ''} 
+        />
+      )}
 
       {/* Details Accordion - Expandable section with additional details */}
       <details className="mt-4 bg-gray-50 dark:bg-gray-800 rounded-lg p-4 shadow-sm">
@@ -93,21 +101,21 @@ export default function PlaywrightContent({ searchParams }: PlaywrightContentPro
         <div className="pt-4 grid grid-cols-2 gap-4">
           <div>
             <p>
-              <strong>Host Name:</strong> {unwrappedSearchParams.hostName || 'N/A'}
+              <strong>Host Name:</strong> {params.hostName || 'N/A'}
             </p>
             <p>
-              <strong>Host IP:</strong> {unwrappedSearchParams.hostIp || 'N/A'}
+              <strong>Host IP:</strong> {params.hostIp || 'N/A'}
             </p>
             <p>
-              <strong>Host Port:</strong> {unwrappedSearchParams.hostPort || 'N/A'}
+              <strong>Host Port:</strong> {params.hostPort || 'N/A'}
             </p>
           </div>
           <div>
             <p>
-              <strong>Repository:</strong> {unwrappedSearchParams.repository || 'N/A'}
+              <strong>Repository:</strong> {params.repository || 'N/A'}
             </p>
             <p>
-              <strong>Script Folder:</strong> {unwrappedSearchParams.scriptFolder || 'N/A'}
+              <strong>Script Folder:</strong> {params.scriptFolder || 'N/A'}
             </p>
           </div>
         </div>

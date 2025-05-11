@@ -105,7 +105,10 @@ export function DeploymentTableClient({
           repository: deployment.repositoryId || 'N/A', // Corrected property name
           scriptFolder: 'N/A', // Placeholder as scriptFolder property does not exist
           startTime: deployment.createdAt || 'N/A', // Corrected property name
-          // WebSocket URL will be updated post-run if available
+          // WebSocket URL and VNC Stream URL will be updated post-run if available
+          websocketUrl: deployment.websocket_url || '',
+          vncStreamUrl: deployment.vnc_stream_url || '',
+          sessionId: deployment.session_id || '',
         });
         // Use the current URL and append the playwright-run path
         const currentPath = window.location.pathname;

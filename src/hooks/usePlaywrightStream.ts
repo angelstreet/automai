@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import useWebSocket from 'react-use-websocket';
 
-export function usePlaywrightStream(websocketUrl: string) {
+export function usePlaywrightStream(websocketUrl: string, vncStreamUrl: string = '') {
   console.log(`[@hook:usePlaywrightStream] Connecting to WebSocket URL: ${websocketUrl}`);
   const [streamImage, setStreamImage] = useState<string | null>(null);
   const { lastMessage, readyState } = useWebSocket(websocketUrl, {
@@ -38,5 +38,7 @@ export function usePlaywrightStream(websocketUrl: string) {
           ? 'Closing'
           : 'Closed';
 
-  return { streamImage, connectionStatus };
+  const streamingMode = vncStreamUrl ? 'VNC (if available)' : 'WebSocket';
+
+  return { streamImage, connectionStatus, streamingMode, vncStreamUrl };
 }

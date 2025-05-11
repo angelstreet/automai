@@ -5,10 +5,12 @@ import { usePlaywrightStream } from '@/hooks/usePlaywrightStream';
 
 interface PlaywrightContentClientProps {
   websocketUrl: string;
+  vncStreamUrl?: string;
+  sessionId?: string;
 }
 
-export default function PlaywrightContentClient({ websocketUrl }: PlaywrightContentClientProps) {
-  const { streamImage, connectionStatus } = usePlaywrightStream(websocketUrl);
+export default function PlaywrightContentClient({ websocketUrl, vncStreamUrl = '', sessionId = '' }: PlaywrightContentClientProps) {
+  const { streamImage, connectionStatus } = usePlaywrightStream(websocketUrl, vncStreamUrl);
 
   return (
     <>
@@ -29,7 +31,7 @@ export default function PlaywrightContentClient({ websocketUrl }: PlaywrightCont
         <h2 className="text-xl font-semibold mb-2">Logs</h2>
         <div className="w-full h-32 bg-gray-100 border rounded p-2 overflow-auto">
           {/* Logs will be implemented later */}
-          <p>Logs will be displayed here.</p>
+          <p>Logs will be displayed here. Session ID: {sessionId || 'N/A'}</p>
         </div>
       </div>
     </>

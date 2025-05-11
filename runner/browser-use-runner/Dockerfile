@@ -17,7 +17,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git curl unzip xvfb xauth dbus libnss3 libatk-bridge2.0-0 libgtk-3-0 libxss1 \
     libasound2 libx11-xcb1 libxcb-dri3-0 libdrm2 libgbm1 libxcomposite1 \
     libxdamage1 libxrandr2 libxinerama1 libxcursor1 libxi6 libgl1-mesa-glx \
+    tightvncserver websockify wget \
     && rm -rf /var/lib/apt/lists/*
+
+# Install noVNC
+RUN wget https://github.com/novnc/noVNC/archive/refs/tags/v1.4.0.tar.gz && \
+    tar -xzf v1.4.0.tar.gz && mv noVNC-1.4.0 /noVNC
 
 # Install Python dependencies directly
 RUN pip install --upgrade pip && \
@@ -42,7 +47,7 @@ COPY . .
 RUN pip install -e .
 
 # Expose port for Render
-EXPOSE 10000
+EXPOSE 10000 6080
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

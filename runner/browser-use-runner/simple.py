@@ -34,9 +34,6 @@ llm = ChatOpenAI(
     temperature=0.0
 )
 
-# Force headless mode
-os.environ["PLAYWRIGHT_HEADLESS"] = "1"
-
 # Set default cookies path if not provided, using os.getcwd()
 cookies_file = args.cookies_path if args.cookies_path else None
 
@@ -54,7 +51,7 @@ context_config = BrowserContextConfig(
 
 # Basic configuration
 browser_config = BrowserConfig(
-    headless=True,
+    headless=False,
     disable_security=False,
     new_context_config=context_config
 )
