@@ -108,6 +108,9 @@ export default function PlaywrightContent({ searchParams }: PlaywrightContentPro
             <p>
               <strong>Host Port:</strong> {params.hostPort || 'N/A'}
             </p>
+            <p>
+              <strong>WebSocket URL:</strong> {params.websocketUrl || 'N/A'}
+            </p>
           </div>
           <div>
             <p>
@@ -115,6 +118,12 @@ export default function PlaywrightContent({ searchParams }: PlaywrightContentPro
             </p>
             <p>
               <strong>Script Folder:</strong> {params.scriptFolder || 'N/A'}
+            </p>
+            <p>
+              <strong>VNC Stream URL:</strong> {params.vncStreamUrl || 'N/A'}
+            </p>
+            <p>
+              <strong>Session ID:</strong> {params.sessionId || 'N/A'}
             </p>
           </div>
         </div>
