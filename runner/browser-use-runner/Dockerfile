@@ -35,7 +35,8 @@ RUN pip install --upgrade pip && \
     uvicorn==0.28.0 \
     argparse==1.4.0 \
     asgiref==3.7.2 \
-    gunicorn==21.2.0
+    gunicorn==21.2.0 \
+    supabase==1.1.0
 
 # Install Playwright dependencies and browser
 RUN playwright install-deps && playwright install chromium

@@ -38,9 +38,7 @@ export default function PlaywrightContent({ searchParams }: PlaywrightContentPro
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <h1 className="text-2xl font-bold">
-          Playwright Run: {params.configName || 'N/A'}
-        </h1>
+        <h1 className="text-2xl font-bold">Playwright Run: {params.configName || 'N/A'}</h1>
       </div>
 
       {/* Primary Info Card - Most Important Info */}
@@ -84,10 +82,11 @@ export default function PlaywrightContent({ searchParams }: PlaywrightContentPro
           />
         </div>
       ) : (
-        <PlaywrightContentClient 
-          websocketUrl={params.websocketUrl || ''} 
-          vncStreamUrl={params.vncStreamUrl || ''} 
-          sessionId={params.sessionId || ''} 
+        <PlaywrightContentClient
+          websocketUrl={params.websocketUrl || ''}
+          vncStreamUrl={params.vncStreamUrl || ''}
+          sessionId={params.sessionId || ''}
+          jobId={params.jobId || ''}
         />
       )}
 
