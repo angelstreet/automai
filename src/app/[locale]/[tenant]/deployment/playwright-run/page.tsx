@@ -1,7 +1,3 @@
-'use client';
-
-import React from 'react';
-
 import PlaywrightContent from './_components/playwrightContent';
 
 interface PlaywrightRunProps {

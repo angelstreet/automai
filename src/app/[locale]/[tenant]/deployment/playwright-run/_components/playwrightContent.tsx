@@ -1,6 +1,5 @@
 import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import React from 'react';
 
 import PlaywrightContentClient from './client/playwrightContentClient';
 
@@ -21,9 +20,9 @@ interface PlaywrightContentProps {
   };
 }
 
-export default function PlaywrightContent({ searchParams }: PlaywrightContentProps) {
+export default async function PlaywrightContent({ searchParams }: PlaywrightContentProps) {
   const router = useRouter();
-  const params = React.use(searchParams);
+  const params = await searchParams;
 
   const handleBackClick = () => {
     router.back();
