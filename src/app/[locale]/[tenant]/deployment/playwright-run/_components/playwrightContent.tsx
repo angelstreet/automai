@@ -1,5 +1,4 @@
 import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
 import PlaywrightContentClient from './client/playwrightContentClient';
 
@@ -21,20 +20,12 @@ interface PlaywrightContentProps {
 }
 
 export default async function PlaywrightContent({ searchParams }: PlaywrightContentProps) {
-  const router = useRouter();
   const params = await searchParams;
-
-  const handleBackClick = () => {
-    router.back();
-  };
 
   return (
     <div className="container mx-auto p-4">
       <div className="flex items-center mb-4">
-        <button
-          onClick={handleBackClick}
-          className="mr-2 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
-        >
+        <button className="mr-2 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700" disabled>
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h1 className="text-2xl font-bold">Playwright Run: {params.configName || 'N/A'}</h1>
