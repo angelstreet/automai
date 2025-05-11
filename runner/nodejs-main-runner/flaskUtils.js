@@ -10,7 +10,7 @@ const {
   collectEnvironmentVariables,
 } = require('./utils');
 
-async function initializeJobOnFlask(jobId, started_at, config, FLASK_SERVICE_URL, supabase) {
+async function initializeJobOnFlask(jobId, started_at, config, FLASK_SERVICE_URL) {
   console.log(`[initializeJobOnFlask] Initializing job ${jobId} on Flask service`);
   console.log(`[initializeJobOnFlask] Flask Service URL: ${FLASK_SERVICE_URL}`);
   try {
@@ -127,22 +127,6 @@ async function finalizeJobOnFlask(
       );
       throw new Error(`Failed to update job status: ${updateError.message}`);
     }
-
-    // Clear session_id from scripts_run associated with this job
-    const { error: clearSessionError } = await supabase
-      .from('scripts_run')
-      .update({
-        session_id: null,
-      })
-      .eq('job_run_id', jobId);
-    if (clearSessionError) {
-      console.error(
-        `[finalizeJobOnFlask] Failed to clear session_id from scripts_run for job ${jobId}: ${clearSessionError.message}`,
-      );
-    } else {
-      console.log(`[finalizeJobOnFlask] Cleared session_id from scripts_run for job ${jobId}`);
-    }
-
     return finalizeData.report_url || null;
   } catch (error) {
     console.error(`[finalizeJobOnFlask] Error finalizing job ${jobId}: ${error.message}`);
@@ -158,18 +142,6 @@ async function finalizeJobOnFlask(
     if (updateError) {
       console.error(
         `[finalizeJobOnFlask] Failed to update job ${jobId} status after error: ${updateError.message}`,
-      );
-    }
-    // Attempt to clear session_id even in case of error
-    const { error: clearSessionError } = await supabase
-      .from('scripts_run')
-      .update({
-        session_id: null,
-      })
-      .eq('job_run_id', jobId);
-    if (clearSessionError) {
-      console.error(
-        `[finalizeJobOnFlask] Failed to clear session_id from scripts_run for job ${jobId} after error: ${clearSessionError.message}`,
       );
     }
     throw error;
@@ -196,7 +168,7 @@ async function executeFlaskScripts(
 
   // Initialize job on Flask service
   try {
-    await initializeJobOnFlask(jobId, started_at, config, FLASK_SERVICE_URL, supabase);
+    await initializeJobOnFlask(jobId, started_at, config, FLASK_SERVICE_URL);
   } catch (error) {
     console.error(`[executeFlaskScripts] Initialization failed for job ${jobId}: ${error.message}`);
     output.stderr = `Initialization failed: ${error.message}`;
@@ -361,16 +333,10 @@ async function executeFlaskScripts(
 
           // Get report URL if available
           const reportUrl = response.data.report_url;
-          // Get VNC stream URL if available
-          const vncStreamUrl = response.data.vncStreamUrl;
-          // Get WebSocket URL if available
-          const websocketUrl = response.data.websocketUrl;
-          // Get session ID if available
-          const sessionId = response.data.sessionId;
           if (reportUrl) {
             console.log(`[executeFlaskScripts] Script report URL: ${reportUrl}`);
 
-            // Update script execution with report URL and session ID
+            // Update script execution with report URL
             await updateScriptExecution(supabase, {
               script_id: scriptExecutionId,
               status: scriptStatus,
@@ -380,13 +346,10 @@ async function executeFlaskScripts(
                 exitCode: response.data.exitCode || 0,
               },
               report_url: reportUrl,
-              vnc_stream_url: vncStreamUrl || '',
-              websocket_url: websocketUrl || '',
-              session_id: sessionId || '',
               completed_at: new Date().toISOString(),
             });
           } else {
-            // Update script execution without report URL but with session ID
+            // Update script execution without report URL
             await updateScriptExecution(supabase, {
               script_id: scriptExecutionId,
               status: scriptStatus,
@@ -395,9 +358,6 @@ async function executeFlaskScripts(
                 stderr: scriptOutput.stderr,
                 exitCode: response.data.exitCode || 0,
               },
-              vnc_stream_url: vncStreamUrl || '',
-              websocket_url: websocketUrl || '',
-              session_id: sessionId || '',
               completed_at: new Date().toISOString(),
             });
           }
