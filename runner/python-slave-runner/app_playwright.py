@@ -99,6 +99,9 @@ async def execute_script():
                 stderr_capture = io.StringIO()
                 with contextlib.redirect_stdout(stdout_capture), contextlib.redirect_stderr(stderr_capture):
                     exec(script_content, {'page': page, 'browser': browser})
+                    # Prepare command with parameters including iteration and trace_folder
+                    # command = [sys.executable, script_content_path] + (parameters.split() if parameters else [])
+
                 stdout_data = stdout_capture.getvalue()
                 stderr_data = stderr_capture.getvalue()
                 result = {'title': await page.title()}
