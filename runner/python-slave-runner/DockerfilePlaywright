@@ -10,7 +10,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PORT=10000 \
     PLAYWRIGHT_HEADLESS=0 \
     DISPLAY=:1 \
-    GUNICORN_WORKERS=2
+    GUNICORN_WORKERS=2 \
+    ENABLE_STREAMING=False
 
 # Install Python dependencies directly
 RUN pip install --no-cache-dir \

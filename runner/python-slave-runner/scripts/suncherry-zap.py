@@ -136,7 +136,7 @@ def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder
     trace_file = f"{trace_subfolder}/{timestamp}.zip"
 
     if cookies:
-        cookies_path = trace_folder
+        cookies_path = os.path.dirname(trace_folder)
     else:
         cookies_path = None
 

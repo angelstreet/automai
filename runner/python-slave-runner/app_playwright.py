@@ -46,6 +46,23 @@ else:
 # Add a boolean flag to toggle streaming functionality
 ENABLE_STREAMING = False  # Set to True to enable VNC and websockify streaming
 
+@sock.route('/ws/<session_id>')
+async def stream(ws, session_id):
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=False)  # Run in non-headless mode for VNC
+        page = await browser.new_page()
+        try:
+            ws.send(f"Started streaming for session {session_id}")
+            for _ in range(100):  # Stream for ~50 seconds
+                screenshot = await page.screenshot()
+                ws.send(base64.b64encode(screenshot).decode())
+                await asyncio.sleep(0.5)
+            ws.send(f"Finished streaming for session {session_id}")
+        except Exception as e:
+            ws.send(f"Error: {str(e)}")
+        finally:
+            await browser.close()
+            
 @app.route('/execute', methods=['POST'])
 async def execute_script():
     data = request.get_json()

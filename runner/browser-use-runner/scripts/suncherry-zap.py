@@ -86,7 +86,7 @@ def zap(page: Page, url: str, channel: str = 'RTS 1'):
 def init_browser(playwright: Playwright, headless=True, debug: bool = False, video_dir: str = None, screenshots: bool = True, video: bool = True, source: bool = True, cookies_path: str = None):
     browser = playwright.chromium.launch(
         headless=headless,
-        args=['--disable-blink-features=AutomationControlled', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--disable-gpu', '--start-maximized', '--window-position=0,0', '--window-size=1280,720']
+        args=['--disable-blink-features=AutomationControlled', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--disable-gpu', '--start-maximized']
     )
 
     # Ensure the cookies directory exists only if a path is provided
@@ -98,7 +98,7 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
             print("Cookies folder exists")
 
     context = browser.new_context(
-        viewport={"width": 1280, "height": 720},  # Match VNC resolution
+        viewport={"width": 1920, "height": 1080},  # Set a large viewport for fullscreen experience
         record_video_dir=video_dir if video else None,
         user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         locale="en-US",
@@ -136,7 +136,7 @@ def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder
     trace_file = f"{trace_subfolder}/{timestamp}.zip"
 
     if cookies:
-        cookies_path = trace_folder
+        cookies_path = os.path.dirname(trace_folder)
     else:
         cookies_path = None
 

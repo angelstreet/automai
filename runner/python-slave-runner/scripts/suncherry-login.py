@@ -165,7 +165,7 @@ def run(playwright: Playwright, username: str, password: str, headless=True, deb
     trace_file = f"{trace_subfolder}/{timestamp}.zip"
 
     if cookies:
-        cookies_path = trace_folder
+        cookies_path = os.path.dirname(trace_folder)
     else:
         cookies_path = None
 
