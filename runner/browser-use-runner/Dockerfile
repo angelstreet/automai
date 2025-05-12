@@ -9,7 +9,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PORT=10000 \
     DEBIAN_FRONTEND=noninteractive \
-    PLAYWRIGHT_HEADLESS=1 \
     DISPLAY=:99
 
 # Install system dependencies

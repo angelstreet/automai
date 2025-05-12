@@ -257,10 +257,6 @@ async def execute_script():
     print(f"[execute_script] Saved metadata to {metadata_path}", file=sys.stderr)
 
     # Add WebSocket URL and VNC streaming URL to response
-    websocket_url = f"ws://{request.host}/ws/{session_id}"
-    vnc_stream_url = f"http://{request.host}/vnc.html?host={request.host.split(':')[0]}&port=6080&password={session_id}"
-    print(f"[execute_script] Generated WebSocket URL: {websocket_url}", file=sys.stderr)
-    print(f"[execute_script] Generated VNC Stream URL: {vnc_stream_url}", file=sys.stderr)
     return jsonify({
         'status': status,
         'sessionId': session_id,

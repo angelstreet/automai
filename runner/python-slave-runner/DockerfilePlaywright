@@ -8,7 +8,6 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PORT=10000 \
-    PLAYWRIGHT_HEADLESS=1 \
     DISPLAY=:99
 
 # Install Python dependencies directly
