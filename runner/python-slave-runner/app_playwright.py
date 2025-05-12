@@ -326,7 +326,9 @@ async def execute_script():
                     print(f"[execute_script] Websockify process killed after timeout", file=sys.stderr)
             
             try:
-                subprocess.run(['vncserver', '-kill', ':1'], check=True, capture_output=True, text=True)
+                vnc_env = os.environ.copy()
+                vnc_env['USER'] = 'root'  # Set USER to root for VNC server
+                subprocess.run(['vncserver', '-kill', ':1'], check=True, capture_output=True, text=True, env=vnc_env)
                 print(f"[execute_script] VNC server stopped", file=sys.stderr)
             except subprocess.CalledProcessError as e:
                 print(f"[execute_script] Failed to stop VNC server: {e.stderr}", file=sys.stderr)
