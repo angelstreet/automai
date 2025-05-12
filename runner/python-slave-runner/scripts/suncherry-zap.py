@@ -76,12 +76,12 @@ def init_browser(playwright: Playwright, headless=False, debug: bool = False, vi
         args=['--disable-blink-features=AutomationControlled', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--disable-gpu']
     )
 
-    if cookies:
-        cookies_path = video_dir if video_dir else None
-        # Ensure the cookies directory exists only if a path is provided
-        if cookies_path:
-            print("Creating or using cookies path:", cookies_path)
-            os.makedirs(cookies_path, exist_ok=True)
+    job_folder = os.path.dirname(video_dir) if video_dir else None
+    cookies_path = job_folder if cookies and job_folder else None
+    # Ensure the cookies directory exists only if a path is provided
+    if cookies_path:
+        print("Creating or using cookies path:", cookies_path)
+        os.makedirs(cookies_path, exist_ok=True)
 
     context = browser.new_context(
         viewport={"width": 1024, "height": 768},
@@ -116,12 +116,11 @@ def init_browser(playwright: Playwright, headless=False, debug: bool = False, vi
 
 def run(playwright: Playwright, headless=False, debug: bool = False, trace_folder: str = 'suncherry-playwright_trace', screenshots: bool = True, video: bool = True, source: bool = True, cookies: bool = True, channel: str = 'RTS 1'):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    trace_subfolder = f"{trace_folder}/{timestamp}"
+    job_folder = trace_folder  # Use trace_folder as the base job folder directly
+    trace_subfolder = f"{job_folder}/trace_{timestamp}"  # Create a trace subfolder within job_folder
     os.makedirs(trace_subfolder, exist_ok=True)
     trace_file = f"{trace_subfolder}/{timestamp}.zip"
 
-    # Derive job folder as the parent directory of trace_folder
-    job_folder = os.path.dirname(trace_folder) if trace_folder else trace_folder
     cookies_path = job_folder if cookies and job_folder else None
     if cookies_path:
         print(f"Using job folder for cookies: {cookies_path}")
