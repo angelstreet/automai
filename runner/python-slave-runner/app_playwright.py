@@ -83,54 +83,51 @@ async def execute_script():
     param_list = parameters.split() if parameters else []
     print(f"[execute_script] Parameters for script execution: {param_list}", file=sys.stderr)
 
-    # Execute Playwright script with streaming
-    try:
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
-            context = await browser.new_context()
-            page = await context.new_page()
-            try:
-                # Set environment variables
-                script_env = os.environ.copy()
-                script_env.update(env_vars)
-                # Execute script and capture output
-                with open(script_content_path, 'r') as f:
-                    script_content = f.read()
-                # Use a StringIO to capture output
-                import io
-                import contextlib
-                stdout_capture = io.StringIO()
-                stderr_capture = io.StringIO()
-                with contextlib.redirect_stdout(stdout_capture), contextlib.redirect_stderr(stderr_capture):
-                    exec(script_content, {'page': page, 'browser': browser, 'sys': sys, 'argv': [script_content_path] + param_list})
-                    
-                stdout_data = stdout_capture.getvalue()
-                stderr_data = stderr_capture.getvalue()
-                result = {'title': await page.title()}
-                # Save screenshot
-                screenshot_path = os.path.join(script_folder_path, 'screenshot.png')
-                await page.screenshot(path=screenshot_path)
-                result['screenshot'] = 'screenshot.png'
-            except Exception as e:
-                status = 'error'
-                stderr_data = str(e)
-                result = {'error': str(e)}
-                with open(os.path.join(script_folder_path, 'stderr.txt'), 'w') as f:
-                    f.write(stderr_data)
-            finally:
-                await context.close()
-                await browser.close()
+    # Prepare command with parameters
+    command = [sys.executable, script_content_path] + param_list
 
-        # Save outputs
+    # Set environment variables
+    script_env = os.environ.copy()
+    script_env.update(env_vars)
+
+    # Execute script using subprocess.run
+    try:
+        print(f"[execute_script] Executing script: {script_path} for job {job_id}, script_id {script_id}", file=sys.stderr)
+        process = subprocess.run(
+            command,
+            shell=False,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=script_env
+        )
+
+        stdout_data = process.stdout
+        stderr_data = process.stderr
+
+        # Save outputs to files
         with open(os.path.join(script_folder_path, 'stdout.txt'), 'w') as f:
-            f.write(stdout_data)
+            f.write(stdout_data if stdout_data else '')
+        with open(os.path.join(script_folder_path, 'stderr.txt'), 'w') as f:
+            f.write(stderr_data if stderr_data else '')
+        print(f"[execute_script] Saved stdout and stderr to files in {script_folder_path}", file=sys.stderr)
+
+        if process.returncode != 0:
+            status = 'failed'
+            print(f"[execute_script] Script execution failed with return code {process.returncode}", file=sys.stderr)
+        else:
+            status = 'success'
+            print(f"[execute_script] Script executed successfully", file=sys.stderr)
+    except subprocess.TimeoutExpired:
+        stderr_data = f"Script timed out after {timeout} seconds"
+        status = 'timeout'
+        print(f"[execute_script] Script timed out after {timeout} seconds", file=sys.stderr)
         with open(os.path.join(script_folder_path, 'stderr.txt'), 'w') as f:
             f.write(stderr_data)
-
     except Exception as e:
-        status = 'error'
         stderr_data = str(e)
-        result = {'error': str(e)}
+        status = 'error'
+        print(f"[execute_script] Error executing script: {str(e)}", file=sys.stderr)
         with open(os.path.join(script_folder_path, 'stderr.txt'), 'w') as f:
             f.write(stderr_data)
 
@@ -161,7 +158,7 @@ async def execute_script():
         json.dump(metadata, f, indent=2)
     print(f"[execute_script] Saved metadata to {metadata_path}", file=sys.stderr)
 
-    # Add WebSocket URL to response
+    # Add WebSocket URL to response (optional, can be removed if not needed for non-Playwright scripts)
     websocket_url = f"ws://{request.host}/ws/{session_id}"
     print(f"[execute_script] Generated WebSocket URL: {websocket_url}", file=sys.stderr)
     return jsonify({

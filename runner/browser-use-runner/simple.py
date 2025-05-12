@@ -5,6 +5,7 @@ import asyncio
 import argparse
 import time
 import zipfile
+import json
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from browser_use import BrowserConfig, Browser, Agent, BrowserContextConfig
@@ -34,12 +35,11 @@ llm = ChatOpenAI(
     temperature=0.0
 )
 
-# Set default cookies path if not provided, using os.getcwd()
-cookies_file = args.cookies_path if args.cookies_path else None
+# Set default cookies path using trace_path
+cookies_file = args.cookies_path if args.cookies_path else os.path.join(trace_path, 'cookies.json')
 
-# Ensure the cookies directory exists only if a path is provided
-if cookies_file:
-    os.makedirs(os.path.dirname(cookies_file), exist_ok=True)
+# Ensure the cookies directory exists
+os.makedirs(os.path.dirname(cookies_file), exist_ok=True)
 
 # Context configuration
 context_config = BrowserContextConfig(
@@ -76,6 +76,16 @@ async def main():
                 logger.info(f"Screenshot saved to: {screenshot_path}")
         except Exception as e:
             logger.error(f"Error taking final screenshot: {str(e)}")
+
+        # Save cookies to file
+        try:
+            if agent.browser_context:
+                cookies_data = await agent.browser_context.context.cookies()
+                with open(cookies_file, 'w') as f:
+                    json.dump(cookies_data, f, indent=2)
+                logger.info(f"Saved cookies to: {cookies_file}")
+        except Exception as e:
+            logger.error(f"Error saving cookies: {str(e)}")
 
         # Unzip the trace file if it exists
         try:

@@ -138,93 +138,95 @@ async def execute_script():
         except Exception as e:
             print(f"[execute_script] Error updating Supabase for script {script_id}: {str(e)}", file=sys.stderr)
 
-    # Execute Playwright script with streaming
+    # Parse parameters into a list similar to command-line arguments
+    param_list = parameters.split() if parameters else []
+    print(f"[execute_script] Parameters for script execution: {param_list}", file=sys.stderr)
+
+    # Prepare command with parameters
+    command = [sys.executable, script_content_path] + param_list
+
+    # Set environment variables
+    script_env = os.environ.copy()
+    script_env.update(env_vars)
+
+    # Execute script using subprocess.run
     try:
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=False)  # Run in non-headless mode for VNC
-            context = await browser.new_context()
-            page = await context.new_page()
+        print(f"[execute_script] Executing script: {script_path} for job {job_id}, script_id {script_id}", file=sys.stderr)
+        # Update stream status to 'streaming'
+        if supabase_client:
             try:
-                # Update stream status to 'streaming'
-                if supabase_client:
-                    try:
-                        response = supabase_client.table('scripts_run').update({
-                            'session': {
-                                'session_id': session_id,
-                                'websocket_url': websocket_url,
-                                'vnc_stream_url': vnc_stream_url,
-                                'session_url': '',
-                                'stream_status': 'streaming'
-                            }
-                        }).eq('id', script_id).execute()
-                        if response.data:
-                            print(f"[execute_script] Updated Supabase with streaming status 'streaming' for script {script_id}", file=sys.stderr)
-                        else:
-                            print(f"[execute_script] Failed to update Supabase streaming status for script {script_id}: {response.error}", file=sys.stderr)
-                    except Exception as e:
-                        print(f"[execute_script] Error updating Supabase streaming status for script {script_id}: {str(e)}", file=sys.stderr)
-
-                # Set environment variables
-                script_env = os.environ.copy()
-                script_env.update(env_vars)
-                # Execute script and capture output
-                with open(script_content_path, 'r') as f:
-                    script_content = f.read()
-                # Use a StringIO to capture output
-                import io
-                import contextlib
-                stdout_capture = io.StringIO()
-                stderr_capture = io.StringIO()
-                with contextlib.redirect_stdout(stdout_capture), contextlib.redirect_stderr(stderr_capture):
-                    exec(script_content, {'page': page, 'browser': browser})
-                stdout_data = stdout_capture.getvalue()
-                stderr_data = stderr_capture.getvalue()
-                result = {'title': await page.title()}
-                # Save screenshot
-                screenshot_path = os.path.join(script_folder_path, 'screenshot.png')
-                await page.screenshot(path=screenshot_path)
-                result['screenshot'] = 'screenshot.png'
+                response = supabase_client.table('scripts_run').update({
+                    'session': {
+                        'session_id': session_id,
+                        'websocket_url': websocket_url,
+                        'vnc_stream_url': vnc_stream_url,
+                        'session_url': '',
+                        'stream_status': 'streaming'
+                    }
+                }).eq('id', script_id).execute()
+                if response.data:
+                    print(f"[execute_script] Updated Supabase with streaming status 'streaming' for script {script_id}", file=sys.stderr)
+                else:
+                    print(f"[execute_script] Failed to update Supabase streaming status for script {script_id}: {response.error}", file=sys.stderr)
             except Exception as e:
-                status = 'error'
-                stderr_data = str(e)
-                result = {'error': str(e)}
-                with open(os.path.join(script_folder_path, 'stderr.txt'), 'w') as f:
-                    f.write(stderr_data)
-            finally:
-                await context.close()
-                await browser.close()
+                print(f"[execute_script] Error updating Supabase streaming status for script {script_id}: {str(e)}", file=sys.stderr)
 
-                # Update stream status to 'complete'
-                if supabase_client:
-                    try:
-                        response = supabase_client.table('scripts_run').update({
-                            'session': {
-                                'session_id': session_id,
-                                'websocket_url': websocket_url,
-                                'vnc_stream_url': vnc_stream_url,
-                                'session_url': '',
-                                'stream_status': 'complete'
-                            }
-                        }).eq('id', script_id).execute()
-                        if response.data:
-                            print(f"[execute_script] Updated Supabase with streaming status 'complete' for script {script_id}", file=sys.stderr)
-                        else:
-                            print(f"[execute_script] Failed to update Supabase streaming status for script {script_id}: {response.error}", file=sys.stderr)
-                    except Exception as e:
-                        print(f"[execute_script] Error updating Supabase streaming status for script {script_id}: {str(e)}", file=sys.stderr)
+        process = subprocess.run(
+            command,
+            shell=False,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=script_env
+        )
 
-        # Save outputs
+        stdout_data = process.stdout
+        stderr_data = process.stderr
+
+        # Save outputs to files
         with open(os.path.join(script_folder_path, 'stdout.txt'), 'w') as f:
-            f.write(stdout_data)
+            f.write(stdout_data if stdout_data else '')
         with open(os.path.join(script_folder_path, 'stderr.txt'), 'w') as f:
-            f.write(stderr_data)
+            f.write(stderr_data if stderr_data else '')
+        print(f"[execute_script] Saved stdout and stderr to files in {script_folder_path}", file=sys.stderr)
 
-    except Exception as e:
-        status = 'error'
-        stderr_data = str(e)
-        result = {'error': str(e)}
+        if process.returncode != 0:
+            status = 'failed'
+            print(f"[execute_script] Script execution failed with return code {process.returncode}", file=sys.stderr)
+        else:
+            status = 'success'
+            print(f"[execute_script] Script executed successfully", file=sys.stderr)
+    except subprocess.TimeoutExpired:
+        stderr_data = f"Script timed out after {timeout} seconds"
+        status = 'timeout'
+        print(f"[execute_script] Script timed out after {timeout} seconds", file=sys.stderr)
         with open(os.path.join(script_folder_path, 'stderr.txt'), 'w') as f:
             f.write(stderr_data)
+    except Exception as e:
+        stderr_data = str(e)
+        status = 'error'
+        print(f"[execute_script] Error executing script: {str(e)}", file=sys.stderr)
+        with open(os.path.join(script_folder_path, 'stderr.txt'), 'w') as f:
+            f.write(stderr_data)
+    finally:
+        # Update stream status to 'complete'
+        if supabase_client:
+            try:
+                response = supabase_client.table('scripts_run').update({
+                    'session': {
+                        'session_id': session_id,
+                        'websocket_url': websocket_url,
+                        'vnc_stream_url': vnc_stream_url,
+                        'session_url': '',
+                        'stream_status': 'complete'
+                    }
+                }).eq('id', script_id).execute()
+                if response.data:
+                    print(f"[execute_script] Updated Supabase with streaming status 'complete' for script {script_id}", file=sys.stderr)
+                else:
+                    print(f"[execute_script] Failed to update Supabase streaming status for script {script_id}: {response.error}", file=sys.stderr)
+            except Exception as e:
+                print(f"[execute_script] Error updating Supabase streaming status for script {script_id}: {str(e)}", file=sys.stderr)
 
     # Save metadata
     end_time_iso = datetime.utcnow().isoformat() + 'Z'

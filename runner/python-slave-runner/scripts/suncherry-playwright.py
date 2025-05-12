@@ -7,33 +7,8 @@ from dotenv import load_dotenv
 import re
 from datetime import datetime
 import zipfile
-
-def save_session(context, storage_path: str):
-    """Save the browser session state in both Playwright and browser-use formats"""
-    os.makedirs(storage_path, exist_ok=True)
+import json
     
-    try:
-        # Get state data directly instead of saving to file first
-        state_data = context.storage_state()
-        
-        # Save complete state in Playwright format
-        storage_state_path = os.path.join(storage_path, "cookies.json")
-        with open(storage_state_path, 'w') as f:
-            json.dump(state_data, f)
-        print(f"Session saved to {storage_state_path}")
-        
-        # Extract just the cookies array for browser-use format
-        cookies = state_data.get('cookies', [])
-        
-        # Save only cookies array in browser-use format
-        browser_use_path = os.path.join(storage_path, "cookies.txt")
-        with open(browser_use_path, 'w') as f:
-            json.dump(cookies, f)
-        print(f"Browser-use format saved to {browser_use_path}")
-            
-    except Exception as e:
-        print(f"Warning: Failed to save session: {str(e)}")
-        
 def activate_semantic_placeholder(page: Page):
     shadow_root_selector = 'body > flutter-view > flt-glass-pane'
     element_inside_shadow_dom_selector = 'flt-semantics-placeholder'
@@ -108,7 +83,7 @@ def login(page: Page, url: str, username: str, password: str):
     page.locator("#kc-login").click()
     
     print("Wait for 10 seconds")
-    page.wait_for_timeout(10000)
+    page.wait_for_timeout(15000)
 
     # Log cookies before reload for debugging
     cookies_before = page.context.cookies()
@@ -117,10 +92,11 @@ def login(page: Page, url: str, username: str, password: str):
         print(f"Cookie: {cookie.get('name', 'Unknown')} - {cookie.get('value', 'No value')}")
 
     print("Reload page")
-    page.reload(timeout=30000)
-
-    print("Wait for 10 seconds after reload")
-    page.wait_for_timeout(10000)
+    try:
+        page.reload(timeout=20000)
+        page.wait_for_timeout(5000)
+    except :
+        print("Failed to reload...Continue test")
 
     activate_semantic_placeholder(page)
     page.wait_for_timeout(1000)
@@ -137,11 +113,18 @@ def login(page: Page, url: str, username: str, password: str):
         print(f'Login failed: {str(e)}')
         return False
 
-def init_browser(playwright: Playwright, headless=False, debug: bool = False, video_dir: str = None, screenshots: bool = True, video: bool = True, source: bool = True):
+def init_browser(playwright: Playwright, headless=False, debug: bool = False, video_dir: str = None, screenshots: bool = True, video: bool = True, source: bool = True, cookies: bool = True):
     browser = playwright.chromium.launch(
         headless=headless,
         args=['--disable-blink-features=AutomationControlled', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--disable-gpu']
     )
+
+    if cookies:
+        cookies_path = video_dir if video_dir else None
+        # Ensure the cookies directory exists only if a path is provided
+        if cookies_path:
+            print("Creating or using cookies path:", cookies_path)
+            os.makedirs(cookies_path, exist_ok=True)
 
     context = browser.new_context(
         viewport={"width": 1024, "height": 768},
@@ -153,6 +136,20 @@ def init_browser(playwright: Playwright, headless=False, debug: bool = False, vi
         ignore_https_errors=True
     )
 
+    # Load cookies from file if they exist
+    if cookies and cookies_path:
+        cookies_file = os.path.join(cookies_path, 'cookies.json')
+        if os.path.exists(cookies_file):
+            try:
+                with open(cookies_file, 'r') as f:
+                    cookies_data = json.load(f)
+                context.add_cookies(cookies_data)
+                print(f"Loaded cookies from {cookies_file}")
+            except Exception as e:
+                print(f"Error loading cookies from {cookies_file}: {str(e)}")
+        else:
+            print(f"No cookies file found at {cookies_file}")
+
     context.tracing.start(screenshots=screenshots, snapshots=True, sources=source)
     page = context.new_page()
     if debug:
@@ -160,13 +157,13 @@ def init_browser(playwright: Playwright, headless=False, debug: bool = False, vi
         page.on("requestfailed", lambda request: print(f"Request failed: {request.url} {request.failure}"))
     return page, context, browser
 
-def run(playwright: Playwright, username: str, password: str, headless=False, debug: bool = False, trace_folder: str = 'suncherry-playwright_trace', screenshots: bool = True, video: bool = True, source: bool = True):
+def run(playwright: Playwright, username: str, password: str, headless=False, debug: bool = False, trace_folder: str = 'suncherry-playwright_trace', screenshots: bool = True, video: bool = True, source: bool = True, cookies: bool = True):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     trace_subfolder = f"{trace_folder}/{timestamp}"
     os.makedirs(trace_subfolder, exist_ok=True)
-    trace_file = f"{trace_subfolder}/{timestamp}.zip"
+    trace_folder = f"{trace_subfolder}/{timestamp}.zip"
 
-    page, context, browser = init_browser(playwright, headless, debug, trace_subfolder if video else None, screenshots, video, source)
+    page, context, browser = init_browser(playwright, headless, debug, trace_subfolder if video else None, screenshots, video, source, trace_subfolder if cookies else None)
     url = "https://www.sunrisetv.ch/de/home"
     page.set_default_timeout(10000)
     
@@ -188,14 +185,27 @@ def run(playwright: Playwright, username: str, password: str, headless=False, de
         except Exception as e:
             print(f"Error taking final screenshot: {str(e)}")
         
+        # Save cookies to file if cookies option is enabled
+        if cookies:
+            cookies_path = trace_subfolder
+            cookies_file = os.path.join(cookies_path, 'cookies.json')
+            try:
+                os.makedirs(cookies_path, exist_ok=True)
+                cookies_data = context.cookies()
+                with open(cookies_file, 'w') as f:
+                    json.dump(cookies_data, f, indent=2)
+                print(f"Saved cookies to {cookies_file}")
+            except Exception as e:
+                print(f"Error saving cookies to {cookies_file}: {str(e)}")
+        
         page.close()
         try:
-            context.tracing.stop(path=trace_file)
-            print(f"Tracing data saved to: {trace_file}")
-            with zipfile.ZipFile(trace_file, 'r') as zip_ref:
+            context.tracing.stop(path=trace_folder)
+            print(f"Tracing data saved to: {trace_folder}")
+            with zipfile.ZipFile(trace_folder, 'r') as zip_ref:
                 zip_ref.extractall(trace_subfolder)
-            os.remove(trace_file)
-            print(f"Zip file removed: {trace_file}")
+            os.remove(trace_folder)
+            print(f"Zip file removed: {trace_folder}")
         except Exception as e:
             print(f"Error saving or extracting trace data: {str(e)}")
 
