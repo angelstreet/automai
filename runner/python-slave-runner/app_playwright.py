@@ -44,7 +44,7 @@ else:
     print("[app] Warning: Supabase credentials not found. Database updates will not be performed.", file=sys.stderr)
 
 # Add a boolean flag to toggle streaming functionality
-ENABLE_STREAMING = False  # Set to True to enable VNC and websockify streaming
+ENABLE_STREAMING =  False  # Set to True to enable VNC and websockify streaming
 
 @sock.route('/ws/<session_id>')
 async def stream(ws, session_id):
@@ -126,47 +126,49 @@ async def execute_script():
     stderr_data = ''
     result = {}
 
-    # Clean up any existing VNC configurations or lock files
-    import shutil
-    vnc_home = os.path.expanduser("~root/.vnc")
-    if os.path.exists(vnc_home):
-        shutil.rmtree(vnc_home, ignore_errors=True)
-        print(f"[execute_script] Cleaned up existing VNC configuration at {vnc_home}", file=sys.stderr)
-    else:
-        print(f"[execute_script] No existing VNC configuration found at {vnc_home}", file=sys.stderr)
-
-    # Create VNC directory
-    os.makedirs("/root/.vnc", exist_ok=True)
-
-    # Create a simple xstartup file
-    xstartup_file = "/root/.vnc/xstartup"
-    with open(xstartup_file, "w") as f:
-        f.write("#!/bin/sh\nxterm &\nsleep infinity\n")
-    os.chmod(xstartup_file, 0o755)
-
-    # Set session_id as VNC password (ensure it's at least 6 characters)
-    vnc_password = session_id
-    if len(vnc_password) < 6:
-        vnc_password = session_id + "123456"[:6-len(session_id)]
-    print(f"[execute_script] Setting VNC password with length {len(vnc_password)}", file=sys.stderr)
-
-    # Create password file using vncpasswd
-    with open('/tmp/vnc_pwd', 'w') as f:
-        f.write(f"{vnc_password}\n{vnc_password}\n")
-
-    try:
-        # Use vncpasswd with input redirection
-        subprocess.run('cat /tmp/vnc_pwd | vncpasswd', shell=True, check=True)
-        os.remove('/tmp/vnc_pwd')  # Remove the temporary password file
-        print(f"[execute_script] VNC password set successfully to /root/.vnc/passwd", file=sys.stderr)
-    except Exception as e:
-        print(f"[execute_script] Error setting VNC password: {str(e)}", file=sys.stderr)
-
-    # Start VNC server with session_id as password
-    vnc_env = os.environ.copy()
-    vnc_env['USER'] = 'root'  # Set USER to root for VNC server
-
+    # Clean up any existing VNC configurations or lock files only if streaming is enabled
     if ENABLE_STREAMING:
+        import shutil
+        vnc_home = os.path.expanduser("~root/.vnc")
+        if os.path.exists(vnc_home):
+            shutil.rmtree(vnc_home, ignore_errors=True)
+            print(f"[execute_script] Cleaned up existing VNC configuration at {vnc_home}", file=sys.stderr)
+        else:
+            print(f"[execute_script] No existing VNC configuration found at {vnc_home}", file=sys.stderr)
+
+    # Create VNC directory and setup only if streaming is enabled
+    if ENABLE_STREAMING:
+        os.makedirs("/root/.vnc", exist_ok=True)
+
+        # Create a simple xstartup file
+        xstartup_file = "/root/.vnc/xstartup"
+        with open(xstartup_file, "w") as f:
+            f.write("#!/bin/sh\nxterm &\nsleep infinity\n")
+        os.chmod(xstartup_file, 0o755)
+
+        # Set session_id as VNC password (ensure it's at least 6 characters)
+        vnc_password = session_id
+        if len(vnc_password) < 6:
+            vnc_password = session_id + "123456"[:6-len(session_id)]
+        print(f"[execute_script] Setting VNC password with length {len(vnc_password)}", file=sys.stderr)
+
+        # Create password file using vncpasswd
+        with open('/tmp/vnc_pwd', 'w') as f:
+            f.write(f"{vnc_password}\n{vnc_password}\n")
+
+        try:
+            # Use vncpasswd with input redirection
+            subprocess.run('cat /tmp/vnc_pwd | vncpasswd', shell=True, check=True)
+            os.remove('/tmp/vnc_pwd')  # Remove the temporary password file
+            print(f"[execute_script] VNC password set successfully to /root/.vnc/passwd", file=sys.stderr)
+        except Exception as e:
+            print(f"[execute_script] Error setting VNC password: {str(e)}", file=sys.stderr)
+
+    # Start VNC server with session_id as password only if streaming is enabled
+    if ENABLE_STREAMING:
+        vnc_env = os.environ.copy()
+        vnc_env['USER'] = 'root'  # Set USER to root for VNC server
+
         # Start VNC server directly
         vnc_cmd = ['vncserver', ':1', '-geometry', '1280x720', '-depth', '16', '-viewonly']
         print(f"[execute_script] Starting VNC server with command: {vnc_cmd}", file=sys.stderr)
@@ -220,11 +222,16 @@ async def execute_script():
         print(f"[execute_script] Streaming is disabled (ENABLE_STREAMING=False)", file=sys.stderr)
         websockify_process = None
 
-    # Generate WebSocket URL and VNC streaming URL
-    websocket_url = f"ws://{request.host}/ws/{session_id}"
-    vnc_stream_url = f"http://{request.host}/vnc.html?host={request.host.split(':')[0]}&port=6080&password={session_id}&view_only=1&autoconnect=1&resize=scale"
-    print(f"[execute_script] Generated WebSocket URL: {websocket_url}", file=sys.stderr)
-    print(f"[execute_script] Generated VNC Stream URL: {vnc_stream_url}", file=sys.stderr)
+    # Generate WebSocket URL and VNC streaming URL only if streaming is enabled
+    if ENABLE_STREAMING:
+        websocket_url = f"ws://{request.host}/ws/{session_id}"
+        vnc_stream_url = f"http://{request.host}/vnc.html?host={request.host.split(':')[0]}&port=6080&password={session_id}&view_only=1&autoconnect=1&resize=scale"
+        print(f"[execute_script] Generated WebSocket URL: {websocket_url}", file=sys.stderr)
+        print(f"[execute_script] Generated VNC Stream URL: {vnc_stream_url}", file=sys.stderr)
+    else:
+        websocket_url = ""
+        vnc_stream_url = ""
+        print(f"[execute_script] Streaming URLs not generated as streaming is disabled", file=sys.stderr)
 
     # Update Supabase with streaming information only if streaming is enabled
     if supabase_client and ENABLE_STREAMING:
@@ -261,7 +268,7 @@ async def execute_script():
     try:
         print(f"[execute_script] Executing script: {script_path} for job {job_id}, script_id {script_id}", file=sys.stderr)
         print(f"[execute_script] Memory usage before execution: {psutil.Process().memory_info().rss / 1024 / 1024:.2f} MB", file=sys.stderr)
-        # Update stream status to 'streaming'
+        # Update stream status to 'streaming' only if streaming is enabled
         if supabase_client and ENABLE_STREAMING:
             try:
                 response = supabase_client.table('scripts_run').update({
@@ -318,7 +325,7 @@ async def execute_script():
         with open(os.path.join(script_folder_path, 'stderr.txt'), 'w') as f:
             f.write(stderr_data)
     finally:
-        # Update stream status to 'complete'
+        # Update stream status to 'complete' only if streaming is enabled
         if supabase_client and ENABLE_STREAMING:
             try:
                 response = supabase_client.table('scripts_run').update({
@@ -410,12 +417,10 @@ async def execute_script():
         json.dump(metadata, f, indent=2)
     print(f"[execute_script] Saved metadata to {metadata_path}", file=sys.stderr)
 
-    # Add WebSocket URL and VNC streaming URL to response
-    return jsonify({
+    # Add WebSocket URL and VNC streaming URL to response only if streaming is enabled
+    response_data = {
         'status': status,
         'sessionId': session_id,
-        'websocketUrl': websocket_url,
-        'vncStreamUrl': vnc_stream_url,
         'stdout': stdout_data,
         'stderr': stderr_data,
         'start_time': start_time_iso,
@@ -423,7 +428,13 @@ async def execute_script():
         'duration': duration,
         'job_id': job_id,
         'script_id': script_id
-    })
+    }
+    if ENABLE_STREAMING:
+        response_data.update({
+            'websocketUrl': websocket_url,
+            'vncStreamUrl': vnc_stream_url
+        })
+    return jsonify(response_data)
 
 @app.route('/initialize_job', methods=['POST'])
 def initialize_job():
