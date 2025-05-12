@@ -1,5 +1,9 @@
-import uvicorn
 import argparse
+try:
+    import gunicorn
+except ImportError:
+    print("[app_playwright] Warning: gunicorn not found, falling back to development server", file=sys.stderr)
+    gunicorn = None
 from flask import Flask, request, jsonify, send_from_directory
 from flask_sock import Sock
 from playwright.async_api import async_playwright
@@ -467,11 +471,39 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run Flask server with custom port')
     parser.add_argument('--port', type=int, default=int(os.getenv('PORT', 10000)), help='Port to run the server on')
     parser.add_argument('--debug', action='store_true', default=False, help='Enable debug mode')
+    parser.add_argument('--workers', type=int, default=int(os.getenv('GUNICORN_WORKERS', 4)), help='Number of gunicorn worker processes')
     args = parser.parse_args()
     port = args.port
     debug = args.debug
-    print(f"[app_playwright] Running on port {port}", file=sys.stderr)
+    workers = args.workers
+    print(f"[app_playwright] Running on port {port} with {workers} workers", file=sys.stderr)
     
-    # Wrap the Flask app with WsgiToAsgi adapter for Uvicorn compatibility
-    asgi_app = WsgiToAsgi(app)
-    uvicorn.run(asgi_app, host='0.0.0.0', port=port, log_level="debug" if debug else "info")
+    if gunicorn:
+        # Run gunicorn for production in Docker environment
+        from gunicorn.app.base import BaseApplication
+
+        class StandaloneApplication(BaseApplication):
+            def __init__(self, app, options=None):
+                self.options = options or {}
+                self.application = app
+                super().__init__()
+
+            def load_config(self):
+                config = {key: value for key, value in self.options.items()
+                          if key in self.cfg.settings and value is not None}
+                for key, value in config.items():
+                    self.cfg.set(key.lower(), value)
+
+            def load(self):
+                return self.application
+
+        options = {
+            'bind': f'0.0.0.0:{port}',
+            'workers': workers,
+            'loglevel': 'debug' if debug else 'info',
+            'timeout': 120
+        }
+        StandaloneApplication(app, options).run()
+    else:
+        # Fallback for development or if gunicorn is not installed
+        app.run(host='0.0.0.0', port=port, debug=debug)
