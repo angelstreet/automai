@@ -79,6 +79,10 @@ async def execute_script():
     stderr_data = ''
     result = {}
 
+    # Parse parameters into a list similar to command-line arguments
+    param_list = parameters.split() if parameters else []
+    print(f"[execute_script] Parameters for script execution: {param_list}", file=sys.stderr)
+
     # Execute Playwright script with streaming
     try:
         async with async_playwright() as p:
@@ -98,10 +102,8 @@ async def execute_script():
                 stdout_capture = io.StringIO()
                 stderr_capture = io.StringIO()
                 with contextlib.redirect_stdout(stdout_capture), contextlib.redirect_stderr(stderr_capture):
-                    exec(script_content, {'page': page, 'browser': browser})
-                    # Prepare command with parameters including iteration and trace_folder
-                    # command = [sys.executable, script_content_path] + (parameters.split() if parameters else [])
-
+                    exec(script_content, {'page': page, 'browser': browser, 'sys': sys, 'argv': [script_content_path] + param_list})
+                    
                 stdout_data = stdout_capture.getvalue()
                 stderr_data = stderr_capture.getvalue()
                 result = {'title': await page.title()}
