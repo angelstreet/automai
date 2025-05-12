@@ -48,26 +48,27 @@ def activate_semantic_placeholder(page: Page):
         return False
 
 def zap(page: Page, url: str, channel: str = 'RTS 1'):
-    activate_semantic_placeholder(page)
-    page.wait_for_timeout(2000)
+    try:
+        activate_semantic_placeholder(page)
+        page.wait_for_timeout(2000)
 
-    page.wait_for_selector("#flt-semantic-node-6", state="visible")
-    print("Click on TV Guide")
-    page.locator("#flt-semantic-node-6").click()
+        page.wait_for_selector("#flt-semantic-node-6", state="visible")
+        print("Click on TV Guide")
+        page.locator("#flt-semantic-node-6").click()
 
-    page.wait_for_selector("#flt-semantic-node-233", state="visible")
-    print("Click on LIVE TV tab")
-    page.locator("#flt-semantic-node-233").click()
+        page.wait_for_selector("#flt-semantic-node-233", state="visible")
+        print("Click on LIVE TV tab")
+        page.locator("#flt-semantic-node-233").click()
 
-    page.wait_for_selector(f'[aria-label*="{channel}"]', state="visible")
-    print("Click on specific channel")
-    page.locator(f'[aria-label*="{channel}"]').click()
+        page.wait_for_selector(f'[aria-label*="{channel}"]', state="visible")
+        print("Click on specific channel")
+        page.locator(f'[aria-label*="{channel}"]').click()
 
-    print('Zap success')
-    return True
-except Exception as e:
-    print(f'Zap failed: {str(e)}')
-    return False
+        print('Zap success')
+        return True
+    except Exception as e:
+        print(f'Zap failed: {str(e)}')
+        return False
 
 def init_browser(playwright: Playwright, headless=False, debug: bool = False, video_dir: str = None, screenshots: bool = True, video: bool = True, source: bool = True, cookies: bool = True):
     browser = playwright.chromium.launch(
