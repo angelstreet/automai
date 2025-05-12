@@ -47,54 +47,68 @@ def activate_semantic_placeholder(page: Page):
         print(f"Error in semantic placeholder activation: {str(e)}")
         return False
 
+def pass_login(page: Page, url: str, channel: str = 'RTS 1'):
+    try:
+        activate_semantic_placeholder(page)
+        page.wait_for_timeout(2000)
+        page.wait_for_selector("#flt-semantic-node-6", state="visible")
+        page.click("#flt-semantic-node-6")
+        print('Login screen skipped')
+        page.wait_for_timeout(10000)
+        return True
+    except Exception as e:
+        print(f'Login screen not shown or skipped: {str(e)}')
+        return True
+
 def zap(page: Page, url: str, channel: str = 'RTS 1'):
     try:
         activate_semantic_placeholder(page)
         page.wait_for_timeout(2000)
 
-        page.wait_for_selector("#flt-semantic-node-6", state="visible")
+        page.wait_for_selector("#flt-semantic-node-6", state="visible", timeout=20000)
         print("Click on TV Guide")
         page.locator("#flt-semantic-node-6").click()
 
-        page.wait_for_selector("#flt-semantic-node-233", state="visible")
+        page.wait_for_selector("[aria-label*='LIVE TV']", state="visible")
         print("Click on LIVE TV tab")
-        page.locator("#flt-semantic-node-233").click()
+        page.locator("[aria-label*='LIVE TV']").click()
 
         page.wait_for_selector(f'[aria-label*="{channel}"]', state="visible")
         print("Click on specific channel")
         page.locator(f'[aria-label*="{channel}"]').click()
-
+        page.wait_for_timeout(20000)
         print('Zap success')
         return True
     except Exception as e:
         print(f'Zap failed: {str(e)}')
         return False
 
-def init_browser(playwright: Playwright, headless=False, debug: bool = False, video_dir: str = None, screenshots: bool = True, video: bool = True, source: bool = True, cookies: bool = True):
+def init_browser(playwright: Playwright, headless=False, debug: bool = False, video_dir: str = None, screenshots: bool = True, video: bool = True, source: bool = True, cookies_path: str = None):
     browser = playwright.chromium.launch(
         headless=headless,
         args=['--disable-blink-features=AutomationControlled', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--disable-gpu']
     )
 
-    job_folder = os.path.dirname(video_dir) if video_dir else None
-    cookies_path = job_folder if cookies and job_folder else None
     # Ensure the cookies directory exists only if a path is provided
     if cookies_path:
-        print("Creating or using cookies path:", cookies_path)
-        os.makedirs(cookies_path, exist_ok=True)
+        if not os.path.exists(cookies_path):
+            os.makedirs(cookies_path, exist_ok=True)
+            print("Creating cookies folder:", cookies_path)
+        else:
+            print("Cookies folder exists")
 
     context = browser.new_context(
         viewport={"width": 1024, "height": 768},
         record_video_dir=video_dir if video else None,
         user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         locale="en-US",
-        timezone_id="America/New_York",
+        timezone_id="Europe/Zurich",
         java_script_enabled=True,
         ignore_https_errors=True
     )
 
     # Load cookies from file if they exist
-    if cookies and cookies_path:
+    if cookies_path: 
         cookies_file = os.path.join(cookies_path, 'cookies.json')
         if os.path.exists(cookies_file):
             try:
@@ -121,20 +135,24 @@ def run(playwright: Playwright, headless=False, debug: bool = False, trace_folde
     os.makedirs(trace_subfolder, exist_ok=True)
     trace_file = f"{trace_subfolder}/{timestamp}.zip"
 
-    cookies_path = job_folder if cookies and job_folder else None
-    if cookies_path:
-        print(f"Using job folder for cookies: {cookies_path}")
+    if cookies:
+        cookies_path = trace_folder
     else:
-        print("No cookies path provided")
-        
+        cookies_path = None
+
     page, context, browser = init_browser(playwright, headless, debug, trace_subfolder if video else None, screenshots, video, source, cookies_path)
     url = "https://www.sunrisetv.ch/de/home"
     page.set_default_timeout(10000)
 
     try:
         page.goto(url, timeout=60000)
-        page.wait_for_timeout(10000)
+        page.wait_for_timeout(5000)
         print("We suppose we are already logged in and cookies are loaded")
+        pass_login(page, url)
+        loaded_cookies = context.cookies()
+        print(f"Loaded cookies count: {len(loaded_cookies)}")
+        for cookie in loaded_cookies:
+            print(f"Cookie: {cookie.get('name', 'Unknown')} - {cookie.get('value', 'No value')}")
         result = zap(page, url, channel)
         page.wait_for_timeout(10000)
     except Exception as e:
@@ -148,18 +166,6 @@ def run(playwright: Playwright, headless=False, debug: bool = False, trace_folde
             print(f"Screenshot saved to: {screenshot_path}")
         except Exception as e:
             print(f"Error taking final screenshot: {str(e)}")
-        
-        # Save cookies to file if cookies option is enabled
-        if cookies and cookies_path:
-            cookies_file = os.path.join(cookies_path, 'cookies.json')
-            try:
-                os.makedirs(cookies_path, exist_ok=True)
-                cookies_data = context.cookies()
-                with open(cookies_file, 'w') as f:
-                    json.dump(cookies_data, f, indent=2)
-                print(f"Saved cookies to {cookies_file}")
-            except Exception as e:
-                print(f"Error saving cookies to {cookies_file}: {str(e)}")
         
         page.close()
         try:
@@ -187,7 +193,7 @@ def main():
     parser.add_argument('--no-screenshots', action='store_true', default=False, help='Disable screenshots in tracing (default: enabled)')
     parser.add_argument('--no-video', action='store_true', default=False, help='Disable video recording (default: enabled)')
     parser.add_argument('--no-trace', action='store_true', default=False, help='Disable source tracing (default: enabled)')
-    parser.add_argument('--channel', type=str, default='RTS 1', help='Channel to select (default: RTS 1)')
+    parser.add_argument('--channel', type=str, default='SRF 1', help='Channel to select (default: SRF 1)')
     args, _ = parser.parse_known_args()
 
     print(f"Running in {'headless' if args.headless else 'visible'} mode with {'no-video' if args.no_video else 'video'}, {'no-screenshots' if args.no_screenshots else 'screenshots'}, {'no-trace' if args.no_trace else 'trace'}, targeting channel: {args.channel}")

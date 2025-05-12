@@ -91,12 +91,14 @@ def login(page: Page, url: str, username: str, password: str):
     for cookie in cookies_before:
         print(f"Cookie: {cookie.get('name', 'Unknown')} - {cookie.get('value', 'No value')}")
 
-    print("Reload page")
+    """
     try:
+        print("Reload page")
         page.reload(timeout=20000)
         page.wait_for_timeout(5000)
     except :
         print("Failed to reload...Continue test")
+    """
 
     activate_semantic_placeholder(page)
     page.wait_for_timeout(1000)
@@ -105,6 +107,18 @@ def login(page: Page, url: str, username: str, password: str):
         element = page.get_by_label(re.compile("Profil", re.IGNORECASE))
         if element.count() > 0 and element.is_visible():
             print('Login success')
+            # Save cookies immediately after successful login
+            cookies_path = os.getenv("cookies_path", "suncherry-playwright_trace")
+            if cookies_path:
+                cookies_file = os.path.join(cookies_path, 'cookies.json')
+                try:
+                    os.makedirs(cookies_path, exist_ok=True)
+                    cookies_data = page.context.cookies()
+                    with open(cookies_file, 'w') as f:
+                        json.dump(cookies_data, f, indent=2)
+                    print(f"Saved cookies to {cookies_file} after successful login")
+                except Exception as e:
+                    print(f"Error saving cookies to {cookies_file}: {str(e)}")
             return True
         else:
             print('Login failed')
@@ -113,42 +127,29 @@ def login(page: Page, url: str, username: str, password: str):
         print(f'Login failed: {str(e)}')
         return False
 
-def init_browser(playwright: Playwright, headless=False, debug: bool = False, video_dir: str = None, screenshots: bool = True, video: bool = True, source: bool = True, cookies: bool = True):
+def init_browser(playwright: Playwright, headless=False, debug: bool = False, video_dir: str = None, screenshots: bool = True, video: bool = True, source: bool = True, cookies_path: str = None):
     browser = playwright.chromium.launch(
         headless=headless,
         args=['--disable-blink-features=AutomationControlled', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--disable-gpu']
     )
-
-    job_folder = os.path.dirname(video_dir) if video_dir else None
-    cookies_path = job_folder if cookies and job_folder else None
-    # Ensure the cookies directory exists only if a path is provided
-    if cookies_path:
-        print("Creating or using cookies path:", cookies_path)
-        os.makedirs(cookies_path, exist_ok=True)
 
     context = browser.new_context(
         viewport={"width": 1024, "height": 768},
         record_video_dir=video_dir if video else None,
         user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         locale="en-US",
-        timezone_id="America/New_York",
+        timezone_id="Europe/Zurich",
         java_script_enabled=True,
         ignore_https_errors=True
     )
 
     # Load cookies from file if they exist
-    if cookies and cookies_path:
-        cookies_file = os.path.join(cookies_path, 'cookies.json')
-        if os.path.exists(cookies_file):
-            try:
-                with open(cookies_file, 'r') as f:
-                    cookies_data = json.load(f)
-                context.add_cookies(cookies_data)
-                print(f"Loaded cookies from {cookies_file}")
-            except Exception as e:
-                print(f"Error loading cookies from {cookies_file}: {str(e)}")
+    if cookies_path: 
+        if not os.path.exists(cookies_path):
+            os.makedirs(cookies_path, exist_ok=True)
+            print("Creating cookies folder:", cookies_path)
         else:
-            print(f"No cookies file found at {cookies_file}")
+            print("Cookies folder exists but we will not use it")
 
     context.tracing.start(screenshots=screenshots, snapshots=True, sources=source)
     page = context.new_page()
@@ -159,16 +160,15 @@ def init_browser(playwright: Playwright, headless=False, debug: bool = False, vi
 
 def run(playwright: Playwright, username: str, password: str, headless=False, debug: bool = False, trace_folder: str = 'suncherry-playwright_trace', screenshots: bool = True, video: bool = True, source: bool = True, cookies: bool = True):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    job_folder = trace_folder  # Use trace_folder as the base job folder directly
-    trace_subfolder = f"{job_folder}/trace_{timestamp}"  # Create a trace subfolder within job_folder
+    trace_subfolder = f"{trace_folder}/{timestamp}"
     os.makedirs(trace_subfolder, exist_ok=True)
     trace_file = f"{trace_subfolder}/{timestamp}.zip"
 
-    cookies_path = job_folder if cookies and job_folder else None
-    if cookies_path:
-        print(f"Using job folder for cookies: {cookies_path}")
+    if cookies:
+        cookies_path = trace_folder
     else:
-        print("No cookies path provided")
+        cookies_path = None
+
     page, context, browser = init_browser(playwright, headless, debug, trace_subfolder if video else None, screenshots, video, source, cookies_path)
     url = "https://www.sunrisetv.ch/de/home"
     page.set_default_timeout(10000)
@@ -191,18 +191,7 @@ def run(playwright: Playwright, username: str, password: str, headless=False, de
         except Exception as e:
             print(f"Error taking final screenshot: {str(e)}")
         
-        # Save cookies to file if cookies option is enabled
-        if cookies and cookies_path:
-            cookies_file = os.path.join(cookies_path, 'cookies.json')
-            try:
-                os.makedirs(cookies_path, exist_ok=True)
-                cookies_data = context.cookies()
-                with open(cookies_file, 'w') as f:
-                    json.dump(cookies_data, f, indent=2)
-                print(f"Saved cookies to {cookies_file}")
-            except Exception as e:
-                print(f"Error saving cookies to {cookies_file}: {str(e)}")
-        
+        # Removed cookie saving here as it's now done after successful login
         page.close()
         try:
             context.tracing.stop(path=trace_file)
