@@ -196,7 +196,7 @@ async def execute_script():
 
     # Generate WebSocket URL and VNC streaming URL (with session_id as password)
     websocket_url = f"ws://{request.host}/ws/{session_id}"
-    vnc_stream_url = f"http://{request.host}/vnc.html?host={request.host.split(':')[0]}&port=6080&password={session_id}"
+    vnc_stream_url = f"http://{request.host}/custom_vnc.html?host={request.host.split(':')[0]}&port=6080&password={session_id}"
     print(f"[execute_script] Generated WebSocket URL: {websocket_url}", file=sys.stderr)
     print(f"[execute_script] Generated VNC Stream URL: {vnc_stream_url}", file=sys.stderr)
 
@@ -559,7 +559,7 @@ def serve_custom_vnc_html():
                 var encrypt = (window.location.protocol === "https:");
                 var trueSock = (window.location.protocol !== "https:");
                 var rfb = new RFB(document.getElementById('noVNC_canvas'), 'ws' + (encrypt ? 's' : '') + '://' + host + ':' + port + '/' + path, { 'credentials': { 'password': password } });
-                rfb.viewOnly = false;
+                rfb.viewOnly = true;  // Set to view-only mode
                 rfb.scaleViewport = true;
                 rfb.resizeSession = true;
                 rfb.showDotCursor = false;
