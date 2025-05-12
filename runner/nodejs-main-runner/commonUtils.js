@@ -21,7 +21,6 @@ function getFlaskServiceUrl(job_run_env) {
   } else if (job_run_env === 'prod-playwright') {
     return process.env.PYTHON_SLAVE_RUNNER_PROD_PLAYWRIGHT_FLASK_SERVICE_URL;
   } else if (job_run_env === 'preprod-playwright') {
-    return 'http://127.0.0.1:10000';
     return process.env.PYTHON_SLAVE_RUNNER_PREPROD_PLAYWRIGHT_FLASK_SERVICE_URL;
   } else if (job_run_env === 'preprod') {
     return process.env.PYTHON_SLAVE_RUNNER_PREPROD_FLASK_SERVICE_URL;
