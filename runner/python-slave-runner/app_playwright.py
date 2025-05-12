@@ -89,11 +89,18 @@ async def execute_script():
                 # Set environment variables
                 script_env = os.environ.copy()
                 script_env.update(env_vars)
-                # Execute script
+                # Execute script and capture output
                 with open(script_content_path, 'r') as f:
                     script_content = f.read()
-                exec(script_content, {'page': page, 'browser': browser})
-                stdout_data = f"Executed {script_path} successfully"
+                # Use a StringIO to capture output
+                import io
+                import contextlib
+                stdout_capture = io.StringIO()
+                stderr_capture = io.StringIO()
+                with contextlib.redirect_stdout(stdout_capture), contextlib.redirect_stderr(stderr_capture):
+                    exec(script_content, {'page': page, 'browser': browser})
+                stdout_data = stdout_capture.getvalue()
+                stderr_data = stderr_capture.getvalue()
                 result = {'title': await page.title()}
                 # Save screenshot
                 screenshot_path = os.path.join(script_folder_path, 'screenshot.png')
