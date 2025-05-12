@@ -601,7 +601,7 @@ if __name__ == '__main__':
         options = {
             'bind': f'0.0.0.0:{port}',
             'workers': workers,
-            'loglevel': 'debug' if debug else 'info',
+            'loglevel': 'info',
             'timeout': 120
         }
         StandaloneApplication(app, options).run()
