@@ -111,17 +111,44 @@ async def execute_script():
     else:
         print(f"[execute_script] No existing VNC configuration found at {vnc_home}", file=sys.stderr)
 
-    # Start VNC server with session_id as password, setting USER environment variable
+    # Create VNC directory
+    os.makedirs("/root/.vnc", exist_ok=True)
+
+    # Create a simple xstartup file
+    xstartup_file = "/root/.vnc/xstartup"
+    with open(xstartup_file, "w") as f:
+        f.write("#!/bin/sh\nxterm &\nsleep infinity\n")
+    os.chmod(xstartup_file, 0o755)
+
+    # Set session_id as VNC password (ensure it's at least 6 characters)
+    vnc_password = session_id
+    if len(vnc_password) < 6:
+        vnc_password = session_id + "123456"[:6-len(session_id)]
+    print(f"[execute_script] Setting VNC password with length {len(vnc_password)}", file=sys.stderr)
+
+    # Create password file using vncpasswd
+    with open('/tmp/vnc_pwd', 'w') as f:
+        f.write(f"{vnc_password}\n{vnc_password}\n")
+
+    try:
+        # Use vncpasswd with input redirection
+        subprocess.run('cat /tmp/vnc_pwd | vncpasswd', shell=True, check=True)
+        os.remove('/tmp/vnc_pwd')  # Remove the temporary password file
+        print(f"[execute_script] VNC password set successfully to /root/.vnc/passwd", file=sys.stderr)
+    except Exception as e:
+        print(f"[execute_script] Error setting VNC password: {str(e)}", file=sys.stderr)
+
+    # Start VNC server with session_id as password
     vnc_env = os.environ.copy()
     vnc_env['USER'] = 'root'  # Set USER to root for VNC server
-    # Use session_id as the password for VNC server
-    vnc_password_file = os.path.join(script_folder_path, 'vncpasswd')
-    with open(vnc_password_file, 'w') as f:
-        f.write(session_id)  # Use session_id as password
-    vnc_process = subprocess.Popen(['vncserver', ':1', '-geometry', '1280x720', '-depth', '24', '-passwd', vnc_password_file], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=vnc_env)
+
+    # Start VNC server directly (vncserver will create password file on first run)
+    vnc_cmd = ['vncserver', ':1', '-geometry', '1280x720', '-depth', '24']
+    print(f"[execute_script] Starting VNC server with command: {vnc_cmd}", file=sys.stderr)
+    vnc_process = subprocess.Popen(vnc_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=vnc_env)
     vnc_process.wait()
     vnc_stdout, vnc_stderr = vnc_process.communicate()
-    print(f"[execute_script] Started VNC server for session {session_id} with session_id as password on display :1", file=sys.stderr)
+    print(f"[execute_script] Started VNC server for session {session_id}", file=sys.stderr)
     print(f"[execute_script] VNC server stdout: {vnc_stdout}", file=sys.stderr)
     print(f"[execute_script] VNC server stderr: {vnc_stderr}", file=sys.stderr)
     print(f"[execute_script] VNC server return code: {vnc_process.returncode}", file=sys.stderr)
@@ -497,6 +524,58 @@ def health_check():
 def serve_vnc_html():
     return send_from_directory('/noVNC', 'vnc.html')
 
+@app.route('/custom_vnc.html', methods=['GET'])
+def serve_custom_vnc_html():
+    custom_html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>noVNC</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <link rel="stylesheet" href="/vnc_lite.css">
+        <style>
+            /* Hide noVNC toolbar */
+            #noVNC_control_bar, #noVNC_status_bar { display: none !important; }
+            #noVNC_canvas { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+        </style>
+        <script src="/core/util.js"></script>
+        <script src="/core/base64.js"></script>
+        <script src="/core/websock.js"></script>
+        <script src="/core/des.js"></script>
+        <script src="/core/input/keysymdef.js"></script>
+        <script src="/core/input/xtscancodes.js"></script>
+        <script src="/core/input/util.js"></script>
+        <script src="/core/input/devices.js"></script>
+        <script src="/core/display.js"></script>
+        <script src="/core/rfb.js"></script>
+        <script src="/core/keysym.js"></script>
+        <script>
+            function init() {
+                var host = WebUtil.getQueryVar('host', window.location.hostname);
+                var port = WebUtil.getQueryVar('port', window.location.port);
+                var password = WebUtil.getQueryVar('password', '');
+                var path = WebUtil.getQueryVar('path', 'websockify');
+                var encrypt = (window.location.protocol === "https:");
+                var trueSock = (window.location.protocol !== "https:");
+                var rfb = new RFB(document.getElementById('noVNC_canvas'), 'ws' + (encrypt ? 's' : '') + '://' + host + ':' + port + '/' + path, { 'credentials': { 'password': password } });
+                rfb.viewOnly = false;
+                rfb.scaleViewport = true;
+                rfb.resizeSession = true;
+                rfb.showDotCursor = false;
+                rfb.background = 'rgb(0,0,0)';
+                rfb.connect();
+            }
+            window.onload = init;
+        </script>
+    </head>
+    <body>
+        <div id="noVNC_canvas"></div>
+    </body>
+    </html>
+    """
+    return custom_html
+
 @app.route('/<path:path>', methods=['GET'])
 def serve_vnc_files(path):
     return send_from_directory('/noVNC', path)
@@ -605,7 +684,7 @@ def start_stream(session_id):
     try:
         start_vnc_server(session_id)
         websockify_process = start_websockify()
-        vnc_url = f"http://127.0.0.1:6080/vnc.html?host=127.0.0.1&port=6080&password={session_id}"
+        vnc_url = f"http://127.0.0.1:6080/custom_vnc.html?host=127.0.0.1&port=6080&password={session_id}"
         print(f"[start_stream] VNC stream started for session {session_id} at {vnc_url}", file=sys.stderr)
         return jsonify({"status": "success", "session_id": session_id, "vnc_url": vnc_url})
     except Exception as e:
