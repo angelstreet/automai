@@ -35,6 +35,9 @@ else:
     supabase_client = None
     print("[app] Warning: Supabase credentials not found. Database updates will not be performed.", file=sys.stderr)
 
+# Wrap the Flask app with WsgiToAsgi for Uvicorn compatibility (moved to module level)
+asgi_app = WsgiToAsgi(app)
+
 @app.route('/execute', methods=['POST'])
 async def execute_script():
     data = request.get_json()
@@ -532,6 +535,5 @@ if __name__ == '__main__':
     workers = args.workers
     print(f"[app_browser-use] Running on port {port} with {workers} workers", file=sys.stderr)
     
-    # Wrap the Flask app with WsgiToAsgi adapter for Uvicorn compatibility
-    asgi_app = WsgiToAsgi(app)
+    # Run Uvicorn for local development
     uvicorn.run(asgi_app, host='0.0.0.0', port=port, log_level="debug" if debug else "info", workers=workers)
