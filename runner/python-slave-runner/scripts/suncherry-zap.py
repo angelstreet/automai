@@ -83,7 +83,7 @@ def zap(page: Page, url: str, channel: str = 'RTS 1'):
         print(f'Zap failed: {str(e)}')
         return False
 
-def init_browser(playwright: Playwright, headless=False, debug: bool = False, video_dir: str = None, screenshots: bool = True, video: bool = True, source: bool = True, cookies_path: str = None):
+def init_browser(playwright: Playwright, headless=True, debug: bool = False, video_dir: str = None, screenshots: bool = True, video: bool = True, source: bool = True, cookies_path: str = None):
     browser = playwright.chromium.launch(
         headless=headless,
         args=['--disable-blink-features=AutomationControlled', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--disable-gpu']
@@ -128,7 +128,7 @@ def init_browser(playwright: Playwright, headless=False, debug: bool = False, vi
         page.on("requestfailed", lambda request: print(f"Request failed: {request.url} {request.failure}"))
     return page, context, browser
 
-def run(playwright: Playwright, headless=False, debug: bool = False, trace_folder: str = 'suncherry-playwright_trace', screenshots: bool = True, video: bool = True, source: bool = True, cookies: bool = True, channel: str = 'RTS 1'):
+def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder: str = 'suncherry-playwright_trace', screenshots: bool = True, video: bool = True, source: bool = True, cookies: bool = True, channel: str = 'RTS 1'):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     job_folder = trace_folder  # Use trace_folder as the base job folder directly
     trace_subfolder = f"{job_folder}/trace_{timestamp}"  # Create a trace subfolder within job_folder

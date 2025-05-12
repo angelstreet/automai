@@ -127,7 +127,7 @@ def login(page: Page, url: str, username: str, password: str):
         print(f'Login failed: {str(e)}')
         return False
 
-def init_browser(playwright: Playwright, headless=False, debug: bool = False, video_dir: str = None, screenshots: bool = True, video: bool = True, source: bool = True, cookies_path: str = None):
+def init_browser(playwright: Playwright, headless=True, debug: bool = False, video_dir: str = None, screenshots: bool = True, video: bool = True, source: bool = True, cookies_path: str = None):
     browser = playwright.chromium.launch(
         headless=headless,
         args=['--disable-blink-features=AutomationControlled', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--disable-gpu']
@@ -158,7 +158,7 @@ def init_browser(playwright: Playwright, headless=False, debug: bool = False, vi
         page.on("requestfailed", lambda request: print(f"Request failed: {request.url} {request.failure}"))
     return page, context, browser
 
-def run(playwright: Playwright, username: str, password: str, headless=False, debug: bool = False, trace_folder: str = 'suncherry-playwright_trace', screenshots: bool = True, video: bool = True, source: bool = True, cookies: bool = True):
+def run(playwright: Playwright, username: str, password: str, headless=True, debug: bool = False, trace_folder: str = 'suncherry-playwright_trace', screenshots: bool = True, video: bool = True, source: bool = True, cookies: bool = True):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     trace_subfolder = f"{trace_folder}/{timestamp}"
     os.makedirs(trace_subfolder, exist_ok=True)

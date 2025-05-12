@@ -102,19 +102,72 @@ async def execute_script():
     stderr_data = ''
     result = {}
 
-    # Start VNC server with session_id as password
+    # Clean up any existing VNC configurations or lock files
+    import shutil
+    vnc_home = os.path.expanduser("~root/.vnc")
+    if os.path.exists(vnc_home):
+        shutil.rmtree(vnc_home, ignore_errors=True)
+        print(f"[execute_script] Cleaned up existing VNC configuration at {vnc_home}", file=sys.stderr)
+    else:
+        print(f"[execute_script] No existing VNC configuration found at {vnc_home}", file=sys.stderr)
+
+    # Start VNC server with session_id as password, setting USER environment variable
+    vnc_env = os.environ.copy()
+    vnc_env['USER'] = 'root'  # Set USER to root for VNC server
+    # Use session_id as the password for VNC server
     vnc_password_file = os.path.join(script_folder_path, 'vncpasswd')
     with open(vnc_password_file, 'w') as f:
-        f.write(session_id)
-    vnc_process = subprocess.Popen(['vncserver', ':99', '-geometry', '1280x720', '-depth', '24', '-passwd', vnc_password_file], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        f.write(session_id)  # Use session_id as password
+    vnc_process = subprocess.Popen(['vncserver', ':1', '-geometry', '1280x720', '-depth', '24', '-passwd', vnc_password_file], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=vnc_env)
     vnc_process.wait()
-    print(f"[execute_script] Started VNC server for session {session_id}", file=sys.stderr)
+    vnc_stdout, vnc_stderr = vnc_process.communicate()
+    print(f"[execute_script] Started VNC server for session {session_id} with session_id as password on display :1", file=sys.stderr)
+    print(f"[execute_script] VNC server stdout: {vnc_stdout}", file=sys.stderr)
+    print(f"[execute_script] VNC server stderr: {vnc_stderr}", file=sys.stderr)
+    print(f"[execute_script] VNC server return code: {vnc_process.returncode}", file=sys.stderr)
 
-    # Start websockify for noVNC
+    # Check if VNC server is running
+    try:
+        vnc_check = subprocess.run(['ps', 'aux'], capture_output=True, text=True)
+        if ':1' in vnc_check.stdout:
+            print(f"[execute_script] VNC server confirmed running on display :1", file=sys.stderr)
+        else:
+            print(f"[execute_script] WARNING: VNC server not found running on display :1", file=sys.stderr)
+    except Exception as e:
+        print(f"[execute_script] Error checking VNC server status: {str(e)}", file=sys.stderr)
+
+    # Start websockify for noVNC, targeting VNC server on display :1 (port 5901)
     websockify_process = subprocess.Popen(['websockify', '6080', 'localhost:5901'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    print(f"[execute_script] Started websockify for VNC streaming on port 6080", file=sys.stderr)
+    print(f"[execute_script] Started websockify for VNC streaming on port 6080 with PID {websockify_process.pid}", file=sys.stderr)
+    
+    # Check if websockify is running and test connectivity to VNC server
+    try:
+        import time
+        time.sleep(1)  # Give it a moment to start
+        if websockify_process.poll() is None:
+            print(f"[execute_script] websockify confirmed running with PID {websockify_process.pid}", file=sys.stderr)
+            # Test connectivity to VNC server
+            try:
+                import socket
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                s.settimeout(2)
+                result = s.connect_ex(('localhost', 5901))
+                if result == 0:
+                    print(f"[execute_script] Success: websockify can connect to VNC server at localhost:5901", file=sys.stderr)
+                else:
+                    print(f"[execute_script] WARNING: websockify cannot connect to VNC server at localhost:5901, error code: {result}", file=sys.stderr)
+                s.close()
+            except Exception as conn_err:
+                print(f"[execute_script] Error testing connectivity to VNC server: {str(conn_err)}", file=sys.stderr)
+        else:
+            print(f"[execute_script] WARNING: websockify terminated unexpectedly with return code {websockify_process.returncode}", file=sys.stderr)
+            websockify_stdout, websockify_stderr = websockify_process.communicate()
+            print(f"[execute_script] websockify stdout: {websockify_stdout}", file=sys.stderr)
+            print(f"[execute_script] websockify stderr: {websockify_stderr}", file=sys.stderr)
+    except Exception as e:
+        print(f"[execute_script] Error checking websockify status: {str(e)}", file=sys.stderr)
 
-    # Generate WebSocket URL and VNC streaming URL
+    # Generate WebSocket URL and VNC streaming URL (with session_id as password)
     websocket_url = f"ws://{request.host}/ws/{session_id}"
     vnc_stream_url = f"http://{request.host}/vnc.html?host={request.host.split(':')[0]}&port=6080&password={session_id}"
     print(f"[execute_script] Generated WebSocket URL: {websocket_url}", file=sys.stderr)
@@ -149,7 +202,7 @@ async def execute_script():
     # Set environment variables
     script_env = os.environ.copy()
     script_env.update(env_vars)
-    script_env['DISPLAY'] = ':99'  # Ensure script runs in the same display as VNC server
+    script_env['DISPLAY'] = ':1'  # Ensure script runs in the same display as VNC server
 
     # Execute script using subprocess.run
     try:
@@ -447,6 +500,118 @@ def serve_vnc_html():
 @app.route('/<path:path>', methods=['GET'])
 def serve_vnc_files(path):
     return send_from_directory('/noVNC', path)
+
+def setup_vnc_password(session_id):
+    vnc_dir = "/root/.vnc"
+    passwd_file = os.path.join(vnc_dir, "passwd")
+    
+    # Ensure VNC directory exists
+    os.makedirs(vnc_dir, exist_ok=True)
+    
+    # Validate password length (minimum 6 characters for tightvncserver)
+    vnc_password = session_id if len(session_id) >= 6 else session_id + "123456"[:6-len(session_id)]
+    print(f"[setup_vnc_password] Using VNC password: {vnc_password[:8]}... (length: {len(vnc_password)})", file=sys.stderr)
+    
+    # Create password file using vncpasswd
+    try:
+        with open("/tmp/vncpasswd_input", "w") as f:
+            f.write(vnc_password + "\n" + vnc_password + "\n")
+        result = subprocess.run(["vncpasswd"], input=open("/tmp/vncpasswd_input").read(), text=True, capture_output=True, check=True)
+        print(f"[setup_vnc_password] VNC password set: {result.stdout}", file=sys.stderr)
+        subprocess.run(["mv", "/root/.vnc/passwd", passwd_file], check=True)
+        subprocess.run(["chmod", "600", passwd_file], check=True)
+        print(f"[setup_vnc_password] VNC password file created at {passwd_file}", file=sys.stderr)
+    except subprocess.CalledProcessError as e:
+        print(f"[setup_vnc_password] Failed to create VNC password file: {e.stderr}", file=sys.stderr)
+        raise
+    except Exception as e:
+        print(f"[setup_vnc_password] Unexpected error setting VNC password: {str(e)}", file=sys.stderr)
+        raise
+
+def start_vnc_server(session_id):
+    print("[start_vnc_server] Starting VNC server setup...", file=sys.stderr)
+    
+    # Setup VNC password
+    try:
+        setup_vnc_password(session_id)
+    except Exception as e:
+        print(f"[start_vnc_server] Failed to setup VNC password: {str(e)}", file=sys.stderr)
+        raise
+    
+    # Set USER environment variable for VNC server
+    vnc_env = os.environ.copy()
+    vnc_env['USER'] = 'root'  # Required for tightvncserver to determine home directory
+    print("[start_vnc_server] Set USER environment variable to 'root'", file=sys.stderr)
+    
+    # Create a custom xstartup script for VNC server to ensure X session starts
+    vnc_dir = "/root/.vnc"
+    xstartup_file = os.path.join(vnc_dir, "xstartup")
+    try:
+        with open(xstartup_file, "w") as f:
+            f.write("#!/bin/sh\n")
+            f.write("# Start a basic X session for VNC\n")
+            f.write("[ -x /etc/vnc/xstartup ] && exec /etc/vnc/xstartup\n")
+            f.write("[ -r $HOME/.Xresources ] && xrdb $HOME/.Xresources\n")
+            f.write("xsetroot -solid grey\n")
+            f.write("# Start a terminal or minimal window manager if available\n")
+            f.write("if command -v xterm > /dev/null; then\n")
+            f.write("    xterm -geometry 80x24+10+10 -ls -title \"$VNCDESKTOP Desktop\" &\n")
+            f.write("fi\n")
+            f.write("# Fallback to ensure session doesn't terminate\n")
+            f.write("sleep infinity\n")
+        subprocess.run(["chmod", "+x", xstartup_file], check=True)
+        print(f"[start_vnc_server] Created custom xstartup script at {xstartup_file}", file=sys.stderr)
+    except Exception as e:
+        print(f"[start_vnc_server] Failed to create xstartup script: {str(e)}", file=sys.stderr)
+        raise
+    
+    # Start VNC server on display :1 with specified environment
+    try:
+        result = subprocess.run(["tightvncserver", ":1", "-geometry", "1280x720"], capture_output=True, text=True, check=True, env=vnc_env)
+        print(f"[start_vnc_server] VNC server started: {result.stdout}", file=sys.stderr)
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"[start_vnc_server] VNC server failed to start: {e.stderr}", file=sys.stderr)
+        raise
+    except Exception as e:
+        print(f"[start_vnc_server] Unexpected error starting VNC server: {str(e)}", file=sys.stderr)
+        raise
+
+def start_websockify():
+    print("[start_websockify] Starting websockify setup...", file=sys.stderr)
+    
+    # Check if VNC server is running
+    try:
+        result = subprocess.run(["ps", "aux"], capture_output=True, text=True, check=True)
+        if "Xtightvnc" not in result.stdout:
+            raise RuntimeError("VNC server is not running")
+        print("[start_websockify] VNC server is running.", file=sys.stderr)
+    except Exception as e:
+        print(f"[start_websockify] Error checking VNC server status: {str(e)}", file=sys.stderr)
+        raise
+    
+    # Start websockify to connect noVNC to VNC server
+    try:
+        process = subprocess.Popen(["websockify", "--web", "/noVNC", "6080", "localhost:5901"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        print("[start_websockify] Websockify started on port 6080", file=sys.stderr)
+        return process
+    except Exception as e:
+        print(f"[start_websockify] Failed to start websockify: {str(e)}", file=sys.stderr)
+        raise
+
+@app.route('/start_stream/<session_id>', methods=['GET'])
+def start_stream(session_id):
+    print(f"[start_stream] Starting stream for session: {session_id}", file=sys.stderr)
+    try:
+        start_vnc_server(session_id)
+        websockify_process = start_websockify()
+        vnc_url = f"http://127.0.0.1:6080/vnc.html?host=127.0.0.1&port=6080&password={session_id}"
+        print(f"[start_stream] VNC stream started for session {session_id} at {vnc_url}", file=sys.stderr)
+        return jsonify({"status": "success", "session_id": session_id, "vnc_url": vnc_url})
+    except Exception as e:
+        error_msg = f"Failed to start stream for session {session_id}: {str(e)}"
+        print(f"[start_stream] {error_msg}", file=sys.stderr)
+        return jsonify({"status": "error", "message": error_msg}), 500
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run Flask server with custom port')
