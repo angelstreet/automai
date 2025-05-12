@@ -18,6 +18,8 @@ from uuid import uuid4
 from asgiref.wsgi import WsgiToAsgi
 import supabase
 from dotenv import load_dotenv
+import signal
+import time
 
 # Load environment variables from .env file
 load_dotenv()
@@ -143,7 +145,7 @@ async def execute_script():
     vnc_env['USER'] = 'root'  # Set USER to root for VNC server
 
     # Start VNC server directly (vncserver will create password file on first run)
-    vnc_cmd = ['vncserver', ':1', '-geometry', '1920x1080', '-depth', '24']
+    vnc_cmd = ['vncserver', ':1', '-geometry', '1920x1080', '-depth', '24', '-viewonly']
     print(f"[execute_script] Starting VNC server with command: {vnc_cmd}", file=sys.stderr)
     vnc_process = subprocess.Popen(vnc_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=vnc_env)
     vnc_process.wait()
@@ -196,7 +198,7 @@ async def execute_script():
 
     # Generate WebSocket URL and VNC streaming URL (with session_id as password)
     websocket_url = f"ws://{request.host}/ws/{session_id}"
-    vnc_stream_url = f"http://{request.host}/vnc.html?host={request.host.split(':')[0]}&port=6080&password={session_id}"
+    vnc_stream_url = f"http://{request.host}/vnc.html?host={request.host.split(':')[0]}&port=6080&password={session_id}&view_only=1&autoconnect=1&resize=scale"
     print(f"[execute_script] Generated WebSocket URL: {websocket_url}", file=sys.stderr)
     print(f"[execute_script] Generated VNC Stream URL: {vnc_stream_url}", file=sys.stderr)
 
@@ -309,6 +311,44 @@ async def execute_script():
                     print(f"[execute_script] Failed to update Supabase streaming status for script {script_id}: {response.error}", file=sys.stderr)
             except Exception as e:
                 print(f"[execute_script] Error updating Supabase streaming status for script {script_id}: {str(e)}", file=sys.stderr)
+        
+        # Stop the VNC server and websockify processes
+        try:
+            print(f"[execute_script] Stopping VNC server and websockify processes", file=sys.stderr)
+            # Terminate websockify process if running
+            if websockify_process and websockify_process.poll() is None:
+                websockify_process.terminate()
+                websockify_process.wait(timeout=5)
+                print(f"[execute_script] Websockify process terminated", file=sys.stderr)
+            
+            # Stop VNC server
+            try:
+                subprocess.run(['vncserver', '-kill', ':1'], check=True, capture_output=True, text=True)
+                print(f"[execute_script] VNC server stopped", file=sys.stderr)
+            except subprocess.CalledProcessError as e:
+                print(f"[execute_script] Failed to stop VNC server: {e.stderr}", file=sys.stderr)
+            
+            # Force kill any remaining VNC processes
+            try:
+                subprocess.run(['pkill', '-f', 'Xtightvnc'], check=False)
+                subprocess.run(['pkill', '-f', 'websockify'], check=False)
+                print(f"[execute_script] Forcefully killed any remaining VNC processes", file=sys.stderr)
+            except Exception as e:
+                print(f"[execute_script] Error during force kill: {str(e)}", file=sys.stderr)
+            
+            # Clean up VNC temp files
+            vnc_dir = '/root/.vnc'
+            if os.path.exists(vnc_dir):
+                for vnc_file in ['passwd', 'xstartup', f':{1}.log', f':{1}.pid']:
+                    file_path = os.path.join(vnc_dir, vnc_file)
+                    if os.path.exists(file_path):
+                        try:
+                            os.remove(file_path)
+                            print(f"[execute_script] Removed VNC temp file: {file_path}", file=sys.stderr)
+                        except Exception as e:
+                            print(f"[execute_script] Failed to remove VNC temp file {file_path}: {str(e)}", file=sys.stderr)
+        except Exception as e:
+            print(f"[execute_script] Error while stopping VNC server and processes: {str(e)}", file=sys.stderr)
 
     # Save metadata
     end_time_iso = datetime.utcnow().isoformat() + 'Z'
@@ -524,58 +564,6 @@ def health_check():
 def serve_vnc_html():
     return send_from_directory('/noVNC', 'vnc.html')
 
-@app.route('/custom_vnc.html', methods=['GET'])
-def serve_custom_vnc_html():
-    custom_html = """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>noVNC</title>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-        <link rel="stylesheet" href="/vnc_lite.css">
-        <style>
-            /* Hide noVNC toolbar */
-            #noVNC_control_bar, #noVNC_status_bar { display: none !important; }
-            #noVNC_canvas { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
-        </style>
-        <script src="/core/util.js"></script>
-        <script src="/core/base64.js"></script>
-        <script src="/core/websock.js"></script>
-        <script src="/core/des.js"></script>
-        <script src="/core/input/keysymdef.js"></script>
-        <script src="/core/input/xtscancodes.js"></script>
-        <script src="/core/input/util.js"></script>
-        <script src="/core/input/devices.js"></script>
-        <script src="/core/display.js"></script>
-        <script src="/core/rfb.js"></script>
-        <script src="/core/keysym.js"></script>
-        <script>
-            function init() {
-                var host = WebUtil.getQueryVar('host', window.location.hostname);
-                var port = WebUtil.getQueryVar('port', window.location.port);
-                var password = WebUtil.getQueryVar('password', '');
-                var path = WebUtil.getQueryVar('path', 'websockify');
-                var encrypt = (window.location.protocol === "https:");
-                var trueSock = (window.location.protocol !== "https:");
-                var rfb = new RFB(document.getElementById('noVNC_canvas'), 'ws' + (encrypt ? 's' : '') + '://' + host + ':' + port + '/' + path, { 'credentials': { 'password': password } });
-                rfb.viewOnly = false;
-                rfb.scaleViewport = true;
-                rfb.resizeSession = true;
-                rfb.showDotCursor = false;
-                rfb.background = 'rgb(0,0,0)';
-                rfb.connect();
-            }
-            window.onload = init;
-        </script>
-    </head>
-    <body>
-        <div id="noVNC_canvas"></div>
-    </body>
-    </html>
-    """
-    return custom_html
-
 @app.route('/<path:path>', methods=['GET'])
 def serve_vnc_files(path):
     return send_from_directory('/noVNC', path)
@@ -646,7 +634,7 @@ def start_vnc_server(session_id):
     
     # Start VNC server on display :1 with specified environment
     try:
-        result = subprocess.run(["tightvncserver", ":1", "-geometry", "1920x1080"], capture_output=True, text=True, check=True, env=vnc_env)
+        result = subprocess.run(["tightvncserver", ":1", "-geometry", "1920x1080", "-viewonly"], capture_output=True, text=True, check=True, env=vnc_env)
         print(f"[start_vnc_server] VNC server started: {result.stdout}", file=sys.stderr)
         return True
     except subprocess.CalledProcessError as e:
@@ -684,7 +672,7 @@ def start_stream(session_id):
     try:
         start_vnc_server(session_id)
         websockify_process = start_websockify()
-        vnc_url = f"http://127.0.0.1:6080/custom_vnc.html?host=127.0.0.1&port=6080&password={session_id}"
+        vnc_url = f"http://127.0.0.1:6080/vnc.html?host=127.0.0.1&port=6080&password={session_id}&view_only=1&autoconnect=1&resize=scale"
         print(f"[start_stream] VNC stream started for session {session_id} at {vnc_url}", file=sys.stderr)
         return jsonify({"status": "success", "session_id": session_id, "vnc_url": vnc_url})
     except Exception as e:

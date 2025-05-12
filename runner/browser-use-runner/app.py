@@ -105,7 +105,7 @@ async def execute_script():
     vnc_password_file = os.path.join(script_folder_path, 'vncpasswd')
     with open(vnc_password_file, 'w') as f:
         f.write(session_id)
-    vnc_process = subprocess.Popen(['vncserver', ':1', '-geometry', '1280x720', '-depth', '24', '-passwd', vnc_password_file], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    vnc_process = subprocess.Popen(['vncserver', ':1', '-geometry', '1280x720', '-depth', '24', '-passwd', vnc_password_file, '-viewonly'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     vnc_process.wait()
     print(f"[execute_script] Started VNC server for session {session_id}", file=sys.stderr)
 
@@ -115,7 +115,7 @@ async def execute_script():
 
     # Generate WebSocket URL and VNC streaming URL
     websocket_url = f"ws://{request.host}/ws/{session_id}"
-    vnc_stream_url = f"http://{request.host}/vnc.html?host={request.host.split(':')[0]}&port=6080&password={session_id}"
+    vnc_stream_url = f"http://{request.host}/vnc.html?host={request.host.split(':')[0]}&port=6080&password={session_id}&view_only=1&autoconnect=1&resize=scale"
     print(f"[execute_script] Generated WebSocket URL: {websocket_url}", file=sys.stderr)
     print(f"[execute_script] Generated VNC Stream URL: {vnc_stream_url}", file=sys.stderr)
 
@@ -257,7 +257,7 @@ async def execute_script():
 
     # Add WebSocket URL and VNC streaming URL to response
     websocket_url = f"ws://{request.host}/ws/{session_id}"
-    vnc_stream_url = f"http://{request.host}/vnc.html?host={request.host.split(':')[0]}&port=6080&password={session_id}"
+    vnc_stream_url = f"http://{request.host}/vnc.html?host={request.host.split(':')[0]}&port=6080&password={session_id}&view_only=1&autoconnect=1&resize=scale"
     print(f"[execute_script] Generated WebSocket URL: {websocket_url}", file=sys.stderr)
     print(f"[execute_script] Generated VNC Stream URL: {vnc_stream_url}", file=sys.stderr)
     return jsonify({
@@ -491,7 +491,7 @@ def setup_streaming():
     vnc_password_file = os.path.join(script_folder_path, 'vncpasswd')
     with open(vnc_password_file, 'w') as f:
         f.write(session_id)
-    vnc_process = subprocess.Popen(['vncserver', ':1', '-geometry', '1280x720', '-depth', '24', '-passwd', vnc_password_file], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    vnc_process = subprocess.Popen(['vncserver', ':1', '-geometry', '1280x720', '-depth', '24', '-passwd', vnc_password_file, '-viewonly'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     vnc_process.wait()
     print(f"[setup_streaming] Started VNC server for session {session_id}", file=sys.stderr)
 
@@ -501,7 +501,7 @@ def setup_streaming():
 
     # Generate WebSocket URL and VNC streaming URL
     websocket_url = f"ws://{request.host}/ws/{session_id}"
-    vnc_stream_url = f"http://{request.host}/vnc.html?host={request.host.split(':')[0]}&port=6080&password={session_id}"
+    vnc_stream_url = f"http://{request.host}/vnc.html?host={request.host.split(':')[0]}&port=6080&password={session_id}&view_only=1&autoconnect=1&resize=scale"
     print(f"[setup_streaming] Generated WebSocket URL: {websocket_url}", file=sys.stderr)
     print(f"[setup_streaming] Generated VNC Stream URL: {vnc_stream_url}", file=sys.stderr)
 
