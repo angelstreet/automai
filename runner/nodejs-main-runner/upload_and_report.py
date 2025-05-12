@@ -732,14 +732,9 @@ def main():
             # Correct the path to avoid duplication of job folder name
             r2_path = relative_path
             
-            # Only print upload progress for report files and .trace files
-            should_print = file_name in ['report.html', 'script_report.html'] or ext.lower() == '.trace'
-            if should_print:
+            # Only print upload progress for report files
+            if file_name in ['report.html', 'script_report.html']:
                 print(f"[@upload_and_report:main] Uploading file to R2: {file_name} -> {r2_path}", file=sys.stderr)
-
-            # Check if the file is likely a script file (based on extension or name)
-            if ext.lower() in ['.py', '.sh'] and should_print:
-                print(f"[@upload_and_report:main] Detected script file for upload: {file_name}", file=sys.stderr)
 
             with open(file_path, 'rb') as f:
                 s3_client.upload_fileobj(
@@ -759,7 +754,7 @@ def main():
             )
 
             file_info['public_url'] = presigned_url
-            if should_print:
+            if file_name in ['report.html', 'script_report.html']:
                 print(f"[@upload_and_report:main] Uploaded file to R2: {file_name}, URL generated", file=sys.stderr)
             uploaded_files.append(file_info)
 
