@@ -143,7 +143,7 @@ async def execute_script():
     vnc_env['USER'] = 'root'  # Set USER to root for VNC server
 
     # Start VNC server directly (vncserver will create password file on first run)
-    vnc_cmd = ['vncserver', ':1', '-geometry', '1280x720', '-depth', '24']
+    vnc_cmd = ['vncserver', ':1', '-geometry', '1920x1080', '-depth', '24']
     print(f"[execute_script] Starting VNC server with command: {vnc_cmd}", file=sys.stderr)
     vnc_process = subprocess.Popen(vnc_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=vnc_env)
     vnc_process.wait()
@@ -646,7 +646,7 @@ def start_vnc_server(session_id):
     
     # Start VNC server on display :1 with specified environment
     try:
-        result = subprocess.run(["tightvncserver", ":1", "-geometry", "1280x720"], capture_output=True, text=True, check=True, env=vnc_env)
+        result = subprocess.run(["tightvncserver", ":1", "-geometry", "1920x1080"], capture_output=True, text=True, check=True, env=vnc_env)
         print(f"[start_vnc_server] VNC server started: {result.stdout}", file=sys.stderr)
         return True
     except subprocess.CalledProcessError as e:
