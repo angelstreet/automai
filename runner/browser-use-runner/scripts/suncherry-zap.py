@@ -47,84 +47,40 @@ def activate_semantic_placeholder(page: Page):
         print(f"Error in semantic placeholder activation: {str(e)}")
         return False
 
-def login(page: Page, url: str, username: str, password: str):
-    print(f"Debug: Username in login: {username}")
-    print(f"Debug: Password in login: {password}")
-    if not username or not password:
-        raise ValueError("Username and password must be provided")
-
-    activate_semantic_placeholder(page)
-    page.wait_for_timeout(2000)
-
-    page.wait_for_selector("#onetrust-accept-btn-handler", state="visible")
-    page.wait_for_timeout(1000)
-    print("Accept cookies")
-    page.locator("#onetrust-accept-btn-handler").click()
-
-    page.wait_for_selector("#flt-semantic-node-6", state="visible")
-    page.wait_for_timeout(1000)
-    print("Click on username")
-    page.locator("#flt-semantic-node-6").click()
-
-    page.wait_for_selector("#username", state="visible")
-    page.wait_for_timeout(1000)
-    print("Fill username")
-    page.locator("#username").fill(username)
-    page.locator("#username").press("Tab")
-
-    page.wait_for_selector("#password", state="visible")
-    page.wait_for_timeout(1000)
-    print("Fill password")
-    page.locator("#password").fill(password)
-
-    page.wait_for_selector("#kc-login", state="visible")
-    page.wait_for_timeout(1000)
-    print("Click on login")
-    page.locator("#kc-login").click()
-    
-    print("Wait for 10 seconds")
-    page.wait_for_timeout(15000)
-
-    # Log cookies before reload for debugging
-    cookies_before = page.context.cookies()
-    print(f"Cookies before reload: {len(cookies_before)} cookies found")
-    for cookie in cookies_before:
-        print(f"Cookie: {cookie.get('name', 'Unknown')} - {cookie.get('value', 'No value')}")
-
-    """
+def pass_login(page: Page, url: str, channel: str = 'RTS 1'):
     try:
-        print("Reload page")
-        page.reload(timeout=20000)
-        page.wait_for_timeout(5000)
-    except :
-        print("Failed to reload...Continue test")
-    """
-
-    activate_semantic_placeholder(page)
-    page.wait_for_timeout(1000)
-
-    try:
-        element = page.get_by_label(re.compile("Profil", re.IGNORECASE))
-        if element.count() > 0 and element.is_visible():
-            print('Login success')
-            # Save cookies immediately after successful login
-            cookies_path = os.getenv("cookies_path", "suncherry-playwright_trace")
-            if cookies_path:
-                cookies_file = os.path.join(cookies_path, 'cookies.json')
-                try:
-                    os.makedirs(cookies_path, exist_ok=True)
-                    cookies_data = page.context.cookies()
-                    with open(cookies_file, 'w') as f:
-                        json.dump(cookies_data, f, indent=2)
-                    print(f"Saved cookies to {cookies_file} after successful login")
-                except Exception as e:
-                    print(f"Error saving cookies to {cookies_file}: {str(e)}")
-            return True
-        else:
-            print('Login failed')
-            return False
+        activate_semantic_placeholder(page)
+        page.wait_for_timeout(2000)
+        page.wait_for_selector("#flt-semantic-node-6", state="visible")
+        page.click("#flt-semantic-node-6")
+        print('Login screen skipped')
+        page.wait_for_timeout(10000)
+        return True
     except Exception as e:
-        print(f'Login failed: {str(e)}')
+        print(f'Login screen not shown or skipped: {str(e)}')
+        return True
+
+def zap(page: Page, url: str, channel: str = 'RTS 1'):
+    try:
+        activate_semantic_placeholder(page)
+        page.wait_for_timeout(2000)
+
+        page.wait_for_selector("#flt-semantic-node-6", state="visible", timeout=20000)
+        print("Click on TV Guide")
+        page.locator("#flt-semantic-node-6").click()
+
+        page.wait_for_selector("[aria-label*='LIVE TV']", state="visible")
+        print("Click on LIVE TV tab")
+        page.locator("[aria-label*='LIVE TV']").click()
+
+        page.wait_for_selector(f'[aria-label*="{channel}"]', state="visible")
+        print("Click on specific channel")
+        page.locator(f'[aria-label*="{channel}"]').click()
+        page.wait_for_timeout(20000)
+        print('Zap success')
+        return True
+    except Exception as e:
+        print(f'Zap failed: {str(e)}')
         return False
 
 def init_browser(playwright: Playwright, headless=True, debug: bool = False, video_dir: str = None, screenshots: bool = True, video: bool = True, source: bool = True, cookies_path: str = None):
@@ -132,6 +88,14 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
         headless=headless,
         args=['--disable-blink-features=AutomationControlled', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--disable-gpu', '--start-maximized', '--window-position=0,0', '--window-size=1280,720']
     )
+
+    # Ensure the cookies directory exists only if a path is provided
+    if cookies_path:
+        if not os.path.exists(cookies_path):
+            os.makedirs(cookies_path, exist_ok=True)
+            print("Creating cookies folder:", cookies_path)
+        else:
+            print("Cookies folder exists")
 
     context = browser.new_context(
         viewport={"width": 1280, "height": 720},  # Match VNC resolution
@@ -145,11 +109,17 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
 
     # Load cookies from file if they exist
     if cookies_path: 
-        if not os.path.exists(cookies_path):
-            os.makedirs(cookies_path, exist_ok=True)
-            print("Creating cookies folder:", cookies_path)
+        cookies_file = os.path.join(cookies_path, 'cookies.json')
+        if os.path.exists(cookies_file):
+            try:
+                with open(cookies_file, 'r') as f:
+                    cookies_data = json.load(f)
+                context.add_cookies(cookies_data)
+                print(f"Loaded cookies from {cookies_file}")
+            except Exception as e:
+                print(f"Error loading cookies from {cookies_file}: {str(e)}")
         else:
-            print("Cookies folder exists but we will not use it")
+            print(f"No cookies file found at {cookies_file}")
 
     context.tracing.start(screenshots=screenshots, snapshots=True, sources=source)
     page = context.new_page()
@@ -158,9 +128,10 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
         page.on("requestfailed", lambda request: print(f"Request failed: {request.url} {request.failure}"))
     return page, context, browser
 
-def run(playwright: Playwright, username: str, password: str, headless=True, debug: bool = False, trace_folder: str = 'suncherry-playwright_trace', screenshots: bool = True, video: bool = True, source: bool = True, cookies: bool = True):
+def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder: str = 'suncherry-playwright_trace', screenshots: bool = True, video: bool = True, source: bool = True, cookies: bool = True, channel: str = 'RTS 1'):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    trace_subfolder = f"{trace_folder}/{timestamp}"
+    job_folder = trace_folder  # Use trace_folder as the base job folder directly
+    trace_subfolder = f"{job_folder}/trace_{timestamp}"  # Create a trace subfolder within job_folder
     os.makedirs(trace_subfolder, exist_ok=True)
     trace_file = f"{trace_subfolder}/{timestamp}.zip"
 
@@ -172,16 +143,21 @@ def run(playwright: Playwright, username: str, password: str, headless=True, deb
     page, context, browser = init_browser(playwright, headless, debug, trace_subfolder if video else None, screenshots, video, source, cookies_path)
     url = "https://www.sunrisetv.ch/de/home"
     page.set_default_timeout(10000)
-    
+
     try:
         page.goto(url, timeout=60000)
-        page.wait_for_timeout(10000)
-
-        login_result = login(page, url, username, password)
+        page.wait_for_timeout(5000)
+        print("We suppose we are already logged in and cookies are loaded")
+        pass_login(page, url)
+        loaded_cookies = context.cookies()
+        print(f"Loaded cookies count: {len(loaded_cookies)}")
+        for cookie in loaded_cookies:
+            print(f"Cookie: {cookie.get('name', 'Unknown')} - {cookie.get('value', 'No value')}")
+        result = zap(page, url, channel)
         page.wait_for_timeout(10000)
     except Exception as e:
         print(f"An error occurred during execution: {str(e)}")
-        login_result = False
+        result = False
     finally:
         # Take a screenshot before closing the page for debugging purposes
         try:
@@ -191,7 +167,6 @@ def run(playwright: Playwright, username: str, password: str, headless=True, deb
         except Exception as e:
             print(f"Error taking final screenshot: {str(e)}")
         
-        # Removed cookie saving here as it's now done after successful login
         page.close()
         try:
             context.tracing.stop(path=trace_file)
@@ -208,45 +183,29 @@ def run(playwright: Playwright, username: str, password: str, headless=True, deb
             print(f"Video saved to: {video_path}")
         browser.close()
     
-    return login_result
+    return result
 
 def main():
     parser = argparse.ArgumentParser(description='Run Suncherry Playwright script')
     parser.add_argument('--headless', action='store_true', help='Run in headless mode')
     parser.add_argument('--debug', action='store_true', help='Enable debug mode')
-    parser.add_argument('--username', type=str, help='Login username')
-    parser.add_argument('--password', type=str, help='Login password')
     parser.add_argument('--trace_folder', type=str, default='suncherry-playwright_trace', help='Folder for storing trace data')
     parser.add_argument('--no-screenshots', action='store_true', default=False, help='Disable screenshots in tracing (default: enabled)')
     parser.add_argument('--no-video', action='store_true', default=False, help='Disable video recording (default: enabled)')
     parser.add_argument('--no-trace', action='store_true', default=False, help='Disable source tracing (default: enabled)')
+    parser.add_argument('--channel', type=str, default='SRF 1', help='Channel to select (default: SRF 1)')
     args, _ = parser.parse_known_args()
 
-    print(f"Debug: Username from args: {args.username}")
-    print(f"Debug: Password from args: {args.password}")
-
-    username = args.username
-    password = args.password
-    if not username or not password:
-        load_dotenv()
-        username = os.getenv("login_username")
-        password = os.getenv("login_password")
-        print(f"Debug: Username from env: {username}")
-        print(f"Debug: Password from env: {password}")
-
-    if not username or not password:
-        raise ValueError("Username and password must be provided either as command-line arguments or in .env file")
-
-    print(f"Running in {'headless' if args.headless else 'visible'} mode with {'no-video' if args.no_video else 'video'}, {'no-screenshots' if args.no_screenshots else 'screenshots'}, {'no-trace' if args.no_trace else 'trace'}")
+    print(f"Running in {'headless' if args.headless else 'visible'} mode with {'no-video' if args.no_video else 'video'}, {'no-screenshots' if args.no_screenshots else 'screenshots'}, {'no-trace' if args.no_trace else 'trace'}, targeting channel: {args.channel}")
 
     try:
         with sync_playwright() as playwright:
-            success = run(playwright, username, password, headless=args.headless, debug=args.debug, trace_folder=args.trace_folder, screenshots=not args.no_screenshots, video=not args.no_video, source=not args.no_trace)
+            success = run(playwright, headless=args.headless, debug=args.debug, trace_folder=args.trace_folder, screenshots=not args.no_screenshots, video=not args.no_video, source=not args.no_trace, channel=args.channel)
             if success:
-                print("Login successful")
+                print("Test successful")
                 sys.exit(0)
             else:
-                print("Login failed")
+                print("Test failed")
                 sys.exit(1)
     except Exception as e:
         print(f"An error occurred: {str(e)}")
