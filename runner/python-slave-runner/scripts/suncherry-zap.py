@@ -118,9 +118,17 @@ def run(playwright: Playwright, headless=False, debug: bool = False, trace_folde
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     trace_subfolder = f"{trace_folder}/{timestamp}"
     os.makedirs(trace_subfolder, exist_ok=True)
-    trace_folder = f"{trace_subfolder}/{timestamp}.zip"
+    trace_file = f"{trace_subfolder}/{timestamp}.zip"
 
-    page, context, browser = init_browser(playwright, headless, debug, trace_subfolder if video else None, screenshots, video, source, trace_subfolder if cookies else None)
+    # Derive job folder as the parent directory of trace_folder
+    job_folder = os.path.dirname(trace_folder) if trace_folder else trace_folder
+    cookies_path = job_folder if cookies and job_folder else None
+    if cookies_path:
+        print(f"Using job folder for cookies: {cookies_path}")
+    else:
+        print("No cookies path provided")
+        
+    page, context, browser = init_browser(playwright, headless, debug, trace_subfolder if video else None, screenshots, video, source, cookies_path)
     url = "https://www.sunrisetv.ch/de/home"
     page.set_default_timeout(10000)
 
@@ -128,10 +136,11 @@ def run(playwright: Playwright, headless=False, debug: bool = False, trace_folde
         page.goto(url, timeout=60000)
         page.wait_for_timeout(10000)
         print("We suppose we are already logged in and cookies are loaded")
-        zap(page, url, channel)
+        result = zap(page, url, channel)
         page.wait_for_timeout(10000)
     except Exception as e:
         print(f"An error occurred during execution: {str(e)}")
+        result = False
     finally:
         # Take a screenshot before closing the page for debugging purposes
         try:
@@ -142,8 +151,7 @@ def run(playwright: Playwright, headless=False, debug: bool = False, trace_folde
             print(f"Error taking final screenshot: {str(e)}")
         
         # Save cookies to file if cookies option is enabled
-        if cookies:
-            cookies_path = trace_subfolder
+        if cookies and cookies_path:
             cookies_file = os.path.join(cookies_path, 'cookies.json')
             try:
                 os.makedirs(cookies_path, exist_ok=True)
@@ -156,12 +164,12 @@ def run(playwright: Playwright, headless=False, debug: bool = False, trace_folde
         
         page.close()
         try:
-            context.tracing.stop(path=trace_folder)
-            print(f"Tracing data saved to: {trace_folder}")
-            with zipfile.ZipFile(trace_folder, 'r') as zip_ref:
+            context.tracing.stop(path=trace_file)
+            print(f"Tracing data saved to: {trace_file}")
+            with zipfile.ZipFile(trace_file, 'r') as zip_ref:
                 zip_ref.extractall(trace_subfolder)
-            os.remove(trace_folder)
-            print(f"Zip file removed: {trace_folder}")
+            os.remove(trace_file)
+            print(f"Zip file removed: {trace_file}")
         except Exception as e:
             print(f"Error saving or extracting trace data: {str(e)}")
 
@@ -170,7 +178,7 @@ def run(playwright: Playwright, headless=False, debug: bool = False, trace_folde
             print(f"Video saved to: {video_path}")
         browser.close()
     
-    return login_result
+    return result
 
 def main():
     parser = argparse.ArgumentParser(description='Run Suncherry Playwright script')
