@@ -35,7 +35,7 @@ async function initializeJobOnFlask(jobId, started_at, config, FLASK_SERVICE_URL
     });
     if (!initResponse.ok) {
       console.error(
-        `[initializeJobOnFlask] Failed to initialize job ${jobId}: ${initResponse.statusText}`,
+        `[initializeJobOnFlask] Failed to initialize job ${jobId}: ${initResponse.statusText}, ${initResponse.data}, Flask Service URL: ${FLASK_SERVICE_URL}`,
       );
       throw new Error(`Failed to initialize job on Flask: ${initResponse.statusText}`);
     }
