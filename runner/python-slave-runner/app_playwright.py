@@ -1,6 +1,6 @@
 import uvicorn
 import argparse
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_sock import Sock
 from playwright.async_api import async_playwright
 import os
@@ -12,9 +12,28 @@ import asyncio
 import base64
 from uuid import uuid4
 from asgiref.wsgi import WsgiToAsgi
+import supabase
+from dotenv import load_dotenv
 
-app = Flask(__name__)
+# Load environment variables from .env file
+load_dotenv()
+
+app = Flask(__name__, static_folder='/noVNC')
 sock = Sock(app)
+
+# Initialize Supabase client
+SUPABASE_URL = os.getenv('SUPABASE_URL', '')
+SUPABASE_KEY = os.getenv('SUPABASE_SERVICE_ROLE_KEY', '')
+if SUPABASE_URL and SUPABASE_KEY:
+    try:
+        supabase_client = supabase.create_client(SUPABASE_URL, SUPABASE_KEY)
+        print(f"[app] Supabase client initialized with URL: {SUPABASE_URL}", file=sys.stderr)
+    except Exception as e:
+        supabase_client = None
+        print(f"[app] Error initializing Supabase client: {str(e)}", file=sys.stderr)
+else:
+    supabase_client = None
+    print("[app] Warning: Supabase credentials not found. Database updates will not be performed.", file=sys.stderr)
 
 @app.route('/execute', methods=['POST'])
 async def execute_script():
@@ -79,6 +98,43 @@ async def execute_script():
     stderr_data = ''
     result = {}
 
+    # Start VNC server with session_id as password
+    vnc_password_file = os.path.join(script_folder_path, 'vncpasswd')
+    with open(vnc_password_file, 'w') as f:
+        f.write(session_id)
+    vnc_process = subprocess.Popen(['vncserver', ':1', '-geometry', '1280x720', '-depth', '24', '-passwd', vnc_password_file], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    vnc_process.wait()
+    print(f"[execute_script] Started VNC server for session {session_id}", file=sys.stderr)
+
+    # Start websockify for noVNC
+    websockify_process = subprocess.Popen(['websockify', '6080', 'localhost:5901'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    print(f"[execute_script] Started websockify for VNC streaming on port 6080", file=sys.stderr)
+
+    # Generate WebSocket URL and VNC streaming URL
+    websocket_url = f"ws://{request.host}/ws/{session_id}"
+    vnc_stream_url = f"http://{request.host}/vnc.html?host={request.host.split(':')[0]}&port=6080&password={session_id}"
+    print(f"[execute_script] Generated WebSocket URL: {websocket_url}", file=sys.stderr)
+    print(f"[execute_script] Generated VNC Stream URL: {vnc_stream_url}", file=sys.stderr)
+
+    # Update Supabase with streaming information if client is initialized
+    if supabase_client:
+        try:
+            response = supabase_client.table('scripts_run').update({
+                'session': {
+                    'session_id': session_id,
+                    'websocket_url': websocket_url,
+                    'vnc_stream_url': vnc_stream_url,
+                    'session_url': '',
+                    'stream_status': 'start'
+                }
+            }).eq('id', script_id).execute()
+            if response.data:
+                print(f"[execute_script] Updated Supabase with streaming info for script {script_id} with status 'start'", file=sys.stderr)
+            else:
+                print(f"[execute_script] Failed to update Supabase for script {script_id}: {response.error}", file=sys.stderr)
+        except Exception as e:
+            print(f"[execute_script] Error updating Supabase for script {script_id}: {str(e)}", file=sys.stderr)
+
     # Parse parameters into a list similar to command-line arguments
     param_list = parameters.split() if parameters else []
     print(f"[execute_script] Parameters for script execution: {param_list}", file=sys.stderr)
@@ -93,6 +149,25 @@ async def execute_script():
     # Execute script using subprocess.run
     try:
         print(f"[execute_script] Executing script: {script_path} for job {job_id}, script_id {script_id}", file=sys.stderr)
+        # Update stream status to 'streaming'
+        if supabase_client:
+            try:
+                response = supabase_client.table('scripts_run').update({
+                    'session': {
+                        'session_id': session_id,
+                        'websocket_url': websocket_url,
+                        'vnc_stream_url': vnc_stream_url,
+                        'session_url': '',
+                        'stream_status': 'streaming'
+                    }
+                }).eq('id', script_id).execute()
+                if response.data:
+                    print(f"[execute_script] Updated Supabase with streaming status 'streaming' for script {script_id}", file=sys.stderr)
+                else:
+                    print(f"[execute_script] Failed to update Supabase streaming status for script {script_id}: {response.error}", file=sys.stderr)
+            except Exception as e:
+                print(f"[execute_script] Error updating Supabase streaming status for script {script_id}: {str(e)}", file=sys.stderr)
+
         process = subprocess.run(
             command,
             shell=False,
@@ -130,6 +205,25 @@ async def execute_script():
         print(f"[execute_script] Error executing script: {str(e)}", file=sys.stderr)
         with open(os.path.join(script_folder_path, 'stderr.txt'), 'w') as f:
             f.write(stderr_data)
+    finally:
+        # Update stream status to 'complete'
+        if supabase_client:
+            try:
+                response = supabase_client.table('scripts_run').update({
+                    'session': {
+                        'session_id': session_id,
+                        'websocket_url': websocket_url,
+                        'vnc_stream_url': vnc_stream_url,
+                        'session_url': '',
+                        'stream_status': 'complete'
+                    }
+                }).eq('id', script_id).execute()
+                if response.data:
+                    print(f"[execute_script] Updated Supabase with streaming status 'complete' for script {script_id}", file=sys.stderr)
+                else:
+                    print(f"[execute_script] Failed to update Supabase streaming status for script {script_id}: {response.error}", file=sys.stderr)
+            except Exception as e:
+                print(f"[execute_script] Error updating Supabase streaming status for script {script_id}: {str(e)}", file=sys.stderr)
 
     # Save metadata
     end_time_iso = datetime.utcnow().isoformat() + 'Z'
@@ -158,13 +252,16 @@ async def execute_script():
         json.dump(metadata, f, indent=2)
     print(f"[execute_script] Saved metadata to {metadata_path}", file=sys.stderr)
 
-    # Add WebSocket URL to response (optional, can be removed if not needed for non-Playwright scripts)
+    # Add WebSocket URL and VNC streaming URL to response
     websocket_url = f"ws://{request.host}/ws/{session_id}"
+    vnc_stream_url = f"http://{request.host}/vnc.html?host={request.host.split(':')[0]}&port=6080&password={session_id}"
     print(f"[execute_script] Generated WebSocket URL: {websocket_url}", file=sys.stderr)
+    print(f"[execute_script] Generated VNC Stream URL: {vnc_stream_url}", file=sys.stderr)
     return jsonify({
         'status': status,
         'sessionId': session_id,
         'websocketUrl': websocket_url,
+        'vncStreamUrl': vnc_stream_url,
         'stdout': stdout_data,
         'stderr': stderr_data,
         'start_time': start_time_iso,
@@ -177,7 +274,7 @@ async def execute_script():
 @sock.route('/ws/<session_id>')
 async def stream(ws, session_id):
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
+        browser = await p.chromium.launch(headless=False)  # Run in non-headless mode for VNC
         page = await browser.new_page()
         try:
             ws.send(f"Started streaming for session {session_id}")
@@ -357,6 +454,14 @@ def finalize_job():
 @app.route('/healthz', methods=['GET'])
 def health_check():
     return jsonify({'status': 'healthy'}), 200
+
+@app.route('/vnc.html', methods=['GET'])
+def serve_vnc_html():
+    return send_from_directory('/noVNC', 'vnc.html')
+
+@app.route('/<path:path>', methods=['GET'])
+def serve_vnc_files(path):
+    return send_from_directory('/noVNC', path)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run Flask server with custom port')

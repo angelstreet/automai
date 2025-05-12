@@ -4,7 +4,12 @@ FROM python:3.9-slim
 WORKDIR /app
 
 # Set non-interactive frontend to avoid debconf prompts
-ENV DEBIAN_FRONTEND=noninteractive
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PORT=10000 \
+    PLAYWRIGHT_HEADLESS=1 \
+    DISPLAY=:99
 
 # Install Python dependencies directly
 RUN pip install --no-cache-dir \
@@ -15,15 +20,39 @@ RUN pip install --no-cache-dir \
     requests==2.32.3 \
     uvicorn==0.28.0 \
     argparse==1.4.0 \
+    supabase==1.1.0 \
     asgiref==3.7.2
 
-# Install system dependencies including Xvfb
+# Install system dependencies including Xvfb and VNC-related packages
 RUN apt-get update && apt-get install -y \
     xvfb \
     git \
     iputils-ping \
+    tightvncserver \
+    websockify \
+    wget \
+    libnss3 \
+    libatk-bridge2.0-0 \
+    libgtk-3-0 \
+    libxss1 \
+    libasound2 \
+    libx11-xcb1 \
+    libxcb-dri3-0 \
+    libdrm2 \
+    libgbm1 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    libxinerama1 \
+    libxcursor1 \
+    libxi6 \
+    libgl1-mesa-glx \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Install noVNC
+RUN wget https://github.com/novnc/noVNC/archive/refs/tags/v1.4.0.tar.gz && \
+    tar -xzf v1.4.0.tar.gz && mv noVNC-1.4.0 /noVNC
 
 # Install Playwright dependencies and Chromium
 RUN playwright install-deps \
@@ -32,8 +61,8 @@ RUN playwright install-deps \
 # Copy application code
 COPY . .
 
-# Expose port for Flask (Render will override with PORT env var)
-EXPOSE 10000
+# Expose ports for Flask and VNC streaming
+EXPOSE 10000 6080
 
 # Run Flask app with Xvfb, binding to Render's PORT
 CMD ["sh", "-c", "xvfb-run --auto-servernum --server-args='-screen 0 1280x720x24' python app_playwright.py --debug --port $PORT"]
