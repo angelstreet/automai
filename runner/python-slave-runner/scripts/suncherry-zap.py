@@ -47,7 +47,7 @@ def activate_semantic_placeholder(page: Page):
         print(f"Error in semantic placeholder activation: {str(e)}")
         return False
 
-def zap(page: Page, url: str):
+def zap(page: Page, url: str, channel: str = 'RTS 1'):
     activate_semantic_placeholder(page)
     page.wait_for_timeout(2000)
 
@@ -59,15 +59,15 @@ def zap(page: Page, url: str):
     print("Click on LIVE TV tab")
     page.locator("#flt-semantic-node-233").click()
 
-    page.wait_for_selector('[aria-label*="RTS 1 HD"]', state="visible")
+    page.wait_for_selector(f'[aria-label*="{channel}"]', state="visible")
     print("Click on specific channel")
-    page.locator('[aria-label*="RTS 1 HD"]').click()
+    page.locator(f'[aria-label*="{channel}"]').click()
 
     print('Zap success')
     return True
 except Exception as e:
-        print(f'Zap failed: {str(e)}')
-        return False
+    print(f'Zap failed: {str(e)}')
+    return False
 
 def init_browser(playwright: Playwright, headless=False, debug: bool = False, video_dir: str = None, screenshots: bool = True, video: bool = True, source: bool = True, cookies: bool = True):
     browser = playwright.chromium.launch(
@@ -113,13 +113,13 @@ def init_browser(playwright: Playwright, headless=False, debug: bool = False, vi
         page.on("requestfailed", lambda request: print(f"Request failed: {request.url} {request.failure}"))
     return page, context, browser
 
-def run(playwright: Playwright, headless=False, debug: bool = False, trace_folder: str = 'suncherry-playwright_trace', screenshots: bool = True, video: bool = True, source: bool = True, cookies: bool = True):
+def run(playwright: Playwright, headless=False, debug: bool = False, trace_folder: str = 'suncherry-playwright_trace', screenshots: bool = True, video: bool = True, source: bool = True, cookies: bool = True, channel: str = 'RTS 1'):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     trace_subfolder = f"{trace_folder}/{timestamp}"
     os.makedirs(trace_subfolder, exist_ok=True)
     trace_folder = f"{trace_subfolder}/{timestamp}.zip"
 
-   page, context, browser = init_browser(playwright, headless, debug, trace_subfolder if video else None, screenshots, video, source, trace_subfolder if cookies else None)
+    page, context, browser = init_browser(playwright, headless, debug, trace_subfolder if video else None, screenshots, video, source, trace_subfolder if cookies else None)
     url = "https://www.sunrisetv.ch/de/home"
     page.set_default_timeout(10000)
 
@@ -127,7 +127,7 @@ def run(playwright: Playwright, headless=False, debug: bool = False, trace_folde
         page.goto(url, timeout=60000)
         page.wait_for_timeout(10000)
         print("We suppose we are already logged in and cookies are loaded")
-        zap()
+        zap(page, url, channel)
         page.wait_for_timeout(10000)
     except Exception as e:
         print(f"An error occurred during execution: {str(e)}")
@@ -179,13 +179,14 @@ def main():
     parser.add_argument('--no-screenshots', action='store_true', default=False, help='Disable screenshots in tracing (default: enabled)')
     parser.add_argument('--no-video', action='store_true', default=False, help='Disable video recording (default: enabled)')
     parser.add_argument('--no-trace', action='store_true', default=False, help='Disable source tracing (default: enabled)')
+    parser.add_argument('--channel', type=str, default='RTS 1', help='Channel to select (default: RTS 1)')
     args, _ = parser.parse_known_args()
 
-      print(f"Running in {'headless' if args.headless else 'visible'} mode with {'no-video' if args.no_video else 'video'}, {'no-screenshots' if args.no_screenshots else 'screenshots'}, {'no-trace' if args.no_trace else 'trace'}")
+    print(f"Running in {'headless' if args.headless else 'visible'} mode with {'no-video' if args.no_video else 'video'}, {'no-screenshots' if args.no_screenshots else 'screenshots'}, {'no-trace' if args.no_trace else 'trace'}, targeting channel: {args.channel}")
 
     try:
         with sync_playwright() as playwright:
-            success = run(playwright, headless=args.headless, debug=args.debug, trace_folder=args.trace_folder, screenshots=not args.no_screenshots, video=not args.no_video, source=not args.no_trace)
+            success = run(playwright, headless=args.headless, debug=args.debug, trace_folder=args.trace_folder, screenshots=not args.no_screenshots, video=not args.no_video, source=not args.no_trace, channel=args.channel)
             if success:
                 print("Test successful")
                 sys.exit(0)
