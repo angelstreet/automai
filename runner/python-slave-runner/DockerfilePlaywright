@@ -9,7 +9,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
     PORT=10000 \
     PLAYWRIGHT_HEADLESS=0 \
-    DISPLAY=:1
+    DISPLAY=:1 \
+    GUNICORN_WORKERS=2
 
 # Install Python dependencies directly
 RUN pip install --no-cache-dir \
@@ -22,7 +23,8 @@ RUN pip install --no-cache-dir \
     argparse==1.4.0 \
     supabase==1.1.0 \
     asgiref==3.7.2 \
-    gunicorn==22.0.0
+    gunicorn==22.0.0 \
+    psutil==5.9.5
 
 # Install system dependencies including Xvfb and VNC-related packages
 RUN apt-get update && apt-get install -y \
@@ -70,4 +72,4 @@ COPY . .
 EXPOSE 10000 6080
 
 # Run Flask app with Xvfb, binding to Render's PORT
-CMD ["sh", "-c", "xvfb-run --auto-servernum --server-args='-screen 0 1280x720x24' python app_playwright.py --debug --port $PORT"]
+CMD ["sh", "-c", "xvfb-run --auto-servernum --server-args='-screen 0 1280x720x16' python app_playwright.py --debug --port $PORT"]

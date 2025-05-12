@@ -20,6 +20,8 @@ import supabase
 from dotenv import load_dotenv
 import signal
 import time
+import gc
+import psutil
 
 # Load environment variables from .env file
 load_dotenv()
@@ -144,8 +146,8 @@ async def execute_script():
     vnc_env = os.environ.copy()
     vnc_env['USER'] = 'root'  # Set USER to root for VNC server
 
-    # Start VNC server directly (vncserver will create password file on first run)
-    vnc_cmd = ['vncserver', ':1', '-geometry', '1920x1080', '-depth', '24', '-viewonly']
+    # Start VNC server directly
+    vnc_cmd = ['vncserver', ':1', '-geometry', '1280x720', '-depth', '16', '-viewonly']
     print(f"[execute_script] Starting VNC server with command: {vnc_cmd}", file=sys.stderr)
     vnc_process = subprocess.Popen(vnc_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=vnc_env)
     vnc_process.wait()
@@ -171,11 +173,9 @@ async def execute_script():
     
     # Check if websockify is running and test connectivity to VNC server
     try:
-        import time
         time.sleep(1)  # Give it a moment to start
         if websockify_process.poll() is None:
             print(f"[execute_script] websockify confirmed running with PID {websockify_process.pid}", file=sys.stderr)
-            # Test connectivity to VNC server
             try:
                 import socket
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -189,20 +189,20 @@ async def execute_script():
             except Exception as conn_err:
                 print(f"[execute_script] Error testing connectivity to VNC server: {str(conn_err)}", file=sys.stderr)
         else:
-            print(f"[execute_script] WARNING: websockify terminated unexpectedly with return code {websockify_process.returncode}", file=sys.stderr)
+            print(f"[execute_script] WARNING: websockify terminated unexpectedly", file=sys.stderr)
             websockify_stdout, websockify_stderr = websockify_process.communicate()
             print(f"[execute_script] websockify stdout: {websockify_stdout}", file=sys.stderr)
             print(f"[execute_script] websockify stderr: {websockify_stderr}", file=sys.stderr)
     except Exception as e:
         print(f"[execute_script] Error checking websockify status: {str(e)}", file=sys.stderr)
 
-    # Generate WebSocket URL and VNC streaming URL (with session_id as password)
+    # Generate WebSocket URL and VNC streaming URL
     websocket_url = f"ws://{request.host}/ws/{session_id}"
     vnc_stream_url = f"http://{request.host}/vnc.html?host={request.host.split(':')[0]}&port=6080&password={session_id}&view_only=1&autoconnect=1&resize=scale"
     print(f"[execute_script] Generated WebSocket URL: {websocket_url}", file=sys.stderr)
     print(f"[execute_script] Generated VNC Stream URL: {vnc_stream_url}", file=sys.stderr)
 
-    # Update Supabase with streaming information if client is initialized
+    # Update Supabase with streaming information
     if supabase_client:
         try:
             response = supabase_client.table('scripts_run').update({
@@ -221,7 +221,7 @@ async def execute_script():
         except Exception as e:
             print(f"[execute_script] Error updating Supabase for script {script_id}: {str(e)}", file=sys.stderr)
 
-    # Parse parameters into a list similar to command-line arguments
+    # Parse parameters into a list
     param_list = parameters.split() if parameters else []
     print(f"[execute_script] Parameters for script execution: {param_list}", file=sys.stderr)
 
@@ -231,11 +231,12 @@ async def execute_script():
     # Set environment variables
     script_env = os.environ.copy()
     script_env.update(env_vars)
-    script_env['DISPLAY'] = ':1'  # Ensure script runs in the same display as VNC server
+    script_env['DISPLAY'] = ':1'
 
-    # Execute script using subprocess.run
+    # Execute script
     try:
         print(f"[execute_script] Executing script: {script_path} for job {job_id}, script_id {script_id}", file=sys.stderr)
+        print(f"[execute_script] Memory usage before execution: {psutil.Process().memory_info().rss / 1024 / 1024:.2f} MB", file=sys.stderr)
         # Update stream status to 'streaming'
         if supabase_client:
             try:
@@ -312,23 +313,24 @@ async def execute_script():
             except Exception as e:
                 print(f"[execute_script] Error updating Supabase streaming status for script {script_id}: {str(e)}", file=sys.stderr)
         
-        # Stop the VNC server and websockify processes
+        # Stop VNC server and websockify processes
         try:
             print(f"[execute_script] Stopping VNC server and websockify processes", file=sys.stderr)
-            # Terminate websockify process if running
             if websockify_process and websockify_process.poll() is None:
                 websockify_process.terminate()
-                websockify_process.wait(timeout=5)
-                print(f"[execute_script] Websockify process terminated", file=sys.stderr)
+                try:
+                    websockify_process.wait(timeout=5)
+                    print(f"[execute_script] Websockify process terminated", file=sys.stderr)
+                except subprocess.TimeoutExpired:
+                    websockify_process.kill()
+                    print(f"[execute_script] Websockify process killed after timeout", file=sys.stderr)
             
-            # Stop VNC server
             try:
                 subprocess.run(['vncserver', '-kill', ':1'], check=True, capture_output=True, text=True)
                 print(f"[execute_script] VNC server stopped", file=sys.stderr)
             except subprocess.CalledProcessError as e:
                 print(f"[execute_script] Failed to stop VNC server: {e.stderr}", file=sys.stderr)
             
-            # Force kill any remaining VNC processes
             try:
                 subprocess.run(['pkill', '-f', 'Xtightvnc'], check=False)
                 subprocess.run(['pkill', '-f', 'websockify'], check=False)
@@ -336,10 +338,9 @@ async def execute_script():
             except Exception as e:
                 print(f"[execute_script] Error during force kill: {str(e)}", file=sys.stderr)
             
-            # Clean up VNC temp files
             vnc_dir = '/root/.vnc'
             if os.path.exists(vnc_dir):
-                for vnc_file in ['passwd', 'xstartup', f':{1}.log', f':{1}.pid']:
+                for vnc_file in ['passwd', 'xstartup', f':1.log', f':1.pid']:
                     file_path = os.path.join(vnc_dir, vnc_file)
                     if os.path.exists(file_path):
                         try:
@@ -349,6 +350,11 @@ async def execute_script():
                             print(f"[execute_script] Failed to remove VNC temp file {file_path}: {str(e)}", file=sys.stderr)
         except Exception as e:
             print(f"[execute_script] Error while stopping VNC server and processes: {str(e)}", file=sys.stderr)
+
+        # Garbage collection
+        gc.collect()
+        print(f"[execute_script] Ran garbage collection", file=sys.stderr)
+        print(f"[execute_script] Memory usage after execution: {psutil.Process().memory_info().rss / 1024 / 1024:.2f} MB", file=sys.stderr)
 
     # Save metadata
     end_time_iso = datetime.utcnow().isoformat() + 'Z'
@@ -391,7 +397,6 @@ async def execute_script():
         'job_id': job_id,
         'script_id': script_id
     })
-
 
 @app.route('/initialize_job', methods=['POST'])
 def initialize_job():
@@ -572,7 +577,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run Flask server with custom port')
     parser.add_argument('--port', type=int, default=int(os.getenv('PORT', 10000)), help='Port to run the server on')
     parser.add_argument('--debug', action='store_true', default=False, help='Enable debug mode')
-    parser.add_argument('--workers', type=int, default=int(os.getenv('GUNICORN_WORKERS', 4)), help='Number of gunicorn worker processes')
+    parser.add_argument('--workers', type=int, default=int(os.getenv('GUNICORN_WORKERS', 2)), help='Number of gunicorn worker processes')
     args = parser.parse_args()
     port = args.port
     debug = args.debug
@@ -580,7 +585,6 @@ if __name__ == '__main__':
     print(f"[app_playwright] Running on port {port} with {workers} workers", file=sys.stderr)
     
     if gunicorn:
-        # Run gunicorn for production in Docker environment
         from gunicorn.app.base import BaseApplication
 
         class StandaloneApplication(BaseApplication):
@@ -602,9 +606,11 @@ if __name__ == '__main__':
             'bind': f'0.0.0.0:{port}',
             'workers': workers,
             'loglevel': 'info',
-            'timeout': 120
+            'timeout': 600,  # Increased to 600 seconds for long-running scripts
+            'limit_request_line': 4094,
+            'limit_request_fields': 100,
+            'limit_request_field_size': 8190
         }
         StandaloneApplication(app, options).run()
     else:
-        # Fallback for development or if gunicorn is not installed
         app.run(host='0.0.0.0', port=port, debug=debug)
