@@ -151,8 +151,6 @@ def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder
         pass_login(page, url)
         loaded_cookies = context.cookies()
         print(f"Loaded cookies count: {len(loaded_cookies)}")
-        for cookie in loaded_cookies:
-            print(f"Cookie: {cookie.get('name', 'Unknown')} - {cookie.get('value', 'No value')}")
         result = zap(page, url, channel)
         page.wait_for_timeout(10000)
     except Exception as e:
