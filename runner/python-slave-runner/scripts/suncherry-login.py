@@ -107,18 +107,6 @@ def login(page: Page, url: str, username: str, password: str):
         element = page.get_by_label(re.compile("Profil", re.IGNORECASE))
         if element.count() > 0 and element.is_visible():
             print('Login success')
-            # Save cookies immediately after successful login
-            cookies_path = os.getenv("cookies_path", "suncherry-playwright_trace")
-            if cookies_path:
-                cookies_file = os.path.join(cookies_path, 'cookies.json')
-                try:
-                    os.makedirs(cookies_path, exist_ok=True)
-                    cookies_data = page.context.cookies()
-                    with open(cookies_file, 'w') as f:
-                        json.dump(cookies_data, f, indent=2)
-                    print(f"Saved cookies to {cookies_file} after successful login")
-                except Exception as e:
-                    print(f"Error saving cookies to {cookies_file}: {str(e)}")
             return True
         else:
             print('Login failed')
@@ -178,6 +166,17 @@ def run(playwright: Playwright, username: str, password: str, headless=True, deb
         page.wait_for_timeout(10000)
 
         login_result = login(page, url, username, password)
+        # Save cookies immediately after successful login
+        if cookies_path:
+            cookies_file = os.path.join(cookies_path, 'cookies.json')
+            try:
+                os.makedirs(cookies_path, exist_ok=True)
+                cookies_data = page.context.cookies()
+                with open(cookies_file, 'w') as f:
+                    json.dump(cookies_data, f, indent=2)
+                print(f"Saved cookies to {cookies_file} after successful login")
+            except Exception as e:
+                print(f"Error saving cookies to {cookies_file}: {str(e)}")
         page.wait_for_timeout(10000)
     except Exception as e:
         print(f"An error occurred during execution: {str(e)}")
