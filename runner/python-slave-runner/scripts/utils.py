@@ -334,14 +334,12 @@ def finalize_run(page: Page, context, browser, trace_subfolder: str, timestamp: 
         print(f"Error taking final screenshot: {str(e)}")
     
     try:
-        # Only stop tracing if not using remote debugging
-        if not remote_debugging:
-            context.tracing.stop(path=trace_file)
-            print(f"Tracing data saved to: {trace_file}")
-            with zipfile.ZipFile(trace_file, 'r') as zip_ref:
-                zip_ref.extractall(trace_subfolder)
-            os.remove(trace_file)
-            print(f"Zip file removed: {trace_file}")
+        context.tracing.stop(path=trace_file)
+        print(f"Tracing data saved to: {trace_file}")
+        with zipfile.ZipFile(trace_file, 'r') as zip_ref:
+            zip_ref.extractall(trace_subfolder)
+        os.remove(trace_file)
+        print(f"Zip file removed: {trace_file}")
     except Exception as e:
         print(f"Error saving or extracting trace data: {str(e)}")
 

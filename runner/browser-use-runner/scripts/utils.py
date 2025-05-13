@@ -36,9 +36,10 @@ def get_cookies_path(trace_folder: str, cookies_enabled: bool = True):
     print(f"Debug: Determined cookies_path to be: {cookies_path} based on trace_folder: {trace_folder}")
     return cookies_path
 
-def activate_semantic_placeholder(page: Page):
+def activate_semantic_placeholder(page: Page, trace_folder: str):
     shadow_root_selector = 'body > flutter-view > flt-glass-pane'
     element_inside_shadow_dom_selector = 'flt-semantics-placeholder'
+    take_screenshot(page, trace_folder, 'semantic_placeholder_start')
     try:
         flutter_view_present = page.locator(shadow_root_selector).count() > 0
         print(f"Page state check: Flutter view present: {flutter_view_present}")
@@ -66,12 +67,15 @@ def activate_semantic_placeholder(page: Page):
 
         if clicked:
             print("Semantic placeholder activated.")
+            take_screenshot(page, trace_folder, 'semantic_placeholder_end')
             return True
         else:
             print("Error activating semantic placeholder")
+            take_screenshot(page, trace_folder, 'semantic_placeholder_error')
             return False
     except Exception as e:
         print(f"Error in semantic placeholder activation: {str(e)}")
+        take_screenshot(page, trace_folder, 'semantic_placeholder_error')
         return False
 
 def load_cookies(context, cookies_path: str):
@@ -357,13 +361,19 @@ def save_cookies(page: Page, cookies_path: str):
     else:
         print("Debug: Skipping cookie saving as cookies_path is not set")
 
-def finalize_run(page: Page, context, browser, trace_subfolder: str, timestamp: str, trace_file: str, video: bool = True, remote_debugging: bool = False, keep_browser_open: bool = True):
+def take_screenshot(page: Page, trace_subfolder: str, name: str = 'screenshot') -> str:
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    screenshot_path = f"{trace_subfolder}/{name}_{timestamp}.png"
     try:
-        screenshot_path = f"{trace_subfolder}/final_state_{timestamp}.png"
         page.screenshot(path=screenshot_path, full_page=True, timeout=20000)
         print(f"Screenshot saved to: {screenshot_path}")
+        return screenshot_path
     except Exception as e:
-        print(f"Error taking final screenshot: {str(e)}")
+        print(f"Error taking screenshot: {str(e)}")
+        return ''
+
+def finalize_run(page: Page, context, browser, trace_subfolder: str, timestamp: str, trace_file: str, video: bool = True, remote_debugging: bool = False, keep_browser_open: bool = True):
+    take_screenshot(page, trace_subfolder, 'final_state')
 
     # Log the current URL to confirm where the browser is before completion
     current_url = page.url
