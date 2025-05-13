@@ -675,6 +675,9 @@ def main():
         print(json.dumps(output, indent=2))
         sys.exit(1)
 
+    # Define bucket name for R2 uploads
+    bucket_name = 'reports'
+
     # Check for Supabase credentials
     supabase_url = os.environ.get('SUPABASE_URL', '')
     supabase_key = os.environ.get('SUPABASE_SERVICE_ROLE_KEY', '')
