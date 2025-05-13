@@ -8,6 +8,10 @@ import re
 from datetime import datetime
 import zipfile
 import json
+import platform
+import subprocess
+import time
+import socket
 
 # Load .env file from the same directory as this script
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -110,25 +114,49 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
     if remote_debugging:
         # Kill any existing Chrome instances to avoid port conflicts
         print('Killing any existing Chrome instances before launching...')
-        os.system('pkill -9 "Google Chrome"')
+        if platform.system() == 'Windows':
+            os.system('taskkill /IM chrome.exe /F')
+        else:
+            os.system('pkill -9 "Google Chrome"')
         # Make sure Chrome processes are fully terminated
-        import time
         time.sleep(2)  # Give OS time to clean up processes
         
         # Verify no Chrome processes remain
-        import subprocess
-        result = subprocess.run(['pgrep', 'Google Chrome'], stdout=subprocess.PIPE)
+        if platform.system() == 'Windows':
+            result = subprocess.run(['tasklist', '|', 'findstr', 'chrome.exe'], shell=True, stdout=subprocess.PIPE)
+        else:
+            result = subprocess.run(['pgrep', 'Google Chrome'], stdout=subprocess.PIPE)
         if result.stdout:
             print('Some Chrome processes still running. Attempting to kill again...')
-            os.system('pkill -9 "Google Chrome"')
+            if platform.system() == 'Windows':
+                os.system('taskkill /IM chrome.exe /F')
+            else:
+                os.system('pkill -9 "Google Chrome"')
             time.sleep(2)
         
         # Check if port 9222 is in use and kill any process using it
+        def is_port_in_use(port):
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(1)
+                try:
+                    s.bind(('127.0.0.1', port))
+                    return False
+                except socket.error:
+                    return True
+
         try:
-            port_check = subprocess.run(['lsof', '-i', ':9222'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            if port_check.stdout:
+            if is_port_in_use(9222):
                 print('Port 9222 is in use. Killing processes using this port...')
-                os.system('lsof -ti:9222 | xargs kill -9')
+                if platform.system() == 'Windows':
+                    result = subprocess.run(['netstat', '-aon', '|', 'findstr', ':9222'], shell=True, stdout=subprocess.PIPE)
+                    if result.stdout:
+                        lines = result.stdout.decode().splitlines()
+                        for line in lines:
+                            if 'LISTENING' in line:
+                                pid = line.split()[-1]
+                                os.system(f'taskkill /PID {pid} /F')
+                else:
+                    os.system('lsof -ti:9222 | xargs kill -9')
                 time.sleep(1)
         except Exception as e:
             print(f'Error checking port usage: {str(e)}')
@@ -140,13 +168,8 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
         print(f'Launching Chrome with remote debugging using: {chrome_path}')
         
         # Launch Chrome with remote debugging enabled using a more reliable approach
-        import subprocess
-        import time
-        import socket
-        
-        # Use a different debugging port to avoid potential conflicts
         debug_port = 9222
-        user_data_dir = f"/tmp/chrome_debug_profile_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        user_data_dir = f"/tmp/chrome_debug_profile_{datetime.now().strftime('%Y%m%d_%H%M%S')}" if platform.system() != 'Windows' else f"C:\\Temp\\chrome_debug_profile_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         os.makedirs(user_data_dir, exist_ok=True)
         
         chrome_flags = [

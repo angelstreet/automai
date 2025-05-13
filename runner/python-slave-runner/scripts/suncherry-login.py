@@ -72,9 +72,9 @@ def login(page: Page, url: str, username: str, password: str):
 
 def run(playwright: Playwright, username: str, password: str, headless=True, debug: bool = False, trace_folder: str = 'suncherry-playwright_trace', screenshots: bool = True, video: bool = True, source: bool = True, cookies: bool = True, executable_path: str = None, remote_debugging: bool = False, keep_browser_open: bool = True):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    trace_subfolder = f"{trace_folder}/{timestamp}"
+    trace_subfolder = os.path.join(trace_folder, timestamp)
     os.makedirs(trace_subfolder, exist_ok=True)
-    trace_file = f"{trace_subfolder}/{timestamp}.zip"
+    trace_file = os.path.join(trace_subfolder, f"{timestamp}.zip")
 
     # Get the cookies path using the utility function
     cookies_path = get_cookies_path(trace_folder, cookies)
