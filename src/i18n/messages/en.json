@@ -60,6 +60,10 @@
     "upgrade_button": "Upgrade Plan",
     "yearly": "Yearly"
   },
+  "browser": {
+    "title": "Browser",
+    "desc": "Run browser automation tests"
+  },
   "common": {
     "actions": "Actions",
     "all": "All",
