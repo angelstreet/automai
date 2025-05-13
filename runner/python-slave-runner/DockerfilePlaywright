@@ -17,7 +17,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 RUN pip install --no-cache-dir \
     flask==2.3.3 \
     flask-sock==0.7.0 \
-    playwright==1.47.0 \
+    playwright==1.52.0 \
     python-dotenv==1.0.1 \
     requests==2.32.3 \
     uvicorn==0.28.0 \

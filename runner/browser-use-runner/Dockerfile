@@ -1,4 +1,4 @@
-FROM python:3.9-slim
+FROM python:3.11-slim
 
 # Set working directory
 WORKDIR /app
@@ -13,11 +13,14 @@ ENV DEBIAN_FRONTEND=noninteractive \
     GUNICORN_WORKERS=2 \
     ENABLE_STREAMING=False
 
+# Update pip to the latest version
+RUN pip install --upgrade pip
+
 # Install Python dependencies directly
 RUN pip install --no-cache-dir \
     flask==2.3.3 \
     flask-sock==0.7.0 \
-    playwright==1.47.0 \
+    playwright==1.52.0 \
     python-dotenv==1.0.1 \
     requests==2.32.3 \
     uvicorn==0.28.0 \
@@ -68,6 +71,8 @@ RUN mkdir -p /root/.vnc && chmod 700 /root/.vnc
 
 # Copy application code
 COPY . .
+
+RUN pip install -e .
 
 # Expose ports for Flask and VNC streaming
 EXPOSE 10000 6080
