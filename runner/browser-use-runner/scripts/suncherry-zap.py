@@ -47,7 +47,7 @@ def zap(page: Page, url: str, channel: str = 'RTS 1'):
         page.wait_for_selector(f'[aria-label*="{channel}"]', state="visible")
         print("Click on specific channel")
         page.locator(f'[aria-label*="{channel}"]').click()
-        page.wait_for_timeout(5000)
+        page.wait_for_timeout(30000)
         print('Test Success, Zap success')
         return True
     except Exception as e:
