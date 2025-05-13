@@ -10,6 +10,9 @@ from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from browser_use import BrowserConfig, Browser, Agent, BrowserContextConfig
 
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.dirname(os.getcwd()))
+
 load_dotenv()
 
 # Force UTF-8 encoding for console output on Windows
@@ -45,11 +48,8 @@ parser.add_argument('--executable_path', type=str, help='Path to Google Chrome e
 args, _ = parser.parse_known_args()
 
 task = args.task
-# Use os.getcwd() instead of __file__ for trace_path
-trace_path = os.path.join(os.getcwd(), args.trace_folder)
 
-# Modify sys.path to include parent directory of current working directory
-sys.path.append(os.path.dirname(os.getcwd()))
+trace_path = os.path.join(os.getcwd(), args.trace_folder)
 
 # Initialize the model
 llm = ChatOpenAI(
@@ -59,25 +59,21 @@ llm = ChatOpenAI(
 
 # Set default cookies path using trace_path
 cookies_file = args.cookies_path if args.cookies_path else os.path.join(trace_path, 'cookies.json')
-
-# Ensure the cookies directory exists
 os.makedirs(os.path.dirname(cookies_file), exist_ok=True)
 
 # Context configuration
 context_config = BrowserContextConfig(
     save_recording_path=trace_path,
     save_downloads_path=trace_path,
-    trace_path=trace_path,
+    #trace_path=trace_path, # bug in patchright
     cookies_file=cookies_file
 )
 
-# Check if running in Docker with Xvfb
-running_in_docker_with_xvfb = os.environ.get('DISPLAY') is not None
 
 # Determine headless mode based on command-line argument only
 headless = args.headless
 logger.info(f"Parsed headless argument: {args.headless}")
-# Removed environment-based override to ensure user choice is respected
+
 browser_config = BrowserConfig(
     headless=headless,
     disable_security=False,
@@ -94,11 +90,10 @@ browser_config = BrowserConfig(
     executable_path=args.executable_path if args.executable_path else None
 )
 
-logger.info(f"BrowserConfig headless: {browser_config.headless}")
 browser = Browser(config=browser_config)
-
 agent = Agent(task=task, llm=llm, browser=browser)
 result = False
+
 async def main():
     try:
         await agent.run()
@@ -118,16 +113,6 @@ async def main():
         except Exception as e:
             logger.error(f"Error taking final screenshot: {str(e)}")
 
-        # Save cookies to file
-        try:
-            if agent.browser_context and hasattr(agent.browser_context, 'context'):
-                cookies_data = await agent.browser_context.context.cookies()
-                with open(cookies_file, 'w') as f:
-                    json.dump(cookies_data, f, indent=2)
-                logger.info(f"Saved cookies to: {cookies_file}")
-        except Exception as e:
-            logger.error(f"Error saving cookies: {str(e)}")
-
         # Unzip the trace file if it exists
         try:
             if agent.browser_context and hasattr(agent.browser_context, 'context_id'):
@@ -142,12 +127,7 @@ async def main():
                     logger.info(f"Zip file removed: {trace_file}")
         except Exception as e:
             logger.error(f"Error saving or extracting trace data: {str(e)}")
-
         return result
 
 if __name__ == '__main__':
-    display_var = os.environ.get('DISPLAY', 'Not set')
-    headless_var = os.environ.get('PLAYWRIGHT_HEADLESS', 'Not set')
-    logger.info(f"Environment: DISPLAY={display_var}, PLAYWRIGHT_HEADLESS={headless_var}")
-    logger.info(f"Starting browser automation with headless={headless}")
     asyncio.run(main())

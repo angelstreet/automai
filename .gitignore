@@ -22,3 +22,4 @@ suncherry-playwright_trace/
 runner/python-slave-runner/files.py
 *.pyc
 nohup.out
+traces/
