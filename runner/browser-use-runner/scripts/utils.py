@@ -15,6 +15,23 @@ env_path = os.path.join(script_dir, '.env')
 load_dotenv(env_path)
 print(f'Loaded environment variables from: {env_path}')
 
+def get_cookies_path(trace_folder: str, cookies_enabled: bool = True):
+    """
+    Determine the appropriate cookies path based on the trace folder.
+    Returns None if cookies are not enabled.
+    """
+    if not cookies_enabled:
+        return None
+    
+    # Determine cookie path based on trace_folder
+    if trace_folder == 'suncherry-playwright_trace':
+        cookies_path = trace_folder
+    else:
+        cookies_path = os.path.dirname(trace_folder)
+    
+    print(f"Debug: Determined cookies_path to be: {cookies_path} based on trace_folder: {trace_folder}")
+    return cookies_path
+
 def activate_semantic_placeholder(page: Page):
     shadow_root_selector = 'body > flutter-view > flt-glass-pane'
     element_inside_shadow_dom_selector = 'flt-semantics-placeholder'
@@ -53,6 +70,40 @@ def activate_semantic_placeholder(page: Page):
         print(f"Error in semantic placeholder activation: {str(e)}")
         return False
 
+def load_cookies(context, cookies_path: str):
+    """
+    Load cookies from a file into the browser context.
+    Returns True if cookies were successfully loaded, False otherwise.
+    """
+    if not cookies_path:
+        print("No cookies path provided, skipping cookie loading")
+        return False
+    
+    if not os.path.exists(cookies_path):
+        os.makedirs(cookies_path, exist_ok=True)
+        print(f"Creating cookies folder: {cookies_path}")
+        return False
+    else:
+        print(f"Cookies folder exists: {cookies_path}")
+    
+    cookies_file = os.path.join(cookies_path, 'cookies.json')
+    if os.path.exists(cookies_file):
+        try:
+            with open(cookies_file, 'r') as f:
+                cookies_data = json.load(f)
+            context.add_cookies(cookies_data)
+            print(f"Loaded {len(cookies_data)} cookies from {cookies_file}")
+            print("We have loaded cookies, should be already logged in")
+            return True
+        except Exception as e:
+            print(f"Error loading cookies from {cookies_file}: {str(e)}")
+            print("No cookies loaded, login might be required")
+            return False
+    else:
+        print(f"No cookies file found at {cookies_file}")
+        print("No cookies loaded, login might be required")
+        return False
+
 def init_browser(playwright: Playwright, headless=True, debug: bool = False, video_dir: str = None, screenshots: bool = True, video: bool = True, source: bool = True, cookies_path: str = None, executable_path: str = None, remote_debugging: bool = False):
     browser_args = ['--disable-blink-features=AutomationControlled','--disable-gpu', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--window-position=0,0']
     
@@ -60,6 +111,27 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
         # Kill any existing Chrome instances to avoid port conflicts
         print('Killing any existing Chrome instances before launching...')
         os.system('pkill -9 "Google Chrome"')
+        # Make sure Chrome processes are fully terminated
+        import time
+        time.sleep(2)  # Give OS time to clean up processes
+        
+        # Verify no Chrome processes remain
+        import subprocess
+        result = subprocess.run(['pgrep', 'Google Chrome'], stdout=subprocess.PIPE)
+        if result.stdout:
+            print('Some Chrome processes still running. Attempting to kill again...')
+            os.system('pkill -9 "Google Chrome"')
+            time.sleep(2)
+        
+        # Check if port 9222 is in use and kill any process using it
+        try:
+            port_check = subprocess.run(['lsof', '-i', ':9222'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            if port_check.stdout:
+                print('Port 9222 is in use. Killing processes using this port...')
+                os.system('lsof -ti:9222 | xargs kill -9')
+                time.sleep(1)
+        except Exception as e:
+            print(f'Error checking port usage: {str(e)}')
         
         # Load Chrome path from .env or use provided executable_path
         chrome_path = executable_path if executable_path else os.getenv('CHROME_INSTANCE_PATH', '').strip('"')
@@ -88,7 +160,7 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
             '--disable-background-networking',
             '--window-position=0,0',
             '--window-size=1920,1080',
-            # Start with a blank page to minimize resource usage
+            '--disable-gpu',
             'about:blank'
         ]
         
@@ -113,6 +185,8 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
                 port_open = True
                 elapsed = time.time() - start_time
                 print(f'Chrome is ready! Port {debug_port} is open after {elapsed:.2f} seconds')
+                # Add a small delay to ensure Chrome is fully initialized
+                time.sleep(2)
                 break
             except (socket.timeout, socket.error):
                 time.sleep(1)
@@ -123,11 +197,60 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
         
         # Now connect to the Chrome instance using CDP
         try:
-            browser = playwright.chromium.connect_over_cdp(f'http://localhost:{debug_port}')
-            print(f'Connected to Chrome instance via CDP on port {debug_port}')
+            # First try to get the debug URL to see if CDP is working
+            import urllib.request
+            try:
+                with urllib.request.urlopen(f'http://127.0.0.1:{debug_port}/json/version') as response:
+                    version_info = json.loads(response.read().decode('utf-8'))
+                    print(f'Successfully connected to Chrome debugging HTTP endpoint: {version_info}')
+                    # If we can see a webSocketDebuggerUrl, that's a good sign
+                    if 'webSocketDebuggerUrl' in version_info:
+                        print(f'Found WebSocket debugger URL: {version_info["webSocketDebuggerUrl"]}')
+                        # Try connecting directly to the WebSocket URL
+                        try:
+                            ws_url = version_info["webSocketDebuggerUrl"]
+                            print(f'Attempting to connect directly to WebSocket URL: {ws_url}')
+                            browser = playwright.chromium.connect_over_cdp(ws_url)
+                            print('Connected to Chrome instance via WebSocket URL')
+                            context = browser.new_context()
+                            context.tracing.start(screenshots=screenshots, snapshots=True, sources=source)
+                            page = context.new_page()
+                            if debug:
+                                page.on("response", lambda response: print(f"Response: {response.status} {response.url}"))
+                                page.on("requestfailed", lambda request: print(f"Request failed: {request.url} {request.failure}"))
+                            return page, context, browser
+                        except Exception as ws_error:
+                            print(f'Failed to connect via WebSocket URL: {str(ws_error)}')
+            except Exception as e:
+                print(f'Error connecting to Chrome debugging HTTP endpoint: {str(e)}')
+            
+            # Try explicitly using 127.0.0.1 instead of localhost to avoid IPv6 issues
+            print('Attempting to connect via http://127.0.0.1:9222...')
+            browser = playwright.chromium.connect_over_cdp('http://127.0.0.1:9222')
+            print('Connected to Chrome instance via CDP on port 9222')
         except Exception as e:
             print(f'Failed to connect to Chrome via CDP: {str(e)}')
-            raise
+            # Try alternative connection if first one fails
+            try:
+                print('Attempting alternative connection method via http://localhost:9222...')
+                browser = playwright.chromium.connect_over_cdp('http://localhost:9222')
+                print('Connected to Chrome instance via CDP using alternative method')
+            except Exception as e2:
+                print(f'Alternative connection also failed: {str(e2)}')
+                # As a last resort, just launch a new browser
+                print('All CDP connection attempts failed. Falling back to launching a regular browser...')
+                if executable_path:
+                    browser = playwright.chromium.launch(
+                        headless=headless,
+                        executable_path=executable_path,
+                        args=browser_args
+                    )
+                else:
+                    browser = playwright.chromium.launch(
+                        headless=headless,
+                        args=browser_args
+                    )
+                print('Fallback browser launched')
     else:
         if executable_path:
             browser = playwright.chromium.launch(
@@ -145,17 +268,8 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
 
     # The rest of the initialization is different depending on whether we're using remote debugging or not
     if remote_debugging:
-        # When using CDP, we need to create a special browser context
         context = browser.new_context()
     else:
-        # Ensure the cookies directory exists only if a path is provided
-        if cookies_path:
-            if not os.path.exists(cookies_path):
-                os.makedirs(cookies_path, exist_ok=True)
-                print("Creating cookies folder:", cookies_path)
-            else:
-                print("Cookies folder exists")
-
         context = browser.new_context(
             viewport={"width": 1920, "height": 1080},  # Set a large viewport for fullscreen experience
             record_video_dir=video_dir if video else None,
@@ -163,60 +277,12 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
             locale="fr-FR",
             timezone_id="Europe/Zurich"
         )
-        context.set_extra_http_headers({
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
-            "Sec-CH-UA": '"Google Chrome";v="136", "Not)A;Brand";v="99", "Chromium";v="136"',
-            "Sec-CH-UA-Platform": '"macOS"'
-        })
-
-    # Load cookies from file if they exist and we're not using remote debugging
-    if cookies_path and not remote_debugging: 
-        cookies_file = os.path.join(cookies_path, 'cookies.json')
-        if os.path.exists(cookies_file):
-            try:
-                with open(cookies_file, 'r') as f:
-                    cookies_data = json.load(f)
-                context.add_cookies(cookies_data)
-                print(f"Loaded cookies from {cookies_file}")
-            except Exception as e:
-                print(f"Error loading cookies from {cookies_file}: {str(e)}")
-        else:
-            print(f"No cookies file found at {cookies_file}")
-
-    # Only start tracing if not using remote debugging
-    if not remote_debugging:
-        context.tracing.start(screenshots=screenshots, snapshots=True, sources=source)
     
+    # Start tracing
+    context.tracing.start(screenshots=screenshots, snapshots=True, sources=source)
     page = context.new_page()
     
-    # Only apply window resize and spoofing if not using remote debugging
-    if not remote_debugging:
-        page.evaluate("window.resizeTo(1920, 1080)")
-        print("Set browser window size to 1920x1080 to match viewport")
-
-        # Spoof navigator properties
-        page.evaluate('''() => {
-            Object.defineProperty(navigator, "platform", { get: () => "MacIntel" });
-            Object.defineProperty(navigator, "language", { get: () => "fr-FR" });
-            Object.defineProperty(navigator, "languages", { get: () => ["fr-FR", "fr", "en-US", "en"] });
-            Object.defineProperty(navigator, "hardwareConcurrency", { get: () => 8 });
-            Object.defineProperty(navigator, "deviceMemory", { get: () => 8 });
-            Object.defineProperty(window, "devicePixelRatio", { get: () => 2 });
-        }''')
-
-        # Spoof WebGL
-        page.evaluate('''() => {
-            const getParameter = WebGLRenderingContext.prototype.getParameter;
-            WebGLRenderingContext.prototype.getParameter = function(parameter) {
-                if (parameter === 37446) return "Apple Inc.";
-                if (parameter === 37447) return "ANGLE (Apple, Apple M1, OpenGL ES 3.0)";
-                return getParameter.apply(this, arguments);
-            };
-        }''')
-    
     if debug:
-        #page.on("request", lambda request: print(f"Request Headers: {request.headers}"))
         page.on("response", lambda response: print(f"Response: {response.status} {response.url}"))
         page.on("requestfailed", lambda request: print(f"Request failed: {request.url} {request.failure}"))
     return page, context, browser
@@ -236,7 +302,7 @@ def save_cookies(page: Page, cookies_path: str):
     else:
         print("Debug: Skipping cookie saving as cookies_path is not set")
 
-def finalize_run(page: Page, context, browser, trace_subfolder: str, timestamp: str, trace_file: str, video: bool = True, remote_debugging: bool = False):
+def finalize_run(page: Page, context, browser, trace_subfolder: str, timestamp: str, trace_file: str, video: bool = True, remote_debugging: bool = False, keep_browser_open: bool = True):
     try:
         screenshot_path = f"{trace_subfolder}/final_state_{timestamp}.png"
         page.screenshot(path=screenshot_path, full_page=True, timeout=20000)
@@ -260,4 +326,89 @@ def finalize_run(page: Page, context, browser, trace_subfolder: str, timestamp: 
     video_path = page.video.path() if not remote_debugging and page.video and video else None
     if video_path:
         print(f"Video saved to: {video_path}")
-    browser.close() 
+    
+    if not keep_browser_open:
+        browser.close()
+        print("Browser closed")
+    else:
+        print("Browser kept open. Remember to close it manually when done.")
+
+def setup_common_args(parser, add_channel=False):
+    """
+    Add common command line arguments to the parser
+    If add_channel is True, add the channel argument for zap script
+    """
+    parser.add_argument('--headless', action='store_true', help='Run in headless mode')
+    parser.add_argument('--debug', action='store_true', help='Enable debug mode')
+    parser.add_argument('--trace_folder', type=str, default='suncherry-playwright_trace', help='Folder for storing trace data')
+    parser.add_argument('--no-screenshots', action='store_true', default=False, help='Disable screenshots in tracing (default: enabled)')
+    parser.add_argument('--no-video', action='store_true', default=False, help='Disable video recording (default: enabled)')
+    parser.add_argument('--no-trace', action='store_true', default=False, help='Disable source tracing (default: enabled)')
+    parser.add_argument('--executable_path', type=str, help='Path to Google Chrome executable, defaults to Chromium if not provided')
+    parser.add_argument('--remote-debugging', action='store_true', default=False, help='Launch and connect to Google Chrome with remote debugging enabled on port 9222')
+    parser.add_argument('--close-browser', action='store_true', default=False, help='Close the browser after the test completes (by default, browser stays open)')
+    
+    if add_channel:
+        parser.add_argument('--channel', type=str, default='SRF 1', help='Channel to select (default: SRF 1)')
+    
+    return parser
+
+def run_main(run_function, args=None, with_username_password=False):
+    """
+    Common main function implementation for both scripts
+    run_function: The script-specific run function to call
+    args: Parsed arguments
+    with_username_password: Whether this script requires username/password
+    """
+    try:
+        if with_username_password:
+            # Process username and password for login script
+            username = args.username
+            password = args.password
+            if not username or not password:
+                load_dotenv()
+                username = os.getenv("login_username")
+                password = os.getenv("login_password")
+                print(f"Debug: Username from env: {username}")
+                print(f"Debug: Password from env: {password}")
+
+            if not username or not password:
+                raise ValueError("Username and password must be provided either as command-line arguments or in .env file")
+            
+            run_args = {
+                'username': username, 
+                'password': password
+            }
+        else:
+            # For zap script
+            run_args = {}
+            if hasattr(args, 'channel'):
+                run_args['channel'] = args.channel
+        
+        # Common arguments for both scripts
+        run_args.update({
+            'headless': args.headless,
+            'debug': args.debug,
+            'trace_folder': args.trace_folder,
+            'screenshots': not args.no_screenshots,
+            'video': not args.no_video,
+            'source': not args.no_trace,
+            'executable_path': args.executable_path,
+            'remote_debugging': args.remote_debugging,
+            'keep_browser_open': not args.close_browser
+        })
+        
+        with sync_playwright() as playwright:
+            run_args['playwright'] = playwright
+            success = run_function(**run_args)
+            
+            if success:
+                print("Test successful" if not with_username_password else "Login successful")
+                sys.exit(0)
+            else:
+                print("Test failed" if not with_username_password else "Login failed")
+                sys.exit(1)
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
+        print("Login failed" if with_username_password else "Test failed")
+        sys.exit(1) 

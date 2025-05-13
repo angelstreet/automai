@@ -10,6 +10,6 @@ echo "CHROME_INSTANCE_PATH: ${CHROME_INSTANCE_PATH}"
 nohup "${CHROME_INSTANCE_PATH}" \
 --remote-debugging-port=9222 \
 --no-default-browser-check \
---disable-features=Translate \
+--disable-features=Translate \  
 -hide-crash-restore-bubble \
 --window-position=0,0 \ &
