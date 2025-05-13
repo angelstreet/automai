@@ -503,6 +503,11 @@ def collect_files(
 
         filename = file_path.name
         extension = file_path.suffix.lower()
+        relative_path = str(file_path.relative_to(job_folder))
+
+        # Skip files in 'resources' directory (case-insensitive)
+        if 'resources' in relative_path.lower().split(os.sep):
+            continue
 
         # Skip excluded files
         if filename in excluded_files:
@@ -510,7 +515,6 @@ def collect_files(
 
         # Include files with allowed extensions or report files
         if filename in report_files or extension in allowed_extensions:
-            relative_path = str(file_path.relative_to(job_folder))
             creation_time = file_path.stat().st_ctime
             files_to_upload.append({
                 "name": filename,
