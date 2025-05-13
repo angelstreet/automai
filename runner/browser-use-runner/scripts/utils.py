@@ -161,11 +161,21 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
         except Exception as e:
             print(f'Error checking port usage: {str(e)}')
         
-        # Load Chrome path from .env or use provided executable_path
-        chrome_path = executable_path if executable_path else os.getenv('CHROME_INSTANCE_PATH', '').strip('"')
-        if not chrome_path:
-            raise ValueError('No Chrome executable path provided via --executable_path or CHROME_INSTANCE_PATH in .env file.')
-        print(f'Launching Chrome with remote debugging using: {chrome_path}')
+        # Set hardcoded Chrome path based on OS if not provided
+        if not executable_path:
+            if platform.system() == 'Windows':
+                executable_path = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
+            elif platform.system() == 'Darwin':  # macOS
+                executable_path = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+            else:  # Linux
+                possible_paths = ['/usr/bin/google-chrome', '/usr/bin/chromium-browser']
+                for path in possible_paths:
+                    if os.path.exists(path):
+                        executable_path = path
+                        break
+                if not executable_path:
+                    raise ValueError('No Chrome executable found in common Linux paths. Please provide --executable_path.')
+        print(f'Launching Chrome with remote debugging using: {executable_path}')
         
         # Launch Chrome with remote debugging enabled using a more reliable approach
         debug_port = 9222
@@ -187,7 +197,7 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
             '--enable-unsafe-swiftshader'
         ]
         
-        cmd_line = [chrome_path] + chrome_flags
+        cmd_line = [executable_path] + chrome_flags
         print(f'Launching Chrome with command: {" ".join(cmd_line)}')
         process = subprocess.Popen(cmd_line)
         print(f'Chrome launched with PID: {process.pid}')
@@ -283,11 +293,33 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
             )
             print(f"Using custom Chrome executable at: {executable_path}")
         else:
-            browser = playwright.chromium.launch(
-                headless=headless,
-                args=browser_args
-            )
-            print("Using default Chromium browser")
+            # Set hardcoded Chrome path based on OS if not provided
+            if platform.system() == 'Windows':
+                executable_path = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
+            elif platform.system() == 'Darwin':  # macOS
+                executable_path = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+            else:  # Linux
+                possible_paths = ['/usr/bin/google-chrome', '/usr/bin/chromium-browser']
+                for path in possible_paths:
+                    if os.path.exists(path):
+                        executable_path = path
+                        break
+                if not executable_path:
+                    print('No Chrome executable found in common Linux paths. Falling back to default Chromium.')
+                    executable_path = None
+            if executable_path and os.path.exists(executable_path):
+                browser = playwright.chromium.launch(
+                    headless=headless,
+                    executable_path=executable_path,
+                    args=browser_args
+                )
+                print(f"Using Chrome executable at: {executable_path}")
+            else:
+                browser = playwright.chromium.launch(
+                    headless=headless,
+                    args=browser_args
+                )
+                print("Using default Chromium browser")
 
     # The rest of the initialization is different depending on whether we're using remote debugging or not
     if remote_debugging:
