@@ -364,16 +364,6 @@ def finalize_run(page: Page, context, browser, trace_subfolder: str, timestamp: 
         print(f"Screenshot saved to: {screenshot_path}")
     except Exception as e:
         print(f"Error taking final screenshot: {str(e)}")
-    
-    try:
-        context.tracing.stop(path=trace_file)
-        print(f"Tracing data saved to: {trace_file}")
-        with zipfile.ZipFile(trace_file, 'r') as zip_ref:
-            zip_ref.extractall(trace_subfolder)
-        os.remove(trace_file)
-        print(f"Zip file removed: {trace_file}")
-    except Exception as e:
-        print(f"Error saving or extracting trace data: {str(e)}")
 
     video_path = page.video.path() if not remote_debugging and page.video and video else None
     if video_path:
@@ -467,7 +457,7 @@ def run_main(run_function, args=None, with_username_password=False):
             else:
                 print("Test failed")
                 sys.exit(1)
-                
+
     except Exception as e:
         print(f"An error occurred: {str(e)}")
         print("Login failed" if with_username_password else "Test failed")
