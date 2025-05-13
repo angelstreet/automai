@@ -61,13 +61,13 @@ def login(page: Page, url: str, username: str, password: str):
     try:
         element = page.get_by_label(re.compile("Profil", re.IGNORECASE))
         if element.count() > 0 and element.is_visible():
-            print('Login success')
+            print('Test Success, Login successful')
             return True
         else:
-            print('Login failed')
+            print('Test Failed, Login failed')
             return False
     except Exception as e:
-        print(f'Login failed: {str(e)}')
+        print(f'Test Failed, Login failed: {str(e)}')
         return False
 
 def run(playwright: Playwright, username: str, password: str, headless=True, debug: bool = False, trace_folder: str = 'suncherry-playwright_trace', screenshots: bool = True, video: bool = True, source: bool = True, cookies: bool = True, executable_path: str = None, remote_debugging: bool = False, keep_browser_open: bool = True):
@@ -89,13 +89,7 @@ def run(playwright: Playwright, username: str, password: str, headless=True, deb
         page.wait_for_timeout(10000)
 
         login_result = login(page, url, username, password)
-        
-        # Debug: Check if cookies_path is set
-        print(f"Debug: cookies_path is set to: {cookies_path}")
-        
-        # Save cookies immediately after successful login for other scripts to use
         if login_result and cookies:
-            print("Login successful, saving cookies for other scripts to use")
             save_cookies(page, cookies_path)
         
         page.wait_for_timeout(10000)
@@ -104,8 +98,7 @@ def run(playwright: Playwright, username: str, password: str, headless=True, deb
         login_result = False
     finally:
         finalize_run(page, context, browser, trace_subfolder, timestamp, trace_file, video, remote_debugging, keep_browser_open)
-    
-    return login_result
+        return login_result
 
 def main():
     parser = argparse.ArgumentParser(description='Run Suncherry Playwright script')
