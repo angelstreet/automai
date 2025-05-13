@@ -351,13 +351,16 @@ export async function getAllJobs(providedUser?: any) {
 
     // Get the user's active team ID
     const { getUserActiveTeam } = await import('@/app/actions/teamAction');
-    const activeTeamResult = await getUserActiveTeam(user.id);
-    if (!activeTeamResult || !activeTeamResult.id) {
-      console.error('[@action:jobsAction:getAllJobs] No active team found for user');
-      return { success: false, error: 'No active team found', data: [] };
-    }
+    let teamId = null;
+    if (user) {
+      const activeTeamResult = await getUserActiveTeam(user.id);
+      if (!activeTeamResult || !activeTeamResult.id) {
+        console.error('[@action:jobsAction:getAllJobs] No active team found for user');
+        return { success: false, error: 'No active team found', data: [] };
+      }
 
-    const teamId = activeTeamResult.id;
+      teamId = activeTeamResult.id;
+    }
 
     // Import getJobConfigsByTeamId only when needed
     const { getJobConfigsByTeamId } = await import('@/lib/db/jobsConfigurationDb');

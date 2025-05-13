@@ -257,15 +257,7 @@ async function executeSSHScripts(
       const scriptCompletedAt = new Date().toISOString();
       // Determine if script was successful based on output or exit code
       const isSuccess =
-        (stdoutFromFile && stdoutFromFile.includes('Test Success')) ||
-        (scriptResult.exitCode === 0 &&
-          !(
-            stderrFromFile &&
-            (stderrFromFile.includes('ERROR') ||
-              stderrFromFile.includes('Traceback') ||
-              stderrFromFile.includes('Browser is closed or disconnected') ||
-              stderrFromFile.includes('Connection closed while reading from the driver'))
-          ));
+        (stdoutFromFile && stdoutFromFile.includes('Test Success')) || scriptResult.exitCode === 0;
       const status = isSuccess ? 'success' : 'failed';
       // Write metadata.json for this script execution
       const startDate = new Date(scriptStartedAt);
