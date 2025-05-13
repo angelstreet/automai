@@ -467,6 +467,7 @@ def run_main(run_function, args=None, with_username_password=False):
             else:
                 print("Test failed")
                 sys.exit(1)
+                
     except Exception as e:
         print(f"An error occurred: {str(e)}")
         print("Login failed" if with_username_password else "Test failed")

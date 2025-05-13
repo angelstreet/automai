@@ -82,8 +82,7 @@ def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder
         print(f"Loaded cookies count: {len(loaded_cookies)}")
         
         result = zap(page, url, channel)
-        page.wait_for_timeout(10000)
-        result = True
+
     except Exception as e:
         print(f"An error occurred during execution: {str(e)}")
         result = False
