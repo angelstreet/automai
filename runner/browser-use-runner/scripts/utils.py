@@ -365,10 +365,6 @@ def finalize_run(page: Page, context, browser, trace_subfolder: str, timestamp: 
     except Exception as e:
         print(f"Error taking final screenshot: {str(e)}")
 
-    video_path = page.video.path() if not remote_debugging and page.video and video else None
-    if video_path:
-        print(f"Video saved to: {video_path}")
-    
     # Log the current URL to confirm where the browser is before completion
     current_url = page.url
     print(f"Current URL before completion: {current_url}")
