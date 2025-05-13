@@ -6,6 +6,7 @@ import json
 import subprocess
 from datetime import datetime, timezone
 import argparse
+import logging
 
 # Import required libraries directly as they are installed via requirements.txt
 import boto3
@@ -13,6 +14,16 @@ from botocore.client import Config
 from dotenv import load_dotenv
 # Add Supabase client library
 import supabase
+from mimetypes import guess_type
+from pathlib import Path
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="[@upload_and_report:main] %(levelname)s: %(message)s",
+    stream=sys.stderr
+)
+logger = logging.getLogger(__name__)
 
 print(f"[@upload_and_report:main] boto3, dotenv, and supabase modules imported successfully.", file=sys.stderr)
 
@@ -464,39 +475,108 @@ def create_job_report_html(job_folder, job_id, start_time, end_time, script_repo
         print(f"[@upload_and_report:create_job_report_html] Error creating job report: {str(e)}", file=sys.stderr)
         return None
 
-def get_content_type(file_extension):
-    """Determine the content type based on file extension."""
-    content_types = {
-        '.html': 'text/html',
-        '.json': 'application/json',
-        '.txt': 'text/plain',
-        '.log': 'text/plain',
-        '.png': 'image/png',
-        '.jpg': 'image/jpeg',
-        '.jpeg': 'image/jpeg',
-        '.gif': 'image/gif',
-        '.bmp': 'image/bmp',
-        '.webp': 'image/webp',
-        '.pdf': 'application/pdf',
-        '.doc': 'application/msword',
-        '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        '.xls': 'application/vnd.ms-excel',
-        '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        '.ppt': 'application/vnd.ms-powerpoint',
-        '.pptx': 'application/vnd.openxmlformats-officedocumen t.powerpointml.presentation',
-        '.webm': 'video/webm',
-        '.mp4': 'video/mp4',
-        '.avi': 'video/x-msvideo',
-        '.mov': 'video/quicktime',
-        '.py': 'text/plain',
-        '.js': 'application/javascript',
-        '.css': 'text/css',
-        '.xml': 'application/xml',
-        '.zip': 'application/zip',
-        '.rar': 'application/x-rar-compressed',
-        '.7z': 'application/x-7z-compressed'
-    }
-    return content_types.get(file_extension.lower(), 'application/octet-stream')
+def get_content_type(file_path: str) -> str:
+    """Return the MIME type for a file based on its extension."""
+    mime_type, _ = guess_type(file_path, strict=False)
+    return mime_type or "application/octet-stream"
+
+def get_content_disposition(mime_type: str) -> str:
+    """Determine content disposition based on MIME type."""
+    return "inline" if mime_type.startswith(("text/", "image/")) else "attachment"
+
+def collect_files(
+    job_folder_path: str,
+    excluded_files: set[str] = {".env", "requirements.txt", "upload_and_report.py"},
+    allowed_extensions: set[str] = {".png", ".jpg", ".trace", ".txt", ".webm"},
+    report_files: set[str] = {"report.html", "script_report.html"}
+) -> list[dict]:
+    """
+    Collect and filter files from job_folder_path for upload.
+    Returns a list of dictionaries with file metadata.
+    """
+    files_to_upload = []
+    job_folder = Path(job_folder_path)
+
+    for file_path in job_folder.rglob("*"):
+        if not file_path.is_file():
+            continue
+
+        filename = file_path.name
+        extension = file_path.suffix.lower()
+
+        # Skip excluded files
+        if filename in excluded_files:
+            logger.info(f"Excluding sensitive file: {filename}")
+            continue
+
+        # Include files with allowed extensions or report files
+        if filename in report_files or extension in allowed_extensions:
+            relative_path = str(file_path.relative_to(job_folder))
+            creation_time = file_path.stat().st_ctime
+            files_to_upload.append({
+                "name": filename,
+                "path": str(file_path),
+                "relative_path": relative_path,
+                "size": file_path.stat().st_size,
+                "creation_date": datetime.fromtimestamp(creation_time, tz=timezone.utc).isoformat()
+            })
+            logger.info(f"Including file: {filename}")
+        else:
+            logger.info(f"Excluding file due to unallowed extension: {filename}")
+
+    logger.info(f"Found {len(files_to_upload)} files to upload")
+    return files_to_upload
+
+def upload_files(
+    files: list[dict],
+    s3_client,
+    bucket_name: str = "reports"
+) -> list[dict]:
+    """
+    Upload files to R2 bucket and return list of successfully uploaded files.
+    """
+    uploaded_files = []
+
+    for file_info in files:
+        file_path = file_info["path"]
+        filename = file_info["name"]
+        r2_path = file_info["relative_path"]
+
+        if not os.path.exists(file_path):
+            logger.error(f"File not found for upload: {filename}")
+            continue
+
+        content_type = get_content_type(filename)
+        content_disposition = get_content_disposition(content_type)
+
+        if filename in {"report.html", "script_report.html"}:
+            logger.info(f"Uploading report file to R2: {filename} -> {r2_path}")
+
+        try:
+            with open(file_path, "rb") as f:
+                s3_client.upload_fileobj(
+                    f,
+                    bucket_name,
+                    r2_path,
+                    ExtraArgs={
+                        "ContentType": content_type,
+                        "ContentDisposition": content_disposition
+                    }
+                )
+            # Generate presigned URL for the uploaded file
+            presigned_url = s3_client.generate_presigned_url(
+                'get_object',
+                Params={'Bucket': bucket_name, 'Key': r2_path},
+                ExpiresIn=604800  # 7 days in seconds
+            )
+            file_info['public_url'] = presigned_url
+            uploaded_files.append(file_info)
+            logger.info(f"Successfully uploaded: {filename}")
+        except Exception as e:
+            logger.error(f"Failed to upload {filename}: {str(e)}")
+            continue
+
+    return uploaded_files
 
 def cleanup_folder(folder_path):
     """Clean up the specified folder by removing it and its contents."""
@@ -655,11 +735,21 @@ def main():
         stdout_path = os.path.join(script_folder_path, 'stdout.txt')
         stderr_path = os.path.join(script_folder_path, 'stderr.txt')
         if os.path.exists(stdout_path):
-            with open(stdout_path, 'r') as f:
-                stdout_content = f.read()
+            try:
+                with open(stdout_path, 'r', encoding='utf-8') as f:
+                    stdout_content = f.read()
+            except UnicodeDecodeError as e:
+                print(f"[@upload_and_report:main] Error decoding stdout.txt with UTF-8 for script {script_id}: {str(e)}", file=sys.stderr)
+                with open(stdout_path, 'r', encoding='cp1252', errors='replace') as f:
+                    stdout_content = f.read()
         if os.path.exists(stderr_path):
-            with open(stderr_path, 'r') as f:
-                stderr_content = f.read()
+            try:
+                with open(stderr_path, 'r', encoding='utf-8') as f:
+                    stderr_content = f.read()
+            except UnicodeDecodeError as e:
+                print(f"[@upload_and_report:main] Error decoding stderr.txt with UTF-8 for script {script_id}: {str(e)}", file=sys.stderr)
+                with open(stderr_path, 'r', encoding='cp1252', errors='replace') as f:
+                    stderr_content = f.read()
 
         # Create script report
         script_report_path = create_script_report_html(
@@ -691,233 +781,134 @@ def main():
     job_status = "success" if all(sr['status'] == 'success' for sr in script_reports.values()) else "failed"
     job_report_path = create_job_report_html(job_folder_path, job_id, start_time, end_time, script_reports, job_status, None, config_name=config_name)
 
-    # Collect all files to upload
-    associated_files = []
-    excluded_files = {'.env', 'requirements.txt', 'upload_and_report.py'}
-    allowed_extensions = {'.png', '.jpg', '.trace', '.txt', '.json', '.webm'}
-    report_files = {'report.html', 'script_report.html'}
-    for root, _, filenames in os.walk(job_folder_path):
-        for filename in filenames:
-            if filename in excluded_files:
-                print(f"[@upload_and_report:main] Excluding sensitive file from upload: {filename}", file=sys.stderr)
-                continue
-            if filename in report_files:
-                file_path = os.path.join(root, filename)
-                relative_path = os.path.relpath(file_path, job_folder_path)
-                creation_time = os.path.getctime(file_path) if os.path.exists(file_path) else 0
-                associated_files.append({
-                    'name': filename,
-                    'path': file_path,
-                    'relative_path': relative_path,
-                    'size': os.path.getsize(file_path) if os.path.exists(file_path) else 0,
-                    'creation_date': datetime.fromtimestamp(creation_time).isoformat() + 'Z' if creation_time else datetime.now(timezone.utc).isoformat()
-                })
-                print(f"[@upload_and_report:main] Including report file for upload: {filename}", file=sys.stderr)
-                continue
-            if not any(filename.lower().endswith(ext) for ext in allowed_extensions):
-                print(f"[@upload_and_report:main] Excluding file due to unallowed extension: {filename}", file=sys.stderr)
-                continue
-            file_path = os.path.join(root, filename)
-            relative_path = os.path.relpath(file_path, job_folder_path)
-            creation_time = os.path.getctime(file_path)
-            associated_files.append({
-                'name': filename,
-                'path': file_path,
-                'relative_path': relative_path,
-                'size': os.path.getsize(file_path),
-                'creation_date': datetime.fromtimestamp(creation_time).isoformat() + 'Z'
-            })
+    # Collect all files to upload using the new function
+    associated_files = collect_files(job_folder_path)
 
-    print(f"[@upload_and_report:main] Found {len(associated_files)} files to upload", file=sys.stderr)
+    # Upload files to R2 using the new function
+    uploaded_files = upload_files(associated_files, s3_client)
+    logger.info(f"Uploaded {len(uploaded_files)} files to R2 for job: {os.path.basename(job_folder_path)}")
+    output = {
+        'status': 'success',
+        'job_id': job_id,
+        'uploaded_files': uploaded_files,
+        'report_url': updated_job_report_url if 'updated_job_report_url' in locals() else job_report_url if 'job_report_url' in locals() else ''
+    }
 
-    # Upload files to R2
-    uploaded_files = []
-    bucket_name = 'reports'
-    try:
-        for file_info in associated_files:
-            file_path = file_info.get('path')
-            file_name = file_info.get('name')
-            relative_path = file_info.get('relative_path', file_name)
-            if not os.path.exists(file_path):
-                print(f"[@upload_and_report:main] File not found for upload: {file_name}", file=sys.stderr)
-                uploaded_files.append(file_info)
-                continue
-
-            # Determine content type based on file extension
-            _, ext = os.path.splitext(file_name)
-            content_type = get_content_type(ext)
-
-            content_disposition = 'inline' if content_type.startswith('text') or content_type.startswith('image') else 'attachment'
-
-            # Correct the path to avoid duplication of job folder name
-            r2_path = relative_path
-            
-            # Only print upload progress for report files
-            if file_name in ['report.html', 'script_report.html']:
-                print(f"[@upload_and_report:main] Uploading file to R2: {file_name} -> {r2_path}", file=sys.stderr)
-
-            with open(file_path, 'rb') as f:
-                s3_client.upload_fileobj(
-                    f,
-                    bucket_name,
-                    r2_path,
-                    ExtraArgs={
-                        'ContentType': content_type,
-                        'ContentDisposition': content_disposition
-                    }
-                )
-
-            presigned_url = s3_client.generate_presigned_url(
-                'get_object',
-                Params={'Bucket': bucket_name, 'Key': r2_path},
-                ExpiresIn=604800  # 7 days in seconds
-            )
-
-            file_info['public_url'] = presigned_url
-            if file_name in ['report.html', 'script_report.html']:
-                print(f"[@upload_and_report:main] Uploaded file to R2: {file_name}, URL generated", file=sys.stderr)
-            uploaded_files.append(file_info)
-
-        print(f"[@upload_and_report:main] Successfully uploaded {len(uploaded_files)} files to R2 for job: {os.path.basename(job_folder_path)}", file=sys.stderr)
-        output = {
-            'status': 'success',
-            'job_id': job_id,
-            'uploaded_files': uploaded_files,
-            'report_url': updated_job_report_url if 'updated_job_report_url' in locals() else job_report_url if 'job_report_url' in locals() else ''
-        }
-
-        # Update report URLs for job and scripts after upload
-        job_report_url = next((file['public_url'] for file in uploaded_files if file['name'] == 'report.html'), '')
-        if job_report_url:
-            job_output = {
-                'scripts': list(script_reports.values()),
-                'stdout': '',
-                'stderr': ''
-            }
-            # Extract UUID from job_id if it contains a timestamp prefix
-            job_uuid = job_id.split('_')[-1] if '_' in job_id else job_id
-            update_supabase_job_status(job_uuid, job_status, job_output, datetime.now(timezone.utc).isoformat(), job_report_url)
-        else:
-            print(f"[@upload_and_report:main] WARNING: Job report URL not found for job {job_id}", file=sys.stderr)
-            job_output = {
-                'scripts': list(script_reports.values()),
-                'stdout': '',
-                'stderr': ''
-            }
-            # Extract UUID from job_id if it contains a timestamp prefix
-            job_uuid = job_id.split('_')[-1] if '_' in job_id else job_id
-            update_supabase_job_status(job_uuid, job_status, job_output, datetime.now(timezone.utc).isoformat(), '')
-
-        for script_id, script_data in script_reports.items():
-            try:
-                script_folder_path = os.path.join(job_folder_path, next(folder for folder in script_folders if script_id in folder))
-            except StopIteration:
-                print(f"[@upload_and_report:main] WARNING: Could not find script folder for script {script_id}", file=sys.stderr)
-                continue
-                
-            stdout_path = os.path.join(script_folder_path, 'stdout.txt')
-            stderr_path = os.path.join(script_folder_path, 'stderr.txt')
-            
-            # Re-read stdout and stderr
-            stdout_content = ""
-            if os.path.exists(stdout_path):
-                try:
-                    with open(stdout_path, 'r') as f:
-                        stdout_content = f.read()
-                except Exception as e:
-                    print(f"[@upload_and_report:main] Error re-reading stdout.txt for script {script_id}: {str(e)}", file=sys.stderr)
-            
-            stderr_content = ""
-            if os.path.exists(stderr_path):
-                try:
-                    with open(stderr_path, 'r') as f:
-                        stderr_content = f.read()
-                except Exception as e:
-                    print(f"[@upload_and_report:main] Error re-reading stderr.txt for script {script_id}: {str(e)}", file=sys.stderr)
-            
-            # Create updated script report with file links
-            updated_script_report_path = create_script_report_html(
-                script_folder_path, stdout_content, stderr_content, script_id, job_id, 
-                datetime.now(timezone.utc).isoformat(), datetime.now(timezone.utc).isoformat(), script_data['script_path'], parameters, 
-                script_data['status'], uploaded_files
-            )
-            
-            # Upload the updated script report
-            if updated_script_report_path:
-                try:
-                    with open(updated_script_report_path, 'rb') as f:
-                        s3_client.upload_fileobj(
-                            f,
-                            bucket_name,
-                            os.path.relpath(updated_script_report_path, job_folder_path),
-                            ExtraArgs={
-                                'ContentType': 'text/html',
-                                'ContentDisposition': 'inline'
-                            }
-                        )
-                    updated_script_report_url = s3_client.generate_presigned_url(
-                        'get_object',
-                        Params={'Bucket': bucket_name, 'Key': os.path.relpath(updated_script_report_path, job_folder_path)},
-                        ExpiresIn=604800  # 7 days in seconds
-                    )
-                    print(f"[@upload_and_report:main] Updated Script Report uploaded with file links for script {script_id}", file=sys.stderr)
-                    
-                    # Update Supabase with the updated report URL
-                    script_output = {
-                        'stdout': next((file.get('stdout', '') for file in uploaded_files if file['name'] == 'stdout.txt' and script_id in file['relative_path']), ''),
-                        'stderr': next((file.get('stderr', '') for file in uploaded_files if file['name'] == 'stderr.txt' and script_id in file['relative_path']), ''),
-                        'exitCode': 0 if script_data['status'] == 'success' else 1
-                    }
-                    update_supabase_script_execution(script_id, script_data['status'], script_output, datetime.now(timezone.utc).isoformat(), updated_script_report_url)
-                except Exception as e:
-                    print(f"[@upload_and_report:main] Error uploading updated script report for script {script_id}: {str(e)}", file=sys.stderr)
-        
-        # Regenerate job report with updated URLs
-        job_report_path = create_job_report_html(job_folder_path, job_id, datetime.now(timezone.utc).isoformat(), datetime.now(timezone.utc).isoformat(), script_reports, job_status, uploaded_files, config_name=config_name)
-        # Upload the updated job report
-        with open(job_report_path, 'rb') as f:
-            s3_client.upload_fileobj(
-                f,
-                bucket_name,
-                os.path.join(os.path.basename(job_folder_path), os.path.basename(job_report_path)),
-                ExtraArgs={
-                    'ContentType': 'text/html',
-                    'ContentDisposition': 'inline'
-                }
-            )
-        updated_job_report_url = s3_client.generate_presigned_url(
-            'get_object',
-            Params={'Bucket': bucket_name, 'Key': os.path.join(os.path.basename(job_folder_path), os.path.basename(job_report_path))},
-            ExpiresIn=604800  # 7 days in seconds
-        )
-        print(f"[@upload_and_report:main] Updated Job Run Report uploaded with URLs for job {job_id}", file=sys.stderr)
-        if updated_job_report_url:
-            update_supabase_job_status(job_uuid, job_status, job_output, datetime.now(timezone.utc).isoformat(), updated_job_report_url)
-
-    except Exception as e:
-        print(f"[@upload_and_report:main] ERROR: Failed to upload files to R2 for job {job_id}: {str(e)}", file=sys.stderr)
-        output = {
-            'status': 'failure',
-            'job_id': job_id,
-            'uploaded_files': uploaded_files,
-            'error': f'Failed to upload files: {str(e)}'
-        }
-        # Still attempt to update Supabase with job status even if upload fails
+    # Update report URLs for job and scripts after upload
+    job_report_url = next((file['public_url'] for file in uploaded_files if file['name'] == 'report.html'), '')
+    if job_report_url:
         job_output = {
             'scripts': list(script_reports.values()),
             'stdout': '',
-            'stderr': str(e)
+            'stderr': ''
         }
         # Extract UUID from job_id if it contains a timestamp prefix
         job_uuid = job_id.split('_')[-1] if '_' in job_id else job_id
-        update_supabase_job_status(job_uuid, job_status, job_output, datetime.now(timezone.utc).isoformat(), job_report_url if 'job_report_url' in locals() else '')
-        for script_id, script_data in script_reports.items():
-            script_output = {
-                'stdout': '',
-                'stderr': str(e),
-                'exitCode': 1
+        update_supabase_job_status(job_uuid, job_status, job_output, datetime.now(timezone.utc).isoformat(), job_report_url)
+    else:
+        print(f"[@upload_and_report:main] WARNING: Job report URL not found for job {job_id}", file=sys.stderr)
+        job_output = {
+            'scripts': list(script_reports.values()),
+            'stdout': '',
+            'stderr': ''
+        }
+        # Extract UUID from job_id if it contains a timestamp prefix
+        job_uuid = job_id.split('_')[-1] if '_' in job_id else job_id
+        update_supabase_job_status(job_uuid, job_status, job_output, datetime.now(timezone.utc).isoformat(), '')
+
+    for script_id, script_data in script_reports.items():
+        try:
+            script_folder_path = os.path.join(job_folder_path, next(folder for folder in script_folders if script_id in folder))
+        except StopIteration:
+            print(f"[@upload_and_report:main] WARNING: Could not find script folder for script {script_id}", file=sys.stderr)
+            continue
+            
+        stdout_path = os.path.join(script_folder_path, 'stdout.txt')
+        stderr_path = os.path.join(script_folder_path, 'stderr.txt')
+        
+        # Re-read stdout and stderr
+        stdout_content = ""
+        if os.path.exists(stdout_path):
+            try:
+                with open(stdout_path, 'r', encoding='utf-8') as f:
+                    stdout_content = f.read()
+            except UnicodeDecodeError as e:
+                print(f"[@upload_and_report:main] Error re-reading stdout.txt with UTF-8 for script {script_id}: {str(e)}", file=sys.stderr)
+                with open(stdout_path, 'r', encoding='cp1252', errors='replace') as f:
+                    stdout_content = f.read()
+            except Exception as e:
+                print(f"[@upload_and_report:main] Error re-reading stdout.txt for script {script_id}: {str(e)}", file=sys.stderr)
+        
+        stderr_content = ""
+        if os.path.exists(stderr_path):
+            try:
+                with open(stderr_path, 'r', encoding='utf-8') as f:
+                    stderr_content = f.read()
+            except UnicodeDecodeError as e:
+                print(f"[@upload_and_report:main] Error re-reading stderr.txt with UTF-8 for script {script_id}: {str(e)}", file=sys.stderr)
+                with open(stderr_path, 'r', encoding='cp1252', errors='replace') as f:
+                    stderr_content = f.read()
+            except Exception as e:
+                print(f"[@upload_and_report:main] Error re-reading stderr.txt for script {script_id}: {str(e)}", file=sys.stderr)
+        
+        # Create updated script report with file links
+        updated_script_report_path = create_script_report_html(
+            script_folder_path, stdout_content, stderr_content, script_id, job_id, 
+            datetime.now(timezone.utc).isoformat(), datetime.now(timezone.utc).isoformat(), script_data['script_path'], parameters, 
+            script_data['status'], uploaded_files
+        )
+        
+        # Upload the updated script report
+        if updated_script_report_path:
+            try:
+                with open(updated_script_report_path, 'rb') as f:
+                    s3_client.upload_fileobj(
+                        f,
+                        bucket_name,
+                        os.path.relpath(updated_script_report_path, job_folder_path),
+                        ExtraArgs={
+                            'ContentType': 'text/html',
+                            'ContentDisposition': 'inline'
+                        }
+                    )
+                updated_script_report_url = s3_client.generate_presigned_url(
+                    'get_object',
+                    Params={'Bucket': bucket_name, 'Key': os.path.relpath(updated_script_report_path, job_folder_path)},
+                    ExpiresIn=604800  # 7 days in seconds
+                )
+                print(f"[@upload_and_report:main] Updated Script Report uploaded with file links for script {script_id}", file=sys.stderr)
+                
+                # Update Supabase with the updated report URL
+                script_output = {
+                    'stdout': next((file.get('stdout', '') for file in uploaded_files if file['name'] == 'stdout.txt' and script_id in file['relative_path']), ''),
+                    'stderr': next((file.get('stderr', '') for file in uploaded_files if file['name'] == 'stderr.txt' and script_id in file['relative_path']), ''),
+                    'exitCode': 0 if script_data['status'] == 'success' else 1
+                }
+                update_supabase_script_execution(script_id, script_data['status'], script_output, datetime.now(timezone.utc).isoformat(), updated_script_report_url)
+            except Exception as e:
+                print(f"[@upload_and_report:main] Error uploading updated script report for script {script_id}: {str(e)}", file=sys.stderr)
+        
+    # Regenerate job report with updated URLs
+    job_report_path = create_job_report_html(job_folder_path, job_id, datetime.now(timezone.utc).isoformat(), datetime.now(timezone.utc).isoformat(), script_reports, job_status, uploaded_files, config_name=config_name)
+    # Upload the updated job report
+    with open(job_report_path, 'rb') as f:
+        s3_client.upload_fileobj(
+            f,
+            bucket_name,
+            os.path.join(os.path.basename(job_folder_path), os.path.basename(job_report_path)),
+            ExtraArgs={
+                'ContentType': 'text/html',
+                'ContentDisposition': 'inline'
             }
-            update_supabase_script_execution(script_id, script_data['status'], script_output, datetime.now(timezone.utc).isoformat(), '')
+        )
+    updated_job_report_url = s3_client.generate_presigned_url(
+        'get_object',
+        Params={'Bucket': bucket_name, 'Key': os.path.join(os.path.basename(job_folder_path), os.path.basename(job_report_path))},
+        ExpiresIn=604800  # 7 days in seconds
+    )
+    print(f"[@upload_and_report:main] Updated Job Run Report uploaded with URLs for job {job_id}", file=sys.stderr)
+    if updated_job_report_url:
+        update_supabase_job_status(job_uuid, job_status, job_output, datetime.now(timezone.utc).isoformat(), updated_job_report_url)
 
     # Move out of the job folder before cleanup
     parent_dir = os.path.dirname(job_folder_path)
