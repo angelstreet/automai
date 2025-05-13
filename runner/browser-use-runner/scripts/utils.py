@@ -105,7 +105,7 @@ def load_cookies(context, cookies_path: str):
         return False
 
 def init_browser(playwright: Playwright, headless=True, debug: bool = False, video_dir: str = None, screenshots: bool = True, video: bool = True, source: bool = True, cookies_path: str = None, executable_path: str = None, remote_debugging: bool = False):
-    browser_args = ['--disable-blink-features=AutomationControlled','--disable-gpu', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--window-position=0,0']
+    browser_args = ['--disable-blink-features=AutomationControlled','--disable-gpu', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--window-position=0,0', '--enable-unsafe-swiftshader']
     
     if remote_debugging:
         # Kill any existing Chrome instances to avoid port conflicts
@@ -161,7 +161,7 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
             '--window-position=0,0',
             '--window-size=1920,1080',
             '--disable-gpu',
-            'about:blank'
+            '--enable-unsafe-swiftshader'
         ]
         
         cmd_line = [chrome_path] + chrome_flags
@@ -325,6 +325,10 @@ def finalize_run(page: Page, context, browser, trace_subfolder: str, timestamp: 
     video_path = page.video.path() if not remote_debugging and page.video and video else None
     if video_path:
         print(f"Video saved to: {video_path}")
+    
+    # Log the current URL to confirm where the browser is before completion
+    current_url = page.url
+    print(f"Current URL before completion: {current_url}")
     
     if not keep_browser_open:
         # Close both page and browser if we're not keeping the browser open
