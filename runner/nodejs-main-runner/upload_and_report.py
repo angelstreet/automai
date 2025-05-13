@@ -34,10 +34,12 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
     associated_files_html = ""
     if associated_files:
         # Filter files to exclude stdout.txt, stderr.txt, and script_report.html
-        excluded_filenames = {'stdout.txt', 'stderr.txt', 'script_report.html', 'metadata.json','vncpasswd'}
+        excluded_filenames = {'stdout.txt', 'stderr.txt', 'script_report.html', 'metadata.json', 'vncpasswd'}
+        allowed_extensions = {'.png', '.jpg', '.trace', '.txt', '.json', '.webm'}
         script_files = [file for file in associated_files 
                         if script_id in file.get('relative_path', '') 
-                        and file.get('name') not in excluded_filenames]
+                        and file.get('name') not in excluded_filenames
+                        and any(file.get('name', '').lower().endswith(ext) for ext in allowed_extensions)]
         
         # Sort files by creation date, newest first
         script_files.sort(key=lambda x: x.get('creation_date', ''), reverse=True)
