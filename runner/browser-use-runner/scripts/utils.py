@@ -379,8 +379,8 @@ def finalize_run(page: Page, context, browser, trace_subfolder: str, timestamp: 
 
     try:
         if context.tracing:
-        context.tracing.stop(path=trace_file)
-        print(f"Tracing data saved to: {trace_file}")
+            context.tracing.stop(path=trace_file)
+            print(f"Tracing data saved to: {trace_file}")
     except Exception as e:
         print(f"Error saving or extracting trace data: {str(e)}")
 

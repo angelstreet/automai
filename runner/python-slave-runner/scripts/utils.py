@@ -6,7 +6,6 @@ import argparse
 from dotenv import load_dotenv
 import re
 from datetime import datetime
-import zipfile
 import json
 import platform
 import subprocess
@@ -327,7 +326,10 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
 
     # The rest of the initialization is different depending on whether we're using remote debugging or not
     if remote_debugging:
-        context = browser.new_context()
+        context = browser.new_context(
+            viewport={"width": 1920, "height": 1080},  # Set a large viewport for fullscreen experience
+            record_video_dir=video_dir if video else None
+        )
     else:
         context = browser.new_context(
             viewport={"width": 1920, "height": 1080},  # Set a large viewport for fullscreen experience
@@ -374,6 +376,14 @@ def take_screenshot(page: Page, trace_subfolder: str, name: str = 'screenshot') 
 
 def finalize_run(page: Page, context, browser, trace_subfolder: str, timestamp: str, trace_file: str, video: bool = True, remote_debugging: bool = False, keep_browser_open: bool = True):
     take_screenshot(page, trace_subfolder, 'final_state')
+
+    try:
+        if context.tracing:
+            context.tracing.stop(path=trace_file)
+            print(f"Tracing data saved to: {trace_file}")
+    except Exception as e:
+        print(f"Error saving or extracting trace data: {str(e)}")
+
 
     # Log the current URL to confirm where the browser is before completion
     current_url = page.url
