@@ -9,22 +9,23 @@ from datetime import datetime
 import zipfile
 import json
 
-from utils import init_browser, activate_semantic_placeholder, save_cookies, finalize_run, get_cookies_path, setup_common_args, run_main
+from utils import init_browser, activate_semantic_placeholder, save_cookies, finalize_run, get_cookies_path, setup_common_args, run_main, take_screenshot
 
-def login(page: Page, url: str, username: str, password: str):
+def login(page: Page, url: str, username: str, password: str, trace_folder: str):
     print(f"Debug: Username in login: {username}")
     print(f"Debug: Password in login: {password}")
     if not username or not password:
         raise ValueError("Username and password must be provided")
 
-    activate_semantic_placeholder(page)
+    activate_semantic_placeholder(page, trace_folder)
     page.wait_for_timeout(2000)
 
     page.wait_for_selector("#onetrust-accept-btn-handler", state="visible")
     page.wait_for_timeout(1000)
     print("Accept cookies")
+    take_screenshot(page, trace_folder, 'accept_cookies')
     page.locator("#onetrust-accept-btn-handler").click()
-
+    
     page.wait_for_selector("#flt-semantic-node-6", state="visible")
     page.wait_for_timeout(1000)
     print("Click on username")
@@ -42,32 +43,36 @@ def login(page: Page, url: str, username: str, password: str):
     page.locator("#password").fill(password)
 
     page.wait_for_selector("#kc-login", state="visible")
+    
     page.wait_for_timeout(1000)
     print("Click on login")
     page.locator("#kc-login").click()
-    
+    take_screenshot(page, trace_folder, 'click_login')
     print("Wait for 10 seconds")
     page.wait_for_timeout(15000)
-
+    take_screenshot(page, trace_folder, 'wait for home')
     # Log cookies before reload for debugging
     cookies_before = page.context.cookies()
     print(f"Cookies before reload: {len(cookies_before)} cookies found")
     for cookie in cookies_before:
         print(f"Cookie: {cookie.get('name', 'Unknown')} - {cookie.get('value', 'No value')}")
 
-    activate_semantic_placeholder(page)
+    activate_semantic_placeholder(page, trace_folder)
     page.wait_for_timeout(1000)
 
     try:
         element = page.get_by_label(re.compile("Profil", re.IGNORECASE))
         if element.count() > 0 and element.is_visible():
             print('Test Success, Login successful')
+            take_screenshot(page, trace_folder, 'login_success')
             return True
         else:
             print('Test Failed, Login failed')
+            take_screenshot(page, trace_folder, 'login_failed')
             return False
     except Exception as e:
         print(f'Test Failed, Login failed: {str(e)}')
+        take_screenshot(page, trace_folder, 'login_failed')
         return False
 
 def run(playwright: Playwright, username: str, password: str, headless=True, debug: bool = False, trace_folder: str = 'suncherry-playwright_trace', screenshots: bool = True, video: bool = True, source: bool = True, cookies: bool = True, executable_path: str = None, remote_debugging: bool = False, keep_browser_open: bool = True):
@@ -88,7 +93,7 @@ def run(playwright: Playwright, username: str, password: str, headless=True, deb
         page.goto(url, timeout=60000)
         page.wait_for_timeout(10000)
 
-        login_result = login(page, url, username, password)
+        login_result = login(page, url, username, password, trace_folder)
         if login_result and cookies:
             save_cookies(page, cookies_path)
         

@@ -9,7 +9,7 @@ from datetime import datetime
 import zipfile
 import json
 
-from utils import init_browser, activate_semantic_placeholder, finalize_run, load_cookies, get_cookies_path, setup_common_args, run_main
+from utils import init_browser, activate_semantic_placeholder, finalize_run, load_cookies, get_cookies_path, setup_common_args, run_main, take_screenshot
 
 # Load .env file from the same directory as this script
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -19,7 +19,7 @@ print(f'Loaded environment variables from: {env_path}')
 
 def pass_login(page: Page, url: str, channel: str = 'RTS 1'):
     try:
-        activate_semantic_placeholder(page)
+        activate_semantic_placeholder(page, trace_folder)
         page.wait_for_timeout(2000)
         page.wait_for_selector("#flt-semantic-node-6", state="visible")
         page.click("#flt-semantic-node-6")
@@ -30,28 +30,38 @@ def pass_login(page: Page, url: str, channel: str = 'RTS 1'):
         print(f'Login screen not shown or skipped: {str(e)}')
         return True
 
-def zap(page: Page, url: str, channel: str = 'RTS 1'):
+def zap(page: Page, url: str, trace_folder: str, channel: str = 'RTS 1'):
     try:
-        activate_semantic_placeholder(page)
+        activate_semantic_placeholder(page, trace_folder)
         page.wait_for_timeout(3000)
 
         page.wait_for_selector("#flt-semantic-node-6", state="visible", timeout=20000)
         print("Click on TV Guide")
+        take_screenshot(page, trace_folder, 'click_tv_guide')
         page.locator("#flt-semantic-node-6").click()
 
         page.wait_for_timeout(1000)
         page.wait_for_selector("[aria-label*='LIVE TV']", state="visible")
         print("Click on LIVE TV tab")
+        take_screenshot(page, trace_folder, 'click_live_tv')
         page.locator("[aria-label*='LIVE TV']").click()
 
         page.wait_for_selector(f'[aria-label*="{channel}"]', state="visible")
         print("Click on specific channel")
+        take_screenshot(page, trace_folder, 'click_channel')
         page.locator(f'[aria-label*="{channel}"]').click()
-        page.wait_for_timeout(30000)
+        take_screenshot(page, trace_folder, 'click_channel_success')
+        page.wait_for_timeout(10000)
+        take_screenshot(page, trace_folder, 'wait_for_channel')
+        page.wait_for_timeout(10000)
+        take_screenshot(page, trace_folder, 'wait_for_channel')
+        page.wait_for_timeout(10000)
         print('Test Success, Zap success')
+        take_screenshot(page, trace_folder, 'zap_success')
         return True
     except Exception as e:
         print(f'Test Failed, Zap failed: {str(e)}')
+        take_screenshot(page, trace_folder, 'zap_failed')
         return False
 
 def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder: str = 'suncherry-playwright_trace', screenshots: bool = True, video: bool = True, source: bool = True, cookies: bool = True, channel: str = 'RTS 1', executable_path: str = None, remote_debugging: bool = False, keep_browser_open: bool = True):
@@ -81,7 +91,7 @@ def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder
         loaded_cookies = context.cookies()
         print(f"Loaded cookies count: {len(loaded_cookies)}")
         
-        result = zap(page, url, channel)
+        result = zap(page, url, trace_folder, channel)
 
     except Exception as e:
         print(f"An error occurred during execution: {str(e)}")

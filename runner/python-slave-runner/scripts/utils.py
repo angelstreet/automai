@@ -36,9 +36,10 @@ def get_cookies_path(trace_folder: str, cookies_enabled: bool = True):
     print(f"Debug: Determined cookies_path to be: {cookies_path} based on trace_folder: {trace_folder}")
     return cookies_path
 
-def activate_semantic_placeholder(page: Page):
+def activate_semantic_placeholder(page: Page, trace_folder: str):
     shadow_root_selector = 'body > flutter-view > flt-glass-pane'
     element_inside_shadow_dom_selector = 'flt-semantics-placeholder'
+    take_screenshot(page, trace_folder, 'semantic_placeholder_start')
     try:
         flutter_view_present = page.locator(shadow_root_selector).count() > 0
         print(f"Page state check: Flutter view present: {flutter_view_present}")
@@ -66,12 +67,15 @@ def activate_semantic_placeholder(page: Page):
 
         if clicked:
             print("Semantic placeholder activated.")
+            take_screenshot(page, trace_folder, 'semantic_placeholder_end')
             return True
         else:
             print("Error activating semantic placeholder")
+            take_screenshot(page, trace_folder, 'semantic_placeholder_error')
             return False
     except Exception as e:
         print(f"Error in semantic placeholder activation: {str(e)}")
+        take_screenshot(page, trace_folder, 'semantic_placeholder_error')
         return False
 
 def load_cookies(context, cookies_path: str):
@@ -161,11 +165,21 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
         except Exception as e:
             print(f'Error checking port usage: {str(e)}')
         
-        # Load Chrome path from .env or use provided executable_path
-        chrome_path = executable_path if executable_path else os.getenv('CHROME_INSTANCE_PATH', '').strip('"')
-        if not chrome_path:
-            raise ValueError('No Chrome executable path provided via --executable_path or CHROME_INSTANCE_PATH in .env file.')
-        print(f'Launching Chrome with remote debugging using: {chrome_path}')
+        # Set hardcoded Chrome path based on OS if not provided
+        if not executable_path:
+            if platform.system() == 'Windows':
+                executable_path = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
+            elif platform.system() == 'Darwin':  # macOS
+                executable_path = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+            else:  # Linux
+                possible_paths = ['/usr/bin/google-chrome', '/usr/bin/chromium-browser']
+                for path in possible_paths:
+                    if os.path.exists(path):
+                        executable_path = path
+                        break
+                if not executable_path:
+                    raise ValueError('No Chrome executable found in common Linux paths. Please provide --executable_path.')
+        print(f'Launching Chrome with remote debugging using: {executable_path}')
         
         # Launch Chrome with remote debugging enabled using a more reliable approach
         debug_port = 9222
@@ -187,7 +201,7 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
             '--enable-unsafe-swiftshader'
         ]
         
-        cmd_line = [chrome_path] + chrome_flags
+        cmd_line = [executable_path] + chrome_flags
         print(f'Launching Chrome with command: {" ".join(cmd_line)}')
         process = subprocess.Popen(cmd_line)
         print(f'Chrome launched with PID: {process.pid}')
@@ -283,11 +297,33 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
             )
             print(f"Using custom Chrome executable at: {executable_path}")
         else:
-            browser = playwright.chromium.launch(
-                headless=headless,
-                args=browser_args
-            )
-            print("Using default Chromium browser")
+            # Set hardcoded Chrome path based on OS if not provided
+            if platform.system() == 'Windows':
+                executable_path = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
+            elif platform.system() == 'Darwin':  # macOS
+                executable_path = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+            else:  # Linux
+                possible_paths = ['/usr/bin/google-chrome', '/usr/bin/chromium-browser']
+                for path in possible_paths:
+                    if os.path.exists(path):
+                        executable_path = path
+                        break
+                if not executable_path:
+                    print('No Chrome executable found in common Linux paths. Falling back to default Chromium.')
+                    executable_path = None
+            if executable_path and os.path.exists(executable_path):
+                browser = playwright.chromium.launch(
+                    headless=headless,
+                    executable_path=executable_path,
+                    args=browser_args
+                )
+                print(f"Using Chrome executable at: {executable_path}")
+            else:
+                browser = playwright.chromium.launch(
+                    headless=headless,
+                    args=browser_args
+                )
+                print("Using default Chromium browser")
 
     # The rest of the initialization is different depending on whether we're using remote debugging or not
     if remote_debugging:
@@ -325,28 +361,20 @@ def save_cookies(page: Page, cookies_path: str):
     else:
         print("Debug: Skipping cookie saving as cookies_path is not set")
 
-def finalize_run(page: Page, context, browser, trace_subfolder: str, timestamp: str, trace_file: str, video: bool = True, remote_debugging: bool = False, keep_browser_open: bool = True):
+def take_screenshot(page: Page, trace_subfolder: str, name: str = 'screenshot') -> str:
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    screenshot_path = f"{trace_subfolder}/{name}_{timestamp}.png"
     try:
-        screenshot_path = f"{trace_subfolder}/final_state_{timestamp}.png"
         page.screenshot(path=screenshot_path, full_page=True, timeout=20000)
         print(f"Screenshot saved to: {screenshot_path}")
+        return screenshot_path
     except Exception as e:
-        print(f"Error taking final screenshot: {str(e)}")
-    
-    try:
-        context.tracing.stop(path=trace_file)
-        print(f"Tracing data saved to: {trace_file}")
-        with zipfile.ZipFile(trace_file, 'r') as zip_ref:
-            zip_ref.extractall(trace_subfolder)
-        os.remove(trace_file)
-        print(f"Zip file removed: {trace_file}")
-    except Exception as e:
-        print(f"Error saving or extracting trace data: {str(e)}")
+        print(f"Error taking screenshot: {str(e)}")
+        return ''
 
-    video_path = page.video.path() if not remote_debugging and page.video and video else None
-    if video_path:
-        print(f"Video saved to: {video_path}")
-    
+def finalize_run(page: Page, context, browser, trace_subfolder: str, timestamp: str, trace_file: str, video: bool = True, remote_debugging: bool = False, keep_browser_open: bool = True):
+    take_screenshot(page, trace_subfolder, 'final_state')
+
     # Log the current URL to confirm where the browser is before completion
     current_url = page.url
     print(f"Current URL before completion: {current_url}")
@@ -430,11 +458,12 @@ def run_main(run_function, args=None, with_username_password=False):
             success = run_function(**run_args)
             
             if success:
-                print("Test successful" if not with_username_password else "Login successful")
+                print("Test successful")
                 sys.exit(0)
             else:
-                print("Test failed" if not with_username_password else "Login failed")
+                print("Test failed")
                 sys.exit(1)
+
     except Exception as e:
         print(f"An error occurred: {str(e)}")
         print("Login failed" if with_username_password else "Test failed")
