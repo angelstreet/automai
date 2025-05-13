@@ -506,7 +506,6 @@ def collect_files(
 
         # Skip excluded files
         if filename in excluded_files:
-            logger.info(f"Excluding sensitive file: {filename}")
             continue
 
         # Include files with allowed extensions or report files
@@ -520,10 +519,7 @@ def collect_files(
                 "size": file_path.stat().st_size,
                 "creation_date": datetime.fromtimestamp(creation_time, tz=timezone.utc).isoformat()
             })
-            logger.info(f"Including file: {filename}")
-        else:
-            logger.info(f"Excluding file due to unallowed extension: {filename}")
-
+        
     logger.info(f"Found {len(files_to_upload)} files to upload")
     return files_to_upload
 
@@ -571,7 +567,8 @@ def upload_files(
             )
             file_info['public_url'] = presigned_url
             uploaded_files.append(file_info)
-            logger.info(f"Successfully uploaded: {filename}")
+            if filename in {"report.html", "script_report.html"}:
+                logger.info(f"Successfully uploaded: {filename}")
         except Exception as e:
             logger.error(f"Failed to upload {filename}: {str(e)}")
             continue
