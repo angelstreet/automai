@@ -695,10 +695,24 @@ def main():
     associated_files = []
     excluded_files = {'.env', 'requirements.txt', 'upload_and_report.py'}
     allowed_extensions = {'.png', '.jpg', '.trace', '.txt', '.json', '.webm'}
+    report_files = {'report.html', 'script_report.html'}
     for root, _, filenames in os.walk(job_folder_path):
         for filename in filenames:
             if filename in excluded_files:
                 print(f"[@upload_and_report:main] Excluding sensitive file from upload: {filename}", file=sys.stderr)
+                continue
+            if filename in report_files:
+                file_path = os.path.join(root, filename)
+                relative_path = os.path.relpath(file_path, job_folder_path)
+                creation_time = os.path.getctime(file_path) if os.path.exists(file_path) else 0
+                associated_files.append({
+                    'name': filename,
+                    'path': file_path,
+                    'relative_path': relative_path,
+                    'size': os.path.getsize(file_path) if os.path.exists(file_path) else 0,
+                    'creation_date': datetime.fromtimestamp(creation_time).isoformat() + 'Z' if creation_time else datetime.now(timezone.utc).isoformat()
+                })
+                print(f"[@upload_and_report:main] Including report file for upload: {filename}", file=sys.stderr)
                 continue
             if not any(filename.lower().endswith(ext) for ext in allowed_extensions):
                 print(f"[@upload_and_report:main] Excluding file due to unallowed extension: {filename}", file=sys.stderr)
