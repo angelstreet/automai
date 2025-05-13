@@ -310,7 +310,6 @@ def finalize_run(page: Page, context, browser, trace_subfolder: str, timestamp: 
     except Exception as e:
         print(f"Error taking final screenshot: {str(e)}")
     
-    page.close()
     try:
         # Only stop tracing if not using remote debugging
         if not remote_debugging:
@@ -328,10 +327,13 @@ def finalize_run(page: Page, context, browser, trace_subfolder: str, timestamp: 
         print(f"Video saved to: {video_path}")
     
     if not keep_browser_open:
+        # Close both page and browser if we're not keeping the browser open
+        page.close()
         browser.close()
         print("Browser closed")
     else:
-        print("Browser kept open. Remember to close it manually when done.")
+        # If keeping browser open, don't close the page so user can continue interacting
+        print("Browser kept open with current page. Remember to close it manually when done.")
 
 def setup_common_args(parser, add_channel=False):
     """
