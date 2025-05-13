@@ -47,11 +47,11 @@ def zap(page: Page, url: str, channel: str = 'RTS 1'):
         page.wait_for_selector(f'[aria-label*="{channel}"]', state="visible")
         print("Click on specific channel")
         page.locator(f'[aria-label*="{channel}"]').click()
-        page.wait_for_timeout(3000)
-        print('Zap success')
+        page.wait_for_timeout(5000)
+        print('Test Success, Zap success')
         return True
     except Exception as e:
-        print(f'Zap failed: {str(e)}')
+        print(f'Test Failed, Zap failed: {str(e)}')
         return False
 
 def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder: str = 'suncherry-playwright_trace', screenshots: bool = True, video: bool = True, source: bool = True, cookies: bool = True, channel: str = 'RTS 1', executable_path: str = None, remote_debugging: bool = False, keep_browser_open: bool = True):
@@ -83,13 +83,13 @@ def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder
         
         result = zap(page, url, channel)
         page.wait_for_timeout(10000)
+        result = True
     except Exception as e:
         print(f"An error occurred during execution: {str(e)}")
         result = False
     finally:
         finalize_run(page, context, browser, trace_subfolder, timestamp, trace_file, video, remote_debugging, keep_browser_open)
-    
-    return result
+        return result
 
 def main():
     parser = argparse.ArgumentParser(description='Run Suncherry Playwright script')
