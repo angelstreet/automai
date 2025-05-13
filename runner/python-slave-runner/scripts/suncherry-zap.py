@@ -83,11 +83,21 @@ def zap(page: Page, url: str, channel: str = 'RTS 1'):
         print(f'Zap failed: {str(e)}')
         return False
 
-def init_browser(playwright: Playwright, headless=True, debug: bool = False, video_dir: str = None, screenshots: bool = True, video: bool = True, source: bool = True, cookies_path: str = None):
-    browser = playwright.chromium.launch(
-        headless=headless,
-        args=['--disable-blink-features=AutomationControlled', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--disable-gpu', '--start-maximized']
-    )
+def init_browser(playwright: Playwright, headless=True, debug: bool = False, video_dir: str = None, screenshots: bool = True, video: bool = True, source: bool = True, cookies_path: str = None, executable_path: str = None):
+    browser_args = ['--disable-blink-features=AutomationControlled', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--disable-gpu',  '--window-position=0,0']
+    if executable_path:
+        browser = playwright.chromium.launch(
+            headless=headless,
+            executable_path=executable_path,
+            args=browser_args
+        )
+        print(f"Using custom Chrome executable at: {executable_path}")
+    else:
+        browser = playwright.chromium.launch(
+            headless=headless,
+            args=browser_args
+        )
+        print("Using default Chromium browser")
 
     # Ensure the cookies directory exists only if a path is provided
     if cookies_path:
@@ -128,7 +138,7 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
         page.on("requestfailed", lambda request: print(f"Request failed: {request.url} {request.failure}"))
     return page, context, browser
 
-def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder: str = 'suncherry-playwright_trace', screenshots: bool = True, video: bool = True, source: bool = True, cookies: bool = True, channel: str = 'RTS 1'):
+def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder: str = 'suncherry-playwright_trace', screenshots: bool = True, video: bool = True, source: bool = True, cookies: bool = True, channel: str = 'RTS 1', executable_path: str = None):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     job_folder = trace_folder  # Use trace_folder as the base job folder directly
     trace_subfolder = f"{job_folder}/trace_{timestamp}"  # Create a trace subfolder within job_folder
@@ -136,11 +146,14 @@ def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder
     trace_file = f"{trace_subfolder}/{timestamp}.zip"
 
     if cookies:
-        cookies_path = os.path.dirname(trace_folder)
+        # Ensure trace_folder is an absolute path to avoid empty dirname
+        abs_trace_folder = os.path.abspath(trace_folder)
+        cookies_path = os.path.dirname(abs_trace_folder) if os.path.dirname(abs_trace_folder) else abs_trace_folder
+        print(f"Debug: Setting cookies_path to: {cookies_path} based on absolute trace_folder: {abs_trace_folder}")
     else:
         cookies_path = None
 
-    page, context, browser = init_browser(playwright, headless, debug, trace_subfolder if video else None, screenshots, video, source, cookies_path)
+    page, context, browser = init_browser(playwright, headless, debug, trace_subfolder if video else None, screenshots, video, source, cookies_path, executable_path)
     url = "https://www.sunrisetv.ch/de/home"
     page.set_default_timeout(10000)
 
@@ -192,13 +205,14 @@ def main():
     parser.add_argument('--no-video', action='store_true', default=False, help='Disable video recording (default: enabled)')
     parser.add_argument('--no-trace', action='store_true', default=False, help='Disable source tracing (default: enabled)')
     parser.add_argument('--channel', type=str, default='SRF 1', help='Channel to select (default: SRF 1)')
+    parser.add_argument('--executable_path', type=str, help='Path to Google Chrome executable, defaults to Chromium if not provided')
     args, _ = parser.parse_known_args()
 
     print(f"Running in {'headless' if args.headless else 'visible'} mode with {'no-video' if args.no_video else 'video'}, {'no-screenshots' if args.no_screenshots else 'screenshots'}, {'no-trace' if args.no_trace else 'trace'}, targeting channel: {args.channel}")
 
     try:
         with sync_playwright() as playwright:
-            success = run(playwright, headless=args.headless, debug=args.debug, trace_folder=args.trace_folder, screenshots=not args.no_screenshots, video=not args.no_video, source=not args.no_trace, channel=args.channel)
+            success = run(playwright, headless=args.headless, debug=args.debug, trace_folder=args.trace_folder, screenshots=not args.no_screenshots, video=not args.no_video, source=not args.no_trace, channel=args.channel, executable_path=args.executable_path)
             if success:
                 print("Test successful")
                 sys.exit(0)

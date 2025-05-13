@@ -115,11 +115,21 @@ def login(page: Page, url: str, username: str, password: str):
         print(f'Login failed: {str(e)}')
         return False
 
-def init_browser(playwright: Playwright, headless=True, debug: bool = False, video_dir: str = None, screenshots: bool = True, video: bool = True, source: bool = True, cookies_path: str = None):
-    browser = playwright.chromium.launch(
-        headless=headless,
-        args=['--disable-blink-features=AutomationControlled', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--disable-gpu', '--start-maximized', '--window-position=0,0']
-    )
+def init_browser(playwright: Playwright, headless=True, debug: bool = False, video_dir: str = None, screenshots: bool = True, video: bool = True, source: bool = True, cookies_path: str = None, executable_path: str = None):
+    browser_args = ['--disable-blink-features=AutomationControlled', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--disable-gpu','--window-position=0,0']
+    if executable_path:
+        browser = playwright.chromium.launch(
+            headless=headless,
+            executable_path=executable_path,
+            args=browser_args
+        )
+        print(f"Using custom Chrome executable at: {executable_path}")
+    else:
+        browser = playwright.chromium.launch(
+            headless=headless,
+            args=browser_args
+        )
+        print("Using default Chromium browser")
 
     context = browser.new_context(
         viewport={"width": 1920, "height": 1080},  # Set viewport to match VNC geometry
@@ -146,18 +156,21 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
         page.on("requestfailed", lambda request: print(f"Request failed: {request.url} {request.failure}"))
     return page, context, browser
 
-def run(playwright: Playwright, username: str, password: str, headless=True, debug: bool = False, trace_folder: str = 'suncherry-playwright_trace', screenshots: bool = True, video: bool = True, source: bool = True, cookies: bool = True):
+def run(playwright: Playwright, username: str, password: str, headless=True, debug: bool = False, trace_folder: str = 'suncherry-playwright_trace', screenshots: bool = True, video: bool = True, source: bool = True, cookies: bool = True, executable_path: str = None):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     trace_subfolder = f"{trace_folder}/{timestamp}"
     os.makedirs(trace_subfolder, exist_ok=True)
     trace_file = f"{trace_subfolder}/{timestamp}.zip"
 
     if cookies:
-        cookies_path = os.path.dirname(trace_folder)
+        # Ensure trace_folder is an absolute path to avoid empty dirname
+        abs_trace_folder = os.path.abspath(trace_folder)
+        cookies_path = os.path.dirname(abs_trace_folder) if os.path.dirname(abs_trace_folder) else abs_trace_folder
+        print(f"Debug: Setting cookies_path to: {cookies_path} based on absolute trace_folder: {abs_trace_folder}")
     else:
         cookies_path = None
 
-    page, context, browser = init_browser(playwright, headless, debug, trace_subfolder if video else None, screenshots, video, source, cookies_path)
+    page, context, browser = init_browser(playwright, headless, debug, trace_subfolder if video else None, screenshots, video, source, cookies_path, executable_path)
     url = "https://www.sunrisetv.ch/de/home"
     page.set_default_timeout(10000)
     
@@ -166,9 +179,12 @@ def run(playwright: Playwright, username: str, password: str, headless=True, deb
         page.wait_for_timeout(10000)
 
         login_result = login(page, url, username, password)
+        # Debug: Check if cookies_path is set
+        print(f"Debug: cookies_path is set to: {cookies_path}")
         # Save cookies immediately after successful login
         if cookies_path:
             cookies_file = os.path.join(cookies_path, 'cookies.json')
+            print(f"Debug: Attempting to save cookies to: {cookies_file}")
             try:
                 os.makedirs(cookies_path, exist_ok=True)
                 cookies_data = page.context.cookies()
@@ -177,6 +193,8 @@ def run(playwright: Playwright, username: str, password: str, headless=True, deb
                 print(f"Saved cookies to {cookies_file} after successful login")
             except Exception as e:
                 print(f"Error saving cookies to {cookies_file}: {str(e)}")
+        else:
+            print("Debug: Skipping cookie saving as cookies_path is not set")
         page.wait_for_timeout(10000)
     except Exception as e:
         print(f"An error occurred during execution: {str(e)}")
@@ -219,6 +237,7 @@ def main():
     parser.add_argument('--no-screenshots', action='store_true', default=False, help='Disable screenshots in tracing (default: enabled)')
     parser.add_argument('--no-video', action='store_true', default=False, help='Disable video recording (default: enabled)')
     parser.add_argument('--no-trace', action='store_true', default=False, help='Disable source tracing (default: enabled)')
+    parser.add_argument('--executable_path', type=str, help='Path to Google Chrome executable, defaults to Chromium if not provided')
     args, _ = parser.parse_known_args()
 
     print(f"Debug: Username from args: {args.username}")
@@ -240,7 +259,7 @@ def main():
 
     try:
         with sync_playwright() as playwright:
-            success = run(playwright, username, password, headless=args.headless, debug=args.debug, trace_folder=args.trace_folder, screenshots=not args.no_screenshots, video=not args.no_video, source=not args.no_trace)
+            success = run(playwright, username, password, headless=args.headless, debug=args.debug, trace_folder=args.trace_folder, screenshots=not args.no_screenshots, video=not args.no_video, source=not args.no_trace, executable_path=args.executable_path)
             if success:
                 print("Login successful")
                 sys.exit(0)

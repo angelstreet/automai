@@ -21,6 +21,7 @@ parser.add_argument('--headless', action='store_true', help='Run in headless mod
 parser.add_argument('--task', type=str, default='Go to youtube and launch a video for 10s', help='The task for the agent to perform')
 parser.add_argument('--trace_folder', type=str, default='traces', help='The folder to save the trace')
 parser.add_argument('--cookies_path', type=str, default='', help='The path to the cookies file')
+parser.add_argument('--executable_path', type=str, help='Path to Google Chrome executable, defaults to Chromium if not provided')
 args, _ = parser.parse_known_args()
 
 task = args.task
@@ -69,7 +70,8 @@ browser_config = BrowserConfig(
         '--disable-accelerated-2d-canvas',
         '--disable-gpu',
         '--node-default-browser-check'
-    ]
+    ],
+    executable_path=args.executable_path if args.executable_path else None
 )
 
 logger.info(f"BrowserConfig headless: {browser_config.headless}")

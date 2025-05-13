@@ -1,0 +1,282 @@
+[
+  {
+    "name": "AUTH_SESSION_ID",
+    "value": "fd2f9984-bfa2-4782-9c23-28a102f45a77.master-7fd54f5c6b-q67lc",
+    "domain": "auth.sunrise.ch",
+    "path": "/auth/realms/SRTV/",
+    "expires": -1,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": "AUTH_SESSION_ID_LEGACY",
+    "value": "fd2f9984-bfa2-4782-9c23-28a102f45a77.master-7fd54f5c6b-q67lc",
+    "domain": "auth.sunrise.ch",
+    "path": "/auth/realms/SRTV/",
+    "expires": -1,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "KEYCLOAK_IDENTITY",
+    "value": "eyJhbGciOiJIUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJjMDM1ODA0Yi0wZTA1LTRjNTktYTgzMS04ZDZmZDc5ZGI2YmEifQ.eyJleHAiOjE3NDcyOTU4NTUsImlhdCI6MTc0NzEyMzA1NSwianRpIjoiOWFhNzE0MDQtZGY3OS00NWMwLTlhN2QtMTdiNWM1YzFiZDIxIiwiaXNzIjoiaHR0cHM6Ly9hdXRoLnN1bnJpc2UuY2gvYXV0aC9yZWFsbXMvU1JUViIsInN1YiI6ImY6YzcyZTk5ZTgtMzg4OC00NTRmLTllOWMtZTUzMTE3ZjNkMTFjOjA3NjMxMTk1MDgiLCJ0eXAiOiJTZXJpYWxpemVkLUlEIiwic2Vzc2lvbl9zdGF0ZSI6ImZkMmY5OTg0LWJmYTItNDc4Mi05YzIzLTI4YTEwMmY0NWE3NyIsInNpZCI6ImZkMmY5OTg0LWJmYTItNDc4Mi05YzIzLTI4YTEwMmY0NWE3NyIsInN0YXRlX2NoZWNrZXIiOiJ0ZkNXWTEtbVhiQ2xRTXhoTlQxeEpzZFpGQURHX3JUUXROeXFwNDA1R3BRIn0.y2mM6akzLeLc6ZqQ4hPArXHTmYHsMyAWYoRwswfOJps",
+    "domain": "auth.sunrise.ch",
+    "path": "/auth/realms/SRTV/",
+    "expires": -1,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": "KEYCLOAK_IDENTITY_LEGACY",
+    "value": "eyJhbGciOiJIUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJjMDM1ODA0Yi0wZTA1LTRjNTktYTgzMS04ZDZmZDc5ZGI2YmEifQ.eyJleHAiOjE3NDcyOTU4NTUsImlhdCI6MTc0NzEyMzA1NSwianRpIjoiOWFhNzE0MDQtZGY3OS00NWMwLTlhN2QtMTdiNWM1YzFiZDIxIiwiaXNzIjoiaHR0cHM6Ly9hdXRoLnN1bnJpc2UuY2gvYXV0aC9yZWFsbXMvU1JUViIsInN1YiI6ImY6YzcyZTk5ZTgtMzg4OC00NTRmLTllOWMtZTUzMTE3ZjNkMTFjOjA3NjMxMTk1MDgiLCJ0eXAiOiJTZXJpYWxpemVkLUlEIiwic2Vzc2lvbl9zdGF0ZSI6ImZkMmY5OTg0LWJmYTItNDc4Mi05YzIzLTI4YTEwMmY0NWE3NyIsInNpZCI6ImZkMmY5OTg0LWJmYTItNDc4Mi05YzIzLTI4YTEwMmY0NWE3NyIsInN0YXRlX2NoZWNrZXIiOiJ0ZkNXWTEtbVhiQ2xRTXhoTlQxeEpzZFpGQURHX3JUUXROeXFwNDA1R3BRIn0.y2mM6akzLeLc6ZqQ4hPArXHTmYHsMyAWYoRwswfOJps",
+    "domain": "auth.sunrise.ch",
+    "path": "/auth/realms/SRTV/",
+    "expires": -1,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "KEYCLOAK_SESSION",
+    "value": "SRTV/f%3Ac72e99e8-3888-454f-9e9c-e53117f3d11c%3A0763119508/fd2f9984-bfa2-4782-9c23-28a102f45a77",
+    "domain": "auth.sunrise.ch",
+    "path": "/auth/realms/SRTV/",
+    "expires": 1747295855.298524,
+    "httpOnly": false,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": "KEYCLOAK_SESSION_LEGACY",
+    "value": "SRTV/f%3Ac72e99e8-3888-454f-9e9c-e53117f3d11c%3A0763119508/fd2f9984-bfa2-4782-9c23-28a102f45a77",
+    "domain": "auth.sunrise.ch",
+    "path": "/auth/realms/SRTV/",
+    "expires": 1747295855.298551,
+    "httpOnly": false,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "TS01803c7a",
+    "value": "010e25f10c2b0c109d5951918e9f61e53ef305873458bfdb64280b32d213054fbb38ad680999294be533e9eb8c1988c93bbef2f0668dab95ce340fbc98b44465bcc232453fdf0e458b4c93ac8432cf2771342dff9dbe4ed8378646d1de9ea7f38d50d1460b7a2d1a2638ab9dcbe03820c937ed7426f15c4ce221ac7019ab2c47e24b7f7629496c0fced784d2c0f033fd2186b78939d5cd91f5c2c2c7324208f1cea0df920ad6ece7d77f888faafb59c1035a0fc9b21c043e51666d555d39c1dd461768ebcb",
+    "domain": "auth.sunrise.ch",
+    "path": "/auth/realms/SRTV/",
+    "expires": -1,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "akaalb_hybrid_perseus_www_prod_ch",
+    "value": "~op=hybrid_perseus_www_prod_ch_single:hybrid_perseus_www_prod_ch_ecx|~rv=3~m=hybrid_perseus_www_prod_ch_ecx:0|~os=e55ddf59c45e13d73df29ebd4e698389~id=806eb822a2bcab0f816ce99587bac077",
+    "domain": "www.sunrisetv.ch",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": "demdex",
+    "value": "84042087270017671121132036943038819354",
+    "domain": ".demdex.net",
+    "path": "/",
+    "expires": 1762675036.515444,
+    "httpOnly": false,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": "kndctr_94B35888557A99487F000101_AdobeOrg_identity",
+    "value": "CiY4NDA3MzE0NjY1NDM5MjQ5OTU4MTEzMjg2MDg1MzQzOTEzMzQyOFITCLvDl8XsMhABGAEqBElSTDEwAPABu8OXxewy",
+    "domain": ".sunrisetv.ch",
+    "path": "/",
+    "expires": 1781251036,
+    "httpOnly": false,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": "kndctr_94B35888557A99487F000101_AdobeOrg_cluster",
+    "value": "irl1",
+    "domain": ".sunrisetv.ch",
+    "path": "/",
+    "expires": 1747124858,
+    "httpOnly": false,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": "AMCV_94B35888557A99487F000101%40AdobeOrg",
+    "value": "MCMID|84073146654392499581132860853439133428",
+    "domain": ".sunrisetv.ch",
+    "path": "/",
+    "expires": 1780819036,
+    "httpOnly": false,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": "OptanonAlertBoxClosed",
+    "value": "2025-05-13T07:57:27.506Z",
+    "domain": ".sunrisetv.ch",
+    "path": "/",
+    "expires": 1762675047,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "rxVisitor",
+    "value": "1747123031501SJ3LC1835BNI8EDQDD6PL87UGAEAV67M",
+    "domain": ".sunrisetv.ch",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "47f9a435667d05e3267b026421cc75db",
+    "value": "08921fea81c8ab1a6b3300ee064c8dab",
+    "domain": "auth.sunrise.ch",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": "289b050122b4253ba653a3335ddf437a",
+    "value": "11c2e11b47468d1a9bf14f088c24f469",
+    "domain": "auth.sunrise.ch",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": "TS014e64f4",
+    "value": "010e25f10cab15ab8578c53dba16c68839dc227fc558bfdb64280b32d213054fbb38ad6809075af8d11a74b48b817a21e8be45b741625425e56b9c5df5424f43caf2e0689e6c8d65ced881c4442e1e8d58de17ee7d",
+    "domain": ".auth.sunrise.ch",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "TSb48daf6c078",
+    "value": "08e6636a3cab20009719ec095951425925eab2090cf4a0f1d425c775aa0f2522ae25eb2ed09106cb082ced0aba189001d0f3d428f01a3305b2f95e52a3cabf44e86d6fac3bad262e81087977cd5ea4a904a482f188204f935d9058648805a270fa0d0f757fac86d8a7f835ca4457420dae5130ddcdac34680c364dd29125c136124dbb44aed4e7ccdf7bb59633762a9ffa7a98111cfcdb8df9274d898c859000fcfa0da3d495a80ad92c05103d493f0ad347e9e55472e14ee8d5ffe3abd57775f50166757111d687713f22d5aa081d71d09f9add3bccedca367b9bef01ef457502029d3e667eeddd76383d20aa987c855de5522388cd94d21ff74c4e59259e8a2fccf16254bb3f1e15824bdb8dd4376bba29567a6d58ee2fa1db1a4e763430bdb5d7c9e16facfc8dddc5bd6ad6b55291f65af84f675190dec3a34cc917264f31ab5aefda4e91faa9ddd2824e6cf550424da61ac3f3ea255c7633085c4c0c4d66a23b48017ff3e037eb0c26fa16b5d876d07a78857f583b28db9a472ea8047174d295a69cd4efe060b78c9e7da51512b218db5b6a4e43fc404499b5a2cfd2fc7b0a8ef12e36487c25779a9bed9aef5cdfcba46633b24fb62981d15d43c5bc6f6f",
+    "domain": "auth.sunrise.ch",
+    "path": "/",
+    "expires": 1747123082.64888,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "TSb48daf6c029",
+    "value": "08e6636a3cab28006f0453a36ef42dc5922ef0df634a8e13bbdb59101c6d51afc5a9ae3fe919ab708ac2a2a27b078278",
+    "domain": "auth.sunrise.ch",
+    "path": "/",
+    "expires": 1747123085.298658,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "TSPD_101",
+    "value": "08e6636a3cab280024c497bf3466e73c1a07c0e0cd6ffcc97a9b12b1e9404e24b6a57dec52eb7ac321033c3a05e746cb0891775d040518006bbf605277e830a41136507ced207d53644306957e6c945f",
+    "domain": "auth.sunrise.ch",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "TS144e77f8027",
+    "value": "08e6636a3cab2000d565afdd50e9d5fd19615778ffd791e672c2f1722e0cb2dedef64f7a31b47121080931d2b611300046a83559c35a3254897256eb73a118102a2b32497293b7db964dbdeaa1c23a017baa0b6f0cd3b08fe32b1f1c06fd625b",
+    "domain": "auth.sunrise.ch",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "dtSa",
+    "value": "-",
+    "domain": ".sunrisetv.ch",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "rxvt",
+    "value": "1747124856480|1747123031502",
+    "domain": ".sunrisetv.ch",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "dtPC",
+    "value": "-28$523055608_246h-vQJREMAPPFRLMKOREPRVQEAMLEAEGOHWT-0e0",
+    "domain": ".sunrisetv.ch",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "OptanonConsent",
+    "value": "isGpcEnabled=0&datestamp=Tue+May+13+2025+09%3A57%3A37+GMT%2B0200+(Central+European+Summer+Time)&version=202306.2.0&browserGpcFlag=0&isIABGlobal=false&hosts=&consentId=e7c18a55-cc22-410e-8125-9b95d2d05d02&interactionCount=1&landingPath=NotLandingPage&groups=C0001%3A1%2CC0002%3A1%2CC0003%3A1&geolocation=%3B&AwaitingReconsent=false",
+    "domain": ".sunrisetv.ch",
+    "path": "/",
+    "expires": 1762675057,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "ACCESSTOKEN",
+    "value": "eyJ0eXAiOiJKV1QiLCJraWQiOiJvZXNwX3Rva2VuX3Byb2RfMjAyMDA4MTkiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ3ZWItYXBpLXByb2Qtb2JvLmhvcml6b24udHYiLCJzaWQiOiI0Y2QwMDgwOGJkZDg4NTg3ZDI5NGUxN2IxZjMxOTU0MTZhMzBmOGE3ZTAwYzc3M2Y0NGZiN2ZlOWRhNzhhN2ZkIiwiaWF0IjoxNzQ3MTIzMDU3LCJleHAiOjE3NDcxMzAyNTcsInN1YiI6IjEwMzYzMjI2NDRfY2gifQ.FpUsgik3QKNJxhgBQpz2mNBGUIaDrg0Ft1tq37_fxRE",
+    "domain": "spark-prod-ch.gnp.cloud.sunrisetv.ch",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "CLAIMSTOKEN",
+    "value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkZXZpY2VzIjpbIkUwQjdCMS1BUFBTVEItMzAxMDAyNDcyODAzIiwiRTBCN0IxLUFQUFNUQi0zMDEwMDI0NjMxMDkiLCIxOGY4YWVlZmRjMmYwNmYyZjhjY2Q2ODc5YmEyOGJiZGNhZjAyMzkxYmYzZDg0MjkxMzQyYWZlNDA5Y2U3ZDNjIiwiYTBhODIzOTdkYTI4YjExYjEyMjQyNGMxYWM4NTdjZjdiMTU2MmE3MmI1ZDMxZDdkNzJhNjU5MjUyZjIzODc4OCIsImVmMzkxNjM5ZjY4NjViNTg4YmQ1MzIzOTY4NzA1NGNiMmY0NzhmZWZkM2MyYjQ4YThjNTZmN2Q3NmM0NzFmMDQiXSwiY3VzdG9tZXJJZCI6IjEwMzYzMjI2NDRfY2giLCJwcm9maWxlcyI6WyIwMmYyZDIxYS05NTI0LTQzYmMtODZlOC1lYjJiYTM3NzVjMTMiLCIzMWI5N2YzYy03YmZjLTRjMjUtOGY2Zi0zNDEwNmZkOTMwNzIiLCJmZDE0ZTNiYy1kNmIxLTRjMGUtOGQ0MC1lYmJmOWQ1YmJjOTQiLCI3OGI5MmE0MS05OGQyLTRjMWEtYTJhMC1mM2Q1MWJhYjQzNWQiLCI4OWMzM2EwMC0yZjc0LTQ5MjgtYWJhYS0xMzA0MWM5YjQ3ZmEiLCI5MGM2MDA4ZS05ZTAwLTQ4OWEtYjk5My03NzU5MjA1ZDNmZGYiXSwiZXhwIjoxNzQ3MjA5NDU4fQ.u67YUjTjCauII9zFAERxBVSq2I9ncZY2z5iXqRfgsNw",
+    "domain": "spark-prod-ch.gnp.cloud.sunrisetv.ch",
+    "path": "/",
+    "expires": 1747209457.926659,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "dtCookie",
+    "value": "v_4_srv_35_sn_NONGC7QE4BEKTEQ3OJUOE0JQGEKOTTSO_app-3A832518aee056ba0c_1_ol_0_perc_100000_mul_1",
+    "domain": ".sunrisetv.ch",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  }
+]
