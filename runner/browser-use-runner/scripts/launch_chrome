@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# Kill any existing Chrome instances
+pkill -9 "Google Chrome"
+
+# Get Chrome path from env and handle spaces correctly
+CHROME_INSTANCE_PATH=$(cat .env | grep CHROME_INSTANCE_PATH | cut -d '=' -f 2 | tr -d '"')
+echo "CHROME_INSTANCE_PATH: ${CHROME_INSTANCE_PATH}"
+# Launch Chrome with debugging options
+nohup "${CHROME_INSTANCE_PATH}" \
+--remote-debugging-port=9222 \
+--no-default-browser-check \
+--disable-features=Translate \
+-hide-crash-restore-bubble \
+--window-position=0,0 \ &

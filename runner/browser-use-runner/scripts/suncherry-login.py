@@ -116,7 +116,7 @@ def login(page: Page, url: str, username: str, password: str):
         return False
 
 def init_browser(playwright: Playwright, headless=True, debug: bool = False, video_dir: str = None, screenshots: bool = True, video: bool = True, source: bool = True, cookies_path: str = None, executable_path: str = None):
-    browser_args = ['--disable-blink-features=AutomationControlled', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--disable-gpu', '--window-position=0,0']
+    browser_args = ['--disable-blink-features=AutomationControlled','--disable-gpu', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--disable-gpu', '--window-position=0,0']
     if executable_path:
         browser = playwright.chromium.launch(
             headless=headless,
@@ -134,12 +134,12 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
     context = browser.new_context(
         viewport={"width": 1920, "height": 1080},  # Set viewport to match VNC geometry
         record_video_dir=video_dir if video else None,
-        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        locale="en-US",
-        timezone_id="Europe/Zurich",
-        java_script_enabled=True,
-        ignore_https_errors=True
-    )
+        #user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+        #locale="en-US",
+        #timezone_id="Europe/Zurich",
+        #java_script_enabled=True,
+        #ignore_https_errors=True
+        )
 
     # Load cookies from file if they exist
     if cookies_path: 
