@@ -33,12 +33,13 @@ def pass_login(page: Page, url: str, channel: str = 'RTS 1'):
 def zap(page: Page, url: str, channel: str = 'RTS 1'):
     try:
         activate_semantic_placeholder(page)
-        page.wait_for_timeout(2000)
+        page.wait_for_timeout(3000)
 
         page.wait_for_selector("#flt-semantic-node-6", state="visible", timeout=20000)
         print("Click on TV Guide")
         page.locator("#flt-semantic-node-6").click()
 
+        page.wait_for_timeout(1000)
         page.wait_for_selector("[aria-label*='LIVE TV']", state="visible")
         print("Click on LIVE TV tab")
         page.locator("[aria-label*='LIVE TV']").click()
