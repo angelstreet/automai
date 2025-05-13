@@ -12,8 +12,17 @@ from browser_use import BrowserConfig, Browser, Agent, BrowserContextConfig
 
 load_dotenv()
 
+# Set up logging with UTF-8 encoding for Windows compatibility
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
+# Ensure UTF-8 encoding for logging output on Windows
+if sys.platform == 'win32':
+    stream_handler = logging.StreamHandler(stream=sys.stdout)
+    stream_handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(levelname)-8s [%(name)s] %(message)s')
+    stream_handler.setFormatter(formatter)
+    logger.handlers = [stream_handler]
 
 # Set up argument parser
 parser = argparse.ArgumentParser(description='Run a browser automation task')
