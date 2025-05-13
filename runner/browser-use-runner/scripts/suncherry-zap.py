@@ -17,7 +17,7 @@ env_path = os.path.join(script_dir, '.env')
 load_dotenv(env_path)
 print(f'Loaded environment variables from: {env_path}')
 
-def pass_login(page: Page, url: str, channel: str = 'RTS 1'):
+def pass_login(page: Page, url: str, trace_folder: str, channel: str = 'RTS 1'):
     try:
         activate_semantic_placeholder(page, trace_folder)
         page.wait_for_timeout(2000)
@@ -39,8 +39,8 @@ def zap(page: Page, url: str, trace_folder: str, channel: str = 'RTS 1'):
         print("Click on TV Guide")
         take_screenshot(page, trace_folder, 'click_tv_guide')
         page.locator("#flt-semantic-node-6").click()
-
         page.wait_for_timeout(1000)
+
         page.wait_for_selector("[aria-label*='LIVE TV']", state="visible")
         print("Click on LIVE TV tab")
         take_screenshot(page, trace_folder, 'click_live_tv')
@@ -50,12 +50,14 @@ def zap(page: Page, url: str, trace_folder: str, channel: str = 'RTS 1'):
         print("Click on specific channel")
         take_screenshot(page, trace_folder, 'click_channel')
         page.locator(f'[aria-label*="{channel}"]').click()
+
         take_screenshot(page, trace_folder, 'click_channel_success')
         page.wait_for_timeout(10000)
         take_screenshot(page, trace_folder, 'wait_for_channel')
         page.wait_for_timeout(10000)
         take_screenshot(page, trace_folder, 'wait_for_channel')
         page.wait_for_timeout(10000)
+
         print('Test Success, Zap success')
         take_screenshot(page, trace_folder, 'zap_success')
         return True
@@ -86,12 +88,12 @@ def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder
     try:
         page.goto(url, timeout=60000)
         page.wait_for_timeout(5000)
-        pass_login(page, url)
+        pass_login(page, url, trace_subfolder)
         
         loaded_cookies = context.cookies()
         print(f"Loaded cookies count: {len(loaded_cookies)}")
         
-        result = zap(page, url, trace_folder, channel)
+        result = zap(page, url, trace_subfolder, channel)
 
     except Exception as e:
         print(f"An error occurred during execution: {str(e)}")

@@ -93,7 +93,7 @@ def run(playwright: Playwright, username: str, password: str, headless=True, deb
         page.goto(url, timeout=60000)
         page.wait_for_timeout(10000)
 
-        login_result = login(page, url, username, password, trace_folder)
+        login_result = login(page, url, username, password, trace_subfolder)
         if login_result and cookies:
             save_cookies(page, cookies_path)
         
