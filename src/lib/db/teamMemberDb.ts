@@ -43,7 +43,7 @@ export async function getTeamMembers(
 
       // Fetch user profiles in a single query
       const { data: userProfiles, error: profilesError } = await supabase
-        .from('team_user_profiles')
+        .from('team_user_profiles') // TODO: Fix: team_user_profiles view was moved to private schema, create RPC function instead
         .select('*')
         .in('id', profileIds);
 
@@ -359,7 +359,7 @@ export async function getAvailableTenantProfilesForTeam(
     const profileIds = profiles.map((profile) => profile.id);
 
     const { data: userProfiles, error: userProfilesError } = await supabase
-      .from('team_user_profiles')
+      .from('team_user_profiles') // TODO: Fix: team_user_profiles view was moved to private schema, create RPC function instead
       .select('*')
       .in('id', profileIds);
 
