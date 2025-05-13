@@ -98,11 +98,14 @@ logger.info(f"BrowserConfig headless: {browser_config.headless}")
 browser = Browser(config=browser_config)
 
 agent = Agent(task=task, llm=llm, browser=browser)
-
+result = False
 async def main():
     try:
         await agent.run()
+        result = True
+        print("Test Success, Agent run successful")
     except Exception as e:
+        print(f"Test Failed, Error during agent run: {str(e)}")
         logger.error(f"Error during agent run: {str(e)}")
     finally:
         # Take a screenshot of the final state
@@ -139,6 +142,8 @@ async def main():
                     logger.info(f"Zip file removed: {trace_file}")
         except Exception as e:
             logger.error(f"Error saving or extracting trace data: {str(e)}")
+
+        return result
 
 if __name__ == '__main__':
     display_var = os.environ.get('DISPLAY', 'Not set')
