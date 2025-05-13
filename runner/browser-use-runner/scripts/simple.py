@@ -12,6 +12,17 @@ from browser_use import BrowserConfig, Browser, Agent, BrowserContextConfig
 
 load_dotenv()
 
+# Force UTF-8 encoding for console output on Windows
+if sys.platform == 'win32':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+    except AttributeError:
+        # For older Python versions that don't support reconfigure
+        import codecs
+        sys.stdout = codecs.getwriter('utf-8')(sys.stdout.detach())
+        sys.stderr = codecs.getwriter('utf-8')(sys.stderr.detach())
+
 # Set up logging with UTF-8 encoding for Windows compatibility
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
