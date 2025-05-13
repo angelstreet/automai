@@ -62,10 +62,11 @@ def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder
     trace_file = f"{trace_subfolder}/{timestamp}.zip"
 
     if cookies:
-        # Ensure trace_folder is an absolute path to avoid empty dirname
-        abs_trace_folder = os.path.abspath(trace_folder)
-        cookies_path = os.path.dirname(abs_trace_folder) if os.path.dirname(abs_trace_folder) else abs_trace_folder
-        print(f"Debug: Setting cookies_path to: {cookies_path} based on absolute trace_folder: {abs_trace_folder}")
+        if trace_folder == 'suncherry-playwright_trace':
+            cookies_path = trace_folder
+        else:
+            cookies_path = os.path.dirname(trace_folder) 
+        print(f"Debug: Setting cookies_path to: {cookies_path} based on trace_folder: {trace_folder}")
     else:
         cookies_path = None
 
