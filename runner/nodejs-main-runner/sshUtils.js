@@ -206,7 +206,7 @@ async function executeSSHScripts(
       // Build the full script command with all setup including script folder creation
       let fullScript;
       if (host.os === 'windows') {
-        fullScript = `${paths.scriptFolderAbsolutePath ? `cd ${paths.scriptFolderAbsolutePath} && ` : ''}${scriptSetupCommand} && ${confirmFolderCommand} && powershell -Command "if (Test-Path 'requirements.txt') { pip install -r requirements.txt } else { Write-Output 'No requirements.txt file found, skipping pip install' }" && ${envSetup}python --version && echo ============================= && ${scriptCommand} 2>&1 | Tee-Object -FilePath "${paths.scriptRunFolderPath}/output.txt" | Out-File -FilePath "${paths.scriptRunFolderPath}/stdout.txt" -Encoding utf8; $global:LASTEXITCODE; Out-File -FilePath "${paths.scriptRunFolderPath}/stderr.txt" -InputObject $Error[0] -Encoding utf8`;
+        fullScript = `${paths.scriptFolderAbsolutePath ? `cd ${paths.scriptFolderAbsolutePath} && ` : ''}${scriptSetupCommand} && ${confirmFolderCommand} && powershell -Command "if (Test-Path 'requirements.txt') { pip install -r requirements.txt } else { Write-Output 'No requirements.txt file found, skipping pip install' }" && ${envSetup}python --version && echo ============================= && powershell -Command "& { $process = Start-Process -FilePath 'python' -ArgumentList '\"${paths.scriptAbsolutePath}\" ${finalParameters}' -NoNewWindow -RedirectStandardOutput '${paths.scriptRunFolderPath}/stdout.txt' -RedirectStandardError '${paths.scriptRunFolderPath}/stderr.txt' -PassThru; Write-Host ('[PID ' + $process.Id + '] Process started'); $startTime = Get-Date; $timeout = 300; $stdoutLinesRead = 0; $stderrLinesRead = 0; while (-not $process.HasExited) { if ((Get-Date) - $startTime -gt [TimeSpan]::FromSeconds($timeout)) { Write-Host 'Process timed out after $timeout seconds'; $process.Kill(); break }; $stdoutContent = Get-Content -Path '${paths.scriptRunFolderPath}/stdout.txt' -Encoding UTF8 -ErrorAction SilentlyContinue; if ($stdoutContent) { $newStdoutLines = $stdoutContent | Select-Object -Skip $stdoutLinesRead; if ($newStdoutLines) { $newStdoutLines | ForEach-Object { Write-Host $_ }; $stdoutLinesRead = $stdoutContent.Count } }; $stderrContent = Get-Content -Path '${paths.scriptRunFolderPath}/stderr.txt' -Encoding UTF8 -ErrorAction SilentlyContinue; if ($stderrContent) { $newStderrLines = $stderrContent | Select-Object -Skip $stderrLinesRead; if ($newStderrLines) { $newStderrLines | ForEach-Object { Write-Host $_ }; $stderrLinesRead = $stderrContent.Count } }; Start-Sleep -Seconds 1 }; if ($process.HasExited) { Write-Host ('Process completed with exit code: ' + $process.ExitCode); $process.ExitCode } else { Write-Host 'Process terminated due to timeout'; 1 } }"`;
       } else {
         fullScript = `${paths.scriptFolderAbsolutePath ? `cd ${paths.scriptFolderAbsolutePath} && ` : ''}${scriptSetupCommand} && ${confirmFolderCommand} && if [ -f "requirements.txt" ]; then pip install -r requirements.txt; else echo "No requirements.txt file found, skipping pip install"; fi && ${envSetup}python --version && echo ============================= && ${scriptCommand} 2> >(tee "${paths.scriptRunFolderPath}/stderr.txt") | tee "${paths.scriptRunFolderPath}/stdout.txt"`;
       }
@@ -257,7 +257,15 @@ async function executeSSHScripts(
       const scriptCompletedAt = new Date().toISOString();
       // Determine if script was successful based on output or exit code
       const isSuccess =
-        (stdoutFromFile && stdoutFromFile.includes('Test Success')) || scriptResult.exitCode === 0;
+        (stdoutFromFile && stdoutFromFile.includes('Test Success')) ||
+        (scriptResult.exitCode === 0 &&
+          !(
+            stderrFromFile &&
+            (stderrFromFile.includes('ERROR') ||
+              stderrFromFile.includes('Traceback') ||
+              stderrFromFile.includes('Browser is closed or disconnected') ||
+              stderrFromFile.includes('Connection closed while reading from the driver'))
+          ));
       const status = isSuccess ? 'success' : 'failed';
       // Write metadata.json for this script execution
       const startDate = new Date(scriptStartedAt);
