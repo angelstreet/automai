@@ -97,6 +97,7 @@ agent = Agent(task=task, llm=llm, browser=browser)
 result = False
 
 async def main():
+    result = False
     try:
         await agent.run()
         result = True
