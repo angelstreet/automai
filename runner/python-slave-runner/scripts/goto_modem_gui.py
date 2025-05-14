@@ -49,12 +49,17 @@ def main():
             take_screenshot(page, trace_folder, 'gui_login_page')
             print(f"Attempting login with provided password")
             page.fill('input[type="password"], input[name="password"], input[id="password"]', args.password)
+            page.wait_for_timeout(2000)
             take_screenshot(page, trace_folder, 'filled_password')
             page.click('input[id="overlay-password-next"]')
-            page.wait_for_timeout(2000)
+            page.wait_for_timeout(10000)
             take_screenshot(page, trace_folder, 'after_login_attempt')
-            result = True
-            print(f"Test Success: Successfully navigated to {args.url}")
+            logout_element = page.query_selector('span[data-lang-id="c_mu30"]')
+            result = logout_element is not None and logout_element.is_visible()
+            if result:
+                print(f"Test Success: Successfully logged in to {args.url}")
+            else:
+                print(f"Test Failed: Login unsuccessful, 'Log out' element not found or not visible")
         except Exception as e:
             print(f"Test Failed: Error navigating to {args.url}: {e}")
             take_screenshot(page, trace_folder, 'login_failed')
