@@ -3,6 +3,7 @@ import argparse
 import os
 from datetime import datetime
 import sys
+from utils import take_screenshot
 
 def main():
     # Set up command line argument parsing
@@ -13,20 +14,20 @@ def main():
                         help='Run browser in headless mode')
     parser.add_argument('--trace_folder', type=str,
                         help='Folder path to save trace, screenshots and video')
-    parser.add_argument('--password', type=str, help='Password for modem GUI login')
+    parser.add_argument('--password', type=str,default="123456789Aa", help='Password for modem GUI login')
     args, unknown = parser.parse_known_args()
 
     with sync_playwright() as p:
         # Set up browser context options
         context_options = {}
-        
+        trace_folder = args.trace_folder
         # Configure recording if trace_folder is provided
-        if args.trace_folder:
+        if trace_folder:
             # Create the directory if it doesn't exist
-            os.makedirs(args.trace_folder, exist_ok=True)
+            os.makedirs(trace_folder, exist_ok=True)
             
             # Set up video recording
-            context_options["record_video_dir"] = args.trace_folder
+            context_options["record_video_dir"] = trace_folder
         
         # Launch browser
         browser = p.chromium.launch(headless=args.headless)
@@ -37,7 +38,7 @@ def main():
         # Start tracing if trace_folder is provided
         if args.trace_folder:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            trace_path = os.path.join(args.trace_folder, f"trace_{timestamp}.zip")
+            trace_path = os.path.join(trace_folder, f"trace_{timestamp}.zip")
             context.tracing.start(screenshots=True, snapshots=True)
         
         result = False
@@ -45,14 +46,22 @@ def main():
             page = context.new_page()
             page.goto(args.url)
             page.wait_for_timeout(2000)
+            take_screenshot(page, trace_folder, 'gui_login_page')
+            print(f"Attempting login with provided password")
+            page.fill('input[type="password"], input[name="password"], input[id="password"]', args.password)
+            take_screenshot(page, trace_folder, 'filled_password')
+            page.click('input[id="overlay-password-next"]')
+            page.wait_for_timeout(2000)
+            take_screenshot(page, trace_folder, 'after_login_attempt')
             result = True
             print(f"Test Success: Successfully navigated to {args.url}")
         except Exception as e:
             print(f"Test Failed: Error navigating to {args.url}: {e}")
+            take_screenshot(page, trace_folder, 'login_failed')
         finally:
-            if args.trace_folder:
+            if trace_folder:
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                screenshot_path = os.path.join(args.trace_folder, f"final_state_{timestamp}.png")
+                screenshot_path = os.path.join(trace_folder, f"final_state_{timestamp}.png")
                 page.screenshot(path=screenshot_path)
                 context.tracing.stop(path=trace_path)
             browser.close()
