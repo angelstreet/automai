@@ -84,25 +84,25 @@ def get_ssid():
             print(f"Error getting SSID on Windows: {e}")
             return "Unknown"
     elif platform.system().lower() == "darwin":  # macOS
-        cmd = ["/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport", "-I"]
+        cmd = ["networksetup", "-getairportnetwork", "en0"]
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, check=True)
             for line in result.stdout.splitlines():
-                if " SSID:" in line:  # Adjusted to match exact spacing
+                if "Current Wi-Fi Network:" in line:
                     return line.split(":")[1].strip()
             return "Unknown"
         except Exception as e:
-            print(f"Error getting SSID on macOS: {e}")
-            # Fallback to another method
+            print(f"Error getting SSID on macOS with networksetup: {e}")
+            # Fallback to airport command
             try:
-                cmd_fallback = ["networksetup", "-getairportnetwork", "en0"]
+                cmd_fallback = ["/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport", "-I"]
                 result = subprocess.run(cmd_fallback, capture_output=True, text=True, check=True)
                 for line in result.stdout.splitlines():
-                    if "Current Wi-Fi Network:" in line:
+                    if " SSID:" in line:
                         return line.split(":")[1].strip()
                 return "Unknown"
             except Exception as e2:
-                print(f"Fallback error getting SSID on macOS: {e2}")
+                print(f"Fallback error getting SSID on macOS with airport: {e2}")
                 return "Unknown"
     else:  # Linux
         cmd = ["iwgetid", "-r"]
@@ -180,6 +180,8 @@ def main():
     print(f"Default Gateway: {default_gateway}")
     print(f"Public Gateway URL: {public_gateway}")
     print(f"SSID: {ssid}")
+    
+    print("-" * 50 + "\n")  # Add separator line
 
     print("Starting modem test...")
     if not ping_test(args.ping_server):
