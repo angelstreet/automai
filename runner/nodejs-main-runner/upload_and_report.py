@@ -96,25 +96,25 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
                     function openVideoPlayer_{video_id}(event) {{
                       event.preventDefault();
                       const videoWindow = window.open('', '_blank', 'width=640,height=480');
-                      const video_url = '{file_url}';
+                      const video_url = '{video_url}';
                       const file_name = '{escaped_file_name}';
                       
                       // Get parent window theme preference
                       const isDark = document.documentElement.classList.contains('dark');
-                      const bgColor = isDark ? '#1f2937' : '#ffffff';
-                      const textColor = isDark ? '#ffffff' : '#000000';
+                      const bg_color = isDark ? '#1f2937' : '#ffffff';
+                      const text_color = isDark ? '#ffffff' : '#000000';
                       
                       videoWindow.document.write(`
                         <!DOCTYPE html>
                         <html>
                         <head>
-                          <title>Video Player - ${file_name}</title>
+                          <title>Video Player - ${{file_name}}</title>
                           <style>
                             body {{
                               margin: 0;
                               padding: 0;
-                              background-color: ${bgColor};
-                              color: ${textColor};
+                              background-color: ${{bg_color}};
+                              color: ${{text_color}};
                               font-family: Arial, sans-serif;
                               display: flex;
                               flex-direction: column;
@@ -140,10 +140,10 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
                           </style>
                         </head>
                         <body>
-                          <div class="header">Playing: ${file_name}</div>
+                          <div class="header">Playing: ${{file_name}}</div>
                           <div class="video-container">
                             <video controls autoplay>
-                              <source src="${video_url}" type="video/webm">
+                              <source src="${{video_url}}" type="video/webm">
                               Your browser does not support the video tag.
                             </video>
                           </div>
