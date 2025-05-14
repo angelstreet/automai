@@ -46,7 +46,7 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
     if associated_files:
         # Filter files to exclude stdout.txt, stderr.txt, and script_report.html
         excluded_filenames = {'stdout.txt', 'stderr.txt', 'script_report.html', 'metadata.json', 'vncpasswd'}
-        allowed_extensions = {'.png', '.jpg', '.jpeg', '.trace', '.txt', '.webm', '.zip'}
+        allowed_extensions = {'.png', '.jpg', '.jpeg', '.trace', '.txt', '.webm', '.zip', '.py'}
         script_files = [file for file in associated_files 
                         if script_id in file.get('relative_path', '') 
                         and file.get('name') not in excluded_filenames
@@ -487,7 +487,7 @@ def get_content_disposition(mime_type: str) -> str:
 def collect_files(
     job_folder_path: str,
     excluded_files: set[str] = {".env", "requirements.txt", "upload_and_report.py"},
-    allowed_extensions: set[str] = {".png", ".jpg",".jpeg", ".trace", ".txt", ".webm", ".zip"},
+    allowed_extensions: set[str] = {".png", ".jpg",".jpeg", ".trace", ".txt", ".webm", ".zip", '.py'},
     report_files: set[str] = {"report.html", "script_report.html"}
 ) -> list[dict]:
     """

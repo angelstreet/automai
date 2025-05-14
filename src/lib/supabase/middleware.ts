@@ -112,8 +112,19 @@ function clearAuthCookies(response: NextResponse): NextResponse {
 }
 
 /**
+ * Checks if auth cookies exist in the request
+ * This helps minimize unnecessary Supabase API calls
+ */
+function hasValidAuthCookies(request: NextRequest): boolean {
+  const accessToken = request.cookies.get('sb-access-token');
+  const refreshToken = request.cookies.get('sb-refresh-token');
+  return !!accessToken && !!refreshToken;
+}
+
+/**
  * Updates the Supabase Auth session in middleware
- * - Refreshes the auth token
+ * - Checks cookies first to minimize Supabase API calls
+ * - Refreshes the auth token only when necessary
  * - Validates the user's session
  * - Returns a NextResponse with updated cookies
  * - Redirects to login if no authenticated user is found
@@ -131,6 +142,18 @@ export async function updateSession(
   );
   const startTime = Date.now();
 
+  // First check if auth cookies exist to avoid unnecessary API calls
+  if (!hasValidAuthCookies(request)) {
+    console.log('[Middleware:updateSession] No valid auth cookies found');
+    const pathParts = request.nextUrl.pathname.split('/').filter(Boolean);
+    const locale =
+      pathParts.length > 0 && locales.includes(pathParts[0] as any) ? pathParts[0] : defaultLocale;
+    const redirectUrl = new URL(`/${locale}/login`, request.url);
+    console.log(`[Middleware:redirect] Redirecting to ${redirectUrl.toString()}`);
+
+    return NextResponse.redirect(redirectUrl, { status: 307 });
+  }
+
   const { supabase, response } = clientData || createClient(request);
 
   let sessionData: any = null;
@@ -138,13 +161,14 @@ export async function updateSession(
   let userData: any = { user: null };
   let userError: any = null;
 
+  // Only make API calls if we have valid cookies but need to validate the session
   if (clientData) {
-    // Use pre-validated session
+    // Use pre-validated session from client data if provided
     const result = await supabase.auth.getSession();
     sessionData = result.data;
     sessionError = result.error;
   } else {
-    // Validate user directly
+    // Use getUser with minimal API calls by leveraging cookie auth
     const result = await supabase.auth.getUser();
     userData = result.data;
     userError = result.error;
@@ -179,15 +203,6 @@ export async function updateSession(
       console.log(
         '[Middleware:redirect] Auth error details:',
         (sessionError || userError)?.message,
-      );
-    }
-
-    const hasAuthCookies = request.cookies
-      .getAll()
-      .some((c) => c.name.startsWith('sb-') && c.name.includes('auth-token'));
-    if (hasAuthCookies) {
-      console.log(
-        '[Middleware:cookies] Auth cookies present but failed to authenticate - possible cookie issue',
       );
     }
 
