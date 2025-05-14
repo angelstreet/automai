@@ -47,7 +47,7 @@ def login(page: Page, url: str, username: str, password: str, trace_folder: str)
     page.wait_for_timeout(1000)
     print("Click on login")
     page.locator("#kc-login").click()
-    take_screenshot(page, trace_folder, 'click_login')
+ 
     print("Wait for 10 seconds")
     page.wait_for_timeout(15000)
     take_screenshot(page, trace_folder, 'wait for home')
