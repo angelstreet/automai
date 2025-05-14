@@ -187,27 +187,26 @@ def main():
     if not ping_test(args.ping_server):
         print("No connectivity. Aborting.")
         print("Test Fail")
-        return 1
+        return sys.exit(1)
 
     print(f"\nRunning download test with {args.iperf_server}...")
     download_speed = run_iperf_test(args.iperf_server, test_type="download")
     if download_speed:
         print(f"Download Speed: {download_speed:.2f} Mbps")
     else:
-        print("Download test failed.")
-        print("Test Fail")
-        return 1
+        print("Test Failed: Download test failed.")
+        return sys.exit(1)
 
     print(f"\nRunning upload test with {args.iperf_server}...")
     upload_speed = run_iperf_test(args.iperf_server, test_type="upload")
     if upload_speed:
         print(f"Upload Speed: {upload_speed:.2f} Mbps")
         print("Test Success")
-        return 0
+        return sys.exit(0)
     else:
         print("Upload test failed.")
         print("Test Fail")
-        return 1   
+        return sys.exit(1)  
 
 if __name__ == "__main__":
     main()
