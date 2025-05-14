@@ -43,7 +43,7 @@ def login(page: Page, url: str, username: str, password: str, trace_folder: str)
     page.locator("#password").fill(password)
 
     page.wait_for_selector("#kc-login", state="visible")
-    
+    take_screenshot(page, trace_folder, 'Filled username and password')
     page.wait_for_timeout(1000)
     print("Click on login")
     page.locator("#kc-login").click()
