@@ -107,15 +107,6 @@ async def main():
         print(f"Test Failed, Error during agent run: {str(e)}")
         logger.error(f"Error during agent run: {str(e)}")
     finally:
-        # Close the browser
-        if agent and hasattr(agent, 'browser') and agent.browser:
-            try:
-                logger.info("Attempting to close the browser...")
-                await agent.browser.close()
-                logger.info("Browser closed successfully.")
-            except Exception as e:
-                logger.error(f"Error closing browser: {str(e)}")
-
         # Take a screenshot of the final state
         try:
             if agent.browser_context and hasattr(agent.browser_context, 'agent_current_page') and agent.browser_context.agent_current_page:
@@ -140,6 +131,25 @@ async def main():
                     logger.info(f"Zip file removed: {trace_file}")
         except Exception as e:
             logger.error(f"Error saving or extracting trace data: {str(e)}")
+            
+        # Explicitly close the browser and clean up resources
+        try:
+            if agent.browser_context:
+                await agent.browser_context.close()
+                logger.info("Browser context closed")
+            
+            if browser and browser.browser:
+                await browser.browser.close()
+                logger.info("Browser closed")
+                
+            # Force cleanup of any remaining browser processes on Windows
+            if sys.platform == 'win32':
+                logger.info("Performing additional Windows cleanup")
+                # Force close any remaining browser processes
+                await asyncio.sleep(0.5)  # Short delay to ensure resources are released
+        except Exception as e:
+            logger.error(f"Error closing browser resources: {str(e)}")
+            
         if result:
             sys.exit(0)
         else:
