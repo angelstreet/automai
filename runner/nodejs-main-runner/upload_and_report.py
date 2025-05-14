@@ -104,7 +104,7 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
                       videoWindow.document.write(`
                         <html>
                         <head>
-                        <title>Video Player - ${fileName}</title>
+                        <title>Video Player - {escaped_file_name}</title>
                         <style>
                         body {{ margin: 0; padding: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; transition: background-color 0.3s, color 0.3s; }}
                         body.light-theme {{ background-color: #f5f5f5; color: #333; }}
@@ -119,7 +119,7 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
                         <body class="${{isDarkTheme ? 'dark-theme' : 'light-theme'}}">
                         <button class="theme-toggle" onclick="toggleTheme()">Toggle Theme</button>
                         <div class="video-container">
-                        <h1>${fileName}</h1>
+                        <h1>{escaped_file_name}</h1>
                         <video controls autoplay width="640" height="360">
                         <source src="${videoUrl}" type="video/webm">
                         Your browser does not support the video tag.
