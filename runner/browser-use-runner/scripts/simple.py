@@ -48,6 +48,7 @@ parser.add_argument('--executable_path', type=str, help='Path to Google Chrome e
 args, _ = parser.parse_known_args()
 
 task = args.task
+print(f"----- Task: {task} -----")
 
 trace_path = os.path.join(os.getcwd(), args.trace_folder)
 
