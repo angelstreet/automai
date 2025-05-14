@@ -90,47 +90,63 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
                     # Create a unique ID for each video to avoid function name collisions
                     video_id = f"video_{idx}_{file_name.replace('.', '_').replace(' ', '_')}"
                     escaped_file_name = file_name.replace("'", "\\'")
+                    video_url = file_url
                     preview = f"""<a href='{file_url}' target='_blank' onclick="openVideoPlayer_{video_id}(event); return false;">Play Video</a>
                     <script>
                     function openVideoPlayer_{video_id}(event) {{
                       event.preventDefault();
                       const videoWindow = window.open('', '_blank', 'width=640,height=480');
-                      const videoUrl = '{file_url}';
-                      const fileName = '{escaped_file_name}';
+                      const video_url = '{file_url}';
+                      const file_name = '{escaped_file_name}';
                       
                       // Get parent window theme preference
-                      const isDarkTheme = document.body.classList.contains('dark-theme');
+                      const isDark = document.documentElement.classList.contains('dark');
+                      const bgColor = isDark ? '#1f2937' : '#ffffff';
+                      const textColor = isDark ? '#ffffff' : '#000000';
                       
                       videoWindow.document.write(`
+                        <!DOCTYPE html>
                         <html>
                         <head>
-                        <title>Video Player - {escaped_file_name}</title>
-                        <style>
-                        body {{ margin: 0; padding: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; transition: background-color 0.3s, color 0.3s; }}
-                        body.light-theme {{ background-color: #f5f5f5; color: #333; }}
-                        body.dark-theme {{ background-color: #1a1a1a; color: #fff; }}
-                        .video-container {{ max-width: 100%; }}
-                        video {{ max-width: 100%; max-height: 70vh; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }}
-                        h1 {{ font-family: Arial, sans-serif; text-align: center; margin-bottom: 20px; font-size: 18px; }}
-                        .theme-toggle {{ position: absolute; top: 10px; right: 10px; background: #555; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; }}
-                        body.light-theme .theme-toggle {{ background: #ddd; color: #333; }}
-                        </style>
+                          <title>Video Player - ${file_name}</title>
+                          <style>
+                            body {{
+                              margin: 0;
+                              padding: 0;
+                              background-color: ${bgColor};
+                              color: ${textColor};
+                              font-family: Arial, sans-serif;
+                              display: flex;
+                              flex-direction: column;
+                              height: 100vh;
+                            }}
+                            .header {{
+                              padding: 10px;
+                              text-align: center;
+                              font-size: 18px;
+                              font-weight: bold;
+                            }}
+                            .video-container {{
+                              flex: 1;
+                              display: flex;
+                              justify-content: center;
+                              align-items: center;
+                              padding: 20px;
+                            }}
+                            video {{
+                              max-width: 100%;
+                              max-height: 100%;
+                            }}
+                          </style>
                         </head>
-                        <body class="${{isDarkTheme ? 'dark-theme' : 'light-theme'}}">
-                        <button class="theme-toggle" onclick="toggleTheme()">Toggle Theme</button>
-                        <div class="video-container">
-                        <h1>{escaped_file_name}</h1>
-                        <video controls autoplay width="640" height="360">
-                        <source src="${videoUrl}" type="video/webm">
-                        Your browser does not support the video tag.
-                        </video>
-                        </div>
-                        <script>
-                        function toggleTheme() {{
-                          document.body.classList.toggle("light-theme");
-                          document.body.classList.toggle("dark-theme");
-                        }}
-                        </script>
+                        <body>
+                          <div class="header">Playing: ${file_name}</div>
+                          <div class="video-container">
+                            <video controls autoplay>
+                              <source src="${video_url}" type="video/webm">
+                              Your browser does not support the video tag.
+                            </video>
+                          </div>
                         </body>
                         </html>
                       `);
