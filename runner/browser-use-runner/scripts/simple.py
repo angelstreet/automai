@@ -93,9 +93,9 @@ browser_config = BrowserConfig(
 
 browser = Browser(config=browser_config)
 agent = Agent(task=task, llm=llm, browser=browser)
-result = False
 
 async def main():
+    result = False
     try:
         await agent.run()
         result = True
@@ -114,6 +114,34 @@ async def main():
         except Exception as e:
             logger.error(f"Error taking final screenshot: {str(e)}")
 
+        # Manually close the browser to avoid hanging
+        try:
+            # Force browser closure if needed
+            if hasattr(agent, 'browser_context') and agent.browser_context:
+                try:
+                    logger.info("Attempting to close browser context")
+                    if hasattr(agent.browser_context, 'session') and agent.browser_context.session:
+                        try:
+                            await asyncio.wait_for(agent.browser_context.session.context.close(), timeout=5.0)
+                        except (asyncio.TimeoutError, asyncio.CancelledError):
+                            logger.warning("Context close timed out or was cancelled")
+                except Exception as e:
+                    logger.error(f"Error closing browser context: {str(e)}")
+                    
+            # Force browser to close if needed
+            if hasattr(agent, 'browser') and agent.browser:
+                try:
+                    logger.info("Attempting to close browser")
+                    if hasattr(agent.browser, 'browser') and agent.browser.browser:
+                        try:
+                            await asyncio.wait_for(agent.browser.browser.close(), timeout=5.0)
+                        except (asyncio.TimeoutError, asyncio.CancelledError):
+                            logger.warning("Browser close timed out or was cancelled")
+                except Exception as e:
+                    logger.error(f"Error closing browser: {str(e)}")
+        except Exception as e:
+            logger.error(f"Error during browser cleanup: {str(e)}")
+
         # Unzip the trace file if it exists
         try:
             if agent.browser_context and hasattr(agent.browser_context, 'context_id'):
@@ -128,7 +156,9 @@ async def main():
                     logger.info(f"Zip file removed: {trace_file}")
         except Exception as e:
             logger.error(f"Error saving or extracting trace data: {str(e)}")
-        return result
+            
+    logger.info("Script completed execution")
+    return result
 
 if __name__ == '__main__':
     asyncio.run(main())
