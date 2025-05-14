@@ -57,6 +57,19 @@ def get_default_gateway():
             print(f"Error getting default gateway on Linux: {e}")
             return "Unknown"
 
+def get_public_gateway_url():
+    """Get the public IP address of the network."""
+    try:
+        response = requests.get('https://api.ipify.org', timeout=5)
+        if response.status_code == 200:
+            return response.text
+        else:
+            print(f"Error getting public gateway URL: Status code {response.status_code}")
+            return "Unknown"
+    except Exception as e:
+        print(f"Error getting public gateway URL: {e}")
+        return "Unknown"
+
 def get_ssid():
     """Get the SSID of the connected Wi-Fi network."""
     if platform.system().lower() == "windows":
@@ -75,12 +88,22 @@ def get_ssid():
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, check=True)
             for line in result.stdout.splitlines():
-                if "SSID:" in line:
+                if " SSID:" in line:  # Adjusted to match exact spacing
                     return line.split(":")[1].strip()
             return "Unknown"
         except Exception as e:
             print(f"Error getting SSID on macOS: {e}")
-            return "Unknown"
+            # Fallback to another method
+            try:
+                cmd_fallback = ["networksetup", "-getairportnetwork", "en0"]
+                result = subprocess.run(cmd_fallback, capture_output=True, text=True, check=True)
+                for line in result.stdout.splitlines():
+                    if "Current Wi-Fi Network:" in line:
+                        return line.split(":")[1].strip()
+                return "Unknown"
+            except Exception as e2:
+                print(f"Fallback error getting SSID on macOS: {e2}")
+                return "Unknown"
     else:  # Linux
         cmd = ["iwgetid", "-r"]
         try:
@@ -149,11 +172,13 @@ def main():
     host_ip = get_host_ip()
     username = getpass.getuser()
     default_gateway = get_default_gateway()
+    public_gateway = get_public_gateway_url()
     ssid = get_ssid()
 
     print(f"Host IP: {host_ip}")
     print(f"Username: {username}")
     print(f"Default Gateway: {default_gateway}")
+    print(f"Public Gateway URL: {public_gateway}")
     print(f"SSID: {ssid}")
 
     print("Starting modem test...")
