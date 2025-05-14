@@ -4,6 +4,91 @@ import platform
 import argparse
 import requests
 import time
+import socket
+import getpass
+
+def get_host_ip():
+    """Get the IP address of the machine running the script."""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception as e:
+        print(f"Error getting host IP: {e}")
+        return "Unknown"
+
+def get_default_gateway():
+    """Get the default gateway IP using system commands."""
+    if platform.system().lower() == "windows":
+        cmd = ["ipconfig"]
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            for line in result.stdout.splitlines():
+                if "Default Gateway" in line:
+                    return line.split(":")[1].strip()
+            return "Unknown"
+        except Exception as e:
+            print(f"Error getting default gateway on Windows: {e}")
+            return "Unknown"
+    elif platform.system().lower() == "darwin":  # macOS
+        cmd = ["netstat", "-nr"]
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            for line in result.stdout.splitlines():
+                if "default" in line:
+                    parts = line.split()
+                    if len(parts) > 1:
+                        return parts[1]
+            return "Unknown"
+        except Exception as e:
+            print(f"Error getting default gateway on macOS: {e}")
+            return "Unknown"
+    else:  # Linux
+        cmd = ["ip", "route"]
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            for line in result.stdout.splitlines():
+                if "default via" in line:
+                    return line.split("via")[1].split()[0]
+            return "Unknown"
+        except Exception as e:
+            print(f"Error getting default gateway on Linux: {e}")
+            return "Unknown"
+
+def get_ssid():
+    """Get the SSID of the connected Wi-Fi network."""
+    if platform.system().lower() == "windows":
+        cmd = ["netsh", "wlan", "show", "interfaces"]
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            for line in result.stdout.splitlines():
+                if "SSID" in line:
+                    return line.split(":")[1].strip()
+            return "Unknown"
+        except Exception as e:
+            print(f"Error getting SSID on Windows: {e}")
+            return "Unknown"
+    elif platform.system().lower() == "darwin":  # macOS
+        cmd = ["/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport", "-I"]
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            for line in result.stdout.splitlines():
+                if "SSID:" in line:
+                    return line.split(":")[1].strip()
+            return "Unknown"
+        except Exception as e:
+            print(f"Error getting SSID on macOS: {e}")
+            return "Unknown"
+    else:  # Linux
+        cmd = ["iwgetid", "-r"]
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            return result.stdout.strip()
+        except Exception as e:
+            print(f"Error getting SSID on Linux: {e}")
+            return "Unknown"
 
 def ping_test(host="8.8.8.8", count=4):
     """Test connectivity by making HTTP requests instead of using ping."""
@@ -59,6 +144,17 @@ def main():
     parser.add_argument("-ping_server", default="8.8.8.8", help="Ping server (default: 8.8.8.8).")
     parser.add_argument("-iperf_server", default="iperf.worldstream.nl", help="iperf3 server (default: iperf.worldstream.nl).")
     args, unknown = parser.parse_known_args()  # Ignore unrecognized arguments
+
+    print("Gathering system information before modem test...")
+    host_ip = get_host_ip()
+    username = getpass.getuser()
+    default_gateway = get_default_gateway()
+    ssid = get_ssid()
+
+    print(f"Host IP: {host_ip}")
+    print(f"Username: {username}")
+    print(f"Default Gateway: {default_gateway}")
+    print(f"SSID: {ssid}")
 
     print("Starting modem test...")
     if not ping_test(args.ping_server):
