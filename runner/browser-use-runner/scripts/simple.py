@@ -107,6 +107,15 @@ async def main():
         print(f"Test Failed, Error during agent run: {str(e)}")
         logger.error(f"Error during agent run: {str(e)}")
     finally:
+        # Close the browser
+        if agent and hasattr(agent, 'browser') and agent.browser:
+            try:
+                logger.info("Attempting to close the browser...")
+                await agent.browser.close()
+                logger.info("Browser closed successfully.")
+            except Exception as e:
+                logger.error(f"Error closing browser: {str(e)}")
+
         # Take a screenshot of the final state
         try:
             if agent.browser_context and hasattr(agent.browser_context, 'agent_current_page') and agent.browser_context.agent_current_page:
