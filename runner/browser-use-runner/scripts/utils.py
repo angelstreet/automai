@@ -326,7 +326,9 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
 
     # The rest of the initialization is different depending on whether we're using remote debugging or not
     if remote_debugging:
-        context = browser.new_context() # We cannot provide context to remote CDP so no video
+        context = browser.new_context(
+            viewport={"width": 1920, "height": 1080},
+        ) # We cannot provide context to remote CDP so no video
     else:
         context = browser.new_context(
             viewport={"width": 1920, "height": 1080},  # Set a large viewport for fullscreen experience
@@ -362,7 +364,7 @@ def save_cookies(page: Page, cookies_path: str):
 
 def take_screenshot(page: Page, trace_subfolder: str, name: str = 'screenshot') -> str:
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    screenshot_path = f"{trace_subfolder}/{name}_{timestamp}.png"
+    screenshot_path = f"{trace_subfolder}/{name.replace(' ', '_')}_{timestamp}.png"
     try:
         page.screenshot(path=screenshot_path, full_page=True, timeout=20000)
         print(f"Screenshot saved to: {screenshot_path}")
@@ -474,4 +476,54 @@ def run_main(run_function, args=None, with_username_password=False):
     except Exception as e:
         print(f"An error occurred: {str(e)}")
         print("Login failed" if with_username_password else "Test failed")
-        sys.exit(1) 
+        sys.exit(1)
+
+def save_storage_state(context, storage_path: str):
+    """
+    Save the storage state (cookies and local storage) from the browser context to a file.
+    Returns True if storage state was successfully saved, False otherwise.
+    """
+    if not storage_path:
+        print("No storage path provided, skipping storage state saving")
+        return False
+    
+    if not os.path.exists(storage_path):
+        os.makedirs(storage_path, exist_ok=True)
+        print(f"Creating storage folder: {storage_path}")
+    
+    storage_file = os.path.join(storage_path, 'storage_state.json')
+    try:
+        storage_state = context.storage_state()
+        with open(storage_file, 'w') as f:
+            json.dump(storage_state, f, indent=2)
+        print(f"Saved storage state to {storage_file}")
+        return True
+    except Exception as e:
+        print(f"Error saving storage state to {storage_file}: {str(e)}")
+        return False
+
+def load_storage_state(context, storage_path: str):
+    """
+    Load the storage state (cookies and local storage) from a file into the browser context.
+    Returns True if storage state was successfully loaded, False otherwise.
+    """
+    if not storage_path:
+        print("No storage path provided, skipping storage state loading")
+        return False
+    
+    storage_file = os.path.join(storage_path, 'storage_state.json')
+    if os.path.exists(storage_file):
+        try:
+            with open(storage_file, 'r') as f:
+                storage_state = json.load(f)
+            context.set_storage_state(storage_state)
+            print(f"Loaded storage state from {storage_file}")
+            return True
+        except Exception as e:
+            print(f"Error loading storage state from {storage_file}: {str(e)}")
+            print("No storage state loaded, login might be required")
+            return False
+    else:
+        print(f"No storage state file found at {storage_file}")
+        print("No storage state loaded, login might be required")
+        return False 

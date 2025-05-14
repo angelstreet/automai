@@ -9,7 +9,8 @@ from datetime import datetime
 import zipfile
 import json
 
-from utils import init_browser, activate_semantic_placeholder, finalize_run, load_cookies, get_cookies_path, setup_common_args, run_main, take_screenshot
+from utils import init_browser, activate_semantic_placeholder, finalize_run, load_cookies, get_cookies_path, setup_common_args, run_main, take_screenshot, load_storage_state
+from suncherryUtils import get_element_id, go_back
 
 # Load .env file from the same directory as this script
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -30,7 +31,7 @@ def pass_login(page: Page, url: str, trace_folder: str, channel: str = 'RTS 1'):
         print(f'Login screen not shown or skipped: {str(e)}')
         return True
 
-def zap(page: Page, url: str, trace_folder: str, channel: str = 'RTS 1'):
+def zap(page: Page, url: str, trace_folder: str, channel: str = 'SRF 1'):
     try:
         activate_semantic_placeholder(page, trace_folder)
         page.wait_for_timeout(3000)
@@ -39,7 +40,7 @@ def zap(page: Page, url: str, trace_folder: str, channel: str = 'RTS 1'):
         print("Click on TV Guide")
         take_screenshot(page, trace_folder, 'click_tv_guide')
         page.locator("#flt-semantic-node-6").click()
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(2000)
 
         page.wait_for_selector("[aria-label*='LIVE TV']", state="visible")
         print("Click on LIVE TV tab")
@@ -47,6 +48,9 @@ def zap(page: Page, url: str, trace_folder: str, channel: str = 'RTS 1'):
         page.locator("[aria-label*='LIVE TV']").click()
 
         page.wait_for_selector(f'[aria-label*="{channel}"]', state="visible")
+        start_channel_id_str = get_element_id(page, 'SRF 1 HD')
+        start_channel_id = int(start_channel_id_str.replace('flt-semantic-node-', ''))
+
         print("Click on specific channel")
         take_screenshot(page, trace_folder, 'click_channel')
         page.locator(f'[aria-label*="{channel}"]').click()
@@ -56,10 +60,25 @@ def zap(page: Page, url: str, trace_folder: str, channel: str = 'RTS 1'):
         take_screenshot(page, trace_folder, 'wait_for_channel')
         page.wait_for_timeout(10000)
         take_screenshot(page, trace_folder, 'wait_for_channel')
-        page.wait_for_timeout(10000)
+        page.wait_for_timeout(1000)
 
+        
+        max_iterations = 3
+        print(f'Zap in loop {max_iterations} times')
+        for i in range(max_iterations):
+            page.go_back()
+            print('go back')
+            page.wait_for_timeout(2000)
+            take_screenshot(page, trace_folder, 'go_back')
+            current_channel_id = start_channel_id + i
+            page.locator(f"[id='flt-semantic-node-{current_channel_id}']").click()
+            page.wait_for_timeout(5000)
+            take_screenshot(page, trace_folder, f'next_channel_{current_channel_id}')
+            
         print('Test Success, Zap success')
         take_screenshot(page, trace_folder, 'zap_success')
+        page.wait_for_timeout(5000)
+
         return True
     except Exception as e:
         print(f'Test Failed, Zap failed: {str(e)}')
@@ -81,6 +100,8 @@ def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder
     # Load cookies before navigating to the site
     if cookies and cookies_path:
         load_cookies(context, cookies_path)
+    # Load storage state before navigating to the site
+    load_storage_state(context, cookies_path)
     
     url = "https://www.sunrisetv.ch/de/home"
     page.set_default_timeout(10000)
@@ -100,6 +121,7 @@ def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder
         result = False
     finally:
         finalize_run(page, context, browser, trace_subfolder, timestamp, trace_file, video, remote_debugging, keep_browser_open)
+        #input('Press Enter to close the browser...')
         return result
 
 def main():

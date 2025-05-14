@@ -9,7 +9,7 @@ from datetime import datetime
 import zipfile
 import json
 
-from utils import init_browser, activate_semantic_placeholder, save_cookies, finalize_run, get_cookies_path, setup_common_args, run_main, take_screenshot
+from utils import init_browser, activate_semantic_placeholder, save_cookies, finalize_run, get_cookies_path, setup_common_args, run_main, take_screenshot, save_storage_state
 
 def login(page: Page, url: str, username: str, password: str, trace_folder: str):
     print(f"Debug: Username in login: {username}")
@@ -96,6 +96,8 @@ def run(playwright: Playwright, username: str, password: str, headless=True, deb
         login_result = login(page, url, username, password, trace_subfolder)
         if login_result and cookies:
             save_cookies(page, cookies_path)
+        if login_result:
+            save_storage_state(context, cookies_path)
         
         page.wait_for_timeout(10000)
     except Exception as e:
