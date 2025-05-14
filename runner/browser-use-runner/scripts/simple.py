@@ -9,6 +9,7 @@ import json
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from browser_use import BrowserConfig, Browser, Agent, BrowserContextConfig
+import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.dirname(os.getcwd()))
@@ -130,7 +131,10 @@ async def main():
                     logger.info(f"Zip file removed: {trace_file}")
         except Exception as e:
             logger.error(f"Error saving or extracting trace data: {str(e)}")
-        return result
+        if result:
+            sys.exit(0)
+        else:
+            sys.exit(1)
 
 if __name__ == '__main__':
     asyncio.run(main())
