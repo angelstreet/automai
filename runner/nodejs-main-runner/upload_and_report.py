@@ -106,14 +106,14 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
                         '<head>' +
                         '<title>Video Player - ' + fileName + '</title>' +
                         '<style>' +
-                        'body {{ margin: 0; padding: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; transition: background-color 0.3s, color 0.3s; }}' +
-                        'body.light-theme {{ background-color: #f5f5f5; color: #333; }}' +
-                        'body.dark-theme {{ background-color: #1a1a1a; color: #fff; }}' +
-                        '.video-container {{ max-width: 100%; }}' +
-                        'video {{ max-width: 100%; max-height: 70vh; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }}' +
-                        'h1 {{ font-family: Arial, sans-serif; text-align: center; margin-bottom: 20px; font-size: 18px; }}' +
-                        '.theme-toggle {{ position: absolute; top: 10px; right: 10px; background: #555; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; }}' +
-                        'body.light-theme .theme-toggle {{ background: #ddd; color: #333; }}' +
+                        'body { margin: 0; padding: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; transition: background-color 0.3s, color 0.3s; }' +
+                        'body.light-theme { background-color: #f5f5f5; color: #333; }' +
+                        'body.dark-theme { background-color: #1a1a1a; color: #fff; }' +
+                        '.video-container { max-width: 100%; }' +
+                        'video { max-width: 100%; max-height: 70vh; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }' +
+                        'h1 { font-family: Arial, sans-serif; text-align: center; margin-bottom: 20px; font-size: 18px; }' +
+                        '.theme-toggle { position: absolute; top: 10px; right: 10px; background: #555; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; }' +
+                        'body.light-theme .theme-toggle { background: #ddd; color: #333; }' +
                         '</style>' +
                         '</head>' +
                         '<body class="' + (isDarkTheme ? 'dark-theme' : 'light-theme') + '">' +
@@ -126,10 +126,10 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
                         '</video>' +
                         '</div>' +
                         '<script>' +
-                        'function toggleTheme() {{' +
+                        'function toggleTheme() {' +
                         '  document.body.classList.toggle("light-theme");' +
                         '  document.body.classList.toggle("dark-theme");' +
-                        '}}' +
+                        '}' +
                         '</script>' +
                         '</body>' +
                         '</html>'
@@ -533,7 +533,7 @@ def get_content_type(file_path: str) -> str:
 
 def get_content_disposition(mime_type: str) -> str:
     """Determine content disposition based on MIME type."""
-    return "inline" if mime_type.startswith(("text/", "image/")) else "attachment"
+    return "inline" if mime_type.startswith(("text/", "image/", "video/")) else "attachment"
 
 def collect_files(
     job_folder_path: str,
