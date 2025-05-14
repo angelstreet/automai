@@ -9,7 +9,6 @@ import json
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from browser_use import BrowserConfig, Browser, Agent, BrowserContextConfig
-import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.dirname(os.getcwd()))
@@ -48,8 +47,7 @@ parser.add_argument('--cookies_path', type=str, default='', help='The path to th
 parser.add_argument('--executable_path', type=str, help='Path to Google Chrome executable, defaults to Chromium if not provided')
 args, _ = parser.parse_known_args()
 
-print(f"----- WARNING: Use _ to escape spaces in task -----")
-task = args.task.replace("_", " ")
+task = args.task
 print(f"----- Task: {task} -----")
 
 trace_path = os.path.join(os.getcwd(), args.trace_folder)
@@ -98,7 +96,6 @@ agent = Agent(task=task, llm=llm, browser=browser)
 result = False
 
 async def main():
-    result = False
     try:
         await agent.run()
         result = True
@@ -131,29 +128,7 @@ async def main():
                     logger.info(f"Zip file removed: {trace_file}")
         except Exception as e:
             logger.error(f"Error saving or extracting trace data: {str(e)}")
-            
-        # Explicitly close the browser and clean up resources
-        try:
-            if agent.browser_context:
-                await agent.browser_context.close()
-                logger.info("Browser context closed")
-            
-            if browser and browser.browser:
-                await browser.browser.close()
-                logger.info("Browser closed")
-                
-            # Force cleanup of any remaining browser processes on Windows
-            if sys.platform == 'win32':
-                logger.info("Performing additional Windows cleanup")
-                # Force close any remaining browser processes
-                await asyncio.sleep(0.5)  # Short delay to ensure resources are released
-        except Exception as e:
-            logger.error(f"Error closing browser resources: {str(e)}")
-            
-        if result:
-            sys.exit(0)
-        else:
-            sys.exit(1)
+        return result
 
 if __name__ == '__main__':
     asyncio.run(main())
