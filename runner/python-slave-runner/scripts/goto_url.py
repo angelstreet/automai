@@ -7,8 +7,8 @@ import sys
 def main():
     # Set up command line argument parsing
     parser = argparse.ArgumentParser(description='Open a URL in Chromium browser')
-    parser.add_argument('--url', type=str, default="https://www.youtube.com", 
-                        help='URL to navigate to (default: https://www.youtube.com)')
+    parser.add_argument('--url', type=str, default="http://www.youtube.com", 
+                        help='URL to navigate to (default: http://www.youtube.com)')
     parser.add_argument('--headless', action='store_true', 
                         help='Run browser in headless mode')
     parser.add_argument('--trace_folder', type=str,
