@@ -509,9 +509,7 @@ def collect_files(
             continue
 
         # Include files with allowed extensions or report files
-        logger.info(f"upload: {filename} at {relative_path}")
         if filename in report_files or extension in allowed_extensions:
-            logger.info(f"upload: {filename} included")
             relative_path = str(file_path.relative_to(job_folder))
             creation_time = file_path.stat().st_ctime
             files_to_upload.append({
