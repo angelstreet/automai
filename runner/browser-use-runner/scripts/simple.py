@@ -47,7 +47,8 @@ parser.add_argument('--cookies_path', type=str, default='', help='The path to th
 parser.add_argument('--executable_path', type=str, help='Path to Google Chrome executable, defaults to Chromium if not provided')
 args, _ = parser.parse_known_args()
 
-task = args.task
+print(f"----- WARNING: Use_ to escape spaces in task -----")
+task = args.task.replace("_", " ")
 print(f"----- Task: {task} -----")
 
 trace_path = os.path.join(os.getcwd(), args.trace_folder)
