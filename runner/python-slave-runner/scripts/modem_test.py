@@ -6,6 +6,7 @@ import requests
 import time
 import socket
 import getpass
+import sys
 
 def get_host_ip():
     """Get the IP address of the machine running the script."""
