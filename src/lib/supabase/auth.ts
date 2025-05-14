@@ -9,11 +9,27 @@ const isUsingSupabase = () => {
   return process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 };
 
+// Session cache to minimize API calls
+let sessionCache: { data: SessionData | null; timestamp: number } = { data: null, timestamp: 0 };
+const SESSION_CACHE_TTL = 60 * 1000; // 1 minute cache
+
+// Check if session cache is valid
+const isSessionCacheValid = () => {
+  return sessionCache.data && Date.now() - sessionCache.timestamp < SESSION_CACHE_TTL;
+};
+
 export const supabaseAuth = {
   async getSession(): Promise<AuthResult<SessionData>> {
     if (!isUsingSupabase()) {
       return { success: false, error: 'Supabase auth not available' };
     }
+
+    // Use cached session if available and still valid
+    if (isSessionCacheValid()) {
+      console.log('[@auth:getSession] Using cached session data');
+      return { success: true, data: sessionCache.data! };
+    }
+
     try {
       const supabase = await createClient();
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
@@ -52,22 +68,30 @@ export const supabaseAuth = {
         return { success: false, error: 'No role found in profiles table' };
       }
 
+      const sessionResult = {
+        user: {
+          id: user.id,
+          email: user.email,
+          name,
+          image: profile?.avatar_url || metadata.avatar_url || null,
+          role,
+          tenant_id: profile?.tenant_id || metadata.tenant_id || 'unknown',
+          tenant_name: profile?.tenant_name || metadata.tenant_name || 'trial',
+          user_metadata: metadata,
+        },
+        accessToken: access_token,
+        expires: expires_at ? new Date(expires_at * 1000).toISOString() : '',
+      };
+
+      // Update cache
+      sessionCache = {
+        data: sessionResult,
+        timestamp: Date.now(),
+      };
+
       return {
         success: true,
-        data: {
-          user: {
-            id: user.id,
-            email: user.email,
-            name,
-            image: profile?.avatar_url || metadata.avatar_url || null,
-            role,
-            tenant_id: profile?.tenant_id || metadata.tenant_id || 'unknown',
-            tenant_name: profile?.tenant_name || metadata.tenant_name || 'trial',
-            user_metadata: metadata,
-          },
-          accessToken: access_token,
-          expires: expires_at ? new Date(expires_at * 1000).toISOString() : '',
-        },
+        data: sessionResult,
       };
     } catch (error) {
       console.error('Error in getSession:', error);
@@ -82,6 +106,16 @@ export const supabaseAuth = {
     if (!isUsingSupabase()) {
       return { success: false, error: 'Supabase auth not available' };
     }
+
+    // Try to get user from session cache first
+    if (isSessionCacheValid() && sessionCache.data?.user) {
+      console.log('[@auth:getUser] Using cached user data');
+      return {
+        success: true,
+        data: sessionCache.data.user as UserSession,
+      };
+    }
+
     try {
       const supabase = await createClient();
       const {
@@ -132,19 +166,21 @@ export const supabaseAuth = {
         return { success: false, error: 'No role found in profiles table' };
       }
 
+      const userData = {
+        id: authUser.id,
+        email: authUser.email || '',
+        name,
+        role,
+        tenant_id: profile.tenant_id || 'default',
+        tenant_name: profile.tenant_name || 'trial',
+        avatar_url:
+          authUser.user_metadata?.avatar_url || profile.avatar_url || '/avatars/default.svg',
+        user_metadata: authUser.user_metadata,
+      };
+
       return {
         success: true,
-        data: {
-          id: authUser.id,
-          email: authUser.email || '',
-          name,
-          role,
-          tenant_id: profile.tenant_id || 'default',
-          tenant_name: profile.tenant_name || 'trial',
-          avatar_url:
-            authUser.user_metadata?.avatar_url || profile.avatar_url || '/avatars/default.svg',
-          user_metadata: authUser.user_metadata,
-        },
+        data: userData,
       };
     } catch (error) {
       console.error('Error in getUser:', error);
@@ -186,6 +222,9 @@ export const supabaseAuth = {
         return { success: false, error: profileError.message };
       }
 
+      // Clear session cache
+      sessionCache = { data: null, timestamp: 0 };
+
       return { success: true, data: authData.user };
     } catch (error) {
       console.error('Error updating user metadata:', error);
@@ -197,6 +236,10 @@ export const supabaseAuth = {
   },
 
   async isAuthenticated(): Promise<boolean> {
+    // Use cache if available to avoid unnecessary API calls
+    if (isSessionCacheValid()) {
+      return true;
+    }
     const sessionResult = await this.getSession();
     return sessionResult.success;
   },
@@ -212,6 +255,10 @@ export const supabaseAuth = {
       if (error) {
         return { success: false, error: error.message };
       }
+
+      // Clear session cache on sign in
+      sessionCache = { data: null, timestamp: 0 };
+
       return { success: true, data: data.session };
     } catch (error) {
       console.error('Error signing in:', error);
