@@ -326,10 +326,7 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
 
     # The rest of the initialization is different depending on whether we're using remote debugging or not
     if remote_debugging:
-        context = browser.new_context(
-            viewport={"width": 1920, "height": 1080},  # Set a large viewport for fullscreen experience
-            record_video_dir=video_dir if video else None
-        )
+        context = browser.new_context() # We cannot provide context to remote CDP so no video
     else:
         context = browser.new_context(
             viewport={"width": 1920, "height": 1080},  # Set a large viewport for fullscreen experience
