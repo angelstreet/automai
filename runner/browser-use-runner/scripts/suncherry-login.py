@@ -25,7 +25,7 @@ def get_username_password(username,password):
         
         return username, password
 
-def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder: str = 'suncherry-playwright_trace', screenshots: bool = True, video: bool = True, source: bool = True, cookies: bool = True, executable_path: str = None, remote_debugging: bool = False, keep_browser_open: bool = True, url: str = None, username: str = None, password: str = None, **kwargs):
+def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder: str = 'suncherry-playwright_trace', screenshots: bool = True, video: bool = True, trace: bool = True, executable_path: str = None, remote_debugging: bool = False, keep_alive: bool = True, url: str = None, username: str = None, password: str = None):
     username,password=get_username_password(username,password)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -34,18 +34,18 @@ def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder
     trace_file = os.path.join(trace_subfolder, f"{timestamp}.zip")
 
     # Get the cookies path using the utility function
-    cookies_path = get_cookies_path(trace_folder, cookies)
+    cookies_path = get_cookies_path(trace_folder)
 
     # We don't load cookies here as this is the login script that generates cookies
-    page, context, browser = init_browser(playwright, headless, debug, trace_subfolder if video else None, screenshots, video, source, cookies_path, executable_path, remote_debugging)
+    page, context, browser = init_browser(playwright, headless, debug, trace_subfolder if video else None, screenshots, video, trace, cookies_path, executable_path, remote_debugging)
     page.set_default_timeout(10000)
     
     try:
         page.goto(url, timeout=60000)
         page.wait_for_timeout(10000)
-        if not is_logged_in(page, trace_subfolder):
+        if not is_logged_in(page, url, trace_subfolder):
             login_result = login(page, username, password, trace_subfolder)
-            if login_result and cookies:
+            if login_result:
                 save_cookies(page, cookies_path)
             if login_result:
                 save_storage_state(context, cookies_path)
@@ -57,7 +57,7 @@ def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder
         print(f"An error occurred during execution: {str(e)}")
         login_result = False
     finally:
-        finalize_run(page, context, browser, trace_subfolder, timestamp, trace_file, video, remote_debugging, keep_browser_open)
+        finalize_run(page, context, browser, trace_subfolder, timestamp, trace_file, video, remote_debugging, keep_alive)
         if login_result :
             return sys.exit(0)
         else:
@@ -66,15 +66,16 @@ def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder
 def main():
     parser = argparse.ArgumentParser(description='Run Suncherry Playwright script')
     parser = setup_common_args(parser)
+    parser.add_argument('--url', type=str, help='URL to navigate to', default='https://www.sunrisetv.ch/de/home')
     parser.add_argument('--username', type=str, help='Login username')
     parser.add_argument('--password', type=str, help='Login password')
-    parser.add_argument('--url', type=str, help='URL to navigate to', default='https://www.sunrisetv.ch/de/home')
     args, _ = parser.parse_known_args()
 
     print(f"Running in {'headless' if args.headless else 'visible'}")
+    print(f"Url from args: {args.url}")
     print(f"Username from args: {args.username}")
     print(f"Password from args: {args.password}")
-    print(f"Url from args: {args.url}")
+    
 
     run_main(run, args)
 
