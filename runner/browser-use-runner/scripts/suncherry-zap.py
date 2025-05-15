@@ -41,7 +41,7 @@ def zap(page: Page, trace_folder: str, channel: str = 'SRF 1', max_iterations: i
             current_channel_id = start_channel_id + i
             print(f"Click on channel {current_channel_id}")
             page.locator(f"[id='flt-semantic-node-{current_channel_id}']").click()
-            page.wait_for_timeout(10000)
+            page.wait_for_timeout(15000)
             take_screenshot(page, trace_folder, f'next_channel_{current_channel_id}')
 
             go_back(page, trace_folder)
