@@ -18,10 +18,7 @@ load_dotenv(env_path)
 print(f'Loaded environment variables from: {env_path}')
 
 def clean_user_data_dir():
-    if platform.system() == 'Windows':
-        user_data_dir = 'C:\\Temp\\chrome_debug_profile'
-    else:  # Linux and macOS
-        user_data_dir = '/tmp/chrome_debug_profile'
+    user_data_dir = '/tmp/chrome_debug_profile'
     if os.path.exists(user_data_dir):
         shutil.rmtree(user_data_dir)
         print(f"Cleaned up user data directory: {user_data_dir}")
