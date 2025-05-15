@@ -40,7 +40,7 @@ def pass_login(page: Page, trace_folder: str):
 
 def tvguide_livetv_zap(page: Page, trace_folder: str, aria_label: str = 'SRF 1'):
     take_screenshot(page, trace_folder, 'tvguide_livetv')
-    page.locator(f'[aria-label*="{channel}"]').click()
+    page.locator(f'[aria-label*="{aria_label}"]').click()
     page.wait_for_timeout(5000)
     take_screenshot(page, trace_folder, 'click_channel')
     return True
