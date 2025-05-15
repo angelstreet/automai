@@ -5,7 +5,7 @@ import argparse
 from datetime import datetime
 from dotenv import load_dotenv
 
-from utils import init_browser, finalize_run, setup_common_args, run_main
+from utils import init_browser, finalize_run, setup_common_args, run_main, clean_user_data_dir
 from suncherryUtils import login, is_logged_in
 
 def get_username_password(username,password):
@@ -33,6 +33,7 @@ def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder
     os.makedirs(trace_subfolder, exist_ok=True)
     trace_file = os.path.join(trace_subfolder, f"{timestamp}.zip")
 
+    clean_user_data_dir()
     page, context, browser = init_browser(playwright, headless, debug, trace_subfolder if video else None, screenshots, video, trace, executable_path, remote_debugging)
     page.set_default_timeout(10000)
     

@@ -9,12 +9,22 @@ import subprocess
 import time
 import socket
 import time
+import shutil
 
 # Load .env file from the same directory as this script
 script_dir = os.path.dirname(os.path.abspath(__file__))
 env_path = os.path.join(script_dir, '.env')
 load_dotenv(env_path)
 print(f'Loaded environment variables from: {env_path}')
+
+def clean_user_data_dir():
+    if platform.system() == 'Windows':
+        user_data_dir = 'C:\\Temp\\chrome_debug_profile'
+    else:  # Linux and macOS
+        user_data_dir = '/tmp/chrome_debug_profile'
+    if os.path.exists(user_data_dir):
+        shutil.rmtree(user_data_dir)
+        print(f"Cleaned up user data directory: {user_data_dir}")
 
 def activate_semantic_placeholder(page: Page, trace_folder: str):
     shadow_root_selector = 'body > flutter-view > flt-glass-pane'
@@ -135,7 +145,7 @@ def init_browser_with_remote_debugging(playwright: Playwright, headless=True, de
     
     # Launch Chrome with remote debugging enabled using a more reliable approach
     debug_port = 9222
-    user_data_dir = f'/tmp/chrome_debug_profile_{datetime.now().strftime("%Y%m%d_%H%M%S")}'
+    user_data_dir = f'/tmp/chrome_debug_profile'
     os.makedirs(user_data_dir, exist_ok=True)
     
     chrome_flags = [
