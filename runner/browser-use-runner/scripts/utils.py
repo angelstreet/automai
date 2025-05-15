@@ -118,11 +118,10 @@ def is_port_in_use(port):
         
 def init_browser(playwright: Playwright, headless=True, debug: bool = False, video_dir: str = None, screenshots: bool = True, video: bool = True, source: bool = True, cookies_path: str = None, executable_path: str = None, remote_debugging: bool = False):
     if remote_debugging:
-        browser = init_browser_with_remote_debugging(playwright, headless, debug, video_dir, screenshots, video, source, cookies_path, executable_path)
+        page, context, browser = init_browser_with_remote_debugging(playwright, headless, debug, video_dir, screenshots, video, source, cookies_path, executable_path)
     else:
-        browser = init_regular_browser(playwright, headless, debug, video_dir, screenshots, video, source, cookies_path, executable_path)
-    context = browser.contexts[0]
-    page = context.pages[0]
+        page, context, browser = init_regular_browser(playwright, headless, debug, video_dir, screenshots, video, source, cookies_path, executable_path)
+    
     if cookies_path:
         load_cookies(context, cookies_path)
     context.tracing.start(screenshots=screenshots, snapshots=True, sources=source)
@@ -259,13 +258,15 @@ def init_browser_with_remote_debugging(playwright: Playwright, headless=True, de
                     print(f'Failed to connect via WebSocket URL: {str(ws_error)}')
     except Exception as e:
         print(f'Error connecting to Chrome debugging HTTP endpoint: {str(e)}')
-        
-    return browser
+
+    context = browser.contexts[0]
+    page = context.pages[0]  
+    return page, context, browser
 
 def init_regular_browser(playwright: Playwright, headless=True, debug: bool = False, video_dir: str = None, screenshots: bool = True, video: bool = True, source: bool = True, cookies_path: str = None, executable_path: str = None):
     """Initialize browser without remote debugging"""
-    browser_args = ['--disable-blink-features=AutomationControlled','--disable-gpu', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--window-position=0,0', '--window-size=1920,1080','--enable-unsafe-swiftshader']
-    
+    browser_args = ['--disable-blink-features=AutomationControlled','--disable-gpu', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--window-position=0,0', '--viewport=1080,720','--enable-unsafe-swiftshader']
+    print(f"Initializing browser with args: {browser_args}")
     if executable_path:
         browser = playwright.chromium.launch(
             headless=headless,
@@ -301,12 +302,12 @@ def init_regular_browser(playwright: Playwright, headless=True, debug: bool = Fa
                 args=browser_args
             )
             print("Using default Chromium browser")
-
-    context = browser.contexts[0]
-    page = context.pages[0]
-    if cookies_path:
-        load_cookies(context, cookies_path)
-    context.tracing.start(screenshots=screenshots, snapshots=True, sources=source)
+    if len(browser.contexts) == 0:
+        context = browser.new_context( )
+        page = context.new_page()
+    else:
+        context = browser.contexts[0]
+        page = context.pages[0]
     
     return page, context, browser
 
