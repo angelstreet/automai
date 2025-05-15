@@ -310,10 +310,6 @@ def finalize_run(page: Page, context, browser, trace_subfolder: str, timestamp: 
     # Log the current URL to confirm where the browser is before completion
     current_url = page.url
     print(f"Current URL before completion: {current_url}")
-    
-    if not keep_browser_open:
-        browser.close()
-        print("Browser and all tabs closed")
 
 def setup_common_args(parser):
     """

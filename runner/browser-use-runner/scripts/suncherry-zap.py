@@ -79,8 +79,10 @@ def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder
     finally:
         finalize_run(page, context, browser, trace_subfolder, timestamp, trace_file, video, remote_debugging, keep_alive)
         if result :
+            print("Test successful, Zap success")
             return sys.exit(0)
         else:
+            print("Test failed, Zap failed")
             return sys.exit(1)
 
 def main():
