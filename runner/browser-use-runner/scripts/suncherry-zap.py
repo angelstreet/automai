@@ -5,7 +5,7 @@ import argparse
 from dotenv import load_dotenv
 from datetime import datetime
 
-from utils import init_browser, activate_semantic_placeholder, finalize_run, setup_common_args, run_main, take_screenshot
+from utils import init_browser, activate_semantic_placeholder, finalize_run, setup_common_args, run_main, take_screenshot, kill_chrome_instances
 from suncherryUtils import get_element_id, pass_login, is_logged_in,go_back
 
 # Load .env file from the same directory as this script

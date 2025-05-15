@@ -5,7 +5,7 @@ import argparse
 from datetime import datetime
 from dotenv import load_dotenv
 
-from utils import init_browser, finalize_run, setup_common_args, run_main, clean_user_data_dir
+from utils import init_browser, finalize_run, setup_common_args, run_main, clean_user_data_dir, kill_chrome_instances
 from suncherryUtils import login, is_logged_in
 
 def get_username_password(username,password):
