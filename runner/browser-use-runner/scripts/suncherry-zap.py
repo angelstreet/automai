@@ -17,7 +17,7 @@ print(f'Loaded environment variables from: {env_path}')
 def zap(page: Page, trace_folder: str, channel: str = 'SRF 1', max_iterations: int = 3):
     try:
         activate_semantic_placeholder(page, trace_folder)
-        page.wait_for_timeout(3000)
+        page.wait_for_timeout(1000)
           
         print("Click on TV Guide")
         page.wait_for_selector("#flt-semantic-node-6", state="visible", timeout=20000)

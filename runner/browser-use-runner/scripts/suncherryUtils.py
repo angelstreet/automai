@@ -34,6 +34,7 @@ def pass_login(page: Page, trace_folder: str):
             print('App download screen skipped')
         except Exception as e:
             print(f'App download screen not shown or skipped: {str(e)}')
+        page.wait_for_timeout(10000)
     except Exception as e:
         print(f'Login screen not shown or skipped: {str(e)}')
         return True
