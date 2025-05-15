@@ -129,6 +129,8 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
 
 def init_browser_with_remote_debugging(playwright: Playwright, headless=True, debug: bool = False, video_dir: str = None, screenshots: bool = True, video: bool = True, source: bool = True, cookies_path: str = None, executable_path: str = None):
     """Initialize browser with remote debugging enabled on port 9222"""
+    browser_args = ['--disable-blink-features=AutomationControlled','--disable-gpu', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--window-position=0,0', '--enable-unsafe-swiftshader']
+   
     # Kill any existing Chrome instances to avoid port conflicts
     print('Killing any existing Chrome instances before launching...')
     if platform.system() == 'Windows':
@@ -208,7 +210,90 @@ def init_browser_with_remote_debugging(playwright: Playwright, headless=True, de
     print(f'Launching Chrome with command: {" ".join(cmd_line)}')
     process = subprocess.Popen(cmd_line)
     print(f'Chrome launched with PID: {process.pid}')
-    time.sleep(10)
+    
+    # Wait for Chrome to be ready by checking if the port is open
+    max_wait = 30  # Maximum wait time in seconds
+    print(f'Waiting up to {max_wait} seconds for Chrome to be ready on port {debug_port}...')
+    
+    start_time = time.time()
+    port_open = False
+    
+    while time.time() - start_time < max_wait:
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(1)
+            s.connect(('127.0.0.1', debug_port))
+            s.close()
+            port_open = True
+            elapsed = time.time() - start_time
+            print(f'Chrome is ready! Port {debug_port} is open after {elapsed:.2f} seconds')
+            # Add a small delay to ensure Chrome is fully initialized
+            time.sleep(2)
+            break
+        except (socket.timeout, socket.error):
+            time.sleep(1)
+    
+    if not port_open:
+        print(f'Timed out waiting for Chrome to open port {debug_port} after {max_wait} seconds')
+        # But still try to connect anyway in case the port check failed but Chrome is still running
+    
+    # Now connect to the Chrome instance using CDP
+    try:
+        # First try to get the debug URL to see if CDP is working
+        import urllib.request
+        try:
+            with urllib.request.urlopen(f'http://127.0.0.1:{debug_port}/json/version') as response:
+                version_info = json.loads(response.read().decode('utf-8'))
+                print(f'Successfully connected to Chrome debugging HTTP endpoint: {version_info}')
+                # If we can see a webSocketDebuggerUrl, that's a good sign
+                if 'webSocketDebuggerUrl' in version_info:
+                    print(f'Found WebSocket debugger URL: {version_info["webSocketDebuggerUrl"]}')
+                    # Try connecting directly to the WebSocket URL
+                    try:
+                        ws_url = version_info["webSocketDebuggerUrl"]
+                        print(f'Attempting to connect directly to WebSocket URL: {ws_url}')
+                        browser = playwright.chromium.connect_over_cdp(ws_url)
+                        print('Connected to Chrome instance via WebSocket URL')
+                        context = browser.new_context()
+                        context.tracing.start(screenshots=screenshots, snapshots=True, sources=source)
+                        page = context.new_page()
+                        if debug:
+                            page.on("response", lambda response: print(f"Response: {response.status} {response.url}"))
+                            page.on("requestfailed", lambda request: print(f"Request failed: {request.url} {request.failure}"))
+                        return page, context, browser
+                    except Exception as ws_error:
+                        print(f'Failed to connect via WebSocket URL: {str(ws_error)}')
+        except Exception as e:
+            print(f'Error connecting to Chrome debugging HTTP endpoint: {str(e)}')
+        
+        # Try explicitly using 127.0.0.1 instead of localhost to avoid IPv6 issues
+        print('Attempting to connect via http://127.0.0.1:9222...')
+        browser = playwright.chromium.connect_over_cdp('http://127.0.0.1:9222')
+        print('Connected to Chrome instance via CDP on port 9222')
+    except Exception as e:
+        print(f'Failed to connect to Chrome via CDP: {str(e)}')
+        # Try alternative connection if first one fails
+        try:
+            print('Attempting alternative connection method via http://localhost:9222...')
+            browser = playwright.chromium.connect_over_cdp('http://localhost:9222')
+            print('Connected to Chrome instance via CDP using alternative method')
+        except Exception as e2:
+            print(f'Alternative connection also failed: {str(e2)}')
+            # As a last resort, just launch a new browser
+            print('All CDP connection attempts failed. Falling back to launching a regular browser...')
+            if executable_path:
+                browser = playwright.chromium.launch(
+                    headless=headless,
+                    executable_path=executable_path,
+                    args=browser_args
+                )
+            else:
+                browser = playwright.chromium.launch(
+                    headless=headless,
+                    args=browser_args
+                )
+            print('Fallback browser launched')
+
     if cookies_path:
         storage_path = os.path.join(cookies_path, 'storage_state.json')
         if not os.path.exists(storage_path):
