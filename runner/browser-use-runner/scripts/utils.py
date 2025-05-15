@@ -191,7 +191,6 @@ def init_browser_with_remote_debugging(playwright: Playwright, headless=True, de
     
     chrome_flags = [
         f'--remote-debugging-port={debug_port}',
-        f'--user-data-dir={user_data_dir}',
         '--no-first-run',
         '--no-default-browser-check',
         '--disable-features=Translate',
