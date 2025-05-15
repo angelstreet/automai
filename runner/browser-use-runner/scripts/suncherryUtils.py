@@ -55,18 +55,18 @@ def login(page: Page, url: str, username: str, password: str, trace_folder: str)
     page.wait_for_timeout(2000)
     try :
         page.wait_for_selector("#onetrust-accept-btn-handler", state="visible", timeout=1000)
-        page.wait_for_timeout(1000)
         print("Accept cookies")
         take_screenshot(page, trace_folder, 'accept_cookies')
         page.locator("#onetrust-accept-btn-handler").click()
+        page.wait_for_timeout(2000)
     except Exception as e:
         print(f'Cookies pop up not shown: {str(e)}')
     
-    page.wait_for_selector("aria-label*=ANMELDEN", state="visible")
-    page.wait_for_timeout(1000)
-    print("Click on username")
-    page.locator("aria-label*=ANMELDEN").click()
+    print("Click on login button")
+    page.wait_for_selector("#flt-semantic-node-6", state="visible")
+    page.locator("#flt-semantic-node-6").click()
 
+    print("Click on username")
     page.wait_for_selector("#username", state="visible")
     page.wait_for_timeout(1000)
     print("Fill username")

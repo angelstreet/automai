@@ -312,7 +312,8 @@ def finalize_run(page: Page, context, browser, trace_subfolder: str, timestamp: 
     print(f"Current URL before completion: {current_url}")
     
     if not keep_browser_open:
-        browser.close()
+        input("Press Enter to close the browser...")
+        #browser.close()
         print("Browser and all tabs closed")
     else:
         print("Browser kept open with all tabs. Remember to close it manually when done.")

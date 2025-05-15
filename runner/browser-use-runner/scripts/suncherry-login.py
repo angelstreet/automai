@@ -62,6 +62,7 @@ def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder
             return sys.exit(0)
         else:
             return sys.exit(1)
+        input("Press Enter to continue...")
 
 def main():
     parser = argparse.ArgumentParser(description='Run Suncherry Playwright script')
@@ -76,7 +77,6 @@ def main():
     print(f"Username from args: {args.username}")
     print(f"Password from args: {args.password}")
     
-
     run_main(run, args)
 
 if __name__ == "__main__":
