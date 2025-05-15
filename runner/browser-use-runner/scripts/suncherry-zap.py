@@ -71,9 +71,9 @@ def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder
             pass_login(page, trace_subfolder)
             if not is_logged_in(page, url, trace_subfolder):
                 print("Test failed, not logged in")
-                return sys.exit(1)
+                result = False
+                return result
         result = zap(page, trace_subfolder, channel, max_iterations)
-
     except Exception as e:
         print(f"An error occurred during execution: {str(e)}")
         result = False
