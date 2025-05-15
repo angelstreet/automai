@@ -4,8 +4,8 @@ from utils import take_screenshot, activate_semantic_placeholder
 
 def go_back(page: Page, trace_folder: str):
     print("** go_back **")
-    page.goBack('domcontentloaded')
-    page.wait_for_timeout(10000)
+    page.go_back()
+    page.wait_for_timeout(5000)
     take_screenshot(page, trace_folder, 'go_back')
 
 
