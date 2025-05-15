@@ -21,10 +21,11 @@ def get_element_id(page: Page, aria_label: str):
 def pass_install_app(page: Page, trace_folder: str):
     try:
         print('Try skip app download screen reloading page')
-        page.wait_for_timeout(6000)
+        page.wait_for_timeout(10000)
         take_screenshot(page, trace_folder, 'app_download_screen')
         print('Reload page')
         page.goto(page.url, timeout=15000)
+        page.wait_for_timeout(5000)
     except Exception as e:
         print(f'App download screen not shown or skipped: {str(e)}')
         page.wait_for_timeout(5000)
@@ -86,7 +87,7 @@ def login(page: Page, url: str, username: str, password: str, trace_folder: str)
     page.wait_for_timeout(1000)
     print("Click on login")
     page.locator("#kc-login").click()
-    page.wait_for_timeout(3000)
+    page.wait_for_timeout(1000)
     pass_install_app(page, trace_folder)
     
     print("Wait for 15 seconds")
