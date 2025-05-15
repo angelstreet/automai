@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from datetime import datetime
 
 from utils import init_browser, activate_semantic_placeholder, finalize_run, get_cookies_path, setup_common_args, run_main, take_screenshot
-from suncherryUtils import get_element_id, pass_login, is_logged_in
+from suncherryUtils import get_element_id, pass_login, is_logged_in,go_back
 
 # Load .env file from the same directory as this script
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -41,14 +41,10 @@ def zap(page: Page, trace_folder: str, channel: str = 'SRF 1', max_iterations: i
             current_channel_id = start_channel_id + i
             print(f"Click on channel {current_channel_id}")
             page.locator(f"[id='flt-semantic-node-{current_channel_id}']").click()
-            page.wait_for_timeout(5000)
+            page.wait_for_timeout(10000)
             take_screenshot(page, trace_folder, f'next_channel_{current_channel_id}')
 
-            print("Go back")
-            page.go_back()
-            print('go back')
-            page.wait_for_timeout(2000)
-            take_screenshot(page, trace_folder, 'go_back')
+            go_back(page, trace_folder)
             
         print('Test Success, Zap success')
         take_screenshot(page, trace_folder, 'zap_success')
