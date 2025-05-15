@@ -16,21 +16,6 @@ env_path = os.path.join(script_dir, '.env')
 load_dotenv(env_path)
 print(f'Loaded environment variables from: {env_path}')
 
-def get_cookies_path(trace_folder: str):
-    """
-    Determine the appropriate cookies path based on the trace folder.
-    Returns None if cookies are not enabled.
-    """
-    
-    # Determine cookie path based on trace_folder
-    if trace_folder == 'suncherry-playwright_trace':
-        cookies_path = trace_folder
-    else:
-        cookies_path = os.path.dirname(trace_folder)
-    
-    print(f"Debug: Determined cookies_path to be: {cookies_path} based on trace_folder: {trace_folder}")
-    return cookies_path
-
 def activate_semantic_placeholder(page: Page, trace_folder: str):
     shadow_root_selector = 'body > flutter-view > flt-glass-pane'
     element_inside_shadow_dom_selector = 'flt-semantics-placeholder'
@@ -73,40 +58,6 @@ def activate_semantic_placeholder(page: Page, trace_folder: str):
         take_screenshot(page, trace_folder, 'semantic_placeholder_error')
         return False
 
-def load_cookies(context, cookies_path: str):
-    """
-    Load cookies from a file into the browser context.
-    Returns True if cookies were successfully loaded, False otherwise.
-    """
-    if not cookies_path:
-        print("No cookies path provided, skipping cookie loading")
-        return False
-    
-    if not os.path.exists(cookies_path):
-        os.makedirs(cookies_path, exist_ok=True)
-        print(f"Creating cookies folder: {cookies_path}")
-        return False
-    else:
-        print(f"Cookies folder exists: {cookies_path}")
-    
-    cookies_file = os.path.join(cookies_path, 'cookies.json')
-    if os.path.exists(cookies_file):
-        try:
-            with open(cookies_file, 'r') as f:
-                cookies_data = json.load(f)
-            context.add_cookies(cookies_data)
-            print(f"Loaded {len(cookies_data)} cookies from {cookies_file}")
-            print("We have loaded cookies, should be already logged in")
-            return True
-        except Exception as e:
-            print(f"Error loading cookies from {cookies_file}: {str(e)}")
-            print("No cookies loaded, login might be required")
-            return False
-    else:
-        print(f"No cookies file found at {cookies_file}")
-        print("No cookies loaded, login might be required")
-        return False
-
 def is_port_in_use(port):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.settimeout(1)
@@ -116,18 +67,16 @@ def is_port_in_use(port):
         except socket.error:
             return True
         
-def init_browser(playwright: Playwright, headless=True, debug: bool = False, video_dir: str = None, screenshots: bool = True, video: bool = True, source: bool = True, cookies_path: str = None, executable_path: str = None, remote_debugging: bool = False):
+def init_browser(playwright: Playwright, headless=True, debug: bool = False, video_dir: str = None, screenshots: bool = True, video: bool = True, source: bool = True, executable_path: str = None, remote_debugging: bool = False):
     if remote_debugging:
-        page, context, browser = init_browser_with_remote_debugging(playwright, headless, debug, video_dir, screenshots, video, source, cookies_path, executable_path)
+        page, context, browser = init_browser_with_remote_debugging(playwright, headless, debug, video_dir, screenshots, video, source, executable_path)
     else:
-        page, context, browser = init_regular_browser(playwright, headless, debug, video_dir, screenshots, video, source, cookies_path, executable_path)
+        page, context, browser = init_regular_browser(playwright, headless, debug, video_dir, screenshots, video, source, executable_path)
     
-    if cookies_path:
-        load_cookies(context, cookies_path)
     context.tracing.start(screenshots=screenshots, snapshots=True, sources=source)
     return page, context, browser
 
-def init_browser_with_remote_debugging(playwright: Playwright, headless=True, debug: bool = False, video_dir: str = None, screenshots: bool = True, video: bool = True, source: bool = True, cookies_path: str = None, executable_path: str = None):
+def init_browser_with_remote_debugging(playwright: Playwright, headless=True, debug: bool = False, video_dir: str = None, screenshots: bool = True, video: bool = True, source: bool = True, executable_path: str = None):
     """Initialize browser with remote debugging enabled on port 9222"""
     # Kill any existing Chrome instances to avoid port conflicts
     print('Killing any existing Chrome instances before launching...')
@@ -186,7 +135,7 @@ def init_browser_with_remote_debugging(playwright: Playwright, headless=True, de
     
     # Launch Chrome with remote debugging enabled using a more reliable approach
     debug_port = 9222
-    user_data_dir = os.path.join(os.getcwd(), cookies_path)
+    user_data_dir = '/tmp/chrome_debug_profile'
     os.makedirs(user_data_dir, exist_ok=True)
     
     chrome_flags = [
@@ -202,7 +151,9 @@ def init_browser_with_remote_debugging(playwright: Playwright, headless=True, de
         '--window-size=1080,720',
         '--disable-gpu',
         '--enable-unsafe-swiftshader',
-        '--hide-crash-restore-bubble'
+        '--hide-crash-restore-bubble',
+        '--guest'
+
     ]
     
     cmd_line = [executable_path] + chrome_flags
@@ -210,10 +161,6 @@ def init_browser_with_remote_debugging(playwright: Playwright, headless=True, de
     process = subprocess.Popen(cmd_line)
     print(f'Chrome launched with PID: {process.pid}')
     time.sleep(10)
-    if cookies_path:
-        storage_path = os.path.join(cookies_path, 'storage_state.json')
-        if not os.path.exists(storage_path):
-            storage_path = None
     
     print('Attempting to connect via http://127.0.0.1:9222...')
     browser = playwright.chromium.connect_over_cdp('http://localhost:9222')
@@ -223,7 +170,7 @@ def init_browser_with_remote_debugging(playwright: Playwright, headless=True, de
     page = context.pages[0]  
     return page, context, browser
 
-def init_regular_browser(playwright: Playwright, headless=True, debug: bool = False, video_dir: str = None, screenshots: bool = True, video: bool = True, source: bool = True, cookies_path: str = None, executable_path: str = None):
+def init_regular_browser(playwright: Playwright, headless=True, debug: bool = False, video_dir: str = None, screenshots: bool = True, video: bool = True, source: bool = True, executable_path: str = None):
     """Initialize browser without remote debugging"""
     browser_args = ['--disable-blink-features=AutomationControlled','--disable-gpu', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--window-position=0,0', '--viewport=1080,720','--enable-unsafe-swiftshader']
     print(f"Initializing browser with args: {browser_args}")
@@ -270,21 +217,6 @@ def init_regular_browser(playwright: Playwright, headless=True, debug: bool = Fa
         page = context.pages[0]
     
     return page, context, browser
-
-def save_cookies(page: Page, cookies_path: str):
-    if cookies_path:
-        cookies_file = os.path.join(cookies_path, 'cookies.json')
-        print(f"Debug: Attempting to save cookies to: {cookies_file}")
-        try:
-            os.makedirs(cookies_path, exist_ok=True)
-            cookies_data = page.context.cookies()
-            with open(cookies_file, 'w') as f:
-                json.dump(cookies_data, f, indent=2)
-            print(f"Saved cookies to {cookies_file}")
-        except Exception as e:
-            print(f"Error saving cookies to {cookies_file}: {str(e)}")
-    else:
-        print("Debug: Skipping cookie saving as cookies_path is not set")
 
 def take_screenshot(page: Page, trace_subfolder: str, name: str = 'screenshot') -> str:
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -338,30 +270,6 @@ def run_main(run_function, args=None):
     except Exception as e:
         print(f"An error occurred: {str(e)}")
         sys.exit(1)
-
-def save_storage_state(context, storage_path: str):
-    """
-    Save the storage state (cookies and local storage) from the browser context to a file.
-    Returns True if storage state was successfully saved, False otherwise.
-    """
-    if not storage_path:
-        print("No storage path provided, skipping storage state saving")
-        return False
-    
-    if not os.path.exists(storage_path):
-        os.makedirs(storage_path, exist_ok=True)
-        print(f"Creating storage folder: {storage_path}")
-    
-    storage_file = os.path.join(storage_path, 'storage_state.json')
-    try:
-        storage_state = context.storage_state()
-        with open(storage_file, 'w') as f:
-            json.dump(storage_state, f, indent=2)
-        print(f"Saved storage state to {storage_file}")
-        return True
-    except Exception as e:
-        print(f"Error saving storage state to {storage_file}: {str(e)}")
-        return False
 
 def launch_browser_with_remote_debugging(executable_path: str = None) -> subprocess.Popen:
     """
@@ -442,7 +350,7 @@ def launch_browser_with_remote_debugging(executable_path: str = None) -> subproc
 
     # Launch Chrome with remote debugging enabled using a more reliable approach
     debug_port = 9222
-    user_data_dir = f"/tmp/chrome_debug_profile_{datetime.now().strftime('%Y%m%d_%H%M%S')}" if platform.system() != 'Windows' else f"C:\\Temp\\chrome_debug_profile_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    user_data_dir = "/tmp/chrome_debug_profile" if platform.system() != 'Windows' else "C:\\Temp\\chrome_debug_profile"
     os.makedirs(user_data_dir, exist_ok=True)
 
     chrome_flags = [

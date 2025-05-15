@@ -58,16 +58,12 @@ llm = ChatOpenAI(
     temperature=0.0
 )
 
-# Set default cookies path using trace_path
-cookies_file = args.cookies_path if args.cookies_path else os.path.join(trace_path, 'cookies.json')
-os.makedirs(os.path.dirname(cookies_file), exist_ok=True)
-
 # Context configuration
 context_config = BrowserContextConfig(
     save_recording_path=trace_path,
     save_downloads_path=trace_path,
+    user_data_dir = '/tmp/chrome_debug_profile'
     #trace_path=trace_path, # bug in patchright
-    cookies_file=cookies_file
 )
 
 

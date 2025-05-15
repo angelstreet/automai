@@ -20,12 +20,11 @@ def get_element_id(page: Page, aria_label: str):
 
 def pass_install_app(page: Page, trace_folder: str):
     try:
-        page.wait_for_selector("aria-label=NICHT JETZT", state="visible", timeout=2000)
-        print('App download screen')
+        print('Try skip app download screen reloading page')
+        page.wait_for_timeout(6000)
         take_screenshot(page, trace_folder, 'app_download_screen')
-        page.click("aria-label=NICHT JETZT")
-        page.wait_for_timeout(1000)
-        print('App download screen skipped')
+        page.reload()
+        page.wait_for_timeout(10000)
     except Exception as e:
         print(f'App download screen not shown or skipped: {str(e)}')
 
@@ -37,9 +36,7 @@ def pass_login(page: Page, trace_folder: str):
         page.wait_for_selector("#flt-semantic-node-6", state="visible")
         page.click("#flt-semantic-node-6")
         print('Login screen skipped')
-
         pass_install_app(page, trace_folder)
-
         page.wait_for_timeout(10000)
     except Exception as e:
         print(f'Login screen not shown or skipped: {str(e)}')
@@ -93,10 +90,7 @@ def login(page: Page, url: str, username: str, password: str, trace_folder: str)
     print("Wait for 15 seconds")
     page.wait_for_timeout(15000)
     take_screenshot(page, trace_folder, 'wait for home')
-    # Log cookies before reload for debugging
-    cookies_before = page.context.cookies()
-    print(f"Cookies before reload: {len(cookies_before)} cookies found")
-    
+ 
     return is_logged_in(page, url, trace_folder)
 
 def is_logged_in(page: Page, url: str, trace_folder: str):
@@ -106,7 +100,6 @@ def is_logged_in(page: Page, url: str, trace_folder: str):
         print(f"Navigating to {url}")
         page.goto(url, timeout=20000)
         page.wait_for_timeout(5000)
-    
 
     try:
         activate_semantic_placeholder(page, trace_folder)

@@ -5,7 +5,7 @@ import argparse
 from dotenv import load_dotenv
 from datetime import datetime
 
-from utils import init_browser, activate_semantic_placeholder, finalize_run, get_cookies_path, setup_common_args, run_main, take_screenshot
+from utils import init_browser, activate_semantic_placeholder, finalize_run, setup_common_args, run_main, take_screenshot
 from suncherryUtils import get_element_id, pass_login, is_logged_in,go_back
 
 # Load .env file from the same directory as this script
@@ -62,9 +62,8 @@ def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder
     trace_subfolder = os.path.join(job_folder, f"trace_{timestamp}")  # Create a trace subfolder within job_folder
     os.makedirs(trace_subfolder, exist_ok=True)
     trace_file = os.path.join(trace_subfolder, f"{timestamp}.zip")
-    cookies_path = get_cookies_path(trace_folder)
 
-    page, context, browser = init_browser(playwright, headless, debug, trace_subfolder if video else None, screenshots, video, trace, cookies_path, executable_path, remote_debugging) 
+    page, context, browser = init_browser(playwright, headless, debug, trace_subfolder if video else None, screenshots, video, trace, executable_path, remote_debugging) 
     page.set_default_timeout(10000)
 
     try:

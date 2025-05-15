@@ -9,7 +9,7 @@ import json
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from browser_use import BrowserConfig, Browser, Agent, BrowserContextConfig
-from utils import  get_cookies_path, launch_browser_with_remote_debugging
+from utils import  launch_browser_with_remote_debugging
 from suncherryAsyncUtils import pass_login,take_screenshot
 from datetime import datetime
 
@@ -68,9 +68,6 @@ llm = ChatOpenAI(
     temperature=0.0
 )
 
-# Set default cookies path using trace_path
-cookies_path = get_cookies_path(trace_folder, True)
-
 # Launch browser with remote debugging if executable path is provided or default path is used
 browser_process = None
 if args.executable_path:
@@ -83,7 +80,6 @@ context_config = BrowserContextConfig(
     save_recording_path=trace_folder,
     save_downloads_path=trace_folder,
     #trace_path=trace_path, # bug in patchright
-    cookies_file=cookies_path
 )
 
 browser_config = BrowserConfig(

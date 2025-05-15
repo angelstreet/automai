@@ -9,7 +9,7 @@ from datetime import datetime
 import zipfile
 import json
 
-from utils import init_browser, activate_semantic_placeholder, save_cookies, finalize_run, get_cookies_path, setup_common_args, run_main, take_screenshot
+from utils import init_browser, activate_semantic_placeholder, save_cookies, finalize_run, setup_common_args, run_main, take_screenshot
 
 def debug(page: Page, url: str, username: str, password: str, trace_folder: str):
     print(f"Debug")

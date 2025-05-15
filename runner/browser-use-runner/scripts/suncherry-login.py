@@ -5,7 +5,7 @@ import argparse
 from datetime import datetime
 from dotenv import load_dotenv
 
-from utils import init_browser, save_cookies, finalize_run, get_cookies_path, setup_common_args, run_main, save_storage_state
+from utils import init_browser, finalize_run, setup_common_args, run_main
 from suncherryUtils import login, is_logged_in
 
 def get_username_password(username,password):
@@ -33,11 +33,7 @@ def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder
     os.makedirs(trace_subfolder, exist_ok=True)
     trace_file = os.path.join(trace_subfolder, f"{timestamp}.zip")
 
-    # Get the cookies path using the utility function
-    cookies_path = get_cookies_path(trace_folder)
-
-    # We don't load cookies here as this is the login script that generates cookies
-    page, context, browser = init_browser(playwright, headless, debug, trace_subfolder if video else None, screenshots, video, trace, cookies_path, executable_path, remote_debugging)
+    page, context, browser = init_browser(playwright, headless, debug, trace_subfolder if video else None, screenshots, video, trace, executable_path, remote_debugging)
     page.set_default_timeout(10000)
     
     try:
@@ -45,14 +41,9 @@ def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder
         page.wait_for_timeout(10000)
         if not is_logged_in(page, url, trace_subfolder):
             login_result = login(page, url,username, password, trace_subfolder)
-            if login_result:
-                save_cookies(page, cookies_path)
-            if login_result:
-                save_storage_state(context, cookies_path)
         else:
             print("Already logged in")
             login_result = True
-        page.wait_for_timeout(3000)
     except Exception as e:
         print(f"An error occurred during execution: {str(e)}")
         login_result = False
