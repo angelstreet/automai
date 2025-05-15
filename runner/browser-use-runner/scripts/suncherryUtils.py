@@ -87,7 +87,7 @@ def login(page: Page, url: str, username: str, password: str, trace_folder: str)
     page.wait_for_timeout(1000)
     print("Click on login")
     page.locator("#kc-login").click()
-    page.wait_for_timeout(1000)
+    page.wait_for_timeout(10000)
     pass_install_app(page, trace_folder)
     
     print("Wait for 15 seconds")
