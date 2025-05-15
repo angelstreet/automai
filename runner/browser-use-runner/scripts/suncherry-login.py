@@ -15,8 +15,8 @@ def get_username_password(username,password):
         env_path = os.path.join(script_dir, '.env')
         load_dotenv(env_path)
         print(f'Loaded environment variables from: {env_path}')
-        username = os.getenv("USERNAME")
-        password = os.getenv("PASSWORD")
+        username = os.getenv("LOGIN_USERNAME")
+        password = os.getenv("LOGIN_PASSWORD")
         print(f"Debug: Username from env: {username}")
         print(f"Debug: Password from env: {password}")
 
