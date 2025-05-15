@@ -241,6 +241,14 @@ async function executeSSHScripts(
           stderr: error.message,
         });
         overallStatus = 'failed';
+        // Check if we need to stop on failure
+        if (!scriptResult.exitCode === 0 && config.scripts.stop_on_failure) {
+          console.log(
+            `[executeSSHScripts] Stopping further script execution due to failure in script ${scriptPath} as per stop_on_failure setting.`,
+          );
+          overallStatus = 'failed';
+          break;
+        }
         continue;
       }
 
@@ -297,6 +305,20 @@ async function executeSSHScripts(
         },
         completed_at: scriptCompletedAt,
       });
+
+      // Check if we need to stop on failure after updating database and metadata
+      if (
+        !isSuccess &&
+        config.scripts &&
+        'stop_on_failure' in config.scripts &&
+        config.scripts.stop_on_failure
+      ) {
+        console.log(
+          `[executeSSHScripts] Stopping further script execution due to failure in script ${scriptPath} as per stop_on_failure setting.`,
+        );
+        overallStatus = 'failed';
+        break;
+      }
 
       // Add to the overall output collection
       const scriptOutputRecord = {
