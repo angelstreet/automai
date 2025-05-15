@@ -266,7 +266,7 @@ async function executeSSHScripts(
       // Determine if script was successful based on output or exit code
       const isSuccess =
         (stdoutFromFile && stdoutFromFile.includes('Test Success')) ||
-        (!(stdoutFromFile && stdoutFromFile.includes('Test Failed')) &&
+        (!(stdoutFromFile && stdoutFromFile.toLowerCase().includes('Test Failed'.toLowerCase())) &&
           scriptResult.exitCode === 0);
       const status = isSuccess ? 'success' : 'failed';
       // Write metadata.json for this script execution
