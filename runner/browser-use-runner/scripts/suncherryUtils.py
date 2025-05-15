@@ -49,7 +49,7 @@ def login(page: Page, username: str, password: str, trace_folder: str):
     activate_semantic_placeholder(page, trace_folder)
     page.wait_for_timeout(2000)
     try :
-        page.wait_for_selector("#onetrust-accept-btn-handler", state="visible")
+        page.wait_for_selector("#onetrust-accept-btn-handler", state="visible", timeout=1000)
         page.wait_for_timeout(1000)
         print("Accept cookies")
         take_screenshot(page, trace_folder, 'accept_cookies')
