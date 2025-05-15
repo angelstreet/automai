@@ -1,15 +1,10 @@
-from playwright.sync_api import sync_playwright, Page, Playwright
-import random
+from playwright.sync_api import Playwright
 import os
 import sys
 import argparse
-from dotenv import load_dotenv
-import re
 from datetime import datetime
-import zipfile
-import json
 
-from utils import init_browser, activate_semantic_placeholder, save_cookies, finalize_run, get_cookies_path, setup_common_args, run_main, take_screenshot, save_storage_state
+from utils import init_browser, save_cookies, finalize_run, get_cookies_path, setup_common_args, run_main, save_storage_state
 from suncherryUtils import login
 
 
@@ -31,7 +26,7 @@ def run(playwright: Playwright, username: str, password: str, headless=True, deb
         page.goto(url, timeout=60000)
         page.wait_for_timeout(10000)
 
-        login_result = login(page, url, username, password, trace_subfolder)
+        login_result = login(page, username, password, trace_subfolder)
         if login_result and cookies:
             save_cookies(page, cookies_path)
         if login_result:

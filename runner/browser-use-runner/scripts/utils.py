@@ -1,10 +1,7 @@
 from playwright.sync_api import sync_playwright, Page, Playwright
-import random
 import os
 import sys
-import argparse
 from dotenv import load_dotenv
-import re
 from datetime import datetime
 import json
 import platform
@@ -324,14 +321,11 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
                 )
                 print("Using default Chromium browser")
     
-    # Load cookies before navigating to the site
-    if cookies and cookies_path:
-        load_cookies(context, cookies_path)
-    # Load storage state before navigating to the site
-    storage_path = None
+    
     if cookies_path:
         storage_path = os.path.join(cookies_path, 'storage_state.json')
-    
+        if not os.path.exists(storage_path):
+            storage_path = None
     # The rest of the initialization is different depending on whether we're using remote debugging or not
     if remote_debugging:
         context = browser.new_context(
@@ -342,9 +336,13 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
             record_video_dir=video_dir if video else None,
             user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
             locale="fr-FR",
-            timezone_id="Europe/Zurich"
+            timezone_id="Europe/Zurich",
+            storage_state=storage_path
         )
-    
+    # Load cookies before navigating to the site
+    if cookies_path:
+        load_cookies(context, cookies_path)
+    # Load storage state before navigating to the site
     # Start tracing
     context.tracing.start(screenshots=screenshots, snapshots=True, sources=source)
     page = context.new_page()
@@ -438,8 +436,8 @@ def run_main(run_function, args=None, with_username_password=False):
             password = args.password
             if not username or not password:
                 load_dotenv()
-                username = os.getenv("login_username")
-                password = os.getenv("login_password")
+                username = os.getenv("USERNAME")
+                password = os.getenv("PASSWORD")
                 print(f"Debug: Username from env: {username}")
                 print(f"Debug: Password from env: {password}")
 

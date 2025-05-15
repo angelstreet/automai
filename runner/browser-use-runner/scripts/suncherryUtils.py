@@ -38,7 +38,7 @@ def tvguide_livetv_zap(page: Page, trace_folder: str, aria_label: str = 'SRF 1')
     take_screenshot(page, trace_folder, 'click_channel')
     return True
 
-def login(page: Page, url: str, username: str, password: str, trace_folder: str):
+def login(page: Page, username: str, password: str, trace_folder: str):
     print(f"Debug: Username in login: {username}")
     print(f"Debug: Password in login: {password}")
     if not username or not password:
