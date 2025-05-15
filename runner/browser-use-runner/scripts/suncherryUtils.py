@@ -45,7 +45,7 @@ def tvguide_livetv_zap(page: Page, trace_folder: str, aria_label: str = 'SRF 1')
     take_screenshot(page, trace_folder, 'click_channel')
     return True
 
-def login(page: Page, username: str, password: str, trace_folder: str):
+def login(page: Page, url: str, username: str, password: str, trace_folder: str):
     activate_semantic_placeholder(page, trace_folder)
     page.wait_for_timeout(2000)
     try :
@@ -86,7 +86,7 @@ def login(page: Page, username: str, password: str, trace_folder: str):
     cookies_before = page.context.cookies()
     print(f"Cookies before reload: {len(cookies_before)} cookies found")
     
-    return is_logged_in(page, trace_folder)
+    return is_logged_in(page, url, trace_folder)
 
 def is_logged_in(page: Page, url: str, trace_folder: str):
     print(f"Current Page url: {page.url}, destination url: {url}")

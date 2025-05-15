@@ -44,7 +44,7 @@ def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder
         page.goto(url, timeout=30000)
         page.wait_for_timeout(10000)
         if not is_logged_in(page, url, trace_subfolder):
-            login_result = login(page, username, password, trace_subfolder)
+            login_result = login(page, url,username, password, trace_subfolder)
             if login_result:
                 save_cookies(page, cookies_path)
             if login_result:
