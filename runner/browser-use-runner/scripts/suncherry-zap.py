@@ -63,6 +63,7 @@ def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder
     os.makedirs(trace_subfolder, exist_ok=True)
     trace_file = os.path.join(trace_subfolder, f"{timestamp}.zip")
 
+    kill_chrome_instances()
     page, context, browser = init_browser(playwright, headless, debug, trace_subfolder if video else None, screenshots, video, trace, executable_path, remote_debugging) 
     page.set_default_timeout(10000)
 

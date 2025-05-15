@@ -17,6 +17,29 @@ env_path = os.path.join(script_dir, '.env')
 load_dotenv(env_path)
 print(f'Loaded environment variables from: {env_path}')
 
+def kill_chrome_instances():
+    # Kill any existing Chrome instances to avoid port conflicts
+    print('Killing any existing Chrome instances before launching...')
+    if platform.system() == 'Windows':
+        os.system('taskkill /IM chrome.exe /F')
+    else:
+        os.system('pkill -9 "Google Chrome"')
+    # Make sure Chrome processes are fully terminated
+    time.sleep(2)  # Give OS time to clean up processes
+    
+    # Verify no Chrome processes remain
+    if platform.system() == 'Windows':
+        result = subprocess.run(['tasklist', '|', 'findstr', 'chrome.exe'], shell=True, stdout=subprocess.PIPE)
+    else:
+        result = subprocess.run(['pgrep', 'Google Chrome'], stdout=subprocess.PIPE)
+    if result.stdout:
+        print('Some Chrome processes still running. Attempting to kill again...')
+        if platform.system() == 'Windows':
+            os.system('taskkill /IM chrome.exe /F')
+        else:
+            os.system('pkill -9 "Google Chrome"')
+        time.sleep(2)
+        
 def clean_user_data_dir():
     user_data_dir = '/tmp/chrome_debug_profile'
     if os.path.exists(user_data_dir):
@@ -84,29 +107,8 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
     return page, context, browser
 
 def init_browser_with_remote_debugging(playwright: Playwright, headless=True, debug: bool = False, video_dir: str = None, screenshots: bool = True, video: bool = True, source: bool = True, executable_path: str = None):
-    """Initialize browser with remote debugging enabled on port 9222"""
-    # Kill any existing Chrome instances to avoid port conflicts
-    print('Killing any existing Chrome instances before launching...')
-    if platform.system() == 'Windows':
-        os.system('taskkill /IM chrome.exe /F')
-    else:
-        os.system('pkill -9 "Google Chrome"')
-    # Make sure Chrome processes are fully terminated
-    time.sleep(2)  # Give OS time to clean up processes
     
-    # Verify no Chrome processes remain
-    if platform.system() == 'Windows':
-        result = subprocess.run(['tasklist', '|', 'findstr', 'chrome.exe'], shell=True, stdout=subprocess.PIPE)
-    else:
-        result = subprocess.run(['pgrep', 'Google Chrome'], stdout=subprocess.PIPE)
-    if result.stdout:
-        print('Some Chrome processes still running. Attempting to kill again...')
-        if platform.system() == 'Windows':
-            os.system('taskkill /IM chrome.exe /F')
-        else:
-            os.system('pkill -9 "Google Chrome"')
-        time.sleep(2)
-
+    """Initialize browser with remote debugging enabled on port 9222"""
     try:
         if is_port_in_use(9222):
             print('Port 9222 is in use. Killing processes using this port...')
