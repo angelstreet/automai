@@ -22,8 +22,8 @@ def get_username_password(username,password):
 
         if not username or not password:
             raise ValueError("Username and password must be provided either as command-line arguments or in .env file")
-        
-        return username, password
+    
+    return username, password
 
 def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder: str = 'suncherry-playwright_trace', screenshots: bool = True, video: bool = True, trace: bool = True, executable_path: str = None, remote_debugging: bool = False, keep_alive: bool = True, url: str = None, username: str = None, password: str = None):
     username,password=get_username_password(username,password)
