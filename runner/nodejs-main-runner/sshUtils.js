@@ -242,7 +242,7 @@ async function executeSSHScripts(
         });
         overallStatus = 'failed';
         // Check if we need to stop on failure
-        if (!scriptResult.exitCode === 0 && config.scripts.stop_on_failure) {
+        if (!scriptResult.exitCode === 0 && script.stop_on_failure) {
           console.log(
             `[executeSSHScripts] Stopping further script execution due to failure in script ${scriptPath} as per stop_on_failure setting.`,
           );
