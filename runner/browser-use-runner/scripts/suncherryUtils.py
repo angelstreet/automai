@@ -48,12 +48,14 @@ def tvguide_livetv_zap(page: Page, trace_folder: str, aria_label: str = 'SRF 1')
 def login(page: Page, username: str, password: str, trace_folder: str):
     activate_semantic_placeholder(page, trace_folder)
     page.wait_for_timeout(2000)
-
-    page.wait_for_selector("#onetrust-accept-btn-handler", state="visible")
-    page.wait_for_timeout(1000)
-    print("Accept cookies")
-    take_screenshot(page, trace_folder, 'accept_cookies')
-    page.locator("#onetrust-accept-btn-handler").click()
+    try :
+        page.wait_for_selector("#onetrust-accept-btn-handler", state="visible")
+        page.wait_for_timeout(1000)
+        print("Accept cookies")
+        take_screenshot(page, trace_folder, 'accept_cookies')
+        page.locator("#onetrust-accept-btn-handler").click()
+    except Exception as e:
+        print(f'Cookies pop up not shown: {str(e)}')
     
     page.wait_for_selector("#flt-semantic-node-6", state="visible")
     page.wait_for_timeout(1000)
@@ -99,14 +101,14 @@ def is_logged_in(page: Page, url: str, trace_folder: str):
     try:
         element = page.get_by_label(re.compile("Profil", re.IGNORECASE))
         if element.count() > 0 and element.is_visible():
-            print('Test Success, Login successful')
+            print('User is logged in')
             take_screenshot(page, trace_folder, 'login_success')
             return True
         else:
-            print('Test Failed, Login failed')
+            print('User is not logged in')
             take_screenshot(page, trace_folder, 'login_failed')
             return False
     except Exception as e:
-        print(f'Test Failed, Login failed: {str(e)}')
+        print(f'Is logged in check failed: {str(e)}')
         take_screenshot(page, trace_folder, 'login_failed')
         return False
