@@ -213,9 +213,11 @@ def init_browser_with_remote_debugging(playwright: Playwright, headless=True, de
         storage_path = os.path.join(cookies_path, 'storage_state.json')
         if not os.path.exists(storage_path):
             storage_path = None
+    
     print('Attempting to connect via http://127.0.0.1:9222...')
-    browser = playwright.chromium.connect_over_cdp('http://127.0.0.1:9222')
+    browser = playwright.chromium.connect_over_cdp('http://localhost:9222')
     print('Connected to Chrome instance via CDP on port 9222')
+    
     context = browser.contexts[0]
     page = context.pages[0]  
     return page, context, browser
