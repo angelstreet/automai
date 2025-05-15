@@ -8,7 +8,7 @@ import platform
 import subprocess
 import time
 import socket
-import urllib.request
+import time
 
 # Load .env file from the same directory as this script
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -208,7 +208,7 @@ def init_browser_with_remote_debugging(playwright: Playwright, headless=True, de
     print(f'Launching Chrome with command: {" ".join(cmd_line)}')
     process = subprocess.Popen(cmd_line)
     print(f'Chrome launched with PID: {process.pid}')
-        
+    time.sleep(10)
     if cookies_path:
         storage_path = os.path.join(cookies_path, 'storage_state.json')
         if not os.path.exists(storage_path):
