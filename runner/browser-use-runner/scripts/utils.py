@@ -208,56 +208,14 @@ def init_browser_with_remote_debugging(playwright: Playwright, headless=True, de
     print(f'Launching Chrome with command: {" ".join(cmd_line)}')
     process = subprocess.Popen(cmd_line)
     print(f'Chrome launched with PID: {process.pid}')
-    
-    # Wait for Chrome to be ready by checking if the port is open
-    max_wait = 30  # Maximum wait time in seconds
-    print(f'Waiting up to {max_wait} seconds for Chrome to be ready on port {debug_port}...')
-    
-    start_time = time.time()
-    port_open = False
-    
-    while time.time() - start_time < max_wait:
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.settimeout(1)
-            s.connect(('127.0.0.1', debug_port))
-            s.close()
-            port_open = True
-            elapsed = time.time() - start_time
-            print(f'Chrome is ready! Port {debug_port} is open after {elapsed:.2f} seconds')
-            # Add a small delay to ensure Chrome is fully initialized
-            time.sleep(2)
-            break
-        except (socket.timeout, socket.error):
-            time.sleep(1)
-    
-    if not port_open:
-        print(f'Timed out waiting for Chrome to open port {debug_port} after {max_wait} seconds')
         
     if cookies_path:
         storage_path = os.path.join(cookies_path, 'storage_state.json')
         if not os.path.exists(storage_path):
             storage_path = None
-
-    # First try to get the debug URL to see if CDP is working
-    
-    try:
-        with urllib.request.urlopen(f'http://127.0.0.1:{debug_port}/json/version') as response:
-            version_info = json.loads(response.read().decode('utf-8'))
-            print(f'Successfully connected to Chrome debugging HTTP endpoint: {version_info}')
-            # If we can see a webSocketDebuggerUrl, that's a good sign
-            if 'webSocketDebuggerUrl' in version_info:
-                print(f'Found WebSocket debugger URL: {version_info["webSocketDebuggerUrl"]}')
-                # Try connecting directly to the WebSocket URL
-                try:
-                    ws_url = version_info["webSocketDebuggerUrl"]
-                    print(f'Attempting to connect directly to WebSocket URL: {ws_url}')
-                    browser = playwright.chromium.connect_over_cdp(ws_url)
-                except Exception as ws_error:
-                    print(f'Failed to connect via WebSocket URL: {str(ws_error)}')
-    except Exception as e:
-        print(f'Error connecting to Chrome debugging HTTP endpoint: {str(e)}')
-
+    print('Attempting to connect via http://127.0.0.1:9222...')
+    browser = playwright.chromium.connect_over_cdp('http://127.0.0.1:9222')
+    print('Connected to Chrome instance via CDP on port 9222')
     context = browser.contexts[0]
     page = context.pages[0]  
     return page, context, browser
