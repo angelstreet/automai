@@ -21,7 +21,7 @@ def get_element_id(page: Page, aria_label: str):
 def pass_login(page: Page, trace_folder: str):
     try:
         activate_semantic_placeholder(page, trace_folder)
-        page.wait_for_timeout(2000)
+        page.wait_for_timeout(1000)
         page.wait_for_selector("#flt-semantic-node-6", state="visible")
         page.click("#flt-semantic-node-6")
         print('Login screen skipped')
@@ -94,11 +94,11 @@ def is_logged_in(page: Page, url: str, trace_folder: str):
         print(f"Navigating to {url}")
         page.goto(url, timeout=20000)
         page.wait_for_timeout(5000)
-        page.wait_for_selector("#flt-semantic-node-6", state="visible", timeout=30000)
-    activate_semantic_placeholder(page, trace_folder)
-    page.wait_for_timeout(1000)
+    
 
     try:
+        activate_semantic_placeholder(page, trace_folder)
+        page.wait_for_timeout(1000)
         element = page.get_by_label(re.compile("Profil", re.IGNORECASE))
         if element.count() > 0 and element.is_visible():
             print('User is logged in')
