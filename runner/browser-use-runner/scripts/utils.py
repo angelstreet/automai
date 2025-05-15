@@ -323,15 +323,22 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
                     args=browser_args
                 )
                 print("Using default Chromium browser")
-
+    
+    # Load cookies before navigating to the site
+    if cookies and cookies_path:
+        load_cookies(context, cookies_path)
+    # Load storage state before navigating to the site
+    storage_path = None
+    if cookies_path:
+        storage_path = os.path.join(cookies_path, 'storage_state.json')
+    
     # The rest of the initialization is different depending on whether we're using remote debugging or not
     if remote_debugging:
         context = browser.new_context(
-            viewport={"width": 1920, "height": 1080},
+            storage_state=storage_path
         ) # We cannot provide context to remote CDP so no video
     else:
         context = browser.new_context(
-            viewport={"width": 1920, "height": 1080},  # Set a large viewport for fullscreen experience
             record_video_dir=video_dir if video else None,
             user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
             locale="fr-FR",
@@ -502,28 +509,131 @@ def save_storage_state(context, storage_path: str):
         print(f"Error saving storage state to {storage_file}: {str(e)}")
         return False
 
-def load_storage_state(context, storage_path: str):
+def launch_browser_with_remote_debugging(executable_path: str = None) -> subprocess.Popen:
     """
-    Load the storage state (cookies and local storage) from a file into the browser context.
-    Returns True if storage state was successfully loaded, False otherwise.
+    Launch a Chrome browser instance with remote debugging enabled on port 9222.
+    Returns the subprocess.Popen object for the launched process.
     """
-    if not storage_path:
-        print("No storage path provided, skipping storage state loading")
-        return False
-    
-    storage_file = os.path.join(storage_path, 'storage_state.json')
-    if os.path.exists(storage_file):
-        try:
-            with open(storage_file, 'r') as f:
-                storage_state = json.load(f)
-            context.set_storage_state(storage_state)
-            print(f"Loaded storage state from {storage_file}")
-            return True
-        except Exception as e:
-            print(f"Error loading storage state from {storage_file}: {str(e)}")
-            print("No storage state loaded, login might be required")
-            return False
+    import platform
+    import subprocess
+    import time
+    import socket
+    import os
+    from datetime import datetime
+
+    # Kill any existing Chrome instances to avoid port conflicts
+    print('Killing any existing Chrome instances before launching...')
+    if platform.system() == 'Windows':
+        os.system('taskkill /IM chrome.exe /F')
     else:
-        print(f"No storage state file found at {storage_file}")
-        print("No storage state loaded, login might be required")
-        return False 
+        os.system('pkill -9 "Google Chrome"')
+    # Make sure Chrome processes are fully terminated
+    time.sleep(2)  # Give OS time to clean up processes
+
+    # Verify no Chrome processes remain
+    if platform.system() == 'Windows':
+        result = subprocess.run(['tasklist', '|', 'findstr', 'chrome.exe'], shell=True, stdout=subprocess.PIPE)
+    else:
+        result = subprocess.run(['pgrep', 'Google Chrome'], stdout=subprocess.PIPE)
+    if result.stdout:
+        print('Some Chrome processes still running. Attempting to kill again...')
+        if platform.system() == 'Windows':
+            os.system('taskkill /IM chrome.exe /F')
+        else:
+            os.system('pkill -9 "Google Chrome"')
+        time.sleep(2)
+
+    # Check if port 9222 is in use and kill any process using it
+    def is_port_in_use(port):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(1)
+            try:
+                s.bind(('127.0.0.1', port))
+                return False
+            except socket.error:
+                return True
+
+    try:
+        if is_port_in_use(9222):
+            print('Port 9222 is in use. Killing processes using this port...')
+            if platform.system() == 'Windows':
+                result = subprocess.run(['netstat', '-aon', '|', 'findstr', ':9222'], shell=True, stdout=subprocess.PIPE)
+                if result.stdout:
+                    lines = result.stdout.decode().splitlines()
+                    for line in lines:
+                        if 'LISTENING' in line:
+                            pid = line.split()[-1]
+                            os.system(f'taskkill /PID {pid} /F')
+            else:
+                os.system('lsof -ti:9222 | xargs kill -9')
+            time.sleep(1)
+    except Exception as e:
+        print(f'Error checking port usage: {str(e)}')
+
+    # Set hardcoded Chrome path based on OS if not provided
+    if not executable_path:
+        if platform.system() == 'Windows':
+            executable_path = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
+        elif platform.system() == 'Darwin':  # macOS
+            executable_path = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+        else:  # Linux
+            possible_paths = ['/usr/bin/google-chrome', '/usr/bin/chromium-browser']
+            for path in possible_paths:
+                if os.path.exists(path):
+                    executable_path = path
+                    break
+            if not executable_path:
+                raise ValueError('No Chrome executable found in common Linux paths. Please provide --executable_path.')
+    print(f'Launching Chrome with remote debugging using: {executable_path}')
+
+    # Launch Chrome with remote debugging enabled using a more reliable approach
+    debug_port = 9222
+    user_data_dir = f"/tmp/chrome_debug_profile_{datetime.now().strftime('%Y%m%d_%H%M%S')}" if platform.system() != 'Windows' else f"C:\\Temp\\chrome_debug_profile_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    os.makedirs(user_data_dir, exist_ok=True)
+
+    chrome_flags = [
+        f'--remote-debugging-port={debug_port}',
+        f'--user-data-dir={user_data_dir}',
+        '--no-first-run',
+        '--no-default-browser-check',
+        '--disable-features=Translate',
+        '--disable-extensions',
+        '--disable-component-extensions-with-background-pages',
+        '--disable-background-networking',
+        '--window-position=0,0',
+        '--disable-gpu',
+        '--enable-unsafe-swiftshader'
+    ]
+
+    cmd_line = [executable_path] + chrome_flags
+    print(f'Launching Chrome with command: {" ".join(cmd_line)}')
+    process = subprocess.Popen(cmd_line)
+    print(f'Chrome launched with PID: {process.pid}')
+
+    # Wait for Chrome to be ready by checking if the port is open
+    max_wait = 30  # Maximum wait time in seconds
+    print(f'Waiting up to {max_wait} seconds for Chrome to be ready on port {debug_port}...')
+
+    start_time = time.time()
+    port_open = False
+
+    while time.time() - start_time < max_wait:
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(1)
+            s.connect(('127.0.0.1', debug_port))
+            s.close()
+            port_open = True
+            elapsed = time.time() - start_time
+            print(f'Chrome is ready! Port {debug_port} is open after {elapsed:.2f} seconds')
+            # Add a small delay to ensure Chrome is fully initialized
+            time.sleep(2)
+            break
+        except (socket.timeout, socket.error):
+            time.sleep(1)
+
+    if not port_open:
+        print(f'Timed out waiting for Chrome to open port {debug_port} after {max_wait} seconds')
+        # But still return the process in case the port check failed but Chrome is still running
+
+    return process 

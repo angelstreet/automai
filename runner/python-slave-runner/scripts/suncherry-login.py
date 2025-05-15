@@ -103,7 +103,10 @@ def run(playwright: Playwright, username: str, password: str, headless=True, deb
         login_result = False
     finally:
         finalize_run(page, context, browser, trace_subfolder, timestamp, trace_file, video, remote_debugging, keep_browser_open)
-        return login_result
+        if login_result :
+            return sys.exit(0)
+        else:
+            return sys.exit(1)
 
 def main():
     parser = argparse.ArgumentParser(description='Run Suncherry Playwright script')

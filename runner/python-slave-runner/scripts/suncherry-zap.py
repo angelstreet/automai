@@ -100,15 +100,16 @@ def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder
         result = False
     finally:
         finalize_run(page, context, browser, trace_subfolder, timestamp, trace_file, video, remote_debugging, keep_browser_open)
-        return result
+        if result :
+            return sys.exit(0)
+        else:
+            return sys.exit(1)
 
 def main():
     parser = argparse.ArgumentParser(description='Run Suncherry Playwright script')
     parser = setup_common_args(parser, add_channel=True)
     args, _ = parser.parse_known_args()
-
     print(f"Running in {'headless' if args.headless else 'visible'} mode with {'no-video' if args.no_video else 'video'}, {'no-screenshots' if args.no_screenshots else 'screenshots'}, {'no-trace' if args.no_trace else 'trace'}, targeting channel: {args.channel}, {'with remote debugging' if args.remote_debugging else 'without remote debugging'}, {'closing browser when done' if args.close_browser else 'keeping browser open'}")
-
     run_main(run, args)
 
 if __name__ == "__main__":
