@@ -18,6 +18,16 @@ def get_element_id(page: Page, aria_label: str):
     print(f"Element ID: {element_id} for aria-label: {aria_label}")
     return element_id
 
+def pass_install_app(page: Page, trace_folder: str):
+    try:
+        page.wait_for_selector("aria-label=NICHT JETZT", state="visible", timeout=2000)
+        print('App download screen')
+        take_screenshot(page, trace_folder, 'app_download_screen')
+        page.click("aria-label=NICHT JETZT")
+        page.wait_for_timeout(1000)
+        print('App download screen skipped')
+    except Exception as e:
+        print(f'App download screen not shown or skipped: {str(e)}')
 
 def pass_login(page: Page, trace_folder: str):
     print("** pass_login **")
@@ -28,14 +38,8 @@ def pass_login(page: Page, trace_folder: str):
         page.click("#flt-semantic-node-6")
         print('Login screen skipped')
 
-        try:
-            page.wait_for_selector("aria-label=NICHT JETZT", state="visible", timeout=2000)
-            print('App download screen')
-            page.click("aria-label=NICHT JETZT")
-            page.wait_for_timeout(1000)
-            print('App download screen skipped')
-        except Exception as e:
-            print(f'App download screen not shown or skipped: {str(e)}')
+        pass_install_app(page, trace_folder)
+
         page.wait_for_timeout(10000)
     except Exception as e:
         print(f'Login screen not shown or skipped: {str(e)}')
@@ -83,8 +87,10 @@ def login(page: Page, url: str, username: str, password: str, trace_folder: str)
     page.wait_for_timeout(1000)
     print("Click on login")
     page.locator("#kc-login").click()
- 
-    print("Wait for 10 seconds")
+    page.wait_for_timeout(3000)
+    pass_install_app(page, trace_folder)
+    
+    print("Wait for 15 seconds")
     page.wait_for_timeout(15000)
     take_screenshot(page, trace_folder, 'wait for home')
     # Log cookies before reload for debugging

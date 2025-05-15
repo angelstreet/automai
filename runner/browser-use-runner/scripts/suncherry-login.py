@@ -59,10 +59,12 @@ def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder
     finally:
         finalize_run(page, context, browser, trace_subfolder, timestamp, trace_file, video, remote_debugging, keep_alive)
         if login_result :
+            print("Test successful, login successful")
             return sys.exit(0)
         else:
+            print("Test failed, login failed")
             return sys.exit(1)
-        input("Press Enter to continue...")
+            input("Press Enter to continue...")
 
 def main():
     parser = argparse.ArgumentParser(description='Run Suncherry Playwright script')
