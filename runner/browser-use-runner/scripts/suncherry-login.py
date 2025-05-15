@@ -41,7 +41,7 @@ def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder
     page.set_default_timeout(10000)
     
     try:
-        page.goto(url, timeout=60000)
+        page.goto(url, timeout=30000)
         page.wait_for_timeout(10000)
         if not is_logged_in(page, url, trace_subfolder):
             login_result = login(page, username, password, trace_subfolder)
