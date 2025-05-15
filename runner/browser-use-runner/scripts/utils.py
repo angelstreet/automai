@@ -135,7 +135,7 @@ def init_browser_with_remote_debugging(playwright: Playwright, headless=True, de
     
     # Launch Chrome with remote debugging enabled using a more reliable approach
     debug_port = 9222
-    user_data_dir = f'/tmp/chrome_debug_profile_{datetime.now().strftime("%Y%m%d_%H%M%S")}'
+    user_data_dir = '/tmp/chrome_debug_profile'
     os.makedirs(user_data_dir, exist_ok=True)
     
     chrome_flags = [
