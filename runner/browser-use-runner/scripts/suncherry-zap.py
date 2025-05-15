@@ -68,7 +68,7 @@ def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder
     trace_file = os.path.join(trace_subfolder, f"{timestamp}.zip")
     cookies_path = get_cookies_path(trace_folder)
 
-    page, context, browser = init_browser(playwright, headless, debug, trace_subfolder if video else None, screenshots, video, source, cookies_path, executable_path, remote_debugging) 
+    page, context, browser = init_browser(playwright, headless, debug, trace_subfolder if video else None, screenshots, video, trace, cookies_path, executable_path, remote_debugging) 
     page.set_default_timeout(10000)
 
     try:
