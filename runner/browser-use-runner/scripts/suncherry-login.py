@@ -3,12 +3,31 @@ import os
 import sys
 import argparse
 from datetime import datetime
+from dotenv import load_dotenv
 
 from utils import init_browser, save_cookies, finalize_run, get_cookies_path, setup_common_args, run_main, save_storage_state
-from suncherryUtils import login
+from suncherryUtils import login, is_logged_in
 
+def get_username_password(username,password):
+    if not username or not password:
+        # Load .env file from the same directory as this script
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        env_path = os.path.join(script_dir, '.env')
+        load_dotenv(env_path)
+        print(f'Loaded environment variables from: {env_path}')
+        username = os.getenv("USERNAME")
+        password = os.getenv("PASSWORD")
+        print(f"Debug: Username from env: {username}")
+        print(f"Debug: Password from env: {password}")
 
-def run(playwright: Playwright, username: str, password: str, headless=True, debug: bool = False, trace_folder: str = 'suncherry-playwright_trace', screenshots: bool = True, video: bool = True, source: bool = True, cookies: bool = True, executable_path: str = None, remote_debugging: bool = False, keep_browser_open: bool = True):
+        if not username or not password:
+            raise ValueError("Username and password must be provided either as command-line arguments or in .env file")
+        
+        return username, password
+
+def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder: str = 'suncherry-playwright_trace', screenshots: bool = True, video: bool = True, source: bool = True, cookies: bool = True, executable_path: str = None, remote_debugging: bool = False, keep_browser_open: bool = True, url: str = None, username: str = None, password: str = None, **kwargs):
+    username,password=get_username_password(username,password)
+
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     trace_subfolder = os.path.join(trace_folder, timestamp)
     os.makedirs(trace_subfolder, exist_ok=True)
@@ -19,20 +38,21 @@ def run(playwright: Playwright, username: str, password: str, headless=True, deb
 
     # We don't load cookies here as this is the login script that generates cookies
     page, context, browser = init_browser(playwright, headless, debug, trace_subfolder if video else None, screenshots, video, source, cookies_path, executable_path, remote_debugging)
-    url = "https://www.sunrisetv.ch/de/home"
     page.set_default_timeout(10000)
     
     try:
         page.goto(url, timeout=60000)
         page.wait_for_timeout(10000)
-
-        login_result = login(page, username, password, trace_subfolder)
-        if login_result and cookies:
-            save_cookies(page, cookies_path)
-        if login_result:
-            save_storage_state(context, cookies_path)
-        
-        page.wait_for_timeout(10000)
+        if not is_logged_in(page, trace_subfolder):
+            login_result = login(page, username, password, trace_subfolder)
+            if login_result and cookies:
+                save_cookies(page, cookies_path)
+            if login_result:
+                save_storage_state(context, cookies_path)
+        else:
+            print("Already logged in")
+            login_result = True
+        page.wait_for_timeout(3000)
     except Exception as e:
         print(f"An error occurred during execution: {str(e)}")
         login_result = False
@@ -48,13 +68,15 @@ def main():
     parser = setup_common_args(parser)
     parser.add_argument('--username', type=str, help='Login username')
     parser.add_argument('--password', type=str, help='Login password')
+    parser.add_argument('--url', type=str, help='URL to navigate to', default='https://www.sunrisetv.ch/de/home')
     args, _ = parser.parse_known_args()
 
-    print(f"Debug: Username from args: {args.username}")
-    print(f"Debug: Password from args: {args.password}")
-    print(f"Running in {'headless' if args.headless else 'visible'} mode with {'no-video' if args.no_video else 'video'}, {'no-screenshots' if args.no_screenshots else 'screenshots'}, {'no-trace' if args.no_trace else 'trace'}, {'with remote debugging' if args.remote_debugging else 'without remote debugging'}, {'closing browser when done' if args.close_browser else 'keeping browser open'}")
+    print(f"Running in {'headless' if args.headless else 'visible'}")
+    print(f"Username from args: {args.username}")
+    print(f"Password from args: {args.password}")
+    print(f"Url from args: {args.url}")
 
-    run_main(run, args, with_username_password=True)
+    run_main(run, args)
 
 if __name__ == "__main__":
     main()

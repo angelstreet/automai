@@ -97,7 +97,8 @@ browser_config = BrowserConfig(
         '--disable-dev-shm-usage',
         '--disable-accelerated-2d-canvas',
         '--disable-gpu',
-        '--node-default-browser-check'
+        '--node-default-browser-check',
+        '--hide-crash-restore-bubble'
     ],
     cdp_url="http://127.0.0.1:9222",
     keep_alive=True

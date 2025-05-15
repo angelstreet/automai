@@ -108,8 +108,18 @@ def load_cookies(context, cookies_path: str):
         print("No cookies loaded, login might be required")
         return False
 
+# Check if port 9222 is in use and kill any process using it
+def is_port_in_use(port):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(1)
+        try:
+            s.bind(('127.0.0.1', port))
+            return False
+        except socket.error:
+            return True
+        
 def init_browser(playwright: Playwright, headless=True, debug: bool = False, video_dir: str = None, screenshots: bool = True, video: bool = True, source: bool = True, cookies_path: str = None, executable_path: str = None, remote_debugging: bool = False):
-    browser_args = ['--disable-blink-features=AutomationControlled','--disable-gpu', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--window-position=0,0', '--enable-unsafe-swiftshader']
+    browser_args = ['--disable-blink-features=AutomationControlled','--disable-gpu', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--window-position=0,0', '--window-size=1920,1080','--enable-unsafe-swiftshader']
     
     if remote_debugging:
         # Kill any existing Chrome instances to avoid port conflicts
@@ -133,16 +143,6 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
             else:
                 os.system('pkill -9 "Google Chrome"')
             time.sleep(2)
-        
-        # Check if port 9222 is in use and kill any process using it
-        def is_port_in_use(port):
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.settimeout(1)
-                try:
-                    s.bind(('127.0.0.1', port))
-                    return False
-                except socket.error:
-                    return True
 
         try:
             if is_port_in_use(9222):
@@ -179,7 +179,7 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
         
         # Launch Chrome with remote debugging enabled using a more reliable approach
         debug_port = 9222
-        user_data_dir = f"/tmp/chrome_debug_profile_{datetime.now().strftime('%Y%m%d_%H%M%S')}" if platform.system() != 'Windows' else f"C:\\Temp\\chrome_debug_profile_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        user_data_dir = cookies_path
         os.makedirs(user_data_dir, exist_ok=True)
         
         chrome_flags = [
@@ -192,9 +192,10 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
             '--disable-component-extensions-with-background-pages',
             '--disable-background-networking',
             '--window-position=0,0',
-            '--window-size=1920,1080',
+            '--window-size=1080,720',
             '--disable-gpu',
-            '--enable-unsafe-swiftshader'
+            '--enable-unsafe-swiftshader',
+            '--hide-crash-restore-bubble'
         ]
         
         cmd_line = [executable_path] + chrome_flags
@@ -226,64 +227,31 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
         
         if not port_open:
             print(f'Timed out waiting for Chrome to open port {debug_port} after {max_wait} seconds')
-            # But still try to connect anyway in case the port check failed but Chrome is still running
-        
-        # Now connect to the Chrome instance using CDP
-        try:
-            # First try to get the debug URL to see if CDP is working
-            import urllib.request
-            try:
-                with urllib.request.urlopen(f'http://127.0.0.1:{debug_port}/json/version') as response:
-                    version_info = json.loads(response.read().decode('utf-8'))
-                    print(f'Successfully connected to Chrome debugging HTTP endpoint: {version_info}')
-                    # If we can see a webSocketDebuggerUrl, that's a good sign
-                    if 'webSocketDebuggerUrl' in version_info:
-                        print(f'Found WebSocket debugger URL: {version_info["webSocketDebuggerUrl"]}')
-                        # Try connecting directly to the WebSocket URL
-                        try:
-                            ws_url = version_info["webSocketDebuggerUrl"]
-                            print(f'Attempting to connect directly to WebSocket URL: {ws_url}')
-                            browser = playwright.chromium.connect_over_cdp(ws_url)
-                            print('Connected to Chrome instance via WebSocket URL')
-                            context = browser.new_context()
-                            context.tracing.start(screenshots=screenshots, snapshots=True, sources=source)
-                            page = context.new_page()
-                            if debug:
-                                page.on("response", lambda response: print(f"Response: {response.status} {response.url}"))
-                                page.on("requestfailed", lambda request: print(f"Request failed: {request.url} {request.failure}"))
-                            return page, context, browser
-                        except Exception as ws_error:
-                            print(f'Failed to connect via WebSocket URL: {str(ws_error)}')
-            except Exception as e:
-                print(f'Error connecting to Chrome debugging HTTP endpoint: {str(e)}')
             
-            # Try explicitly using 127.0.0.1 instead of localhost to avoid IPv6 issues
-            print('Attempting to connect via http://127.0.0.1:9222...')
-            browser = playwright.chromium.connect_over_cdp('http://127.0.0.1:9222')
-            print('Connected to Chrome instance via CDP on port 9222')
+        if cookies_path:
+            storage_path = os.path.join(cookies_path, 'storage_state.json')
+            if not os.path.exists(storage_path):
+                storage_path = None
+
+    
+        # First try to get the debug URL to see if CDP is working
+        import urllib.request
+        try:
+            with urllib.request.urlopen(f'http://127.0.0.1:{debug_port}/json/version') as response:
+                version_info = json.loads(response.read().decode('utf-8'))
+                print(f'Successfully connected to Chrome debugging HTTP endpoint: {version_info}')
+                # If we can see a webSocketDebuggerUrl, that's a good sign
+                if 'webSocketDebuggerUrl' in version_info:
+                    print(f'Found WebSocket debugger URL: {version_info["webSocketDebuggerUrl"]}')
+                    # Try connecting directly to the WebSocket URL
+                    try:
+                        ws_url = version_info["webSocketDebuggerUrl"]
+                        print(f'Attempting to connect directly to WebSocket URL: {ws_url}')
+                        browser = playwright.chromium.connect_over_cdp(ws_url)
+                    except Exception as ws_error:
+                        print(f'Failed to connect via WebSocket URL: {str(ws_error)}')
         except Exception as e:
-            print(f'Failed to connect to Chrome via CDP: {str(e)}')
-            # Try alternative connection if first one fails
-            try:
-                print('Attempting alternative connection method via http://localhost:9222...')
-                browser = playwright.chromium.connect_over_cdp('http://localhost:9222')
-                print('Connected to Chrome instance via CDP using alternative method')
-            except Exception as e2:
-                print(f'Alternative connection also failed: {str(e2)}')
-                # As a last resort, just launch a new browser
-                print('All CDP connection attempts failed. Falling back to launching a regular browser...')
-                if executable_path:
-                    browser = playwright.chromium.launch(
-                        headless=headless,
-                        executable_path=executable_path,
-                        args=browser_args
-                    )
-                else:
-                    browser = playwright.chromium.launch(
-                        headless=headless,
-                        args=browser_args
-                    )
-                print('Fallback browser launched')
+            print(f'Error connecting to Chrome debugging HTTP endpoint: {str(e)}')
     else:
         if executable_path:
             browser = playwright.chromium.launch(
@@ -321,35 +289,12 @@ def init_browser(playwright: Playwright, headless=True, debug: bool = False, vid
                 )
                 print("Using default Chromium browser")
     
-    
-    if cookies_path:
-        storage_path = os.path.join(cookies_path, 'storage_state.json')
-        if not os.path.exists(storage_path):
-            storage_path = None
-    # The rest of the initialization is different depending on whether we're using remote debugging or not
-    if remote_debugging:
-        context = browser.new_context(
-            storage_state=storage_path
-        ) # We cannot provide context to remote CDP so no video
-    else:
-        context = browser.new_context(
-            record_video_dir=video_dir if video else None,
-            user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
-            locale="fr-FR",
-            timezone_id="Europe/Zurich",
-            storage_state=storage_path
-        )
-    # Load cookies before navigating to the site
+    context = browser.contexts[0]
+    page = context.pages[0]
     if cookies_path:
         load_cookies(context, cookies_path)
-    # Load storage state before navigating to the site
-    # Start tracing
     context.tracing.start(screenshots=screenshots, snapshots=True, sources=source)
-    page = context.new_page()
     
-    if debug:
-        page.on("response", lambda response: print(f"Response: {response.status} {response.url}"))
-        page.on("requestfailed", lambda request: print(f"Request failed: {request.url} {request.failure}"))
     return page, context, browser
 
 def save_cookies(page: Page, cookies_path: str):
@@ -388,24 +333,19 @@ def finalize_run(page: Page, context, browser, trace_subfolder: str, timestamp: 
     except Exception as e:
         print(f"Error saving or extracting trace data: {str(e)}")
 
-
     # Log the current URL to confirm where the browser is before completion
     current_url = page.url
     print(f"Current URL before completion: {current_url}")
     
     if not keep_browser_open:
-        # Close both page and browser if we're not keeping the browser open
-        page.close()
         browser.close()
-        print("Browser closed")
+        print("Browser and all tabs closed")
     else:
-        # If keeping browser open, don't close the page so user can continue interacting
-        print("Browser kept open with current page. Remember to close it manually when done.")
+        print("Browser kept open with all tabs. Remember to close it manually when done.")
 
-def setup_common_args(parser, add_channel=False):
+def setup_common_args(parser):
     """
     Add common command line arguments to the parser
-    If add_channel is True, add the channel argument for zap script
     """
     parser.add_argument('--headless', action='store_true', help='Run in headless mode')
     parser.add_argument('--debug', action='store_true', help='Enable debug mode')
@@ -416,71 +356,19 @@ def setup_common_args(parser, add_channel=False):
     parser.add_argument('--executable_path', type=str, help='Path to Google Chrome executable, defaults to Chromium if not provided')
     parser.add_argument('--remote-debugging', action='store_true', default=False, help='Launch and connect to Google Chrome with remote debugging enabled on port 9222')
     parser.add_argument('--close-browser', action='store_true', default=False, help='Close the browser after the test completes (by default, browser stays open)')
-    
-    if add_channel:
-        parser.add_argument('--channel', type=str, default='SRF 1', help='Channel to select (default: SRF 1)')
-    
     return parser
 
-def run_main(run_function, args=None, with_username_password=False):
+def run_main(run_function, args=None):
     """
     Common main function implementation for both scripts
     run_function: The script-specific run function to call
     args: Parsed arguments
-    with_username_password: Whether this script requires username/password
     """
     try:
-        if with_username_password:
-            # Process username and password for login script
-            username = args.username
-            password = args.password
-            if not username or not password:
-                load_dotenv()
-                username = os.getenv("USERNAME")
-                password = os.getenv("PASSWORD")
-                print(f"Debug: Username from env: {username}")
-                print(f"Debug: Password from env: {password}")
-
-            if not username or not password:
-                raise ValueError("Username and password must be provided either as command-line arguments or in .env file")
-            
-            run_args = {
-                'username': username, 
-                'password': password
-            }
-        else:
-            # For zap script
-            run_args = {}
-            if hasattr(args, 'channel'):
-                run_args['channel'] = args.channel
-        
-        # Common arguments for both scripts
-        run_args.update({
-            'headless': args.headless,
-            'debug': args.debug,
-            'trace_folder': args.trace_folder,
-            'screenshots': not args.no_screenshots,
-            'video': not args.no_video,
-            'source': not args.no_trace,
-            'executable_path': args.executable_path,
-            'remote_debugging': args.remote_debugging,
-            'keep_browser_open': not args.close_browser
-        })
-        
         with sync_playwright() as playwright:
-            run_args['playwright'] = playwright
-            success = run_function(**run_args)
-            
-            if success:
-                print("Test successful")
-                sys.exit(0)
-            else:
-                print("Test failed")
-                sys.exit(1)
-
+            run_function(playwright=playwright, headless=args.headless, debug=args.debug, trace_folder=args.trace_folder, screenshots=not args.no_screenshots, video=not args.no_video, source=not args.no_trace, executable_path=args.executable_path, remote_debugging=args.remote_debugging, keep_browser_open=not args.close_browser)
     except Exception as e:
         print(f"An error occurred: {str(e)}")
-        print("Login failed" if with_username_password else "Test failed")
         sys.exit(1)
 
 def save_storage_state(context, storage_path: str):
@@ -600,7 +488,8 @@ def launch_browser_with_remote_debugging(executable_path: str = None) -> subproc
         '--disable-background-networking',
         '--window-position=0,0',
         '--disable-gpu',
-        '--enable-unsafe-swiftshader'
+        '--enable-unsafe-swiftshader',
+        '--window-size=1920,1080'
     ]
 
     cmd_line = [executable_path] + chrome_flags

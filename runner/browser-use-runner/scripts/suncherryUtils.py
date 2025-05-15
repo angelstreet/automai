@@ -25,8 +25,15 @@ def pass_login(page: Page, trace_folder: str):
         page.wait_for_selector("#flt-semantic-node-6", state="visible")
         page.click("#flt-semantic-node-6")
         print('Login screen skipped')
-        page.wait_for_timeout(10000)
-        return True
+
+        try:
+            page.wait_for_selector("aria-label=NICHT JETZT", state="visible", timeout=2000)
+            print('App download screen')
+            page.click("aria-label=NICHT JETZT")
+            page.wait_for_timeout(1000)
+            print('App download screen skipped')
+        except Exception as e:
+            print(f'App download screen not shown or skipped: {str(e)}')
     except Exception as e:
         print(f'Login screen not shown or skipped: {str(e)}')
         return True
@@ -39,11 +46,6 @@ def tvguide_livetv_zap(page: Page, trace_folder: str, aria_label: str = 'SRF 1')
     return True
 
 def login(page: Page, username: str, password: str, trace_folder: str):
-    print(f"Debug: Username in login: {username}")
-    print(f"Debug: Password in login: {password}")
-    if not username or not password:
-        raise ValueError("Username and password must be provided")
-
     activate_semantic_placeholder(page, trace_folder)
     page.wait_for_timeout(2000)
 
@@ -84,7 +86,12 @@ def login(page: Page, username: str, password: str, trace_folder: str):
     
     return is_logged_in(page, trace_folder)
 
-def is_logged_in(page: Page, trace_folder: str):
+def is_logged_in(page: Page, url: str, trace_folder: str):
+    print(f"Current Page url: {page.url}, destination url: {url}")
+    if page.url != url:
+        print(f"Navigating to {url}")
+        page.goto(url, timeout=20000)
+        page.wait_for_timeout(5000)
     activate_semantic_placeholder(page, trace_folder)
     page.wait_for_timeout(1000)
 

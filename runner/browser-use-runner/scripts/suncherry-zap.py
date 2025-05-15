@@ -1,16 +1,12 @@
-from playwright.sync_api import sync_playwright, Page, Playwright
-import random
+from playwright.sync_api import Page, Playwright
 import os
 import sys
 import argparse
 from dotenv import load_dotenv
-import re
 from datetime import datetime
-import zipfile
-import json
 
-from utils import init_browser, activate_semantic_placeholder, finalize_run, load_cookies, get_cookies_path, setup_common_args, run_main, take_screenshot, load_storage_state
-from suncherryUtils import get_element_id, go_back, pass_login
+from utils import init_browser, activate_semantic_placeholder, finalize_run, get_cookies_path, setup_common_args, run_main, take_screenshot
+from suncherryUtils import get_element_id, pass_login, is_logged_in
 
 # Load .env file from the same directory as this script
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -18,7 +14,7 @@ env_path = os.path.join(script_dir, '.env')
 load_dotenv(env_path)
 print(f'Loaded environment variables from: {env_path}')
 
-def zap(page: Page, url: str, trace_folder: str, channel: str = 'SRF 1'):
+def zap(page: Page, trace_folder: str, channel: str = 'SRF 1'):
     try:
         activate_semantic_placeholder(page, trace_folder)
         page.wait_for_timeout(3000)
@@ -72,37 +68,29 @@ def zap(page: Page, url: str, trace_folder: str, channel: str = 'SRF 1'):
         take_screenshot(page, trace_folder, 'zap_failed')
         return False
 
-def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder: str = 'suncherry-playwright_trace', screenshots: bool = True, video: bool = True, source: bool = True, cookies: bool = True, channel: str = 'RTS 1', executable_path: str = None, remote_debugging: bool = False, keep_browser_open: bool = True):
+def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder: str = 'suncherry-playwright_trace', screenshots: bool = True, video: bool = True, source: bool = True, cookies: bool = True, executable_path: str = None, remote_debugging: bool = False, keep_browser_open: bool = True, url: str = None, channel: str = 'SRF 1 HD', **kwargs):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     job_folder = trace_folder  # Use trace_folder as the base job folder directly
     trace_subfolder = os.path.join(job_folder, f"trace_{timestamp}")  # Create a trace subfolder within job_folder
     os.makedirs(trace_subfolder, exist_ok=True)
     trace_file = os.path.join(trace_subfolder, f"{timestamp}.zip")
-
-    # Get the cookies path using the utility function
     cookies_path = get_cookies_path(trace_folder, cookies)
 
-    page, context, browser = init_browser(playwright, headless, debug, trace_subfolder if video else None, screenshots, video, source, cookies_path, executable_path, remote_debugging)
-    
-    url = "https://www.sunrisetv.ch/de/home"
+    page, context, browser = init_browser(playwright, headless, debug, trace_subfolder if video else None, screenshots, video, source, cookies_path, executable_path, remote_debugging) 
     page.set_default_timeout(10000)
 
     try:
-        page.goto(url, timeout=60000)
-        page.wait_for_timeout(5000)
-        pass_login(page, trace_subfolder)
+
+        if not is_logged_in(page, url, trace_subfolder):
+            pass_login(page, trace_subfolder)
         
-        #loaded_cookies = context.cookies()
-        print(f"Loaded cookies count: {len(loaded_cookies)}")
-        
-        result = zap(page, url, trace_subfolder, channel)
+        result = zap(page, trace_subfolder, channel)
 
     except Exception as e:
         print(f"An error occurred during execution: {str(e)}")
         result = False
     finally:
         finalize_run(page, context, browser, trace_subfolder, timestamp, trace_file, video, remote_debugging, keep_browser_open)
-        #input('Press Enter to close the browser...')
         if result :
             return sys.exit(0)
         else:
@@ -110,10 +98,14 @@ def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder
 
 def main():
     parser = argparse.ArgumentParser(description='Run Suncherry Playwright script')
-    parser = setup_common_args(parser, add_channel=True)
+    parser = setup_common_args(parser)
+    parser.add_argument('--url', type=str, help='URL to navigate to', default='https://www.sunrisetv.ch/de/home')
+    parser.add_argument('--channel', type=str, help='Channel to select (default: SRF 1)', default='SRF 1 HD')
     args, _ = parser.parse_known_args()
 
-    print(f"Running in {'headless' if args.headless else 'visible'} mode with {'no-video' if args.no_video else 'video'}, {'no-screenshots' if args.no_screenshots else 'screenshots'}, {'no-trace' if args.no_trace else 'trace'}, targeting channel: {args.channel}, {'with remote debugging' if args.remote_debugging else 'without remote debugging'}, {'closing browser when done' if args.close_browser else 'keeping browser open'}")
+    print(f"Running in {'headless' if args.headless else 'visible'}")
+    print(f"Url from args: {args.url}")
+    print(f"Channel from args: {args.channel}")
     run_main(run, args)
 
 if __name__ == "__main__":
