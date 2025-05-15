@@ -3,13 +3,14 @@ from playwright.sync_api import Page
 from utils import take_screenshot, activate_semantic_placeholder
 
 def go_back(page: Page, trace_folder: str):
-    print("go back")
+    print("** go_back **")
     page.goBack('domcontentloaded')
     page.wait_for_timeout(10000)
     take_screenshot(page, trace_folder, 'go_back')
 
 
 def get_element_id(page: Page, aria_label: str):
+    print("** get_element_id **")
    # Locate the element inside the shadow DOM
     element = page.locator(f'flt-semantics[aria-label*="{aria_label}"]')
     # Get the 'id' attribute
@@ -19,6 +20,7 @@ def get_element_id(page: Page, aria_label: str):
 
 
 def pass_login(page: Page, trace_folder: str):
+    print("** pass_login **")
     try:
         activate_semantic_placeholder(page, trace_folder)
         page.wait_for_timeout(1000)
@@ -40,6 +42,7 @@ def pass_login(page: Page, trace_folder: str):
         return True
 
 def tvguide_livetv_zap(page: Page, trace_folder: str, aria_label: str = 'SRF 1'):
+    print("** tvguide_livetv_zap **")
     take_screenshot(page, trace_folder, 'tvguide_livetv')
     page.locator(f'[aria-label*="{aria_label}"]').click()
     page.wait_for_timeout(5000)
@@ -47,6 +50,7 @@ def tvguide_livetv_zap(page: Page, trace_folder: str, aria_label: str = 'SRF 1')
     return True
 
 def login(page: Page, url: str, username: str, password: str, trace_folder: str):
+    print("** login **")
     activate_semantic_placeholder(page, trace_folder)
     page.wait_for_timeout(2000)
     try :
@@ -58,10 +62,10 @@ def login(page: Page, url: str, username: str, password: str, trace_folder: str)
     except Exception as e:
         print(f'Cookies pop up not shown: {str(e)}')
     
-    page.wait_for_selector("#flt-semantic-node-6", state="visible")
+    page.wait_for_selector("aria-label*=ANMELDEN", state="visible")
     page.wait_for_timeout(1000)
     print("Click on username")
-    page.locator("#flt-semantic-node-6").click()
+    page.locator("aria-label*=ANMELDEN").click()
 
     page.wait_for_selector("#username", state="visible")
     page.wait_for_timeout(1000)
@@ -90,6 +94,7 @@ def login(page: Page, url: str, username: str, password: str, trace_folder: str)
     return is_logged_in(page, url, trace_folder)
 
 def is_logged_in(page: Page, url: str, trace_folder: str):
+    print("** is_logged_in **")
     print(f"Current Page url: {page.url}, destination url: {url}")
     if page.url != url:
         print(f"Navigating to {url}")
