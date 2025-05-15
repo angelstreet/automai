@@ -366,7 +366,7 @@ def run_main(run_function, args=None):
     """
     try:
         with sync_playwright() as playwright:
-            run_function(playwright=playwright, headless=args.headless, debug=args.debug, trace_folder=args.trace_folder, screenshots=not args.no_screenshots, video=not args.no_video, source=not args.no_trace, executable_path=args.executable_path, remote_debugging=args.remote_debugging, keep_browser_open=not args.close_browser)
+            run_function(playwright=playwright, **vars(args))
     except Exception as e:
         print(f"An error occurred: {str(e)}")
         sys.exit(1)
