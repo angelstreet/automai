@@ -356,7 +356,7 @@ def launch_browser_with_remote_debugging(executable_path: str = None) -> subproc
 
     # Launch Chrome with remote debugging enabled using a more reliable approach
     debug_port = 9222
-    user_data_dir = "/tmp/chrome_debug_profile" if platform.system() != 'Windows' else "C:\\Temp\\chrome_debug_profile"
+    user_data_dir = "/tmp/chrome_debug_profile"
     os.makedirs(user_data_dir, exist_ok=True)
 
     chrome_flags = [
