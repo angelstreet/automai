@@ -50,7 +50,6 @@ def zap(page: Page, trace_folder: str, channel: str = 'SRF 1', max_iterations: i
 
             go_back(page, trace_folder)
             
-        print('Test Success, Zap success')
         take_screenshot(page, trace_folder, 'zap_success')
         page.wait_for_timeout(5000)
 
