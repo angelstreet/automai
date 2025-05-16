@@ -24,10 +24,10 @@ def pass_install_app(page: Page, trace_folder: str):
         take_screenshot(page, trace_folder, 'app_download_screen')
         print('Reload page')
         page.goto(page.url, timeout=10000)
-        page.wait_for_timeout(10000)
+        page.wait_for_timeout(15000)
     except Exception as e:
         print(f'App download screen not shown or skipped: {str(e)}')
-        page.wait_for_timeout(2000)
+        page.wait_for_timeout(5000)
         pass
 
 def pass_login(page: Page, trace_folder: str):
