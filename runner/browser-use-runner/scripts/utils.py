@@ -214,7 +214,8 @@ def init_regular_browser(playwright: Playwright, headless=True, debug: bool = Fa
         else:
             browser = playwright.chromium.launch(
                 headless=headless,
-                args=browser_args
+                args=browser_args,
+                user_data_dir="/tmp/chrome_debug_profile"
             )
             print("Using default Chromium browser")
     if len(browser.contexts) == 0:
