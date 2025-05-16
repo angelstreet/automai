@@ -36,7 +36,7 @@ def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder
     kill_chrome_instances()
     clean_user_data_dir()
     page, context, browser = init_browser(playwright, headless, debug, trace_subfolder if video else None, screenshots, video, trace, executable_path, remote_debugging)
-    page.set_default_timeout(10000)
+    page.set_default_timeout(5000)
     
     try:
         page.goto(url, timeout=30000)
@@ -52,10 +52,10 @@ def run(playwright: Playwright, headless=True, debug: bool = False, trace_folder
     finally:
         finalize_run(page, context, browser, trace_subfolder, timestamp, trace_file, video, remote_debugging, keep_alive)
         if login_result :
-            print("Test successful, login successful")
+            print("Test Success, login successful")
             return sys.exit(0)
         else:
-            print("Test failed, login failed")
+            print("Test Fail, login failed")
             return sys.exit(1)
 
 def main():
