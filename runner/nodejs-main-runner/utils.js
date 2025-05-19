@@ -60,9 +60,14 @@ function formatEnvVarsForSSH(decryptedEnvVars, osType) {
           .map(([key, value]) => `set ${key}=${value}`)
           .join(' && ')
       : Object.entries(decryptedEnvVars)
-          .map(([key, value]) => `export ${key}='${value.replace(/([()\[\]{}$|&;])/g, '\\$1')}'`)
+          .map(([key, value]) => {
+            // Escape special characters in value but leave it as a string
+            // This properly escapes characters that would break shell syntax
+            const escapedValue = value.replace(/(['"\\$`!*?()[\]{}|&;<>])/g, '\\$1');
+            return `export ${key}='${escapedValue}'`;
+          })
           .join(' && ');
-  return envSetup + (osType === 'windows' ? ' && ' : ' && ');
+  return envSetup;
 }
 
 function collectEnvironmentVariables(decryptedEnvVars) {
