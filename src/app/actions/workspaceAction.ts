@@ -7,7 +7,7 @@ import { cookies } from 'next/headers';
 import workspaceDb from '@/lib/db/workspaceDb';
 import { createClient } from '@/lib/supabase/server';
 import { DbResponse } from '@/lib/utils/commonUtils';
-import { Workspace } from '@/types/component/workspaceComponentType';
+import { Workspace, WorkspaceMapping } from '@/types/component/workspaceComponentType';
 
 /**
  * Custom cache storage with TTL for server-side caching
@@ -230,4 +230,136 @@ export async function setActiveWorkspace(workspaceId: string | null): Promise<Db
   }
 
   return result;
+}
+
+/**
+ * Add an item to a workspace
+ */
+export async function addItemToWorkspace(
+  workspaceId: string,
+  itemType: 'deployment' | 'repository' | 'host' | 'config',
+  itemId: string,
+): Promise<DbResponse<WorkspaceMapping>> {
+  console.log(
+    `[@action:workspace:addItemToWorkspace] Adding ${itemType} ${itemId} to workspace ${workspaceId}`,
+  );
+
+  try {
+    const cookieStore = await cookies();
+    const supabase = await createClient(cookieStore);
+
+    // Create the mapping object based on item type
+    const mapping: any = {
+      workspace_id: workspaceId,
+    };
+
+    // Add the appropriate item ID field based on type
+    switch (itemType) {
+      case 'deployment':
+        mapping.deployment_id = itemId;
+        break;
+      case 'repository':
+        mapping.repository_id = itemId;
+        break;
+      case 'host':
+        mapping.host_id = itemId;
+        break;
+      case 'config':
+        mapping.config_id = itemId;
+        break;
+      default:
+        throw new Error(`Invalid item type: ${itemType}`);
+    }
+
+    // Insert the mapping
+    const { data, error } = await supabase
+      .from('workspace_mappings')
+      .insert([mapping])
+      .select()
+      .single();
+
+    if (error) {
+      console.log(`[@action:workspace:addItemToWorkspace] ERROR: ${error.message}`);
+      return { success: false, error: error.message };
+    }
+
+    console.log(
+      `[@action:workspace:addItemToWorkspace] Successfully added ${itemType} to workspace`,
+    );
+
+    // Revalidate relevant paths
+    revalidatePath('/');
+
+    return { success: true, data };
+  } catch (error: any) {
+    console.error('[@action:workspace:addItemToWorkspace] Unexpected error:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to add item to workspace',
+    };
+  }
+}
+
+/**
+ * Remove an item from a workspace
+ */
+export async function removeItemFromWorkspace(
+  workspaceId: string,
+  itemType: 'deployment' | 'repository' | 'host' | 'config',
+  itemId: string,
+): Promise<DbResponse<null>> {
+  console.log(
+    `[@action:workspace:removeItemFromWorkspace] Removing ${itemType} ${itemId} from workspace ${workspaceId}`,
+  );
+
+  try {
+    const cookieStore = await cookies();
+    const supabase = await createClient(cookieStore);
+
+    // Create the query conditions based on item type
+    const conditions: any = {
+      workspace_id: workspaceId,
+    };
+
+    // Add the appropriate item ID condition based on type
+    switch (itemType) {
+      case 'deployment':
+        conditions.deployment_id = itemId;
+        break;
+      case 'repository':
+        conditions.repository_id = itemId;
+        break;
+      case 'host':
+        conditions.host_id = itemId;
+        break;
+      case 'config':
+        conditions.config_id = itemId;
+        break;
+      default:
+        throw new Error(`Invalid item type: ${itemType}`);
+    }
+
+    // Delete the mapping
+    const { error } = await supabase.from('workspace_mappings').delete().match(conditions);
+
+    if (error) {
+      console.log(`[@action:workspace:removeItemFromWorkspace] ERROR: ${error.message}`);
+      return { success: false, error: error.message };
+    }
+
+    console.log(
+      `[@action:workspace:removeItemFromWorkspace] Successfully removed ${itemType} from workspace`,
+    );
+
+    // Revalidate relevant paths
+    revalidatePath('/');
+
+    return { success: true, data: null };
+  } catch (error: any) {
+    console.error('[@action:workspace:removeItemFromWorkspace] Unexpected error:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to remove item from workspace',
+    };
+  }
 }

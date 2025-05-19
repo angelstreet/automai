@@ -10,6 +10,7 @@ import {
   MoreHorizontal,
   Edit2,
   Copy,
+  FolderPlus,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React, { useState } from 'react';
@@ -23,6 +24,8 @@ import {
 } from '@/components/shadcn/dropdown-menu';
 import { getFormattedTime } from '@/lib/utils/deploymentUtils';
 import { Deployment } from '@/types/component/deploymentComponentType';
+import { addItemToWorkspace } from '@/app/actions/workspaceAction';
+import AddToWorkspace from '@/components/workspace/AddToWorkspace';
 
 import DeploymentStatusBadgeClient from './DeploymentStatusBadgeClient';
 
@@ -121,6 +124,18 @@ export function DeploymentTableClient({
         error,
       );
     }
+  };
+
+  const handleAddToWorkspace = async (deploymentId: string) => {
+    return async (workspaceId: string) => {
+      console.log(
+        `[@component:DeploymentTableClient] Adding deployment ${deploymentId} to workspace ${workspaceId}`,
+      );
+      const result = await addItemToWorkspace(workspaceId, 'deployment', deploymentId);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to add deployment to workspace');
+      }
+    };
   };
 
   const renderSkeletonRows = () => {
@@ -414,6 +429,23 @@ export function DeploymentTableClient({
                               <Copy className="mr-2 h-3.5 w-3.5" />
                               Duplicate
                             </DropdownMenuItem>
+                            <AddToWorkspace
+                              itemId={deployment.id}
+                              itemType="deployment"
+                              onAddToWorkspace={handleAddToWorkspace(deployment.id)}
+                              trigger={
+                                <DropdownMenuItem
+                                  onSelect={(e) => {
+                                    e.preventDefault();
+                                  }}
+                                  disabled={actionInProgress === deployment.id}
+                                  className="text-xs py-1.5 h-7"
+                                >
+                                  <FolderPlus className="mr-2 h-3.5 w-3.5" />
+                                  Add to Workspace
+                                </DropdownMenuItem>
+                              }
+                            />
                             <DropdownMenuItem
                               className="text-xs py-1.5 h-7 text-red-600"
                               onClick={(e) => {

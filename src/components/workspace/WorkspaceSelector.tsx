@@ -48,6 +48,8 @@ import {
 } from '@/components/shadcn/select';
 import { Workspace } from '@/types/component/workspaceComponentType';
 
+export type { Workspace };
+
 export default function WorkspaceSelector({ className = '' }) {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [activeWorkspace, setActiveWorkspace] = useState<Workspace | null>(null);
