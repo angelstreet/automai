@@ -60,7 +60,7 @@ function formatEnvVarsForSSH(decryptedEnvVars, osType) {
           .map(([key, value]) => `set ${key}=${value}`)
           .join(' && ')
       : Object.entries(decryptedEnvVars)
-          .map(([key, value]) => `export ${key}=${value}`)
+          .map(([key, value]) => `export ${key}='${value.replace(/([()\[\]{}$|&;])/g, '\\$1')}'`)
           .join(' && ');
   return envSetup + (osType === 'windows' ? ' && ' : ' && ');
 }

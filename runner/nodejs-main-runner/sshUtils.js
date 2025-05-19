@@ -233,6 +233,8 @@ async function executeSSHScripts(
       const envVars = collectEnvironmentVariables(decryptedEnvVars);
       let envSetup = formatEnvVarsForSSH(envVars, host.os);
       if (envSetup) {
+        // Escape special characters in environment variable values to prevent bash syntax errors
+        envSetup = envSetup.replace(/([()\[\]{}$|&;])/g, '\\$1');
         console.log(
           `[executeSSHScripts] Environment variables setup for SSH: ${Object.keys(envVars).join(', ')}`,
         );
