@@ -13,8 +13,9 @@ import {
   FolderPlus,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
+import { getActiveWorkspace, getWorkspacesContainingItem } from '@/app/actions/workspaceAction';
 import { Button } from '@/components/shadcn/button';
 import {
   DropdownMenu,
@@ -71,6 +72,65 @@ export function DeploymentTableClient({
   // State to manage dropdown visibility for each deployment
   const [openViewDropdowns, setOpenViewDropdowns] = useState<Record<string, boolean>>({});
   const [openActionsDropdowns, setOpenActionsDropdowns] = useState<Record<string, boolean>>({});
+  const [activeWorkspace, setActiveWorkspace] = useState<string | null>(null);
+  const [filteredDeployments, setFilteredDeployments] = useState<Deployment[]>(displayDeployments);
+
+  // Fetch active workspace and related deployments
+  useEffect(() => {
+    const fetchWorkspaceData = async () => {
+      try {
+        // Get active workspace
+        const workspaceResult = await getActiveWorkspace();
+        if (workspaceResult.success) {
+          setActiveWorkspace(workspaceResult.data || null);
+        }
+      } catch (error) {
+        console.error('[@component:DeploymentTableClient] Error fetching workspace data:', error);
+      }
+    };
+
+    fetchWorkspaceData();
+  }, []);
+
+  // Filter deployments whenever displayDeployments or active workspace changes
+  useEffect(() => {
+    const filterByWorkspace = async () => {
+      if (activeWorkspace) {
+        console.log(
+          '[@component:DeploymentTableClient] Filtering by active workspace:',
+          activeWorkspace,
+        );
+
+        // Create a map of deployment IDs that belong to the active workspace
+        const workspaceMap = new Map<string, boolean>();
+
+        // Process each deployment to check workspace membership
+        const checkPromises = displayDeployments.map(async (deployment) => {
+          const result = await getWorkspacesContainingItem('deployment', deployment.id);
+          if (result.success && result.data && result.data.includes(activeWorkspace)) {
+            workspaceMap.set(deployment.id, true);
+          }
+          return deployment;
+        });
+
+        // Wait for all checks to complete
+        await Promise.all(checkPromises);
+
+        // Filter deployments to only those in the active workspace
+        const filtered = displayDeployments.filter((deployment) => workspaceMap.has(deployment.id));
+        setFilteredDeployments(filtered);
+
+        console.log(
+          `[@component:DeploymentTableClient] Filtered to ${filtered.length} deployments in workspace`,
+        );
+      } else {
+        // If no active workspace, show all deployments
+        setFilteredDeployments(displayDeployments);
+      }
+    };
+
+    filterByWorkspace();
+  }, [displayDeployments, activeWorkspace]);
 
   // Functions to toggle dropdown visibility
   const toggleViewDropdown = (deploymentId: string, open: boolean) => {
@@ -201,7 +261,7 @@ export function DeploymentTableClient({
     );
   }
 
-  if (displayDeployments.length > 0) {
+  if (filteredDeployments.length > 0) {
     return (
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -252,7 +312,7 @@ export function DeploymentTableClient({
             </tr>
           </thead>
           <tbody className="bg-transparent dark:bg-transparent divide-y divide-gray-200 dark:divide-gray-700">
-            {displayDeployments.map((deployment) => (
+            {filteredDeployments.map((deployment) => (
               <tr
                 key={deployment.id}
                 className="hover:bg-gray-800/10 dark:hover:bg-gray-700/30 cursor-pointer"
