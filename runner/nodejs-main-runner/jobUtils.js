@@ -476,11 +476,11 @@ async function finalizeJobOnHost(
   } catch (uploadError) {
     console.error(`[finalizeJobOnHost] Error uploading metadata: ${uploadError.message}`);
   }
-  // Ensure upload_and_report.py handles all files in the job folder
+  // Ensure the virtual environment is activated for non-Windows hosts
   const finalizeCommand =
     host.os === 'windows'
       ? `powershell -Command "cd '${jobFolderPath}'; python upload_and_report.py"`
-      : `cd ${jobFolderPath} && python upload_and_report.py`;
+      : `cd ${jobFolderPath} && source /tmp/python/venv/bin/activate && python upload_and_report.py`;
   const connFinalize = new Client();
 
   try {
