@@ -61,9 +61,9 @@ function formatEnvVarsForSSH(decryptedEnvVars, osType) {
           .join(' && ')
       : Object.entries(decryptedEnvVars)
           .map(([key, value]) => {
-            // Escape special characters in value but leave it as a string
-            // This properly escapes characters that would break shell syntax
-            const escapedValue = value.replace(/(['"\\$`!*?()[\]{}|&;<>])/g, '\\$1');
+            // Escape only specific characters that would break shell syntax, avoiding over-escaping
+            // Don't escape parentheses unnecessarily as they are valid in passwords
+            const escapedValue = value.replace(/(['"\\$`!|&;<>])/g, '\\$1');
             return `export ${key}='${escapedValue}'`;
           })
           .join(' && ');
