@@ -28,6 +28,34 @@ function getFlaskServiceUrl(job_run_env) {
   }
 }
 
+// Function to handle Python virtual environment on non-Windows systems
+function handlePythonVenv() {
+  if (process.platform !== 'win32') {
+    const fs = require('fs');
+    const path = require('path');
+    const venvPath = '/tmp/python/venv';
+    const venvBinPath = path.join(venvPath, 'bin');
+
+    if (!fs.existsSync(venvPath)) {
+      console.log('[utils] Creating Python virtual environment at', venvPath);
+      const { execSync } = require('child_process');
+      execSync(`python3 -m venv ${venvPath}`, { stdio: 'inherit' });
+      console.log('[utils] Virtual environment created successfully');
+    } else {
+      console.log('[utils] Using existing Python virtual environment at', venvPath);
+    }
+
+    // Update pip in the virtual environment
+    console.log('[utils] Updating pip in virtual environment');
+    const { execSync } = require('child_process');
+    execSync(`${venvBinPath}/pip install --upgrade pip`, { stdio: 'inherit' });
+    console.log('[utils] pip updated successfully');
+
+    return venvBinPath;
+  }
+  return null;
+}
+
 async function executeOnFlask(
   config,
   jobId,
@@ -42,6 +70,7 @@ async function executeOnFlask(
   config_name,
 ) {
   // Execute scripts via Flask service
+  const venvBinPath = handlePythonVenv();
   const result = await executeFlaskScripts(
     config,
     jobId,
@@ -79,6 +108,7 @@ async function executeOnSSH(
   config_name,
 ) {
   // Execute scripts via SSH on hosts
+  const venvBinPath = handlePythonVenv();
   const result = await executeSSHScripts(
     config,
     jobId,
@@ -90,6 +120,7 @@ async function executeOnSSH(
     creator_id,
     env,
     config_name,
+    venvBinPath,
   );
   const output = result.output;
   const overallStatus = result.overallStatus;

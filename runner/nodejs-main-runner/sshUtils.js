@@ -33,6 +33,7 @@ async function executeSSHScripts(
   creator_id,
   env,
   config_name,
+  venvBinPath = null,
 ) {
   console.log(`[executeSSHScripts] Starting SSH script execution for job ${jobId}`);
 
@@ -103,6 +104,42 @@ async function executeSSHScripts(
         `[executeSSHScripts] Failed to initialize job on host ${host.ip}: ${error.message}`,
       );
       throw error;
+    }
+
+    // Use virtual environment for non-Windows hosts if provided
+    let venvPrefix = '';
+    let venvPath = '';
+    if (host.os !== 'windows') {
+      venvPath = '/tmp/python/venv';
+      const checkVenvCommand = `test -d ${venvPath} && echo 'exists' || echo 'not exists'`;
+      try {
+        const venvCheckResult = await executeSSHCommand(host, sshKeyOrPass, checkVenvCommand);
+        if (venvCheckResult.stdout.includes('not exists')) {
+          console.log(
+            `[executeSSHScripts] Creating virtual environment on ${host.ip} at ${venvPath}`,
+          );
+          const createVenvCommand = `python3 -m venv ${venvPath}`;
+          await executeSSHCommand(host, sshKeyOrPass, createVenvCommand);
+          console.log(`[executeSSHScripts] Virtual environment created on ${host.ip}`);
+        } else {
+          console.log(
+            `[executeSSHScripts] Using existing virtual environment on ${host.ip} at ${venvPath}`,
+          );
+        }
+        venvPrefix = `source ${venvPath}/bin/activate && `;
+        console.log(`[executeSSHScripts] Using virtual environment for host ${host.ip}`);
+      } catch (error) {
+        console.error(
+          `[executeSSHScripts] Failed to setup virtual environment on ${host.ip}: ${error.message}`,
+        );
+        // Fallback to no prefix, might fail with externally managed environment error
+        venvPrefix = '';
+      }
+    } else if (host.os !== 'windows' && venvBinPath) {
+      venvPrefix = `source ${venvBinPath}/activate && `;
+      console.log(
+        `[executeSSHScripts] Using provided virtual environment path for host ${host.ip}`,
+      );
     }
 
     // Process each script separately for tracking purposes
@@ -208,7 +245,7 @@ async function executeSSHScripts(
       if (host.os === 'windows') {
         fullScript = `${paths.scriptFolderAbsolutePath ? `cd ${paths.scriptFolderAbsolutePath} && ` : ''}${scriptSetupCommand} && ${confirmFolderCommand} && powershell -Command "if (Test-Path 'requirements.txt') { pip install -r requirements.txt } else { Write-Output 'No requirements.txt file found, skipping pip install' }" && ${envSetup}python --version && echo ============================= && powershell -Command "& { $process = Start-Process -FilePath 'python' -ArgumentList '\"${paths.scriptAbsolutePath}\" ${finalParameters}' -NoNewWindow -RedirectStandardOutput '${paths.scriptRunFolderPath}/stdout.txt' -RedirectStandardError '${paths.scriptRunFolderPath}/stderr.txt' -PassThru; Write-Host ('[PID ' + $process.Id + '] Process started'); $startTime = Get-Date; $timeout = 300; $stdoutLinesRead = 0; $stderrLinesRead = 0; while (-not $process.HasExited) { if ((Get-Date) - $startTime -gt [TimeSpan]::FromSeconds($timeout)) { Write-Host 'Process timed out after $timeout seconds'; $process.Kill(); exit 1 }; $stdoutContent = Get-Content -Path '${paths.scriptRunFolderPath}/stdout.txt' -Encoding UTF8 -ErrorAction SilentlyContinue; if ($stdoutContent) { $newStdoutLines = $stdoutContent | Select-Object -Skip $stdoutLinesRead; if ($newStdoutLines) { $newStdoutLines | ForEach-Object { Write-Host $_ }; $stdoutLinesRead = $stdoutContent.Count } }; $stderrContent = Get-Content -Path '${paths.scriptRunFolderPath}/stderr.txt' -Encoding UTF8 -ErrorAction SilentlyContinue; if ($stderrContent) { $newStderrLines = $stderrContent | Select-Object -Skip $stderrLinesRead; if ($newStderrLines) { $newStderrLines | ForEach-Object { Write-Host $_ }; $stderrLinesRead = $stderrContent.Count } }; Start-Sleep -Seconds 1 }; $process.WaitForExit(); Write-Host ('Process completed with exit code: ' + $process.ExitCode); exit $process.ExitCode }"`;
       } else {
-        fullScript = `${paths.scriptFolderAbsolutePath ? `cd ${paths.scriptFolderAbsolutePath} && ` : ''}${scriptSetupCommand} && ${confirmFolderCommand} && if [ -f "requirements.txt" ]; then pip install -r requirements.txt; else echo "No requirements.txt file found, skipping pip install"; fi && ${envSetup}python --version && echo ============================= && ${scriptCommand} 2> >(tee "${paths.scriptRunFolderPath}/stderr.txt") | tee "${paths.scriptRunFolderPath}/stdout.txt"`;
+        fullScript = `${paths.scriptFolderAbsolutePath ? `cd ${paths.scriptFolderAbsolutePath} && ` : ''}${scriptSetupCommand} && ${confirmFolderCommand} && if [ -f "requirements.txt" ]; then ${venvPrefix}pip install -r requirements.txt; else echo "No requirements.txt file found, skipping pip install"; fi && ${envSetup}${venvPrefix}python --version && echo ============================= && ${venvPrefix}${scriptCommand} 2> >(tee "${paths.scriptRunFolderPath}/stderr.txt") | tee "${paths.scriptRunFolderPath}/stdout.txt"`;
       }
       console.log(`[executeSSHScripts] SSH command to be executed on ${host.ip}: ${fullScript}`);
 
