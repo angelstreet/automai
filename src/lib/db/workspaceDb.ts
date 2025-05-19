@@ -523,6 +523,64 @@ export async function getCurrentUserProfile(): Promise<DbResponse<any>> {
   }
 }
 
+/**
+ * Get all workspaces containing a specific item
+ */
+export async function getWorkspacesContainingItem(
+  itemType: 'deployment' | 'repository' | 'host' | 'config',
+  itemId: string,
+): Promise<DbResponse<string[]>> {
+  try {
+    const cookieStore = await cookies();
+    const supabase = await createClient(cookieStore);
+
+    // Determine the correct table and field based on item type
+    let table: string;
+    let field: string;
+
+    switch (itemType) {
+      case 'deployment':
+        table = 'jobs_configuration_workspaces';
+        field = 'config_id';
+        break;
+      case 'repository':
+        table = 'repository_workspaces';
+        field = 'repository_id';
+        break;
+      case 'host':
+        table = 'hosts_workspaces';
+        field = 'host_id';
+        break;
+      case 'config':
+        table = 'jobs_configuration_workspaces';
+        field = 'config_id';
+        break;
+      default:
+        throw new Error(`Invalid item type: ${itemType}`);
+    }
+
+    // Query the appropriate table
+    const { data, error } = await supabase.from(table).select('workspace_id').eq(field, itemId);
+
+    if (error) {
+      console.log(`[@db:workspaceDb:getWorkspacesContainingItem] ERROR: ${error.message}`);
+      return { success: false, error: error.message, data: [] };
+    }
+
+    // Extract workspace IDs
+    const workspaceIds = data.map((item) => item.workspace_id);
+
+    return { success: true, data: workspaceIds };
+  } catch (error: any) {
+    console.log(`[@db:workspaceDb:getWorkspacesContainingItem] CATCH ERROR: ${error.message}`);
+    return {
+      success: false,
+      error: error.message || 'Failed to get workspaces containing item',
+      data: [],
+    };
+  }
+}
+
 const workspaceDb = {
   getWorkspacesForCurrentUser,
   createWorkspace,
@@ -533,6 +591,7 @@ const workspaceDb = {
   addItemToWorkspace,
   removeItemFromWorkspace,
   getCurrentUserProfile,
+  getWorkspacesContainingItem,
 };
 
 export default workspaceDb;

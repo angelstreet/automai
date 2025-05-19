@@ -302,3 +302,36 @@ export async function removeItemFromWorkspace(
     };
   }
 }
+
+/**
+ * Get all workspaces containing a specific item
+ */
+export async function getWorkspacesContainingItem(
+  itemType: 'deployment' | 'repository' | 'host' | 'config',
+  itemId: string,
+): Promise<DbResponse<string[]>> {
+  console.log(
+    `[@action:workspace:getWorkspacesContainingItem] Getting workspaces containing ${itemType} ${itemId}`,
+  );
+
+  try {
+    const result = await workspaceDb.getWorkspacesContainingItem(itemType, itemId);
+
+    if (result.success) {
+      console.log(
+        `[@action:workspace:getWorkspacesContainingItem] Found ${result.data?.length || 0} workspaces`,
+      );
+    } else {
+      console.log(`[@action:workspace:getWorkspacesContainingItem] ERROR: ${result.error}`);
+    }
+
+    return result;
+  } catch (error: any) {
+    console.error('[@action:workspace:getWorkspacesContainingItem] Unexpected error:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to get workspaces containing item',
+      data: [],
+    };
+  }
+}

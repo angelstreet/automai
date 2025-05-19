@@ -3,8 +3,14 @@
 import { FolderPlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import { getWorkspaces } from '@/app/actions/workspaceAction';
+import {
+  getWorkspaces,
+  getWorkspacesContainingItem,
+  addItemToWorkspace,
+  removeItemFromWorkspace,
+} from '@/app/actions/workspaceAction';
 import { Button } from '@/components/shadcn/button';
+import { Checkbox } from '@/components/shadcn/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -14,69 +20,98 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/shadcn/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/shadcn/select';
 import { Workspace } from '@/types/component/workspaceComponentType';
 
 interface AddToWorkspaceProps {
-  itemType: 'deployment' | 'repository' | 'host' | 'config'; // Add more types as needed
-  onAddToWorkspace: (workspaceId: string) => Promise<void>;
-  trigger?: React.ReactNode; // Optional custom trigger
+  itemType: 'deployment' | 'repository' | 'host' | 'config';
+  itemId: string;
+  trigger?: React.ReactNode;
 }
 
-export default function AddToWorkspace({
-  itemType,
-  onAddToWorkspace,
-  trigger,
-}: AddToWorkspaceProps) {
+export default function AddToWorkspace({ itemType, itemId, trigger }: AddToWorkspaceProps) {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [selectedWorkspace, setSelectedWorkspace] = useState<string>('');
+  const [memberWorkspaces, setMemberWorkspaces] = useState<string[]>([]);
+  const [selectedWorkspaces, setSelectedWorkspaces] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Fetch workspaces and membership when dialog opens
   useEffect(() => {
-    const fetchWorkspaces = async () => {
-      setIsLoading(true);
-      try {
-        const result = await getWorkspaces();
-        if (result.success && result.data) {
-          setWorkspaces(result.data);
-        }
-      } catch (err) {
-        console.error('[@component:AddToWorkspace] Error fetching workspaces:', err);
-        setError('Failed to load workspaces');
-      }
-      setIsLoading(false);
-    };
-
     if (isOpen) {
-      fetchWorkspaces();
-    }
-  }, [isOpen]);
+      const fetchData = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+          // Get all workspaces and memberships in parallel
+          const [workspacesResult, membershipResult] = await Promise.all([
+            getWorkspaces(),
+            getWorkspacesContainingItem(itemType, itemId),
+          ]);
 
-  const handleAdd = async () => {
-    if (!selectedWorkspace) {
-      setError('Please select a workspace');
-      return;
-    }
+          if (workspacesResult.success && workspacesResult.data) {
+            setWorkspaces(workspacesResult.data);
+          }
 
+          if (membershipResult.success && membershipResult.data) {
+            setMemberWorkspaces(membershipResult.data);
+
+            // Initialize selected workspaces based on current memberships
+            const selected: Record<string, boolean> = {};
+            membershipResult.data.forEach((id) => {
+              selected[id] = true;
+            });
+            setSelectedWorkspaces(selected);
+          }
+        } catch (err) {
+          console.error('[@component:AddToWorkspace] Error fetching data:', err);
+          setError('Failed to load workspaces');
+        }
+        setIsLoading(false);
+      };
+
+      fetchData();
+    }
+  }, [isOpen, itemId, itemType]);
+
+  const toggleWorkspace = (workspaceId: string) => {
+    setSelectedWorkspaces((prev) => ({
+      ...prev,
+      [workspaceId]: !prev[workspaceId],
+    }));
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
     setError(null);
-    setIsLoading(true);
+
     try {
-      await onAddToWorkspace(selectedWorkspace);
+      const operations = [];
+
+      // For each workspace, check if we need to add or remove
+      for (const workspace of workspaces) {
+        const isSelected = !!selectedWorkspaces[workspace.id];
+        const isMember = memberWorkspaces.includes(workspace.id);
+
+        if (isSelected && !isMember) {
+          // Add to workspace
+          operations.push(addItemToWorkspace(workspace.id, itemType, itemId));
+        } else if (!isSelected && isMember) {
+          // Remove from workspace
+          operations.push(removeItemFromWorkspace(workspace.id, itemType, itemId));
+        }
+      }
+
+      // Execute all operations
+      await Promise.all(operations);
       setIsOpen(false);
-      setSelectedWorkspace('');
     } catch (err) {
-      console.error('[@component:AddToWorkspace] Error adding to workspace:', err);
-      setError('Failed to add to workspace');
+      console.error('[@component:AddToWorkspace] Error saving workspace changes:', err);
+      setError('Failed to update workspaces');
     }
-    setIsLoading(false);
+
+    setIsSaving(false);
   };
 
   // Stop event propagation to prevent parent table row click
@@ -84,85 +119,73 @@ export default function AddToWorkspace({
     e.stopPropagation();
   };
 
-  // Custom trigger wrapper with stopPropagation
-  const triggerWithStopPropagation = (
-    <span onClick={stopPropagation}>
-      {trigger || (
-        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
-          <FolderPlus className="mr-2 h-3.5 w-3.5" />
-          Add to Workspace
-        </Button>
-      )}
-    </span>
-  );
-
   return (
-    <Dialog
-      open={isOpen}
-      onOpenChange={(open) => {
-        if (!isLoading) {
-          setIsOpen(open);
-        }
-      }}
-    >
-      <DialogTrigger asChild>{triggerWithStopPropagation}</DialogTrigger>
-      <DialogContent
-        onPointerDownCapture={stopPropagation}
-        onClick={stopPropagation}
-        className="z-50"
-      >
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <span onClick={stopPropagation}>
+          {trigger || (
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
+              <FolderPlus className="mr-2 h-3.5 w-3.5" />
+              Manage in Workspaces
+            </Button>
+          )}
+        </span>
+      </DialogTrigger>
+
+      <DialogContent onClick={stopPropagation} className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Add to Workspace</DialogTitle>
-          <DialogDescription>Select a workspace to add this {itemType} to.</DialogDescription>
+          <DialogTitle>Manage in Workspaces</DialogTitle>
+          <DialogDescription>
+            Select workspaces to add or remove this {itemType} from.
+          </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4" onClick={stopPropagation}>
-          <Select
-            value={selectedWorkspace}
-            onValueChange={setSelectedWorkspace}
-            disabled={isLoading}
-          >
-            <SelectTrigger onClick={stopPropagation}>
-              <SelectValue placeholder="Select a workspace" />
-            </SelectTrigger>
-            <SelectContent
-              onPointerDownCapture={stopPropagation}
-              onClick={stopPropagation}
-              onSelect={(event) => {
-                if ('stopPropagation' in event) {
-                  event.stopPropagation();
-                }
-              }}
-              position="popper"
-              className="z-[60]"
-            >
+
+        <div className="py-4 space-y-4">
+          {isLoading ? (
+            <div className="text-center py-4">Loading workspaces...</div>
+          ) : workspaces.length === 0 ? (
+            <div className="text-center py-4">No workspaces found. Create a workspace first.</div>
+          ) : (
+            <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
               {workspaces.map((workspace) => (
-                <SelectItem key={workspace.id} value={workspace.id} onClick={stopPropagation}>
-                  {workspace.name}
-                </SelectItem>
+                <div
+                  key={workspace.id}
+                  className="flex items-center space-x-2 p-2 rounded hover:bg-secondary/20"
+                  onClick={() => toggleWorkspace(workspace.id)}
+                >
+                  <Checkbox
+                    checked={!!selectedWorkspaces[workspace.id]}
+                    onCheckedChange={() => toggleWorkspace(workspace.id)}
+                    id={`workspace-${workspace.id}`}
+                  />
+                  <label
+                    htmlFor={`workspace-${workspace.id}`}
+                    className="flex-1 text-sm font-medium leading-none cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      {workspace.name}
+                      {memberWorkspaces.includes(workspace.id) && (
+                        <span className="text-xs text-muted-foreground">(Current)</span>
+                      )}
+                    </div>
+                    {workspace.description && (
+                      <p className="text-xs text-muted-foreground mt-1">{workspace.description}</p>
+                    )}
+                  </label>
+                </div>
               ))}
-            </SelectContent>
-          </Select>
+            </div>
+          )}
+
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
+
         <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={(e) => {
-              stopPropagation(e);
-              setIsOpen(false);
-            }}
-            disabled={isLoading}
-          >
+          <Button variant="outline" onClick={() => setIsOpen(false)} disabled={isSaving}>
             Cancel
           </Button>
-          <Button
-            onClick={(e) => {
-              stopPropagation(e);
-              handleAdd();
-            }}
-            disabled={isLoading}
-          >
-            {isLoading ? 'Adding...' : 'Add'}
+          <Button onClick={handleSave} disabled={isLoading || isSaving}>
+            {isSaving ? 'Saving...' : 'Save Changes'}
           </Button>
         </DialogFooter>
       </DialogContent>

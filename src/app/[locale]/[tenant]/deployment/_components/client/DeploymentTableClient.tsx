@@ -15,7 +15,6 @@ import {
 import { useTranslations } from 'next-intl';
 import React, { useState } from 'react';
 
-import { addItemToWorkspace } from '@/app/actions/workspaceAction';
 import { Button } from '@/components/shadcn/button';
 import {
   DropdownMenu,
@@ -124,18 +123,6 @@ export function DeploymentTableClient({
         error,
       );
     }
-  };
-
-  const handleAddToWorkspace = (deploymentId: string) => {
-    return async (workspaceId: string) => {
-      console.log(
-        `[@component:DeploymentTableClient] Adding deployment ${deploymentId} to workspace ${workspaceId}`,
-      );
-      const result = await addItemToWorkspace(workspaceId, 'deployment', deploymentId);
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to add deployment to workspace');
-      }
-    };
   };
 
   const renderSkeletonRows = () => {
@@ -431,7 +418,7 @@ export function DeploymentTableClient({
                             </DropdownMenuItem>
                             <AddToWorkspace
                               itemType="deployment"
-                              onAddToWorkspace={handleAddToWorkspace(deployment.id)}
+                              itemId={deployment.id}
                               trigger={
                                 <DropdownMenuItem
                                   onSelect={(e) => {
@@ -441,7 +428,7 @@ export function DeploymentTableClient({
                                   className="text-xs py-1.5 h-7"
                                 >
                                   <FolderPlus className="mr-2 h-3.5 w-3.5" />
-                                  Add to Workspace
+                                  Manage in Workspaces
                                 </DropdownMenuItem>
                               }
                             />
