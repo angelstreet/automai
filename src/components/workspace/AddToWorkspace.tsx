@@ -10,7 +10,6 @@ import {
   removeItemFromWorkspace,
 } from '@/app/actions/workspaceAction';
 import { Button } from '@/components/shadcn/button';
-import { Checkbox } from '@/components/shadcn/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -159,30 +158,34 @@ export default function AddToWorkspace({
             <div className="text-center py-4">No workspaces found. Create a workspace first.</div>
           ) : (
             <div className="space-y-1 max-h-60 overflow-y-auto pr-2">
-              {workspaces.map((workspace) => (
-                <div
-                  key={workspace.id}
-                  className="flex items-center space-x-2 p-1.5 rounded hover:bg-secondary/20"
-                  onClick={() => toggleWorkspace(workspace.id)}
-                >
-                  <Checkbox
-                    checked={!!selectedWorkspaces[workspace.id]}
-                    onCheckedChange={() => toggleWorkspace(workspace.id)}
-                    id={`workspace-${workspace.id}`}
-                  />
-                  <label
-                    htmlFor={`workspace-${workspace.id}`}
-                    className="flex-1 text-sm font-medium leading-none cursor-pointer"
+              {workspaces.map((workspace) => {
+                const isSelected = !!selectedWorkspaces[workspace.id];
+
+                return (
+                  <button
+                    key={workspace.id}
+                    type="button"
+                    className="flex items-center w-full text-left p-1.5 rounded hover:bg-secondary/20 focus:outline-none"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleWorkspace(workspace.id);
+                    }}
                   >
-                    <div className="flex items-center gap-2">
-                      {workspace.name}
-                      {memberWorkspaces.includes(workspace.id) && (
-                        <span className="text-xs text-muted-foreground">(Current)</span>
-                      )}
+                    <div className="flex items-center justify-center h-4 w-4 rounded border border-primary mr-2 flex-shrink-0">
+                      {isSelected && <div className="h-2 w-2 bg-primary rounded-sm" />}
                     </div>
-                  </label>
-                </div>
-              ))}
+
+                    <div className="flex-1 text-sm font-medium">
+                      <div className="flex items-center gap-2">
+                        {workspace.name}
+                        {memberWorkspaces.includes(workspace.id) && (
+                          <span className="text-xs text-muted-foreground">(Current)</span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
 

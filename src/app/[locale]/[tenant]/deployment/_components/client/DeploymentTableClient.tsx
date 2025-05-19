@@ -419,7 +419,6 @@ export function DeploymentTableClient({
                             <AddToWorkspace
                               itemType="deployment"
                               itemId={deployment.id}
-                              onClose={() => toggleActionsDropdown(deployment.id, false)}
                               trigger={
                                 <DropdownMenuItem
                                   onSelect={(e) => {
