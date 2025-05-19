@@ -163,14 +163,14 @@ export function HostFormDialogClient({ formData, onChange, onCancel }: HostFormD
         }
       } else {
         // Handle error response
-        setTestError(result.error || c('error_test_failed'));
+        setTestError(result.error || t('error_test_failed'));
       }
     } catch (error) {
       console.error(
         '[@client:hosts:HostFormDialogClient:testHostConnection] Error testing connection:',
         error,
       );
-      setTestError(error instanceof Error ? error.message : c('error_test_failed'));
+      setTestError(error instanceof Error ? error.message : t('error_test_failed'));
     } finally {
       setTesting(false);
     }
