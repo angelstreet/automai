@@ -26,9 +26,15 @@ interface AddToWorkspaceProps {
   itemType: 'deployment' | 'repository' | 'host' | 'config';
   itemId: string;
   trigger?: React.ReactNode;
+  onClose?: () => void;
 }
 
-export default function AddToWorkspace({ itemType, itemId, trigger }: AddToWorkspaceProps) {
+export default function AddToWorkspace({
+  itemType,
+  itemId,
+  trigger,
+  onClose,
+}: AddToWorkspaceProps) {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [memberWorkspaces, setMemberWorkspaces] = useState<string[]>([]);
   const [selectedWorkspaces, setSelectedWorkspaces] = useState<Record<string, boolean>>({});
@@ -75,6 +81,7 @@ export default function AddToWorkspace({ itemType, itemId, trigger }: AddToWorks
     }
   }, [isOpen, itemId, itemType]);
 
+  // Immediately update UI when toggling a workspace
   const toggleWorkspace = (workspaceId: string) => {
     setSelectedWorkspaces((prev) => ({
       ...prev,
@@ -105,7 +112,14 @@ export default function AddToWorkspace({ itemType, itemId, trigger }: AddToWorks
 
       // Execute all operations
       await Promise.all(operations);
+
+      // Close the dialog
       setIsOpen(false);
+
+      // Close parent dropdown if callback provided
+      if (onClose) {
+        onClose();
+      }
     } catch (err) {
       console.error('[@component:AddToWorkspace] Error saving workspace changes:', err);
       setError('Failed to update workspaces');
@@ -126,7 +140,7 @@ export default function AddToWorkspace({ itemType, itemId, trigger }: AddToWorks
           {trigger || (
             <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
               <FolderPlus className="mr-2 h-3.5 w-3.5" />
-              Manage in Workspaces
+              Workspaces
             </Button>
           )}
         </span>
@@ -134,10 +148,8 @@ export default function AddToWorkspace({ itemType, itemId, trigger }: AddToWorks
 
       <DialogContent onClick={stopPropagation} className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Manage in Workspaces</DialogTitle>
-          <DialogDescription>
-            Select workspaces to add or remove this {itemType} from.
-          </DialogDescription>
+          <DialogTitle>Workspaces</DialogTitle>
+          <DialogDescription>Select workspaces for this {itemType}.</DialogDescription>
         </DialogHeader>
 
         <div className="py-4 space-y-4">
@@ -146,11 +158,11 @@ export default function AddToWorkspace({ itemType, itemId, trigger }: AddToWorks
           ) : workspaces.length === 0 ? (
             <div className="text-center py-4">No workspaces found. Create a workspace first.</div>
           ) : (
-            <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+            <div className="space-y-1 max-h-60 overflow-y-auto pr-2">
               {workspaces.map((workspace) => (
                 <div
                   key={workspace.id}
-                  className="flex items-center space-x-2 p-2 rounded hover:bg-secondary/20"
+                  className="flex items-center space-x-2 p-1.5 rounded hover:bg-secondary/20"
                   onClick={() => toggleWorkspace(workspace.id)}
                 >
                   <Checkbox
@@ -168,9 +180,6 @@ export default function AddToWorkspace({ itemType, itemId, trigger }: AddToWorks
                         <span className="text-xs text-muted-foreground">(Current)</span>
                       )}
                     </div>
-                    {workspace.description && (
-                      <p className="text-xs text-muted-foreground mt-1">{workspace.description}</p>
-                    )}
                   </label>
                 </div>
               ))}
@@ -185,7 +194,7 @@ export default function AddToWorkspace({ itemType, itemId, trigger }: AddToWorks
             Cancel
           </Button>
           <Button onClick={handleSave} disabled={isLoading || isSaving}>
-            {isSaving ? 'Saving...' : 'Save Changes'}
+            {isSaving ? 'Saving...' : 'Save'}
           </Button>
         </DialogFooter>
       </DialogContent>

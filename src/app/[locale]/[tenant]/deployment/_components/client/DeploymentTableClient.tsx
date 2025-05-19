@@ -419,6 +419,7 @@ export function DeploymentTableClient({
                             <AddToWorkspace
                               itemType="deployment"
                               itemId={deployment.id}
+                              onClose={() => toggleActionsDropdown(deployment.id, false)}
                               trigger={
                                 <DropdownMenuItem
                                   onSelect={(e) => {
@@ -428,7 +429,7 @@ export function DeploymentTableClient({
                                   className="text-xs py-1.5 h-7"
                                 >
                                   <FolderPlus className="mr-2 h-3.5 w-3.5" />
-                                  Manage in Workspaces
+                                  Workspaces
                                 </DropdownMenuItem>
                               }
                             />
