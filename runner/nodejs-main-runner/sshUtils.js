@@ -245,7 +245,7 @@ async function executeSSHScripts(
       if (host.os === 'windows') {
         fullScript = `${paths.scriptFolderAbsolutePath ? `cd ${paths.scriptFolderAbsolutePath} && ` : ''}${scriptSetupCommand} && ${confirmFolderCommand} && powershell -Command "if (Test-Path 'requirements.txt') { pip install -r requirements.txt } else { Write-Output 'No requirements.txt file found, skipping pip install' }" && ${envSetup}python --version && echo ============================= && powershell -Command "& { $process = Start-Process -FilePath 'python' -ArgumentList '\"${paths.scriptAbsolutePath}\" ${finalParameters}' -NoNewWindow -RedirectStandardOutput '${paths.scriptRunFolderPath}/stdout.txt' -RedirectStandardError '${paths.scriptRunFolderPath}/stderr.txt' -PassThru; Write-Host ('[PID ' + $process.Id + '] Process started'); $startTime = Get-Date; $timeout = 300; $stdoutLinesRead = 0; $stderrLinesRead = 0; while (-not $process.HasExited) { if ((Get-Date) - $startTime -gt [TimeSpan]::FromSeconds($timeout)) { Write-Host 'Process timed out after $timeout seconds'; $process.Kill(); exit 1 }; $stdoutContent = Get-Content -Path '${paths.scriptRunFolderPath}/stdout.txt' -Encoding UTF8 -ErrorAction SilentlyContinue; if ($stdoutContent) { $newStdoutLines = $stdoutContent | Select-Object -Skip $stdoutLinesRead; if ($newStdoutLines) { $newStdoutLines | ForEach-Object { Write-Host $_ }; $stdoutLinesRead = $stdoutContent.Count } }; $stderrContent = Get-Content -Path '${paths.scriptRunFolderPath}/stderr.txt' -Encoding UTF8 -ErrorAction SilentlyContinue; if ($stderrContent) { $newStderrLines = $stderrContent | Select-Object -Skip $stderrLinesRead; if ($newStderrLines) { $newStderrLines | ForEach-Object { Write-Host $_ }; $stderrLinesRead = $stderrContent.Count } }; Start-Sleep -Seconds 1 }; $process.WaitForExit(); Write-Host ('Process completed with exit code: ' + $process.ExitCode); exit $process.ExitCode }"`;
       } else {
-        fullScript = `${paths.scriptFolderAbsolutePath ? `cd ${paths.scriptFolderAbsolutePath} && ` : ''}${scriptSetupCommand} && ${confirmFolderCommand} && if [ -f "requirements.txt" ]; then ${venvPrefix}pip install -r requirements.txt; else echo "No requirements.txt file found, skipping pip install"; fi && ${envSetup && envSetup + ' && '} ${venvPrefix}python --version && echo ============================= && ${venvPrefix}${scriptCommand} 2> >(tee "${paths.scriptRunFolderPath}/stderr.txt") | tee "${paths.scriptRunFolderPath}/stdout.txt"`;
+        fullScript = `${paths.scriptFolderAbsolutePath ? `cd ${paths.scriptFolderAbsolutePath} && ` : ''}${scriptSetupCommand} && ${confirmFolderCommand} && if [ -f "requirements.txt" ]; then ${venvPrefix}pip install -r requirements.txt; else echo "No requirements.txt file found, skipping pip install"; fi && ${envSetup && envSetup + ' && '} ${venvPrefix}python --version && echo ============================= && (${venvPrefix}${command} "${paths.scriptAbsolutePath}" ${finalParameters} > "${paths.scriptRunFolderPath}/stdout.txt" 2> "${paths.scriptRunFolderPath}/stderr.txt"; echo "EXIT_CODE=$?" > "${paths.scriptRunFolderPath}/exit_code.txt"; cat "${paths.scriptRunFolderPath}/stdout.txt"; cat "${paths.scriptRunFolderPath}/stderr.txt" >&2)`;
       }
       console.log(`[executeSSHScripts] SSH command to be executed on ${host.ip}: ${fullScript}`);
 
@@ -298,13 +298,29 @@ async function executeSSHScripts(
         host.os,
       );
 
+      // Get actual exit code from file for Linux hosts
+      let actualExitCode = scriptResult.exitCode;
+      if (host.os !== 'windows') {
+        try {
+          const exitCodeCmd = `cat "${paths.scriptRunFolderPath}/exit_code.txt" 2>/dev/null || echo "EXIT_CODE=0"`;
+          const exitCodeResult = await executeSSHCommand(host, sshKeyOrPass, exitCodeCmd);
+          const exitCodeMatch = exitCodeResult.stdout.match(/EXIT_CODE=(\d+)/);
+          if (exitCodeMatch && exitCodeMatch[1]) {
+            actualExitCode = parseInt(exitCodeMatch[1], 10);
+            console.log(`[executeSSHScripts] Actual script exit code from file: ${actualExitCode}`);
+          }
+        } catch (error) {
+          console.error(`[executeSSHScripts] Error reading exit code file: ${error.message}`);
+        }
+      }
+
       // Update script output with results
       const scriptCompletedAt = new Date().toISOString();
       // Determine if script was successful based on output or exit code
       const isSuccess =
         (stdoutFromFile && stdoutFromFile.includes('Test Success')) ||
         (!(stdoutFromFile && stdoutFromFile.toLowerCase().includes('Test Failed'.toLowerCase())) &&
-          scriptResult.exitCode === 0);
+          (host.os === 'windows' ? scriptResult.exitCode === 0 : actualExitCode === 0));
       const status = isSuccess ? 'success' : 'failed';
       // Write metadata.json for this script execution
       const startDate = new Date(scriptStartedAt);
