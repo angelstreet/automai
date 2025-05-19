@@ -41,14 +41,70 @@ export async function getWorkspacesForCurrentUser(): Promise<DbResponse<Workspac
 export async function createWorkspace(
   name: string,
   description?: string,
+  workspace_type: 'private' | 'team' = 'private',
+  team_id?: string,
 ): Promise<DbResponse<Workspace>> {
   try {
     const cookieStore = await cookies();
     const supabase = await createClient(cookieStore);
 
+    // Get the current user ID
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError) {
+      console.log(`[@db:workspaceDb:createWorkspace] ERROR getting user: ${userError.message}`);
+      return { success: false, error: userError.message };
+    }
+
+    if (!userData?.user?.id) {
+      console.log(`[@db:workspaceDb:createWorkspace] ERROR: No authenticated user found`);
+      return { success: false, error: 'No authenticated user found' };
+    }
+
+    // Get user's profile to access active_team
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('active_team')
+      .eq('id', userData.user.id)
+      .single();
+
+    if (profileError) {
+      console.log(
+        `[@db:workspaceDb:createWorkspace] ERROR getting profile: ${profileError.message}`,
+      );
+      return { success: false, error: profileError.message };
+    }
+
+    // For team workspaces, use active_team from profile if team_id not specified
+    let selectedTeamId = team_id;
+    if (workspace_type === 'team') {
+      if (!team_id && !profile.active_team) {
+        return {
+          success: false,
+          error: 'No active team found. Please select a team first.',
+        };
+      }
+
+      // Use provided team_id or fall back to active_team from profile
+      selectedTeamId = team_id || profile.active_team;
+    }
+
+    const workspaceData: any = {
+      name,
+      description,
+      workspace_type,
+      profile_id: userData.user.id, // Add the profile_id to associate the workspace with the user
+    };
+
+    // Only include team_id for team workspaces
+    if (workspace_type === 'team' && selectedTeamId) {
+      workspaceData.team_id = selectedTeamId;
+    }
+
+    console.log(`[@db:workspaceDb:createWorkspace] Inserting workspace with data:`, workspaceData);
+
     const { data, error } = await supabase
       .from('workspaces')
-      .insert([{ name, description }])
+      .insert([workspaceData])
       .select()
       .single();
 
@@ -57,7 +113,9 @@ export async function createWorkspace(
       return { success: false, error: error.message };
     }
 
-    console.log(`[@db:workspaceDb:createWorkspace] Successfully created workspace: ${data.name}`);
+    console.log(
+      `[@db:workspaceDb:createWorkspace] Successfully created workspace: ${data.name}, type: ${workspace_type}${selectedTeamId ? `, team: ${selectedTeamId}` : ''}`,
+    );
     return { success: true, data };
   } catch (error: any) {
     console.log(`[@db:workspaceDb:createWorkspace] CATCH ERROR: ${error.message}`);
@@ -155,11 +213,113 @@ export async function setDefaultWorkspace(id: string): Promise<DbResponse<null>>
   }
 }
 
+/**
+ * Update active workspace in the current user's profile
+ * @param workspaceId - ID of the workspace to set as active, null for default (show everything)
+ */
+export async function updateActiveWorkspace(workspaceId: string | null): Promise<DbResponse<null>> {
+  try {
+    const cookieStore = await cookies();
+    const supabase = await createClient(cookieStore);
+
+    // Get current user
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError) {
+      console.log(
+        `[@db:workspaceDb:updateActiveWorkspace] ERROR getting user: ${userError.message}`,
+      );
+      return { success: false, error: userError.message };
+    }
+
+    if (!userData?.user?.id) {
+      console.log(`[@db:workspaceDb:updateActiveWorkspace] ERROR: No authenticated user found`);
+      return { success: false, error: 'No authenticated user found' };
+    }
+
+    // Update the active_workspace field in the user's profile
+    const { error } = await supabase
+      .from('profiles')
+      .update({ active_workspace: workspaceId })
+      .eq('id', userData.user.id);
+
+    if (error) {
+      console.log(`[@db:workspaceDb:updateActiveWorkspace] ERROR: ${error.message}`);
+      return { success: false, error: error.message };
+    }
+
+    console.log(
+      `[@db:workspaceDb:updateActiveWorkspace] Successfully updated active workspace to ${
+        workspaceId || 'default (null)'
+      }`,
+    );
+    return { success: true, data: null };
+  } catch (error: any) {
+    console.log(`[@db:workspaceDb:updateActiveWorkspace] CATCH ERROR: ${error.message}`);
+    return {
+      success: false,
+      error: error.message || 'Failed to update active workspace',
+    };
+  }
+}
+
+/**
+ * Get the active workspace ID from the current user's profile
+ * @returns The active workspace ID or null if using default
+ */
+export async function getCurrentUserActiveWorkspace(): Promise<DbResponse<string | null>> {
+  try {
+    const cookieStore = await cookies();
+    const supabase = await createClient(cookieStore);
+
+    // Get current user
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError) {
+      console.log(
+        `[@db:workspaceDb:getCurrentUserActiveWorkspace] ERROR getting user: ${userError.message}`,
+      );
+      return { success: false, error: userError.message, data: null };
+    }
+
+    if (!userData?.user?.id) {
+      console.log(
+        `[@db:workspaceDb:getCurrentUserActiveWorkspace] ERROR: No authenticated user found`,
+      );
+      return { success: false, error: 'No authenticated user found', data: null };
+    }
+
+    // Get the user's profile to find the active workspace
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('active_workspace')
+      .eq('id', userData.user.id)
+      .single();
+
+    if (error) {
+      console.log(`[@db:workspaceDb:getCurrentUserActiveWorkspace] ERROR: ${error.message}`);
+      return { success: false, error: error.message, data: null };
+    }
+
+    return {
+      success: true,
+      data: data.active_workspace,
+    };
+  } catch (error: any) {
+    console.log(`[@db:workspaceDb:getCurrentUserActiveWorkspace] CATCH ERROR: ${error.message}`);
+    return {
+      success: false,
+      error: error.message || 'Failed to get active workspace',
+      data: null,
+    };
+  }
+}
+
 const workspaceDb = {
   getWorkspacesForCurrentUser,
   createWorkspace,
   deleteWorkspace,
   setDefaultWorkspace,
+  updateActiveWorkspace,
+  getCurrentUserActiveWorkspace,
 };
 
 export default workspaceDb;

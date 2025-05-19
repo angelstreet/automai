@@ -2,8 +2,10 @@
 
 import { revalidatePath } from 'next/cache';
 import { cache } from 'react';
+import { cookies } from 'next/headers';
 
 import workspaceDb from '@/lib/db/workspaceDb';
+import { createClient } from '@/lib/supabase/server';
 import { DbResponse } from '@/lib/utils/commonUtils';
 import { Workspace } from '@/types/component/workspaceComponentType';
 
@@ -69,15 +71,87 @@ export const getWorkspaces = cache(async (): Promise<DbResponse<Workspace[]>> =>
 });
 
 /**
+ * Get the active workspace from the user's profile
+ */
+export const getActiveWorkspace = cache(async (): Promise<DbResponse<string | null>> => {
+  console.log('[@action:workspace:getActiveWorkspace] Getting active workspace from profile');
+
+  try {
+    const result = await workspaceDb.getCurrentUserActiveWorkspace();
+
+    if (result.success) {
+      console.log(
+        `[@action:workspace:getActiveWorkspace] Active workspace: ${result.data || 'default (null)'}`,
+      );
+    } else {
+      console.log(`[@action:workspace:getActiveWorkspace] ERROR: ${result.error}`);
+    }
+
+    return result;
+  } catch (error: any) {
+    console.error('[@action:workspace:getActiveWorkspace] Unexpected error:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to get active workspace',
+    };
+  }
+});
+
+/**
+ * Get all teams the current user belongs to
+ */
+export const getUserTeams = cache(async (): Promise<DbResponse<any[]>> => {
+  console.log('[@action:workspace:getUserTeams] Getting user teams');
+
+  try {
+    // Get current user's ID
+    const cookieStore = await cookies();
+    const supabase = await createClient(cookieStore);
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !userData?.user?.id) {
+      console.log('[@action:workspace:getUserTeams] No authenticated user found');
+      return {
+        success: false,
+        error: 'No authenticated user found',
+        data: [],
+      };
+    }
+
+    // Import teamDb dynamically to avoid circular dependencies
+    const { getUserTeams } = await import('@/lib/db/teamDb');
+    const result = await getUserTeams(userData.user.id, cookieStore);
+
+    if (result.success) {
+      console.log(`[@action:workspace:getUserTeams] Found ${result.data?.length || 0} teams`);
+    } else {
+      console.log(`[@action:workspace:getUserTeams] ERROR: ${result.error}`);
+    }
+
+    return result;
+  } catch (error: any) {
+    console.error('[@action:workspace:getUserTeams] Unexpected error:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to get user teams',
+      data: [],
+    };
+  }
+});
+
+/**
  * Create a new workspace
  */
 export async function addWorkspace(
   name: string,
   description?: string,
+  workspace_type: 'private' | 'team' = 'private',
 ): Promise<DbResponse<Workspace>> {
-  console.log(`[@action:workspace:addWorkspace] Creating workspace: ${name}`);
+  console.log(
+    `[@action:workspace:addWorkspace] Creating workspace: ${name}, type: ${workspace_type}`,
+  );
 
-  const result = await workspaceDb.createWorkspace(name, description);
+  const result = await workspaceDb.createWorkspace(name, description, workspace_type);
 
   if (result.success) {
     console.log(`[@action:workspace:addWorkspace] Successfully created workspace: ${name}`);
@@ -128,6 +202,30 @@ export async function makeDefaultWorkspace(id: string): Promise<DbResponse<null>
     revalidatePath('/');
   } else {
     console.log(`[@action:workspace:makeDefaultWorkspace] ERROR: ${result.error}`);
+  }
+
+  return result;
+}
+
+/**
+ * Set active workspace for the current user's profile
+ * Setting to null means using the default (show everything)
+ */
+export async function setActiveWorkspace(workspaceId: string | null): Promise<DbResponse<null>> {
+  console.log(
+    `[@action:workspace:setActiveWorkspace] Setting active workspace: ${workspaceId || 'default (null)'}`,
+  );
+
+  const result = await workspaceDb.updateActiveWorkspace(workspaceId);
+
+  if (result.success) {
+    console.log(
+      `[@action:workspace:setActiveWorkspace] Successfully set active workspace: ${workspaceId || 'default (null)'}`,
+    );
+    // No need to invalidate workspace cache as this only affects the profile
+    revalidatePath('/');
+  } else {
+    console.log(`[@action:workspace:setActiveWorkspace] ERROR: ${result.error}`);
   }
 
   return result;

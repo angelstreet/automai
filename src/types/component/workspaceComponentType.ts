@@ -11,6 +11,8 @@ export type Workspace = {
   is_default: boolean;
   created_at: string;
   updated_at: string;
+  workspace_type?: 'private' | 'team' | 'default';
+  team_id?: string | null;
 };
 
 export type WorkspaceMapping = {

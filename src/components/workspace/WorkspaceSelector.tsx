@@ -1,13 +1,15 @@
 'use client';
 
-import { Check, ChevronDown, Home, Plus, Star, Trash } from 'lucide-react';
+import { Check, ChevronDown, Home, Plus, Star, Trash, Users, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import {
   addWorkspace,
+  getActiveWorkspace,
   getWorkspaces,
   makeDefaultWorkspace,
   removeWorkspace,
+  setActiveWorkspace as updateActiveWorkspace,
 } from '@/app/actions/workspaceAction';
 import {
   AlertDialog,
@@ -38,36 +40,82 @@ import {
 } from '@/components/shadcn/dropdown-menu';
 import { Input } from '@/components/shadcn/input';
 import { Label } from '@/components/shadcn/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/shadcn/select';
 import { Workspace } from '@/types/component/workspaceComponentType';
 
 export default function WorkspaceSelector({ className = '' }) {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [activeWorkspace, setActiveWorkspace] = useState<Workspace | null>(null);
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
   const [newWorkspaceDescription, setNewWorkspaceDescription] = useState('');
+  const [newWorkspaceType, setNewWorkspaceType] = useState<'private' | 'team'>('private');
   const [deleteWorkspaceId, setDeleteWorkspaceId] = useState<string | null>(null);
   const [deleteWorkspaceName, setDeleteWorkspaceName] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchWorkspaces = async () => {
+    const fetchData = async () => {
       setIsLoading(true);
-      const result = await getWorkspaces();
-      if (result.success && result.data) {
-        setWorkspaces(result.data);
-        const defaultWorkspace = result.data.find((w) => w.is_default);
-        if (defaultWorkspace) {
-          setActiveWorkspace(defaultWorkspace);
-        } else if (result.data.length > 0) {
-          setActiveWorkspace(result.data[0]);
+      // Get workspaces and active workspace ID in parallel
+      const [workspacesResult, activeWorkspaceResult] = await Promise.all([
+        getWorkspaces(),
+        getActiveWorkspace(),
+      ]);
+
+      if (workspacesResult.success && workspacesResult.data) {
+        setWorkspaces(workspacesResult.data);
+
+        // Store the active workspace ID from profile
+        if (activeWorkspaceResult.success && activeWorkspaceResult.data !== undefined) {
+          setActiveWorkspaceId(activeWorkspaceResult.data);
+
+          if (activeWorkspaceResult.data) {
+            // Find the active workspace from ID
+            const active = workspacesResult.data.find((w) => w.id === activeWorkspaceResult.data);
+            if (active) {
+              setActiveWorkspace(active);
+            }
+          } else {
+            // If active workspace is null, we're in "default" mode (show everything)
+            setActiveWorkspace(null);
+          }
+        } else {
+          // Fallback to default workspace if we couldn't get the active workspace
+          const defaultWorkspace = workspacesResult.data.find((w) => w.is_default);
+          if (defaultWorkspace) {
+            setActiveWorkspace(defaultWorkspace);
+          } else if (workspacesResult.data.length > 0) {
+            setActiveWorkspace(workspacesResult.data[0]);
+          }
         }
       }
+
       setIsLoading(false);
     };
 
-    fetchWorkspaces();
+    fetchData();
   }, []);
+
+  const handleSetActiveWorkspace = async (workspace: Workspace | null) => {
+    // Update UI immediately for responsiveness
+    setActiveWorkspace(workspace);
+
+    // Update the active workspace in the profile
+    const workspaceId = workspace?.id || null;
+    setActiveWorkspaceId(workspaceId);
+
+    // Save to database
+    await updateActiveWorkspace(workspaceId);
+  };
 
   const handleMakeDefault = async (id: string) => {
     const result = await makeDefaultWorkspace(id);
@@ -86,15 +134,33 @@ export default function WorkspaceSelector({ className = '' }) {
   };
 
   const handleCreateWorkspace = async () => {
-    if (!newWorkspaceName.trim()) return;
+    setError(null);
 
-    const result = await addWorkspace(newWorkspaceName, newWorkspaceDescription || undefined);
+    if (!newWorkspaceName.trim()) {
+      setError('Workspace name is required');
+      return;
+    }
 
-    if (result.success && result.data) {
-      setWorkspaces([...workspaces, result.data]);
-      setNewWorkspaceName('');
-      setNewWorkspaceDescription('');
-      setCreateOpen(false);
+    try {
+      const result = await addWorkspace(
+        newWorkspaceName,
+        newWorkspaceDescription || undefined,
+        newWorkspaceType,
+      );
+
+      if (result.success && result.data) {
+        setWorkspaces([...workspaces, result.data]);
+        setNewWorkspaceName('');
+        setNewWorkspaceDescription('');
+        setNewWorkspaceType('private');
+        setCreateOpen(false);
+      } else {
+        setError(result.error || 'Failed to create workspace');
+        console.error('Error creating workspace:', result.error);
+      }
+    } catch (err: any) {
+      setError(err.message || 'An unexpected error occurred');
+      console.error('Exception creating workspace:', err);
     }
   };
 
@@ -107,16 +173,9 @@ export default function WorkspaceSelector({ className = '' }) {
       const updatedWorkspaces = workspaces.filter((w) => w.id !== deleteWorkspaceId);
       setWorkspaces(updatedWorkspaces);
 
-      // If we deleted the active workspace, switch to the default
+      // If we deleted the active workspace, switch to default mode (null)
       if (activeWorkspace?.id === deleteWorkspaceId) {
-        const defaultWorkspace = updatedWorkspaces.find((w) => w.is_default);
-        if (defaultWorkspace) {
-          setActiveWorkspace(defaultWorkspace);
-        } else if (updatedWorkspaces.length > 0) {
-          setActiveWorkspace(updatedWorkspaces[0]);
-        } else {
-          setActiveWorkspace(null);
-        }
+        handleSetActiveWorkspace(null);
       }
 
       setDeleteWorkspaceId(null);
@@ -129,6 +188,12 @@ export default function WorkspaceSelector({ className = '' }) {
     setDeleteWorkspaceName(workspace.name);
   };
 
+  const getWorkspaceIcon = (workspace: Workspace) => {
+    if (workspace.is_default) return <Home className="h-4 w-4" />;
+    if (workspace.workspace_type === 'team') return <Users className="h-4 w-4" />;
+    return <User className="h-4 w-4" />;
+  };
+
   return (
     <>
       <DropdownMenu>
@@ -138,8 +203,21 @@ export default function WorkspaceSelector({ className = '' }) {
               'Loading workspaces...'
             ) : (
               <>
-                {activeWorkspace?.is_default && <Home className="h-4 w-4" />}
-                {activeWorkspace?.name || 'Select Workspace'}
+                {activeWorkspace ? (
+                  <>
+                    {activeWorkspace.is_default && <Home className="h-4 w-4" />}
+                    {activeWorkspace.workspace_type === 'team' && <Users className="h-4 w-4" />}
+                    {!activeWorkspace.is_default && activeWorkspace.workspace_type !== 'team' && (
+                      <User className="h-4 w-4" />
+                    )}
+                    {activeWorkspace.name}
+                  </>
+                ) : (
+                  <>
+                    <Home className="h-4 w-4" />
+                    Default (All)
+                  </>
+                )}
                 <ChevronDown className="h-4 w-4" />
               </>
             )}
@@ -148,16 +226,29 @@ export default function WorkspaceSelector({ className = '' }) {
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel>Your Workspaces</DropdownMenuLabel>
           <DropdownMenuSeparator />
+          {/* Default option - shows everything */}
+          <DropdownMenuItem
+            key="default"
+            className="flex items-center justify-between cursor-pointer"
+            onClick={() => handleSetActiveWorkspace(null)}
+          >
+            <span className="flex items-center gap-2">
+              <Home className="h-4 w-4" />
+              Default (All)
+              {activeWorkspaceId === null && <Check className="h-4 w-4 ml-2" />}
+            </span>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           {workspaces.map((workspace) => (
             <DropdownMenuItem
               key={workspace.id}
               className="flex items-center justify-between cursor-pointer"
-              onClick={() => setActiveWorkspace(workspace)}
+              onClick={() => handleSetActiveWorkspace(workspace)}
             >
               <span className="flex items-center gap-2">
-                {workspace.is_default && <Home className="h-4 w-4" />}
+                {getWorkspaceIcon(workspace)}
                 {workspace.name}
-                {activeWorkspace?.id === workspace.id && <Check className="h-4 w-4 ml-2" />}
+                {activeWorkspaceId === workspace.id && <Check className="h-4 w-4 ml-2" />}
               </span>
               <span className="flex">
                 {!workspace.is_default && (
@@ -168,7 +259,7 @@ export default function WorkspaceSelector({ className = '' }) {
                         e.stopPropagation();
                         handleMakeDefault(workspace.id);
                       }}
-                      title="Make default"
+                      aria-label="Make default"
                     />
                     <Trash
                       className="h-4 w-4 text-muted-foreground hover:text-destructive cursor-pointer"
@@ -176,7 +267,7 @@ export default function WorkspaceSelector({ className = '' }) {
                         e.stopPropagation();
                         confirmDelete(workspace);
                       }}
-                      title="Delete workspace"
+                      aria-label="Delete workspace"
                     />
                   </>
                 )}
@@ -224,8 +315,37 @@ export default function WorkspaceSelector({ className = '' }) {
                 className="col-span-3"
               />
             </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="type" className="text-right">
+                Type
+              </Label>
+              <Select
+                value={newWorkspaceType}
+                onValueChange={(value) => setNewWorkspaceType(value as 'private' | 'team')}
+              >
+                <SelectTrigger id="type" className="col-span-3">
+                  <SelectValue placeholder="Select workspace type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="private">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      <span>Private Workspace</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="team">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      <span>Team Workspace</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {/* Removed team selection - will use active_team from profile automatically */}
           </div>
           <DialogFooter>
+            {error && <p className="text-sm text-destructive mb-2 w-full text-left">{error}</p>}
             <Button variant="outline" onClick={() => setCreateOpen(false)}>
               Cancel
             </Button>
