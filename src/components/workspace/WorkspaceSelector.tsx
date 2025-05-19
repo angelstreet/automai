@@ -1,14 +1,12 @@
 'use client';
 
-import { Check, ChevronDown, Home, Plus, Star, Trash, Users, User } from 'lucide-react';
+import { Check, ChevronDown, Home, Plus, Trash, Users, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import {
   addWorkspace,
   getActiveWorkspace,
-  getUserTeams,
   getWorkspaces,
-  makeDefaultWorkspace,
   removeWorkspace,
   setActiveWorkspace as updateActiveWorkspace,
 } from '@/app/actions/workspaceAction';
@@ -59,25 +57,18 @@ export default function WorkspaceSelector({ className = '' }) {
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
   const [newWorkspaceDescription, setNewWorkspaceDescription] = useState('');
   const [newWorkspaceType, setNewWorkspaceType] = useState<'private' | 'team'>('private');
-  const [teams, setTeams] = useState<any[]>([]);
-  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [deleteWorkspaceId, setDeleteWorkspaceId] = useState<string | null>(null);
   const [deleteWorkspaceName, setDeleteWorkspaceName] = useState('');
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
-      // Get workspaces, active workspace ID, and teams in parallel
-      const [workspacesResult, activeWorkspaceResult, teamsResult] = await Promise.all([
+      // Get workspaces and active workspace ID in parallel
+      const [workspacesResult, activeWorkspaceResult] = await Promise.all([
         getWorkspaces(),
         getActiveWorkspace(),
-        getUserTeams(),
       ]);
-
-      if (teamsResult.success && teamsResult.data) {
-        setTeams(teamsResult.data);
-      }
 
       if (workspacesResult.success && workspacesResult.data) {
         setWorkspaces(workspacesResult.data);
@@ -96,14 +87,8 @@ export default function WorkspaceSelector({ className = '' }) {
             // If active workspace is null, we're in "default" mode (show everything)
             setActiveWorkspace(null);
           }
-        } else {
-          // Fallback to default workspace if we couldn't get the active workspace
-          const defaultWorkspace = workspacesResult.data.find((w) => w.is_default);
-          if (defaultWorkspace) {
-            setActiveWorkspace(defaultWorkspace);
-          } else if (workspacesResult.data.length > 0) {
-            setActiveWorkspace(workspacesResult.data[0]);
-          }
+        } else if (workspacesResult.data.length > 0) {
+          setActiveWorkspace(workspacesResult.data[0]);
         }
       }
 
@@ -125,22 +110,6 @@ export default function WorkspaceSelector({ className = '' }) {
     await updateActiveWorkspace(workspaceId);
   };
 
-  const handleMakeDefault = async (id: string) => {
-    const result = await makeDefaultWorkspace(id);
-    if (result.success) {
-      // Update local state
-      const updatedWorkspaces = workspaces.map((w) => ({
-        ...w,
-        is_default: w.id === id,
-      }));
-      setWorkspaces(updatedWorkspaces);
-      const newDefault = updatedWorkspaces.find((w) => w.id === id);
-      if (newDefault) {
-        setActiveWorkspace(newDefault);
-      }
-    }
-  };
-
   const handleCreateWorkspace = async () => {
     setError(null);
 
@@ -154,7 +123,6 @@ export default function WorkspaceSelector({ className = '' }) {
         newWorkspaceName,
         newWorkspaceDescription || undefined,
         newWorkspaceType,
-        selectedTeamId || undefined,
       );
 
       if (result.success && result.data) {
@@ -162,7 +130,6 @@ export default function WorkspaceSelector({ className = '' }) {
         setNewWorkspaceName('');
         setNewWorkspaceDescription('');
         setNewWorkspaceType('private');
-        setSelectedTeamId(null);
         setCreateOpen(false);
       } else {
         setError(result.error || 'Failed to create workspace');
@@ -199,8 +166,7 @@ export default function WorkspaceSelector({ className = '' }) {
   };
 
   const getWorkspaceIcon = (workspace: Workspace) => {
-    if (workspace.workspace_type === 'default' || workspace.is_default)
-      return <Home className="h-4 w-4" />;
+    if (workspace.workspace_type === 'default') return <Home className="h-4 w-4" />;
     if (workspace.workspace_type === 'team') return <Users className="h-4 w-4" />;
     return <User className="h-4 w-4" />;
   };
@@ -258,26 +224,14 @@ export default function WorkspaceSelector({ className = '' }) {
                 {activeWorkspaceId === workspace.id && <Check className="h-4 w-4 ml-2" />}
               </span>
               <span className="flex">
-                {!workspace.is_default && (
-                  <>
-                    <Star
-                      className="h-4 w-4 text-muted-foreground hover:text-primary mr-2 cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleMakeDefault(workspace.id);
-                      }}
-                      aria-label="Make default"
-                    />
-                    <Trash
-                      className="h-4 w-4 text-muted-foreground hover:text-destructive cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        confirmDelete(workspace);
-                      }}
-                      aria-label="Delete workspace"
-                    />
-                  </>
-                )}
+                <Trash
+                  className="h-4 w-4 text-muted-foreground hover:text-destructive cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    confirmDelete(workspace);
+                  }}
+                  aria-label="Delete workspace"
+                />
               </span>
             </DropdownMenuItem>
           ))}
@@ -349,28 +303,6 @@ export default function WorkspaceSelector({ className = '' }) {
                 </SelectContent>
               </Select>
             </div>
-
-            {/* Team selection for team workspaces */}
-            {newWorkspaceType === 'team' && (
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="team" className="text-right">
-                  Team
-                </Label>
-                <Select value={selectedTeamId || ''} onValueChange={setSelectedTeamId}>
-                  <SelectTrigger id="team" className="col-span-3">
-                    <SelectValue placeholder="Select team (or use active team)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Use Active Team</SelectItem>
-                    {teams.map((team) => (
-                      <SelectItem key={team.id} value={team.id}>
-                        {team.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
           </div>
           <DialogFooter>
             {error && <p className="text-sm text-destructive mb-2 w-full text-left">{error}</p>}
