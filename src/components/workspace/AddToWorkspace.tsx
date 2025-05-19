@@ -133,7 +133,15 @@ export default function AddToWorkspace({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        setIsOpen(open);
+        if (open && onClose) {
+          onClose();
+        }
+      }}
+    >
       <DialogTrigger asChild>
         <span onClick={stopPropagation}>
           {trigger || (
@@ -145,7 +153,7 @@ export default function AddToWorkspace({
         </span>
       </DialogTrigger>
 
-      <DialogContent onClick={stopPropagation} className="max-w-md">
+      <DialogContent onClick={stopPropagation} className="w-[380px]">
         <DialogHeader>
           <DialogTitle>Workspaces</DialogTitle>
           <DialogDescription>Select workspaces for this {itemType}.</DialogDescription>

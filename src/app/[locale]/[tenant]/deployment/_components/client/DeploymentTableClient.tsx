@@ -90,6 +90,20 @@ export function DeploymentTableClient({
     };
 
     fetchWorkspaceData();
+
+    // Listen for workspace change events
+    const handleWorkspaceChange = () => {
+      console.log('[@component:DeploymentTableClient] Workspace change detected, refreshing data');
+      fetchWorkspaceData();
+    };
+
+    // Add event listener for workspace changes
+    window.addEventListener('WORKSPACE_CHANGED', handleWorkspaceChange);
+
+    // Cleanup function
+    return () => {
+      window.removeEventListener('WORKSPACE_CHANGED', handleWorkspaceChange);
+    };
   }, []);
 
   // Filter deployments whenever displayDeployments or active workspace changes
@@ -126,6 +140,9 @@ export function DeploymentTableClient({
       } else {
         // If no active workspace, show all deployments
         setFilteredDeployments(displayDeployments);
+        console.log(
+          `[@component:DeploymentTableClient] No active workspace, showing all ${displayDeployments.length} deployments`,
+        );
       }
     };
 

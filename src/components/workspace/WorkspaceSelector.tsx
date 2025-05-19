@@ -46,6 +46,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/shadcn/select';
+import { notifyWorkspaceChange } from '@/lib/utils/workspaceUtils';
 import { Workspace } from '@/types/component/workspaceComponentType';
 
 export type { Workspace };
@@ -110,6 +111,9 @@ export default function WorkspaceSelector({ className = '' }) {
 
     // Save to database
     await updateActiveWorkspace(workspaceId);
+
+    // Notify components that workspace has changed
+    notifyWorkspaceChange();
   };
 
   const handleCreateWorkspace = async () => {
