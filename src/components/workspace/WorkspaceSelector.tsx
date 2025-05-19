@@ -7,6 +7,7 @@ import {
   addWorkspace,
   getActiveWorkspace,
   getWorkspaces,
+  notifyWorkspaceChange,
   removeWorkspace,
   setActiveWorkspace as updateActiveWorkspace,
 } from '@/app/actions/workspaceAction';
@@ -46,7 +47,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/shadcn/select';
-import { notifyWorkspaceChange } from '@/lib/utils/workspaceUtils';
 import { Workspace } from '@/types/component/workspaceComponentType';
 
 export type { Workspace };
