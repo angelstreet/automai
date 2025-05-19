@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import {
   addWorkspace,
   getActiveWorkspace,
+  getUserTeams,
   getWorkspaces,
   makeDefaultWorkspace,
   removeWorkspace,
@@ -58,6 +59,8 @@ export default function WorkspaceSelector({ className = '' }) {
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
   const [newWorkspaceDescription, setNewWorkspaceDescription] = useState('');
   const [newWorkspaceType, setNewWorkspaceType] = useState<'private' | 'team'>('private');
+  const [teams, setTeams] = useState<any[]>([]);
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [deleteWorkspaceId, setDeleteWorkspaceId] = useState<string | null>(null);
   const [deleteWorkspaceName, setDeleteWorkspaceName] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -65,11 +68,16 @@ export default function WorkspaceSelector({ className = '' }) {
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
-      // Get workspaces and active workspace ID in parallel
-      const [workspacesResult, activeWorkspaceResult] = await Promise.all([
+      // Get workspaces, active workspace ID, and teams in parallel
+      const [workspacesResult, activeWorkspaceResult, teamsResult] = await Promise.all([
         getWorkspaces(),
         getActiveWorkspace(),
+        getUserTeams(),
       ]);
+
+      if (teamsResult.success && teamsResult.data) {
+        setTeams(teamsResult.data);
+      }
 
       if (workspacesResult.success && workspacesResult.data) {
         setWorkspaces(workspacesResult.data);
@@ -146,6 +154,7 @@ export default function WorkspaceSelector({ className = '' }) {
         newWorkspaceName,
         newWorkspaceDescription || undefined,
         newWorkspaceType,
+        selectedTeamId || undefined,
       );
 
       if (result.success && result.data) {
@@ -153,6 +162,7 @@ export default function WorkspaceSelector({ className = '' }) {
         setNewWorkspaceName('');
         setNewWorkspaceDescription('');
         setNewWorkspaceType('private');
+        setSelectedTeamId(null);
         setCreateOpen(false);
       } else {
         setError(result.error || 'Failed to create workspace');
@@ -189,7 +199,8 @@ export default function WorkspaceSelector({ className = '' }) {
   };
 
   const getWorkspaceIcon = (workspace: Workspace) => {
-    if (workspace.is_default) return <Home className="h-4 w-4" />;
+    if (workspace.workspace_type === 'default' || workspace.is_default)
+      return <Home className="h-4 w-4" />;
     if (workspace.workspace_type === 'team') return <Users className="h-4 w-4" />;
     return <User className="h-4 w-4" />;
   };
@@ -205,11 +216,7 @@ export default function WorkspaceSelector({ className = '' }) {
               <>
                 {activeWorkspace ? (
                   <>
-                    {activeWorkspace.is_default && <Home className="h-4 w-4" />}
-                    {activeWorkspace.workspace_type === 'team' && <Users className="h-4 w-4" />}
-                    {!activeWorkspace.is_default && activeWorkspace.workspace_type !== 'team' && (
-                      <User className="h-4 w-4" />
-                    )}
+                    {getWorkspaceIcon(activeWorkspace)}
                     {activeWorkspace.name}
                   </>
                 ) : (
@@ -342,7 +349,28 @@ export default function WorkspaceSelector({ className = '' }) {
                 </SelectContent>
               </Select>
             </div>
-            {/* Removed team selection - will use active_team from profile automatically */}
+
+            {/* Team selection for team workspaces */}
+            {newWorkspaceType === 'team' && (
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="team" className="text-right">
+                  Team
+                </Label>
+                <Select value={selectedTeamId || ''} onValueChange={setSelectedTeamId}>
+                  <SelectTrigger id="team" className="col-span-3">
+                    <SelectValue placeholder="Select team (or use active team)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Use Active Team</SelectItem>
+                    {teams.map((team) => (
+                      <SelectItem key={team.id} value={team.id}>
+                        {team.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           <DialogFooter>
             {error && <p className="text-sm text-destructive mb-2 w-full text-left">{error}</p>}

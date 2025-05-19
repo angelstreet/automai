@@ -146,12 +146,13 @@ export async function addWorkspace(
   name: string,
   description?: string,
   workspace_type: 'private' | 'team' = 'private',
+  team_id?: string,
 ): Promise<DbResponse<Workspace>> {
   console.log(
-    `[@action:workspace:addWorkspace] Creating workspace: ${name}, type: ${workspace_type}`,
+    `[@action:workspace:addWorkspace] Creating workspace: ${name}, type: ${workspace_type}${team_id ? `, team: ${team_id}` : ''}`,
   );
 
-  const result = await workspaceDb.createWorkspace(name, description, workspace_type);
+  const result = await workspaceDb.createWorkspace(name, description, workspace_type, team_id);
 
   if (result.success) {
     console.log(`[@action:workspace:addWorkspace] Successfully created workspace: ${name}`);

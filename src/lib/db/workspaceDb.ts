@@ -11,11 +11,7 @@ export async function getWorkspacesForCurrentUser(): Promise<DbResponse<Workspac
     const cookieStore = await cookies();
     const supabase = await createClient(cookieStore);
 
-    const { data, error } = await supabase
-      .from('workspaces')
-      .select('*')
-      .order('is_default', { ascending: false })
-      .order('name');
+    const { data, error } = await supabase.from('workspaces').select('*').order('name');
 
     if (error) {
       console.log(`[@db:workspaceDb:getWorkspacesForCurrentUser] ERROR: ${error.message}`);
@@ -134,25 +130,6 @@ export async function deleteWorkspace(id: string): Promise<DbResponse<null>> {
     const cookieStore = await cookies();
     const supabase = await createClient(cookieStore);
 
-    // Check if this is the default workspace
-    const { data: workspace, error: fetchError } = await supabase
-      .from('workspaces')
-      .select('is_default')
-      .eq('id', id)
-      .single();
-
-    if (fetchError) {
-      console.log(`[@db:workspaceDb:deleteWorkspace] ERROR: ${fetchError.message}`);
-      return { success: false, error: fetchError.message };
-    }
-
-    if (workspace.is_default) {
-      return {
-        success: false,
-        error: 'Cannot delete the default workspace',
-      };
-    }
-
     const { error } = await supabase.from('workspaces').delete().eq('id', id);
 
     if (error) {
@@ -167,48 +144,6 @@ export async function deleteWorkspace(id: string): Promise<DbResponse<null>> {
     return {
       success: false,
       error: error.message || 'Failed to delete workspace',
-    };
-  }
-}
-
-/**
- * Set a workspace as default
- */
-export async function setDefaultWorkspace(id: string): Promise<DbResponse<null>> {
-  try {
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
-
-    // First, set all workspaces to non-default
-    const { error: resetError } = await supabase
-      .from('workspaces')
-      .update({ is_default: false })
-      .neq('id', 'non-existent-id'); // This will update all rows
-
-    if (resetError) {
-      console.log(
-        `[@db:workspaceDb:setDefaultWorkspace] ERROR resetting defaults: ${resetError.message}`,
-      );
-      return { success: false, error: resetError.message };
-    }
-
-    // Then set the selected workspace as default
-    const { error } = await supabase.from('workspaces').update({ is_default: true }).eq('id', id);
-
-    if (error) {
-      console.log(`[@db:workspaceDb:setDefaultWorkspace] ERROR setting default: ${error.message}`);
-      return { success: false, error: error.message };
-    }
-
-    console.log(
-      `[@db:workspaceDb:setDefaultWorkspace] Successfully set workspace ${id} as default`,
-    );
-    return { success: true, data: null };
-  } catch (error: any) {
-    console.log(`[@db:workspaceDb:setDefaultWorkspace] CATCH ERROR: ${error.message}`);
-    return {
-      success: false,
-      error: error.message || 'Failed to set default workspace',
     };
   }
 }
@@ -313,13 +248,94 @@ export async function getCurrentUserActiveWorkspace(): Promise<DbResponse<string
   }
 }
 
+/**
+ * Set a workspace as the default one
+ * @param id - ID of the workspace to set as default
+ */
+export async function setDefaultWorkspace(id: string): Promise<DbResponse<null>> {
+  try {
+    const cookieStore = await cookies();
+    const supabase = await createClient(cookieStore);
+
+    // Get current user
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError) {
+      console.log(`[@db:workspaceDb:setDefaultWorkspace] ERROR getting user: ${userError.message}`);
+      return { success: false, error: userError.message };
+    }
+
+    if (!userData?.user?.id) {
+      console.log(`[@db:workspaceDb:setDefaultWorkspace] ERROR: No authenticated user found`);
+      return { success: false, error: 'No authenticated user found' };
+    }
+
+    // Get the workspace to ensure it belongs to the current user
+    const { data: workspace, error: workspaceError } = await supabase
+      .from('workspaces')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (workspaceError) {
+      console.log(`[@db:workspaceDb:setDefaultWorkspace] ERROR: ${workspaceError.message}`);
+      return { success: false, error: workspaceError.message };
+    }
+
+    if (workspace.profile_id !== userData.user.id) {
+      console.log(
+        `[@db:workspaceDb:setDefaultWorkspace] ERROR: Not authorized to modify this workspace`,
+      );
+      return { success: false, error: 'Not authorized to modify this workspace' };
+    }
+
+    // First, clear the default flag from all workspaces for this profile
+    const { error: clearError } = await supabase
+      .from('workspaces')
+      .update({
+        is_default: false,
+        workspace_type: (workspace_type) =>
+          workspace_type !== 'default' ? workspace_type : 'private',
+      })
+      .eq('profile_id', userData.user.id);
+
+    if (clearError) {
+      console.log(
+        `[@db:workspaceDb:setDefaultWorkspace] ERROR clearing defaults: ${clearError.message}`,
+      );
+      return { success: false, error: clearError.message };
+    }
+
+    // Then set the new default
+    const { error: updateError } = await supabase
+      .from('workspaces')
+      .update({ is_default: true, workspace_type: 'default' })
+      .eq('id', id);
+
+    if (updateError) {
+      console.log(`[@db:workspaceDb:setDefaultWorkspace] ERROR updating: ${updateError.message}`);
+      return { success: false, error: updateError.message };
+    }
+
+    console.log(
+      `[@db:workspaceDb:setDefaultWorkspace] Successfully set workspace ${id} as default`,
+    );
+    return { success: true, data: null };
+  } catch (error: any) {
+    console.log(`[@db:workspaceDb:setDefaultWorkspace] CATCH ERROR: ${error.message}`);
+    return {
+      success: false,
+      error: error.message || 'Failed to set default workspace',
+    };
+  }
+}
+
 const workspaceDb = {
   getWorkspacesForCurrentUser,
   createWorkspace,
   deleteWorkspace,
-  setDefaultWorkspace,
   updateActiveWorkspace,
   getCurrentUserActiveWorkspace,
+  setDefaultWorkspace,
 };
 
 export default workspaceDb;
