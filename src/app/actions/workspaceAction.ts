@@ -1,11 +1,10 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { cache } from 'react';
 import { cookies } from 'next/headers';
+import { cache } from 'react';
 
 import workspaceDb from '@/lib/db/workspaceDb';
-import { createClient } from '@/lib/supabase/server';
 import { DbResponse } from '@/lib/utils/commonUtils';
 import { Workspace, WorkspaceMapping } from '@/types/component/workspaceComponentType';
 
@@ -104,12 +103,12 @@ export const getUserTeams = cache(async (): Promise<DbResponse<any[]>> => {
   console.log('[@action:workspace:getUserTeams] Getting user teams');
 
   try {
-    // Get current user's ID
     const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
-    const { data: userData, error: userError } = await supabase.auth.getUser();
 
-    if (userError || !userData?.user?.id) {
+    // Get the current user from the db layer to avoid using Supabase directly
+    const { data: profile } = await workspaceDb.getCurrentUserProfile();
+
+    if (!profile || !profile.id) {
       console.log('[@action:workspace:getUserTeams] No authenticated user found');
       return {
         success: false,
@@ -120,7 +119,7 @@ export const getUserTeams = cache(async (): Promise<DbResponse<any[]>> => {
 
     // Import teamDb dynamically to avoid circular dependencies
     const { getUserTeams } = await import('@/lib/db/teamDb');
-    const result = await getUserTeams(userData.user.id, cookieStore);
+    const result = await getUserTeams(profile.id, cookieStore);
 
     if (result.success) {
       console.log(`[@action:workspace:getUserTeams] Found ${result.data?.length || 0} teams`);
@@ -245,52 +244,20 @@ export async function addItemToWorkspace(
   );
 
   try {
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
+    // Call the db layer function to handle the database operation
+    const result = await workspaceDb.addItemToWorkspace(workspaceId, itemType, itemId);
 
-    // Create the mapping object based on item type
-    const mapping: any = {
-      workspace_id: workspaceId,
-    };
-
-    // Add the appropriate item ID field based on type
-    switch (itemType) {
-      case 'deployment':
-        mapping.deployment_id = itemId;
-        break;
-      case 'repository':
-        mapping.repository_id = itemId;
-        break;
-      case 'host':
-        mapping.host_id = itemId;
-        break;
-      case 'config':
-        mapping.config_id = itemId;
-        break;
-      default:
-        throw new Error(`Invalid item type: ${itemType}`);
+    if (result.success) {
+      console.log(
+        `[@action:workspace:addItemToWorkspace] Successfully added ${itemType} to workspace`,
+      );
+      // Revalidate relevant paths
+      revalidatePath('/');
+    } else {
+      console.log(`[@action:workspace:addItemToWorkspace] ERROR: ${result.error}`);
     }
 
-    // Insert the mapping
-    const { data, error } = await supabase
-      .from('workspace_mappings')
-      .insert([mapping])
-      .select()
-      .single();
-
-    if (error) {
-      console.log(`[@action:workspace:addItemToWorkspace] ERROR: ${error.message}`);
-      return { success: false, error: error.message };
-    }
-
-    console.log(
-      `[@action:workspace:addItemToWorkspace] Successfully added ${itemType} to workspace`,
-    );
-
-    // Revalidate relevant paths
-    revalidatePath('/');
-
-    return { success: true, data };
+    return result;
   } catch (error: any) {
     console.error('[@action:workspace:addItemToWorkspace] Unexpected error:', error);
     return {
@@ -313,48 +280,20 @@ export async function removeItemFromWorkspace(
   );
 
   try {
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
+    // Call the db layer function to handle the database operation
+    const result = await workspaceDb.removeItemFromWorkspace(workspaceId, itemType, itemId);
 
-    // Create the query conditions based on item type
-    const conditions: any = {
-      workspace_id: workspaceId,
-    };
-
-    // Add the appropriate item ID condition based on type
-    switch (itemType) {
-      case 'deployment':
-        conditions.deployment_id = itemId;
-        break;
-      case 'repository':
-        conditions.repository_id = itemId;
-        break;
-      case 'host':
-        conditions.host_id = itemId;
-        break;
-      case 'config':
-        conditions.config_id = itemId;
-        break;
-      default:
-        throw new Error(`Invalid item type: ${itemType}`);
+    if (result.success) {
+      console.log(
+        `[@action:workspace:removeItemFromWorkspace] Successfully removed ${itemType} from workspace`,
+      );
+      // Revalidate relevant paths
+      revalidatePath('/');
+    } else {
+      console.log(`[@action:workspace:removeItemFromWorkspace] ERROR: ${result.error}`);
     }
 
-    // Delete the mapping
-    const { error } = await supabase.from('workspace_mappings').delete().match(conditions);
-
-    if (error) {
-      console.log(`[@action:workspace:removeItemFromWorkspace] ERROR: ${error.message}`);
-      return { success: false, error: error.message };
-    }
-
-    console.log(
-      `[@action:workspace:removeItemFromWorkspace] Successfully removed ${itemType} from workspace`,
-    );
-
-    // Revalidate relevant paths
-    revalidatePath('/');
-
-    return { success: true, data: null };
+    return result;
   } catch (error: any) {
     console.error('[@action:workspace:removeItemFromWorkspace] Unexpected error:', error);
     return {

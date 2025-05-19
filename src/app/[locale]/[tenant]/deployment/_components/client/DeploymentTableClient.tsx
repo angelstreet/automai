@@ -15,6 +15,7 @@ import {
 import { useTranslations } from 'next-intl';
 import React, { useState } from 'react';
 
+import { addItemToWorkspace } from '@/app/actions/workspaceAction';
 import { Button } from '@/components/shadcn/button';
 import {
   DropdownMenu,
@@ -22,10 +23,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
+import AddToWorkspace from '@/components/workspace/AddToWorkspace';
 import { getFormattedTime } from '@/lib/utils/deploymentUtils';
 import { Deployment } from '@/types/component/deploymentComponentType';
-import { addItemToWorkspace } from '@/app/actions/workspaceAction';
-import AddToWorkspace from '@/components/workspace/AddToWorkspace';
 
 import DeploymentStatusBadgeClient from './DeploymentStatusBadgeClient';
 
@@ -64,7 +64,7 @@ export function DeploymentTableClient({
   handleOutputClick,
   handleDuplicateClick,
   handleToggleActiveClick,
-  params,
+  params: _params,
 }: DeploymentTableProps & { params: { locale: string; tenant: string } }) {
   const c = useTranslations('common');
   const t = useTranslations('deployment');
@@ -109,9 +109,9 @@ export function DeploymentTableClient({
           scriptFolder: 'N/A', // Placeholder as scriptFolder property does not exist
           startTime: deployment.createdAt || 'N/A', // Corrected property name
           // WebSocket URL and VNC Stream URL will be updated post-run if available
-          websocketUrl: deployment.websocket_url || '',
-          vncStreamUrl: deployment.vnc_stream_url || '',
-          sessionId: deployment.session_id || '',
+          websocketUrl: (deployment as any).websocket_url || '',
+          vncStreamUrl: (deployment as any).vnc_stream_url || '',
+          sessionId: (deployment as any).session_id || '',
         });
         // Use the current URL and append the playwright-run path
         const currentPath = window.location.pathname;
@@ -126,7 +126,7 @@ export function DeploymentTableClient({
     }
   };
 
-  const handleAddToWorkspace = async (deploymentId: string) => {
+  const handleAddToWorkspace = (deploymentId: string) => {
     return async (workspaceId: string) => {
       console.log(
         `[@component:DeploymentTableClient] Adding deployment ${deploymentId} to workspace ${workspaceId}`,
@@ -430,7 +430,6 @@ export function DeploymentTableClient({
                               Duplicate
                             </DropdownMenuItem>
                             <AddToWorkspace
-                              itemId={deployment.id}
                               itemType="deployment"
                               onAddToWorkspace={handleAddToWorkspace(deployment.id)}
                               trigger={

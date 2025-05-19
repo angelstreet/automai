@@ -24,14 +24,12 @@ import {
 import { Workspace } from '@/types/component/workspaceComponentType';
 
 interface AddToWorkspaceProps {
-  itemId: string;
   itemType: 'deployment' | 'repository' | 'host' | 'config'; // Add more types as needed
   onAddToWorkspace: (workspaceId: string) => Promise<void>;
   trigger?: React.ReactNode; // Optional custom trigger
 }
 
 export default function AddToWorkspace({
-  itemId,
   itemType,
   onAddToWorkspace,
   trigger,
@@ -129,7 +127,11 @@ export default function AddToWorkspace({
             <SelectContent
               onPointerDownCapture={stopPropagation}
               onClick={stopPropagation}
-              onSelect={stopPropagation}
+              onSelect={(event) => {
+                if ('stopPropagation' in event) {
+                  event.stopPropagation();
+                }
+              }}
               position="popper"
               className="z-[60]"
             >

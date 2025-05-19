@@ -1,7 +1,8 @@
+import { cookies } from 'next/headers';
+
 import { createClient } from '@/lib/supabase/server';
 import { DbResponse } from '@/lib/utils/commonUtils';
 import { Workspace } from '@/types/component/workspaceComponentType';
-import { cookies } from 'next/headers';
 
 /**
  * Get all workspaces for the current authenticated user
@@ -293,7 +294,7 @@ export async function setDefaultWorkspace(id: string): Promise<DbResponse<null>>
       .from('workspaces')
       .update({
         is_default: false,
-        workspace_type: (workspace_type) =>
+        workspace_type: (workspace_type: string) =>
           workspace_type !== 'default' ? workspace_type : 'private',
       })
       .eq('profile_id', userData.user.id);
@@ -329,6 +330,199 @@ export async function setDefaultWorkspace(id: string): Promise<DbResponse<null>>
   }
 }
 
+/**
+ * Add an item to a workspace
+ * @param workspaceId - ID of the workspace
+ * @param itemType - Type of item to add
+ * @param itemId - ID of the item to add
+ */
+export async function addItemToWorkspace(
+  workspaceId: string,
+  itemType: 'deployment' | 'repository' | 'host' | 'config',
+  itemId: string,
+): Promise<DbResponse<any>> {
+  console.log(
+    `[@db:workspaceDb:addItemToWorkspace] Adding ${itemType} ${itemId} to workspace ${workspaceId}`,
+  );
+
+  try {
+    const cookieStore = await cookies();
+    const supabase = await createClient(cookieStore);
+
+    // Different item types use different mapping tables
+    let table: string;
+    let mapping: any = {};
+
+    switch (itemType) {
+      case 'deployment':
+        table = 'jobs_configuration_workspaces';
+        mapping = {
+          workspace_id: workspaceId,
+          config_id: itemId, // Note: Deployments use config_id, not deployment_id
+        };
+        break;
+      case 'repository':
+        table = 'repository_workspaces';
+        mapping = {
+          workspace_id: workspaceId,
+          repository_id: itemId,
+        };
+        break;
+      case 'host':
+        table = 'hosts_workspaces';
+        mapping = {
+          workspace_id: workspaceId,
+          host_id: itemId,
+        };
+        break;
+      case 'config':
+        // Assuming configs use the same table as deployments
+        table = 'jobs_configuration_workspaces';
+        mapping = {
+          workspace_id: workspaceId,
+          config_id: itemId,
+        };
+        break;
+      default:
+        throw new Error(`Invalid item type: ${itemType}`);
+    }
+
+    // Insert the mapping to the appropriate table
+    const { data, error } = await supabase.from(table).insert([mapping]).select().single();
+
+    if (error) {
+      console.log(`[@db:workspaceDb:addItemToWorkspace] ERROR: ${error.message}`);
+      return { success: false, error: error.message };
+    }
+
+    console.log(`[@db:workspaceDb:addItemToWorkspace] Successfully added ${itemType} to workspace`);
+
+    return { success: true, data };
+  } catch (error: any) {
+    console.log(`[@db:workspaceDb:addItemToWorkspace] CATCH ERROR: ${error.message}`);
+    return {
+      success: false,
+      error: error.message || 'Failed to add item to workspace',
+    };
+  }
+}
+
+/**
+ * Remove an item from a workspace
+ * @param workspaceId - ID of the workspace
+ * @param itemType - Type of item to remove
+ * @param itemId - ID of the item to remove
+ */
+export async function removeItemFromWorkspace(
+  workspaceId: string,
+  itemType: 'deployment' | 'repository' | 'host' | 'config',
+  itemId: string,
+): Promise<DbResponse<null>> {
+  console.log(
+    `[@db:workspaceDb:removeItemFromWorkspace] Removing ${itemType} ${itemId} from workspace ${workspaceId}`,
+  );
+
+  try {
+    const cookieStore = await cookies();
+    const supabase = await createClient(cookieStore);
+
+    // Different item types use different mapping tables
+    let table: string;
+    let conditions: any = { workspace_id: workspaceId };
+
+    switch (itemType) {
+      case 'deployment':
+        table = 'jobs_configuration_workspaces';
+        conditions.config_id = itemId; // Note: Deployments use config_id, not deployment_id
+        break;
+      case 'repository':
+        table = 'repository_workspaces';
+        conditions.repository_id = itemId;
+        break;
+      case 'host':
+        table = 'hosts_workspaces';
+        conditions.host_id = itemId;
+        break;
+      case 'config':
+        // Assuming configs use the same table as deployments
+        table = 'jobs_configuration_workspaces';
+        conditions.config_id = itemId;
+        break;
+      default:
+        throw new Error(`Invalid item type: ${itemType}`);
+    }
+
+    // Delete the mapping from the appropriate table
+    const { error } = await supabase.from(table).delete().match(conditions);
+
+    if (error) {
+      console.log(`[@db:workspaceDb:removeItemFromWorkspace] ERROR: ${error.message}`);
+      return { success: false, error: error.message };
+    }
+
+    console.log(
+      `[@db:workspaceDb:removeItemFromWorkspace] Successfully removed ${itemType} from workspace`,
+    );
+
+    return { success: true, data: null };
+  } catch (error: any) {
+    console.log(`[@db:workspaceDb:removeItemFromWorkspace] CATCH ERROR: ${error.message}`);
+    return {
+      success: false,
+      error: error.message || 'Failed to remove item from workspace',
+    };
+  }
+}
+
+/**
+ * Get the current user's profile
+ * @returns The user profile information
+ */
+export async function getCurrentUserProfile(): Promise<DbResponse<any>> {
+  try {
+    const cookieStore = await cookies();
+    const supabase = await createClient(cookieStore);
+
+    // Get current user
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError) {
+      console.log(
+        `[@db:workspaceDb:getCurrentUserProfile] ERROR getting user: ${userError.message}`,
+      );
+      return { success: false, error: userError.message, data: null };
+    }
+
+    if (!userData?.user?.id) {
+      console.log(`[@db:workspaceDb:getCurrentUserProfile] ERROR: No authenticated user found`);
+      return { success: false, error: 'No authenticated user found', data: null };
+    }
+
+    // Get the user's profile
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userData.user.id)
+      .single();
+
+    if (error) {
+      console.log(`[@db:workspaceDb:getCurrentUserProfile] ERROR: ${error.message}`);
+      return { success: false, error: error.message, data: null };
+    }
+
+    return {
+      success: true,
+      data,
+    };
+  } catch (error: any) {
+    console.log(`[@db:workspaceDb:getCurrentUserProfile] CATCH ERROR: ${error.message}`);
+    return {
+      success: false,
+      error: error.message || 'Failed to get user profile',
+      data: null,
+    };
+  }
+}
+
 const workspaceDb = {
   getWorkspacesForCurrentUser,
   createWorkspace,
@@ -336,6 +530,9 @@ const workspaceDb = {
   updateActiveWorkspace,
   getCurrentUserActiveWorkspace,
   setDefaultWorkspace,
+  addItemToWorkspace,
+  removeItemFromWorkspace,
+  getCurrentUserProfile,
 };
 
 export default workspaceDb;
