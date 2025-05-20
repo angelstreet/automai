@@ -12,7 +12,86 @@ export async function getWorkspacesForCurrentUser(): Promise<DbResponse<Workspac
     const cookieStore = await cookies();
     const supabase = await createClient(cookieStore);
 
-    const { data, error } = await supabase.from('workspaces').select('*').order('name');
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError) {
+      console.log(
+        `[@db:workspaceDb:getWorkspacesForCurrentUser] ERROR getting user: ${userError.message}`,
+      );
+      return { success: false, error: userError.message };
+    }
+
+    if (!userData?.user?.id) {
+      console.log(
+        `[@db:workspaceDb:getWorkspacesForCurrentUser] ERROR: No authenticated user found`,
+      );
+      return { success: false, error: 'No authenticated user found' };
+    }
+
+    // Fetch user's profile including active_workspace and active_team
+    const { data: userProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('active_workspace, active_team')
+      .eq('id', userData.user.id)
+      .single();
+
+    if (profileError) {
+      console.log(
+        `[@db:workspaceDb:getWorkspacesForCurrentUser] ERROR getting profile: ${profileError.message}`,
+      );
+      return { success: false, error: profileError.message };
+    }
+    if (!userProfile) {
+      console.log(`[@db:workspaceDb:getWorkspacesForCurrentUser] ERROR: User profile not found`);
+      return { success: false, error: 'User profile not found' };
+    }
+
+    let queryBuilder = supabase.from('workspaces').select('*');
+    const userPrivateWorkspacesClause = `and(workspace_type.eq.private,profile_id.eq.${userData.user.id})`;
+
+    if (userProfile.active_workspace === null) {
+      // "Default (All)" mode: Fetch all user's private workspaces + all team workspaces they are a member of.
+      console.log(
+        `[@db:workspaceDb:getWorkspacesForCurrentUser] Default (All) mode: fetching all accessible workspaces.`,
+      );
+
+      const { data: teamMemberships, error: teamMembersError } = await supabase
+        .from('team_members')
+        .select('team_id')
+        .eq('profile_id', userData.user.id);
+
+      if (teamMembersError) {
+        console.log(
+          `[@db:workspaceDb:getWorkspacesForCurrentUser] ERROR getting team memberships: ${teamMembersError.message}`,
+        );
+        return { success: false, error: teamMembersError.message };
+      }
+
+      const userTeamIds = teamMemberships ? teamMemberships.map((tm) => tm.team_id) : [];
+
+      if (userTeamIds.length > 0) {
+        const userTeamWorkspacesClause = `and(workspace_type.eq.team,team_id.in.(${userTeamIds.join(',')}))`;
+        queryBuilder = queryBuilder.or(
+          `${userPrivateWorkspacesClause},${userTeamWorkspacesClause}`,
+        );
+      } else {
+        // User is not in any teams, or no teams found, so only fetch their private workspaces.
+        queryBuilder = queryBuilder.or(userPrivateWorkspacesClause); // .or here is fine as it's the only clause
+      }
+    } else {
+      // Specific workspace is selected, or a team context is active.
+      // Fetch user's private workspaces + team workspaces for the active_team (if set).
+      console.log(
+        `[@db:workspaceDb:getWorkspacesForCurrentUser] Filter mode: active_workspace: ${userProfile.active_workspace}, active_team: ${userProfile.active_team}`,
+      );
+      let orFilterString = userPrivateWorkspacesClause;
+      if (userProfile.active_team) {
+        const teamWorkspacesClause = `and(workspace_type.eq.team,team_id.eq.${userProfile.active_team})`;
+        orFilterString = `${userPrivateWorkspacesClause},${teamWorkspacesClause}`;
+      }
+      queryBuilder = queryBuilder.or(orFilterString);
+    }
+
+    const { data, error } = await queryBuilder.order('name');
 
     if (error) {
       console.log(`[@db:workspaceDb:getWorkspacesForCurrentUser] ERROR: ${error.message}`);
@@ -602,7 +681,6 @@ export async function getBulkWorkspaceMappings(
     const cookieStore = await cookies();
     const supabase = await createClient(cookieStore);
 
-    // Determine the correct table and field based on item type
     let table: string;
     let field: string;
 
@@ -627,7 +705,12 @@ export async function getBulkWorkspaceMappings(
         throw new Error(`Invalid item type: ${itemType}`);
     }
 
-    // Query the appropriate table for all provided item IDs in a single query
+    // Define a type for the expected shape of valid items in the data array
+    type ValidMappingItem = {
+      [key: string]: string | undefined; // field can be string, workspace_id is string
+      workspace_id: string;
+    };
+
     const { data, error } = await supabase
       .from(table)
       .select(`${field}, workspace_id`)
@@ -638,22 +721,36 @@ export async function getBulkWorkspaceMappings(
       return { success: false, error: error.message, data: {} };
     }
 
-    // Group by item ID
     const mappings: Record<string, string[]> = {};
-
-    // Initialize each item ID with an empty array
     itemIds.forEach((id) => {
       mappings[id] = [];
     });
 
-    // Populate the workspace IDs for each item
-    data.forEach((item) => {
-      const itemId = item[field];
-      if (!mappings[itemId]) {
-        mappings[itemId] = [];
-      }
-      mappings[itemId].push(item.workspace_id);
-    });
+    // Filter out potential error objects and ensure proper typing
+    if (data) {
+      data.forEach((item: any) => {
+        // Check if item is a valid object and has the required properties
+        if (item && typeof item === 'object' && field in item && 'workspace_id' in item) {
+          const validItem = item as ValidMappingItem;
+          const itemId = validItem[field];
+          const workspaceId = validItem.workspace_id;
+
+          if (
+            itemId &&
+            typeof itemId === 'string' &&
+            workspaceId &&
+            typeof workspaceId === 'string'
+          ) {
+            if (mappings[itemId]) {
+              mappings[itemId].push(workspaceId);
+            } else {
+              // This case should ideally not happen if itemIds are pre-initialized in mappings
+              mappings[itemId] = [workspaceId];
+            }
+          }
+        }
+      });
+    }
 
     console.log(
       `[@db:workspaceDb:getBulkWorkspaceMappings] Successfully fetched workspaces for ${itemIds.length} items`,
