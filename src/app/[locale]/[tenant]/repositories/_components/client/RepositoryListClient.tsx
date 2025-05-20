@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, GitBranch, PlusCircle, Star } from 'lucide-r
 import { useTranslations } from 'next-intl';
 import React, { useState, useEffect } from 'react';
 
-import { getActiveWorkspace, getWorkspacesContainingItem } from '@/app/actions/workspaceAction';
+import { getActiveWorkspace } from '@/app/actions/workspaceAction';
 import { Button } from '@/components/shadcn/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 import { EmptyState } from '@/components/ui/EmptyState';
