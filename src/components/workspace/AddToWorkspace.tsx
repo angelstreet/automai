@@ -1,17 +1,17 @@
 'use client';
 
 import { FolderPlus } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
-import { HostsEvents } from '@/app/[locale]/[tenant]/hosts/_components/client/HostEventListener';
-import { RepositoryEvents } from '@/app/[locale]/[tenant]/repositories/_components/client/RepositoryEventListener';
-import { DeploymentEvents } from '@/app/[locale]/[tenant]/deployment/_components/client/DeploymentEventListener';
 import {
   getWorkspaces,
   getWorkspacesContainingItem,
   addItemToWorkspace,
   removeItemFromWorkspace,
 } from '@/app/actions/workspaceAction';
+import { DeploymentEvents } from '@/app/[locale]/[tenant]/deployment/_components/client/DeploymentEventListener';
+import { HostsEvents } from '@/app/[locale]/[tenant]/hosts/_components/client/HostEventListener';
+import { RepositoryEvents } from '@/app/[locale]/[tenant]/repositories/_components/client/RepositoryEventListener';
 import { Button } from '@/components/shadcn/button';
 import {
   Dialog,
@@ -28,13 +28,15 @@ import { Workspace } from '@/types/component/workspaceComponentType';
 interface WorkspaceCache {
   workspaces: Workspace[] | null;
   timestamp: number;
+  membershipCache: Map<string, { data: string[]; timestamp: number }>;
 }
 
 // Global cache with 60 second TTL
 const CACHE_TTL = 60 * 1000; // 60 seconds
-let globalWorkspaceCache: WorkspaceCache = {
+const globalWorkspaceCache: WorkspaceCache = {
   workspaces: null,
   timestamp: 0,
+  membershipCache: new Map(),
 };
 
 interface AddToWorkspaceProps {
@@ -57,60 +59,131 @@ export default function AddToWorkspace({
   const [isSaving, setIsSaving] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isCachedData, setIsCachedData] = useState(false);
+
+  // Pre-fetch workspaces on mount to have them ready when dialog opens
+  useEffect(() => {
+    const prefetchWorkspaces = async () => {
+      const now = Date.now();
+      if (!globalWorkspaceCache.workspaces || now - globalWorkspaceCache.timestamp > CACHE_TTL) {
+        try {
+          console.log('[@component:AddToWorkspace] Pre-fetching workspaces in background');
+          const workspacesResult = await getWorkspaces();
+          if (workspacesResult.success && workspacesResult.data) {
+            globalWorkspaceCache.workspaces = workspacesResult.data;
+            globalWorkspaceCache.timestamp = now;
+            console.log('[@component:AddToWorkspace] Successfully pre-fetched workspaces');
+          }
+        } catch (err) {
+          console.error('[@component:AddToWorkspace] Error pre-fetching workspaces:', err);
+        }
+      }
+    };
+
+    prefetchWorkspaces();
+  }, []);
+
+  // Get workspaces from cache or fetch them
+  const fetchWorkspaces = useCallback(async () => {
+    const now = Date.now();
+
+    // Try to use cached workspaces
+    if (globalWorkspaceCache.workspaces && now - globalWorkspaceCache.timestamp < CACHE_TTL) {
+      console.log('[@component:AddToWorkspace] Using cached workspaces');
+      setWorkspaces(globalWorkspaceCache.workspaces);
+      setIsCachedData(true);
+      return globalWorkspaceCache.workspaces;
+    }
+
+    // Fetch fresh workspaces
+    console.log('[@component:AddToWorkspace] Fetching fresh workspaces');
+    try {
+      const workspacesResult = await getWorkspaces();
+      if (workspacesResult.success && workspacesResult.data) {
+        globalWorkspaceCache.workspaces = workspacesResult.data;
+        globalWorkspaceCache.timestamp = now;
+        setWorkspaces(workspacesResult.data);
+        return workspacesResult.data;
+      }
+    } catch (err) {
+      console.error('[@component:AddToWorkspace] Error fetching workspaces:', err);
+    }
+    return [];
+  }, []);
+
+  // Get membership from cache or fetch it
+  const fetchMembership = useCallback(async () => {
+    const now = Date.now();
+    const membershipCacheKey = `${itemType}-${itemId}`;
+    const cachedMembership = globalWorkspaceCache.membershipCache.get(membershipCacheKey);
+
+    // Try to use cached membership
+    if (cachedMembership && now - cachedMembership.timestamp < CACHE_TTL) {
+      console.log('[@component:AddToWorkspace] Using cached membership');
+      setMemberWorkspaces(cachedMembership.data);
+      return cachedMembership.data;
+    }
+
+    // Fetch fresh membership
+    console.log('[@component:AddToWorkspace] Fetching fresh membership');
+    try {
+      const membershipResult = await getWorkspacesContainingItem(itemType, itemId);
+      if (membershipResult.success && membershipResult.data) {
+        const data = membershipResult.data;
+        globalWorkspaceCache.membershipCache.set(membershipCacheKey, {
+          data,
+          timestamp: now,
+        });
+        setMemberWorkspaces(data);
+        return data;
+      }
+    } catch (err) {
+      console.error('[@component:AddToWorkspace] Error fetching membership:', err);
+    }
+    return [];
+  }, [itemId, itemType]);
 
   // Fetch workspaces and membership when dialog opens
   useEffect(() => {
     if (isOpen) {
       const fetchData = async () => {
-        setIsLoading(true);
         setError(null);
+
+        // If we don't already have cached data, show loading state
+        if (
+          !isCachedData &&
+          (!globalWorkspaceCache.workspaces ||
+            Date.now() - globalWorkspaceCache.timestamp > CACHE_TTL)
+        ) {
+          setIsLoading(true);
+        }
+
         try {
-          // Check if we have cached workspaces data that's still valid
-          const now = Date.now();
-          let workspacesResult;
+          // Get workspaces and memberships concurrently for better performance
+          const [workspacesData, membershipData] = await Promise.all([
+            fetchWorkspaces(),
+            fetchMembership(),
+          ]);
 
-          if (globalWorkspaceCache.workspaces && now - globalWorkspaceCache.timestamp < CACHE_TTL) {
-            console.log('[@component:AddToWorkspace] Using cached workspaces data');
-            workspacesResult = { success: true, data: globalWorkspaceCache.workspaces };
-          } else {
-            console.log('[@component:AddToWorkspace] Fetching fresh workspaces data');
-            // Get workspaces and save to cache
-            workspacesResult = await getWorkspaces();
-            if (workspacesResult.success && workspacesResult.data) {
-              globalWorkspaceCache = {
-                workspaces: workspacesResult.data,
-                timestamp: now,
-              };
-            }
-          }
+          // Initialize selected workspaces based on current memberships
+          const selected: Record<string, boolean> = {};
+          membershipData.forEach((id) => {
+            selected[id] = true;
+          });
+          setSelectedWorkspaces(selected);
 
-          // Get memberships
-          const membershipResult = await getWorkspacesContainingItem(itemType, itemId);
-
-          if (workspacesResult.success && workspacesResult.data) {
-            setWorkspaces(workspacesResult.data);
-          }
-
-          if (membershipResult.success && membershipResult.data) {
-            setMemberWorkspaces(membershipResult.data);
-
-            // Initialize selected workspaces based on current memberships
-            const selected: Record<string, boolean> = {};
-            membershipResult.data.forEach((id) => {
-              selected[id] = true;
-            });
-            setSelectedWorkspaces(selected);
-          }
+          // Ensure loading is set to false when fetch completes
+          setIsLoading(false);
         } catch (err) {
           console.error('[@component:AddToWorkspace] Error fetching data:', err);
           setError('Failed to load workspaces');
+          setIsLoading(false);
         }
-        setIsLoading(false);
       };
 
       fetchData();
     }
-  }, [isOpen, itemId, itemType]);
+  }, [isOpen, fetchWorkspaces, fetchMembership, isCachedData]);
 
   // Immediately update UI when toggling a workspace
   const toggleWorkspace = (workspaceId: string) => {
@@ -157,6 +230,10 @@ export default function AddToWorkspace({
 
       // Execute all operations
       await Promise.all(operations);
+
+      // Invalidate membership cache for this item
+      const membershipCacheKey = `${itemType}-${itemId}`;
+      globalWorkspaceCache.membershipCache.delete(membershipCacheKey);
 
       // Dispatch events to notify components that workspaces have changed for this item
       const events = getItemTypeEvents();
