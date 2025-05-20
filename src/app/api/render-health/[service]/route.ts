@@ -1,5 +1,3 @@
-import https from 'https';
-
 import { NextResponse } from 'next/server';
 
 // Status constants
@@ -12,8 +10,6 @@ const STATUS = {
 export async function GET(_request: Request, { params }: { params: { service: string } }) {
   try {
     const service = (await params).service;
-    console.log(`[@api:render-health] Checking health for Render ${service} service`);
-
     let renderUrl;
     switch (service) {
       case 'main-prod':
@@ -58,10 +54,10 @@ export async function GET(_request: Request, { params }: { params: { service: st
     const healthEndpoint = `${renderUrl}/healthz`;
     console.log(`[@api:render-health] Checking health endpoint: ${healthEndpoint}`);
 
-    const healthResponse = await makeHttpsRequest(renderUrl);
+    const healthResponse = await makeFetchRequest(healthEndpoint);
 
     // If service is already active (200 response)
-    if (healthResponse.statusCode === 200) {
+    if (healthResponse.status === 200) {
       return NextResponse.json({
         success: true,
         status: STATUS.AWAKE,
@@ -69,38 +65,47 @@ export async function GET(_request: Request, { params }: { params: { service: st
       });
     }
 
-    // If service is not active, try to wake it up
-    console.log(
-      `[@api:render-health] Render ${service} service is not active, attempting to wake up`,
-    );
-
     // Hit the root URL to wake up the service
-    await makeHttpsRequest(renderUrl);
+    await makeFetchRequest(renderUrl);
 
-    // Try to verify if the service woke up (3 attempts with 20s intervals)
+    // Try to verify if the service woke up (10 attempts with 10s intervals)
     const maxRetries = 10;
     const retryDelayMs = 10000;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      console.log(
-        `[@api:render-health] Waiting for Render ${service} to wake up, attempt ${attempt}/${maxRetries}`,
-      );
-
       // Wait for the retry delay
       await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
 
-      // Check health again
-      const retryHealthResponse = await fetch(healthEndpoint);
-
-      if (retryHealthResponse.ok) {
-        console.log(
-          `[@api:render-health] Render ${service} service woke up successfully on attempt ${attempt}`,
-        );
-        return NextResponse.json({
-          success: true,
-          status: STATUS.AWAKE,
-          message: `Render ${service} service woke up successfully`,
+      // Check health again with fetch and timeout
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 120000); // 120s timeout
+        const retryHealthResponse = await fetch(healthEndpoint, {
+          signal: controller.signal,
+          headers: {
+            Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+            Connection: 'keep-alive',
+          },
         });
+        clearTimeout(timeoutId);
+
+        if (retryHealthResponse.ok) {
+          console.log(
+            `[@api:render-health] Render ${service} service woke up successfully on attempt ${attempt}`,
+          );
+          return NextResponse.json({
+            success: true,
+            status: STATUS.AWAKE,
+            message: `Render ${service} service woke up successfully`,
+          });
+        }
+      } catch (fetchError: any) {
+        console.warn(
+          `[@api:render-health] Attempt ${attempt} failed for ${healthEndpoint}:`,
+          fetchError.message,
+        );
       }
     }
 
@@ -123,44 +128,32 @@ export async function GET(_request: Request, { params }: { params: { service: st
   }
 }
 
-function makeHttpsRequest(url: string): Promise<{ statusCode: number; data: string }> {
-  return new Promise((resolve, reject) => {
-    const req = https.get(
-      url,
-      {
-        headers: {
-          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
-          Connection: 'keep-alive',
-        },
-        minVersion: 'TLSv1.2',
+async function makeFetchRequest(url: string): Promise<{ status: number; data: string }> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 120000); // 120s timeout
+
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+        Connection: 'keep-alive',
       },
-      (res) => {
-        let data = '';
-
-        res.on('data', (chunk) => {
-          data += chunk;
-        });
-
-        res.on('end', () => {
-          resolve({
-            statusCode: res.statusCode || 0,
-            data,
-          });
-        });
-      },
-    );
-
-    req.on('error', (err) => {
-      reject(err);
     });
+    clearTimeout(timeoutId);
 
-    req.setTimeout(120000, () => {
-      req.destroy();
-      reject(new Error('Request timed out after 120 seconds'));
-    });
-
-    req.end();
-  });
+    const data = await response.text();
+    return {
+      status: response.status,
+      data,
+    };
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error('Request timed out after 120 seconds');
+    }
+    throw error;
+  }
 }

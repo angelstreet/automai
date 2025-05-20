@@ -338,7 +338,7 @@ export async function deleteJob(id: string) {
  */
 export async function getAllJobs(providedUser?: any) {
   try {
-    console.log('[@action:jobsAction:getAllJobs] Getting all job configurations');
+    //console.log('[@action:jobsAction:getAllJobs] Getting all job configurations');
     const cookieStore = await cookies();
 
     // Get current user or use provided user
@@ -376,11 +376,6 @@ export async function getAllJobs(providedUser?: any) {
       return { success: false, error: result.error, data: [] };
     }
 
-    console.log(
-      '[@action:jobsAction:getAllJobs] Fetched configurations count:',
-      result.data?.length || 0,
-    );
-
     // Transform job configuration data to match expected deployment format with camelCase fields
     const transformedData =
       result.data?.map((config) => {
@@ -395,13 +390,6 @@ export async function getAllJobs(providedUser?: any) {
                 return timeB - timeA; // Descending order - newer runs first
               })[0]
             : null;
-
-        // Log to debug the sorting
-        if (config.jobs_run && config.jobs_run.length > 1) {
-          console.log(
-            `[@action:jobsAction:getAllJobs] Found ${config.jobs_run.length} runs for job '${config.name}'`,
-          );
-        }
 
         return {
           id: config.id,

@@ -349,10 +349,13 @@ export async function setUserActiveTeam(
     // Create Supabase client
     const supabase = await createClient(cookieStore);
 
-    // Update the user's active_team in the profiles table
+    // Update both active_team and active_workspace in the profiles table
     const { error: updateError } = await supabase
       .from('profiles')
-      .update({ active_team: teamId })
+      .update({
+        active_team: teamId,
+        active_workspace: null, // Reset workspace to default when changing teams
+      })
       .eq('id', userId);
 
     if (updateError) {
@@ -365,7 +368,7 @@ export async function setUserActiveTeam(
     }
 
     console.log(
-      `[@db:teamDb:setUserActiveTeam] Successfully set active team: ${teamId} for user: ${userId}`,
+      `[@db:teamDb:setUserActiveTeam] Successfully set active team: ${teamId} and reset workspace for user: ${userId}`,
     );
     return { success: true, data: null };
   } catch (error) {

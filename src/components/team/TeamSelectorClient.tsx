@@ -3,7 +3,7 @@
 import { Handshake, Check, ChevronsUpDown } from 'lucide-react';
 import { useState } from 'react';
 
-import { setUserActiveTeam } from '@/app/actions/teamAction';
+import { setUserActiveTeam, invalidateWorkspaceCache } from '@/app/actions/teamAction';
 import { Button } from '@/components/shadcn/button';
 import { Command, CommandGroup } from '@/components/shadcn/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/shadcn/popover';
@@ -39,7 +39,11 @@ export function TeamSelectorClient({
 
     try {
       console.log(`[@component:TeamSelectorClient] Selecting team: ${teamId}`);
-      // Directly call the server action to change the active team
+
+      // First invalidate the workspace cache since we're changing teams
+      await invalidateWorkspaceCache();
+
+      // Then change the active team
       await setUserActiveTeam(user.id, teamId);
 
       // Optionally call the provided callback

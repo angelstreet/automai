@@ -46,49 +46,25 @@ export async function getWorkspacesForCurrentUser(): Promise<DbResponse<Workspac
     }
 
     let queryBuilder = supabase.from('workspaces').select('*');
+
+    // Always include user's private workspaces
     const userPrivateWorkspacesClause = `and(workspace_type.eq.private,profile_id.eq.${userData.user.id})`;
 
-    if (userProfile.active_workspace === null) {
-      // "Default (All)" mode: Fetch all user's private workspaces + all team workspaces they are a member of.
+    // FIXED LOGIC: Always respect active_team for team workspaces
+    if (userProfile.active_team) {
+      // If there's an active team, show only team workspaces from THAT team
+      const teamWorkspacesClause = `and(workspace_type.eq.team,team_id.eq.${userProfile.active_team})`;
+      queryBuilder = queryBuilder.or(`${userPrivateWorkspacesClause},${teamWorkspacesClause}`);
+
       console.log(
-        `[@db:workspaceDb:getWorkspacesForCurrentUser] Default (All) mode: fetching all accessible workspaces.`,
+        `[@db:workspaceDb:getWorkspacesForCurrentUser] Filtering by active team: ${userProfile.active_team}, showing private workspaces and team workspaces for this team only`,
       );
-
-      const { data: teamMemberships, error: teamMembersError } = await supabase
-        .from('team_members')
-        .select('team_id')
-        .eq('profile_id', userData.user.id);
-
-      if (teamMembersError) {
-        console.log(
-          `[@db:workspaceDb:getWorkspacesForCurrentUser] ERROR getting team memberships: ${teamMembersError.message}`,
-        );
-        return { success: false, error: teamMembersError.message };
-      }
-
-      const userTeamIds = teamMemberships ? teamMemberships.map((tm) => tm.team_id) : [];
-
-      if (userTeamIds.length > 0) {
-        const userTeamWorkspacesClause = `and(workspace_type.eq.team,team_id.in.(${userTeamIds.join(',')}))`;
-        queryBuilder = queryBuilder.or(
-          `${userPrivateWorkspacesClause},${userTeamWorkspacesClause}`,
-        );
-      } else {
-        // User is not in any teams, or no teams found, so only fetch their private workspaces.
-        queryBuilder = queryBuilder.or(userPrivateWorkspacesClause); // .or here is fine as it's the only clause
-      }
     } else {
-      // Specific workspace is selected, or a team context is active.
-      // Fetch user's private workspaces + team workspaces for the active_team (if set).
+      // No active team selected - only show private workspaces
+      queryBuilder = queryBuilder.or(userPrivateWorkspacesClause);
       console.log(
-        `[@db:workspaceDb:getWorkspacesForCurrentUser] Filter mode: active_workspace: ${userProfile.active_workspace}, active_team: ${userProfile.active_team}`,
+        `[@db:workspaceDb:getWorkspacesForCurrentUser] No active team, showing only private workspaces`,
       );
-      let orFilterString = userPrivateWorkspacesClause;
-      if (userProfile.active_team) {
-        const teamWorkspacesClause = `and(workspace_type.eq.team,team_id.eq.${userProfile.active_team})`;
-        orFilterString = `${userPrivateWorkspacesClause},${teamWorkspacesClause}`;
-      }
-      queryBuilder = queryBuilder.or(orFilterString);
     }
 
     const { data, error } = await queryBuilder.order('name');
