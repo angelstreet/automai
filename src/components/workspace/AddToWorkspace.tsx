@@ -3,15 +3,15 @@
 import { FolderPlus } from 'lucide-react';
 import { useEffect, useState, useCallback } from 'react';
 
+import { DeploymentEvents } from '@/app/[locale]/[tenant]/deployment/_components/client/DeploymentEventListener';
+import { HostsEvents } from '@/app/[locale]/[tenant]/hosts/_components/client/HostEventListener';
+import { RepositoryEvents } from '@/app/[locale]/[tenant]/repositories/_components/client/RepositoryEventListener';
 import {
   getWorkspaces,
   getWorkspacesContainingItem,
   addItemToWorkspace,
   removeItemFromWorkspace,
 } from '@/app/actions/workspaceAction';
-import { DeploymentEvents } from '@/app/[locale]/[tenant]/deployment/_components/client/DeploymentEventListener';
-import { HostsEvents } from '@/app/[locale]/[tenant]/hosts/_components/client/HostEventListener';
-import { RepositoryEvents } from '@/app/[locale]/[tenant]/repositories/_components/client/RepositoryEventListener';
 import { Button } from '@/components/shadcn/button';
 import {
   Dialog,
