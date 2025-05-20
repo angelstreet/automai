@@ -7,6 +7,7 @@ import { TeamMemberDialogContext } from '@/context/TeamMemberDialogContext';
 // Import the dialog components
 import AddMemberDialog from './TeamMemberAddDialogClient';
 import EditPermissionsDialog from './TeamMemberPermissionsDialogClient';
+import InviteMemberDialog from './TeamMemberInviteDialogClient';
 
 /**
  * TeamMemberDialogsClient - Renders the dialogs for team member management
@@ -29,6 +30,8 @@ export default function TeamMemberDialogsClient() {
     setAddDialogOpen,
     editDialogOpen,
     setEditDialogOpen,
+    inviteDialogOpen,
+    setInviteDialogOpen,
     selectedMember,
     onMembersChanged,
   } = dialogContext;
@@ -48,6 +51,13 @@ export default function TeamMemberDialogsClient() {
         onOpenChange={setAddDialogOpen}
         teamId={teamId}
         onAddMember={handleMembersChanged}
+      />
+
+      {/* Invite Member Dialog */}
+      <InviteMemberDialog
+        open={inviteDialogOpen}
+        onOpenChange={setInviteDialogOpen}
+        teamId={teamId}
       />
 
       {/* Edit Permissions Dialog */}

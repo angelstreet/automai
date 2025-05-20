@@ -326,8 +326,7 @@ export async function getAvailableTenantProfilesForTeam(
         `
         id, 
         avatar_url,
-        active_team,
-        role
+        active_team
       `,
       )
       .eq('active_team', teamId);

@@ -78,9 +78,9 @@ export async function GET(_request: Request, { params }: { params: { service: st
     // Hit the root URL to wake up the service
     await makeHttpsRequest(renderUrl);
 
-    // Try to verify if the service woke up (3 attempts with 50s intervals)
-    const maxRetries = 3;
-    const retryDelayMs = 50000;
+    // Try to verify if the service woke up (3 attempts with 20s intervals)
+    const maxRetries = 10;
+    const retryDelayMs = 10000;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       console.log(
@@ -91,9 +91,9 @@ export async function GET(_request: Request, { params }: { params: { service: st
       await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
 
       // Check health again
-      const retryHealthResponse = await makeHttpsRequest(healthEndpoint);
+      const retryHealthResponse = await fetch(healthEndpoint);
 
-      if (retryHealthResponse.statusCode === 200) {
+      if (retryHealthResponse.ok) {
         console.log(
           `[@api:render-health] Render ${service} service woke up successfully on attempt ${attempt}`,
         );
@@ -157,9 +157,9 @@ function makeHttpsRequest(url: string): Promise<{ statusCode: number; data: stri
       reject(err);
     });
 
-    req.setTimeout(60000, () => {
+    req.setTimeout(120000, () => {
       req.destroy();
-      reject(new Error('Request timed out after 60 seconds'));
+      reject(new Error('Request timed out after 120 seconds'));
     });
 
     req.end();

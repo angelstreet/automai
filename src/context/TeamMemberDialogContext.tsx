@@ -15,11 +15,14 @@ export interface TeamMemberDialogContextState {
   setAddDialogOpen: (isOpen: boolean) => void;
   editDialogOpen: boolean;
   setEditDialogOpen: (isOpen: boolean) => void;
+  inviteDialogOpen: boolean;
+  setInviteDialogOpen: (isOpen: boolean) => void;
   selectedMember: TeamMemberResource | null;
 
   // Dialog control functions
   openAddDialog: () => void;
   openEditDialog: (member: TeamMemberResource) => void;
+  openInviteDialog: () => void;
 
   // Callback function
   onMembersChanged?: () => void;

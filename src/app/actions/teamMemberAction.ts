@@ -7,6 +7,7 @@ import { cache } from 'react';
 import { getUser } from '@/app/actions/userAction';
 import permissionDb from '@/lib/db/permissionDb';
 import teamMemberDb from '@/lib/db/teamMemberDb';
+import { createClient } from '@/lib/supabase/server';
 import type { ResourceType } from '@/types/context/permissionsContextType';
 import { ResourcePermissions } from '@/types/context/teamContextType';
 
@@ -582,3 +583,165 @@ export const getTeamMemberRole = cache(async (profileId: string, teamId: string)
     return null;
   }
 });
+
+/**
+ * Invite a user by email to join a team
+ * This sends an email invitation to the provided email and creates a temporary invitation record
+ */
+export const inviteTeamMemberByEmail = cache(
+  async (teamId: string, email: string, role: string) => {
+    try {
+      // Verify the current user is authenticated
+      const user = await getUser();
+      if (!user) {
+        return { success: false, error: 'User not authenticated' };
+      }
+
+      // Basic validation
+      if (!email) {
+        return { success: false, error: 'Email is required' };
+      }
+
+      if (!teamId) {
+        return { success: false, error: 'Team ID is required' };
+      }
+
+      const cookieStore = await cookies();
+
+      // Check if user with this email already exists in Supabase
+      const supabase = await createClient(cookieStore);
+
+      // First try to find if the user already exists (but not in the team)
+      const { data: existingUsers, error: lookupError } = await supabase
+        .from('team_user_profiles')
+        .select('id, email')
+        .ilike('email', email);
+
+      if (lookupError) {
+        console.error(
+          '[@action:teamMemberAction:inviteTeamMemberByEmail] Error looking up user:',
+          lookupError,
+        );
+        return { success: false, error: 'Error looking up user' };
+      }
+
+      if (existingUsers && existingUsers.length > 0) {
+        // User exists in Supabase, try to add them directly to the team
+        const userProfile = existingUsers[0];
+        const profileId = userProfile.id;
+
+        // Check if they're already in the team
+        const { data: existingMember, error: memberCheckError } = await supabase
+          .from('team_members')
+          .select('*')
+          .eq('team_id', teamId)
+          .eq('profile_id', profileId);
+
+        if (memberCheckError) {
+          console.error(
+            '[@action:teamMemberAction:inviteTeamMemberByEmail] Error checking membership:',
+            memberCheckError,
+          );
+          return { success: false, error: 'Error checking team membership' };
+        }
+
+        if (existingMember && existingMember.length > 0) {
+          return { success: false, error: 'User is already a member of this team' };
+        }
+
+        // Add the member to the team
+        const result = await teamMemberDb.addTeamMember(
+          {
+            team_id: teamId,
+            profile_id: profileId,
+            role: role,
+          },
+          cookieStore,
+        );
+
+        if (!result.success) {
+          return {
+            success: false,
+            error: result.error || 'Failed to add team member',
+          };
+        }
+
+        // If successful, also apply the role template to set permissions
+        const roleResult = await permissionDb.applyRoleTemplate(
+          teamId,
+          profileId,
+          role,
+          cookieStore,
+        );
+
+        if (!roleResult.success) {
+          console.warn(
+            'Failed to apply role template, but user was added to team:',
+            roleResult.error,
+          );
+        }
+
+        // Revalidate team-related paths
+        revalidatePath('/[locale]/[tenant]/team', 'page');
+
+        return {
+          success: true,
+          data: { added: true, invited: false },
+        };
+      } else {
+        // User doesn't exist in Supabase, create an invitation
+        // In a real implementation, you would:
+        // 1. Create an invitation record in the database
+        // 2. Generate a unique token for the invitation
+        // 3. Send an email with a sign-up link including the token
+
+        // For this prototype, we'll just simulate a successful invitation
+        console.log(
+          `[@action:teamMemberAction:inviteTeamMemberByEmail] Sending invitation to ${email} for team ${teamId} with role ${role}`,
+        );
+
+        // Get team name for the invitation email
+        const { data: team, error: teamError } = await supabase
+          .from('teams')
+          .select('name')
+          .eq('id', teamId)
+          .single();
+
+        if (teamError) {
+          console.error(
+            '[@action:teamMemberAction:inviteTeamMemberByEmail] Error getting team:',
+            teamError,
+          );
+          return { success: false, error: 'Failed to get team information' };
+        }
+
+        // In a real implementation, you would call an email service here
+        // For now, we'll just log the details
+        console.log(`[@action:teamMemberAction:inviteTeamMemberByEmail] Invitation details:
+        - Team: ${team.name} (${teamId})
+        - Inviter: ${user.email} (${user.id})
+        - Invitee: ${email}
+        - Role: ${role}
+        - Signup URL: https://your-app.com/signup?invitation=TOKEN_HERE
+      `);
+
+        // Revalidate team-related paths
+        revalidatePath('/[locale]/[tenant]/team', 'page');
+
+        return {
+          success: true,
+          data: { added: false, invited: true },
+        };
+      }
+    } catch (error) {
+      console.error(
+        '[@action:teamMemberAction:inviteTeamMemberByEmail] Error inviting team member:',
+        error,
+      );
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to invite team member',
+      };
+    }
+  },
+);

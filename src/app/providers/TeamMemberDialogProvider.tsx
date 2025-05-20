@@ -28,6 +28,7 @@ export function TeamMemberDialogProvider({
   // Dialog state
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<TeamMemberResource | null>(null);
 
   // Memoized dialog control functions to prevent unnecessary re-renders
@@ -40,6 +41,10 @@ export function TeamMemberDialogProvider({
     setEditDialogOpen(true);
   }, []);
 
+  const openInviteDialog = useCallback(() => {
+    setInviteDialogOpen(true);
+  }, []);
+
   // Context value - contains only state and minimal functions
   const contextValue: TeamMemberDialogContextState = {
     // Dialog state values
@@ -47,11 +52,14 @@ export function TeamMemberDialogProvider({
     setAddDialogOpen,
     editDialogOpen,
     setEditDialogOpen,
+    inviteDialogOpen,
+    setInviteDialogOpen,
     selectedMember,
 
     // Dialog control functions
     openAddDialog,
     openEditDialog,
+    openInviteDialog,
 
     // Callback function
     onMembersChanged,

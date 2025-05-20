@@ -8,6 +8,7 @@ import {
   getAvailableTenantProfiles as getAvailableTenantProfilesAction,
   removeTeamMember as removeTeamMemberAction,
   updateTeamMemberRole,
+  inviteTeamMemberByEmail as inviteTeamMemberByEmailAction,
 } from '@/app/actions/teamMemberAction';
 import { useToast } from '@/components/shadcn/use-toast';
 
@@ -196,6 +197,56 @@ export function useUpdateMemberRole() {
       toast({
         title: 'Error',
         description: error instanceof Error ? error.message : 'Failed to update role',
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+/**
+ * Hook for inviting a user by email to join a team
+ */
+export function useInviteTeamMemberByEmail() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({
+      teamId,
+      email,
+      role,
+    }: {
+      teamId: string;
+      email: string;
+      role: string;
+    }) => {
+      const result = await inviteTeamMemberByEmailAction(teamId, email, role);
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to invite team member');
+      }
+      return { teamId, result };
+    },
+    onSuccess: ({ teamId, result }) => {
+      // Invalidate team members query
+      queryClient.invalidateQueries({ queryKey: ['teamMembers', teamId] });
+
+      if (result.data?.added) {
+        toast({
+          title: 'Success',
+          description: 'User added to the team successfully',
+        });
+      } else {
+        toast({
+          title: 'Invitation Sent',
+          description: 'Invitation has been sent to the provided email',
+        });
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to send invitation',
         variant: 'destructive',
       });
     },
