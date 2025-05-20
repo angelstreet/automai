@@ -58,11 +58,10 @@ export async function GET(_request: Request, { params }: { params: { service: st
     const healthEndpoint = `${renderUrl}/healthz`;
     console.log(`[@api:render-health] Checking health endpoint: ${healthEndpoint}`);
 
-    const healthResponse = await makeHttpsRequest(healthEndpoint);
+    const healthResponse = await makeHttpsRequest(renderUrl);
 
     // If service is already active (200 response)
     if (healthResponse.statusCode === 200) {
-      console.log(`[@api:render-health] Render ${service} service is already awake`);
       return NextResponse.json({
         success: true,
         status: STATUS.AWAKE,
