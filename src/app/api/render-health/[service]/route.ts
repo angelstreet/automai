@@ -126,29 +126,39 @@ export async function GET(_request: Request, { params }: { params: { service: st
 
 function makeHttpsRequest(url: string): Promise<{ statusCode: number; data: string }> {
   return new Promise((resolve, reject) => {
-    const req = https.get(url, { headers: { Accept: '*/*' } }, (res) => {
-      let data = '';
+    const req = https.get(
+      url,
+      {
+        headers: {
+          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+          Connection: 'keep-alive',
+        },
+      },
+      (res) => {
+        let data = '';
 
-      res.on('data', (chunk) => {
-        data += chunk;
-      });
-
-      res.on('end', () => {
-        resolve({
-          statusCode: res.statusCode || 0,
-          data,
+        res.on('data', (chunk) => {
+          data += chunk;
         });
-      });
-    });
+
+        res.on('end', () => {
+          resolve({
+            statusCode: res.statusCode || 0,
+            data,
+          });
+        });
+      },
+    );
 
     req.on('error', (err) => {
       reject(err);
     });
 
-    // Set a timeout of 30 seconds
-    req.setTimeout(30000, () => {
+    req.setTimeout(60000, () => {
       req.destroy();
-      reject(new Error('Request timed out after 30 seconds'));
+      reject(new Error('Request timed out after 60 seconds'));
     });
 
     req.end();

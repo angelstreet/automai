@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 
 import { HostsEvents } from '@/app/[locale]/[tenant]/hosts/_components/client/HostEventListener';
 import { RepositoryEvents } from '@/app/[locale]/[tenant]/repositories/_components/client/RepositoryEventListener';
+import { DeploymentEvents } from '@/app/[locale]/[tenant]/deployment/_components/client/DeploymentEventListener';
 import {
   addWorkspace,
   getActiveWorkspace,
@@ -116,6 +117,7 @@ export default function WorkspaceSelector({ className = '' }) {
     // Notify components that workspace has changed using the standard events
     window.dispatchEvent(new Event(RepositoryEvents.WORKSPACE_CHANGED));
     window.dispatchEvent(new Event(HostsEvents.WORKSPACE_CHANGED));
+    window.dispatchEvent(new Event(DeploymentEvents.WORKSPACE_CHANGED));
   };
 
   const handleCreateWorkspace = async () => {

@@ -15,11 +15,7 @@ import {
 import { useTranslations } from 'next-intl';
 import React, { useState, useEffect } from 'react';
 
-import {
-  getActiveWorkspace,
-  getWorkspacesContainingItem,
-  getBulkWorkspaceMappings,
-} from '@/app/actions/workspaceAction';
+import { getActiveWorkspace, getBulkWorkspaceMappings } from '@/app/actions/workspaceAction';
 import { Button } from '@/components/shadcn/button';
 import {
   DropdownMenu,
@@ -31,6 +27,7 @@ import AddToWorkspace from '@/components/workspace/AddToWorkspace';
 import { getFormattedTime } from '@/lib/utils/deploymentUtils';
 import { Deployment } from '@/types/component/deploymentComponentType';
 
+import DeploymentEventListener, { DeploymentEvents } from './DeploymentEventListener';
 import DeploymentStatusBadgeClient from './DeploymentStatusBadgeClient';
 
 interface DeploymentTableProps {
@@ -101,12 +98,12 @@ export function DeploymentTableClient({
       fetchWorkspaceData();
     };
 
-    // Add event listener for workspace changes
-    window.addEventListener('WORKSPACE_CHANGED', handleWorkspaceChange);
+    // Add event listener for workspace changes using standardized event name
+    window.addEventListener(DeploymentEvents.WORKSPACE_CHANGED, handleWorkspaceChange);
 
     // Cleanup function
     return () => {
-      window.removeEventListener('WORKSPACE_CHANGED', handleWorkspaceChange);
+      window.removeEventListener(DeploymentEvents.WORKSPACE_CHANGED, handleWorkspaceChange);
     };
   }, []);
 
@@ -233,6 +230,7 @@ export function DeploymentTableClient({
   if (isInitialLoad) {
     return (
       <div className="overflow-x-auto">
+        <DeploymentEventListener />
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-transparent dark:bg-transparent">
             <tr>
@@ -285,6 +283,7 @@ export function DeploymentTableClient({
   if (filteredDeployments.length > 0) {
     return (
       <div className="overflow-x-auto">
+        <DeploymentEventListener />
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-transparent dark:bg-transparent">
             <tr>
@@ -565,28 +564,31 @@ export function DeploymentTableClient({
   }
 
   return (
-    <div className="text-center py-8 bg-transparent dark:bg-transparent">
-      <div className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-4">
-        {activeTab === 'scheduled' ? (
-          <Clock className="h-12 w-12" />
-        ) : activeTab === 'pending' ? (
-          <Clock className="h-12 w-12" />
-        ) : activeTab === 'active' ? (
-          <Play className="h-12 w-12" />
-        ) : activeTab === 'completed' ? (
-          <Clock className="h-12 w-12" />
-        ) : (
-          <Clock className="h-12 w-12" />
-        )}
+    <>
+      <DeploymentEventListener />
+      <div className="text-center py-8 bg-transparent dark:bg-transparent">
+        <div className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-4">
+          {activeTab === 'scheduled' ? (
+            <Clock className="h-12 w-12" />
+          ) : activeTab === 'pending' ? (
+            <Clock className="h-12 w-12" />
+          ) : activeTab === 'active' ? (
+            <Play className="h-12 w-12" />
+          ) : activeTab === 'completed' ? (
+            <Clock className="h-12 w-12" />
+          ) : (
+            <Clock className="h-12 w-12" />
+          )}
+        </div>
+        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
+          No deployments found
+        </h3>
+        <p className="text-gray-500 dark:text-gray-400">
+          {searchQuery || filterStatus !== 'all'
+            ? 'Try changing your search or filter criteria'
+            : 'Create your first deployment to get started'}
+        </p>
       </div>
-      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
-        No deployments found
-      </h3>
-      <p className="text-gray-500 dark:text-gray-400">
-        {searchQuery || filterStatus !== 'all'
-          ? 'Try changing your search or filter criteria'
-          : 'Create your first deployment to get started'}
-      </p>
-    </div>
+    </>
   );
 }

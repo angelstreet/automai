@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 
 import { HostsEvents } from '@/app/[locale]/[tenant]/hosts/_components/client/HostEventListener';
 import { RepositoryEvents } from '@/app/[locale]/[tenant]/repositories/_components/client/RepositoryEventListener';
+import { DeploymentEvents } from '@/app/[locale]/[tenant]/deployment/_components/client/DeploymentEventListener';
 import {
   getWorkspaces,
   getWorkspacesContainingItem,
@@ -119,6 +120,20 @@ export default function AddToWorkspace({
     }));
   };
 
+  // Get the appropriate event constant based on item type
+  const getItemTypeEvents = () => {
+    switch (itemType) {
+      case 'repository':
+        return RepositoryEvents;
+      case 'host':
+        return HostsEvents;
+      case 'deployment':
+        return DeploymentEvents;
+      default:
+        return null;
+    }
+  };
+
   const handleSave = async () => {
     setIsSaving(true);
     setError(null);
@@ -143,16 +158,11 @@ export default function AddToWorkspace({
       // Execute all operations
       await Promise.all(operations);
 
-      // Dispatch events based on item type
-      if (itemType === 'repository') {
+      // Dispatch events to notify components that workspaces have changed for this item
+      const events = getItemTypeEvents();
+      if (events) {
         window.dispatchEvent(
-          new CustomEvent(RepositoryEvents.WORKSPACE_ITEM_ADDED, {
-            detail: { itemId, itemType },
-          }),
-        );
-      } else if (itemType === 'host') {
-        window.dispatchEvent(
-          new CustomEvent(HostsEvents.WORKSPACE_ITEM_ADDED, {
+          new CustomEvent(events.WORKSPACE_ITEM_ADDED, {
             detail: { itemId, itemType },
           }),
         );
