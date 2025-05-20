@@ -1,3 +1,5 @@
+'use client';
+
 import { useEffect } from 'react';
 import { useRepository } from '@/hooks/useRepository';
 

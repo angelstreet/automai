@@ -16,6 +16,9 @@ const HostsEvents = {
   // Host Testing Events
   HOST_TESTING_START: 'HOST_TESTING_START', // Single host testing starts
   HOST_TESTING_COMPLETE: 'HOST_TESTING_COMPLETE', // Single host testing completes
+
+  // Workspace Events
+  WORKSPACE_CHANGED: 'WORKSPACE_CHANGED', // Workspace changed, refresh hosts
 };
 
 // Export the constants object
@@ -28,6 +31,12 @@ export default function HostEventListener() {
     // Handle refresh hosts request
     const handleRefreshHosts = () => {
       console.log('[@component:HostEventListener] REFRESH_HOSTS: Refreshing hosts data');
+      router.refresh();
+    };
+
+    // Handle workspace change
+    const handleWorkspaceChange = () => {
+      console.log('[@component:HostEventListener] WORKSPACE_CHANGED: Refreshing hosts data');
       router.refresh();
     };
 
@@ -53,6 +62,7 @@ export default function HostEventListener() {
 
     // Add event listeners
     window.addEventListener(HostsEvents.REFRESH_HOSTS, handleRefreshHosts);
+    window.addEventListener(HostsEvents.WORKSPACE_CHANGED, handleWorkspaceChange);
     window.addEventListener(
       HostsEvents.HOST_TESTING_START,
       handleHostTestingStart as EventListener,
@@ -68,6 +78,7 @@ export default function HostEventListener() {
 
       // Remove event listeners
       window.removeEventListener(HostsEvents.REFRESH_HOSTS, handleRefreshHosts);
+      window.removeEventListener(HostsEvents.WORKSPACE_CHANGED, handleWorkspaceChange);
       window.removeEventListener(
         HostsEvents.HOST_TESTING_START,
         handleHostTestingStart as EventListener,

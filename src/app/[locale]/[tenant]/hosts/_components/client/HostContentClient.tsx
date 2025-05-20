@@ -10,7 +10,7 @@ import { useHost } from '@/hooks/useHost';
 import { useHostViewStore } from '@/store/hostViewStore';
 import { Host } from '@/types/component/hostComponentType';
 
-import { HostsEvents } from './HostEventListener';
+import HostEventListener, { HostsEvents } from './HostEventListener';
 import { HostGridClient } from './HostGridClient';
 import { HostTableClient } from './HostTableClient';
 
@@ -82,11 +82,11 @@ function HostContentClient({ initialHosts }: HostContentClientProps) {
     };
 
     // Add event listener for workspace changes
-    window.addEventListener('WORKSPACE_CHANGED', handleWorkspaceChange);
+    window.addEventListener(HostsEvents.WORKSPACE_CHANGED, handleWorkspaceChange);
 
     // Cleanup function
     return () => {
-      window.removeEventListener('WORKSPACE_CHANGED', handleWorkspaceChange);
+      window.removeEventListener(HostsEvents.WORKSPACE_CHANGED, handleWorkspaceChange);
     };
   }, []);
 
@@ -343,33 +343,36 @@ function HostContentClient({ initialHosts }: HostContentClientProps) {
     );
   }
 
-  // Render the appropriate view based on viewMode
+  // Render the view based on current state and view mode
   return (
-    <div className="space-y-4 p-4">
-      {!isClient ? (
-        // Server-side placeholder with minimal content to avoid hydration mismatch
-        <div className="min-h-[200px] rounded-md border p-4 animate-pulse bg-muted/10"></div>
-      ) : viewMode === 'grid' ? (
-        <HostGridClient
-          hosts={filteredHosts}
-          selectedHosts={selectedHosts}
-          selectMode={false}
-          onSelect={handleSelectHost}
-          onDelete={handleDeleteHost}
-          onTestConnection={handleTestConnection}
-          activeWorkspace={activeWorkspace}
-        />
-      ) : (
-        <HostTableClient
-          hosts={filteredHosts}
-          selectedHosts={selectedHosts}
-          selectMode={false}
-          onSelect={handleSelectHost}
-          onDelete={handleDeleteHost}
-          onTestConnection={handleTestConnection}
-          activeWorkspace={activeWorkspace}
-        />
-      )}
-    </div>
+    <>
+      <HostEventListener />
+      <div className="space-y-4 p-4">
+        {!isClient ? (
+          // Server-side placeholder with minimal content to avoid hydration mismatch
+          <div className="min-h-[200px] rounded-md border p-4 animate-pulse bg-muted/10"></div>
+        ) : viewMode === 'grid' ? (
+          <HostGridClient
+            hosts={filteredHosts}
+            selectedHosts={selectedHosts}
+            selectMode={false}
+            onSelect={handleSelectHost}
+            onDelete={handleDeleteHost}
+            onTestConnection={handleTestConnection}
+            activeWorkspace={activeWorkspace}
+          />
+        ) : (
+          <HostTableClient
+            hosts={filteredHosts}
+            selectedHosts={selectedHosts}
+            selectMode={false}
+            onSelect={handleSelectHost}
+            onDelete={handleDeleteHost}
+            onTestConnection={handleTestConnection}
+            activeWorkspace={activeWorkspace}
+          />
+        )}
+      </div>
+    </>
   );
 }

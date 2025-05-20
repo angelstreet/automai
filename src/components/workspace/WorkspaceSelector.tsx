@@ -3,6 +3,8 @@
 import { Check, ChevronDown, Home, Plus, Trash, Users, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { HostsEvents } from '@/app/[locale]/[tenant]/hosts/_components/client/HostEventListener';
+import { RepositoryEvents } from '@/app/[locale]/[tenant]/repositories/_components/client/RepositoryEventListener';
 import {
   addWorkspace,
   getActiveWorkspace,
@@ -47,7 +49,6 @@ import {
   SelectValue,
 } from '@/components/shadcn/select';
 import { Workspace } from '@/types/component/workspaceComponentType';
-import { RepositoryEvents } from '@/app/[locale]/[tenant]/repositories/_components/client/RepositoryEventListener';
 
 export type { Workspace };
 
@@ -112,8 +113,9 @@ export default function WorkspaceSelector({ className = '' }) {
     // Save to database
     await updateActiveWorkspace(workspaceId);
 
-    // Notify components that workspace has changed using the standard event
+    // Notify components that workspace has changed using the standard events
     window.dispatchEvent(new Event(RepositoryEvents.WORKSPACE_CHANGED));
+    window.dispatchEvent(new Event(HostsEvents.WORKSPACE_CHANGED));
   };
 
   const handleCreateWorkspace = async () => {

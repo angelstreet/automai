@@ -373,19 +373,3 @@ export async function getBulkWorkspaceMappings(
     };
   }
 }
-
-/**
- * Client-side helper to notify components when workspace changes
- * This should be called after setActiveWorkspace in client components
- */
-export async function notifyWorkspaceChange() {
-  'use client';
-
-  if (typeof window !== 'undefined') {
-    console.log('[@action:workspace:notifyWorkspaceChange] Dispatching workspace change event');
-    window.dispatchEvent(new Event('WORKSPACE_CHANGED'));
-  }
-
-  // Since this is an async function, we need to return something
-  return { success: true };
-}
