@@ -53,19 +53,21 @@ export function RepositoryListClient() {
     fetchWorkspaceData();
 
     // Listen for workspace change events
-    const handleWorkspaceChange = () => {
+    const handleWorkspaceChange = async () => {
       console.log('[@component:RepositoryListClient] Workspace change detected, refreshing data');
-      fetchWorkspaceData();
+      await fetchWorkspaceData();
+      // Trigger repository data refresh when workspace changes
+      await refetchRepositories();
     };
 
-    // Add event listener for workspace changes
+    // Add event listener for workspace changes - use the standard event name
     window.addEventListener('WORKSPACE_CHANGED', handleWorkspaceChange);
 
     // Cleanup function
     return () => {
       window.removeEventListener('WORKSPACE_CHANGED', handleWorkspaceChange);
     };
-  }, []);
+  }, [refetchRepositories]);
 
   // Filter repositories by active workspace
   useEffect(() => {
@@ -231,8 +233,10 @@ export function RepositoryListClient() {
       {/* Repository cards grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {isLoadingRepositories ? (
-          <div key="loading-spinner" className="col-span-full flex justify-center p-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <div key="loading-spinner" className="col-span-full">
+            <div className="flex justify-center p-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
           </div>
         ) : currentRepositories.length === 0 ? (
           <div key="empty-state" className="col-span-full">
