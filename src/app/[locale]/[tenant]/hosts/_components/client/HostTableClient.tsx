@@ -1,6 +1,6 @@
 'use client';
 
-import { Terminal, RefreshCw, XCircle, ScrollText, MoreHorizontal } from 'lucide-react';
+import { Terminal, RefreshCw, XCircle, ScrollText, MoreHorizontal, FolderPlus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
@@ -19,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/shadcn/table';
+import AddToWorkspace from '@/components/workspace/AddToWorkspace';
 import { Host } from '@/types/component/hostComponentType';
 
 interface HostTableClientProps {
@@ -159,6 +160,22 @@ export function HostTableClient({
                         <RefreshCw className="mr-2 h-3.5 w-3.5" />
                         <span className="text-sm">{t('refresh')}</span>
                       </DropdownMenuItem>
+                      <AddToWorkspace
+                        itemType="host"
+                        itemId={host.id}
+                        trigger={
+                          <DropdownMenuItem
+                            key={`workspace-${host.id}`}
+                            onSelect={(e) => {
+                              e.preventDefault();
+                            }}
+                            className="py-1.5"
+                          >
+                            <FolderPlus className="mr-2 h-3.5 w-3.5" />
+                            <span className="text-sm">Workspaces</span>
+                          </DropdownMenuItem>
+                        }
+                      />
                       <DropdownMenuItem
                         key={`delete-${host.id}`}
                         onClick={() => onDelete?.(host.id)}

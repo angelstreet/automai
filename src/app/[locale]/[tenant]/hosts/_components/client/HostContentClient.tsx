@@ -3,6 +3,7 @@
 import { Server, PlusCircle } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 
+import { getActiveWorkspace, getWorkspacesContainingItem } from '@/app/actions/workspaceAction';
 import { Button } from '@/components/shadcn/button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useHost } from '@/hooks/useHost';
@@ -39,6 +40,13 @@ function HostContentClient({ initialHosts }: HostContentClientProps) {
   const [hosts, setHosts] = useState<Host[]>(initialHosts);
   const [selectedHosts, setSelectedHosts] = useState<Set<string>>(new Set());
 
+  // Workspace filtering
+  const [activeWorkspace, setActiveWorkspace] = useState<string | null>(null);
+  const [filteredHosts, setFilteredHosts] = useState<Host[]>(initialHosts);
+
+  // Client-side only view component rendering to prevent hydration issues
+  const [isClient, setIsClient] = useState(false);
+
   // Log when viewMode changes
   useEffect(() => {
     console.log(`[@component:HostListClient] View mode changed to: ${viewMode}`);
@@ -50,6 +58,80 @@ function HostContentClient({ initialHosts }: HostContentClientProps) {
       setHosts(queryHosts);
     }
   }, [queryHosts]);
+
+  // Fetch active workspace and related hosts
+  useEffect(() => {
+    const fetchWorkspaceData = async () => {
+      try {
+        // Get active workspace
+        const workspaceResult = await getActiveWorkspace();
+        if (workspaceResult.success) {
+          setActiveWorkspace(workspaceResult.data || null);
+        }
+      } catch (error) {
+        console.error('[@component:HostContentClient] Error fetching workspace data:', error);
+      }
+    };
+
+    fetchWorkspaceData();
+
+    // Listen for workspace change events
+    const handleWorkspaceChange = () => {
+      console.log('[@component:HostContentClient] Workspace change detected, refreshing data');
+      fetchWorkspaceData();
+    };
+
+    // Add event listener for workspace changes
+    window.addEventListener('WORKSPACE_CHANGED', handleWorkspaceChange);
+
+    // Cleanup function
+    return () => {
+      window.removeEventListener('WORKSPACE_CHANGED', handleWorkspaceChange);
+    };
+  }, []);
+
+  // Filter hosts whenever hosts or active workspace changes
+  useEffect(() => {
+    const filterByWorkspace = async () => {
+      if (activeWorkspace) {
+        console.log(
+          '[@component:HostContentClient] Filtering by active workspace:',
+          activeWorkspace,
+        );
+
+        // Create a map of host IDs that belong to the active workspace
+        const workspaceMap = new Map<string, boolean>();
+
+        // Process each host to check workspace membership
+        const checkPromises = hosts.map(async (host) => {
+          const result = await getWorkspacesContainingItem('host', host.id);
+          if (result.success && result.data && result.data.includes(activeWorkspace)) {
+            workspaceMap.set(host.id, true);
+          }
+          return host;
+        });
+
+        // Wait for all checks to complete
+        await Promise.all(checkPromises);
+
+        // Filter hosts to only those in the active workspace
+        const filtered = hosts.filter((host) => workspaceMap.has(host.id));
+        setFilteredHosts(filtered);
+
+        console.log(
+          `[@component:HostContentClient] Filtered to ${filtered.length} hosts in workspace`,
+        );
+      } else {
+        // If no active workspace, show all hosts
+        setFilteredHosts(hosts);
+        console.log(
+          `[@component:HostContentClient] No active workspace, showing all ${hosts.length} hosts`,
+        );
+      }
+    };
+
+    filterByWorkspace();
+  }, [hosts, activeWorkspace]);
 
   // Create helper functions to handle test start/complete
   const handleTestStarted = useCallback((hostId: string) => {
@@ -214,8 +296,21 @@ function HostContentClient({ initialHosts }: HostContentClientProps) {
     }
   };
 
+  // Debug log to show what hosts are being rendered
+  useEffect(() => {
+    console.log(
+      `[@component:HostContentClient] Rendering with ${filteredHosts.length} filtered hosts (out of ${hosts.length} total hosts)`,
+    );
+    console.log(`[@component:HostContentClient] Active workspace: ${activeWorkspace || 'none'}`);
+  }, [filteredHosts, hosts, activeWorkspace]);
+
+  // Set isClient to true on client-side
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   // Empty state for no hosts
-  if (hosts.length === 0) {
+  if (filteredHosts.length === 0 && hosts.length === 0) {
     return (
       <div className="p-6">
         <EmptyState
@@ -237,12 +332,28 @@ function HostContentClient({ initialHosts }: HostContentClientProps) {
     );
   }
 
-  // Client-side only view component rendering to prevent hydration issues
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
+  // Show empty state if workspace filter returns no results
+  if (filteredHosts.length === 0 && hosts.length > 0) {
+    return (
+      <div className="p-6">
+        <EmptyState
+          icon={<Server className="h-10 w-10" />}
+          title="No hosts in current workspace"
+          description="Add hosts to this workspace or switch workspaces"
+          action={
+            <Button
+              onClick={() => window.dispatchEvent(new Event(HostsEvents.OPEN_HOST_DIALOG))}
+              size="sm"
+              className="gap-1"
+            >
+              <PlusCircle className="h-4 w-4" />
+              <span>Add Host</span>
+            </Button>
+          }
+        />
+      </div>
+    );
+  }
 
   // Render the appropriate view based on viewMode
   return (
@@ -252,7 +363,7 @@ function HostContentClient({ initialHosts }: HostContentClientProps) {
         <div className="min-h-[200px] rounded-md border p-4 animate-pulse bg-muted/10"></div>
       ) : viewMode === 'grid' ? (
         <HostGridClient
-          hosts={hosts}
+          hosts={filteredHosts}
           selectedHosts={selectedHosts}
           selectMode={false}
           onSelect={handleSelectHost}
@@ -261,7 +372,7 @@ function HostContentClient({ initialHosts }: HostContentClientProps) {
         />
       ) : (
         <HostTableClient
-          hosts={hosts}
+          hosts={filteredHosts}
           selectedHosts={selectedHosts}
           selectMode={false}
           onSelect={handleSelectHost}

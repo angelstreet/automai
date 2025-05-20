@@ -1,6 +1,6 @@
 'use client';
 
-import { Terminal, MoreHorizontal, RefreshCw, XCircle, ScrollText } from 'lucide-react';
+import { Terminal, MoreHorizontal, RefreshCw, XCircle, ScrollText, FolderPlus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useState, useEffect, useCallback } from 'react';
@@ -33,6 +33,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/shadcn/tooltip';
+import AddToWorkspace from '@/components/workspace/AddToWorkspace';
 import { Host } from '@/types/component/hostComponentType';
 
 interface HostCardClientProps {
@@ -337,6 +338,21 @@ function HostCardClient({ host, onDelete, onTestConnection }: HostCardClientProp
                   <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                   <span>{isRefreshing ? t('refreshing') : t('refresh')}</span>
                 </DropdownMenuItem>
+                <AddToWorkspace
+                  itemType="host"
+                  itemId={host.id}
+                  trigger={
+                    <DropdownMenuItem
+                      onSelect={(e) => {
+                        e.preventDefault();
+                      }}
+                      disabled={isDeleting || isRefreshing}
+                    >
+                      <FolderPlus className="mr-2 h-4 w-4" />
+                      <span>Workspaces</span>
+                    </DropdownMenuItem>
+                  }
+                />
                 <DropdownMenuItem
                   onClick={handleDeleteClick}
                   disabled={isDeleting}
