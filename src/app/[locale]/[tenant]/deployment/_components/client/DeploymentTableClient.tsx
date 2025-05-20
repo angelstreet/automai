@@ -164,37 +164,6 @@ export function DeploymentTableClient({
     try {
       // Execute the original run logic
       await handleRunDeployment(deployment);
-
-      // Check if config.env contains 'playwright'
-      if (
-        deployment.config &&
-        deployment.config.env &&
-        deployment.config.env.toLowerCase().includes('playwright')
-      ) {
-        console.log(
-          '[@component:DeploymentTableClient:customHandleRunDeployment] Redirecting to Playwright Run page for deployment:',
-          deployment.id,
-        );
-        const queryParams = new URLSearchParams({
-          jobId: deployment.id || 'N/A',
-          configName: deployment.name || 'N/A',
-          env: deployment.config?.env || 'N/A',
-          hostName: 'N/A', // Placeholder as host property does not exist
-          hostIp: 'N/A', // Placeholder as host property does not exist
-          hostPort: 'N/A', // Placeholder as host property does not exist
-          repository: deployment.repositoryId || 'N/A', // Corrected property name
-          scriptFolder: 'N/A', // Placeholder as scriptFolder property does not exist
-          startTime: deployment.createdAt || 'N/A', // Corrected property name
-          // WebSocket URL and VNC Stream URL will be updated post-run if available
-          websocketUrl: (deployment as any).websocket_url || '',
-          vncStreamUrl: (deployment as any).vnc_stream_url || '',
-          sessionId: (deployment as any).session_id || '',
-        });
-        // Use the current URL and append the playwright-run path
-        const currentPath = window.location.pathname;
-        const url = `${currentPath}/playwright-run?${queryParams.toString()}`;
-        window.open(url, '_blank');
-      }
     } catch (error) {
       console.error(
         '[@component:DeploymentTableClient:customHandleRunDeployment] Error running deployment:',

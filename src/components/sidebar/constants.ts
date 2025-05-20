@@ -14,6 +14,7 @@ import {
   GitBranch,
   Key,
   Globe,
+  EyeIcon,
 } from 'lucide-react';
 
 import { Role } from '@/types/service/userServiceType';
@@ -72,6 +73,12 @@ export const sidebarNavigationData: SidebarNavigationData = {
           title: 'Browser',
           href: '/browser',
           icon: Globe,
+          roles: ['admin', 'developer', 'tester', 'viewer'],
+        },
+        {
+          title: 'REC',
+          href: '/rec',
+          icon: EyeIcon,
           roles: ['admin', 'developer', 'tester', 'viewer'],
         },
         {
