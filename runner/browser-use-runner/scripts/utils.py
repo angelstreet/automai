@@ -160,7 +160,9 @@ def init_browser_with_remote_debugging(playwright: Playwright, headless=True, de
         '--window-size=1080,720',
         '--disable-gpu',
         '--enable-unsafe-swiftshader',
-        '--hide-crash-restore-bubble'
+        '--hide-crash-restore-bubble',
+        '--disable-webgpu',
+        '--use-gl=swiftshader'
 
     ]
     
