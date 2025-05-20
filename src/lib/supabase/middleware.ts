@@ -116,9 +116,19 @@ function clearAuthCookies(response: NextResponse): NextResponse {
  * This helps minimize unnecessary Supabase API calls
  */
 function hasValidAuthCookies(request: NextRequest): boolean {
-  const accessToken = request.cookies.get('sb-access-token');
-  const refreshToken = request.cookies.get('sb-refresh-token');
-  return !!accessToken && !!refreshToken;
+  // Look for project-specific auth token cookies (ends with auth-token.0 and auth-token.1)
+  const allCookies = request.cookies.getAll();
+  const authCookies = allCookies.filter(
+    (cookie) => cookie.name.includes('auth-token.0') || cookie.name.includes('auth-token.1'),
+  );
+
+  const hasValidCookies = authCookies.length >= 2;
+
+  console.log(
+    `[Middleware:hasValidAuthCookies] Found ${authCookies.length} valid auth cookies. Valid: ${hasValidCookies}`,
+  );
+
+  return hasValidCookies; // We need both the .0 and .1 cookies
 }
 
 /**
