@@ -29,6 +29,7 @@ interface HostTableClientProps {
   onSelect: (id: string) => void;
   onDelete?: (id: string) => void;
   onTestConnection?: (host: Host, options?: { skipRevalidation?: boolean }) => Promise<boolean>;
+  activeWorkspace?: string | null;
 }
 
 export function HostTableClient({
@@ -38,6 +39,7 @@ export function HostTableClient({
   onSelect,
   onDelete,
   onTestConnection,
+  activeWorkspace,
 }: HostTableClientProps) {
   const router = useRouter();
   const t = useTranslations('common');
@@ -93,103 +95,113 @@ export function HostTableClient({
           </TableRow>
         </TableHeader>
         <TableBody key="host-table-body">
-          {hosts.map((host) => (
-            <TableRow
-              key={host.id}
-              className="h-10"
-              onClick={() => selectMode && onSelect(host.id)}
-            >
-              <TableCell className="py-2">
-                <div className="flex justify-center">{getStatusDot(host.status)}</div>
-              </TableCell>
-              <TableCell className="font-medium py-2">{host.name}</TableCell>
-              <TableCell className="py-2">
-                {host.ip}
-                {host.port ? `:${host.port}` : ''}
-              </TableCell>
-              <TableCell className="py-2">
-                {(() => {
-                  switch (host.status) {
-                    case 'connected':
-                      return host.updated_at
-                        ? new Date(host.updated_at).toLocaleString()
-                        : new Date().toLocaleString();
-                    case 'testing':
-                      return <span className="text-yellow-500">{t('testing')}</span>;
-                    case 'failed':
-                      return <span className="text-red-500">{t('failed')}</span>;
-                    default:
-                      return t('never');
-                  }
-                })()}
-              </TableCell>
-              <TableCell className="py-2">
-                <div className="flex items-center space-x-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 w-7 p-0"
-                    onClick={() => handleTerminalClick(host)}
-                    disabled={host.status !== 'connected'}
-                  >
-                    <Terminal className="h-3.5 w-3.5" />
-                  </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                        <MoreHorizontal className="h-3.5 w-3.5" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-[140px]">
-                      <DropdownMenuItem
-                        key={`logs-${host.id}`}
-                        onClick={() => {
-                          const { locale, tenant } = getPathSegments();
-                          router.push(`/${locale}/${tenant}/logs/${host.name}`);
-                        }}
-                        className="py-1.5"
-                      >
-                        <ScrollText className="mr-2 h-3.5 w-3.5" />
-                        <span className="text-sm">{t('logs')}</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        key={`refresh-${host.id}`}
-                        onClick={() => onTestConnection?.(host, { skipRevalidation: false })}
-                        className="py-1.5"
-                      >
-                        <RefreshCw className="mr-2 h-3.5 w-3.5" />
-                        <span className="text-sm">{t('refresh')}</span>
-                      </DropdownMenuItem>
-                      <AddToWorkspace
-                        itemType="host"
-                        itemId={host.id}
-                        trigger={
-                          <DropdownMenuItem
-                            key={`workspace-${host.id}`}
-                            onSelect={(e) => {
-                              e.preventDefault();
-                            }}
-                            className="py-1.5"
-                          >
-                            <FolderPlus className="mr-2 h-3.5 w-3.5" />
-                            <span className="text-sm">Workspaces</span>
-                          </DropdownMenuItem>
-                        }
-                      />
-                      <DropdownMenuItem
-                        key={`delete-${host.id}`}
-                        onClick={() => onDelete?.(host.id)}
-                        className="text-destructive py-1.5"
-                      >
-                        <XCircle className="mr-2 h-3.5 w-3.5" />
-                        <span className="text-sm">{t('delete')}</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+          {hosts.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={5} className="h-24 text-center">
+                <div className="text-sm text-muted-foreground">
+                  {activeWorkspace ? 'No hosts found in this workspace' : 'No hosts found'}
                 </div>
               </TableCell>
             </TableRow>
-          ))}
+          ) : (
+            hosts.map((host) => (
+              <TableRow
+                key={host.id}
+                className="h-10"
+                onClick={() => selectMode && onSelect(host.id)}
+              >
+                <TableCell className="py-2">
+                  <div className="flex justify-center">{getStatusDot(host.status)}</div>
+                </TableCell>
+                <TableCell className="font-medium py-2">{host.name}</TableCell>
+                <TableCell className="py-2">
+                  {host.ip}
+                  {host.port ? `:${host.port}` : ''}
+                </TableCell>
+                <TableCell className="py-2">
+                  {(() => {
+                    switch (host.status) {
+                      case 'connected':
+                        return host.updated_at
+                          ? new Date(host.updated_at).toLocaleString()
+                          : new Date().toLocaleString();
+                      case 'testing':
+                        return <span className="text-yellow-500">{t('testing')}</span>;
+                      case 'failed':
+                        return <span className="text-red-500">{t('failed')}</span>;
+                      default:
+                        return t('never');
+                    }
+                  })()}
+                </TableCell>
+                <TableCell className="py-2">
+                  <div className="flex items-center space-x-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 w-7 p-0"
+                      onClick={() => handleTerminalClick(host)}
+                      disabled={host.status !== 'connected'}
+                    >
+                      <Terminal className="h-3.5 w-3.5" />
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                          <MoreHorizontal className="h-3.5 w-3.5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-[140px]">
+                        <DropdownMenuItem
+                          key={`logs-${host.id}`}
+                          onClick={() => {
+                            const { locale, tenant } = getPathSegments();
+                            router.push(`/${locale}/${tenant}/logs/${host.name}`);
+                          }}
+                          className="py-1.5"
+                        >
+                          <ScrollText className="mr-2 h-3.5 w-3.5" />
+                          <span className="text-sm">{t('logs')}</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          key={`refresh-${host.id}`}
+                          onClick={() => onTestConnection?.(host, { skipRevalidation: false })}
+                          className="py-1.5"
+                        >
+                          <RefreshCw className="mr-2 h-3.5 w-3.5" />
+                          <span className="text-sm">{t('refresh')}</span>
+                        </DropdownMenuItem>
+                        <AddToWorkspace
+                          itemType="host"
+                          itemId={host.id}
+                          trigger={
+                            <DropdownMenuItem
+                              key={`workspace-${host.id}`}
+                              onSelect={(e) => {
+                                e.preventDefault();
+                              }}
+                              className="py-1.5"
+                            >
+                              <FolderPlus className="mr-2 h-3.5 w-3.5" />
+                              <span className="text-sm">Workspaces</span>
+                            </DropdownMenuItem>
+                          }
+                        />
+                        <DropdownMenuItem
+                          key={`delete-${host.id}`}
+                          onClick={() => onDelete?.(host.id)}
+                          className="text-destructive py-1.5"
+                        >
+                          <XCircle className="mr-2 h-3.5 w-3.5" />
+                          <span className="text-sm">{t('delete')}</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
     </div>

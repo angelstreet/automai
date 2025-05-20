@@ -337,6 +337,44 @@ export async function getWorkspacesContainingItem(
 }
 
 /**
+ * Get workspaces for multiple items at once
+ * This is a performance optimization to avoid making multiple separate API calls
+ */
+export async function getBulkWorkspaceMappings(
+  itemType: 'deployment' | 'repository' | 'host' | 'config',
+  itemIds: string[],
+): Promise<DbResponse<Record<string, string[]>>> {
+  console.log(
+    `[@action:workspace:getBulkWorkspaceMappings] Getting workspaces for ${itemIds.length} ${itemType} items`,
+  );
+
+  try {
+    const result = await workspaceDb.getBulkWorkspaceMappings(itemType, itemIds);
+
+    if (result.success) {
+      const totalMappings = Object.values(result.data || {}).reduce(
+        (acc, workspaces) => acc + workspaces.length,
+        0,
+      );
+      console.log(
+        `[@action:workspace:getBulkWorkspaceMappings] Found ${totalMappings} workspace mappings for ${itemIds.length} items`,
+      );
+    } else {
+      console.log(`[@action:workspace:getBulkWorkspaceMappings] ERROR: ${result.error}`);
+    }
+
+    return result;
+  } catch (error: any) {
+    console.error('[@action:workspace:getBulkWorkspaceMappings] Unexpected error:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to get bulk workspace mappings',
+      data: {},
+    };
+  }
+}
+
+/**
  * Client-side helper to notify components when workspace changes
  * This should be called after setActiveWorkspace in client components
  */

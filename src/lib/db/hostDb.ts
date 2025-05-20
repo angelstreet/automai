@@ -16,7 +16,14 @@ export async function getHosts(teamId: string): Promise<DbResponse<Host[]>> {
 
     const { data, error } = await supabase
       .from('hosts')
-      .select('*')
+      .select(
+        `
+        *,
+        hosts_workspaces(
+          workspace_id
+        )
+      `,
+      )
       .eq('team_id', teamId)
       .order('created_at', { ascending: false });
 
@@ -24,10 +31,22 @@ export async function getHosts(teamId: string): Promise<DbResponse<Host[]>> {
       return { success: false, error: error.message };
     }
 
+    // Process the data to include workspace IDs in a cleaner format
+    const processedData = data.map((host) => {
+      // Format workspace data into an array of workspace IDs
+      const workspaces = (host.hosts_workspaces || []).map((mapping) => mapping.workspace_id);
+
+      return {
+        ...host,
+        workspaces, // Add the array of workspace IDs
+        hosts_workspaces: undefined, // Remove the raw mapping data
+      };
+    });
+
     console.log(
-      `[@db:hostDb:getHosts] Successfully retrieved ${data?.length || 0} hosts for team: ${teamId}`,
+      `[@db:hostDb:getHosts] Successfully retrieved ${processedData.length || 0} hosts with workspace data for team: ${teamId}`,
     );
-    return { success: true, data };
+    return { success: true, data: processedData };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to get hosts' };
   }

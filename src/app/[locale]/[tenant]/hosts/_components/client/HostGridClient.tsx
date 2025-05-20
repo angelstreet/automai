@@ -13,6 +13,7 @@ interface HostGridClientProps {
   onSelect: (id: string) => void;
   onDelete?: (id: string) => void;
   onTestConnection?: (host: Host, options?: { skipRevalidation?: boolean }) => Promise<boolean>;
+  activeWorkspace?: string | null;
 }
 
 export function HostGridClient({
@@ -22,7 +23,18 @@ export function HostGridClient({
   onSelect,
   onDelete,
   onTestConnection,
+  activeWorkspace,
 }: HostGridClientProps) {
+  if (hosts.length === 0) {
+    return (
+      <div className="w-full p-4 text-center">
+        <div className="text-sm text-muted-foreground">
+          {activeWorkspace ? 'No hosts found in this workspace' : 'No hosts found'}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {hosts.map((host) => (

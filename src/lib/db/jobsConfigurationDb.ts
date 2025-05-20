@@ -33,6 +33,9 @@ export async function getJobConfigsByTeamId(
           started_at, 
           completed_at,
           report_url
+        ),
+        jobs_configuration_workspaces!jobs_configuration_workspaces_config_id_fkey(
+          workspace_id
         )
       `,
       )
@@ -44,10 +47,24 @@ export async function getJobConfigsByTeamId(
       return { success: false, error: error.message };
     }
 
+    // Process the data to include workspace IDs
+    const processedData = data.map((config) => {
+      // Format workspace data into an array of workspace IDs
+      const workspaces = (config.jobs_configuration_workspaces || []).map(
+        (mapping) => mapping.workspace_id,
+      );
+
+      return {
+        ...config,
+        workspaces, // Add the array of workspace IDs
+        jobs_configuration_workspaces: undefined, // Remove the raw mapping data
+      };
+    });
+
     console.log(
-      `[@db:jobsConfigurationDb:getJobConfigsByTeamId] Successfully fetched ${data.length} job configs`,
+      `[@db:jobsConfigurationDb:getJobConfigsByTeamId] Successfully fetched ${processedData.length} job configs with workspace data`,
     );
-    return { success: true, data };
+    return { success: true, data: processedData };
   } catch (error: any) {
     console.error(`[@db:jobsConfigurationDb:getJobConfigsByTeamId] Error: ${error.message}`);
     return { success: false, error: error.message || 'Failed to get job configurations' };
@@ -271,6 +288,7 @@ export async function getJobConfigsWithLatestRun(
     const supabase = await createClient(cookieStore);
 
     // Query to get all job configurations with their latest run (if any)
+    // And include workspace information in the same query
     const { data, error } = await supabase
       .from('jobs_configuration')
       .select(
@@ -284,6 +302,9 @@ export async function getJobConfigsWithLatestRun(
           completed_at,
           results,
           report_url
+        ),
+        jobs_configuration_workspaces!jobs_configuration_workspaces_config_id_fkey(
+          workspace_id
         )
       `,
       )
@@ -295,7 +316,7 @@ export async function getJobConfigsWithLatestRun(
       return { success: false, error: error.message };
     }
 
-    // Process the data to include only the latest run
+    // Process the data to include only the latest run and organize workspace data
     const processedData = data.map((config) => {
       // Get the latest run by created_at date
       const runs = config.jobs_run || [];
@@ -305,15 +326,22 @@ export async function getJobConfigsWithLatestRun(
           )[0]
         : null;
 
+      // Format workspace data into an array of workspace IDs
+      const workspaces = (config.jobs_configuration_workspaces || []).map(
+        (mapping) => mapping.workspace_id,
+      );
+
       return {
         ...config,
         latest_run: latestRun,
         jobs_run: undefined, // Remove the array of runs
+        workspaces, // Add the array of workspace IDs
+        jobs_configuration_workspaces: undefined, // Remove the raw mapping data
       };
     });
 
     console.log(
-      `[@db:jobsConfigurationDb:getJobConfigsWithLatestRun] Successfully fetched ${processedData.length} job configs with latest run`,
+      `[@db:jobsConfigurationDb:getJobConfigsWithLatestRun] Successfully fetched ${processedData.length} job configs with latest run and workspace data`,
     );
     return { success: true, data: processedData };
   } catch (error: any) {
@@ -353,6 +381,9 @@ export async function getJobConfigWithRuns(
           results,
           logs,
           report_url
+        ),
+        jobs_configuration_workspaces!jobs_configuration_workspaces_config_id_fkey(
+          workspace_id
         )
       `,
       )
@@ -371,10 +402,22 @@ export async function getJobConfigWithRuns(
       );
     }
 
-    console.log(
-      `[@db:jobsConfigurationDb:getJobConfigWithRuns] Successfully fetched job config with runs`,
+    // Format workspace data into an array of workspace IDs
+    const workspaces = (data.jobs_configuration_workspaces || []).map(
+      (mapping) => mapping.workspace_id,
     );
-    return { success: true, data };
+
+    // Add workspaces to the return data
+    const processedData = {
+      ...data,
+      workspaces,
+      jobs_configuration_workspaces: undefined, // Remove the raw mapping data
+    };
+
+    console.log(
+      `[@db:jobsConfigurationDb:getJobConfigWithRuns] Successfully fetched job config with runs and workspace data`,
+    );
+    return { success: true, data: processedData };
   } catch (error: any) {
     console.error(`[@db:jobsConfigurationDb:getJobConfigWithRuns] Error: ${error.message}`);
     return {

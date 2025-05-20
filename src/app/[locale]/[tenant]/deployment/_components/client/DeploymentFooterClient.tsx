@@ -62,9 +62,19 @@ export function DeploymentFooterClient() {
           throw new Error(`Health check failed: ${response.status}`);
         }
         const data = await response.json();
+
+        let status;
+        if (data.status === 'awake') {
+          status = 'ok';
+        } else if (data.status === 'waking_up') {
+          status = 'waking_up';
+        } else {
+          status = 'error';
+        }
+
         setHealthStatus((prev) => ({
           ...prev,
-          [service]: { loading: false, status: data.success ? 'ok' : 'error' },
+          [service]: { loading: false, status },
         }));
       } catch (error) {
         console.error(
@@ -219,7 +229,14 @@ export function DeploymentFooterClient() {
     if (status.loading) {
       return 'bg-yellow-500 animate-blink';
     }
-    return status.status === 'ok' ? 'bg-green-500' : 'bg-red-500';
+
+    if (status.status === 'waking_up') {
+      return 'bg-yellow-500 animate-blink';
+    } else if (status.status === 'ok') {
+      return 'bg-green-500';
+    } else {
+      return 'bg-red-500';
+    }
   };
 
   // Generic dialog component for displaying logs

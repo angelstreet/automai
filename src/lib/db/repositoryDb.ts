@@ -67,8 +67,13 @@ export async function getRepositories(
     );
     const supabase = await createClient(cookieStore);
 
-    // Query repositories with optional team_id filter
-    let query = supabase.from('repositories').select('*');
+    // Query repositories with optional team_id filter and include workspace mappings
+    let query = supabase.from('repositories').select(`
+      *,
+      repository_workspaces(
+        workspace_id
+      )
+    `);
 
     // Apply team_id filter if provided
     if (teamId) {
@@ -81,10 +86,22 @@ export async function getRepositories(
       return { success: false, error: error.message };
     }
 
+    // Process the data to include workspace IDs in a cleaner format
+    const processedData = data.map((repo) => {
+      // Format workspace data into an array of workspace IDs
+      const workspaces = (repo.repository_workspaces || []).map((mapping) => mapping.workspace_id);
+
+      return {
+        ...repo,
+        workspaces, // Add the array of workspace IDs
+        repository_workspaces: undefined, // Remove the raw mapping data
+      };
+    });
+
     console.log(
-      `[@db:repositoryDb:getRepositories] Successfully fetched ${data.length} repositories`,
+      `[@db:repositoryDb:getRepositories] Successfully fetched ${processedData.length} repositories with workspace data`,
     );
-    return { success: true, data };
+    return { success: true, data: processedData };
   } catch (error: unknown) {
     const err = error instanceof Error ? error : new Error(String(error));
     console.error(`[@db:repositoryDb:getRepositories] Error: ${err.message}`);

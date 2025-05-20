@@ -1,9 +1,18 @@
+import https from 'https';
+
 import { NextResponse } from 'next/server';
+
+// Status constants
+const STATUS = {
+  AWAKE: 'awake',
+  WAKING_UP: 'waking_up',
+  ERROR: 'error',
+};
 
 export async function GET(_request: Request, { params }: { params: { service: string } }) {
   try {
     const service = (await params).service;
-    console.log(`[@api:render-health] Sending request to wake up Render ${service} service`);
+    console.log(`[@api:render-health] Checking health for Render ${service} service`);
 
     let renderUrl;
     switch (service) {
@@ -29,6 +38,7 @@ export async function GET(_request: Request, { params }: { params: { service: st
         console.error('[@api:render-health] Invalid service specified:', service);
         return NextResponse.json({
           success: false,
+          status: STATUS.ERROR,
           error: 'Invalid service specified',
         });
     }
@@ -37,35 +47,110 @@ export async function GET(_request: Request, { params }: { params: { service: st
       console.error(`[@api:render-health] Render ${service} service URL is not defined`);
       return NextResponse.json({
         success: false,
+        status: STATUS.ERROR,
         error: `Render ${service} service URL is not defined`,
       });
     }
 
-    const response = await fetch(`${renderUrl}`, {
-      method: 'GET',
-      headers: {
-        Accept: '*/*',
-      },
-    });
-    console.log(`[@api:render-health] Render ${service} service response:`, response);
-    if (response.ok) {
-      console.log(`[@api:render-health] Render ${service} service is awake`);
+    console.log(`[@api:render-health] Render service url ${renderUrl}`);
+
+    // First check if service is already active using /healthz endpoint
+    const healthEndpoint = `${renderUrl}/healthz`;
+    console.log(`[@api:render-health] Checking health endpoint: ${healthEndpoint}`);
+
+    const healthResponse = await makeHttpsRequest(healthEndpoint);
+
+    // If service is already active (200 response)
+    if (healthResponse.statusCode === 200) {
+      console.log(`[@api:render-health] Render ${service} service is already awake`);
       return NextResponse.json({
         success: true,
+        status: STATUS.AWAKE,
         message: `Render ${service} service is awake`,
       });
-    } else {
-      console.log(`[@api:render-health] Render ${service} service is waking up`);
-      return NextResponse.json({
-        success: true,
-        message: `Render ${service} service is waking up, please wait`,
-      });
     }
-  } catch (error: any) {
-    console.error(`[@api:render-health] Error waking up Render service:`, error.message);
+
+    // If service is not active, try to wake it up
+    console.log(
+      `[@api:render-health] Render ${service} service is not active, attempting to wake up`,
+    );
+
+    // Hit the root URL to wake up the service
+    await makeHttpsRequest(renderUrl);
+
+    // Try to verify if the service woke up (3 attempts with 50s intervals)
+    const maxRetries = 3;
+    const retryDelayMs = 50000;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      console.log(
+        `[@api:render-health] Waiting for Render ${service} to wake up, attempt ${attempt}/${maxRetries}`,
+      );
+
+      // Wait for the retry delay
+      await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+
+      // Check health again
+      const retryHealthResponse = await makeHttpsRequest(healthEndpoint);
+
+      if (retryHealthResponse.statusCode === 200) {
+        console.log(
+          `[@api:render-health] Render ${service} service woke up successfully on attempt ${attempt}`,
+        );
+        return NextResponse.json({
+          success: true,
+          status: STATUS.AWAKE,
+          message: `Render ${service} service woke up successfully`,
+        });
+      }
+    }
+
+    // If still not awake after max retries
+    console.log(
+      `[@api:render-health] Render ${service} service failed to wake up after ${maxRetries} attempts`,
+    );
     return NextResponse.json({
       success: false,
-      error: 'Failed to wake up Render service',
+      status: STATUS.WAKING_UP,
+      message: `Render ${service} service is still waking up after ${maxRetries} attempts`,
+    });
+  } catch (error: any) {
+    console.error(`[@api:render-health] Error checking health for Render service:`, error.message);
+    return NextResponse.json({
+      success: false,
+      status: STATUS.ERROR,
+      error: 'Failed to check health for Render service',
     });
   }
+}
+
+function makeHttpsRequest(url: string): Promise<{ statusCode: number; data: string }> {
+  return new Promise((resolve, reject) => {
+    const req = https.get(url, { headers: { Accept: '*/*' } }, (res) => {
+      let data = '';
+
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+
+      res.on('end', () => {
+        resolve({
+          statusCode: res.statusCode || 0,
+          data,
+        });
+      });
+    });
+
+    req.on('error', (err) => {
+      reject(err);
+    });
+
+    // Set a timeout of 30 seconds
+    req.setTimeout(30000, () => {
+      req.destroy();
+      reject(new Error('Request timed out after 30 seconds'));
+    });
+
+    req.end();
+  });
 }

@@ -581,6 +581,94 @@ export async function getWorkspacesContainingItem(
   }
 }
 
+/**
+ * Get workspace mappings for multiple items at once
+ * Returns a map of item IDs to workspace IDs arrays
+ */
+export async function getBulkWorkspaceMappings(
+  itemType: 'deployment' | 'repository' | 'host' | 'config',
+  itemIds: string[],
+): Promise<DbResponse<Record<string, string[]>>> {
+  try {
+    if (itemIds.length === 0) {
+      console.log('[@db:workspaceDb:getBulkWorkspaceMappings] No item IDs provided');
+      return { success: true, data: {} };
+    }
+
+    console.log(
+      `[@db:workspaceDb:getBulkWorkspaceMappings] Fetching workspaces for ${itemIds.length} ${itemType} items`,
+    );
+
+    const cookieStore = await cookies();
+    const supabase = await createClient(cookieStore);
+
+    // Determine the correct table and field based on item type
+    let table: string;
+    let field: string;
+
+    switch (itemType) {
+      case 'deployment':
+        table = 'jobs_configuration_workspaces';
+        field = 'config_id';
+        break;
+      case 'repository':
+        table = 'repository_workspaces';
+        field = 'repository_id';
+        break;
+      case 'host':
+        table = 'hosts_workspaces';
+        field = 'host_id';
+        break;
+      case 'config':
+        table = 'jobs_configuration_workspaces';
+        field = 'config_id';
+        break;
+      default:
+        throw new Error(`Invalid item type: ${itemType}`);
+    }
+
+    // Query the appropriate table for all provided item IDs in a single query
+    const { data, error } = await supabase
+      .from(table)
+      .select(`${field}, workspace_id`)
+      .in(field, itemIds);
+
+    if (error) {
+      console.log(`[@db:workspaceDb:getBulkWorkspaceMappings] ERROR: ${error.message}`);
+      return { success: false, error: error.message, data: {} };
+    }
+
+    // Group by item ID
+    const mappings: Record<string, string[]> = {};
+
+    // Initialize each item ID with an empty array
+    itemIds.forEach((id) => {
+      mappings[id] = [];
+    });
+
+    // Populate the workspace IDs for each item
+    data.forEach((item) => {
+      const itemId = item[field];
+      if (!mappings[itemId]) {
+        mappings[itemId] = [];
+      }
+      mappings[itemId].push(item.workspace_id);
+    });
+
+    console.log(
+      `[@db:workspaceDb:getBulkWorkspaceMappings] Successfully fetched workspaces for ${itemIds.length} items`,
+    );
+    return { success: true, data: mappings };
+  } catch (error: any) {
+    console.log(`[@db:workspaceDb:getBulkWorkspaceMappings] CATCH ERROR: ${error.message}`);
+    return {
+      success: false,
+      error: error.message || 'Failed to get bulk workspace mappings',
+      data: {},
+    };
+  }
+}
+
 const workspaceDb = {
   getWorkspacesForCurrentUser,
   createWorkspace,
@@ -592,6 +680,7 @@ const workspaceDb = {
   removeItemFromWorkspace,
   getCurrentUserProfile,
   getWorkspacesContainingItem,
+  getBulkWorkspaceMappings,
 };
 
 export default workspaceDb;

@@ -99,27 +99,15 @@ function HostContentClient({ initialHosts }: HostContentClientProps) {
           activeWorkspace,
         );
 
-        // Create a map of host IDs that belong to the active workspace
-        const workspaceMap = new Map<string, boolean>();
-
-        // Process each host to check workspace membership
-        const checkPromises = hosts.map(async (host) => {
-          const result = await getWorkspacesContainingItem('host', host.id);
-          if (result.success && result.data && result.data.includes(activeWorkspace)) {
-            workspaceMap.set(host.id, true);
-          }
-          return host;
+        // Filter hosts using the workspaces array that comes directly from the database
+        const filtered = hosts.filter((host) => {
+          const hostWorkspaces = (host as any).workspaces || [];
+          return hostWorkspaces.includes(activeWorkspace);
         });
 
-        // Wait for all checks to complete
-        await Promise.all(checkPromises);
-
-        // Filter hosts to only those in the active workspace
-        const filtered = hosts.filter((host) => workspaceMap.has(host.id));
         setFilteredHosts(filtered);
-
         console.log(
-          `[@component:HostContentClient] Filtered to ${filtered.length} hosts in workspace`,
+          `[@component:HostContentClient] Filtered to ${filtered.length} hosts in workspace using direct workspace data`,
         );
       } else {
         // If no active workspace, show all hosts
@@ -369,6 +357,7 @@ function HostContentClient({ initialHosts }: HostContentClientProps) {
           onSelect={handleSelectHost}
           onDelete={handleDeleteHost}
           onTestConnection={handleTestConnection}
+          activeWorkspace={activeWorkspace}
         />
       ) : (
         <HostTableClient
@@ -378,6 +367,7 @@ function HostContentClient({ initialHosts }: HostContentClientProps) {
           onSelect={handleSelectHost}
           onDelete={handleDeleteHost}
           onTestConnection={handleTestConnection}
+          activeWorkspace={activeWorkspace}
         />
       )}
     </div>

@@ -15,7 +15,11 @@ import {
 import { useTranslations } from 'next-intl';
 import React, { useState, useEffect } from 'react';
 
-import { getActiveWorkspace, getWorkspacesContainingItem } from '@/app/actions/workspaceAction';
+import {
+  getActiveWorkspace,
+  getWorkspacesContainingItem,
+  getBulkWorkspaceMappings,
+} from '@/app/actions/workspaceAction';
 import { Button } from '@/components/shadcn/button';
 import {
   DropdownMenu,
@@ -115,28 +119,28 @@ export function DeploymentTableClient({
           activeWorkspace,
         );
 
-        // Create a map of deployment IDs that belong to the active workspace
-        const workspaceMap = new Map<string, boolean>();
+        // Use bulk operation to fetch workspace mappings for all deployments at once
+        const deploymentIds = displayDeployments.map((deployment) => deployment.id);
+        const result = await getBulkWorkspaceMappings('deployment', deploymentIds);
 
-        // Process each deployment to check workspace membership
-        const checkPromises = displayDeployments.map(async (deployment) => {
-          const result = await getWorkspacesContainingItem('deployment', deployment.id);
-          if (result.success && result.data && result.data.includes(activeWorkspace)) {
-            workspaceMap.set(deployment.id, true);
-          }
-          return deployment;
-        });
+        if (result.success && result.data) {
+          // Filter deployments to only those in the active workspace
+          const filtered = displayDeployments.filter((deployment) => {
+            const workspaceIds = result.data[deployment.id] || [];
+            return workspaceIds.includes(activeWorkspace);
+          });
 
-        // Wait for all checks to complete
-        await Promise.all(checkPromises);
-
-        // Filter deployments to only those in the active workspace
-        const filtered = displayDeployments.filter((deployment) => workspaceMap.has(deployment.id));
-        setFilteredDeployments(filtered);
-
-        console.log(
-          `[@component:DeploymentTableClient] Filtered to ${filtered.length} deployments in workspace`,
-        );
+          setFilteredDeployments(filtered);
+          console.log(
+            `[@component:DeploymentTableClient] Filtered to ${filtered.length} deployments in workspace using bulk operation`,
+          );
+        } else {
+          console.error(
+            '[@component:DeploymentTableClient] Error fetching workspace mappings:',
+            result.error,
+          );
+          setFilteredDeployments(displayDeployments);
+        }
       } else {
         // If no active workspace, show all deployments
         setFilteredDeployments(displayDeployments);

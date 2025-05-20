@@ -25,6 +25,13 @@ export function RepositoryListClient() {
   const [selectedRepository, setSelectedRepository] = useState<Repository | null>(null);
   const [showExplorer, setShowExplorer] = useState(false);
 
+  // UI state - Move these declarations up before they're used in useEffects
+  const [activeTab, setActiveTab] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [searchQuery, _setSearchQuery] = useState('');
+  const itemsPerPage = 12;
+
   // Workspace filtering
   const [activeWorkspace, setActiveWorkspace] = useState<string | null>(null);
   const [filteredRepositories, setFilteredRepositories] = useState<Repository[]>([]);
@@ -96,27 +103,15 @@ export function RepositoryListClient() {
           activeWorkspace,
         );
 
-        // Create a map of repository IDs that belong to the active workspace
-        const workspaceMap = new Map<string, boolean>();
-
-        // Process each repository to check workspace membership
-        const checkPromises = initialFiltered.map(async (repo) => {
-          const result = await getWorkspacesContainingItem('repository', repo.id);
-          if (result.success && result.data && result.data.includes(activeWorkspace)) {
-            workspaceMap.set(repo.id, true);
-          }
-          return repo;
+        // Filter repositories using the workspaces array that comes directly from the database
+        const filtered = initialFiltered.filter((repo) => {
+          const repoWorkspaces = (repo as any).workspaces || [];
+          return repoWorkspaces.includes(activeWorkspace);
         });
 
-        // Wait for all checks to complete
-        await Promise.all(checkPromises);
-
-        // Filter repositories to only those in the active workspace
-        const filtered = initialFiltered.filter((repo) => workspaceMap.has(repo.id));
         setFilteredRepositories(filtered);
-
         console.log(
-          `[@component:RepositoryListClient] Filtered to ${filtered.length} repositories in workspace`,
+          `[@component:RepositoryListClient] Filtered to ${filtered.length} repositories in workspace using direct workspace data`,
         );
       } else {
         // If no active workspace, show all repositories
@@ -172,13 +167,6 @@ export function RepositoryListClient() {
     window.addEventListener('refresh-repositories', handleRefresh);
     return () => window.removeEventListener('refresh-repositories', handleRefresh);
   }, [refetchRepositories]);
-
-  // UI state
-  const [activeTab, setActiveTab] = useState('all');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [isDeleting, setIsDeleting] = useState<string | null>(null);
-  const [searchQuery, _setSearchQuery] = useState('');
-  const itemsPerPage = 12;
 
   const handleViewRepository = (repo: Repository) => {
     // Update state to show the explorer
