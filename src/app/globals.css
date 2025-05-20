@@ -466,3 +466,90 @@
     scrollbar-color: rgba(155, 155, 155, 0.5) transparent;
   }
 }
+
+/* Mobile Responsiveness Enhancements
+ * These rules use the .is-mobile-view class added by MobileViewHelper
+ * They are designed to enhance mobile experience without breaking existing layouts
+ */
+
+/* Mobile viewport adjustments */
+html.is-mobile-view {
+  /* Custom properties specifically for mobile */
+  --mobile-header-font-size: 0.875rem;
+  --mobile-spacing: 0.5rem;
+  /* Use existing layout dimensions to maintain consistency */
+  --header-spacing-mobile: 0.5rem;
+}
+
+/* Mobile text adjustments */
+html.is-mobile-view [data-sidebar-header='true'] {
+  font-size: var(--mobile-header-font-size, 0.875rem);
+}
+
+/* Improve touch targets on mobile */
+html.is-mobile-view button,
+html.is-mobile-view a,
+html.is-mobile-view [role='button'] {
+  min-height: 2.5rem;
+  min-width: 2.5rem;
+}
+
+/* Improve spacing in mobile layout */
+html.is-mobile-view [data-sidebar-content='main'] {
+  padding-left: var(--mobile-spacing, 0.5rem);
+}
+
+/* Adjust card and container spacing for mobile */
+html.is-mobile-view [data-page-content='container'] {
+  padding: var(--mobile-spacing, 0.5rem);
+}
+
+/* Make tables responsive */
+html.is-mobile-view table {
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+/* Optimize forms for mobile */
+html.is-mobile-view form {
+  max-width: 100%;
+}
+
+/* Ensure inputs are easier to tap */
+html.is-mobile-view input,
+html.is-mobile-view select,
+html.is-mobile-view textarea {
+  font-size: 16px; /* Prevents iOS zoom */
+  padding: 0.75rem;
+}
+
+/* Adjust mobile header spacing */
+html.is-mobile-view [data-is-mobile='true'] [data-sidebar-header='true'] {
+  padding-left: var(--header-spacing-mobile);
+  padding-right: var(--header-spacing-mobile);
+}
+
+/* Improve mobile menu interaction */
+html.is-mobile-view [data-sidebar='sidebar'] {
+  width: 100vw;
+  max-width: 280px;
+}
+
+/* Optimize dashboard cards for mobile */
+@media (max-width: 768px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .dashboard-card {
+    min-width: 100%;
+  }
+}
+
+/* Prevent overflow issues on mobile */
+html.is-mobile-view * {
+  max-width: 100vw;
+  overflow-wrap: break-word;
+}

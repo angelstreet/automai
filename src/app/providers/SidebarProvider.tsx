@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 
 import { SidebarContext } from '@/context/SidebarContext';
+import { useIsMobile } from '@/hooks/useMobile';
 import { SidebarContext as SidebarContextType } from '@/types/context/sidebarContextType';
 
 /**
@@ -28,10 +29,29 @@ export function SidebarProvider({
   const [isMobile, setIsMobile] = React.useState<boolean>(initialIsMobile);
   const [state, setState] = React.useState<'expanded' | 'collapsed'>('expanded');
 
+  // Use the useIsMobile hook for automatic detection
+  const isCurrentlyMobile = useIsMobile();
+
+  // Update isMobile state when screen size changes
+  useEffect(() => {
+    console.log(
+      `[@provider:SidebarProvider] Mobile detection: ${isCurrentlyMobile ? 'mobile' : 'desktop'}`,
+    );
+    setIsMobile(isCurrentlyMobile);
+
+    // Add an attribute to the document for CSS targeting
+    document.documentElement.setAttribute('data-is-mobile', isCurrentlyMobile ? 'true' : 'false');
+  }, [isCurrentlyMobile]);
+
+  // Original toggle behavior preserved
   const toggleSidebar = React.useCallback(() => {
-    setOpen(!open);
-    setState(!open ? 'collapsed' : 'expanded');
-  }, [open]);
+    if (isMobile) {
+      setOpenMobile(!openMobile);
+    } else {
+      setOpen(!open);
+      setState(!open ? 'expanded' : 'collapsed');
+    }
+  }, [open, openMobile, isMobile]);
 
   // Update state when open changes
   React.useEffect(() => {

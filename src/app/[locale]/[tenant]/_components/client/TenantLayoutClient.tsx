@@ -7,6 +7,7 @@ import { TeamProvider, UserProvider, SidebarProvider, PermissionProvider } from 
 import { HeaderClient, HeaderSkeleton } from '@/components/header';
 import HeaderEventListener from '@/components/header/HeaderEventListener';
 import { SidebarSkeleton, SidebarClient } from '@/components/sidebar';
+import MobileViewHelper from '@/components/ui/MobileViewHelper';
 import { Team } from '@/types/context/teamContextType';
 import { User } from '@/types/service/userServiceType';
 
@@ -56,6 +57,7 @@ export default function TenantLayoutClient({
           <PermissionProvider initialPermissions={permissions}>
             <SidebarProvider showTooltips={false}>
               <HeaderEventListener />
+              <MobileViewHelper />
               <div className="flex">
                 <Suspense fallback={<SidebarSkeleton />}>
                   <aside>

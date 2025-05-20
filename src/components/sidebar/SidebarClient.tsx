@@ -10,10 +10,12 @@ import { SidebarRail } from '@/components/sidebar/SidebarRail';
 import {
   APP_SIDEBAR_WIDTH,
   APP_SIDEBAR_WIDTH_ICON,
+  SIDEBAR_WIDTH_MOBILE,
   sidebarNavigationData,
 } from '@/components/sidebar/constants';
 import TeamSelector from '@/components/team/TeamSelector';
 import { useSidebar } from '@/hooks';
+import { useIsMobile } from '@/hooks/useMobile';
 import { cn } from '@/lib/utils';
 import { Team } from '@/types/context/teamContextType';
 import { User } from '@/types/service/userServiceType';
@@ -33,6 +35,8 @@ const SidebarClient = React.memo(function SidebarClient({
   const sidebarContext = useSidebar('SidebarClient');
   const state = sidebarContext?.state || 'expanded';
   const open = sidebarContext?.open || true;
+  const isMobile = useIsMobile();
+  const { openMobile } = useSidebar('SidebarClient');
 
   // Track role changes with local state
   const [currentRole, setCurrentRole] = React.useState(user?.role || 'viewer');
@@ -60,13 +64,14 @@ const SidebarClient = React.memo(function SidebarClient({
   // Log debug information
   React.useEffect(() => {
     console.log('[@component:SidebarClient] Rendering with:', {
+      isMobile,
       user: user ? 'User data available' : 'No user data',
       teamsCount: teams.length,
       activeTeam: activeTeam?.name || 'No active team',
       open,
       state,
     });
-  }, [user, teams, activeTeam, open, state]);
+  }, [user, teams, activeTeam, open, state, isMobile]);
 
   // Extract navigation data from constants
   const navGroups = sidebarNavigationData.groups;
@@ -75,7 +80,7 @@ const SidebarClient = React.memo(function SidebarClient({
 
   // Update CSS variables when sidebar state changes
   React.useEffect(() => {
-    // Simply set the offset based on the state - all calculations now in CSS
+    // Set the offset based on the state - all calculations now in CSS
     document.documentElement.style.setProperty(
       '--sidebar-width-offset',
       state === 'collapsed' ? 'var(--sidebar-width-icon)' : 'var(--sidebar-width)',
@@ -87,13 +92,13 @@ const SidebarClient = React.memo(function SidebarClient({
 
   return (
     <Sidebar
-      collapsible="icon"
+      collapsible={isMobile ? 'offcanvas' : 'icon'}
       variant="floating"
       className="fixed left-0 top-0 z-30 sidebar-visible animate-in fade-in-50 duration-300"
       style={
         {
-          '--sidebar-width': APP_SIDEBAR_WIDTH,
-          '--sidebar-width-icon': APP_SIDEBAR_WIDTH_ICON, // Use correct variable names to match CSS selectors
+          '--sidebar-width': isMobile ? SIDEBAR_WIDTH_MOBILE : APP_SIDEBAR_WIDTH,
+          '--sidebar-width-icon': APP_SIDEBAR_WIDTH_ICON,
         } as React.CSSProperties
       }
     >

@@ -12,6 +12,7 @@ import { SidebarTrigger } from '@/components/sidebar';
 import { ThemeToggleStatic } from '@/components/theme';
 import { Search } from '@/components/ui/Search';
 import WorkspaceSelector from '@/components/workspace/WorkspaceSelector';
+import { useIsMobile } from '@/hooks/useMobile';
 import { cn } from '@/lib/utils';
 import { useHeaderStore } from '@/store/headerStore';
 import { Team } from '@/types/context/teamContextType';
@@ -34,6 +35,7 @@ export function HeaderClient({
 }: HeaderClientProps) {
   // Get header visibility state from Zustand store
   const { isVisible, toggleVisibility } = useHeaderStore();
+  const isMobile = useIsMobile();
 
   // Use provided team or fallback to context
   const currentTeam = activeTeam;
@@ -65,6 +67,7 @@ export function HeaderClient({
       )}
       data-sidebar-header="true"
       data-header-state={isVisible ? 'expanded' : 'collapsed'}
+      data-is-mobile={isMobile ? 'true' : 'false'}
     >
       <div
         className={cn('flex h-14 items-center relative')}
@@ -76,15 +79,28 @@ export function HeaderClient({
             <div className="relative flex items-center h-full">
               <div className="sidebar-trigger-container">
                 <SidebarTrigger />
-                <Separator orientation="vertical" className="h-8 opacity-50 ml-2" />
+                <Separator
+                  orientation="vertical"
+                  className={cn('h-8 opacity-50 ml-2', isMobile && 'hidden md:block')}
+                />
               </div>
             </div>
 
             {/* Center section - Display tenant name */}
-            <div className="flex items-center justify-start mx-10 min-w-[14rem]">
+            <div
+              className={cn(
+                'flex items-center justify-start',
+                isMobile ? 'mx-2' : 'mx-10 min-w-[14rem]',
+              )}
+            >
               {currentTeam?.tenant_name && (
-                <div className="text-lg font-semibold ml-4 flex items-center">
-                  <Building2 className="mr-2 h-5 w-5" />
+                <div
+                  className={cn(
+                    'font-semibold flex items-center',
+                    isMobile ? 'text-sm ml-1 max-w-[120px] truncate' : 'text-lg ml-4',
+                  )}
+                >
+                  <Building2 className={cn('mr-2 h-5 w-5', isMobile && 'mr-1 h-4 w-4')} />
                   {currentTeam.tenant_name}
                 </div>
               )}
@@ -92,7 +108,7 @@ export function HeaderClient({
 
             {/* Right section */}
             <div className="flex-1 flex items-center gap-4 px-4 h-full pr-14 justify-end">
-              <div className="flex-none w-30 mr-4">
+              <div className={cn('flex-none w-30 mr-4', isMobile && 'hidden md:block')}>
                 {user ? (
                   <RoleSwitcher
                     key={`role-switcher-${user.role || 'default'}`}
@@ -104,16 +120,34 @@ export function HeaderClient({
                 )}
               </div>
 
-              <WorkspaceSelector />
+              <div className={cn('', isMobile && 'hidden md:block')}>
+                <WorkspaceSelector />
+              </div>
 
-              <Separator orientation="vertical" className="h-8 opacity-30" />
-              <div className="flex-1 max-w-[26rem] min-w-[12.5rem]">
+              <Separator
+                orientation="vertical"
+                className={cn('h-8 opacity-30', isMobile && 'hidden md:block')}
+              />
+              <div
+                className={cn(
+                  'flex-1 max-w-[26rem] min-w-[12.5rem]',
+                  isMobile && 'hidden md:block',
+                )}
+              >
                 <Search />
               </div>
               <div className="flex items-center gap-1">
-                <Separator orientation="vertical" className="h-8 opacity-30" />
-                <LanguageSwitcher />
-                <Separator orientation="vertical" className="h-8 opacity-30" />
+                <Separator
+                  orientation="vertical"
+                  className={cn('h-8 opacity-30', isMobile && 'hidden md:block')}
+                />
+                <div className={cn('', isMobile && 'hidden md:block')}>
+                  <LanguageSwitcher />
+                </div>
+                <Separator
+                  orientation="vertical"
+                  className={cn('h-8 opacity-30', isMobile && 'hidden md:block')}
+                />
                 <ThemeToggleStatic />
                 <Separator orientation="vertical" className="h-8 opacity-30" />
                 <Suspense
@@ -121,7 +155,10 @@ export function HeaderClient({
                 >
                   <ProfileDropDown user={user} activeTeam={currentTeam} />
                 </Suspense>
-                <Separator orientation="vertical" className="h-8 opacity-30" />
+                <Separator
+                  orientation="vertical"
+                  className={cn('h-8 opacity-30', isMobile && 'hidden md:block')}
+                />
               </div>
             </div>
           </>
