@@ -7,7 +7,6 @@ import {
   addWorkspace,
   getActiveWorkspace,
   getWorkspaces,
-  notifyWorkspaceChange,
   removeWorkspace,
   setActiveWorkspace as updateActiveWorkspace,
 } from '@/app/actions/workspaceAction';
@@ -48,6 +47,7 @@ import {
   SelectValue,
 } from '@/components/shadcn/select';
 import { Workspace } from '@/types/component/workspaceComponentType';
+import { RepositoryEvents } from '@/app/[locale]/[tenant]/repositories/_components/client/RepositoryEventListener';
 
 export type { Workspace };
 
@@ -112,8 +112,8 @@ export default function WorkspaceSelector({ className = '' }) {
     // Save to database
     await updateActiveWorkspace(workspaceId);
 
-    // Notify components that workspace has changed
-    notifyWorkspaceChange();
+    // Notify components that workspace has changed using the standard event
+    window.dispatchEvent(new Event(RepositoryEvents.WORKSPACE_CHANGED));
   };
 
   const handleCreateWorkspace = async () => {

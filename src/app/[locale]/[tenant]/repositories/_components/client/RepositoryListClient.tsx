@@ -12,6 +12,7 @@ import { useRepository } from '@/hooks/useRepository';
 import { Repository } from '@/types/component/repositoryComponentType';
 
 import { RepositoryCardClient } from './RepositoryCardClient';
+import { RepositoryEventListener } from './RepositoryEventListener';
 import { RepositoryExplorerClient } from './RepositoryExplorerClient';
 
 export function RepositoryListClient() {
@@ -36,7 +37,7 @@ export function RepositoryListClient() {
   const [activeWorkspace, setActiveWorkspace] = useState<string | null>(null);
   const [filteredRepositories, setFilteredRepositories] = useState<Repository[]>([]);
 
-  // Fetch active workspace and set up listener for workspace changes
+  // Fetch active workspace
   useEffect(() => {
     const fetchWorkspaceData = async () => {
       try {
@@ -51,29 +52,13 @@ export function RepositoryListClient() {
     };
 
     fetchWorkspaceData();
-
-    // Listen for workspace change events
-    const handleWorkspaceChange = async () => {
-      console.log('[@component:RepositoryListClient] Workspace change detected, refreshing data');
-      await fetchWorkspaceData();
-      // Trigger repository data refresh when workspace changes
-      await refetchRepositories();
-    };
-
-    // Add event listener for workspace changes - use the standard event name
-    window.addEventListener('WORKSPACE_CHANGED', handleWorkspaceChange);
-
-    // Cleanup function
-    return () => {
-      window.removeEventListener('WORKSPACE_CHANGED', handleWorkspaceChange);
-    };
-  }, [refetchRepositories]);
+  }, []);
 
   // Filter repositories by active workspace
   useEffect(() => {
     const filterByWorkspace = async () => {
       // Set initial filtered repositories based on basic filters (before workspace filtering)
-      const initialFiltered = repositories.filter((repo: Repository) => {
+      const initialFiltered = repositories.filter((repo) => {
         // Search filter
         if (searchQuery) {
           const query = searchQuery.toLowerCase();
@@ -91,8 +76,8 @@ export function RepositoryListClient() {
         }
 
         // Filter by tab
-        if (activeTab === 'public' && repo.is_private === true) return false;
-        if (activeTab === 'private' && repo.is_private !== true) return false;
+        if (activeTab === 'public' && repo.isPrivate === true) return false;
+        if (activeTab === 'private' && repo.isPrivate !== true) return false;
         // We no longer have starring functionality
         if (activeTab === 'starred') return false;
 
@@ -111,13 +96,13 @@ export function RepositoryListClient() {
           return repoWorkspaces.includes(activeWorkspace);
         });
 
-        setFilteredRepositories(filtered);
+        setFilteredRepositories(filtered as Repository[]);
         console.log(
           `[@component:RepositoryListClient] Filtered to ${filtered.length} repositories in workspace using direct workspace data`,
         );
       } else {
         // If no active workspace, show all repositories
-        setFilteredRepositories(initialFiltered);
+        setFilteredRepositories(initialFiltered as Repository[]);
         console.log(
           `[@component:RepositoryListClient] No active workspace, showing all ${initialFiltered.length} repositories`,
         );
@@ -143,8 +128,8 @@ export function RepositoryListClient() {
       console.log('[RepositoryListClient] Debug repositories data:');
       repositories.forEach((repo) => {
         console.log(`- Repository: ${repo.name || 'unnamed'}`);
-        console.log(`  provider_type: ${repo.provider_type || 'undefined'}`);
-        console.log(`  default_branch: ${repo.default_branch || 'undefined'}`);
+        console.log(`  provider_type: ${repo.providerType || 'undefined'}`);
+        console.log(`  default_branch: ${repo.defaultBranch || 'undefined'}`);
         console.log(`  All data:`, repo);
       });
     }
@@ -208,100 +193,103 @@ export function RepositoryListClient() {
     return <RepositoryExplorerClient repository={selectedRepository} onBack={handleBackToList} />;
   }
 
-  // Otherwise render repository list
+  // Render repository list with event listener
   return (
-    <div>
-      {/* Tabs filter and search */}
-      <div className="flex justify-between items-center py-4 mb-4">
-        <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-4 min-w-[400px]">
-            <TabsTrigger value="all">{t('sort_all')}</TabsTrigger>
-            <TabsTrigger value="starred">
-              <div className="flex items-center">
-                <Star className="h-4 w-4 mr-1" />
-                <span>{t('sort_starred')}</span>
+    <>
+      <RepositoryEventListener />
+      <div>
+        {/* Tabs filter and search */}
+        <div className="flex justify-between items-center py-4 mb-4">
+          <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid grid-cols-4 min-w-[400px]">
+              <TabsTrigger value="all">{t('sort_all')}</TabsTrigger>
+              <TabsTrigger value="starred">
+                <div className="flex items-center">
+                  <Star className="h-4 w-4 mr-1" />
+                  <span>{t('sort_starred')}</span>
+                </div>
+              </TabsTrigger>
+              <TabsTrigger value="public">{t('sort_public')}</TabsTrigger>
+              <TabsTrigger value="private">{t('sort_private')}</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          <div className="ml-auto">{/* Empty div for spacing */}</div>
+        </div>
+
+        {/* Repository cards grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {isLoadingRepositories ? (
+            <div key="loading-spinner" className="col-span-full">
+              <div className="flex justify-center p-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
-            </TabsTrigger>
-            <TabsTrigger value="public">{t('sort_public')}</TabsTrigger>
-            <TabsTrigger value="private">{t('sort_private')}</TabsTrigger>
-          </TabsList>
-        </Tabs>
-
-        <div className="ml-auto">{/* Empty div for spacing */}</div>
-      </div>
-
-      {/* Repository cards grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {isLoadingRepositories ? (
-          <div key="loading-spinner" className="col-span-full">
-            <div className="flex justify-center p-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
-          </div>
-        ) : currentRepositories.length === 0 ? (
-          <div key="empty-state" className="col-span-full">
-            <EmptyState
-              icon={<GitBranch className="h-10 w-10" />}
-              title={
-                activeWorkspace && repositories.length > 0 ? t('none_in_workspace') : t('none')
-              }
-              description={
-                activeWorkspace && repositories.length > 0
-                  ? t('none_in_workspace_desc')
-                  : searchQuery
-                    ? t('none_matching_search')
-                    : t('none_yet')
-              }
-              action={
-                <Button
-                  onClick={() => document.getElementById('add-repository-button')?.click()}
-                  size="sm"
-                  className="gap-1"
-                >
-                  <PlusCircle className="h-4 w-4" />
-                  <span>{t('add_button')}</span>
-                </Button>
-              }
-            />
-          </div>
-        ) : (
-          currentRepositories.map((repo: Repository) => (
-            <div key={repo.id}>
-              <RepositoryCardClient
-                repository={repo}
-                isDeleting={isDeleting === repo.id}
-                onClick={() => handleViewRepository(repo)}
-                onDelete={handleDeleteRepository}
+          ) : currentRepositories.length === 0 ? (
+            <div key="empty-state" className="col-span-full">
+              <EmptyState
+                icon={<GitBranch className="h-10 w-10" />}
+                title={
+                  activeWorkspace && repositories.length > 0 ? t('none_in_workspace') : t('none')
+                }
+                description={
+                  activeWorkspace && repositories.length > 0
+                    ? t('none_in_workspace_desc')
+                    : searchQuery
+                      ? t('none_matching_search')
+                      : t('none_yet')
+                }
+                action={
+                  <Button
+                    onClick={() => document.getElementById('add-repository-button')?.click()}
+                    size="sm"
+                    className="gap-1"
+                  >
+                    <PlusCircle className="h-4 w-4" />
+                    <span>{t('add_button')}</span>
+                  </Button>
+                }
               />
             </div>
-          ))
+          ) : (
+            currentRepositories.map((repo: Repository) => (
+              <div key={repo.id}>
+                <RepositoryCardClient
+                  repository={repo}
+                  isDeleting={isDeleting === repo.id}
+                  onClick={() => handleViewRepository(repo)}
+                  onDelete={handleDeleteRepository}
+                />
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex justify-center mt-4 space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="py-2 px-2">
+              {currentPage} / {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         )}
       </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-center mt-4 space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-            disabled={currentPage === 1}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="py-2 px-2">
-            {currentPage} / {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-            disabled={currentPage === totalPages}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
-    </div>
+    </>
   );
 }
