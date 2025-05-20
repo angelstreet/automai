@@ -1,6 +1,6 @@
 'use client';
 
-import { MoreHorizontal, Search, ShieldAlert, Mail, Plus } from 'lucide-react';
+import { MoreHorizontal, Search, ShieldAlert, Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState, useContext } from 'react';
 
@@ -68,7 +68,6 @@ function MembersTabContent({
   // Use the dialog functions if context is available
   const openEditDialog = dialogContext?.openEditDialog;
   const openAddDialog = dialogContext?.openAddDialog;
-  const openInviteDialog = dialogContext?.openInviteDialog;
 
   // Use the centralized permission hook to check if user can manage team members
   const { canManageTeamMembers } = usePermission();
@@ -129,12 +128,8 @@ function MembersTabContent({
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          {canManageMembers && openAddDialog && openInviteDialog && (
+          {canManageMembers && openAddDialog && (
             <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={openInviteDialog}>
-                <Mail className="mr-2 h-4 w-4" />
-                {t('members_invite')}
-              </Button>
               <Button size="sm" onClick={openAddDialog}>
                 <Plus className="mr-2 h-4 w-4" />
                 {t('members_add_button')}
@@ -272,11 +267,11 @@ export function MembersTab({
   teamId,
   subscriptionTier: _subscriptionTier,
   initialMembers = [],
-}: MembersTabProps & { initialMembers?: TeamMember[] }) {
+}: MembersTabProps & { initialMembers?: TeamMemberDetails[] }) {
   // Only fetch if we don't have initial data or when we explicitly need to
   const teamMembersQuery = useTeamMembers(teamId);
   const [searchQuery, setSearchQuery] = useState('');
-  const { openAddDialog } = useContext(TeamMemberDialogContext) || {};
+  const { openAddDialog: _openAddDialog } = useContext(TeamMemberDialogContext) || {};
   const removeTeamMemberMutation = useRemoveTeamMember();
 
   // State to track whether we're using initial data

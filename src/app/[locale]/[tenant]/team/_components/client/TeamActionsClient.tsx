@@ -1,10 +1,11 @@
 'use client';
 
-import { PlusIcon } from 'lucide-react';
+import { Mail, PlusIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 
 import { Button } from '@/components/shadcn/button';
+import { TeamMemberDialogContext } from '@/context/TeamMemberDialogContext';
 import { usePermission } from '@/hooks/usePermission';
 import { useTeam } from '@/hooks/useTeam';
 import { TeamDetails } from '@/types/context/teamContextType';
@@ -14,6 +15,9 @@ import AddMemberDialog from './TeamMemberAddDialogClient';
 export default function TeamActions() {
   const t = useTranslations('team');
   const { activeTeam } = useTeam('TeamActionsClient');
+
+  // Access the dialog context to use the invite dialog
+  const dialogContext = useContext(TeamMemberDialogContext);
 
   // Local dialog state
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -45,6 +49,13 @@ export default function TeamActions() {
     setAddDialogOpen(true);
   };
 
+  // Handle invite dialog open
+  const handleInviteClick = () => {
+    if (dialogContext?.openInviteDialog) {
+      dialogContext.openInviteDialog();
+    }
+  };
+
   // Handle member added callback
   const handleMemberAdded = () => {
     // Refresh data or take other actions when a member is added
@@ -62,6 +73,10 @@ export default function TeamActions() {
   return (
     <>
       <div className="flex gap-2 items-center">
+        <Button variant="outline" size="sm" onClick={handleInviteClick}>
+          <Mail className="h-4 w-4 mr-1" />
+          {t('members_invite')}
+        </Button>
         <Button variant="outline" size="sm" onClick={handleAddMemberClick}>
           <PlusIcon className="h-4 w-4 mr-1" />
           {t('members_add_button')}
