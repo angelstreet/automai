@@ -45,12 +45,6 @@ function handlePythonVenv() {
       console.log('[utils] Using existing Python virtual environment at', venvPath);
     }
 
-    // Update pip in the virtual environment
-    console.log('[utils] Updating pip in virtual environment');
-    const { execSync } = require('child_process');
-    execSync(`${venvBinPath}/pip install --upgrade pip`, { stdio: 'inherit' });
-    console.log('[utils] pip updated successfully');
-
     return venvBinPath;
   }
   return null;
@@ -70,7 +64,6 @@ async function executeOnFlask(
   config_name,
 ) {
   // Execute scripts via Flask service
-  const venvBinPath = handlePythonVenv();
   const result = await executeFlaskScripts(
     config,
     jobId,
