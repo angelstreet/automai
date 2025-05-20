@@ -2,25 +2,23 @@
 
 import { Mail, PlusIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
 
 import { Button } from '@/components/shadcn/button';
-import { TeamMemberDialogContext } from '@/context/TeamMemberDialogContext';
 import { usePermission } from '@/hooks/usePermission';
 import { useTeam } from '@/hooks/useTeam';
 import { TeamDetails } from '@/types/context/teamContextType';
 
 import AddMemberDialog from './TeamMemberAddDialogClient';
+import InviteMemberDialog from './TeamMemberInviteDialogClient';
 
 export default function TeamActions() {
   const t = useTranslations('team');
   const { activeTeam } = useTeam('TeamActionsClient');
 
-  // Access the dialog context to use the invite dialog
-  const dialogContext = useContext(TeamMemberDialogContext);
-
   // Local dialog state
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
 
   // Treat activeTeam as TeamDetails
   const team = activeTeam as unknown as TeamDetails;
@@ -51,9 +49,7 @@ export default function TeamActions() {
 
   // Handle invite dialog open
   const handleInviteClick = () => {
-    if (dialogContext?.openInviteDialog) {
-      dialogContext.openInviteDialog();
-    }
+    setInviteDialogOpen(true);
   };
 
   // Handle member added callback
@@ -83,12 +79,17 @@ export default function TeamActions() {
         </Button>
       </div>
 
-      {/* Include the dialog directly in this component */}
+      {/* Include the dialogs directly in this component */}
       <AddMemberDialog
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
         teamId={team.id || null}
         onAddMember={handleMemberAdded}
+      />
+      <InviteMemberDialog
+        open={inviteDialogOpen}
+        onOpenChange={setInviteDialogOpen}
+        teamId={team.id || null}
       />
     </>
   );
