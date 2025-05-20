@@ -19,6 +19,8 @@ const HostsEvents = {
 
   // Workspace Events
   WORKSPACE_CHANGED: 'WORKSPACE_CHANGED', // Workspace changed, refresh hosts
+  WORKSPACE_ITEM_ADDED: 'WORKSPACE_ITEM_ADDED', // Item added to workspace
+  WORKSPACE_ITEM_REMOVED: 'WORKSPACE_ITEM_REMOVED', // Item removed from workspace
 };
 
 // Export the constants object
@@ -38,6 +40,26 @@ export default function HostEventListener() {
     const handleWorkspaceChange = () => {
       console.log('[@component:HostEventListener] WORKSPACE_CHANGED: Refreshing hosts data');
       router.refresh();
+    };
+
+    // Handle workspace item added event
+    const handleWorkspaceItemAdded = (event: CustomEvent) => {
+      if (event.detail?.itemType === 'host') {
+        console.log(
+          `[@component:HostEventListener] Host ${event.detail.itemId} added to workspace`,
+        );
+        router.refresh();
+      }
+    };
+
+    // Handle workspace item removed event
+    const handleWorkspaceItemRemoved = (event: CustomEvent) => {
+      if (event.detail?.itemType === 'host') {
+        console.log(
+          `[@component:HostEventListener] Host ${event.detail.itemId} removed from workspace`,
+        );
+        router.refresh();
+      }
     };
 
     // Handle individual host testing events
@@ -64,6 +86,14 @@ export default function HostEventListener() {
     window.addEventListener(HostsEvents.REFRESH_HOSTS, handleRefreshHosts);
     window.addEventListener(HostsEvents.WORKSPACE_CHANGED, handleWorkspaceChange);
     window.addEventListener(
+      HostsEvents.WORKSPACE_ITEM_ADDED,
+      handleWorkspaceItemAdded as EventListener,
+    );
+    window.addEventListener(
+      HostsEvents.WORKSPACE_ITEM_REMOVED,
+      handleWorkspaceItemRemoved as EventListener,
+    );
+    window.addEventListener(
       HostsEvents.HOST_TESTING_START,
       handleHostTestingStart as EventListener,
     );
@@ -79,6 +109,14 @@ export default function HostEventListener() {
       // Remove event listeners
       window.removeEventListener(HostsEvents.REFRESH_HOSTS, handleRefreshHosts);
       window.removeEventListener(HostsEvents.WORKSPACE_CHANGED, handleWorkspaceChange);
+      window.removeEventListener(
+        HostsEvents.WORKSPACE_ITEM_ADDED,
+        handleWorkspaceItemAdded as EventListener,
+      );
+      window.removeEventListener(
+        HostsEvents.WORKSPACE_ITEM_REMOVED,
+        handleWorkspaceItemRemoved as EventListener,
+      );
       window.removeEventListener(
         HostsEvents.HOST_TESTING_START,
         handleHostTestingStart as EventListener,

@@ -15,6 +15,8 @@ export const RepositoryEvents = {
 
   // Workspace Events
   WORKSPACE_CHANGED: 'WORKSPACE_CHANGED',
+  WORKSPACE_ITEM_ADDED: 'WORKSPACE_ITEM_ADDED',
+  WORKSPACE_ITEM_REMOVED: 'WORKSPACE_ITEM_REMOVED',
 };
 
 export function RepositoryEventListener() {
@@ -37,14 +39,40 @@ export function RepositoryEventListener() {
       window.dispatchEvent(new Event(RepositoryEvents.REPOSITORY_COUNT_UPDATED));
     };
 
+    // Handle workspace item events (add/remove)
+    const handleWorkspaceItemChange = async (event: CustomEvent) => {
+      if (event.detail?.itemType === 'repository') {
+        console.log(
+          `[@component:RepositoryEventListener] Repository workspace mapping changed for repository ${event.detail.itemId}`,
+        );
+        await refetchRepositories();
+      }
+    };
+
     // Add event listeners
     window.addEventListener(RepositoryEvents.WORKSPACE_CHANGED, handleWorkspaceChange);
     window.addEventListener(RepositoryEvents.REFRESH_REPOSITORIES, handleRefreshRepositories);
+    window.addEventListener(
+      RepositoryEvents.WORKSPACE_ITEM_ADDED,
+      handleWorkspaceItemChange as EventListener,
+    );
+    window.addEventListener(
+      RepositoryEvents.WORKSPACE_ITEM_REMOVED,
+      handleWorkspaceItemChange as EventListener,
+    );
 
     // Cleanup
     return () => {
       window.removeEventListener(RepositoryEvents.WORKSPACE_CHANGED, handleWorkspaceChange);
       window.removeEventListener(RepositoryEvents.REFRESH_REPOSITORIES, handleRefreshRepositories);
+      window.removeEventListener(
+        RepositoryEvents.WORKSPACE_ITEM_ADDED,
+        handleWorkspaceItemChange as EventListener,
+      );
+      window.removeEventListener(
+        RepositoryEvents.WORKSPACE_ITEM_REMOVED,
+        handleWorkspaceItemChange as EventListener,
+      );
     };
   }, [refetchRepositories]);
 

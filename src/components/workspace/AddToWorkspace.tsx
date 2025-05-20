@@ -3,6 +3,8 @@
 import { FolderPlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { HostsEvents } from '@/app/[locale]/[tenant]/hosts/_components/client/HostEventListener';
+import { RepositoryEvents } from '@/app/[locale]/[tenant]/repositories/_components/client/RepositoryEventListener';
 import {
   getWorkspaces,
   getWorkspacesContainingItem,
@@ -20,6 +22,19 @@ import {
   DialogTrigger,
 } from '@/components/shadcn/dialog';
 import { Workspace } from '@/types/component/workspaceComponentType';
+
+// Cache for workspaces data
+interface WorkspaceCache {
+  workspaces: Workspace[] | null;
+  timestamp: number;
+}
+
+// Global cache with 60 second TTL
+const CACHE_TTL = 60 * 1000; // 60 seconds
+let globalWorkspaceCache: WorkspaceCache = {
+  workspaces: null,
+  timestamp: 0,
+};
 
 interface AddToWorkspaceProps {
   itemType: 'deployment' | 'repository' | 'host' | 'config';
@@ -49,11 +64,27 @@ export default function AddToWorkspace({
         setIsLoading(true);
         setError(null);
         try {
-          // Get all workspaces and memberships in parallel
-          const [workspacesResult, membershipResult] = await Promise.all([
-            getWorkspaces(),
-            getWorkspacesContainingItem(itemType, itemId),
-          ]);
+          // Check if we have cached workspaces data that's still valid
+          const now = Date.now();
+          let workspacesResult;
+
+          if (globalWorkspaceCache.workspaces && now - globalWorkspaceCache.timestamp < CACHE_TTL) {
+            console.log('[@component:AddToWorkspace] Using cached workspaces data');
+            workspacesResult = { success: true, data: globalWorkspaceCache.workspaces };
+          } else {
+            console.log('[@component:AddToWorkspace] Fetching fresh workspaces data');
+            // Get workspaces and save to cache
+            workspacesResult = await getWorkspaces();
+            if (workspacesResult.success && workspacesResult.data) {
+              globalWorkspaceCache = {
+                workspaces: workspacesResult.data,
+                timestamp: now,
+              };
+            }
+          }
+
+          // Get memberships
+          const membershipResult = await getWorkspacesContainingItem(itemType, itemId);
 
           if (workspacesResult.success && workspacesResult.data) {
             setWorkspaces(workspacesResult.data);
@@ -112,6 +143,21 @@ export default function AddToWorkspace({
       // Execute all operations
       await Promise.all(operations);
 
+      // Dispatch events based on item type
+      if (itemType === 'repository') {
+        window.dispatchEvent(
+          new CustomEvent(RepositoryEvents.WORKSPACE_ITEM_ADDED, {
+            detail: { itemId, itemType },
+          }),
+        );
+      } else if (itemType === 'host') {
+        window.dispatchEvent(
+          new CustomEvent(HostsEvents.WORKSPACE_ITEM_ADDED, {
+            detail: { itemId, itemType },
+          }),
+        );
+      }
+
       // Close the dialog
       setIsOpen(false);
 
@@ -137,7 +183,7 @@ export default function AddToWorkspace({
       open={isOpen}
       onOpenChange={(open) => {
         setIsOpen(open);
-        if (open && onClose) {
+        if (!open && onClose) {
           onClose();
         }
       }}
