@@ -1,6 +1,6 @@
 'use client';
 
-import { GitBranch, ExternalLink, Globe, Lock, Trash2 } from 'lucide-react';
+import { GitBranch, ExternalLink, Globe, Lock, Trash2, FolderPlus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState, useEffect } from 'react';
 
@@ -23,6 +23,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/shadcn/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/shadcn/dropdown-menu';
+import AddToWorkspace from '@/components/workspace/AddToWorkspace';
 import { EnhancedRepositoryCardProps } from '@/types/context/repositoryContextType';
 
 import { LANGUAGE_COLORS } from '../../constants';
@@ -144,17 +151,49 @@ export function RepositoryCardClient({
         </CardContent>
 
         <CardFooter className="px-4 py-2 flex justify-between items-center text-xs border-t">
-          <div className="flex items-center gap-1">
-            <ExternalLink className="h-3 w-3" />
-            <a
-              href={repository?.url || '#'}
-              target="_blank"
-              rel="noreferrer"
-              className="hover:underline"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {c('view')}
-            </a>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
+              <ExternalLink className="h-3 w-3" />
+              <a
+                href={repository?.url || '#'}
+                target="_blank"
+                rel="noreferrer"
+                className="hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {c('view')}
+              </a>
+            </div>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <FolderPlus className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <AddToWorkspace
+                  itemType="repository"
+                  itemId={repository?.id || ''}
+                  trigger={
+                    <DropdownMenuItem
+                      onSelect={(e) => {
+                        e.preventDefault();
+                      }}
+                      disabled={isDeleting}
+                    >
+                      <FolderPlus className="mr-2 h-3.5 w-3.5" />
+                      <span>Workspaces</span>
+                    </DropdownMenuItem>
+                  }
+                />
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {onDelete && (

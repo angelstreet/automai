@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, GitBranch, PlusCircle, Star } from 'lucide-r
 import { useTranslations } from 'next-intl';
 import React, { useState, useEffect } from 'react';
 
+import { getActiveWorkspace, getWorkspacesContainingItem } from '@/app/actions/workspaceAction';
 import { Button } from '@/components/shadcn/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -23,6 +24,111 @@ export function RepositoryListClient() {
   // State for repository explorer
   const [selectedRepository, setSelectedRepository] = useState<Repository | null>(null);
   const [showExplorer, setShowExplorer] = useState(false);
+
+  // Workspace filtering
+  const [activeWorkspace, setActiveWorkspace] = useState<string | null>(null);
+  const [filteredRepositories, setFilteredRepositories] = useState<Repository[]>([]);
+
+  // Fetch active workspace and set up listener for workspace changes
+  useEffect(() => {
+    const fetchWorkspaceData = async () => {
+      try {
+        // Get active workspace
+        const workspaceResult = await getActiveWorkspace();
+        if (workspaceResult.success) {
+          setActiveWorkspace(workspaceResult.data || null);
+        }
+      } catch (error) {
+        console.error('[@component:RepositoryListClient] Error fetching workspace data:', error);
+      }
+    };
+
+    fetchWorkspaceData();
+
+    // Listen for workspace change events
+    const handleWorkspaceChange = () => {
+      console.log('[@component:RepositoryListClient] Workspace change detected, refreshing data');
+      fetchWorkspaceData();
+    };
+
+    // Add event listener for workspace changes
+    window.addEventListener('WORKSPACE_CHANGED', handleWorkspaceChange);
+
+    // Cleanup function
+    return () => {
+      window.removeEventListener('WORKSPACE_CHANGED', handleWorkspaceChange);
+    };
+  }, []);
+
+  // Filter repositories by active workspace
+  useEffect(() => {
+    const filterByWorkspace = async () => {
+      // Set initial filtered repositories based on basic filters (before workspace filtering)
+      const initialFiltered = repositories.filter((repo: Repository) => {
+        // Search filter
+        if (searchQuery) {
+          const query = searchQuery.toLowerCase();
+          const repoName = repo.name?.toLowerCase() || '';
+          const repoOwner = repo.owner?.toLowerCase() || '';
+          const repoDescription = repo.description?.toLowerCase() || '';
+
+          if (
+            !repoName.includes(query) &&
+            !repoOwner.includes(query) &&
+            !repoDescription.includes(query)
+          ) {
+            return false;
+          }
+        }
+
+        // Filter by tab
+        if (activeTab === 'public' && repo.is_private === true) return false;
+        if (activeTab === 'private' && repo.is_private !== true) return false;
+        // We no longer have starring functionality
+        if (activeTab === 'starred') return false;
+
+        return true;
+      });
+
+      if (activeWorkspace) {
+        console.log(
+          '[@component:RepositoryListClient] Filtering by active workspace:',
+          activeWorkspace,
+        );
+
+        // Create a map of repository IDs that belong to the active workspace
+        const workspaceMap = new Map<string, boolean>();
+
+        // Process each repository to check workspace membership
+        const checkPromises = initialFiltered.map(async (repo) => {
+          const result = await getWorkspacesContainingItem('repository', repo.id);
+          if (result.success && result.data && result.data.includes(activeWorkspace)) {
+            workspaceMap.set(repo.id, true);
+          }
+          return repo;
+        });
+
+        // Wait for all checks to complete
+        await Promise.all(checkPromises);
+
+        // Filter repositories to only those in the active workspace
+        const filtered = initialFiltered.filter((repo) => workspaceMap.has(repo.id));
+        setFilteredRepositories(filtered);
+
+        console.log(
+          `[@component:RepositoryListClient] Filtered to ${filtered.length} repositories in workspace`,
+        );
+      } else {
+        // If no active workspace, show all repositories
+        setFilteredRepositories(initialFiltered);
+        console.log(
+          `[@component:RepositoryListClient] No active workspace, showing all ${initialFiltered.length} repositories`,
+        );
+      }
+    };
+
+    filterByWorkspace();
+  }, [repositories, activeWorkspace, searchQuery, activeTab]);
 
   // Dispatch event when repository count changes
   useEffect(() => {
@@ -85,34 +191,7 @@ export function RepositoryListClient() {
     setShowExplorer(false);
   };
 
-  // Filter repositories
-  const filteredRepositories = repositories.filter((repo: Repository) => {
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      const repoName = repo.name?.toLowerCase() || '';
-      const repoOwner = repo.owner?.toLowerCase() || '';
-      const repoDescription = repo.description?.toLowerCase() || '';
-
-      if (
-        !repoName.includes(query) &&
-        !repoOwner.includes(query) &&
-        !repoDescription.includes(query)
-      ) {
-        return false;
-      }
-    }
-
-    // Filter by tab
-    if (activeTab === 'public' && repo.is_private === true) return false;
-    if (activeTab === 'private' && repo.is_private !== true) return false;
-    // We no longer have starring functionality
-    if (activeTab === 'starred') return false;
-
-    return true;
-  });
-
-  // Calculate pagination
+  // Calculate pagination using filteredRepositories instead of calculating on the fly
   const totalPages = Math.ceil(filteredRepositories.length / itemsPerPage);
   const currentRepositories = filteredRepositories.slice(
     (currentPage - 1) * itemsPerPage,
@@ -171,8 +250,16 @@ export function RepositoryListClient() {
           <div key="empty-state" className="col-span-full">
             <EmptyState
               icon={<GitBranch className="h-10 w-10" />}
-              title={t('none')}
-              description={searchQuery ? t('none_matching_search') : t('none_yet')}
+              title={
+                activeWorkspace && repositories.length > 0 ? t('none_in_workspace') : t('none')
+              }
+              description={
+                activeWorkspace && repositories.length > 0
+                  ? t('none_in_workspace_desc')
+                  : searchQuery
+                    ? t('none_matching_search')
+                    : t('none_yet')
+              }
               action={
                 <Button
                   onClick={() => document.getElementById('add-repository-button')?.click()}
