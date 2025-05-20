@@ -141,7 +141,13 @@ async def main():
                     logger.info(f"Zip file removed: {trace_file}")
         except Exception as e:
             logger.error(f"Error saving or extracting trace data: {str(e)}")
-        return result
+        
+        if result:
+            print("Test Success, Agent run successful")
+            return sys.exit(0)
+        else:
+            print("Test Failed, Agent run failed")
+            return sys.exit(1)
 
 if __name__ == '__main__':
     asyncio.run(main())
