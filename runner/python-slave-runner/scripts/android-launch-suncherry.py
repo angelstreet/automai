@@ -64,9 +64,8 @@ def main():
         "appium:automationName": "UiAutomator2",
         "appium:appPackage": args.package,
         "appium:appActivity": args.activity,
-        "appium:noReset": False,
+        "appium:noReset": True,  # Preserve app data to avoid re-login
         "appium:fullReset": False,
-        # Add intent flags to force new task
         "appium:optionalIntentArguments": "-f 0x20000000"  # FLAG_ACTIVITY_NEW_TASK
     }
     options = UiAutomator2Options().load_capabilities(capabilities)
@@ -81,14 +80,13 @@ def main():
     stop_recording = record_video(driver, args.trace_folder, "video")
 
     try:
-        # Unlock device and wake screen
-        driver.execute_script('mobile: shell', {'command': 'input keyevent KEYCODE_WAKEUP'})
+        # Unlock device
         driver.unlock()
 
-        # Force-stop the app to ensure a fresh launch
-        driver.execute_script('mobile: shell', {'command': f'am force-stop {args.package}'})
+        # Terminate the app to ensure a fresh launch without clearing data
+        driver.terminate_app(args.package)
 
-        # Launch the app (Appium will use appPackage/appActivity and optionalIntentArguments)
+        # Launch the app
         driver.activate_app(args.package)
 
         # Verify the app is in the foreground
@@ -97,7 +95,7 @@ def main():
         )
         print("App is in the foreground")
 
-        # Optionally, verify a UI element (update ID based on inspection)
+        # Verify a UI element (update ID based on inspection)
         try:
             WebDriverWait(driver, 5).until(
                 EC.presence_of_element_located((AppiumBy.ID, "com.lgi.upcch.preprod:id/main_view"))
