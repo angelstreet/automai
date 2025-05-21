@@ -16,6 +16,7 @@ class HDMIUtils:
 
     def initialize(self):
         """Initialize capture card for screenshots."""
+        print(f"Initializing HDMI capture card at index {self.device_index}")
         self.cap = cv2.VideoCapture(self.device_index)
         if not self.cap.isOpened():
             print(f"Error: Could not open capture card at index {self.device_index}")
