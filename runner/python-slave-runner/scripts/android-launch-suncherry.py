@@ -105,31 +105,52 @@ def record_video(prefix):
 
 def click_element(tag=None, text=None, resource_id=None, timeout=5):
     """
-    Click on an element using various locator strategies.
+    Click on an element using various locator strategies for Android.
     """
     try:
         print(f"Attempting to find element with: Tag={tag}, Text={text}, Resource-ID={resource_id}")
         
-        # Build XPath based on provided attributes
-        conditions = []
+        # Try multiple locator strategies
         if tag:
-            # For tag names, we use local-name() function instead of @class
-            conditions.append(f"local-name()='{tag}'")
-        if text:
-            conditions.append(f"@text='{text}'")
-        if resource_id:
-            conditions.append(f"@resource-id='{resource_id}'")
-            
-        if not conditions:
+            print(f"Trying to find element by tag name: {tag}")
+            # For Android tag names are often reflected in content-desc or text attributes
+            try:
+                # Method 1: Try by content-desc
+                element = DRIVER.find_element(AppiumBy.XPATH, f"//*[@content-desc='{tag}']")
+                print(f"Found element by content-desc: {tag}")
+            except:
+                try:
+                    # Method 2: Try by text
+                    element = DRIVER.find_element(AppiumBy.XPATH, f"//*[@text='{tag}']")
+                    print(f"Found element by text: {tag}")
+                except:
+                    try:
+                        # Method 3: Try by class and content-desc containing the tag
+                        element = DRIVER.find_element(AppiumBy.XPATH, f"//*[contains(@content-desc, '{tag}')]")
+                        print(f"Found element by partial content-desc: {tag}")
+                    except:
+                        # Method 4: Try by class and text containing the tag
+                        element = DRIVER.find_element(AppiumBy.XPATH, f"//*[contains(@text, '{tag}')]")
+                        print(f"Found element by partial text: {tag}")
+        elif text:
+            print(f"Trying to find element by text: {text}")
+            element = DRIVER.find_element(AppiumBy.XPATH, f"//*[@text='{text}']")
+        elif resource_id:
+            print(f"Trying to find element by resource-id: {resource_id}")
+            element = DRIVER.find_element(AppiumBy.ID, resource_id)
+        else:
             print("Error: At least one search criterion (tag, text, or resource_id) must be provided")
             return False
             
-        xpath = "//*[" + " and ".join(conditions) + "]"
-        print(f"Using XPath: {xpath}")
-        
-        element = WebDriverWait(DRIVER, timeout).until(
-            EC.presence_of_element_located((AppiumBy.XPATH, xpath))
-        )
+        # Before clicking, print more information about the found element
+        try:
+            print(f"Found element: {element.tag_name}")
+            print(f"Element text: {element.text}")
+            print(f"Element resource-id: {element.get_attribute('resource-id')}")
+            print(f"Element content-desc: {element.get_attribute('content-desc')}")
+            print(f"Element class: {element.get_attribute('class')}")
+        except Exception as e:
+            print(f"Could not get all element attributes: {e}")
         
         if element.is_displayed():
             element.click()
@@ -145,6 +166,11 @@ def click_element(tag=None, text=None, resource_id=None, timeout=5):
     except Exception as e:
         print(f"Test Failed: Failed to click on element: {e}")
         capture_screenshot("click_error")
+        
+        # Let's print the current DOM to help with debugging
+        print("Dumping DOM for debugging purposes:")
+        print_visible_elements()
+        
         raise Exception(f"Test Failed: Failed to click on element: {e}")
 
 def main():
