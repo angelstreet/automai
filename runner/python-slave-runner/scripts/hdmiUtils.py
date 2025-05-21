@@ -14,6 +14,7 @@ class HDMIUtils:
 
     def initialize(self):
         """Initialize capture card for screenshots."""
+        print(f"Initializing HDMI capture card at index {self.device_index}")
         if self.device_index is None:
             return False
 

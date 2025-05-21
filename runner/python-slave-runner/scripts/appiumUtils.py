@@ -221,7 +221,7 @@ def check_device_adb_connected(device_udid):
         print(f"ADB check failed: {e}")
         return False
 
-def initialize_driver(device_udid, appium_port, package, activity):
+def initialize_driver(device_udid, appium_port, package, activity, hdmi=None):
     """Initialize Appium driver with setup and connectivity checks."""
     if not check_device_adb_connected(device_udid):
         print(f"Device {device_udid}: Not connected via ADB")
