@@ -81,19 +81,17 @@ def main():
 
     try:
         # Unlock device
+        print("Unlocking device")
         driver.unlock()
 
-        # Terminate the app to ensure a fresh launch without clearing data
+        print("Terminating app")
         driver.terminate_app(args.package)
-        driver.implicitly_wait(3)
+        driver.implicitly_wait(5)
+        
         # Launch the app
+        print("Launching app")
         driver.activate_app(args.package)
-
-        # Verify the app is in the foreground
-        WebDriverWait(driver, 10).until(
-            lambda d: d.current_activity == ".MainActivity"  # Adjust if activity name differs
-        )
-        print("App is in the foreground, waiting 10 seconds")
+        driver.implicitly_wait(2)
         screenshot_path = capture_screenshot(driver, args.trace_folder)
         driver.implicitly_wait(10)
         screenshot_path = capture_screenshot(driver, args.trace_folder)
