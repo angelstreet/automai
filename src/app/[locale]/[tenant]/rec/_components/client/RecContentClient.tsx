@@ -1,7 +1,5 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
-
 import { useRecHosts } from '@/hooks/useRecHosts';
 
 import { RecEventListener } from './RecEventListener';
@@ -11,8 +9,6 @@ import { RecVncPreviewGrid } from './RecVncPreviewGrid';
  * Client component for displaying and managing rec
  */
 export function RecContentClient() {
-  const t = useTranslations('common');
-
   // Use the rec hosts hook to fetch and manage host data
   const { hosts, loading, error, refreshHosts } = useRecHosts();
 

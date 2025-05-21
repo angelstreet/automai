@@ -1,18 +1,9 @@
 {
   "compilerOptions": {
     "target": "es2022",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
-    "types": [
-      "node",
-      "verror",
-      "jest",
-      "@jest/globals"
-    ],
+    "types": ["node", "verror", "jest", "@jest/globals"],
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
@@ -29,17 +20,17 @@
       }
     ],
     "paths": {
-      "@/*": [
-        "./src/*"
-      ]
-    }
+      "@/*": ["./src/*"]
+    },
+    "typeRoots": ["./node_modules/@types", "./src/types"]
   },
   "include": [
     "src/**/*.ts",
     "src/**/*.tsx",
     ".next/types/**/*.ts",
-    "global.d.ts"
-, "src/app/metadata.ts"  ],
+    "global.d.ts",
+    "src/app/metadata.ts"
+  ],
   "exclude": [
     "node_modules",
     ".next",

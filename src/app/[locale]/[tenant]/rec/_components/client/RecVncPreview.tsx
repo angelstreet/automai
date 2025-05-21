@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 
 import { Host } from '@/types/component/hostComponentType';
 
@@ -9,18 +9,48 @@ interface RecVncPreviewProps {
   host: Host;
 }
 
-/**
- * VNC Preview component for a single host
- * Shows a preview thumbnail that can be double-clicked to open full screen
- */
 export function RecVncPreview({ host }: RecVncPreviewProps) {
+  // Check for dedicated VNC fields only
+  const vnc_port = (host as any).vnc_port;
+  const vnc_password = (host as any).vnc_password;
+
+  // If either VNC field is missing, don't show anything
+  if (!vnc_port || !vnc_password) {
+    return null;
+  }
+
   const params = useParams();
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // Generate VNC page URL with dedicated VNC fields
+  const vncPageUrl = `/api/vnc-page?host=${encodeURIComponent(host.ip)}&port=${
+    vnc_port
+  }&password=${encodeURIComponent(vnc_password)}&viewOnly=true`;
+
+  // Handle messages from iframe
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      switch (event.data) {
+        case 'connected':
+          setIsLoading(false);
+          setHasError(false);
+          break;
+        case 'disconnected':
+        case 'auth-failed':
+          setHasError(true);
+          setIsLoading(false);
+          break;
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
 
   // Handle double click to open the fullscreen view
   const handleDoubleClick = useCallback(() => {
-    // Open in new tab
     const locale = params.locale as string;
     const tenant = params.tenant as string;
     const fullscreenUrl = `/${locale}/${tenant}/rec/vnc-viewer/${host.id}`;
@@ -46,29 +76,25 @@ export function RecVncPreview({ host }: RecVncPreviewProps) {
           <div className="flex flex-col items-center p-4">
             <span className="text-red-500 text-sm">Connection Error</span>
             <span className="text-xs text-gray-500 mt-1">
-              {host.ip}:{host.port || 5900}
+              {host.ip}:{vnc_port}
             </span>
           </div>
         )}
 
-        {/* This would be a real-time preview in production */}
-        {/* For now, use a placeholder div that looks like a screen */}
-        <div
-          className={`absolute inset-0 ${hasError ? 'hidden' : ''}`}
-          style={{ backgroundColor: '#1a1a1a' }}
-        >
-          <div className="p-3 text-xs text-white">
-            <div className="font-bold">{host.name}</div>
-          </div>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-gray-500 text-xs">Double-click to open fullscreen</span>
-          </div>
-        </div>
+        {!isLoading && !hasError && (
+          <iframe
+            ref={iframeRef}
+            src={vncPageUrl}
+            className="absolute inset-0 w-full h-full"
+            style={{ pointerEvents: 'none' }} // View-only for preview
+            sandbox="allow-scripts allow-same-origin"
+          />
+        )}
       </div>
 
       <div className="absolute bottom-0 left-0 right-0 bg-gray-800 bg-opacity-80 text-white p-1 text-xs">
         <div className="truncate font-semibold text-center">
-          {host.ip}:{host.port || 5900}
+          {host.ip}:{vnc_port}
         </div>
       </div>
     </div>

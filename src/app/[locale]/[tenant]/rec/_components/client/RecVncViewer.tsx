@@ -11,9 +11,7 @@ interface RecVncViewerProps {
 }
 
 /**
- * Fullscreen VNC viewer component
- * This is a placeholder implementation that would need to be replaced with
- * an actual VNC client library like noVNC
+ * Fullscreen VNC viewer component using an iframe approach
  */
 export function RecVncViewer({ host, onClose }: RecVncViewerProps) {
   const router = useRouter();
@@ -21,41 +19,80 @@ export function RecVncViewer({ host, onClose }: RecVncViewerProps) {
   const [isConnecting, setIsConnecting] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // The URL for the actual VNC connection
-  // This would need to be adjusted based on your actual VNC implementation
-  const vncUrl = `http://${host.ip}:${host.port || 5900}/vnc.html?autoconnect=true&password=${encodeURIComponent(host.password || '')}`;
+  // Check for dedicated VNC fields only
+  const vnc_port = (host as any).vnc_port;
+  const vnc_password = (host as any).vnc_password;
+
+  // Check if VNC connection is possible
+  const canConnectVnc = !!vnc_port && !!vnc_password;
+
+  // Handle missing VNC fields
+  useEffect(() => {
+    if (!canConnectVnc) {
+      setIsConnecting(false);
+      setError('VNC connection not available for this host.');
+    }
+  }, [canConnectVnc]);
+
+  // Generate VNC page URL
+  const vncPageUrl = canConnectVnc
+    ? `/api/vnc-page?host=${encodeURIComponent(host.ip)}&port=${
+        vnc_port
+      }&password=${encodeURIComponent(vnc_password)}&viewOnly=false`
+    : '';
+
+  // Handle messages from iframe
+  useEffect(() => {
+    if (!canConnectVnc) return;
+
+    const handleMessage = (event: MessageEvent) => {
+      switch (event.data) {
+        case 'connected':
+          setIsConnecting(false);
+          setError(null);
+          console.log('[@component:RecVncViewer] Connected to VNC server');
+          break;
+        case 'disconnected':
+          setError('Disconnected from VNC server');
+          console.log('[@component:RecVncViewer] Disconnected from VNC server');
+          break;
+        case 'auth-failed':
+          setError('Invalid VNC password');
+          setIsConnecting(false);
+          console.log('[@component:RecVncViewer] Authentication failed');
+          break;
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [canConnectVnc]);
 
   // Handle connection timeout
   useEffect(() => {
+    if (!canConnectVnc) return;
+
     const timeoutId = setTimeout(() => {
       if (isConnecting) {
         setIsConnecting(false);
         setError('Connection timed out. Please check if the VNC server is running on the host.');
       }
-    }, 10000); // 10 second timeout
+    }, 10000);
 
     return () => clearTimeout(timeoutId);
-  }, [isConnecting]);
-
-  // Handle iframe load event
-  const handleIframeLoad = useCallback(() => {
-    setIsConnecting(false);
-  }, []);
-
-  // Handle iframe error
-  const handleIframeError = useCallback(() => {
-    setIsConnecting(false);
-    setError('Failed to connect to VNC server. Please check your connection settings.');
-  }, []);
+  }, [isConnecting, canConnectVnc]);
 
   // Handle close button
   const handleClose = useCallback(() => {
+    if (canConnectVnc && iframeRef.current?.contentWindow) {
+      iframeRef.current.contentWindow.postMessage('disconnect', '*');
+    }
     if (onClose) {
       onClose();
     } else {
       router.back();
     }
-  }, [onClose, router]);
+  }, [onClose, router, canConnectVnc]);
 
   // Keyboard shortcuts (ESC to exit fullscreen)
   useEffect(() => {
@@ -76,7 +113,8 @@ export function RecVncViewer({ host, onClose }: RecVncViewerProps) {
         <div className="text-white">
           <span className="font-semibold">{host.name}</span>
           <span className="ml-2 text-gray-400 text-sm">
-            {host.ip}:{host.port || 5900}
+            {host.ip}
+            {vnc_port ? `:${vnc_port}` : ''}
           </span>
         </div>
         <button
@@ -113,30 +151,16 @@ export function RecVncViewer({ host, onClose }: RecVncViewerProps) {
           </div>
         )}
 
-        {/* This is a placeholder for the actual VNC client implementation */}
-        {/* In a real implementation, this would be replaced with a proper VNC client library */}
-        <div className="h-full w-full flex items-center justify-center bg-gray-800">
-          <div className="text-gray-400 text-center p-6">
-            <p className="mb-4">VNC Viewer would be implemented here</p>
-            <p className="text-sm">
-              In a production environment, this would integrate with a VNC client library such as
-              noVNC to provide a real-time remote connection.
-            </p>
-          </div>
-
-          {/* The iframe would be used if you have a web-based VNC client like noVNC */}
-          {/* Uncomment this when you have an actual VNC implementation */}
-          {/* 
+        {/* VNC iframe - only shown if connection is possible */}
+        {canConnectVnc && (
           <iframe
             ref={iframeRef}
-            src={vncUrl}
-            className="h-full w-full border-0"
-            onLoad={handleIframeLoad}
-            onError={handleIframeError}
-            allow="fullscreen"
+            src={vncPageUrl}
+            className="w-full h-full border-0"
+            allow="clipboard-read; clipboard-write"
+            sandbox="allow-scripts allow-same-origin"
           />
-          */}
-        </div>
+        )}
       </div>
     </div>
   );

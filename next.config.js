@@ -18,6 +18,7 @@ const nextConfig = {
       '*.cloudworkstations.dev',
       '3000-idx-automaigit-1741768452810.cluster-4ezwrnmkojawstf2k7vqy36oe6.cloudworkstations.dev',
     ],
+    esmExternals: true, // Enable ESM in external packages
   },
   assetPrefix: process.env.ASSET_PREFIX || '',
   images: {
@@ -62,7 +63,40 @@ const nextConfig = {
       { module: /node_modules\/oidc-token-hash/ },
       { module: /node_modules\/openid-client/ },
       { message: /should not be imported directly/ },
+      /Critical dependency: the request of a dependency is an expression/,
+      /Module not found: Can't resolve 'ws'/,
+      /export 'default' \(imported as 'RFB'\) was not found in/,
     ];
+
+    // Fix for noVNC ESM modules with top-level await
+    config.module.rules.push({
+      test: /node_modules\/@novnc\/novnc\/lib\/.*\.js$/,
+      type: 'javascript/auto', // Treat as auto to handle both ESM and CJS
+      resolve: {
+        fullySpecified: false, // Allow importing without extensions
+      },
+      use: {
+        loader: 'babel-loader',
+        options: {
+          presets: [
+            [
+              '@babel/preset-env',
+              {
+                targets: { browsers: ['last 2 versions', 'not dead'] },
+                modules: false, // Preserve ES modules
+                useBuiltIns: 'usage',
+                corejs: 3,
+              },
+            ],
+          ],
+          plugins: [
+            '@babel/plugin-syntax-import-assertions',
+            '@babel/plugin-syntax-top-level-await',
+          ],
+        },
+      },
+    });
+
     return config;
   },
   serverExternalPackages: [
