@@ -17,7 +17,10 @@ def main():
         default="com.libertyglobal.horizonx.MainActivity",
         help="App activity name (default: com.libertyglobal.horizonx.MainActivity)"
     )
-    args = parser.parse_args()
+    # Parse known args only, ignoring unknown args
+    args, unknown = parser.parse_known_args()
+    if unknown:
+        print(f"Warning: Ignoring unknown arguments: {unknown}")
 
     # Desired capabilities for Appium
     capabilities = {
