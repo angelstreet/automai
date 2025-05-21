@@ -1,8 +1,5 @@
 import argparse
 import sys
-import os
-import time
-import threading
 from appium import webdriver
 import appiumUtils
 from hdmiUtils import HDMIUtils
@@ -10,15 +7,14 @@ from testRunnerUtils import run_tests_on_devices
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
-        description="Launch an Android app with Appium on multiple devices",
+        description="Launch an Android app with Appium on mobile and Android TV",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     parser.add_argument("--package", default="com.lgi.upcch.preprod", help="App package name")
     parser.add_argument("--activity", default="com.libertyglobal.horizonx.MainActivity", help="App activity name")
     parser.add_argument("--trace_folder", default="traces", help="Directory for trace outputs")
-    parser.add_argument("--device", default="192.168.1.130:5555,192.168.1.230:5555", 
-                        help="Comma-separated device UDIDs ip:port[:hdmi_index] (e.g., ip1:port1:hdmi1,ip2:port2)")
-    
+    parser.add_argument("--device", default="192.168.1.29:5555:1", 
+                        help="Comma-separated device UDIDs ip:port:hdmi_index (e.g., ip1:port1:hdmi1,ip2:port2:hdmi2)")
     args, unknown = parser.parse_known_args()
     if unknown:
         print(f"[@script:android-launch] Warning: Ignoring unknown arguments: {unknown}", file=sys.stderr)
@@ -51,7 +47,7 @@ def run_test_on_device(device_udid, hdmi_index, appium_port, package, activity, 
         return 1
 
     context = appiumUtils.init_globals(driver, trace_folder, package)
-    stop_recording = appiumUtils.record_video(context)
+    stop_recording = appiumUtils.record_video(context, video_size="1200x1848")
 
     try:
         print(f"Terminating app on {device_udid}")
@@ -62,24 +58,21 @@ def run_test_on_device(device_udid, hdmi_index, appium_port, package, activity, 
         driver.activate_app(package)
         time.sleep(2)
         appiumUtils.capture_screenshot(context)
-        time.sleep(20)
-        appiumUtils.capture_screenshot(context)
-
-        appiumUtils.click_element(context, tag="TV Guide")
-        time.sleep(2)
-        appiumUtils.click_element(context, tag="LIVE TV")
-        time.sleep(2)
-        appiumUtils.click_element(context, tag="SRF 1 HD")
-        time.sleep(20)
-        hdmi.take_screenshot()
 
         print(f"Sunrise TV app ({package}) launched successfully on {device_udid}!")
 
+        appiumUtils.click_element(context, tag="TV Guide")
+        appiumUtils.click_element(context, tag="LIVE TV")
+        appiumUtils.click_element(context, tag="SRF 1 HD")
+        time.sleep(10)
+        appiumUtils.capture_screenshot(context)
+        
         print(f"Test Success for {device_udid}")
         return 0
 
     except Exception as e:
         print(f"Test Failed for {device_udid}: {e}")
+        appiumUtils.capture_screenshot(context, "error")
         return 1
 
     finally:
@@ -87,10 +80,8 @@ def run_test_on_device(device_udid, hdmi_index, appium_port, package, activity, 
         if video_path:
             print(f"Video saved for {device_udid}: {video_path}")
         appiumUtils.print_visible_elements(context)
-        appiumUtils.capture_screenshot(context)
-        hdmi.take_screenshot()
-        hdmi.release()
         driver.quit()
+        hdmi.release()
 
 def main():
     args = parse_arguments()
