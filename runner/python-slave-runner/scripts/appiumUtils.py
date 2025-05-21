@@ -158,7 +158,7 @@ def click_element(context, tag=None, text=None, resource_id=None, timeout=5):
         else:
             print(f"[@click] ✗ Failed")
         capture_screenshot(context, "click_error")
-        raise Exception(f"Failed to click on element: {e}")
+        raise Exception(f"Failed to click on element")
 
 def is_appium_running(port):
     """Check if Appium is running on the specified port."""
