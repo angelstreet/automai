@@ -11,6 +11,34 @@ from appium.options.android import UiAutomator2Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
+def print_visible_elements(driver):
+    try:
+        # Wait for the app to stabilize (adjust timeout as needed)
+        WebDriverWait(driver, 10).until(
+            lambda d: d.current_package == "com.lgi.upcch.preprod"
+        )
+        print("Dumping visible elements:")
+        
+        # Find all elements using a broad XPath
+        elements = driver.find_elements(AppiumBy.XPATH, "//*")
+        
+        for index, element in enumerate(elements, 1):
+            try:
+                if element.is_displayed():
+                    tag = element.tag_name
+                    text = element.text.strip() if element.text else "<no text>"
+                    resource_id = element.get_attribute("resource-id") or "<no resource-id>"
+                    print(f"Element {index}:")
+                    print(f"  Tag: {tag}")
+                    print(f"  Text: {text}")
+                    print(f"  Resource-ID: {resource_id}")
+                    print("  ---")
+            except Exception as e:
+                # Skip elements that cause errors (e.g., stale elements)
+                print(f"Error inspecting element {index}: {e}")
+    except Exception as e:
+        print(f"Failed to dump visible elements: {e}")
+
 def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Launch an Android app with Appium",
@@ -98,7 +126,7 @@ def main():
         time.sleep(10)
         screenshot_path = capture_screenshot(driver, args.trace_folder)
         print(f"Test Success: Sunrise TV app ({args.package}) launched successfully!")
-        
+        print_visible_elements(driver)
         video_path = stop_recording()
         if video_path:
             print(f"Video saved: {video_path}")
