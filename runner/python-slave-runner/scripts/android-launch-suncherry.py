@@ -130,7 +130,7 @@ def main():
 
     # Initialize the Appium driver
     try:
-        print("initializing appium driver",options)
+        print("initializing appium driver",capabilities)
         driver = webdriver.Remote(command_executor="http://localhost:4723", options=options)
     except Exception as e:
         print(f"Test Failed: Failed to initialize Appium driver: {e}")
