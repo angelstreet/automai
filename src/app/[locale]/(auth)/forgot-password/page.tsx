@@ -87,7 +87,7 @@ export default function ForgotPasswordPage() {
 
         {success ? (
           <div className="bg-green-100 dark:bg-green-900 p-4 rounded-md text-green-800 dark:text-green-100">
-            {t('resetLinkSent')}
+            {t('send_reset_link')}
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="mt-8 space-y-6">
