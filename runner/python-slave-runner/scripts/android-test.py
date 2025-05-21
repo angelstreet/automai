@@ -12,7 +12,7 @@ desired_caps = {
     "appium:appActivity": "com.android.deskclock.DeskClock",  # Main activity for Clock app
     "appium:noReset": True
 }
-
+    
 # Initialize the Appium driver
 driver = webdriver.Remote("http://localhost:4723", desired_caps)
 
