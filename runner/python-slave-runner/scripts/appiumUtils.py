@@ -8,6 +8,7 @@ import requests
 from datetime import datetime
 from appium import webdriver
 from appium.webdriver.common.appiumby import AppiumBy
+from appium.webdriver.extensions.android.nativekey import AndroidKey
 from appium.options.android import UiAutomator2Options
 
 def init_globals(appium_driver, folder, package):
@@ -109,7 +110,7 @@ def click_element(context, tag=None, text=None, resource_id=None, timeout=5):
                         element = context["driver"].find_element(AppiumBy.XPATH, f"//*[contains(@text, '{tag}')]")
                         status_parts.append("Found[partial-text]")
         elif text:
-            element = context["driver"].find_element(AppiumBy.NPATH, f"//*[@text='{text}']")
+            element = context["driver"].find_element(AppiumBy.XPATH, f"//*[@text='{text}']")
             status_parts.append("Found[exact-text]")
         elif resource_id:
             element = context["driver"].find_element(AppiumBy.ID, resource_id)
@@ -153,12 +154,45 @@ def click_element(context, tag=None, text=None, resource_id=None, timeout=5):
             
     except Exception as e:
         if status_parts:
-            status_parts.append(f"✗ Failed")
+            status_parts.append(f"✗ Failed: {str(e)}")
             print(f"[@click] {' → '.join(status_parts)}")
         else:
-            print(f"[@click] ✗ Failed")
+            print(f"[@click] ✗ Failed: {str(e)}")
         capture_screenshot(context, "click_error")
-        raise Exception(f"Failed to click on element")
+        raise Exception(f"Failed to click on element: {e}")
+
+def send_keys(context, key):
+    """Send a keycode or key name to the device (e.g., for Android TV remote navigation)."""
+    key_map = {
+        "up": AndroidKey.DPAD_UP,
+        "down": AndroidKey.DPAD_DOWN,
+        "left": AndroidKey.DPAD_LEFT,
+        "right": AndroidKey.DPAD_RIGHT,
+        "center": AndroidKey.DPAD_CENTER,
+        "ok": AndroidKey.DPAD_CENTER,
+        "menu": AndroidKey.MENU,
+        "back": AndroidKey.BACK
+    }
+    
+    try:
+        if isinstance(key, int):
+            keycode = key
+            key_name = str(key)
+        elif isinstance(key, str):
+            key_name = key.lower()
+            if key_name not in key_map:
+                raise ValueError(f"Unsupported key name: {key}. Supported: {list(key_map.keys())}")
+            keycode = key_map[key_name].value
+        else:
+            raise ValueError("Key must be an integer keycode or a supported key name")
+
+        context["driver"].press_keycode(keycode)
+        print(f"[@send_keys] Sent key: {key_name} (keycode: {keycode})")
+        time.sleep(1)  # Brief pause to ensure action completes
+        return True
+    except Exception as e:
+        print(f"[@send_keys] Failed to send key {key}: {e}")
+        return False
 
 def is_appium_running(port):
     """Check if Appium is running on the specified port."""
@@ -221,7 +255,7 @@ def check_device_adb_connected(device_udid):
         print(f"ADB check failed: {e}")
         return False
 
-def initialize_driver(device_udid, appium_port, package, activity, hdmi=None):
+def initialize_driver(device_udid, appium_port, package, activity):
     """Initialize Appium driver with setup and connectivity checks."""
     if not check_device_adb_connected(device_udid):
         print(f"Device {device_udid}: Not connected via ADB")
