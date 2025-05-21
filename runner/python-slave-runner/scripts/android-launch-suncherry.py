@@ -4,7 +4,7 @@ from appium import webdriver
 import appiumUtils
 from hdmiUtils import HDMIUtils
 from testRunnerUtils import run_tests_on_devices
-
+import time
 def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Launch an Android app with Appium on mobile and Android TV",
