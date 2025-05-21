@@ -68,12 +68,11 @@ def capture_screenshot(context, prefix="screenshot"):
     context["driver"].save_screenshot(screenshot_path)
     return screenshot_path
 
-def record_video(context, prefix):
+def record_video(context):
     """Start recording screen and return a function to stop the recording."""
     if not os.path.exists(context["trace_folder"]):
         os.makedirs(context["trace_folder"])
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    mp4_path = os.path.join(context["trace_folder"], f"{prefix}_{timestamp}.mp4")
+    mp4_path = os.path.join(context["trace_folder"], "video.mp4")
     context["driver"].start_recording_screen(options={"videoSize": "1280x720", "bitRate": 5000000, "timeLimit": "180"})
     def stop_recording():
         try:
@@ -89,32 +88,33 @@ def record_video(context, prefix):
 
 def click_element(context, tag=None, text=None, resource_id=None, timeout=5):
     """Find and click an element by tag, text, or resource-id."""
+    status_parts = []
     try:
-        print(f"[@click] Searching for element with: Tag={tag} | Text={text} | Resource-ID={resource_id}")
+        status_parts.append(f"Search[Tag={tag}|Text={text}|ID={resource_id}]")
         
         if tag:
             try:
                 element = context["driver"].find_element(AppiumBy.XPATH, f"//*[@content-desc='{tag}']")
-                print(f"[@click] Found element by content-desc: {tag}")
+                status_parts.append("Found[content-desc]")
             except:
                 try:
                     element = context["driver"].find_element(AppiumBy.XPATH, f"//*[@text='{tag}']")
-                    print(f"[@click] Found element by text: {tag}")
+                    status_parts.append("Found[text]")
                 except:
                     try:
                         element = context["driver"].find_element(AppiumBy.XPATH, f"//*[contains(@content-desc, '{tag}')]")
-                        print(f"[@click] Found element by partial content-desc: {tag}")
+                        status_parts.append("Found[partial-content-desc]")
                     except:
                         element = context["driver"].find_element(AppiumBy.XPATH, f"//*[contains(@text, '{tag}')]")
-                        print(f"[@click] Found element by partial text: {tag}")
+                        status_parts.append("Found[partial-text]")
         elif text:
             element = context["driver"].find_element(AppiumBy.XPATH, f"//*[@text='{text}']")
-            print(f"[@click] Found element by exact text: {text}")
+            status_parts.append("Found[exact-text]")
         elif resource_id:
             element = context["driver"].find_element(AppiumBy.ID, resource_id)
-            print(f"[@click] Found element by resource-id: {resource_id}")
+            status_parts.append("Found[resource-id]")
         else:
-            print("[@click] ERROR: At least one search criterion (tag, text, or resource_id) must be provided")
+            print("[@click] ERROR: At least one search criterion required")
             return False
             
         # Get element properties in a compact format
@@ -124,34 +124,38 @@ def click_element(context, tag=None, text=None, resource_id=None, timeout=5):
             if tag_name: properties.append(f"Tag={tag_name}")
             
             el_text = element.text.strip() if element.text else "<no text>"
-            properties.append(f"Text={el_text}")
+            if el_text != "<no text>": properties.append(f"Text={el_text}")
             
             resource_id = element.get_attribute("resource-id")
-            if resource_id: properties.append(f"Resource-ID={resource_id}")
+            if resource_id: properties.append(f"ID={resource_id}")
             
             content_desc = element.get_attribute("content-desc")
-            if content_desc: properties.append(f"Content-Desc={content_desc}")
+            if content_desc: properties.append(f"Desc={content_desc}")
             
-            el_class = element.get_attribute("class")
-            if el_class: properties.append(f"Class={el_class}")
-            
-            print(f"[@click] Element details: {' | '.join(properties)}")
+            if properties:
+                status_parts.append(f"Props[{' | '.join(properties)}]")
         except Exception as e:
-            print(f"[@click] Warning: Could not get all element attributes: {e}")
+            status_parts.append(f"Props[error: {str(e)}]")
         
         if element.is_displayed():
             element.click()
-            print(f"[@click] SUCCESS: Clicked on element")
+            status_parts.append("✓ Clicked")
             time.sleep(3)
             capture_screenshot(context, "click_success")
+            print(f"[@click] {' → '.join(status_parts)}")
             return True
         else:
-            print(f"[@click] FAIL: Element found but not visible")
+            status_parts.append("✗ Not visible")
             capture_screenshot(context, "click_failed")
+            print(f"[@click] {' → '.join(status_parts)}")
             raise Exception("Element found but not visible")
             
     except Exception as e:
-        print(f"[@click] FAIL: Could not click element: {e}")
+        if status_parts:
+            status_parts.append(f"✗ Failed: {str(e)}")
+            print(f"[@click] {' → '.join(status_parts)}")
+        else:
+            print(f"[@click] ✗ Failed: {str(e)}")
         capture_screenshot(context, "click_error")
         raise Exception(f"Failed to click on element: {e}")
 
