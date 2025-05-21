@@ -23,6 +23,15 @@ export function RecVncViewer({ host, onClose }: RecVncViewerProps) {
   const vnc_port = (host as any).vnc_port;
   const vnc_password = (host as any).vnc_password;
 
+  // Debug log connection parameters
+  console.log('[@component:RecVncViewer] Connection info:', {
+    host_name: host.name,
+    ip: host.ip,
+    vnc_port,
+    has_password: !!vnc_password,
+    password_preview: vnc_password ? `${vnc_password.charAt(0)}...` : 'none',
+  });
+
   // Check if VNC connection is possible
   const canConnectVnc = !!vnc_port && !!vnc_password;
 

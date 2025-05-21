@@ -14,8 +14,18 @@ export function RecVncPreview({ host }: RecVncPreviewProps) {
   const vnc_port = (host as any).vnc_port;
   const vnc_password = (host as any).vnc_password;
 
+  // Debug log connection parameters
+  console.log('[@component:RecVncPreview] Connection info:', {
+    host_name: host.name,
+    ip: host.ip,
+    vnc_port,
+    has_password: !!vnc_password,
+    password_preview: vnc_password ? `${vnc_password.charAt(0)}...` : 'none',
+  });
+
   // If either VNC field is missing, don't show anything
   if (!vnc_port || !vnc_password) {
+    console.log('[@component:RecVncPreview] Skipping VNC preview - missing required fields');
     return null;
   }
 
@@ -23,6 +33,7 @@ export function RecVncPreview({ host }: RecVncPreviewProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [showDebug, setShowDebug] = useState(false);
 
   // Generate VNC page URL with dedicated VNC fields
   const vncPageUrl = `/api/vnc-page?host=${encodeURIComponent(host.ip)}&port=${
@@ -57,6 +68,12 @@ export function RecVncPreview({ host }: RecVncPreviewProps) {
     window.open(fullscreenUrl, '_blank');
   }, [host.id, params.locale, params.tenant]);
 
+  // Add a debug toggle button
+  const toggleDebug = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Don't trigger double-click handler
+    setShowDebug(!showDebug);
+  };
+
   return (
     <div
       className="relative overflow-hidden rounded-md border border-gray-200 dark:border-gray-700 
@@ -64,6 +81,29 @@ export function RecVncPreview({ host }: RecVncPreviewProps) {
       style={{ height: '160px' }}
       onDoubleClick={handleDoubleClick}
     >
+      {/* Debug toggle button */}
+      <button
+        className="absolute top-0 right-0 z-50 bg-black p-1 text-white text-xs opacity-30 hover:opacity-100"
+        onClick={toggleDebug}
+      >
+        Debug
+      </button>
+
+      {/* Debug overlay */}
+      {showDebug && (
+        <div className="absolute inset-0 bg-black bg-opacity-80 text-white z-40 p-2 text-xs overflow-auto">
+          <h4 className="font-bold">VNC Connection Info:</h4>
+          <pre>
+            Host: {host.ip}
+            {'\n'}
+            VNC Port: {vnc_port || 'none'}
+            {'\n'}
+            Password: {vnc_password ? `${vnc_password.charAt(0)}...` : 'none'}
+            {'\n'}
+          </pre>
+        </div>
+      )}
+
       <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
         {isLoading && (
           <div className="flex flex-col items-center">
