@@ -46,7 +46,7 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
     if associated_files:
         # Filter files to exclude stdout.txt, stderr.txt, and script_report.html
         excluded_filenames = {'stdout.txt', 'stderr.txt', 'script_report.html', 'metadata.json', 'vncpasswd'}
-        allowed_extensions = {'.png', '.jpg', '.jpeg', '.trace', '.txt', '.webm', '.zip', '.py'}
+        allowed_extensions = {'.png', '.jpg', '.jpeg', '.trace', '.txt', '.webm', '.mp4', '.zip', '.py'}
         script_files = [file for file in associated_files 
                         if script_id in file.get('relative_path', '') 
                         and file.get('name') not in excluded_filenames
@@ -81,7 +81,7 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
                 # Check if file is an image or text for preview
                 image_extensions = {'.png', '.jpg', '.jpeg', '.gif', '.webp'}
                 text_extensions = {'.json', '.trace', '.txt'}
-                video_extensions = {'.webm'}
+                video_extensions = {'.webm', '.mp4'}
                 _, ext = os.path.splitext(file_name.lower())
                 preview = ""
                 if ext in image_extensions and file_url:
@@ -91,6 +91,8 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
                     video_id = f"video_{idx}_{file_name.replace('.', '_').replace(' ', '_')}"
                     escaped_file_name = file_name.replace("'", "\\'")
                     video_url = file_url
+                    # Set content type based on file extension
+                    content_type = "video/mp4" if ext == ".mp4" else "video/webm"
                     preview = f"""<a href='{file_url}' target='_blank' onclick="openVideoPlayer_{video_id}(event); return false;">Play Video</a>
                     <script>
                     function openVideoPlayer_{video_id}(event) {{
@@ -98,6 +100,7 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
                       const videoWindow = window.open('', '_blank', 'width=640,height=480');
                       const video_url = '{video_url}';
                       const file_name = '{escaped_file_name}';
+                      const content_type = '{content_type}';
                       
                       // Get parent window theme preference
                       const isDark = document.documentElement.classList.contains('dark');
@@ -143,7 +146,7 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
                           <div class="header">Playing: ${{file_name}}</div>
                           <div class="video-container">
                             <video controls autoplay>
-                              <source src="${{video_url}}" type="video/webm">
+                              <source src="${{video_url}}" type="${{content_type}}">
                               Your browser does not support the video tag.
                             </video>
                           </div>
@@ -554,7 +557,7 @@ def get_content_disposition(mime_type: str) -> str:
 def collect_files(
     job_folder_path: str,
     excluded_files: set[str] = {".env", "requirements.txt", "upload_and_report.py"},
-    allowed_extensions: set[str] = {".png", ".jpg", ".jpeg", ".trace", ".txt", ".webm", ".zip", '.py'},
+    allowed_extensions: set[str] = {".png", ".jpg", ".jpeg", ".trace", ".txt", ".webm", ".mp4", ".zip", '.py'},
     report_files: set[str] = {"report.html", "script_report.html"}
 ) -> list[dict]:
     """
