@@ -7,7 +7,6 @@ from datetime import datetime
 from appium import webdriver
 from appium.webdriver.common.appiumby import AppiumBy
 from appium.options.android import UiAutomator2Options
-from appium.webdriver.extensions.android.screenrecord import AndroidStartScreenRecordingOptions
 
 def parse_arguments():
     """Parse command-line arguments for Appium script."""
@@ -60,10 +59,11 @@ def record_video(driver, trace_folder, prefix):
     
     # Start screen recording
     driver.start_recording_screen(
-        AndroidStartScreenRecordingOptions()
-        .with_video_size("1280x720")
-        .with_bit_rate(5000000)
-        .with_time_limit(180)  # 3 minutes max
+         options={
+        "videoSize": "1280x720",
+        "bitRate": 5000000,
+        "timeLimit": "180"
+        }
     )
     
     def stop_recording():
