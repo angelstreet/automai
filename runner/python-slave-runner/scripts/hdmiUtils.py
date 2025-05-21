@@ -11,16 +11,11 @@ class HDMIUtils:
         self.trace_folder = trace_folder
         self.cap = None
         self.is_initialized = False
+        if device_index:
+            self.initialize()
 
     def initialize(self):
         """Initialize capture card for screenshots."""
-        print(f"Initializing HDMI capture card at index {self.device_index}")
-        if self.device_index is None:
-            return False
-
-        if self.is_initialized:
-            return True
-
         self.cap = cv2.VideoCapture(self.device_index)
         if not self.cap.isOpened():
             print(f"Error: Could not open capture card at index {self.device_index}")
@@ -34,10 +29,7 @@ class HDMIUtils:
 
     def take_screenshot(self, filename=None):
         """Take a screenshot from HDMI and save to trace_folder if HDMI is available."""
-        if self.device_index is None:
-            return False
-
-        if not self.is_initialized and not self.initialize():
+        if self.device_index is None or not self.is_initialized:
             return False
 
         ret, frame = self.cap.read()
