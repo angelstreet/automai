@@ -67,7 +67,7 @@ def parse_arguments():
         description="Launch an Android app with Appium",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.add_argument("--package", default="com.lgi.upcch.firetv.preprod", help="App package name")
+    parser.add_argument("--package", default="com.lgi.upcch.preprod", help="App package name")
     parser.add_argument("--activity", default="com.libertyglobal.horizonx.MainActivity", help="App activity name")
     parser.add_argument("--trace_folder", default="traces", help="Directory for trace outputs")
     parser.add_argument("--device", default="192.168.1.130", help="Device IP address for ADB connection")
