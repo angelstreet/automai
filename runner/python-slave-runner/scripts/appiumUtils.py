@@ -68,13 +68,13 @@ def capture_screenshot(context, prefix="screenshot"):
     context["driver"].save_screenshot(screenshot_path)
     return screenshot_path
 
-def record_video(context):
+def record_video(context, video_size="1280x720", bit_rate=5000000, time_limit="180"):
     """Start recording screen and return a function to stop the recording."""
     if not os.path.exists(context["trace_folder"]):
         os.makedirs(context["trace_folder"])
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     mp4_path = os.path.join(context["trace_folder"], f"video_{timestamp}.mp4")
-    context["driver"].start_recording_screen(options={"videoSize": "1280x720", "bitRate": 5000000, "timeLimit": "180"})
+    context["driver"].start_recording_screen(options={"videoSize": video_size, "bitRate": bit_rate, "timeLimit": time_limit})
     def stop_recording():
         try:
             base64_video = context["driver"].stop_recording_screen()

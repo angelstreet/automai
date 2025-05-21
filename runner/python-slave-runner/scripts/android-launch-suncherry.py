@@ -54,7 +54,7 @@ def run_test_on_device(device_udid, appium_port, package, activity, trace_folder
         print(f"Test Failed for {device_udid}: Failed to initialize Appium driver: {e}")
         return 1
 
-    stop_recording = appiumUtils.record_video(context)
+    stop_recording = appiumUtils.record_video(context, video_size="1200x1848")
 
     try:
         print(f"Terminating app on {device_udid}")
