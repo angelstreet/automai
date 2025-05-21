@@ -63,8 +63,8 @@ export async function POST(request: NextRequest, { params }: { params: { token: 
       );
     }
 
-    // Update invitation status to accepted
-    await teamMemberDb.updateTeamInvitationStatus(token, 'accepted', cookieStore);
+    // Update invitation status
+    const updateResult = await teamMemberDb.updateInvitationStatus(token, 'accepted', cookieStore);
 
     return NextResponse.json({
       success: true,

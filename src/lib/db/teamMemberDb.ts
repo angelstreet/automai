@@ -699,6 +699,10 @@ export async function createTeamInvitation(
   cookieStore?: any,
 ): Promise<DbResponse<{ id: string; token: string }>> {
   try {
+    console.log(
+      `[@db:teamMemberDb:createTeamInvitation] Creating invitation: ${email} to team ${teamId} with role ${role}`,
+    );
+
     const supabase = await createClient(cookieStore);
 
     // Set expiration to 7 days from now
@@ -712,131 +716,119 @@ export async function createTeamInvitation(
         team_id: teamId,
         email: email,
         role: role,
-        created_by: createdBy,
         expires_at: expiresAt.toISOString(),
-        status: 'pending',
+        created_by: createdBy,
       })
       .select('id, token')
       .single();
 
     if (error) {
-      console.error('[@db:teamMemberDb:createTeamInvitation] Error creating invitation:', error);
+      console.error(`[@db:teamMemberDb:createTeamInvitation] Error creating invitation:`, error);
       return { success: false, error: error.message };
     }
 
-    return {
-      success: true,
-      data: data,
-    };
+    console.log(
+      `[@db:teamMemberDb:createTeamInvitation] Successfully created invitation with ID ${data.id}`,
+    );
+    return { success: true, data };
   } catch (error: any) {
-    console.error('[@db:teamMemberDb:createTeamInvitation] Error:', error);
-    return {
-      success: false,
-      error: error.message || 'Failed to create team invitation',
-    };
+    console.error(`[@db:teamMemberDb:createTeamInvitation] Unexpected error:`, error);
+    return { success: false, error: error.message };
   }
 }
 
 /**
- * Get a team invitation by token
+ * Get team invitation by token
  * @param token Invitation token
  * @param cookieStore Cookie store for authentication
- * @returns Invitation data if found and valid
+ * @returns Invitation data
  */
 export async function getTeamInvitationByToken(
   token: string,
   cookieStore?: any,
 ): Promise<DbResponse<any>> {
   try {
+    console.log(
+      `[@db:teamMemberDb:getTeamInvitationByToken] Fetching invitation with token: ${token}`,
+    );
+
     const supabase = await createClient(cookieStore);
 
-    // Get the invitation with team data
+    // Get the current timestamp
+    const now = new Date().toISOString();
+
+    // Get invitation by token if it's not expired
     const { data, error } = await supabase
       .from('team_invitations')
-      .select(
-        `
-        id,
-        team_id,
-        email,
-        role,
-        token,
-        expires_at,
-        created_at,
-        status,
-        teams:team_id (id, name)
-      `,
-      )
+      .select('*')
       .eq('token', token)
+      .gte('expires_at', now)
       .eq('status', 'pending')
-      .gt('expires_at', new Date().toISOString())
       .single();
 
     if (error) {
       console.error(
-        '[@db:teamMemberDb:getTeamInvitationByToken] Error fetching invitation:',
+        `[@db:teamMemberDb:getTeamInvitationByToken] Error fetching invitation:`,
         error,
       );
       return { success: false, error: error.message };
     }
 
-    return {
-      success: true,
-      data: data,
-    };
+    if (!data) {
+      console.warn(
+        `[@db:teamMemberDb:getTeamInvitationByToken] Invitation not found or expired: ${token}`,
+      );
+      return { success: false, error: 'Invitation not found or expired' };
+    }
+
+    console.log(
+      `[@db:teamMemberDb:getTeamInvitationByToken] Successfully fetched invitation: ${data.id}`,
+    );
+    return { success: true, data };
   } catch (error: any) {
-    console.error('[@db:teamMemberDb:getTeamInvitationByToken] Error:', error);
-    return {
-      success: false,
-      error: error.message || 'Failed to get team invitation',
-    };
+    console.error(`[@db:teamMemberDb:getTeamInvitationByToken] Unexpected error:`, error);
+    return { success: false, error: error.message };
   }
 }
 
 /**
- * Update a team invitation status
+ * Update invitation status
  * @param token Invitation token
  * @param status New status ('accepted', 'declined', 'expired')
  * @param cookieStore Cookie store for authentication
  * @returns Success status
  */
-export async function updateTeamInvitationStatus(
+export async function updateInvitationStatus(
   token: string,
   status: 'accepted' | 'declined' | 'expired',
   cookieStore?: any,
 ): Promise<DbResponse<null>> {
   try {
+    console.log(
+      `[@db:teamMemberDb:updateInvitationStatus] Updating invitation ${token} status to ${status}`,
+    );
+
     const supabase = await createClient(cookieStore);
 
     const { error } = await supabase
       .from('team_invitations')
-      .update({
-        status,
-        updated_at: new Date().toISOString(),
-      })
+      .update({ status, updated_at: new Date().toISOString() })
       .eq('token', token);
 
     if (error) {
-      console.error(
-        '[@db:teamMemberDb:updateTeamInvitationStatus] Error updating invitation:',
-        error,
-      );
+      console.error(`[@db:teamMemberDb:updateInvitationStatus] Error updating invitation:`, error);
       return { success: false, error: error.message };
     }
 
-    return {
-      success: true,
-      data: null,
-    };
+    console.log(`[@db:teamMemberDb:updateInvitationStatus] Successfully updated invitation status`);
+    return { success: true, data: null };
   } catch (error: any) {
-    console.error('[@db:teamMemberDb:updateTeamInvitationStatus] Error:', error);
-    return {
-      success: false,
-      error: error.message || 'Failed to update team invitation',
-    };
+    console.error(`[@db:teamMemberDb:updateInvitationStatus] Unexpected error:`, error);
+    return { success: false, error: error.message };
   }
 }
 
-// Export functions
+// Export object with all functions
 const teamMemberDb = {
   getTeamMembers,
   addTeamMember,
@@ -848,7 +840,7 @@ const teamMemberDb = {
   getTeamsByUserId,
   createTeamInvitation,
   getTeamInvitationByToken,
-  updateTeamInvitationStatus,
+  updateInvitationStatus,
 };
 
 export default teamMemberDb;

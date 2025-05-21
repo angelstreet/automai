@@ -1,38 +1,65 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as React from 'react';
 
-import {
-  signUp as signUpAction,
-  signInWithOAuth as signInWithOAuthAction,
-} from '@/app/actions/authAction';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
-import teamMemberDb from '@/lib/db/teamMemberDb';
+import { Alert, AlertDescription } from '@/components/shadcn/alert';
+import { Loader2 } from 'lucide-react';
 
 export default function InviteSignUpPage() {
   const router = useRouter();
   const params = useParams();
-  const { locale, token } = params;
+  const searchParams = useSearchParams();
+  const { locale, token } = params as { locale: string; token: string };
   const t = useTranslations('auth');
   const c = useTranslations('common');
 
   const [name, setName] = React.useState('');
   const [email, setEmail] = React.useState('');
-  const [password, setPassword] = React.useState('');
-  const [confirmPassword, setConfirmPassword] = React.useState('');
-  const [error, setError] = React.useState('');
-  const [success, setSuccess] = React.useState(false);
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [redirectCountdown, setRedirectCountdown] = React.useState(3);
-  const [invitationDetails, setInvitationDetails] = React.useState<any>(null);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const [success, setSuccess] = React.useState(false);
+  const [invitationDetails, setInvitationDetails] = React.useState<any>(null);
 
-  // Fetch the invitation details
+  // Get query params - Supabase might redirect with code and hash
+  const authCode = searchParams.get('code');
+  const authType = searchParams.get('type');
+
+  // If there's an auth code, we're in a redirect from Supabase Auth
   React.useEffect(() => {
+    if (authCode && authType) {
+      console.log('Magic link redirect detected - processing login');
+      // Handle the auth redirect - we just show a success message as Supabase handles the password setup
+      setSuccess(true);
+      setIsLoading(false);
+
+      // We can also try to accept the invitation automatically
+      const acceptInvitation = async () => {
+        try {
+          const baseUrl = window.location.origin;
+          await fetch(`${baseUrl}/api/invitations/${token}/accept`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email }),
+          });
+          console.log('Automatically accepted invitation');
+        } catch (err) {
+          console.error('Failed to automatically accept invitation:', err);
+          // We don't show an error for this - the user can still proceed
+        }
+      };
+
+      acceptInvitation();
+      return;
+    }
+
+    // If no auth code, fetch the invitation details
     const fetchInvitation = async () => {
       try {
         // Use absolute URL to ensure it works in production
@@ -54,106 +81,46 @@ export default function InviteSignUpPage() {
       }
     };
 
-    if (token) {
-      fetchInvitation();
-    }
-  }, [token]);
+    fetchInvitation();
+  }, [token, authCode, authType]);
 
-  React.useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const hasSession =
-          localStorage.getItem('sb-auth-token') || sessionStorage.getItem('supabase.auth.token');
-
-        if (hasSession) {
-          router.push(`/${locale}/`);
-        }
-      } catch (err) {
-        console.error('Session check error:', err);
-      }
-    };
-
-    checkSession();
-  }, [router, locale]);
-
-  React.useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (success && redirectCountdown > 0) {
-      timer = setTimeout(() => {
-        setRedirectCountdown((prev) => prev - 1);
-      }, 1000);
-    } else if (success && redirectCountdown === 0) {
-      router.push(`/${locale}/login`);
-    }
-    return () => clearTimeout(timer);
-  }, [success, redirectCountdown, router, locale]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setIsSubmitting(true);
-
-    if (password !== confirmPassword) {
-      setError(t('error_passwords_do_not_match'));
-      setIsSubmitting(false);
-      return;
-    }
-
-    try {
-      const baseUrl = window.location.origin;
-      const redirectUrl = `${baseUrl}/${locale}/login`;
-      const result = await signUpAction(email, password, name, redirectUrl);
-
-      if (result.error) {
-        setError(result.error);
-        setIsSubmitting(false);
-        return;
-      }
-
-      // Update invitation status to accepted
-      await fetch(`${baseUrl}/api/invitations/${token}/accept`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      });
-
-      if (result.data?.session || result.data?.user) {
-        setSuccess(true);
-        setRedirectCountdown(3);
-      }
-    } catch (err: any) {
-      setError(err.message || 'An error occurred');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  if (isLoading) {
+  // If success, show confirmation
+  if (success) {
     return (
-      <div className="min-h-screen w-full flex flex-col items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-        <p className="mt-4">{t('loading')}</p>
-      </div>
-    );
-  }
+      <div className="flex min-h-screen flex-col items-center justify-center px-4 py-8">
+        <div className="mx-auto w-full max-w-md space-y-6 rounded-lg bg-background p-6 shadow-lg">
+          <div className="space-y-2 text-center">
+            <h1 className="text-2xl font-bold">{t('invite_success_title')}</h1>
+            <p className="text-muted-foreground">{t('invite_success_description')}</p>
+          </div>
 
-  if (error && !invitationDetails) {
-    return (
-      <div className="min-h-screen w-full flex flex-col items-center justify-center">
-        <div className="w-full max-w-md p-6 space-y-4 bg-white dark:bg-gray-800 rounded-lg shadow-md">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold">{t('invitation_error')}</h1>
-            <p className="mt-4 text-red-600 dark:text-red-400">{error}</p>
-            <div className="mt-6">
-              <Link
-                href={`/${locale}/login`}
-                className="inline-flex items-center justify-center text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-              >
-                {t('back_to_login')}
-              </Link>
-            </div>
+          <div className="space-y-4 bg-green-50 dark:bg-green-900/20 p-4 rounded-md">
+            <p className="text-center text-sm text-green-800 dark:text-green-300">
+              {t('invite_login_successful')}
+            </p>
+
+            <p className="text-center text-sm text-muted-foreground">{t('invite_team_access')}</p>
+          </div>
+
+          <div className="pt-4">
+            <Button
+              className="w-full"
+              onClick={() =>
+                router.push(`/${locale}/${invitationDetails?.tenant || 'default'}/dashboard`)
+              }
+            >
+              {t('go_to_dashboard')}
+            </Button>
+          </div>
+
+          <div className="pt-2">
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => router.push(`/${locale}/login`)}
+            >
+              {t('back_to_login')}
+            </Button>
           </div>
         </div>
       </div>
@@ -161,144 +128,60 @@ export default function InviteSignUpPage() {
   }
 
   return (
-    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      <div className="absolute top-8 left-8">
-        <div className="flex items-center space-x-2">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-6 w-6"
-          >
-            <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3" />
-          </svg>
-          <span className="text-xl font-bold">AutomAI</span>
-        </div>
-      </div>
-
-      <div className="w-full max-w-md p-6 space-y-4 bg-white dark:bg-gray-800 rounded-lg shadow-md">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">{t('join_team')}</h1>
-          {invitationDetails && (
-            <p className="mt-1 text-gray-600 dark:text-gray-400">
-              {t('join_team_invite_desc', {
-                teamName: invitationDetails.teams?.name || 'Team',
-                role: invitationDetails.role,
-              })}
-            </p>
-          )}
+    <div className="flex min-h-screen flex-col items-center justify-center px-4 py-8">
+      <div className="mx-auto w-full max-w-md space-y-6 rounded-lg bg-background p-6 shadow-lg">
+        <div className="space-y-2 text-center">
+          <h1 className="text-2xl font-bold">{t('invitation_title')}</h1>
+          <p className="text-muted-foreground">
+            {isLoading
+              ? t('loading')
+              : invitationDetails
+                ? t('invitation_description')
+                : t('invitation_invalid')}
+          </p>
         </div>
 
-        {success ? (
-          <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-md text-center">
-            <p className="text-green-700 dark:text-green-300">{t('signup_success')}</p>
-            <p className="text-green-700 dark:text-green-300 mt-1">
-              {t('redirecting_in_seconds', { count: redirectCountdown })}
-            </p>
-            <div className="mt-3">
-              <Link
-                href={`/${locale}/login`}
-                className="inline-flex items-center justify-center text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+        {isLoading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : error ? (
+          <Alert variant="destructive" className="my-4">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : invitationDetails ? (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                {t('invited_to_team', { teamName: invitationDetails.team_name })}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {t('invited_as_role', { role: invitationDetails.role })}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-center text-sm text-muted-foreground">
+                {t('invitation_check_email')}
+              </p>
+              <p className="text-center font-medium">{email}</p>
+            </div>
+
+            <div className="text-center text-sm text-muted-foreground">
+              {t('invitation_email_instructions')}
+            </div>
+
+            <div className="pt-4">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => router.push(`/${locale}/login`)}
               >
-                {t('back_to_login')}
-              </Link>
+                {t('go_to_login')}
+              </Button>
             </div>
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="mt-4 space-y-3">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium">
-                {c('name')}
-              </label>
-              <Input
-                id="name"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                className="mt-1 border border-gray-200 dark:border-gray-700"
-                placeholder={t('signup_name_placeholder')}
-                autoComplete="name"
-                disabled={isSubmitting}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium">
-                {c('email')}
-              </label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="mt-1 border border-gray-200 dark:border-gray-700"
-                placeholder={t('signin_email_placeholder')}
-                autoComplete="email"
-                disabled={true} // Email is pre-filled and can't be changed for invitations
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium">
-                {c('password')}
-              </label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="mt-1 border border-gray-200 dark:border-gray-700"
-                placeholder={t('signin_password_placeholder')}
-                autoComplete="new-password"
-                disabled={isSubmitting}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium">
-                {t('signup_confirm_password')}
-              </label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                className="mt-1 border border-gray-200 dark:border-gray-700"
-                placeholder={t('signup_confirm_password_placeholder')}
-                autoComplete="new-password"
-                disabled={isSubmitting}
-              />
-            </div>
-
-            {error && (
-              <div className="bg-red-100 dark:bg-red-900/20 p-2 rounded-md text-red-800 dark:text-red-100 text-sm">
-                {error}
-              </div>
-            )}
-
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? t('signup_signing') : t('join_team_button')}
-            </Button>
-
-            <div className="text-center mt-4 text-sm text-gray-500">
-              {t('already_have_account')}{' '}
-              <Link
-                href={`/${locale}/login`}
-                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-              >
-                {t('signin_button')}
-              </Link>
-            </div>
-          </form>
-        )}
+        ) : null}
       </div>
     </div>
   );

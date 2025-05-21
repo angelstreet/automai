@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 
+import teamDb from '@/lib/db/teamDb';
 import teamMemberDb from '@/lib/db/teamMemberDb';
 
 /**
@@ -15,7 +16,7 @@ export async function GET(request: NextRequest, { params }: { params: { token: s
       return NextResponse.json({ error: 'Token is required' }, { status: 400 });
     }
 
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const result = await teamMemberDb.getTeamInvitationByToken(token, cookieStore);
 
     if (!result.success || !result.data) {
@@ -25,13 +26,19 @@ export async function GET(request: NextRequest, { params }: { params: { token: s
       );
     }
 
-    // Return the invitation details
-    return NextResponse.json(result.data);
-  } catch (error: any) {
-    console.error('[@api:invitations:GET] Error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to get invitation' },
-      { status: 500 },
-    );
+    // Get the team details to include team name
+    const teamId = result.data.team_id;
+    const teamResult = await teamDb.getTeamById(teamId, cookieStore);
+
+    // Add team name to the response
+    const responseData = {
+      ...result.data,
+      team_name: teamResult.success ? teamResult.data?.name : 'Unknown Team',
+    };
+
+    return NextResponse.json(responseData);
+  } catch (error) {
+    console.error(`[@api:invitations/token:GET] Error retrieving invitation:`, error);
+    return NextResponse.json({ error: 'Failed to retrieve invitation' }, { status: 500 });
   }
 }

@@ -6,8 +6,9 @@ import { cache } from 'react';
 
 import { getUser } from '@/app/actions/userAction';
 import permissionDb from '@/lib/db/permissionDb';
+import * as teamDb from '@/lib/db/teamDb';
 import teamMemberDb from '@/lib/db/teamMemberDb';
-import { createClient } from '@/lib/supabase/server';
+import { createClient as createAdminClient } from '@/lib/supabase/admin';
 import type { ResourceType } from '@/types/context/permissionsContextType';
 import { ResourcePermissions } from '@/types/context/teamContextType';
 
@@ -608,46 +609,32 @@ export const inviteTeamMemberByEmail = cache(
 
       const cookieStore = await cookies();
 
-      // Check if user with this email already exists in Supabase
-      const supabase = await createClient(cookieStore);
-
       // First try to find if the user already exists (but not in the team)
-      const { data: existingUsers, error: lookupError } = await supabase
-        .from('team_user_profiles')
-        .select('id, email')
-        .ilike('email', email);
+      // Use the database layer instead of direct Supabase queries
+      const result = await teamMemberDb.getAvailableTenantProfilesForTeam(
+        user.tenant_id || 'default',
+        teamId,
+        cookieStore,
+      );
 
-      if (lookupError) {
+      if (!result.success || !result.data) {
         console.error(
-          '[@action:teamMemberAction:inviteTeamMemberByEmail] Error looking up user:',
-          lookupError,
+          '[@action:teamMemberAction:inviteTeamMemberByEmail] Error looking up users:',
+          result.error,
         );
-        return { success: false, error: 'Error looking up user' };
+        return { success: false, error: 'Error looking up users' };
       }
 
-      if (existingUsers && existingUsers.length > 0) {
-        // User exists in Supabase, try to add them directly to the team
-        const userProfile = existingUsers[0];
-        const profileId = userProfile.id;
+      // Check if the user with this email exists in the available profiles
+      const existingUser = result.data.find(
+        (profile) =>
+          profile.email?.toLowerCase() === email.toLowerCase() ||
+          profile.user?.email?.toLowerCase() === email.toLowerCase(),
+      );
 
-        // Check if they're already in the team
-        const { data: existingMember, error: memberCheckError } = await supabase
-          .from('team_members')
-          .select('*')
-          .eq('team_id', teamId)
-          .eq('profile_id', profileId);
-
-        if (memberCheckError) {
-          console.error(
-            '[@action:teamMemberAction:inviteTeamMemberByEmail] Error checking membership:',
-            memberCheckError,
-          );
-          return { success: false, error: 'Error checking team membership' };
-        }
-
-        if (existingMember && existingMember.length > 0) {
-          return { success: false, error: 'User is already a member of this team' };
-        }
+      if (existingUser) {
+        // User exists, try to add them directly to the team
+        const profileId = existingUser.id;
 
         // Add the member to the team
         const result = await teamMemberDb.addTeamMember(
@@ -660,6 +647,13 @@ export const inviteTeamMemberByEmail = cache(
         );
 
         if (!result.success) {
+          if (result.error?.includes('already a member')) {
+            return {
+              success: false,
+              error: 'User is already a member of this team',
+            };
+          }
+
           return {
             success: false,
             error: result.error || 'Failed to add team member',
@@ -694,20 +688,18 @@ export const inviteTeamMemberByEmail = cache(
           `[@action:teamMemberAction:inviteTeamMemberByEmail] Creating invitation for ${email} to join team ${teamId} with role ${role}`,
         );
 
-        // Get team name for the invitation email
-        const { data: team, error: teamError } = await supabase
-          .from('teams')
-          .select('name')
-          .eq('id', teamId)
-          .single();
+        // Get team details using teamDb instead of direct Supabase query
+        const teamResult = await teamDb.getTeamById(teamId, cookieStore);
 
-        if (teamError) {
+        if (!teamResult.success || !teamResult.data) {
           console.error(
             '[@action:teamMemberAction:inviteTeamMemberByEmail] Error getting team:',
-            teamError,
+            teamResult.error,
           );
           return { success: false, error: 'Failed to get team information' };
         }
+
+        const team = teamResult.data;
 
         // Create an invitation record in the database
         const invitationResult = await teamMemberDb.createTeamInvitation(
@@ -736,12 +728,53 @@ export const inviteTeamMemberByEmail = cache(
         // Use hardcoded production URL instead of environment variables or localhost
         const signupUrl = `https://automai-eta.vercel.app/en/${tenant}/signup/invite/${token}`;
 
-        // Send password reset email using Supabase Auth
-        // This will send a "magic link" email that the user can use to sign up
-        const { error: emailError } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: signupUrl,
-        });
+        // Get admin client for user management
+        console.log(`[@action:teamMemberAction:inviteTeamMemberByEmail] Getting admin client...`);
+        const adminClient = await createAdminClient();
+        console.log(`[@action:teamMemberAction:inviteTeamMemberByEmail] Admin client obtained`);
 
+        console.log(
+          `[@action:teamMemberAction:inviteTeamMemberByEmail] Sending invitation email to: ${email}`,
+        );
+
+        let emailError = null;
+
+        try {
+          // Send a magic link - this is the most reliable approach
+          const magicLinkResult = await adminClient.auth.admin.generateLink({
+            type: 'magiclink',
+            email: email,
+            options: {
+              redirectTo: signupUrl,
+              data: {
+                invitation_token: token,
+                invited_team_id: teamId,
+                invited_role: role,
+                invited_by: user.email,
+                team_name: team.name,
+              },
+            },
+          });
+
+          if (magicLinkResult.error) {
+            console.error(
+              `[@action:teamMemberAction:inviteTeamMemberByEmail] Error sending magic link: ${magicLinkResult.error.message}`,
+            );
+            emailError = magicLinkResult.error;
+          } else {
+            console.log(
+              `[@action:teamMemberAction:inviteTeamMemberByEmail] Magic link email successfully sent to: ${email}`,
+            );
+          }
+        } catch (err) {
+          console.error(
+            `[@action:teamMemberAction:inviteTeamMemberByEmail] Exception during email sending:`,
+            err,
+          );
+          emailError = err;
+        }
+
+        // Handle any email errors (we still want to return success if the invitation was created)
         if (emailError) {
           console.error(
             '[@action:teamMemberAction:inviteTeamMemberByEmail] Error sending invitation email:',
