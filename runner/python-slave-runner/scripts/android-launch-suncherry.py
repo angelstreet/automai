@@ -130,6 +130,7 @@ def main():
 
     # Initialize the Appium driver
     try:
+        print("initializing appium driver",options)
         driver = webdriver.Remote(command_executor="http://localhost:4723", options=options)
     except Exception as e:
         print(f"Test Failed: Failed to initialize Appium driver: {e}")
@@ -150,7 +151,7 @@ def main():
         print("waiting 10 seconds")
         driver.implicitly_wait(10000)
         screenshot_path = capture_screenshot(driver, args.trace_folder)
-        print(f"Test Success: Sunrise TV app ({args.package}) launched successfully! Screenshot saved: {screenshot_path}")
+        print(f"Test Success: Sunrise TV app ({args.package}) launched successfully!")
         
         # Stop recording
         video_path = stop_recording()
