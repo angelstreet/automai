@@ -1,8 +1,9 @@
 from appium import webdriver
 from appium.webdriver.common.appiumby import AppiumBy
+from appium.options.android import UiAutomator2Options
 
 # Desired capabilities for Appium
-desired_caps = {
+capabilities = {
     "platformName": "Android",
     "appium:platformVersion": "12",  # Adjust if your device's version differs
     "appium:deviceName": "any-name",
@@ -12,9 +13,12 @@ desired_caps = {
     "appium:appActivity": "com.android.deskclock.DeskClock",  # Main activity for Clock app
     "appium:noReset": True
 }
-    
+
+# Set up options with capabilities
+options = UiAutomator2Options().load_capabilities(capabilities)
+
 # Initialize the Appium driver
-driver = webdriver.Remote("http://localhost:4723", desired_caps)
+driver = webdriver.Remote(command_executor="http://localhost:4723", options=options)
 
 try:
     # Wait for the app to load (implicit wait)
