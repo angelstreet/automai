@@ -10,23 +10,45 @@ from appium.options.android import UiAutomator2Options
 
 def parse_arguments():
     """Parse command-line arguments for Appium script."""
-    parser = argparse.ArgumentParser(description="Launch an Android app with Appium")
-    parser.add_argument(
-        "--package",
-        default="com.lgi.upcch.preprod",
-        help="App package name (default: com.lgi.upcch.preprod)"
-    )
-    parser.add_argument(
-        "--activity",
-        default="com.libertyglobal.horizonx.MainActivity",
-        help="App activity name (default: com.libertyglobal.horizonx.MainActivity)"
-    )
-    parser.add_argument(
-        "--trace_folder",
-        default="traces",
-        help="Directory for trace outputs, including screenshots and videos (default: traces)"
-    )
-    return parser.parse_args()
+    try:
+        parser = argparse.ArgumentParser(
+            description="Launch an Android app with Appium",
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        )
+        
+        # Define allowed arguments
+        parser.add_argument(
+            "--package",
+            default="com.lgi.upcch.preprod",
+            help="App package name"
+        )
+        parser.add_argument(
+            "--activity",
+            default="com.libertyglobal.horizonx.MainActivity",
+            help="App activity name"
+        )
+        parser.add_argument(
+            "--trace_folder",
+            default="traces",
+            help="Directory for trace outputs, including screenshots and videos"
+        )
+        parser.add_argument(
+            "--device",
+            default="192.168.1.29",
+            help="Device IP address for ADB connection"
+        )
+
+        # Only parse known args and ignore unknown ones
+        args, unknown = parser.parse_known_args()
+        
+        if unknown:
+            print(f"[@script:android-launch] Warning: Ignoring unknown arguments: {unknown}", file=sys.stderr)
+        
+        return args
+        
+    except Exception as e:
+        print(f"[@script:android-launch] Error parsing arguments: {str(e)}", file=sys.stderr)
+        sys.exit(1)
 
 def capture_screenshot(driver, trace_folder):
     """Capture a screenshot and save it to the trace folder with an incremental number."""
@@ -96,7 +118,7 @@ def main():
         "platformName": "Android",
         "appium:platformVersion": "12",
         "appium:deviceName": "any-name",
-        "appium:udid": "192.168.1.29:5555",
+        "appium:udid": f"{args.device}:5555",
         "appium:automationName": "UiAutomator2",
         "appium:appPackage": args.package,
         "appium:appActivity": args.activity,
