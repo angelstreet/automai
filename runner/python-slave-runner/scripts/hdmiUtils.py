@@ -59,7 +59,3 @@ class HDMIUtils:
             self.cap.release()
         self.is_initialized = False
         print("Released HDMI capture resources")
-
-    def __del__(self):
-        """Cleanup resources on object destruction."""
-        self.release()

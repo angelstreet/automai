@@ -76,12 +76,12 @@ def run_test_on_device(device_udid, hdmi_index, appium_port, package, activity, 
         return 1
 
     finally:
-        video_path = stop_recording()
-        if video_path:
-            print(f"Video saved for {device_udid}: {video_path}")
+        stop_recording()
         appiumUtils.print_visible_elements(context)
-        driver.quit()
+        appiumUtils.capture_screenshot(context)
+        hdmi.take_screenshot()
         hdmi.release()
+        driver.quit()
 
 def main():
     args = parse_arguments()
