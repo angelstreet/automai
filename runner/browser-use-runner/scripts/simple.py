@@ -88,7 +88,24 @@ browser_config = BrowserConfig(
 )
 
 browser = Browser(config=browser_config)
-agent = Agent(task=task, llm=llm, browser=browser)
+
+# Function to take screenshots after each step
+async def screenshot_callback(step_number, step_description, browser_context):
+    try:
+        if browser_context and hasattr(browser_context, 'agent_current_page') and browser_context.agent_current_page:
+            timestamp = time.strftime("%Y%m%d-%H%M%S")
+            screenshot_path = os.path.join(trace_path, f"step_{step_number:03d}_{timestamp}.png")
+            await browser_context.agent_current_page.screenshot(path=screenshot_path, full_page=True, timeout=20000)
+            logger.info(f"Step {step_number} screenshot saved to: {screenshot_path}")
+    except Exception as e:
+        logger.error(f"Error taking step {step_number} screenshot: {str(e)}")
+
+agent = Agent(
+    task=task, 
+    llm=llm, 
+    browser=browser,
+    step_callback=screenshot_callback
+)
 
 async def main():
     result = False
@@ -124,7 +141,13 @@ async def main():
                     logger.info(f"Zip file removed: {trace_file}")
         except Exception as e:
             logger.error(f"Error saving or extracting trace data: {str(e)}")
-        return result
+        
+        if result:
+            print("Test Success, Agent run successful")
+            return sys.exit(0)
+        else:
+            print("Test Failed, Agent run failed")
+            return sys.exit(1)
 
 if __name__ == '__main__':
     asyncio.run(main())

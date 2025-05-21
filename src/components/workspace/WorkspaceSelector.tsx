@@ -198,7 +198,7 @@ export default function WorkspaceSelector({ className = '' }) {
                 ) : (
                   <>
                     <Home className="h-4 w-4" />
-                    Default (All)
+                    Default
                   </>
                 )}
                 <ChevronDown className="h-4 w-4" />
@@ -217,7 +217,7 @@ export default function WorkspaceSelector({ className = '' }) {
           >
             <span className="flex items-center gap-2">
               <Home className="h-4 w-4" />
-              Default (All)
+              Default
               {activeWorkspaceId === null && <Check className="h-4 w-4 ml-2" />}
             </span>
           </DropdownMenuItem>

@@ -27,6 +27,7 @@ import type {
   ResourceLimit,
 } from '@/types/context/teamContextType';
 import { User } from '@/types/service/userServiceType';
+import { invalidateWorkspaceCache } from '@/app/actions/workspaceAction';
 
 // Add ActionResult type
 export type ActionResult<T> = {
@@ -910,3 +911,5 @@ export const getTeamPageData = cache(async () => {
     };
   }
 });
+
+export { invalidateWorkspaceCache };
