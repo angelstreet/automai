@@ -1,10 +1,20 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import PropTypes from 'prop-types';
 import { useEffect, useState, useRef } from 'react';
 
-export function RecVncPreview({ host }) {
+interface HostProps {
+  id: string;
+  ip: string;
+  vnc_port: string | number;
+  vnc_password: string;
+}
+
+interface MessageEvent {
+  data: any;
+}
+
+export function RecVncPreview({ host }: { host: HostProps }) {
   const vnc_port = host?.vnc_port;
   const vnc_password = host?.vnc_password;
 
@@ -17,7 +27,7 @@ export function RecVncPreview({ host }) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [errorReason, setErrorReason] = useState('');
-  const iframeRef = useRef(null);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
   useEffect(() => {
     const fetchVncPage = async () => {
@@ -48,7 +58,7 @@ export function RecVncPreview({ host }) {
   }, [host.ip, vnc_port, vnc_password]);
 
   useEffect(() => {
-    const handleMessage = (event) => {
+    const handleMessage = (event: MessageEvent) => {
       if (event.data?.type === 'debug') {
         console.log('[VNC] Debug:', event.data.message);
         if (event.data.message.includes('ERROR')) {
@@ -161,12 +171,3 @@ export function RecVncPreview({ host }) {
     </div>
   );
 }
-
-RecVncPreview.propTypes = {
-  host: PropTypes.shape({
-    ip: PropTypes.string,
-    id: PropTypes.string,
-    vnc_port: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    vnc_password: PropTypes.string,
-  }).isRequired,
-};

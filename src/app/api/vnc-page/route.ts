@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
-export async function POST(request) {
+export async function POST(request: NextRequest) {
   const { host, port = '5900', password = '', viewOnly = true } = await request.json();
 
   console.log('[@api:vnc-page] VNC request:', { host, port, has_password: !!password, viewOnly });

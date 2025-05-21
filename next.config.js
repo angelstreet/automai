@@ -68,10 +68,10 @@ const nextConfig = {
       /export 'default' \(imported as 'RFB'\) was not found in/,
     ];
 
-    // Fix for noVNC ESM modules with top-level await
+    // Update noVNC handling for top-level await
     config.module.rules.push({
       test: /node_modules\/@novnc\/novnc\/lib\/.*\.js$/,
-      type: 'javascript/auto', // Treat as auto to handle both ESM and CJS
+      type: 'javascript/auto', // Ensure it's treated as JavaScript
       resolve: {
         fullySpecified: false, // Allow importing without extensions
       },
@@ -96,6 +96,12 @@ const nextConfig = {
         },
       },
     });
+
+    // Enable top-level await in webpack
+    config.experiments = {
+      ...config.experiments,
+      topLevelAwait: true,
+    };
 
     return config;
   },

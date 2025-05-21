@@ -1,6 +1,7 @@
 /* eslint-disable */
 import { WebSocketServer, WebSocket } from 'ws';
-import { createProxyServer } from 'websockify'; // Add websockify import
+// @ts-ignore - Add ts-ignore for the websockify import since it doesn't have type definitions
+import { createProxyServer } from 'websockify';
 import { logUtils } from '../utils/logUtils';
 import { IncomingMessage } from 'http';
 import { Socket } from 'net';
@@ -86,8 +87,9 @@ export function initializeWebSocketServer(): WebSocketServer {
           ws.on('close', () => {
             console.info('VNC WebSocket connection closed', { vncHost, vncPort });
           });
-        } catch (error) {
-          console.error('Failed to proxy VNC connection', { error: error.message });
+        } catch (error: unknown) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          console.error('Failed to proxy VNC connection', { error: errorMessage });
           ws.close(1011, 'VNC proxy error');
         }
         return; // Skip SSH logic for VNC connections

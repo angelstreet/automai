@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   preset: 'jest-puppeteer',
   testMatch: ['**/tests/**/*.test.ts'],
   transform: {
@@ -6,9 +6,11 @@ module.exports = {
   },
   testEnvironment: 'node',
   setupFilesAfterEnv: ['./tests/setup.ts'],
+  extensionsToTreatAsEsm: ['.ts'],
   globals: {
     'ts-jest': {
       tsconfig: 'tsconfig.json',
+      useESM: true,
     },
   },
 };

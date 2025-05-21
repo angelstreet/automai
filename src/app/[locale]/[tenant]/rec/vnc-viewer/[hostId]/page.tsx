@@ -1,11 +1,18 @@
 'use client';
 
-import { notFound, useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
+import { useState, useEffect, lazy, Suspense } from 'react';
 
-import { RecVncViewer } from '@/app/[locale]/[tenant]/rec/_components/client/RecVncViewer';
 import { getHostById } from '@/app/actions/hostsAction';
 import { Host } from '@/types/component/hostComponentType';
+import NoVncViewerFallback from '@/components/vnc/NoVncViewerFallback';
+
+// Host with VNC properties - extend the base Host type
+interface VncHost extends Host {
+  // Additional VNC properties that might be present but not in the Host type
+  vnc_port?: string | number;
+  vnc_password?: string;
+}
 
 /**
  * Fullscreen VNC viewer page for a specific host
@@ -14,31 +21,26 @@ export default function VNCViewerPage() {
   const params = useParams();
   const hostId = params.hostId as string;
 
-  const [host, setHost] = useState<Host | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [host, setHost] = useState<VncHost | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [useFallback, setUseFallback] = useState(false);
 
   useEffect(() => {
     async function fetchHost() {
+      if (!hostId) return;
+
       try {
-        setLoading(true);
-        setError(null);
-
-        if (!hostId) {
-          setError('No host ID provided');
-          setLoading(false);
-          return;
-        }
-
         const result = await getHostById(hostId);
-
         if (result.success && result.data) {
-          setHost(result.data);
+          // Cast to VncHost to handle potential VNC properties
+          setHost(result.data as VncHost);
         } else {
           setError(result.error || 'Failed to fetch host');
         }
-      } catch (err: any) {
-        setError(err.message || 'An unexpected error occurred');
+      } catch (error) {
+        console.error('[@page:vnc-viewer] Failed to fetch host:', error);
+        setError('An unexpected error occurred');
       } finally {
         setLoading(false);
       }
@@ -47,33 +49,31 @@ export default function VNCViewerPage() {
     fetchHost();
   }, [hostId]);
 
-  // Show 404 if host not found
-  if (!loading && !host && !error) {
-    notFound();
-  }
+  // Handle errors in the primary viewer by switching to fallback
+  const handleError = () => {
+    console.log('[@page:vnc-viewer] Switching to fallback VNC viewer');
+    setUseFallback(true);
+  };
 
-  // Show loading state
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-black flex items-center justify-center">
-        <div className="flex flex-col items-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-          <span className="mt-4 text-white">Loading VNC viewer...</span>
-        </div>
+      <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-800">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
-  // Show error state
-  if (error) {
+  if (error || !host) {
     return (
-      <div className="fixed inset-0 bg-black flex items-center justify-center">
-        <div className="bg-red-900 p-6 rounded-lg max-w-md text-center">
-          <h3 className="text-xl font-bold text-white mb-2">Error</h3>
-          <p className="text-red-200 mb-4">{error}</p>
+      <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-800">
+        <div className="text-center p-6 bg-white dark:bg-gray-700 rounded-lg shadow-md">
+          <h1 className="text-xl font-semibold text-red-500">{error || 'Host Not Found'}</h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-300">
+            The requested host could not be found or you don't have access to it.
+          </p>
           <button
+            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
             onClick={() => window.close()}
-            className="bg-white text-red-900 px-4 py-2 rounded-md font-medium"
           >
             Close
           </button>
@@ -82,10 +82,32 @@ export default function VNCViewerPage() {
     );
   }
 
-  // Show VNC viewer
-  if (host) {
-    return <RecVncViewer host={host} onClose={() => window.close()} />;
-  }
+  // Extract VNC connection details
+  const vncPort = host.vnc_port || host.port || '5900';
+  const vncPassword = host.vnc_password || host.password || '';
 
-  return null;
+  // Show VNC viewer (use fallback by default for now)
+  return (
+    <div className="flex flex-col h-screen">
+      <div className="p-2 bg-gray-800 text-white flex justify-between items-center">
+        <h1 className="text-lg font-medium">{host.name || host.hostname || 'VNC Viewer'}</h1>
+        <div className="text-sm text-gray-300">
+          {host.ip}:{vncPort}
+        </div>
+      </div>
+
+      <div className="flex-1 relative">
+        <NoVncViewerFallback
+          host={host.ip}
+          port={vncPort}
+          password={vncPassword}
+          viewOnly={false}
+          fullScreen={true}
+        />
+      </div>
+    </div>
+  );
 }
+
+// Mark as dynamic to ensure fresh data on each request
+export const dynamic = 'force-dynamic';
