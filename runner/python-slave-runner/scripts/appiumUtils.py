@@ -72,7 +72,8 @@ def record_video(context):
     """Start recording screen and return a function to stop the recording."""
     if not os.path.exists(context["trace_folder"]):
         os.makedirs(context["trace_folder"])
-    mp4_path = os.path.join(context["trace_folder"], "video.mp4")
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    mp4_path = os.path.join(context["trace_folder"], f"video_{timestamp}.mp4")
     context["driver"].start_recording_screen(options={"videoSize": "1280x720", "bitRate": 5000000, "timeLimit": "180"})
     def stop_recording():
         try:

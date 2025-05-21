@@ -67,6 +67,13 @@ def run_test_on_device(device_udid, appium_port, package, activity, trace_folder
         appiumUtils.capture_screenshot(context)
         time.sleep(20)
         appiumUtils.capture_screenshot(context)
+
+        appiumUtils.click_element(context, tag="TV Guide")
+        time.sleep(2)
+        appiumUtils.click_element(context, tag="LIVE TV")
+        time.sleep(2)
+        appiumUtils.click_element(context, tag="SRF 1 HD")
+        time.sleep(20)
         print(f"Sunrise TV app ({package}) launched successfully on {device_udid}!")
 
         print(f"Test Success for {device_udid}")
