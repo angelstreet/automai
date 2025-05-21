@@ -142,9 +142,9 @@ def click_element(tag=None, text=None, resource_id=None, timeout=5):
             return False
             
     except Exception as e:
-        print(f"Failed to click on element: {e}")
+        print(f"Test Failed: Failed to click on element: {e}")
         capture_screenshot("click_error")
-        raise Exception(f"Failed to click on element: {e}")
+        raise Exception(f"Test Failed: Failed to click on element: {e}")
 
 def main():
     args = parse_arguments()
@@ -189,13 +189,13 @@ def main():
         DRIVER.activate_app(PACKAGE)
         time.sleep(2)
         capture_screenshot()
-        print("Waiting 10 seconds")
-        time.sleep(10)
+        print("Waiting 3 seconds")
+        time.sleep(3)
         capture_screenshot()
         
         print(f"Sunrise TV app ({PACKAGE}) launched successfully!")    
         
-        click_element(text="TV Guide Register")
+        click_element(tag="TV Guide Register")
         time.sleep(2)
         click_element(text="LIVE TV")
         time.sleep(2)
