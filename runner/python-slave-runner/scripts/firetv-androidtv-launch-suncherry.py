@@ -65,7 +65,8 @@ def run_test_on_device(device_udid, appium_port, package, activity, trace_folder
         driver.activate_app(package)
         time.sleep(2)
         appiumUtils.capture_screenshot(context)
-
+        time.sleep(20)
+        appiumUtils.capture_screenshot(context)
         print(f"Sunrise TV app ({package}) launched successfully on {device_udid}!")
 
         print(f"Test Success for {device_udid}")
