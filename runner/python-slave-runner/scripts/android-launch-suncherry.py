@@ -3,6 +3,7 @@ import sys
 import os
 import base64
 import glob
+import time
 from datetime import datetime
 from appium import webdriver
 from appium.webdriver.common.appiumby import AppiumBy
@@ -86,15 +87,15 @@ def main():
 
         print("Terminating app")
         driver.terminate_app(args.package)
-        driver.implicitly_wait(5)
+        time.sleep(2)
         
         # Launch the app
         print("Launching app")
         driver.activate_app(args.package)
-        driver.implicitly_wait(2)
+        time.sleep(2)
         screenshot_path = capture_screenshot(driver, args.trace_folder)
-        print("Waiting 20 seconds")
-        driver.implicitly_wait(20)
+        print("Waiting 10 seconds")
+        time.sleep(10)
         screenshot_path = capture_screenshot(driver, args.trace_folder)
         print(f"Test Success: Sunrise TV app ({args.package}) launched successfully!")
         
