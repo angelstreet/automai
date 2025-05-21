@@ -216,9 +216,8 @@ def main():
         print(f"Sunrise TV app ({PACKAGE}) launched successfully!")    
         
         click_element(tag="TV Guide")
-        time.sleep(2)
         click_element(tag="LIVE TV")
-        time.sleep(2)
+
         print(f"Test Success")  
         return 0
 
