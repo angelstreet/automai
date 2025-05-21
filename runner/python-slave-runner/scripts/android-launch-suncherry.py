@@ -63,7 +63,7 @@ def parse_arguments():
     parser.add_argument("--package", default="com.lgi.upcch.preprod", help="App package name")
     parser.add_argument("--activity", default="com.libertyglobal.horizonx.MainActivity", help="App activity name")
     parser.add_argument("--trace_folder", default="traces", help="Directory for trace outputs")
-    parser.add_argument("--device", default="192.168.1.29:5555,192.168.1.30:5555", 
+    parser.add_argument("--device", default="192.168.1.29:5555", 
                         help="Comma-separated device UDIDs (e.g., mobile_IP:port,android_tv_IP:port)")
     args, unknown = parser.parse_known_args()
     if unknown:
