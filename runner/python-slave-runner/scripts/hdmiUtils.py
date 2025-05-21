@@ -11,7 +11,7 @@ class HDMIUtils:
         self.trace_folder = trace_folder
         self.cap = None
         self.is_initialized = False
-        if device_index:
+        if device_index is not None:
             self.initialize()
 
     def initialize(self):
