@@ -1,19 +1,20 @@
 /* eslint-disable */
 import { WebSocketServer, WebSocket } from 'ws';
+import { createProxyServer } from 'websockify'; // Add websockify import
 import { logUtils } from '../utils/logUtils';
 import { IncomingMessage } from 'http';
 import { Socket } from 'net';
 import { WebSocketConnection } from '@/types/component/sshComponentType';
 
-// Create a function to handle SSH connections since it's not exported from sshService
 function handleSshConnection(ws: WebSocketConnection, connectionId: string, options: any) {
   console.log('SSH connection handler called with options:', options);
-  // This is a stub implementation because the actual function isn't available
-  ws.send(JSON.stringify({
-    type: 'error',
-    message: 'SSH connection not implemented',
-    connectionId
-  }));
+  ws.send(
+    JSON.stringify({
+      type: 'error',
+      message: 'SSH connection not implemented',
+      connectionId,
+    }),
+  );
 }
 
 interface ExtendedWebSocket extends WebSocket {
@@ -63,13 +64,39 @@ export function initializeWebSocketServer(): WebSocketServer {
       clearInterval(pingInterval);
     });
 
-    wss.on('connection', (ws, req) => {
+    wss.on('connection', (ws: ExtendedWebSocket, req: IncomingMessage) => {
       console.info('Client connected to WebSocket server', { ws_ip: req.socket.remoteAddress });
-      (ws as ExtendedWebSocket).ws_isAlive = true; // Set initial alive state
+      ws.ws_isAlive = true;
 
+      // Check if this is a VNC connection
+      const url = new URL(req.url || '/', `http://${req.headers.host}`);
+      const isVncConnection = url.pathname.startsWith('/vnc') || url.searchParams.has('vnc_host');
+      const vncHost = url.searchParams.get('vnc_host');
+      const vncPort = url.searchParams.get('vnc_port') || '5900';
+
+      if (isVncConnection && vncHost) {
+        console.info('Handling VNC WebSocket connection', { vncHost, vncPort });
+        try {
+          createProxyServer(ws, {
+            target: { host: vncHost, port: parseInt(vncPort) },
+          });
+          ws.on('error', (error) => {
+            console.error('VNC WebSocket error', { error: error.message });
+          });
+          ws.on('close', () => {
+            console.info('VNC WebSocket connection closed', { vncHost, vncPort });
+          });
+        } catch (error) {
+          console.error('Failed to proxy VNC connection', { error: error.message });
+          ws.close(1011, 'VNC proxy error');
+        }
+        return; // Skip SSH logic for VNC connections
+      }
+
+      // Existing SSH connection logic
       ws.on('pong', () => {
         console.debug('Received pong from client', { ws_connectionId: (ws as any).connectionId });
-        (ws as ExtendedWebSocket).ws_isAlive = true;
+        ws.ws_isAlive = true;
       });
 
       ws.on('close', (code, reason) => {
@@ -88,7 +115,6 @@ export function initializeWebSocketServer(): WebSocketServer {
         });
       });
 
-      // Send immediate confirmation
       ws.send(JSON.stringify({ type: 'connected', message: 'WebSocket established' }));
       console.debug('Sent connection confirmation to client', {
         ws_connectionId: (ws as any).connectionId,
@@ -106,6 +132,7 @@ export function initializeWebSocketServer(): WebSocketServer {
   }
 }
 
+// Keep existing functions unchanged
 export function getWebSocketServer(): WebSocketServer {
   if (global.websocketServer) {
     return global.websocketServer;
@@ -153,22 +180,12 @@ export function handleUpgrade(request: IncomingMessage, socket: Socket, head: Bu
     }
   }
 
-  if (ws_connectionId) {
-    console.info('WebSocket upgrade with connection ID:', { ws_connectionId });
-    console.log('Connection ID for WebSocket:', ws_connectionId);
-  } else {
-    console.warn('WebSocket upgrade request missing connectionId');
-    console.log('No connectionId found on WebSocket upgrade request');
-  }
-
   try {
     (socket as any).__websocketHandled = true;
     wss.handleUpgrade(request, socket, head, (ws) => {
       if (ws_connectionId) {
         (ws as any).connectionId = ws_connectionId;
         console.log('Set connectionId on WebSocket object:', ws_connectionId);
-      } else {
-        console.warn('Cannot set connectionId on WebSocket: undefined');
       }
 
       ws.on('message', (message) => {
