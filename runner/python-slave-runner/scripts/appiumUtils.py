@@ -115,8 +115,8 @@ def click_element(context, tag=None, text=None, resource_id=None, timeout=5):
             element = context["driver"].find_element(AppiumBy.ID, resource_id)
             status_parts.append("Found[resource-id]")
         else:
-            print("[@click] ERROR: At least one search criterion required")
-            return False
+        print("[@click] ERROR: At least one search criterion required")
+        return False
             
         # Get element properties in a compact format
         properties = []
@@ -221,9 +221,23 @@ def check_device_adb_connected(device_udid):
         print(f"ADB check failed: {e}")
         return False
 
-def create_trace_folder(base_folder, device_udid):
-    """Create a device-specific trace folder."""
-    device_trace_folder = os.path.join(base_folder, device_udid.replace(":", "_"))
-    if not os.path.exists(device_trace_folder):
-        os.makedirs(device_trace_folder)
-    return device_trace_folder 
+def initialize_driver(device_udid, appium_port, package, activity):
+    """Initialize Appium driver with setup and connectivity checks."""
+    if not check_device_adb_connected(device_udid):
+        print(f"Device {device_udid}: Not connected via ADB")
+        return None
+
+    if not is_appium_running(appium_port):
+        print(f"Appium not running on port {appium_port}. Starting Appium server...")
+        if not start_appium_server(appium_port):
+            print(f"Could not start Appium server on port {appium_port}")
+            return None
+
+    options = setup_driver(device_udid, appium_port, package, activity)
+    try:
+        print(f"Initializing Appium driver for {device_udid} on port {appium_port}")
+        driver = webdriver.Remote(command_executor=f"http://localhost:{appium_port}", options=options)
+        return driver
+    except Exception as e:
+        print(f"Failed to initialize Appium driver for {device_udid}: {e}")
+        return None

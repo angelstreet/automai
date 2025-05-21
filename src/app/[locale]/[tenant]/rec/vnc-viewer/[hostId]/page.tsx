@@ -3,8 +3,8 @@
 import { notFound, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { RecVncViewer } from '@/app/[locale]/[tenant]/rec/_components/client/RecVncViewer';
 import { getHostById } from '@/app/actions/hostsAction';
-import { RecVncViewer } from '../../../_components/client/RecVncViewer';
 import { Host } from '@/types/component/hostComponentType';
 
 /**

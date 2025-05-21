@@ -5,6 +5,8 @@ import time
 import threading
 from appium import webdriver
 import appiumUtils
+from hdmiUtils import HDMIUtils
+from testRunnerUtils import run_tests_on_devices
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
@@ -15,45 +17,40 @@ def parse_arguments():
     parser.add_argument("--activity", default="com.libertyglobal.horizonx.MainActivity", help="App activity name")
     parser.add_argument("--trace_folder", default="traces", help="Directory for trace outputs")
     parser.add_argument("--device", default="192.168.1.130:5555,192.168.1.230:5555", 
-                        help="Comma-separated device UDIDs (e.g., IP:port or serial)")
+                        help="Comma-separated device UDIDs ip:port[:hdmi_index] (e.g., ip1:port1:hdmi1,ip2:port2)")
+    
     args, unknown = parser.parse_known_args()
     if unknown:
         print(f"[@script:android-launch] Warning: Ignoring unknown arguments: {unknown}", file=sys.stderr)
     
-    # Split the device argument on commas and strip whitespace
-    args.devices = [device.strip() for device in args.device.split(",") if device.strip()]
+    # Parse device argument: ip:port:hdmi_index or just ip:port
+    args.devices = []
+    for device in args.device.split(","):
+        device = device.strip()
+        if not device:
+            continue
+        parts = device.split(":")
+        if len(parts) >= 3:  # ip:port:hdmi
+            udid = f"{parts[0]}:{parts[1]}"
+            hdmi_index = int(parts[2]) if parts[2].isdigit() else None
+        else:  # ip:port or ip
+            udid = device
+            hdmi_index = None
+        args.devices.append((udid, hdmi_index))
+    
     if not args.devices:
         parser.error("No valid device UDIDs provided in --device argument")
-    
+        
     return args
 
-def run_test_on_device(device_udid, appium_port, package, activity, trace_folder):
-    # Check ADB connectivity
-    if not appiumUtils.check_device_adb_connected(device_udid):
-        print(f"Test Failed for {device_udid}: Device not connected via ADB")
+def run_test_on_device(device_udid, hdmi_index, appium_port, package, activity, trace_folder):
+    hdmi = HDMIUtils(device_index=hdmi_index, trace_folder=trace_folder)
+    driver = appiumUtils.initialize_driver(device_udid, appium_port, package, activity)
+    if not driver:
+        hdmi.release()
         return 1
 
-    # Create a device-specific trace folder
-    device_trace_folder = appiumUtils.create_trace_folder(trace_folder, device_udid)
-
-    # Check if Appium is running, start if not
-    if not appiumUtils.is_appium_running(appium_port):
-        print(f"Appium not running on port {appium_port}. Starting Appium server...")
-        if not appiumUtils.start_appium_server(appium_port):
-            print(f"Test Failed for {device_udid}: Could not start Appium server on port {appium_port}")
-            return 1
-
-    # Set up capabilities for the device
-    options = appiumUtils.setup_driver(device_udid, appium_port, package, activity)
-
-    try:
-        print(f"Initializing Appium driver for {device_udid} on port {appium_port}")
-        driver = webdriver.Remote(command_executor=f"http://localhost:{appium_port}", options=options)
-        context = appiumUtils.init_globals(driver, device_trace_folder, package)
-    except Exception as e:
-        print(f"Test Failed for {device_udid}: Failed to initialize Appium driver: {e}")
-        return 1
-
+    context = appiumUtils.init_globals(driver, trace_folder, package)
     stop_recording = appiumUtils.record_video(context)
 
     try:
@@ -74,6 +71,8 @@ def run_test_on_device(device_udid, appium_port, package, activity, trace_folder
         time.sleep(2)
         appiumUtils.click_element(context, tag="SRF 1 HD")
         time.sleep(20)
+        hdmi.take_screenshot()
+
         print(f"Sunrise TV app ({package}) launched successfully on {device_udid}!")
 
         print(f"Test Success for {device_udid}")
@@ -81,7 +80,6 @@ def run_test_on_device(device_udid, appium_port, package, activity, trace_folder
 
     except Exception as e:
         print(f"Test Failed for {device_udid}: {e}")
-        appiumUtils.capture_screenshot(context, "error")
         return 1
 
     finally:
@@ -89,32 +87,14 @@ def run_test_on_device(device_udid, appium_port, package, activity, trace_folder
         if video_path:
             print(f"Video saved for {device_udid}: {video_path}")
         appiumUtils.print_visible_elements(context)
+        appiumUtils.capture_screenshot(context)
+        hdmi.take_screenshot()
+        hdmi.release()
         driver.quit()
 
 def main():
     args = parse_arguments()
-    if not os.path.exists(args.trace_folder):
-        os.makedirs(args.trace_folder)
-
-    # Map devices to Appium ports
-    device_port_map = {args.devices[i]: 4723 + i for i in range(len(args.devices))}
-
-    # Run tests in parallel using threads
-    threads = []
-    for device_udid, port in device_port_map.items():
-        thread = threading.Thread(
-            target=run_test_on_device,
-            args=(device_udid, port, args.package, args.activity, args.trace_folder)
-        )
-        threads.append(thread)
-        thread.start()
-
-    # Wait for all threads to complete
-    for thread in threads:
-        thread.join()
-
-    print("All device tests completed")
-    return 0
+    return run_tests_on_devices(args.devices, run_test_on_device, args.package, args.activity, args.trace_folder)
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -1,8 +1,8 @@
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 
-import teamDb from '@/lib/db/teamDb';
-import teamMemberDb from '@/lib/db/teamMemberDb';
+import { getTeamById } from '@/lib/db/teamDb';
+import { getTeamInvitationByToken } from '@/lib/db/teamMemberDb';
 
 /**
  * GET /api/invitations/[token]
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest, { params }: { params: { token: s
     }
 
     const cookieStore = await cookies();
-    const result = await teamMemberDb.getTeamInvitationByToken(token, cookieStore);
+    const result = await getTeamInvitationByToken(token, cookieStore);
 
     if (!result.success || !result.data) {
       return NextResponse.json(
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest, { params }: { params: { token: s
 
     // Get the team details to include team name
     const teamId = result.data.team_id;
-    const teamResult = await teamDb.getTeamById(teamId, cookieStore);
+    const teamResult = await getTeamById(teamId, cookieStore);
 
     // Add team name to the response
     const responseData = {
