@@ -70,7 +70,10 @@ def run_test_on_device(device_udid, appium_port, package, activity, trace_folder
 
         appiumUtils.click_element(context, tag="TV Guide")
         appiumUtils.click_element(context, tag="LIVE TV")
-
+        appiumUtils.click_element(context, tag="SRF 1 HD")
+        time.sleep(10)
+        appiumUtils.capture_screenshot(context)
+        
         print(f"Test Success for {device_udid}")
         return 0
 

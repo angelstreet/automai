@@ -31,7 +31,14 @@ def print_visible_elements(context):
                     text = element.text.strip() if element.text else "<no text>"
                     resource_id = element.get_attribute("resource-id") or "<no resource-id>"
                     
-                    if (tag is None or tag == "") and text == "<no text>" and resource_id == "<no resource-id>":
+                    # Skip elements with None tag or null resource_id and no text
+                    if (tag is None or tag.lower() == "none" or tag == "") and \
+                       (text == "<no text>" or not text) and \
+                       (resource_id == "<no resource-id>" or resource_id == "null" or resource_id is None):
+                        continue
+                    
+                    # Skip elements with null as resource-id
+                    if resource_id == "null":
                         continue
                         
                     output.append(f"Element {index}:")
