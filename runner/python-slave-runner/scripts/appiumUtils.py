@@ -157,21 +157,21 @@ def click_element(context, tag=None, text=None, resource_id=None, timeout=5):
             status_parts.append(f"✗ Failed: {str(e)}")
             print(f"[@click] {' → '.join(status_parts)}")
         else:
-            print(f"[@click] ✗ Failed: {str(e)}")
+            print(f"[@click] {' → '.join(status_parts)}")
         capture_screenshot(context, "click_error")
         raise Exception(f"Failed to click on element: {e}")
 
 def send_keys(context, key):
     """Send a keycode or key name to the device (e.g., for Android TV remote navigation)."""
     key_map = {
-        "up": AndroidKey.DPAD_UP,
-        "down": AndroidKey.DPAD_DOWN,
-        "left": AndroidKey.DPAD_LEFT,
-        "right": AndroidKey.DPAD_RIGHT,
-        "center": AndroidKey.DPAD_CENTER,
-        "ok": AndroidKey.DPAD_CENTER,
-        "menu": AndroidKey.MENU,
-        "back": AndroidKey.BACK
+        "up": 19,      # AndroidKey.DPAD_UP
+        "down": 20,    # AndroidKey.DPAD_DOWN
+        "left": 21,    # AndroidKey.DPAD_LEFT
+        "right": 22,   # AndroidKey.DPAD_RIGHT
+        "center": 23,  # AndroidKey.DPAD_CENTER
+        "ok": 23,      # Alias for center
+        "menu": 82,    # AndroidKey.MENU
+        "back": 4      # AndroidKey.BACK
     }
     
     try:
@@ -182,7 +182,7 @@ def send_keys(context, key):
             key_name = key.lower()
             if key_name not in key_map:
                 raise ValueError(f"Unsupported key name: {key}. Supported: {list(key_map.keys())}")
-            keycode = key_map[key_name].value
+            keycode = key_map[key_name]
         else:
             raise ValueError("Key must be an integer keycode or a supported key name")
 
@@ -192,7 +192,7 @@ def send_keys(context, key):
         return True
     except Exception as e:
         print(f"[@send_keys] Failed to send key {key}: {e}")
-        return False
+        raise Exception(f"Failed to send key {key}: {e}")
 
 def is_appium_running(port):
     """Check if Appium is running on the specified port."""
