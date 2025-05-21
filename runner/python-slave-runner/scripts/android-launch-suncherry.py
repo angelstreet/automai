@@ -125,6 +125,9 @@ def main():
         
         # Capture screenshot on successful launch
         screenshot_path = capture_screenshot(driver, args.trace_folder)
+        print("waiting 10 seconds")
+        driver.implicitly_wait(10000)
+        screenshot_path = capture_screenshot(driver, args.trace_folder)
         print(f"Test Success: Sunrise TV app ({args.package}) launched successfully! Screenshot saved: {screenshot_path}")
         
         # Stop recording
