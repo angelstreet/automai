@@ -7,10 +7,21 @@ const STATUS = {
   ERROR: 'error',
 };
 
+// In-memory cache for service status
+const serviceStatusCache = new Map<string, { status: string; lastChecked: number }>();
+
+// Configuration
+const MAX_RETRIES = 5; // Reduced retries
+const RETRY_DELAY_MS = 5000; // 5s delay
+const FETCH_TIMEOUT_MS = 10000; // 10s timeout
+const CACHE_TTL_MS = 300000; // 5 minutes
+
 export async function GET(_request: Request, { params }: { params: { service: string } }) {
   try {
     const service = (await params).service;
     let renderUrl;
+
+    // Map service to URL
     switch (service) {
       case 'main-prod':
         renderUrl = process.env.NODEJS_MAIN_RUNNER_PROD_URL;
@@ -49,90 +60,58 @@ export async function GET(_request: Request, { params }: { params: { service: st
     }
 
     console.log(`[@api:render-health] Render service url ${renderUrl}`);
-
-    // First check if service is already active using /healthz endpoint
     const healthEndpoint = `${renderUrl}/healthz`;
     console.log(`[@api:render-health] Checking health endpoint: ${healthEndpoint}`);
 
+    // Check cache first
+    const cachedStatus = serviceStatusCache.get(service);
+    const now = Date.now();
+    if (cachedStatus && now - cachedStatus.lastChecked < CACHE_TTL_MS) {
+      console.log(
+        `[@api:render-health] Returning cached status for ${service}: ${cachedStatus.status}`,
+      );
+      return NextResponse.json({
+        success: cachedStatus.status === STATUS.AWAKE,
+        status: cachedStatus.status,
+        message: `Render ${service} service status from cache`,
+      });
+    }
+
+    // Check if service is already awake
     try {
       const healthResponse = await makeFetchRequest(healthEndpoint);
-
-      // If service is already active (200 response)
       if (healthResponse.status === 200) {
+        serviceStatusCache.set(service, { status: STATUS.AWAKE, lastChecked: now });
         return NextResponse.json({
           success: true,
           status: STATUS.AWAKE,
           message: `Render ${service} service is awake`,
         });
       }
-
-      // Hit the root URL to wake up the service asynchronously
-      const wakeupPromise = makeFetchRequest(renderUrl).catch((error) => {
-        console.warn(`[@api:render-health] Wake-up request failed:`, error.message);
-        // We don't fail here as the service might still wake up
-      });
-
-      // Try to verify if the service woke up (10 attempts with 10s intervals)
-      const maxRetries = 10;
-      const retryDelayMs = 10000;
-
-      // Create an array of retry attempts
-      const retryAttempts = Array.from({ length: maxRetries }, (_, index) => index + 1);
-
-      // Run health checks in parallel with proper delays
-      const results = await Promise.all(
-        retryAttempts.map(async (attempt) => {
-          // Wait for the retry delay
-          await new Promise((resolve) => setTimeout(resolve, attempt * retryDelayMs));
-
-          try {
-            const retryHealthResponse = await makeFetchRequest(healthEndpoint);
-            if (retryHealthResponse.status === 200) {
-              console.log(
-                `[@api:render-health] Render ${service} service woke up successfully on attempt ${attempt}`,
-              );
-              return { success: true, attempt };
-            }
-          } catch (error: any) {
-            console.warn(
-              `[@api:render-health] Attempt ${attempt} failed for ${healthEndpoint}:`,
-              error.message,
-            );
-          }
-          return { success: false, attempt };
-        }),
-      );
-
-      // Check if any attempt was successful
-      const successfulAttempt = results.find((result) => result.success);
-
-      if (successfulAttempt) {
-        return NextResponse.json({
-          success: true,
-          status: STATUS.AWAKE,
-          message: `Render ${service} service woke up successfully`,
-        });
-      }
-
-      // If still not awake after max retries
-      console.log(
-        `[@api:render-health] Render ${service} service failed to wake up after ${maxRetries} attempts`,
-      );
-      return NextResponse.json({
-        success: false,
-        status: STATUS.WAKING_UP,
-        message: `Render ${service} service is still waking up after ${maxRetries} attempts`,
-      });
     } catch (error: any) {
-      console.error(`[@api:render-health] Error during health check:`, error.message);
-      return NextResponse.json({
-        success: false,
-        status: STATUS.ERROR,
-        error: `Failed to check health: ${error.message}`,
-      });
+      console.warn(`[@api:render-health] Initial health check failed: ${error.message}`);
     }
+
+    // Service is not awake; initiate wake-up asynchronously
+    serviceStatusCache.set(service, { status: STATUS.WAKING_UP, lastChecked: now });
+
+    // Start wake-up process in the background
+    wakeUpService(service, renderUrl, healthEndpoint).catch((error) => {
+      console.error(
+        `[@api:render-health] Background wake-up failed for ${service}:`,
+        error.message,
+      );
+    });
+
+    // Respond immediately
+    return NextResponse.json({
+      success: false,
+      status: STATUS.WAKING_UP,
+      message: `Render ${service} service is waking up`,
+    });
   } catch (error: any) {
-    console.error(`[@api:render-health] Error checking health for Render service:`, error.message);
+    console.error(`[@api:render-health] Error checking health for ${service}:`, error.message);
+    serviceStatusCache.set(service, { status: STATUS.ERROR, lastChecked: Date.now() });
     return NextResponse.json({
       success: false,
       status: STATUS.ERROR,
@@ -141,9 +120,39 @@ export async function GET(_request: Request, { params }: { params: { service: st
   }
 }
 
+async function wakeUpService(service: string, renderUrl: string, healthEndpoint: string) {
+  // Trigger wake-up request
+  makeFetchRequest(renderUrl).catch((error) => {
+    console.warn(`[@api:render-health] Wake-up request failed for ${service}:`, error.message);
+  });
+
+  // Sequential retries
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+      const retryHealthResponse = await makeFetchRequest(healthEndpoint);
+      if (retryHealthResponse.status === 200) {
+        console.log(
+          `[@api:render-health] Render ${service} service woke up successfully on attempt ${attempt}`,
+        );
+        serviceStatusCache.set(service, { status: STATUS.AWAKE, lastChecked: Date.now() });
+        return;
+      }
+    } catch (error: any) {
+      console.warn(`[@api:render-health] Attempt ${attempt} failed for ${service}:`, error.message);
+    }
+  }
+
+  // If retries fail
+  console.log(
+    `[@api:render-health] Render ${service} service failed to wake up after ${MAX_RETRIES} attempts`,
+  );
+  serviceStatusCache.set(service, { status: STATUS.WAKING_UP, lastChecked: Date.now() });
+}
+
 async function makeFetchRequest(url: string): Promise<{ status: number; data: string }> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 120000); // 120s timeout
+  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
   try {
     const response = await fetch(url, {
@@ -165,7 +174,7 @@ async function makeFetchRequest(url: string): Promise<{ status: number; data: st
   } catch (error: any) {
     clearTimeout(timeoutId);
     if (error.name === 'AbortError') {
-      throw new Error('Request timed out after 120 seconds');
+      throw new Error(`Request timed out after ${FETCH_TIMEOUT_MS / 1000} seconds`);
     }
     throw error;
   }
