@@ -13,7 +13,7 @@ def parse_arguments():
     parser.add_argument("--package", default="com.lgi.upcch.preprod", help="App package name")
     parser.add_argument("--activity", default="com.libertyglobal.horizonx.MainActivity", help="App activity name")
     parser.add_argument("--trace_folder", default="traces", help="Directory for trace outputs")
-    parser.add_argument("--device", default="192.168.1.29:5555:0", 
+    parser.add_argument("--device", default="192.168.1.29:5555", 
                         help="Comma-separated device UDIDs ip:port:hdmi_index (e.g., ip1:port1:hdmi1,ip2:port2:hdmi2)")
     args, unknown = parser.parse_known_args()
     if unknown:
