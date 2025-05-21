@@ -13,11 +13,9 @@ from selenium.webdriver.support import expected_conditions as EC
 
 def print_visible_elements(driver):
     try:
-        # Wait for the app to stabilize (adjust timeout as needed)
-        WebDriverWait(driver, 10).until(
-            lambda d: d.current_package == "com.lgi.upcch.preprod"
-        )
-        print("Dumping visible elements:")
+        print("--------------------------------")
+        print("-----------Dumping visible elements-----------")
+        print("--------------------------------")
         
         # Find all elements using a broad XPath
         elements = driver.find_elements(AppiumBy.XPATH, "//*")
@@ -36,6 +34,8 @@ def print_visible_elements(driver):
             except Exception as e:
                 # Skip elements that cause errors (e.g., stale elements)
                 print(f"Error inspecting element {index}: {e}")
+        print("--------------------------------")
+        print("--------------------------------")
     except Exception as e:
         print(f"Failed to dump visible elements: {e}")
 
