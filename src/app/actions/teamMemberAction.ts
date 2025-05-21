@@ -690,14 +690,8 @@ export const inviteTeamMemberByEmail = cache(
         };
       } else {
         // User doesn't exist in Supabase, create an invitation
-        // In a real implementation, you would:
-        // 1. Create an invitation record in the database
-        // 2. Generate a unique token for the invitation
-        // 3. Send an email with a sign-up link including the token
-
-        // For this prototype, we'll just simulate a successful invitation
         console.log(
-          `[@action:teamMemberAction:inviteTeamMemberByEmail] Sending invitation to ${email} for team ${teamId} with role ${role}`,
+          `[@action:teamMemberAction:inviteTeamMemberByEmail] Creating invitation for ${email} to join team ${teamId} with role ${role}`,
         );
 
         // Get team name for the invitation email
@@ -715,14 +709,58 @@ export const inviteTeamMemberByEmail = cache(
           return { success: false, error: 'Failed to get team information' };
         }
 
-        // In a real implementation, you would call an email service here
-        // For now, we'll just log the details
-        console.log(`[@action:teamMemberAction:inviteTeamMemberByEmail] Invitation details:
+        // Create an invitation record in the database
+        const invitationResult = await teamMemberDb.createTeamInvitation(
+          teamId,
+          email,
+          role,
+          user.id,
+          cookieStore,
+        );
+
+        if (!invitationResult.success || !invitationResult.data) {
+          console.error(
+            '[@action:teamMemberAction:inviteTeamMemberByEmail] Error creating invitation:',
+            invitationResult.error,
+          );
+          return { success: false, error: 'Failed to create invitation' };
+        }
+
+        // Get the invitation token
+        const { id: invitationId, token } = invitationResult.data;
+
+        // Create a sign-up URL with the invitation token
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        const signupUrl = `${baseUrl}/signup/invite/${token}`;
+
+        // Get current tenant from the user
+        const tenant = user.tenant_id || 'default';
+
+        // Send password reset email using Supabase Auth
+        // This will send a "magic link" email that the user can use to sign up
+        const { error: emailError } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: signupUrl,
+        });
+
+        if (emailError) {
+          console.error(
+            '[@action:teamMemberAction:inviteTeamMemberByEmail] Error sending invitation email:',
+            emailError,
+          );
+          // We created the invitation record, but failed to send email
+          // We'll still return success, but log the error
+          console.warn(
+            '[@action:teamMemberAction:inviteTeamMemberByEmail] Invitation created but email sending failed',
+          );
+        }
+
+        console.log(`[@action:teamMemberAction:inviteTeamMemberByEmail] Invitation sent:
         - Team: ${team.name} (${teamId})
         - Inviter: ${user.email} (${user.id})
         - Invitee: ${email}
         - Role: ${role}
-        - Signup URL: https://your-app.com/signup?invitation=TOKEN_HERE
+        - Token: ${token}
+        - Signup URL: ${signupUrl}
       `);
 
         // Revalidate team-related paths
@@ -730,7 +768,7 @@ export const inviteTeamMemberByEmail = cache(
 
         return {
           success: true,
-          data: { added: false, invited: true },
+          data: { added: false, invited: true, invitationId },
         };
       }
     } catch (error) {

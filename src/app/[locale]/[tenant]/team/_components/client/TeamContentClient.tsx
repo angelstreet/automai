@@ -37,7 +37,6 @@ export default function TeamContentClient({
   const activeTab = searchParams.get('tab') || 'overview';
 
   const { activeTeam } = useTeam('TeamContentClient');
-  const subscriptionTier = activeTeam?.subscription_tier || 'pro';
 
   // Show skeleton when team data is not available
   if (!teamDetails || !teamDetails.team) {

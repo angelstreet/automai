@@ -682,8 +682,162 @@ export async function getTeamsByUserId(
   }
 }
 
-// Export at the end of the file
-export default {
+/**
+ * Create a team invitation record
+ * @param teamId Team ID
+ * @param email Email of the invitee
+ * @param role Role for the invitee
+ * @param createdBy User ID of the inviter
+ * @param cookieStore Cookie store for authentication
+ * @returns Created invitation data with token
+ */
+export async function createTeamInvitation(
+  teamId: string,
+  email: string,
+  role: string,
+  createdBy: string,
+  cookieStore?: any,
+): Promise<DbResponse<{ id: string; token: string }>> {
+  try {
+    const supabase = await createClient(cookieStore);
+
+    // Set expiration to 7 days from now
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    // Create the invitation record
+    const { data, error } = await supabase
+      .from('team_invitations')
+      .insert({
+        team_id: teamId,
+        email: email,
+        role: role,
+        created_by: createdBy,
+        expires_at: expiresAt.toISOString(),
+        status: 'pending',
+      })
+      .select('id, token')
+      .single();
+
+    if (error) {
+      console.error('[@db:teamMemberDb:createTeamInvitation] Error creating invitation:', error);
+      return { success: false, error: error.message };
+    }
+
+    return {
+      success: true,
+      data: data,
+    };
+  } catch (error: any) {
+    console.error('[@db:teamMemberDb:createTeamInvitation] Error:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to create team invitation',
+    };
+  }
+}
+
+/**
+ * Get a team invitation by token
+ * @param token Invitation token
+ * @param cookieStore Cookie store for authentication
+ * @returns Invitation data if found and valid
+ */
+export async function getTeamInvitationByToken(
+  token: string,
+  cookieStore?: any,
+): Promise<DbResponse<any>> {
+  try {
+    const supabase = await createClient(cookieStore);
+
+    // Get the invitation with team data
+    const { data, error } = await supabase
+      .from('team_invitations')
+      .select(
+        `
+        id,
+        team_id,
+        email,
+        role,
+        token,
+        expires_at,
+        created_at,
+        status,
+        teams:team_id (id, name)
+      `,
+      )
+      .eq('token', token)
+      .eq('status', 'pending')
+      .gt('expires_at', new Date().toISOString())
+      .single();
+
+    if (error) {
+      console.error(
+        '[@db:teamMemberDb:getTeamInvitationByToken] Error fetching invitation:',
+        error,
+      );
+      return { success: false, error: error.message };
+    }
+
+    return {
+      success: true,
+      data: data,
+    };
+  } catch (error: any) {
+    console.error('[@db:teamMemberDb:getTeamInvitationByToken] Error:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to get team invitation',
+    };
+  }
+}
+
+/**
+ * Update a team invitation status
+ * @param token Invitation token
+ * @param status New status ('accepted', 'declined', 'expired')
+ * @param cookieStore Cookie store for authentication
+ * @returns Success status
+ */
+export async function updateTeamInvitationStatus(
+  token: string,
+  status: 'accepted' | 'declined' | 'expired',
+  cookieStore?: any,
+): Promise<DbResponse<null>> {
+  try {
+    const supabase = await createClient(cookieStore);
+
+    const { error } = await supabase
+      .from('team_invitations')
+      .update({
+        status,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('token', token);
+
+    if (error) {
+      console.error(
+        '[@db:teamMemberDb:updateTeamInvitationStatus] Error updating invitation:',
+        error,
+      );
+      return { success: false, error: error.message };
+    }
+
+    return {
+      success: true,
+      data: null,
+    };
+  } catch (error: any) {
+    console.error('[@db:teamMemberDb:updateTeamInvitationStatus] Error:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to update team invitation',
+    };
+  }
+}
+
+// Export functions
+const teamMemberDb = {
   getTeamMembers,
   addTeamMember,
   updateTeamMemberRole,
@@ -692,4 +846,9 @@ export default {
   addMultipleTeamMembers,
   getTeamMemberRole,
   getTeamsByUserId,
+  createTeamInvitation,
+  getTeamInvitationByToken,
+  updateTeamInvitationStatus,
 };
+
+export default teamMemberDb;

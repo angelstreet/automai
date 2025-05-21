@@ -257,7 +257,7 @@ const AddMemberDialog = ({ open, onOpenChange, teamId }: AddMemberDialogProps) =
             ) : (
               <Plus className="mr-2 h-4 w-4" />
             )}
-            {t('members_add_button')}
+            {t('members_send_invite')}
           </Button>
         </DialogFooter>
       </DialogContent>

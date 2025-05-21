@@ -6,8 +6,8 @@ import { TeamMemberDialogContext } from '@/context/TeamMemberDialogContext';
 
 // Import the dialog components
 import AddMemberDialog from './TeamMemberAddDialogClient';
-import EditPermissionsDialog from './TeamMemberPermissionsDialogClient';
 import InviteMemberDialog from './TeamMemberInviteDialogClient';
+import EditPermissionsDialog from './TeamMemberPermissionsDialogClient';
 
 /**
  * TeamMemberDialogsClient - Renders the dialogs for team member management

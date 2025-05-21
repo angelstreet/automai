@@ -137,7 +137,7 @@ const InviteMemberDialog = ({ open, onOpenChange, teamId }: InviteMemberDialogPr
             ) : (
               <Mail className="mr-2 h-4 w-4" />
             )}
-            {t('members_invite')}
+            {t('members_send_invite')}
           </Button>
         </DialogFooter>
       </DialogContent>
