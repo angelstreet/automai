@@ -167,10 +167,6 @@ def click_element(tag=None, text=None, resource_id=None, timeout=5):
         print(f"Test Failed: Failed to click on element: {e}")
         capture_screenshot("click_error")
         
-        # Let's print the current DOM to help with debugging
-        print("Dumping DOM for debugging purposes:")
-        print_visible_elements()
-        
         raise Exception(f"Test Failed: Failed to click on element: {e}")
 
 def main():
@@ -216,17 +212,14 @@ def main():
         DRIVER.activate_app(PACKAGE)
         time.sleep(2)
         capture_screenshot()
-        print("Waiting 3 seconds")
-        time.sleep(3)
-        capture_screenshot()
         
         print(f"Sunrise TV app ({PACKAGE}) launched successfully!")    
         
-        click_element(tag="TV Guide Register")
+        click_element(tag="TV Guide")
         time.sleep(2)
-        click_element(text="LIVE TV")
+        click_element(tag="LIVE TV")
         time.sleep(2)
-        print(f"Test Success: TV Guide Register clicked")  
+        print(f"Test Success")  
         return 0
 
     except Exception as e:
