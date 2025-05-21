@@ -113,7 +113,8 @@ def click_element(tag=None, text=None, resource_id=None, timeout=5):
         # Build XPath based on provided attributes
         conditions = []
         if tag:
-            conditions.append(f"@class='{tag}'")
+            # For tag names, we use local-name() function instead of @class
+            conditions.append(f"local-name()='{tag}'")
         if text:
             conditions.append(f"@text='{text}'")
         if resource_id:
@@ -137,9 +138,9 @@ def click_element(tag=None, text=None, resource_id=None, timeout=5):
             capture_screenshot("click_success")
             return True
         else:
-            print("Element found but not visible")
+            print("Test Failed: Element found but not visible")
             capture_screenshot("click_failed")
-            return False
+            raise Exception("Element found but not visible")
             
     except Exception as e:
         print(f"Test Failed: Failed to click on element: {e}")
