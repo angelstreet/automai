@@ -12,17 +12,22 @@ def main():
         default="com.lgi.upcch.preprod",
         help="App package name (default: com.lgi.upcch.preprod)"
     )
+    parser.add_argument(
+        "--activity",
+        default="com.libertyglobal.horizonx.MainActivity",
+        help="App activity name (default: com.libertyglobal.horizonx.MainActivity)"
+    )
     args = parser.parse_args()
 
     # Desired capabilities for Appium
     capabilities = {
         "platformName": "Android",
-        "appium:platformVersion": "12",  # Adjust if your device's version differs
+        "appium:platformVersion": "12",
         "appium:deviceName": "any-name",
-        "appium:udid": "RZCTB0ZX4PM",  # From your adb devices output
+        "appium:udid": "192.168.1.29:5555",
         "appium:automationName": "UiAutomator2",
-        "appium:appPackage": args.package,  # Use package from command-line or default
-        "appium:appActivity": "com.lgi.upcch.preprod.MainActivity",  # Replace with correct activity
+        "appium:appPackage": args.package,
+        "appium:appActivity": args.activity,
         "appium:noReset": True
     }
 
@@ -40,8 +45,8 @@ def main():
         # Wait for the app to load
         driver.implicitly_wait(10)
 
-        # Verify the app is launched by finding an element
-        #element = driver.find_element(AppiumBy.ID, "com.lgi.upcch.preprod:id/main_view")  # Replace with correct ID
+        # Verify the app is launched by finding an element (commented out until correct ID is found)
+        # element = driver.find_element(AppiumBy.ID, "com.lgi.upcch.preprod:id/main_view")  # Replace with correct ID
         print(f"Test Success: Sunrise TV app ({args.package}) launched successfully!")
         return 0
 
