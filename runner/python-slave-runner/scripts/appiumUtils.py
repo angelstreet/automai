@@ -23,6 +23,7 @@ def print_visible_elements(context):
         output.append("--------------------------------")
         
         elements = context["driver"].find_elements(AppiumBy.XPATH, "//*")
+        element_counter = 0
         
         for index, element in enumerate(elements, 1):
             try:
@@ -41,14 +42,12 @@ def print_visible_elements(context):
                     if resource_id == "null":
                         continue
                         
-                    output.append(f"Element {index}:")
-                    output.append(f"  Tag: {tag}")
-                    output.append(f"  Text: {text}")
-                    output.append(f"  Resource-ID: {resource_id}")
-                    output.append("  ---")
+                    element_counter += 1
+                    output.append(f"Element {element_counter}: Tag={tag} | Text={text} | Resource-ID={resource_id}")
             except Exception as e:
                 output.append(f"Error inspecting element {index}: {e}")
         output.append("--------------------------------")
+        output.append(f"Total visible elements: {element_counter}")
         output.append("--------------------------------")
         
         dom_file_path = os.path.join(context["trace_folder"], "dom.txt")
@@ -91,58 +90,70 @@ def record_video(context, prefix):
 def click_element(context, tag=None, text=None, resource_id=None, timeout=5):
     """Find and click an element by tag, text, or resource-id."""
     try:
-        print(f"Attempting to find element with: Tag={tag}, Text={text}, Resource-ID={resource_id}")
+        print(f"[@click] Searching for element with: Tag={tag} | Text={text} | Resource-ID={resource_id}")
         
         if tag:
-            print(f"Trying to find element by tag name: {tag}")
             try:
                 element = context["driver"].find_element(AppiumBy.XPATH, f"//*[@content-desc='{tag}']")
-                print(f"Found element by content-desc: {tag}")
+                print(f"[@click] Found element by content-desc: {tag}")
             except:
                 try:
                     element = context["driver"].find_element(AppiumBy.XPATH, f"//*[@text='{tag}']")
-                    print(f"Found element by text: {tag}")
+                    print(f"[@click] Found element by text: {tag}")
                 except:
                     try:
                         element = context["driver"].find_element(AppiumBy.XPATH, f"//*[contains(@content-desc, '{tag}')]")
-                        print(f"Found element by partial content-desc: {tag}")
+                        print(f"[@click] Found element by partial content-desc: {tag}")
                     except:
                         element = context["driver"].find_element(AppiumBy.XPATH, f"//*[contains(@text, '{tag}')]")
-                        print(f"Found element by partial text: {tag}")
+                        print(f"[@click] Found element by partial text: {tag}")
         elif text:
-            print(f"Trying to find element by text: {text}")
             element = context["driver"].find_element(AppiumBy.XPATH, f"//*[@text='{text}']")
+            print(f"[@click] Found element by exact text: {text}")
         elif resource_id:
-            print(f"Trying to find element by resource-id: {resource_id}")
             element = context["driver"].find_element(AppiumBy.ID, resource_id)
+            print(f"[@click] Found element by resource-id: {resource_id}")
         else:
-            print("Error: At least one search criterion (tag, text, or resource_id) must be provided")
+            print("[@click] ERROR: At least one search criterion (tag, text, or resource_id) must be provided")
             return False
             
+        # Get element properties in a compact format
+        properties = []
         try:
-            print(f"Found element: {element.tag_name}")
-            print(f"Element text: {element.text}")
-            print(f"Element resource-id: {element.get_attribute('resource-id')}")
-            print(f"Element content-desc: {element.get_attribute('content-desc')}")
-            print(f"Element class: {element.get_attribute('class')}")
+            tag_name = element.tag_name
+            if tag_name: properties.append(f"Tag={tag_name}")
+            
+            el_text = element.text.strip() if element.text else "<no text>"
+            properties.append(f"Text={el_text}")
+            
+            resource_id = element.get_attribute("resource-id")
+            if resource_id: properties.append(f"Resource-ID={resource_id}")
+            
+            content_desc = element.get_attribute("content-desc")
+            if content_desc: properties.append(f"Content-Desc={content_desc}")
+            
+            el_class = element.get_attribute("class")
+            if el_class: properties.append(f"Class={el_class}")
+            
+            print(f"[@click] Element details: {' | '.join(properties)}")
         except Exception as e:
-            print(f"Could not get all element attributes: {e}")
+            print(f"[@click] Warning: Could not get all element attributes: {e}")
         
         if element.is_displayed():
             element.click()
-            print("Successfully clicked on element")
+            print(f"[@click] SUCCESS: Clicked on element")
             time.sleep(3)
             capture_screenshot(context, "click_success")
             return True
         else:
-            print("Test Failed: Element found but not visible")
+            print(f"[@click] FAIL: Element found but not visible")
             capture_screenshot(context, "click_failed")
             raise Exception("Element found but not visible")
             
     except Exception as e:
-        print(f"Test Failed: Failed to click on element: {e}")
+        print(f"[@click] FAIL: Could not click element: {e}")
         capture_screenshot(context, "click_error")
-        raise Exception(f"Test Failed: Failed to click on element: {e}")
+        raise Exception(f"Failed to click on element: {e}")
 
 def is_appium_running(port):
     """Check if Appium is running on the specified port."""
