@@ -85,7 +85,7 @@ def main():
 
         # Terminate the app to ensure a fresh launch without clearing data
         driver.terminate_app(args.package)
-
+        driver.implicitly_wait(3)
         # Launch the app
         driver.activate_app(args.package)
 
@@ -93,18 +93,9 @@ def main():
         WebDriverWait(driver, 10).until(
             lambda d: d.current_activity == ".MainActivity"  # Adjust if activity name differs
         )
-        print("App is in the foreground")
-
-        # Verify a UI element (update ID based on inspection)
-        try:
-            WebDriverWait(driver, 5).until(
-                EC.presence_of_element_located((AppiumBy.ID, "com.lgi.upcch.preprod:id/main_view"))
-            )
-            print("App UI loaded successfully")
-        except Exception as e:
-            print(f"Warning: UI element not found: {e}")
-
-        # Capture screenshot
+        print("App is in the foreground, waiting 10 seconds")
+        screenshot_path = capture_screenshot(driver, args.trace_folder)
+        driver.implicitly_wait(10)
         screenshot_path = capture_screenshot(driver, args.trace_folder)
         print(f"Test Success: Sunrise TV app ({args.package}) launched successfully!")
         
