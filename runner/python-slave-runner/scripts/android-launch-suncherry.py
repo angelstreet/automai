@@ -66,7 +66,7 @@ def run_test_on_device(device_udid, hdmi_index, appium_port, package, activity, 
         appiumUtils.click_element(context, tag="SRF 1 HD")
         time.sleep(10)
         appiumUtils.capture_screenshot(context)
-        
+        hdmi.take_screenshot()
         print(f"Test Success for {device_udid}")
         return 0
 

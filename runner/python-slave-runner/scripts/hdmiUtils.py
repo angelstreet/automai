@@ -1,5 +1,7 @@
 import cv2
 import os
+import glob
+import subprocess
 from datetime import datetime
 
 class HDMIUtils:
@@ -16,16 +18,37 @@ class HDMIUtils:
 
     def initialize(self):
         """Initialize capture card for screenshots."""
-        print(f"Initializing HDMI capture card at index {self.device_index}")
+        # Check available video devices
+        video_devices = glob.glob("/dev/video*")
+        if not video_devices:
+            print("Error: No video devices found in /dev/video*")
+            return False
+        print(f"Available video devices: {video_devices}")
+
+        # Verify device_index exists
+        device_path = f"/dev/video{self.device_index}"
+        if device_path not in video_devices:
+            print(f"Error: Device /dev/video{self.device_index} not found. Available devices: {video_devices}")
+            # Try to list device details with v4l2-ctl
+            try:
+                result = subprocess.run(["v4l2-ctl", "--list-devices"], capture_output=True, text=True)
+                print(f"v4l2-ctl --list-devices output:\n{result.stdout}")
+            except FileNotFoundError:
+                print("v4l2-ctl not found. Install v4l-utils with 'sudo apt install v4l-utils' for device info.")
+            except Exception as e:
+                print(f"Error running v4l2-ctl: {e}")
+            return False
+
         self.cap = cv2.VideoCapture(self.device_index)
         if not self.cap.isOpened():
-            print(f"Error: Could not open capture card at index {self.device_index}")
+            print(f"Error: Could not open capture card at index {self.device_index} (/dev/video{self.device_index})")
             return False
 
         # Set resolution
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
         self.is_initialized = True
+        print(f"Initialized capture card at /dev/video{self.device_index} with resolution {self.width}x{self.height}")
         return True
 
     def take_screenshot(self, filename=None):
@@ -43,8 +66,10 @@ class HDMIUtils:
 
         # Generate filename if not provided
         if filename is None:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"screenshot_{timestamp}.png"
+            prefix = "screenshot"
+            screenshot_files = glob.glob(os.path.join(self.trace_folder, f"{prefix}_*.png"))
+            next_number = max([int(os.path.basename(f).replace(f"{prefix}_", "").replace(".png", "")) for f in screenshot_files] + [0]) + 1
+            filename = f"{prefix}_{next_number}.png"
 
         output_file = os.path.join(self.trace_folder, filename)
         cv2.imwrite(output_file, frame)
@@ -60,3 +85,7 @@ class HDMIUtils:
             self.cap.release()
         self.is_initialized = False
         print("Released HDMI capture resources")
+
+    def __del__(self):
+        """Cleanup resources on object destruction."""
+        self.release()
