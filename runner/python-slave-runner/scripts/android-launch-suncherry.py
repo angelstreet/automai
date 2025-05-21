@@ -144,7 +144,7 @@ def click_element(tag=None, text=None, resource_id=None, timeout=5):
     except Exception as e:
         print(f"Failed to click on element: {e}")
         capture_screenshot("click_error")
-        return False
+        raise Exception(f"Failed to click on element: {e}")
 
 def main():
     args = parse_arguments()
@@ -177,8 +177,8 @@ def main():
 
     try:
         # Unlock device
-        print("Unlocking device")
-        DRIVER.unlock()
+        #print("Unlocking device")
+        #DRIVER.unlock()
 
         print("Terminating app")
         DRIVER.terminate_app(PACKAGE)
