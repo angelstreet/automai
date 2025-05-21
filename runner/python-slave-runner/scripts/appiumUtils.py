@@ -109,14 +109,14 @@ def click_element(context, tag=None, text=None, resource_id=None, timeout=5):
                         element = context["driver"].find_element(AppiumBy.XPATH, f"//*[contains(@text, '{tag}')]")
                         status_parts.append("Found[partial-text]")
         elif text:
-            element = context["driver"].find_element(AppiumBy.XPATH, f"//*[@text='{text}']")
+            element = context["driver"].find_element(AppiumBy.NPATH, f"//*[@text='{text}']")
             status_parts.append("Found[exact-text]")
         elif resource_id:
             element = context["driver"].find_element(AppiumBy.ID, resource_id)
             status_parts.append("Found[resource-id]")
         else:
-        print("[@click] ERROR: At least one search criterion required")
-        return False
+            print("[@click] ERROR: At least one search criterion required")
+            return False
             
         # Get element properties in a compact format
         properties = []
