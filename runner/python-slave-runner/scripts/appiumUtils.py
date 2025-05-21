@@ -153,10 +153,10 @@ def click_element(context, tag=None, text=None, resource_id=None, timeout=5):
             
     except Exception as e:
         if status_parts:
-            status_parts.append(f"✗ Failed: {str(e)}")
+            status_parts.append(f"✗ Failed")
             print(f"[@click] {' → '.join(status_parts)}")
         else:
-            print(f"[@click] ✗ Failed: {str(e)}")
+            print(f"[@click] ✗ Failed")
         capture_screenshot(context, "click_error")
         raise Exception(f"Failed to click on element: {e}")
 
