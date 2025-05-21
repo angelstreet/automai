@@ -3,6 +3,7 @@
 import { Suspense } from 'react';
 
 import { Host } from '@/types/component/hostComponentType';
+
 import { RecVncPreview } from './RecVncPreview';
 
 interface RecVncPreviewGridProps {

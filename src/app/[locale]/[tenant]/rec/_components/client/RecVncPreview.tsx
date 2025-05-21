@@ -59,9 +59,6 @@ export function RecVncPreview({ host }: RecVncPreviewProps) {
         >
           <div className="p-3 text-xs text-white">
             <div className="font-bold">{host.name}</div>
-            <div className="opacity-70">
-              {host.ip}:{host.port || 5900}
-            </div>
           </div>
           <div className="absolute inset-0 flex items-center justify-center">
             <span className="text-gray-500 text-xs">Double-click to open fullscreen</span>
@@ -70,7 +67,9 @@ export function RecVncPreview({ host }: RecVncPreviewProps) {
       </div>
 
       <div className="absolute bottom-0 left-0 right-0 bg-gray-800 bg-opacity-80 text-white p-1 text-xs">
-        <div className="truncate font-semibold">{host.name}</div>
+        <div className="truncate font-semibold text-center">
+          {host.ip}:{host.port || 5900}
+        </div>
       </div>
     </div>
   );
