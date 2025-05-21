@@ -110,6 +110,32 @@ export function DeploymentTableClient({
   // Filter deployments whenever displayDeployments or active workspace changes
   useEffect(() => {
     const filterByWorkspace = async () => {
+      // First filter by search query
+      let filtered = displayDeployments;
+
+      // Apply search filter if search query exists
+      if (searchQuery && searchQuery.trim() !== '') {
+        console.log('[@component:DeploymentTableClient] Filtering by search query:', searchQuery);
+
+        const normalizedQuery = searchQuery.toLowerCase().trim();
+        filtered = filtered.filter(
+          (deployment) =>
+            deployment.name.toLowerCase().includes(normalizedQuery) ||
+            (deployment.description &&
+              deployment.description.toLowerCase().includes(normalizedQuery)),
+        );
+      }
+
+      // Apply status filter if not set to 'all'
+      if (filterStatus && filterStatus !== 'all') {
+        console.log('[@component:DeploymentTableClient] Filtering by status:', filterStatus);
+
+        filtered = filtered.filter(
+          (deployment) => deployment.status.toLowerCase() === filterStatus.toLowerCase(),
+        );
+      }
+
+      // Then filter by workspace if active
       if (activeWorkspace) {
         console.log(
           '[@component:DeploymentTableClient] Filtering by active workspace:',
@@ -117,12 +143,12 @@ export function DeploymentTableClient({
         );
 
         // Use bulk operation to fetch workspace mappings for all deployments at once
-        const deploymentIds = displayDeployments.map((deployment) => deployment.id);
+        const deploymentIds = filtered.map((deployment) => deployment.id);
         const result = await getBulkWorkspaceMappings('deployment', deploymentIds);
 
         if (result.success && result.data) {
           // Filter deployments to only those in the active workspace
-          const filtered = displayDeployments.filter((deployment) => {
+          filtered = filtered.filter((deployment) => {
             const workspaceIds = result.data[deployment.id] || [];
             return workspaceIds.includes(activeWorkspace);
           });
@@ -136,19 +162,19 @@ export function DeploymentTableClient({
             '[@component:DeploymentTableClient] Error fetching workspace mappings:',
             result.error,
           );
-          setFilteredDeployments(displayDeployments);
+          setFilteredDeployments(filtered);
         }
       } else {
-        // If no active workspace, show all deployments
-        setFilteredDeployments(displayDeployments);
+        // If no active workspace, use the filtered deployments
+        setFilteredDeployments(filtered);
         console.log(
-          `[@component:DeploymentTableClient] No active workspace, showing all ${displayDeployments.length} deployments`,
+          `[@component:DeploymentTableClient] No active workspace, showing filtered ${filtered.length} deployments`,
         );
       }
     };
 
     filterByWorkspace();
-  }, [displayDeployments, activeWorkspace]);
+  }, [displayDeployments, activeWorkspace, searchQuery, filterStatus]);
 
   // Functions to toggle dropdown visibility
   const toggleViewDropdown = (deploymentId: string, open: boolean) => {
