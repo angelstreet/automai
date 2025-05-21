@@ -23,8 +23,7 @@ class HDMIUtils:
         if not video_devices:
             print("Error: No video devices found in /dev/video*")
             return False
-        print(f"Available video devices: {video_devices}")
-
+        
         # Verify device_index exists
         device_path = f"/dev/video{self.device_index}"
         if device_path not in video_devices:
