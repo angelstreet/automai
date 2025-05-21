@@ -729,12 +729,12 @@ export const inviteTeamMemberByEmail = cache(
         // Get the invitation token
         const { id: invitationId, token } = invitationResult.data;
 
-        // Create a sign-up URL with the invitation token
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-        const signupUrl = `${baseUrl}/signup/invite/${token}`;
-
         // Get current tenant from the user
         const tenant = user.tenant_id || 'default';
+
+        // Create a sign-up URL with the invitation token
+        // Use hardcoded production URL instead of environment variables or localhost
+        const signupUrl = `https://automai-eta.vercel.app/en/${tenant}/signup/invite/${token}`;
 
         // Send password reset email using Supabase Auth
         // This will send a "magic link" email that the user can use to sign up

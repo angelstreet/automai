@@ -17,10 +17,17 @@ export async function POST(request: NextRequest, { params }: { params: { token: 
       return NextResponse.json({ error: 'Token is required' }, { status: 400 });
     }
 
+    // Allow passing email in request body for newly created accounts
+    // that might not have fully established session yet
+    const body = await request.json().catch(() => ({}));
+
     // Get the current user
     const user = await getUser();
-    if (!user) {
-      return NextResponse.json({ error: 'User not authenticated' }, { status: 401 });
+    if (!user && !body.email) {
+      return NextResponse.json(
+        { error: 'User not authenticated and no email provided' },
+        { status: 401 },
+      );
     }
 
     const cookieStore = cookies();
@@ -38,7 +45,8 @@ export async function POST(request: NextRequest, { params }: { params: { token: 
     const invitation = invitationResult.data;
 
     // Check if the user's email matches the invitation email
-    if (user.email.toLowerCase() !== invitation.email.toLowerCase()) {
+    const userEmail = user?.email || body.email;
+    if (!userEmail || userEmail.toLowerCase() !== invitation.email.toLowerCase()) {
       return NextResponse.json(
         { error: 'This invitation is for a different email address' },
         { status: 403 },
@@ -46,7 +54,7 @@ export async function POST(request: NextRequest, { params }: { params: { token: 
     }
 
     // Add the user to the team
-    const addResult = await addTeamMember(invitation.team_id, user.email, invitation.role);
+    const addResult = await addTeamMember(invitation.team_id, userEmail, invitation.role);
 
     if (!addResult.success) {
       return NextResponse.json(

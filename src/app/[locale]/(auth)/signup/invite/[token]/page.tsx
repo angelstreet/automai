@@ -35,8 +35,10 @@ export default function InviteSignUpPage() {
   React.useEffect(() => {
     const fetchInvitation = async () => {
       try {
+        // Use absolute URL to ensure it works in production
+        const baseUrl = window.location.origin;
         // Call our API to get invitation details
-        const response = await fetch(`/api/invitations/${token}`);
+        const response = await fetch(`${baseUrl}/api/invitations/${token}`);
 
         if (!response.ok) {
           throw new Error('Invalid or expired invitation');
@@ -109,11 +111,12 @@ export default function InviteSignUpPage() {
       }
 
       // Update invitation status to accepted
-      await fetch(`/api/invitations/${token}/accept`, {
+      await fetch(`${baseUrl}/api/invitations/${token}/accept`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ email }),
       });
 
       if (result.data?.session || result.data?.user) {
