@@ -93,7 +93,8 @@ def main():
         driver.activate_app(args.package)
         driver.implicitly_wait(2)
         screenshot_path = capture_screenshot(driver, args.trace_folder)
-        driver.implicitly_wait(10)
+        print("Waiting 20 seconds")
+        driver.implicitly_wait(20)
         screenshot_path = capture_screenshot(driver, args.trace_folder)
         print(f"Test Success: Sunrise TV app ({args.package}) launched successfully!")
         
