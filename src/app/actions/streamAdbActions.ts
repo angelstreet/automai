@@ -1,11 +1,15 @@
 'use server';
 
 import { getHostWithDecryptedCredentials } from '@/app/actions/hostsAction';
-import { SSHCommandOptions, connect, disconnect, executeCommand } from '@/lib/services/sshService';
+import {
+  SSHConnectionOptions,
+  createConnection,
+  closeConnection,
+  executeOnConnection,
+} from '@/lib/services/sshService';
 
-// Key mappings for ADB remote control - based on Android KeyEvent codes
-// Note: In server actions, only export async functions
-const ADB_KEY_MAPPINGS = {
+// Key names for ADB remote control
+const ADB_KEYS = {
   UP: 'KEYCODE_DPAD_UP',
   DOWN: 'KEYCODE_DPAD_DOWN',
   LEFT: 'KEYCODE_DPAD_LEFT',
@@ -21,17 +25,13 @@ const ADB_KEY_MAPPINGS = {
 } as const;
 
 // Type for keys
-export type AdbKeyType = keyof typeof ADB_KEY_MAPPINGS;
+export type AdbKeyType = keyof typeof ADB_KEYS;
 
 /**
- * Connect to host via SSH
+ * Connect to SSH and ADB device
  */
-export async function connectToHost(hostId: string) {
+export async function connectToHost(hostId: string, androidDeviceId: string) {
   try {
-    console.log(
-      `[@action:streamAdbActions:connectToHost] Starting SSH connection to host ${hostId}`,
-    );
-
     // Get host with decrypted credentials
     const hostResult = await getHostWithDecryptedCredentials(hostId);
     if (!hostResult.success || !hostResult.data) {
@@ -43,8 +43,8 @@ export async function connectToHost(hostId: string) {
       return { success: false, error: 'Host is missing username for SSH connection' };
     }
 
-    // Connect to host
-    const sshOptions = {
+    // Create SSH connection options
+    const sshOptions: SSHConnectionOptions = {
       host: host.ip,
       port: host.port || 22,
       username: host.user,
@@ -52,13 +52,34 @@ export async function connectToHost(hostId: string) {
       ...(host.auth_type === 'privateKey' && (host as any).privateKey
         ? { privateKey: (host as any).privateKey }
         : {}),
+      timeout: 10000,
     };
 
-    const result = await connect(sshOptions);
-    return {
-      success: result.success,
-      error: result.error,
-    };
+    // Create a persistent SSH connection
+    console.log(`[@action:streamAdbActions:connectToHost] Creating SSH connection to ${host.ip}`);
+    const connectionResult = await createConnection(hostId, sshOptions);
+    if (!connectionResult.success) {
+      return {
+        success: false,
+        error: connectionResult.error || 'Failed to establish SSH connection',
+      };
+    }
+
+    // Connect to ADB device
+    const adbCommand = `adb connect ${androidDeviceId}`;
+    console.log(`[@action:streamAdbActions:connectToHost] Running command: ${adbCommand}`);
+
+    const result = await executeOnConnection(hostId, adbCommand);
+    if (!result.success) {
+      // Close the connection if ADB connection fails
+      await closeConnection(hostId);
+      return { success: false, error: result.error || 'Failed to connect to ADB device' };
+    }
+
+    console.log(
+      `[@action:streamAdbActions:connectToHost] Successfully connected to device ${androidDeviceId}`,
+    );
+    return { success: true };
   } catch (error: any) {
     console.error(`[@action:streamAdbActions:connectToHost] ERROR: ${error.message}`);
     return { success: false, error: error.message };
@@ -71,32 +92,10 @@ export async function connectToHost(hostId: string) {
 export async function disconnectFromHost(hostId: string) {
   try {
     console.log(
-      `[@action:streamAdbActions:disconnectFromHost] Closing SSH connection to host ${hostId}`,
+      `[@action:streamAdbActions:disconnectFromHost] Closing SSH connection for host ${hostId}`,
     );
-
-    // Get host with decrypted credentials
-    const hostResult = await getHostWithDecryptedCredentials(hostId);
-    if (!hostResult.success || !hostResult.data) {
-      return { success: false, error: hostResult.error || 'Failed to get host credentials' };
-    }
-
-    const host = hostResult.data;
-    if (!host.user) {
-      return { success: false, error: 'Host is missing username for SSH connection' };
-    }
-
-    // Disconnect from host
-    const sshOptions = {
-      host: host.ip,
-      port: host.port || 22,
-      username: host.user,
-    };
-
-    const result = await disconnect(sshOptions);
-    return {
-      success: result.success,
-      error: result.error,
-    };
+    const result = await closeConnection(hostId);
+    return { success: result.success, error: result.error };
   } catch (error: any) {
     console.error(`[@action:streamAdbActions:disconnectFromHost] ERROR: ${error.message}`);
     return { success: false, error: error.message };
@@ -106,53 +105,34 @@ export async function disconnectFromHost(hostId: string) {
 /**
  * Execute an ADB key command via SSH
  */
-export async function executeAdbKeyCommand(hostId: string, deviceId: string, key: AdbKeyType) {
+export async function executeAdbKeyCommand(
+  hostId: string,
+  androidDeviceId: string,
+  key: AdbKeyType,
+) {
   try {
-    console.log(
-      `[@action:streamAdbActions:executeAdbKeyCommand] Starting SSH connection for key ${key} to device ${deviceId} on host ${hostId}`,
-    );
-
     // Get the KeyEvent code
-    const keyCode = ADB_KEY_MAPPINGS[key];
+    const keyCode = ADB_KEYS[key];
     if (!keyCode) {
       return { success: false, error: `Invalid key: ${key}` };
     }
 
-    // Get host with decrypted credentials
-    const hostResult = await getHostWithDecryptedCredentials(hostId);
-    if (!hostResult.success || !hostResult.data) {
-      return { success: false, error: hostResult.error || 'Failed to get host credentials' };
+    // Execute the key command on the existing SSH connection
+    const keyCommand = `adb -s ${androidDeviceId} shell input keyevent ${keyCode}`;
+    console.log(`[@action:streamAdbActions:executeAdbKeyCommand] Running command: ${keyCommand}`);
+
+    const result = await executeOnConnection(hostId, keyCommand);
+    if (!result.success) {
+      console.error(
+        `[@action:streamAdbActions:executeAdbKeyCommand] Failed to execute command: ${result.error}`,
+      );
+      return { success: false, error: result.error || 'Failed to send key command' };
     }
 
-    const host = hostResult.data;
-    if (!host.user) {
-      return { success: false, error: 'Host is missing username for SSH connection' };
-    }
-
-    // Build the command
-    const command = `adb -s ${deviceId} shell input keyevent ${keyCode}`;
-    console.log(`[@action:streamAdbActions:executeAdbKeyCommand] Executing command: ${command}`);
-
-    // Build SSH command options
-    const sshOptions: SSHCommandOptions = {
-      host: host.ip,
-      port: host.port || 22,
-      username: host.user,
-      ...(host.auth_type === 'password' && host.password ? { password: host.password } : {}),
-      ...(host.auth_type === 'privateKey' && (host as any).privateKey
-        ? { privateKey: (host as any).privateKey }
-        : {}),
-      command: command,
-      timeout: 5000,
-    };
-
-    // Execute the command using existing connection
-    const result = await executeCommand(sshOptions);
-    return {
-      success: result.success,
-      data: result.data,
-      error: result.error,
-    };
+    console.log(
+      `[@action:streamAdbActions:executeAdbKeyCommand] Successfully sent keyevent ${keyCode}`,
+    );
+    return { success: true };
   } catch (error: any) {
     console.error(`[@action:streamAdbActions:executeAdbKeyCommand] ERROR: ${error.message}`);
     return { success: false, error: error.message };

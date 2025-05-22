@@ -42,30 +42,49 @@ export function RecStreamModal({
   // Toggle remote control
   const toggleRemote = async () => {
     const newShowRemote = !showRemote;
-    setShowRemote(newShowRemote);
 
-    if (hostId) {
-      if (newShowRemote) {
-        // Connect when showing remote
-        const result = await connectToHost(hostId);
+    // If showing remote, connect to SSH and ADB
+    if (newShowRemote && hostId && deviceId) {
+      try {
+        console.log('[@component:RecStreamModal] Connecting to host and ADB...');
+        const result = await connectToHost(hostId, deviceId);
         if (!result.success) {
-          console.error('[@component:RecStreamModal] Failed to connect SSH:', result.error);
+          console.error('[@component:RecStreamModal] Failed to connect:', result.error);
+          // Don't show remote if connection failed
+          return;
         }
-      } else {
-        // Disconnect when hiding remote
+        console.log('[@component:RecStreamModal] Successfully connected to host');
+      } catch (error) {
+        console.error('[@component:RecStreamModal] Error connecting to host:', error);
+        return;
+      }
+    } else if (!newShowRemote && hostId) {
+      // If hiding remote, disconnect from SSH
+      try {
+        console.log('[@component:RecStreamModal] Disconnecting from host...');
         await disconnectFromHost(hostId);
+      } catch (error) {
+        console.error('[@component:RecStreamModal] Error disconnecting from host:', error);
       }
     }
+
+    // Update state after connection/disconnection
+    setShowRemote(newShowRemote);
   };
 
   // Handle modal close
-  const handleClose = useCallback(async () => {
-    // Disconnect SSH if remote was shown
+  const handleClose = useCallback(() => {
+    // Disconnect SSH when closing modal if remote is shown
     if (showRemote && hostId) {
-      await disconnectFromHost(hostId);
+      disconnectFromHost(hostId).catch((error) => {
+        console.error('[@component:RecStreamModal] Error disconnecting on close:', error);
+      });
     }
+
+    // Always hide remote when closing modal
+    setShowRemote(false);
     onClose();
-  }, [showRemote, hostId, onClose]);
+  }, [onClose, showRemote, hostId]);
 
   const setupHlsStream = async (url: string) => {
     try {
@@ -303,15 +322,6 @@ export function RecStreamModal({
       }
     };
   }, []);
-
-  // Cleanup on unmount or when modal closes
-  useEffect(() => {
-    return () => {
-      if (showRemote && hostId) {
-        disconnectFromHost(hostId);
-      }
-    };
-  }, [showRemote, hostId]);
 
   if (!isOpen) return null;
 
