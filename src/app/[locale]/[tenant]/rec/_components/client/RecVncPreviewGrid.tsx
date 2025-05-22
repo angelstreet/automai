@@ -49,7 +49,7 @@ export function RecVncPreviewGrid({ hosts, isLoading, error }: RecVncPreviewGrid
 
   // Device ID of the Android device - in a real application, this would be
   // fetched from a database or config. For this example, we're using a placeholder.
-  const androidDeviceId = '192.168.1.129:5555';
+  const androidDeviceId = '192.168.1.29:5555';
 
   // Handle opening the stream viewer modal
   const handleOpenStreamViewer = () => {

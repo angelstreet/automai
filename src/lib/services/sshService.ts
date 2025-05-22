@@ -32,69 +32,102 @@ export interface SSHCommandOptions extends SSHConnectionOptions {
   timeout?: number;
 }
 
-/**
- * Test an SSH connection
- */
-export async function testConnection(
-  options: SSHConnectionOptions,
-): Promise<StandardResponse<boolean>> {
-  try {
-    console.log(
-      `[@service:ssh:testConnection] Testing SSH connection to ${options.host}:${options.port || 22}`,
-    );
+// Store active SSH connections
+const activeConnections: Record<string, boolean> = {};
 
-    // In a real implementation, this would use an SSH library to test the connection
-    // Simulate connection test
-    if (!options.host || !options.username || (!options.password && !options.privateKey)) {
-      console.error(
-        `[@service:ssh:testConnection] Invalid connection parameters for ${options.host}`,
+/**
+ * Get connection key for a host
+ */
+function getConnectionKey(options: SSHConnectionOptions): string {
+  return `${options.username}@${options.host}:${options.port || 22}`;
+}
+
+/**
+ * Connect to SSH host and maintain connection
+ */
+export async function connect(options: SSHConnectionOptions): Promise<StandardResponse<boolean>> {
+  try {
+    const connectionKey = getConnectionKey(options);
+
+    // Check if already connected
+    if (activeConnections[connectionKey]) {
+      console.log(
+        `[@service:ssh:connect] Already connected to ${options.host}:${options.port || 22}`,
       );
-      return {
-        success: false,
-        error: 'Invalid connection parameters',
-      };
+      return { success: true, data: true };
     }
 
     console.log(
-      `[@service:ssh:testConnection] Connection test successful to ${options.host}:${options.port || 22}`,
+      `[@service:ssh:connect] Establishing persistent connection to ${options.host}:${options.port || 22}`,
     );
-    return {
-      success: true,
-      data: true,
-    };
+
+    // Validate connection params
+    if (!options.host || !options.username || (!options.password && !options.privateKey)) {
+      console.error(`[@service:ssh:connect] Invalid connection parameters for ${options.host}`);
+      return { success: false, error: 'Invalid connection parameters' };
+    }
+
+    // In real implementation, establish persistent connection here
+    activeConnections[connectionKey] = true;
+
+    console.log(
+      `[@service:ssh:connect] Successfully connected to ${options.host}:${options.port || 22}`,
+    );
+    return { success: true, data: true };
   } catch (error: any) {
-    console.error(
-      `[@service:ssh:testConnection] Connection failed to ${options.host}:${options.port || 22}: ${error.message}`,
-    );
-    return {
-      success: false,
-      error: error.message || 'Failed to test SSH connection',
-    };
+    console.error(`[@service:ssh:connect] Connection failed: ${error.message}`);
+    return { success: false, error: error.message };
   }
 }
 
 /**
- * Execute a command via SSH
+ * Disconnect from SSH host
+ */
+export async function disconnect(
+  options: SSHConnectionOptions,
+): Promise<StandardResponse<boolean>> {
+  try {
+    const connectionKey = getConnectionKey(options);
+
+    if (!activeConnections[connectionKey]) {
+      console.log(
+        `[@service:ssh:disconnect] No active connection to ${options.host}:${options.port || 22}`,
+      );
+      return { success: true, data: true };
+    }
+
+    console.log(
+      `[@service:ssh:disconnect] Closing connection to ${options.host}:${options.port || 22}`,
+    );
+
+    // In real implementation, close the connection here
+    delete activeConnections[connectionKey];
+
+    return { success: true, data: true };
+  } catch (error: any) {
+    console.error(`[@service:ssh:disconnect] Disconnect failed: ${error.message}`);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Execute a command on an existing SSH connection
  */
 export async function executeCommand(
   options: SSHCommandOptions,
 ): Promise<StandardResponse<SSHExecutionResult>> {
   try {
-    console.log(
-      `[@service:ssh:executeCommand] Connecting to ${options.host}:${options.port || 22} as ${options.username}`,
-    );
-    console.log(
-      `[@service:ssh:executeCommand] Using auth type: ${options.password ? 'password' : options.privateKey ? 'privateKey' : 'none'}`,
-    );
+    const connectionKey = getConnectionKey(options);
 
-    // In a real implementation, this would use an SSH library to execute the command
-    // Simulate command execution
+    // Check for active connection
+    if (!activeConnections[connectionKey]) {
+      console.error(`[@service:ssh:executeCommand] No active connection to ${options.host}`);
+      return { success: false, error: 'No active SSH connection' };
+    }
+
     if (!options.command) {
       console.error(`[@service:ssh:executeCommand] No command provided for ${options.host}`);
-      return {
-        success: false,
-        error: 'No command provided',
-      };
+      return { success: false, error: 'No command provided' };
     }
 
     console.log(
@@ -105,7 +138,6 @@ export async function executeCommand(
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     console.log(`[@service:ssh:executeCommand] Command executed successfully on ${options.host}`);
-    console.log(`[@service:ssh:executeCommand] Disconnecting from ${options.host}`);
 
     return {
       success: true,
@@ -116,11 +148,7 @@ export async function executeCommand(
       },
     };
   } catch (error: any) {
-    console.error(
-      `[@service:ssh:executeCommand] Command execution failed on ${options.host}: ${error.message}`,
-    );
-    console.log(`[@service:ssh:executeCommand] Disconnecting from ${options.host} after error`);
-
+    console.error(`[@service:ssh:executeCommand] Command execution failed: ${error.message}`);
     return {
       success: false,
       data: {
@@ -135,7 +163,8 @@ export async function executeCommand(
 
 // Export all SSH service functions
 const sshService = {
-  testConnection,
+  connect,
+  disconnect,
   executeCommand,
 };
 
