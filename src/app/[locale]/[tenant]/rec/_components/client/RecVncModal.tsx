@@ -40,6 +40,7 @@ export function RecVncModal({ host, isOpen, onClose }: RecVncModalProps) {
 
   // Get VNC connection details
   const vnc_port = host?.vnc_port;
+  const vnc_password = host?.vnc_password;
 
   // If VNC not configured
   if (!vnc_port) {
@@ -64,8 +65,27 @@ export function RecVncModal({ host, isOpen, onClose }: RecVncModalProps) {
     );
   }
 
-  // VNC URL format
-  const vncUrl = `http://${host.ip}:${vnc_port}/vnc.html?host=${host.ip}&port=${vnc_port}&path=websockify&encrypt=0`;
+  // VNC URL format with password param if available
+  const vncUrl = `http://${host.ip}:${vnc_port}/vnc.html?host=${host.ip}&port=${vnc_port}&path=websockify&encrypt=0${vnc_password ? `&password=${vnc_password}` : ''}`;
+
+  // Try to auto-login with JavaScript if password is available
+  const autoLoginScript = vnc_password
+    ? `
+    <script>
+      window.addEventListener('load', function() {
+        setTimeout(function() {
+          // Try to find password field and auto-submit
+          var passwordInput = document.querySelector('input[type="password"]');
+          if (passwordInput) {
+            passwordInput.value = "${vnc_password}";
+            var submitButton = document.querySelector('button[type="submit"]');
+            if (submitButton) submitButton.click();
+          }
+        }, 1000);
+      });
+    </script>
+  `
+    : '';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
@@ -99,9 +119,14 @@ export function RecVncModal({ host, isOpen, onClose }: RecVncModalProps) {
             src={vncUrl}
             className="w-full h-full"
             style={{ border: 'none' }}
-            sandbox="allow-scripts allow-same-origin"
+            sandbox="allow-scripts allow-same-origin allow-forms"
             onLoad={handleIframeLoad}
             title={`VNC Stream - ${host.name || host.ip}`}
+            srcDoc={
+              autoLoginScript
+                ? `<!DOCTYPE html><html><head>${autoLoginScript}</head><body><iframe src="${vncUrl}" style="width:100%;height:100%;border:none;"></iframe></body></html>`
+                : undefined
+            }
           />
         </div>
       </div>

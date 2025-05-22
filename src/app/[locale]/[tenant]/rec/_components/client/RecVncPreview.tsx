@@ -10,6 +10,7 @@ export function RecVncPreview({ host }: { host: Host }) {
 
   // Get VNC connection details
   const vnc_port = host?.vnc_port;
+  const vnc_password = host?.vnc_password;
 
   // Early return if VNC is not configured
   if (!vnc_port) {
@@ -21,8 +22,8 @@ export function RecVncPreview({ host }: { host: Host }) {
     );
   }
 
-  // VNC URL format - adding viewOnly=1 for preview mode
-  const vncUrl = `http://${host.ip}:${vnc_port}/vnc.html?host=${host.ip}&port=${vnc_port}&path=websockify&encrypt=0&view_only=1`;
+  // VNC URL format - adding viewOnly=1 for preview mode and password if available
+  const vncUrl = `http://${host.ip}:${vnc_port}/vnc.html?host=${host.ip}&port=${vnc_port}&path=websockify&encrypt=0&view_only=1${vnc_password ? `&password=${vnc_password}` : ''}`;
 
   // Handle iframe load
   const handleIframeLoad = () => {
@@ -59,7 +60,7 @@ export function RecVncPreview({ host }: { host: Host }) {
         src={vncUrl}
         className="w-full h-full"
         style={{ border: 'none' }}
-        sandbox="allow-scripts allow-same-origin"
+        sandbox="allow-scripts allow-same-origin allow-forms"
         onLoad={handleIframeLoad}
       />
 
