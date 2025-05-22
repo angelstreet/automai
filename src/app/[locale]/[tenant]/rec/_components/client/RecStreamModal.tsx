@@ -1,13 +1,15 @@
 'use client';
 
 import { X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+
+import { connectToHost, disconnectFromHost } from '@/app/actions/streamAdbActions';
 
 import { RecStreamAdbRemote } from './RecStreamAdbRemote';
 
 interface RecStreamModalProps {
   streamUrl: string;
-  title: string;
+  _title: string; // Prefix with _ to indicate intentionally unused
   isOpen: boolean;
   onClose: () => void;
   hostId?: string;
@@ -16,7 +18,7 @@ interface RecStreamModalProps {
 
 export function RecStreamModal({
   streamUrl,
-  title,
+  _title,
   isOpen,
   onClose,
   hostId,
@@ -38,9 +40,32 @@ export function RecStreamModal({
   }, [isDisconnected]);
 
   // Toggle remote control
-  const toggleRemote = () => {
-    setShowRemote((prev) => !prev);
+  const toggleRemote = async () => {
+    const newShowRemote = !showRemote;
+    setShowRemote(newShowRemote);
+
+    if (hostId) {
+      if (newShowRemote) {
+        // Connect when showing remote
+        const result = await connectToHost(hostId);
+        if (!result.success) {
+          console.error('[@component:RecStreamModal] Failed to connect SSH:', result.error);
+        }
+      } else {
+        // Disconnect when hiding remote
+        await disconnectFromHost(hostId);
+      }
+    }
   };
+
+  // Handle modal close
+  const handleClose = useCallback(async () => {
+    // Disconnect SSH if remote was shown
+    if (showRemote && hostId) {
+      await disconnectFromHost(hostId);
+    }
+    onClose();
+  }, [showRemote, hostId, onClose]);
 
   const setupHlsStream = async (url: string) => {
     try {
@@ -234,7 +259,7 @@ export function RecStreamModal({
     // Handle escape key press to close the modal
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        handleClose();
       }
     };
 
@@ -256,7 +281,7 @@ export function RecStreamModal({
         connectionCheckRef.current = null;
       }
     };
-  }, [isOpen, onClose, streamUrl]);
+  }, [isOpen, handleClose, streamUrl]);
 
   // Add ended event handler
   useEffect(() => {
@@ -278,6 +303,15 @@ export function RecStreamModal({
       }
     };
   }, []);
+
+  // Cleanup on unmount or when modal closes
+  useEffect(() => {
+    return () => {
+      if (showRemote && hostId) {
+        disconnectFromHost(hostId);
+      }
+    };
+  }, [showRemote, hostId]);
 
   if (!isOpen) return null;
 
@@ -302,7 +336,7 @@ export function RecStreamModal({
               </button>
             )}
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="text-gray-300 hover:text-white focus:outline-none"
               aria-label="Close"
             >
@@ -336,7 +370,7 @@ export function RecStreamModal({
                   </p>
                   <p>{error}</p>
                   <button
-                    onClick={onClose}
+                    onClick={handleClose}
                     className="mt-4 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
                   >
                     Close
