@@ -30,7 +30,12 @@ export function RecEventListener() {
   const [currentHost, setCurrentHost] = useState<Host | null>(null);
 
   const [isStreamModalOpen, setIsStreamModalOpen] = useState(false);
-  const [streamData, setStreamData] = useState<{ streamUrl: string; title: string } | null>(null);
+  const [streamData, setStreamData] = useState<{
+    streamUrl: string;
+    title: string;
+    hostId?: string;
+    deviceId?: string;
+  } | null>(null);
 
   useEffect(() => {
     console.log('[@component:RecEventListener] Initializing event listeners');
@@ -55,10 +60,10 @@ export function RecEventListener() {
 
     // Handler for opening stream viewer
     const handleOpenStreamViewer = (event: CustomEvent) => {
-      const { streamUrl, title } = event.detail;
+      const { streamUrl, title, hostId, deviceId } = event.detail;
       if (streamUrl) {
         console.log(`[@component:RecEventListener] Opening stream modal for: ${streamUrl}`);
-        setStreamData({ streamUrl, title });
+        setStreamData({ streamUrl, title, hostId, deviceId });
         setIsStreamModalOpen(true);
       } else {
         console.error('[@component:RecEventListener] Missing stream URL for stream viewer');
@@ -127,6 +132,8 @@ export function RecEventListener() {
           title={streamData.title}
           isOpen={isStreamModalOpen}
           onClose={handleCloseStreamModal}
+          hostId={streamData.hostId}
+          deviceId={streamData.deviceId}
         />
       )}
     </>

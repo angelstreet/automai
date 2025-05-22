@@ -3,10 +3,10 @@
 import { Suspense } from 'react';
 
 import { Host } from '@/types/component/hostComponentType';
-import { RecEvents } from './RecEventListener';
 
-import { RecVncPreview } from './RecVncPreview';
+import { RecEvents } from './RecEventListener';
 import { RecStreamPreview } from './RecStreamPreview';
+import { RecVncPreview } from './RecVncPreview';
 
 interface RecVncPreviewGridProps {
   hosts: Host[];
@@ -43,6 +43,14 @@ export function RecVncPreviewGrid({ hosts, isLoading, error }: RecVncPreviewGrid
   // Filter hosts that have VNC configured (have vnc_port)
   const vnc_hosts = hosts.filter((host) => host.vnc_port);
 
+  // Get stream host ID - in a real application, this would be the actual host ID
+  // that is running the stream server and has ADB access
+  const streamHostId = hosts.length > 0 ? hosts[0].id : undefined;
+
+  // Device ID of the Android device - in a real application, this would be
+  // fetched from a database or config. For this example, we're using a placeholder.
+  const androidDeviceId = '192.168.1.129:5555';
+
   // Handle opening the stream viewer modal
   const handleOpenStreamViewer = () => {
     // You can implement a custom event for handling the stream modal
@@ -51,7 +59,9 @@ export function RecVncPreviewGrid({ hosts, isLoading, error }: RecVncPreviewGrid
       new CustomEvent(RecEvents.OPEN_STREAM_VIEWER, {
         detail: {
           streamUrl: 'http://77.56.53.130:8081/stream/output.m3u8',
-          title: 'Live Camera Stream',
+          title: 'Live',
+          hostId: streamHostId,
+          deviceId: androidDeviceId,
         },
       }),
     );
@@ -63,7 +73,7 @@ export function RecVncPreviewGrid({ hosts, isLoading, error }: RecVncPreviewGrid
         {/* Hardcoded M3U8 stream preview */}
         <RecStreamPreview
           streamUrl="http://77.56.53.130:8081/stream/output.m3u8"
-          title="Live Camera Stream"
+          title="Live"
           onClick={handleOpenStreamViewer}
         />
 
@@ -82,7 +92,7 @@ export function RecVncPreviewGrid({ hosts, isLoading, error }: RecVncPreviewGrid
       {/* Hardcoded M3U8 stream preview */}
       <RecStreamPreview
         streamUrl="http://77.56.53.130:8081/stream/output.m3u8"
-        title="Live Camera Stream"
+        title="Live"
         onClick={handleOpenStreamViewer}
       />
 

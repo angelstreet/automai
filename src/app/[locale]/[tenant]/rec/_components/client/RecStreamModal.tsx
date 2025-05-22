@@ -3,18 +3,30 @@
 import { X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
+import { RecStreamAdbRemote } from './RecStreamAdbRemote';
+
 interface RecStreamModalProps {
   streamUrl: string;
   title: string;
   isOpen: boolean;
   onClose: () => void;
+  hostId?: string;
+  deviceId?: string;
 }
 
-export function RecStreamModal({ streamUrl, title, isOpen, onClose }: RecStreamModalProps) {
+export function RecStreamModal({
+  streamUrl,
+  title,
+  isOpen,
+  onClose,
+  hostId,
+  deviceId,
+}: RecStreamModalProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDisconnected, setIsDisconnected] = useState(false);
+  const [showRemote, setShowRemote] = useState(false);
   const connectionCheckRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const hlsRef = useRef<any>(null);
@@ -24,6 +36,11 @@ export function RecStreamModal({ streamUrl, title, isOpen, onClose }: RecStreamM
   useEffect(() => {
     isDisconnectedRef.current = isDisconnected;
   }, [isDisconnected]);
+
+  // Toggle remote control
+  const toggleRemote = () => {
+    setShowRemote((prev) => !prev);
+  };
 
   const setupHlsStream = async (url: string) => {
     try {
@@ -264,63 +281,88 @@ export function RecStreamModal({ streamUrl, title, isOpen, onClose }: RecStreamM
 
   if (!isOpen) return null;
 
+  // Check if we can show the ADB remote (need both hostId and deviceId)
+  const canShowRemote = !!hostId && !!deviceId;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90">
       <div className="w-[95vw] h-[90vh] bg-white dark:bg-gray-800 rounded-lg shadow-lg flex flex-col overflow-hidden">
         {/* Header */}
         <div className="p-2 bg-gray-800 text-white flex justify-between items-center rounded-t-lg">
           <h2 className="text-lg font-medium">
-            {title} - {isDisconnected ? 'Stream Disconnected' : 'Live Stream'}
+            {isDisconnected ? 'Stream Disconnected' : 'Live Stream'}
           </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-300 hover:text-white focus:outline-none"
-            aria-label="Close"
-          >
-            <X size={24} />
-          </button>
+          <div className="flex items-center space-x-2">
+            {canShowRemote && (
+              <button
+                onClick={toggleRemote}
+                className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                {showRemote ? 'Hide Remote' : 'Show Remote'}
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="text-gray-300 hover:text-white focus:outline-none"
+              aria-label="Close"
+            >
+              <X size={24} />
+            </button>
+          </div>
         </div>
 
-        {/* Stream Viewer */}
-        <div className="flex-1 relative overflow-hidden bg-black">
-          {/* Loading state */}
-          {isLoading && !error && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800 z-10">
-              <div className="flex flex-col items-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-                <span className="mt-2 text-gray-500">Connecting to stream...</span>
+        {/* Main Content */}
+        <div className="flex-1 flex overflow-hidden bg-black">
+          {/* Stream Viewer */}
+          <div
+            className={`relative ${showRemote && canShowRemote ? 'w-3/4' : 'w-full'} overflow-hidden`}
+          >
+            {/* Loading state */}
+            {isLoading && !error && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800 z-10">
+                <div className="flex flex-col items-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                  <span className="mt-2 text-gray-500">Connecting to stream...</span>
+                </div>
               </div>
+            )}
+
+            {/* Error state - only show persistent errors */}
+            {(error || isDisconnected) && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800 z-10">
+                <div className="text-red-500 text-center p-4">
+                  <p className="font-medium">
+                    {isDisconnected ? 'Stream Disconnected' : 'Stream Error'}
+                  </p>
+                  <p>{error}</p>
+                  <button
+                    onClick={onClose}
+                    className="mt-4 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Video Stream */}
+            <video
+              ref={videoRef}
+              className="w-full h-full"
+              playsInline
+              autoPlay
+              muted
+              disablePictureInPicture
+              style={{ backgroundColor: 'black' }}
+            />
+          </div>
+
+          {/* Remote Control Panel - Show only if we have required props and user toggled it on */}
+          {showRemote && canShowRemote && (
+            <div className="w-1/4 bg-gray-100 dark:bg-gray-900 border-l border-gray-300 dark:border-gray-700 p-4 overflow-y-auto flex flex-col items-center justify-center">
+              <RecStreamAdbRemote hostId={hostId!} deviceId={deviceId!} />
             </div>
           )}
-
-          {/* Error state - only show persistent errors */}
-          {(error || isDisconnected) && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800 z-10">
-              <div className="text-red-500 text-center p-4">
-                <p className="font-medium">
-                  {isDisconnected ? 'Stream Disconnected' : 'Stream Error'}
-                </p>
-                <p>{error}</p>
-                <button
-                  onClick={onClose}
-                  className="mt-4 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Video Stream */}
-          <video
-            ref={videoRef}
-            className="w-full h-full"
-            playsInline
-            autoPlay
-            muted
-            disablePictureInPicture
-            style={{ backgroundColor: 'black' }}
-          />
         </div>
       </div>
     </div>
