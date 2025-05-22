@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import { Host } from '@/types/component/hostComponentType';
+
 import { RecEvents } from './RecEventListener';
 
 export function RecVncPreview({ host }: { host: Host }) {
@@ -64,8 +65,11 @@ export function RecVncPreview({ host }: { host: Host }) {
         onLoad={handleIframeLoad}
       />
 
+      {/* Transparent overlay to capture clicks */}
+      <div className="absolute inset-0 z-10" aria-hidden="true" />
+
       {/* Host info footer */}
-      <div className="absolute bottom-0 left-0 right-0 bg-gray-800 bg-opacity-80 text-white p-1 text-xs">
+      <div className="absolute bottom-0 left-0 right-0 bg-gray-800 bg-opacity-80 text-white p-1 text-xs z-20">
         <div className="flex justify-between items-center">
           <span>{host.name || host.ip}</span>
           <span>
