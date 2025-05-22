@@ -26,7 +26,7 @@ import psutil
 # Load environment variables from .env file
 load_dotenv()
 
-app = Flask(__name__, static_folder='/noVNC')
+app = Flask(__name__)
 sock = Sock(app)
 
 # Initialize Supabase client
@@ -43,8 +43,6 @@ else:
     supabase_client = None
     print("[app] Warning: Supabase credentials not found. Database updates will not be performed.", file=sys.stderr)
 
-# Add a boolean flag to toggle streaming functionality
-ENABLE_STREAMING =  False  # Set to True to enable VNC and websockify streaming
 
 @sock.route('/ws/<session_id>')
 async def stream(ws, session_id):
@@ -126,132 +124,6 @@ async def execute_script():
     stderr_data = ''
     result = {}
 
-    # Clean up any existing VNC configurations or lock files only if streaming is enabled
-    if ENABLE_STREAMING:
-        import shutil
-        vnc_home = os.path.expanduser("~root/.vnc")
-        if os.path.exists(vnc_home):
-            shutil.rmtree(vnc_home, ignore_errors=True)
-            print(f"[execute_script] Cleaned up existing VNC configuration at {vnc_home}", file=sys.stderr)
-        else:
-            print(f"[execute_script] No existing VNC configuration found at {vnc_home}", file=sys.stderr)
-
-    # Create VNC directory and setup only if streaming is enabled
-    if ENABLE_STREAMING:
-        os.makedirs("/root/.vnc", exist_ok=True)
-
-        # Create a simple xstartup file
-        xstartup_file = "/root/.vnc/xstartup"
-        with open(xstartup_file, "w") as f:
-            f.write("#!/bin/sh\nxterm &\nsleep infinity\n")
-        os.chmod(xstartup_file, 0o755)
-
-        # Set session_id as VNC password (ensure it's at least 6 characters)
-        vnc_password = session_id
-        if len(vnc_password) < 6:
-            vnc_password = session_id + "123456"[:6-len(session_id)]
-        print(f"[execute_script] Setting VNC password with length {len(vnc_password)}", file=sys.stderr)
-
-        # Create password file using vncpasswd
-        with open('/tmp/vnc_pwd', 'w') as f:
-            f.write(f"{vnc_password}\n{vnc_password}\n")
-
-        try:
-            # Use vncpasswd with input redirection
-            subprocess.run('cat /tmp/vnc_pwd | vncpasswd', shell=True, check=True)
-            os.remove('/tmp/vnc_pwd')  # Remove the temporary password file
-            print(f"[execute_script] VNC password set successfully to /root/.vnc/passwd", file=sys.stderr)
-        except Exception as e:
-            print(f"[execute_script] Error setting VNC password: {str(e)}", file=sys.stderr)
-
-    # Start VNC server with session_id as password only if streaming is enabled
-    if ENABLE_STREAMING:
-        vnc_env = os.environ.copy()
-        vnc_env['USER'] = 'root'  # Set USER to root for VNC server
-
-        # Start VNC server directly
-        vnc_cmd = ['vncserver', ':1', '-geometry', '1280x720', '-depth', '16', '-viewonly']
-        print(f"[execute_script] Starting VNC server with command: {vnc_cmd}", file=sys.stderr)
-        vnc_process = subprocess.Popen(vnc_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=vnc_env)
-        vnc_process.wait()
-        vnc_stdout, vnc_stderr = vnc_process.communicate()
-        print(f"[execute_script] Started VNC server for session {session_id}", file=sys.stderr)
-        print(f"[execute_script] VNC server stdout: {vnc_stdout}", file=sys.stderr)
-        print(f"[execute_script] VNC server stderr: {vnc_stderr}", file=sys.stderr)
-        print(f"[execute_script] VNC server return code: {vnc_process.returncode}", file=sys.stderr)
-
-        # Check if VNC server is running
-        try:
-            vnc_check = subprocess.run(['ps', 'aux'], capture_output=True, text=True)
-            if ':1' in vnc_check.stdout:
-                print(f"[execute_script] VNC server confirmed running on display :1", file=sys.stderr)
-            else:
-                print(f"[execute_script] WARNING: VNC server not found running on display :1", file=sys.stderr)
-        except Exception as e:
-            print(f"[execute_script] Error checking VNC server status: {str(e)}", file=sys.stderr)
-
-        # Start websockify for noVNC, targeting VNC server on display :1 (port 5901)
-        websockify_process = subprocess.Popen(['websockify', '6080', 'localhost:5901'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        print(f"[execute_script] Started websockify for VNC streaming on port 6080 with PID {websockify_process.pid}", file=sys.stderr)
-        
-        # Check if websockify is running and test connectivity to VNC server
-        try:
-            time.sleep(1)  # Give it a moment to start
-            if websockify_process.poll() is None:
-                print(f"[execute_script] websockify confirmed running with PID {websockify_process.pid}", file=sys.stderr)
-                try:
-                    import socket
-                    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    s.settimeout(2)
-                    result = s.connect_ex(('localhost', 5901))
-                    if result == 0:
-                        print(f"[execute_script] Success: websockify can connect to VNC server at localhost:5901", file=sys.stderr)
-                    else:
-                        print(f"[execute_script] WARNING: websockify cannot connect to VNC server at localhost:5901, error code: {result}", file=sys.stderr)
-                    s.close()
-                except Exception as conn_err:
-                    print(f"[execute_script] Error testing connectivity to VNC server: {str(conn_err)}", file=sys.stderr)
-            else:
-                print(f"[execute_script] WARNING: websockify terminated unexpectedly", file=sys.stderr)
-                websockify_stdout, websockify_stderr = websockify_process.communicate()
-                print(f"[execute_script] websockify stdout: {websockify_stdout}", file=sys.stderr)
-                print(f"[execute_script] websockify stderr: {websockify_stderr}", file=sys.stderr)
-        except Exception as e:
-            print(f"[execute_script] Error checking websockify status: {str(e)}", file=sys.stderr)
-    else:
-        print(f"[execute_script] Streaming is disabled (ENABLE_STREAMING=False)", file=sys.stderr)
-        websockify_process = None
-
-    # Generate WebSocket URL and VNC streaming URL only if streaming is enabled
-    if ENABLE_STREAMING:
-        websocket_url = f"ws://{request.host}/ws/{session_id}"
-        vnc_stream_url = f"http://{request.host}/vnc.html?host={request.host.split(':')[0]}&port=6080&password={session_id}&view_only=1&autoconnect=1&resize=scale"
-        print(f"[execute_script] Generated WebSocket URL: {websocket_url}", file=sys.stderr)
-        print(f"[execute_script] Generated VNC Stream URL: {vnc_stream_url}", file=sys.stderr)
-    else:
-        websocket_url = ""
-        vnc_stream_url = ""
-        print(f"[execute_script] Streaming URLs not generated as streaming is disabled", file=sys.stderr)
-
-    # Update Supabase with streaming information only if streaming is enabled
-    if supabase_client and ENABLE_STREAMING:
-        try:
-            response = supabase_client.table('scripts_run').update({
-                'session': {
-                    'session_id': session_id,
-                    'websocket_url': websocket_url,
-                    'vnc_stream_url': vnc_stream_url,
-                    'session_url': '',
-                    'stream_status': 'start'
-                }
-            }).eq('id', script_id).execute()
-            if response.data:
-                print(f"[execute_script] Updated Supabase with streaming info for script {script_id} with status 'start'", file=sys.stderr)
-            else:
-                print(f"[execute_script] Failed to update Supabase for script {script_id}: {response.error}", file=sys.stderr)
-        except Exception as e:
-            print(f"[execute_script] Error updating Supabase for script {script_id}: {str(e)}", file=sys.stderr)
-
     # Parse parameters into a list
     param_list = parameters.split() if parameters else []
     print(f"[execute_script] Parameters for script execution: {param_list}", file=sys.stderr)
@@ -269,24 +141,6 @@ async def execute_script():
         print(f"[execute_script] Executing script: {script_path} for job {job_id}, script_id {script_id}", file=sys.stderr)
         print(f"[execute_script] Memory usage before execution: {psutil.Process().memory_info().rss / 1024 / 1024:.2f} MB", file=sys.stderr)
         # Update stream status to 'streaming' only if streaming is enabled
-        if supabase_client and ENABLE_STREAMING:
-            try:
-                response = supabase_client.table('scripts_run').update({
-                    'session': {
-                        'session_id': session_id,
-                        'websocket_url': websocket_url,
-                        'vnc_stream_url': vnc_stream_url,
-                        'session_url': '',
-                        'stream_status': 'streaming'
-                    }
-                }).eq('id', script_id).execute()
-                if response.data:
-                    print(f"[execute_script] Updated Supabase with streaming status 'streaming' for script {script_id}", file=sys.stderr)
-                else:
-                    print(f"[execute_script] Failed to update Supabase streaming status for script {script_id}: {response.error}", file=sys.stderr)
-            except Exception as e:
-                print(f"[execute_script] Error updating Supabase streaming status for script {script_id}: {str(e)}", file=sys.stderr)
-
         process = subprocess.run(
             command,
             shell=False,
@@ -325,66 +179,6 @@ async def execute_script():
         with open(os.path.join(script_folder_path, 'stderr.txt'), 'w') as f:
             f.write(stderr_data)
     finally:
-        # Update stream status to 'complete' only if streaming is enabled
-        if supabase_client and ENABLE_STREAMING:
-            try:
-                response = supabase_client.table('scripts_run').update({
-                    'session': {
-                        'session_id': session_id,
-                        'websocket_url': websocket_url,
-                        'vnc_stream_url': vnc_stream_url,
-                        'session_url': '',
-                        'stream_status': 'complete'
-                    }
-                }).eq('id', script_id).execute()
-                if response.data:
-                    print(f"[execute_script] Updated Supabase with streaming status 'complete' for script {script_id}", file=sys.stderr)
-                else:
-                    print(f"[execute_script] Failed to update Supabase streaming status for script {script_id}: {response.error}", file=sys.stderr)
-            except Exception as e:
-                print(f"[execute_script] Error updating Supabase streaming status for script {script_id}: {str(e)}", file=sys.stderr)
-        
-        # Stop VNC server and websockify processes only if streaming is enabled
-        if ENABLE_STREAMING:
-            try:
-                print(f"[execute_script] Stopping VNC server and websockify processes", file=sys.stderr)
-                if websockify_process and websockify_process.poll() is None:
-                    websockify_process.terminate()
-                    try:
-                        websockify_process.wait(timeout=5)
-                        print(f"[execute_script] Websockify process terminated", file=sys.stderr)
-                    except subprocess.TimeoutExpired:
-                        websockify_process.kill()
-                        print(f"[execute_script] Websockify process killed after timeout", file=sys.stderr)
-                
-                try:
-                    vnc_env = os.environ.copy()
-                    vnc_env['USER'] = 'root'  # Set USER to root for VNC server
-                    subprocess.run(['vncserver', '-kill', ':1'], check=True, capture_output=True, text=True, env=vnc_env)
-                    print(f"[execute_script] VNC server stopped", file=sys.stderr)
-                except subprocess.CalledProcessError as e:
-                    print(f"[execute_script] Failed to stop VNC server: {e.stderr}", file=sys.stderr)
-                
-                try:
-                    subprocess.run(['pkill', '-f', 'Xtightvnc'], check=False)
-                    subprocess.run(['pkill', '-f', 'websockify'], check=False)
-                    print(f"[execute_script] Forcefully killed any Remaining VNC processes", file=sys.stderr)
-                except Exception as e:
-                    print(f"[execute_script] Error during force kill: {str(e)}", file=sys.stderr)
-                
-                vnc_dir = '/root/.vnc'
-                if os.path.exists(vnc_dir):
-                    for vnc_file in ['passwd', 'xstartup', f':1.log', f':1.pid']:
-                        file_path = os.path.join(vnc_dir, vnc_file)
-                        if os.path.exists(file_path):
-                            try:
-                                os.remove(file_path)
-                                print(f"[execute_script] Removed VNC temp file: {file_path}", file=sys.stderr)
-                            except Exception as e:
-                                print(f"[execute_script] Failed to remove VNC temp file {file_path}: {str(e)}", file=sys.stderr)
-            except Exception as e:
-                print(f"[execute_script] Error while stopping VNC server and processes: {str(e)}", file=sys.stderr)
-
         # Garbage collection
         gc.collect()
         print(f"[execute_script] Ran garbage collection", file=sys.stderr)
@@ -420,7 +214,6 @@ async def execute_script():
     # Add WebSocket URL and VNC streaming URL to response only if streaming is enabled
     response_data = {
         'status': status,
-        'sessionId': session_id,
         'stdout': stdout_data,
         'stderr': stderr_data,
         'start_time': start_time_iso,
@@ -429,11 +222,6 @@ async def execute_script():
         'job_id': job_id,
         'script_id': script_id
     }
-    if ENABLE_STREAMING:
-        response_data.update({
-            'websocketUrl': websocket_url,
-            'vncStreamUrl': vnc_stream_url
-        })
     return jsonify(response_data)
 
 @app.route('/initialize_job', methods=['POST'])
@@ -602,10 +390,6 @@ def finalize_job():
 @app.route('/healthz', methods=['GET'])
 def health_check():
     return jsonify({'status': 'healthy'}), 200
-
-@app.route('/vnc.html', methods=['GET'])
-def serve_vnc_html():
-    return send_from_directory('/noVNC', 'vnc.html')
 
 @app.route('/<path:path>', methods=['GET'])
 def serve_vnc_files(path):

@@ -45,7 +45,7 @@ def build_script_report_html_content(script_name, script_id, job_id, script_path
     associated_files_html = ""
     if associated_files:
         # Filter files to exclude stdout.txt, stderr.txt, and script_report.html
-        excluded_filenames = {'stdout.txt', 'stderr.txt', 'script_report.html', 'metadata.json', 'vncpasswd'}
+        excluded_filenames = {'stdout.txt', 'stderr.txt', 'script_report.html', 'metadata.json'}
         allowed_extensions = {'.png', '.jpg', '.jpeg', '.trace', '.txt', '.webm', '.mp4', '.zip', '.py'}
         script_files = [file for file in associated_files 
                         if script_id in file.get('relative_path', '') 

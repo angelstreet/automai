@@ -32,8 +32,6 @@ RUN apt-get update && apt-get install -y \
     xvfb \
     git \
     iputils-ping \
-    tightvncserver \
-    websockify \
     wget \
     libnss3 \
     libatk-bridge2.0-0 \
@@ -55,22 +53,15 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install noVNC
-RUN wget https://github.com/novnc/noVNC/archive/refs/tags/v1.4.0.tar.gz && \
-    tar -xzf v1.4.0.tar.gz && mv noVNC-1.4.0 /noVNC
-
 # Install Playwright dependencies and Chromium
 RUN playwright install-deps \
     && playwright install chromium
 
-# Create VNC directory with appropriate permissions
-RUN mkdir -p /root/.vnc && chmod 700 /root/.vnc
-
 # Copy application code
 COPY . .
 
-# Expose ports for Flask and VNC streaming
-EXPOSE 10000 6080
+# Expose ports for Flask
+EXPOSE 10000 
 
 # Run Flask app with Xvfb, binding to Render's PORT
 CMD ["sh", "-c", "xvfb-run --auto-servernum --server-args='-screen 0 1280x720x16' python app_playwright.py --debug --port $PORT"]
