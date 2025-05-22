@@ -38,11 +38,14 @@ export function RecVncPreviewGrid({ hosts, isLoading, error }: RecVncPreviewGrid
     );
   }
 
-  if (hosts.length === 0) {
+  // Filter hosts that have VNC configured (have vnc_port)
+  const vnc_hosts = hosts.filter((host) => host.vnc_port);
+
+  if (vnc_hosts.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 p-4 rounded-md text-yellow-800 dark:text-yellow-200">
-          <p className="font-medium">No hosts found</p>
+          <p className="font-medium">No hosts with VNC found</p>
           <p className="text-sm">Add hosts with VNC connectivity to see them here.</p>
         </div>
       </div>
@@ -51,7 +54,7 @@ export function RecVncPreviewGrid({ hosts, isLoading, error }: RecVncPreviewGrid
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-      {hosts.map((host) => (
+      {vnc_hosts.map((host) => (
         <Suspense key={host.id} fallback={<RecVncPreviewSkeleton />}>
           <RecVncPreview host={host} />
         </Suspense>

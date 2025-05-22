@@ -35,6 +35,10 @@ export interface Host {
   auth_type?: 'password' | 'privateKey'; // Authentication method
   private_key?: string; // SSH private key
 
+  // VNC specific fields
+  vnc_port?: string | number;
+  vnc_password?: string;
+
   // Status fields
   status: HostStatus;
 

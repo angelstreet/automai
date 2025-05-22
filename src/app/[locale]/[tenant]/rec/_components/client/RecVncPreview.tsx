@@ -1,172 +1,76 @@
 'use client';
 
-import { useParams } from 'next/navigation';
-import { useEffect, useState, useRef } from 'react';
+import { useState } from 'react';
 
-interface HostProps {
-  id: string;
-  ip: string;
-  vnc_port: string | number;
-  vnc_password: string;
-}
+import { Host } from '@/types/component/hostComponentType';
+import { RecEvents } from './RecEventListener';
 
-interface MessageEvent {
-  data: any;
-}
+export function RecVncPreview({ host }: { host: Host }) {
+  const [isLoading, setIsLoading] = useState(true);
 
-export function RecVncPreview({ host }: { host: HostProps }) {
+  // Get VNC connection details
   const vnc_port = host?.vnc_port;
-  const vnc_password = host?.vnc_password;
 
-  if (!vnc_port || !vnc_password) {
-    console.log('[@component:RecVncPreview] Missing VNC fields');
-    return null;
+  // Early return if VNC is not configured
+  if (!vnc_port) {
+    console.log('[@component:RecVncPreview] Missing VNC fields for host:', host.name);
+    return (
+      <div className="flex items-center justify-center h-40 bg-gray-100 dark:bg-gray-800 rounded-md">
+        <p className="text-sm text-gray-500">VNC not configured</p>
+      </div>
+    );
   }
 
-  const params = useParams();
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
-  const [errorReason, setErrorReason] = useState('');
-  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  // VNC URL format - adding viewOnly=1 for preview mode
+  const vncUrl = `http://${host.ip}:${vnc_port}/vnc.html?host=${host.ip}&port=${vnc_port}&path=websockify&encrypt=0&view_only=1`;
 
-  useEffect(() => {
-    const fetchVncPage = async () => {
-      try {
-        const response = await fetch('/api/vnc-page', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            host: host.ip,
-            port: vnc_port,
-            password: vnc_password,
-            viewOnly: true,
-          }),
-        });
-        const html = await response.text();
-        if (iframeRef.current) {
-          iframeRef.current.srcdoc = html;
-        }
-      } catch (error) {
-        console.error('[@component:RecVncPreview] Failed to load VNC page:', error);
-        setHasError(true);
-        setErrorReason('Failed to load VNC page');
-        setIsLoading(false);
-      }
-    };
-
-    fetchVncPage();
-  }, [host.ip, vnc_port, vnc_password]);
-
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type === 'debug') {
-        console.log('[VNC] Debug:', event.data.message);
-        if (event.data.message.includes('ERROR')) {
-          setErrorReason(event.data.message.replace('ERROR:', '').trim());
-        }
-        return;
-      }
-
-      switch (event.data) {
-        case 'connected':
-          setIsLoading(false);
-          setHasError(false);
-          break;
-        case 'disconnected':
-        case 'auth-failed':
-        case 'error':
-          setIsLoading(false);
-          setHasError(true);
-          setErrorReason(
-            event.data === 'auth-failed' ? 'Authentication failed' : 'Connection error',
-          );
-          break;
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, []);
-
-  const handleReload = () => {
-    setIsLoading(true);
-    setHasError(false);
-    setErrorReason('');
-    fetch('/api/vnc-page', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        host: host.ip,
-        port: vnc_port,
-        password: vnc_password,
-        viewOnly: true,
-      }),
-    })
-      .then((res) => res.text())
-      .then((html) => {
-        if (iframeRef.current) {
-          iframeRef.current.srcdoc = html;
-        }
-      });
+  // Handle iframe load
+  const handleIframeLoad = () => {
+    setIsLoading(false);
   };
 
-  const handleDoubleClick = () => {
-    const locale = params.locale;
-    const tenant = params.tenant;
-    if (locale && tenant) {
-      window.open(`/${locale}/${tenant}/rec/vnc-viewer/${host.id}`, '_blank');
-    }
+  // Handle opening the modal via event system
+  const handleOpenViewer = () => {
+    window.dispatchEvent(
+      new CustomEvent(RecEvents.OPEN_VNC_VIEWER, {
+        detail: { host },
+      }),
+    );
   };
 
   return (
     <div
       className="relative overflow-hidden rounded-md border border-gray-200 dark:border-gray-700 hover:border-blue-500 transition-colors cursor-pointer"
       style={{ height: '160px' }}
-      onDoubleClick={handleDoubleClick}
+      onClick={handleOpenViewer}
     >
-      <button
-        className="absolute top-0 right-0 z-10 bg-black p-1 text-white text-xs opacity-30 hover:opacity-100"
-        onClick={handleReload}
-      >
-        Reload
-      </button>
-
-      <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
-        {isLoading && (
+      {/* Loading state */}
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800 z-10">
           <div className="flex flex-col items-center">
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-            <span className="mt-2 text-xs text-gray-500">Loading...</span>
+            <span className="mt-2 text-xs text-gray-500">Connecting...</span>
           </div>
-        )}
+        </div>
+      )}
 
-        {hasError && (
-          <div className="flex flex-col items-center p-4 text-center">
-            <span className="text-red-500 text-sm">Connection Error</span>
-            <span className="text-xs text-gray-500 mt-1">
-              {host.ip}:{vnc_port}
-            </span>
-            {errorReason && <span className="text-xs text-red-400 mt-1">{errorReason}</span>}
-            <button
-              className="text-xs mt-2 px-2 py-1 bg-blue-500 text-white rounded"
-              onClick={handleReload}
-            >
-              Retry
-            </button>
-          </div>
-        )}
+      {/* VNC Stream */}
+      <iframe
+        src={vncUrl}
+        className="w-full h-full"
+        style={{ border: 'none' }}
+        sandbox="allow-scripts allow-same-origin"
+        onLoad={handleIframeLoad}
+      />
 
-        {!isLoading && !hasError && (
-          <iframe
-            ref={iframeRef}
-            className="absolute inset-0 w-full h-full"
-            style={{ pointerEvents: 'none' }}
-            sandbox="allow-scripts"
-          />
-        )}
-      </div>
-
-      <div className="absolute bottom-0 left-0 right-0 bg-gray-800 bg-opacity-80 text-white p-1 text-xs text-center">
-        {host.ip}:{vnc_port}
+      {/* Host info footer */}
+      <div className="absolute bottom-0 left-0 right-0 bg-gray-800 bg-opacity-80 text-white p-1 text-xs">
+        <div className="flex justify-between items-center">
+          <span>{host.name || host.ip}</span>
+          <span>
+            {host.ip}:{vnc_port}
+          </span>
+        </div>
       </div>
     </div>
   );
