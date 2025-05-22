@@ -15,27 +15,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 
-import { executeAdbKeyCommand } from '@/app/actions/streamAdbActions';
-
-// Key mappings for ADB remote control - must match server-side definitions
-// This is a client-side duplicate of the mappings in streamAdbActions.ts
-const ADB_KEY_MAPPINGS = {
-  UP: 'KEYCODE_DPAD_UP',
-  DOWN: 'KEYCODE_DPAD_DOWN',
-  LEFT: 'KEYCODE_DPAD_LEFT',
-  RIGHT: 'KEYCODE_DPAD_RIGHT',
-  SELECT: 'KEYCODE_DPAD_CENTER',
-  BACK: 'KEYCODE_BACK',
-  HOME: 'KEYCODE_HOME',
-  MENU: 'KEYCODE_MENU',
-  VOLUME_UP: 'KEYCODE_VOLUME_UP',
-  VOLUME_DOWN: 'KEYCODE_VOLUME_DOWN',
-  VOLUME_MUTE: 'KEYCODE_VOLUME_MUTE',
-  POWER: 'KEYCODE_POWER',
-} as const;
-
-// Type for keys
-type AdbKeyType = keyof typeof ADB_KEY_MAPPINGS;
+import { AdbKeyType, executeAdbKeyCommand } from '@/app/actions/streamAdbActions';
 
 interface RecStreamAdbRemoteProps {
   hostId: string;

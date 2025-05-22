@@ -1,5 +1,6 @@
 'use server';
 
+import { getHostWithDecryptedCredentials } from '@/app/actions/hostsAction';
 import { SSHCommandOptions, executeCommand } from '@/lib/services/sshService';
 
 // Key mappings for ADB remote control - based on Android KeyEvent codes
@@ -20,16 +21,15 @@ const ADB_KEY_MAPPINGS = {
 } as const;
 
 // Type for keys
-type AdbKeyType = keyof typeof ADB_KEY_MAPPINGS;
+export type AdbKeyType = keyof typeof ADB_KEY_MAPPINGS;
 
 /**
  * Execute an ADB key command via SSH
- * For testing, using hardcoded host data
  */
-export async function executeAdbKeyCommand(_hostId: string, deviceId: string, key: AdbKeyType) {
+export async function executeAdbKeyCommand(hostId: string, deviceId: string, key: AdbKeyType) {
   try {
     console.log(
-      `[@action:streamAdbActions:executeAdbKeyCommand] Sending key ${key} to device ${deviceId}`,
+      `[@action:streamAdbActions:executeAdbKeyCommand] Sending key ${key} to device ${deviceId} on host ${hostId}`,
     );
 
     // Get the KeyEvent code
@@ -38,24 +38,26 @@ export async function executeAdbKeyCommand(_hostId: string, deviceId: string, ke
       return { success: false, error: `Invalid key: ${key}` };
     }
 
+    // Get host with decrypted credentials
+    const hostResult = await getHostWithDecryptedCredentials(hostId);
+    if (!hostResult.success || !hostResult.data) {
+      return { success: false, error: hostResult.error || 'Failed to get host credentials' };
+    }
+
+    const host = hostResult.data;
+
     // Build the command
     const command = `adb -s ${deviceId} shell input keyevent ${keyCode}`;
 
-    // Hardcoded host data for testing - in production this would come from the database
-    // In real implementation, you'd use a separate service to get the host details
-    const hostData = {
-      ip: '192.168.1.100',
-      port: 22,
-      username: 'admin',
-      password: 'password123',
-    };
-
     // Build SSH command options
     const sshOptions: SSHCommandOptions = {
-      host: hostData.ip,
-      port: hostData.port,
-      username: hostData.username,
-      password: hostData.password,
+      host: host.ip,
+      port: host.port || 22,
+      username: host.user,
+      ...(host.auth_type === 'password' && host.password ? { password: host.password } : {}),
+      ...(host.auth_type === 'privateKey' && (host as any).privateKey
+        ? { privateKey: (host as any).privateKey }
+        : {}),
       command: command,
       timeout: 5000, // 5 second timeout for key commands
     };
