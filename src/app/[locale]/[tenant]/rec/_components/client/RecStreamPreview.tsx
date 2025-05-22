@@ -26,6 +26,12 @@ export function RecStreamPreview({ streamUrl, title, onClick }: RecStreamPreview
 
             hls = new HLS({
               enableWorker: true,
+              lowLatencyMode: true,
+              liveSyncDuration: 1,
+              liveMaxLatencyDuration: 5,
+              liveDurationInfinity: true,
+              maxBufferLength: 5,
+              maxMaxBufferLength: 10,
             });
 
             hls.loadSource(streamUrl);
@@ -107,7 +113,13 @@ export function RecStreamPreview({ streamUrl, title, onClick }: RecStreamPreview
       )}
 
       {/* Video Stream */}
-      <video ref={videoRef} className="w-full h-full object-cover" muted playsInline />
+      <video
+        ref={videoRef}
+        className="w-full h-full object-cover"
+        muted
+        playsInline
+        disablePictureInPicture
+      />
 
       {/* Transparent overlay to capture clicks */}
       <div className="absolute inset-0 z-10" aria-hidden="true" />

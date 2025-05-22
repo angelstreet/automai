@@ -31,6 +31,12 @@ export function RecStreamModal({ streamUrl, title, isOpen, onClose }: RecStreamM
 
             hls = new HLS({
               enableWorker: true,
+              lowLatencyMode: true,
+              liveSyncDuration: 1,
+              liveMaxLatencyDuration: 5,
+              liveDurationInfinity: true,
+              maxBufferLength: 5,
+              maxMaxBufferLength: 10,
             });
 
             hls.loadSource(streamUrl);
@@ -140,9 +146,10 @@ export function RecStreamModal({ streamUrl, title, isOpen, onClose }: RecStreamM
           <video
             ref={videoRef}
             className="w-full h-full"
-            controls
             playsInline
             autoPlay
+            muted
+            disablePictureInPicture
             style={{ backgroundColor: 'black' }}
           />
         </div>
