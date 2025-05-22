@@ -45,8 +45,8 @@ export function RecVncModal({ host, isOpen, onClose }: RecVncModalProps) {
   // If VNC not configured
   if (!vnc_port) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
-        <div className="w-11/12 h-5/6 bg-white dark:bg-gray-800 rounded-lg shadow-lg flex flex-col">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90">
+        <div className="w-[95vw] h-[90vh] bg-white dark:bg-gray-800 rounded-lg shadow-lg flex flex-col overflow-hidden">
           <div className="p-2 bg-gray-800 text-white flex justify-between items-center rounded-t-lg">
             <h2 className="text-lg font-medium">{host.name || host.ip} - VNC Connection</h2>
             <button
@@ -68,28 +68,9 @@ export function RecVncModal({ host, isOpen, onClose }: RecVncModalProps) {
   // VNC URL format with password param if available
   const vncUrl = `http://${host.ip}:${vnc_port}/vnc.html?host=${host.ip}&port=${vnc_port}&path=websockify&encrypt=0${vnc_password ? `&password=${vnc_password}` : ''}`;
 
-  // Try to auto-login with JavaScript if password is available
-  const autoLoginScript = vnc_password
-    ? `
-    <script>
-      window.addEventListener('load', function() {
-        setTimeout(function() {
-          // Try to find password field and auto-submit
-          var passwordInput = document.querySelector('input[type="password"]');
-          if (passwordInput) {
-            passwordInput.value = "${vnc_password}";
-            var submitButton = document.querySelector('button[type="submit"]');
-            if (submitButton) submitButton.click();
-          }
-        }, 1000);
-      });
-    </script>
-  `
-    : '';
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
-      <div className="w-11/12 h-5/6 bg-white dark:bg-gray-800 rounded-lg shadow-lg flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90">
+      <div className="w-[95vw] h-[90vh] bg-white dark:bg-gray-800 rounded-lg shadow-lg flex flex-col overflow-hidden">
         {/* Header */}
         <div className="p-2 bg-gray-800 text-white flex justify-between items-center rounded-t-lg">
           <h2 className="text-lg font-medium">{host.name || host.ip} - VNC Connection</h2>
@@ -103,7 +84,7 @@ export function RecVncModal({ host, isOpen, onClose }: RecVncModalProps) {
         </div>
 
         {/* VNC Viewer */}
-        <div className="flex-1 relative">
+        <div className="flex-1 relative overflow-hidden">
           {/* Loading state */}
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800 z-10">
@@ -118,15 +99,13 @@ export function RecVncModal({ host, isOpen, onClose }: RecVncModalProps) {
           <iframe
             src={vncUrl}
             className="w-full h-full"
-            style={{ border: 'none' }}
+            style={{
+              border: 'none',
+              display: 'block',
+            }}
             sandbox="allow-scripts allow-same-origin allow-forms"
             onLoad={handleIframeLoad}
             title={`VNC Stream - ${host.name || host.ip}`}
-            srcDoc={
-              autoLoginScript
-                ? `<!DOCTYPE html><html><head>${autoLoginScript}</head><body><iframe src="${vncUrl}" style="width:100%;height:100%;border:none;"></iframe></body></html>`
-                : undefined
-            }
           />
         </div>
       </div>
