@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 
 import { Host } from '@/types/component/hostComponentType';
 
+import { RecStreamModal } from './RecStreamModal';
 import { RecVncModal } from './RecVncModal';
 
 /**
@@ -13,6 +14,8 @@ export const RecEvents = {
   // UI Control Events
   OPEN_VNC_VIEWER: 'OPEN_VNC_VIEWER',
   CLOSE_VNC_VIEWER: 'CLOSE_VNC_VIEWER',
+  OPEN_STREAM_VIEWER: 'OPEN_STREAM_VIEWER',
+  CLOSE_STREAM_VIEWER: 'CLOSE_STREAM_VIEWER',
 
   // Data Refresh Events
   REFRESH_REC_HOSTS: 'REFRESH_REC_HOSTS',
@@ -25,6 +28,9 @@ export const RecEvents = {
 export function RecEventListener() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentHost, setCurrentHost] = useState<Host | null>(null);
+
+  const [isStreamModalOpen, setIsStreamModalOpen] = useState(false);
+  const [streamData, setStreamData] = useState<{ streamUrl: string; title: string } | null>(null);
 
   useEffect(() => {
     console.log('[@component:RecEventListener] Initializing event listeners');
@@ -47,6 +53,24 @@ export function RecEventListener() {
       setIsModalOpen(false);
     };
 
+    // Handler for opening stream viewer
+    const handleOpenStreamViewer = (event: CustomEvent) => {
+      const { streamUrl, title } = event.detail;
+      if (streamUrl) {
+        console.log(`[@component:RecEventListener] Opening stream modal for: ${streamUrl}`);
+        setStreamData({ streamUrl, title });
+        setIsStreamModalOpen(true);
+      } else {
+        console.error('[@component:RecEventListener] Missing stream URL for stream viewer');
+      }
+    };
+
+    // Handler for closing stream viewer
+    const handleCloseStreamViewer = () => {
+      console.log('[@component:RecEventListener] Closing stream modal');
+      setIsStreamModalOpen(false);
+    };
+
     // Handler for refreshing rec hosts
     const handleRefreshRecHosts = () => {
       console.log('[@component:RecEventListener] Refreshing rec hosts');
@@ -57,6 +81,11 @@ export function RecEventListener() {
     // Register event listeners with TypeScript cast for CustomEvent
     window.addEventListener(RecEvents.OPEN_VNC_VIEWER, handleOpenVncViewer as EventListener);
     window.addEventListener(RecEvents.CLOSE_VNC_VIEWER, handleCloseVncViewer as EventListener);
+    window.addEventListener(RecEvents.OPEN_STREAM_VIEWER, handleOpenStreamViewer as EventListener);
+    window.addEventListener(
+      RecEvents.CLOSE_STREAM_VIEWER,
+      handleCloseStreamViewer as EventListener,
+    );
     window.addEventListener(RecEvents.REFRESH_REC_HOSTS, handleRefreshRecHosts as EventListener);
 
     // Cleanup function to remove event listeners when component unmounts
@@ -64,6 +93,14 @@ export function RecEventListener() {
       console.log('[@component:RecEventListener] Cleaning up event listeners');
       window.removeEventListener(RecEvents.OPEN_VNC_VIEWER, handleOpenVncViewer as EventListener);
       window.removeEventListener(RecEvents.CLOSE_VNC_VIEWER, handleCloseVncViewer as EventListener);
+      window.removeEventListener(
+        RecEvents.OPEN_STREAM_VIEWER,
+        handleOpenStreamViewer as EventListener,
+      );
+      window.removeEventListener(
+        RecEvents.CLOSE_STREAM_VIEWER,
+        handleCloseStreamViewer as EventListener,
+      );
       window.removeEventListener(
         RecEvents.REFRESH_REC_HOSTS,
         handleRefreshRecHosts as EventListener,
@@ -75,10 +112,22 @@ export function RecEventListener() {
     setIsModalOpen(false);
   };
 
+  const handleCloseStreamModal = () => {
+    setIsStreamModalOpen(false);
+  };
+
   return (
     <>
       {currentHost && (
         <RecVncModal host={currentHost} isOpen={isModalOpen} onClose={handleCloseModal} />
+      )}
+      {streamData && (
+        <RecStreamModal
+          streamUrl={streamData.streamUrl}
+          title={streamData.title}
+          isOpen={isStreamModalOpen}
+          onClose={handleCloseStreamModal}
+        />
       )}
     </>
   );

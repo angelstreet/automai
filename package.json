@@ -85,6 +85,7 @@
     "detect-node-es": "1.1.0",
     "electron-store": "^10.0.1",
     "get-nonce": "1.0.1",
+    "hls.js": "^1.6.2",
     "i18next": "25.0.2",
     "is-electron": "^2.2.2",
     "jose": "6.0.10",
