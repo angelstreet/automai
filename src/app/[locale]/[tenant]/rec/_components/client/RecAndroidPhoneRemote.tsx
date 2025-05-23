@@ -18,7 +18,7 @@ import {
   Smartphone,
   Search,
 } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 import {
   AdbKeyType,
@@ -74,6 +74,78 @@ export function RecAndroidPhoneRemote({
     height: number;
   } | null>(null);
   const [showOverlay, setShowOverlay] = useState(false);
+  const [isAutoDumpScheduled, setIsAutoDumpScheduled] = useState(false);
+
+  // Auto-dump timer ref
+  const autoDumpTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Dump UI elements
+  const handleDumpElements = useCallback(async () => {
+    if (isDumpingElements || isConnecting) return;
+
+    setIsDumpingElements(true);
+    setElementsStatus('Dumping UI elements...');
+
+    try {
+      // Get device resolution first
+      const resolutionResult = await getDeviceResolution(hostId, deviceId);
+      if (!resolutionResult.success || !resolutionResult.width || !resolutionResult.height) {
+        setElementsStatus(`Error getting resolution: ${resolutionResult.error}`);
+        return;
+      }
+
+      setDeviceResolution({ width: resolutionResult.width, height: resolutionResult.height });
+
+      // Then dump UI elements
+      const result = await dumpUIElements(hostId, deviceId);
+
+      if (result.success) {
+        setElements(result.elements);
+        setSelectedElement(null);
+        setElementsStatus(`Found ${result.totalCount} elements`);
+        setShowOverlay(true);
+
+        // Notify parent component
+        onElementsUpdate?.(result.elements, resolutionResult.width, resolutionResult.height);
+        onOverlayToggle?.(true);
+      } else {
+        setElementsStatus(`Error: ${result.error}`);
+      }
+    } catch (error: any) {
+      setElementsStatus(`Error: ${error.message}`);
+    } finally {
+      setIsDumpingElements(false);
+    }
+  }, [hostId, deviceId, isDumpingElements, isConnecting, onElementsUpdate, onOverlayToggle]);
+
+  // Auto-dump function that triggers after UI interactions
+  const scheduleAutoDump = useCallback(() => {
+    // Only auto-dump if overlay is currently visible (user is actively inspecting UI)
+    if (!showOverlay) return;
+
+    // Clear any existing timer
+    if (autoDumpTimerRef.current) {
+      clearTimeout(autoDumpTimerRef.current);
+    }
+
+    setIsAutoDumpScheduled(true);
+
+    // Schedule new dump after 1.5 seconds
+    autoDumpTimerRef.current = setTimeout(() => {
+      console.log('[@component:RecAndroidPhoneRemote] Auto-dumping UI elements after action');
+      setIsAutoDumpScheduled(false);
+      handleDumpElements();
+    }, 2000);
+  }, [showOverlay, handleDumpElements]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (autoDumpTimerRef.current) {
+        clearTimeout(autoDumpTimerRef.current);
+      }
+    };
+  }, []);
 
   // Handle key button press
   const handleKeyPress = async (key: AdbKeyType) => {
@@ -87,6 +159,8 @@ export function RecAndroidPhoneRemote({
 
       if (result.success) {
         setLastAction(`Sent ${key}`);
+        // Schedule auto-dump after successful key press
+        scheduleAutoDump();
       } else {
         setLastAction(`Error: ${result.error}`);
       }
@@ -142,45 +216,6 @@ export function RecAndroidPhoneRemote({
     }
   };
 
-  // Dump UI elements
-  const handleDumpElements = async () => {
-    if (isDumpingElements || isConnecting) return;
-
-    setIsDumpingElements(true);
-    setElementsStatus('Dumping UI elements...');
-
-    try {
-      // Get device resolution first
-      const resolutionResult = await getDeviceResolution(hostId, deviceId);
-      if (!resolutionResult.success || !resolutionResult.width || !resolutionResult.height) {
-        setElementsStatus(`Error getting resolution: ${resolutionResult.error}`);
-        return;
-      }
-
-      setDeviceResolution({ width: resolutionResult.width, height: resolutionResult.height });
-
-      // Then dump UI elements
-      const result = await dumpUIElements(hostId, deviceId);
-
-      if (result.success) {
-        setElements(result.elements);
-        setSelectedElement(null);
-        setElementsStatus(`Found ${result.totalCount} elements`);
-        setShowOverlay(true);
-
-        // Notify parent component
-        onElementsUpdate?.(result.elements, resolutionResult.width, resolutionResult.height);
-        onOverlayToggle?.(true);
-      } else {
-        setElementsStatus(`Error: ${result.error}`);
-      }
-    } catch (error: any) {
-      setElementsStatus(`Error: ${error.message}`);
-    } finally {
-      setIsDumpingElements(false);
-    }
-  };
-
   // Click on any element (for overlay clicks)
   const handleElementClick = useCallback(
     async (element: AndroidElement) => {
@@ -198,6 +233,8 @@ export function RecAndroidPhoneRemote({
           );
           // Update selected element in UI for visual feedback
           setSelectedElement(element);
+          // Schedule auto-dump after successful element click
+          scheduleAutoDump();
         } else {
           setLastAction(`Error clicking element: ${result.error}`);
         }
@@ -207,7 +244,7 @@ export function RecAndroidPhoneRemote({
         setIsClickingElement(false);
       }
     },
-    [hostId, deviceId, isClickingElement, isConnecting],
+    [hostId, deviceId, isClickingElement, isConnecting, scheduleAutoDump],
   );
 
   // Click on selected element (for dropdown selection)
@@ -237,6 +274,13 @@ export function RecAndroidPhoneRemote({
 
   // Clear overlay
   const handleClearOverlay = () => {
+    // Cancel any pending auto-dump
+    if (autoDumpTimerRef.current) {
+      clearTimeout(autoDumpTimerRef.current);
+      autoDumpTimerRef.current = null;
+      setIsAutoDumpScheduled(false);
+    }
+
     setShowOverlay(false);
     onOverlayToggle?.(false);
   };
@@ -510,6 +554,12 @@ export function RecAndroidPhoneRemote({
         {elementsStatus && !elementsStatus.startsWith('Found') && (
           <div className="text-xs text-center text-gray-500 dark:text-gray-400 py-0.5 mb-1">
             {elementsStatus}
+          </div>
+        )}
+        {/* Auto-dump status */}
+        {isAutoDumpScheduled && (
+          <div className="text-xs text-center text-blue-500 dark:text-blue-400 py-0.5 mb-1">
+            Auto-dump in 1.5s...
           </div>
         )}
         {/* Click element dropdown - only show when elements exist */}
