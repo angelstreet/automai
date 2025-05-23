@@ -3,7 +3,7 @@
 import { X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { connectToHost, disconnectFromHost } from '@/app/actions/streamAdbActions';
+import { connectToHost, disconnectFromHost } from '@/app/actions/adbActions';
 
 import { DeviceConfig, DeviceModalProps, RemoteType } from '../types/recDeviceTypes';
 import { RecAndroidPhoneRemote } from './RecAndroidPhoneRemote';
@@ -197,7 +197,11 @@ export function RecDeviceModal({ device, isOpen, onClose }: DeviceModalProps) {
       case 'androidTv':
         return { title: 'Android TV', remoteType: 'androidTv' as RemoteType, canShowRemote: true };
       case 'androidPhone':
-        return { title: 'Android Phone', remoteType: 'androidPhone' as RemoteType, canShowRemote: true };
+        return {
+          title: 'Android Phone',
+          remoteType: 'androidPhone' as RemoteType,
+          canShowRemote: true,
+        };
       case 'host':
         return { title: 'Host VNC', remoteType: 'none' as RemoteType, canShowRemote: false };
       default:
@@ -339,4 +343,4 @@ export function RecDeviceModal({ device, isOpen, onClose }: DeviceModalProps) {
       </div>
     </div>
   );
-} 
+}

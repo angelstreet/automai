@@ -2,7 +2,7 @@
 
 import { Home, Power, RotateCcw } from 'lucide-react';
 
-import { executeAdbKeyCommand } from '@/app/actions/streamAdbActions';
+import { executeAdbKeyCommand } from '@/app/actions/adbActions';
 
 interface RecStreamUsbAdbRemoteProps {
   hostId: string;

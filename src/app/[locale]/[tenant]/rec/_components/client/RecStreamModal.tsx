@@ -3,7 +3,7 @@
 import { X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { connectToHost, disconnectFromHost } from '@/app/actions/streamAdbActions';
+import { connectToHost, disconnectFromHost } from '@/app/actions/adbActions';
 
 import { RecStreamAdbRemote } from './RecStreamAdbRemote';
 import { RecStreamUsbAdbRemote } from './RecStreamUsbAdbRemote';

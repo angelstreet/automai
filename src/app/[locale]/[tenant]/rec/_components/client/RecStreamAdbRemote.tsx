@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 
-import { AdbKeyType, executeAdbKeyCommand } from '@/app/actions/streamAdbActions';
+import { AdbKeyType, executeAdbKeyCommand } from '@/app/actions/adbActions';
 
 interface RecStreamAdbRemoteProps {
   hostId: string;
