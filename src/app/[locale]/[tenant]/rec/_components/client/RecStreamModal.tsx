@@ -6,6 +6,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { connectToHost, disconnectFromHost } from '@/app/actions/streamAdbActions';
 
 import { RecStreamAdbRemote } from './RecStreamAdbRemote';
+import { RecStreamUsbAdbRemote } from './RecStreamUsbAdbRemote';
+
+// Remote control types
+export type RemoteType = 'adb' | 'usbAdb';
 
 interface RecStreamModalProps {
   streamUrl: string;
@@ -14,6 +18,7 @@ interface RecStreamModalProps {
   onClose: () => void;
   hostId?: string;
   deviceId?: string;
+  remoteType?: RemoteType;
 }
 
 export function RecStreamModal({
@@ -23,6 +28,7 @@ export function RecStreamModal({
   onClose,
   hostId,
   deviceId,
+  remoteType = 'adb', // Default to standard ADB remote
 }: RecStreamModalProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -99,6 +105,7 @@ export function RecStreamModal({
       const HLS = (await import('hls.js')).default;
 
       if (!HLS.isSupported()) {
+        console.log('[@component:RecStreamModal] HLS.js is not supported, trying native playback');
         // Try native HLS
         if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
           videoRef.current.src = url;
@@ -325,8 +332,11 @@ export function RecStreamModal({
 
   if (!isOpen) return null;
 
-  // Check if we can show the ADB remote (need both hostId and deviceId)
+  // Check if we can show the remote (need both hostId and deviceId)
   const canShowRemote = !!hostId && !!deviceId;
+
+  // Get the title based on remote type
+  const remoteTitle = remoteType === 'usbAdb' ? 'USB ADB' : 'Android ADB';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90">
@@ -334,7 +344,7 @@ export function RecStreamModal({
         {/* Header */}
         <div className="p-2 bg-gray-800 text-white flex justify-between items-center rounded-t-lg">
           <h2 className="text-lg font-medium">
-            {isDisconnected ? 'Stream Disconnected' : 'Live Stream'}
+            {isDisconnected ? 'Stream Disconnected' : `${remoteTitle} Live Stream`}
           </h2>
           <div className="flex items-center space-x-2">
             {canShowRemote && (
@@ -404,7 +414,11 @@ export function RecStreamModal({
           {/* Remote Control Panel - Show only if we have required props and user toggled it on */}
           {showRemote && canShowRemote && (
             <div className="w-1/4 bg-gray-100 dark:bg-gray-900 border-l border-gray-300 dark:border-gray-700 p-4 overflow-y-auto flex flex-col items-center justify-center">
-              <RecStreamAdbRemote hostId={hostId!} deviceId={deviceId!} />
+              {remoteType === 'usbAdb' ? (
+                <RecStreamUsbAdbRemote hostId={hostId!} deviceId={deviceId!} />
+              ) : (
+                <RecStreamAdbRemote hostId={hostId!} deviceId={deviceId!} />
+              )}
             </div>
           )}
         </div>

@@ -6,6 +6,7 @@ import { Host } from '@/types/component/hostComponentType';
 
 import { RecEvents } from './RecEventListener';
 import { RecStreamPreview } from './RecStreamPreview';
+import { RecUsbAdbStream } from './RecUsbAdbStream';
 import { RecVncPreview } from './RecVncPreview';
 
 interface RecVncPreviewGridProps {
@@ -77,6 +78,9 @@ export function RecVncPreviewGrid({ hosts, isLoading, error }: RecVncPreviewGrid
           onClick={handleOpenStreamViewer}
         />
 
+        {/* USB ADB stream */}
+        <RecUsbAdbStream hostId={streamHostId || ''} mobileName="USB Android" />
+
         <div className="flex items-center justify-center h-64 col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-3">
           <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 p-4 rounded-md text-yellow-800 dark:text-yellow-200">
             <p className="font-medium">No hosts with VNC found</p>
@@ -95,6 +99,9 @@ export function RecVncPreviewGrid({ hosts, isLoading, error }: RecVncPreviewGrid
         title="Live"
         onClick={handleOpenStreamViewer}
       />
+
+      {/* USB ADB stream */}
+      <RecUsbAdbStream hostId={streamHostId || ''} mobileName="USB Android" />
 
       {/* VNC host previews */}
       {vnc_hosts.map((host) => (
