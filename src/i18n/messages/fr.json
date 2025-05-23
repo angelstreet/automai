@@ -152,6 +152,10 @@
     "view_config": "Voir config",
     "visibility": "Visibilité"
   },
+  "tasks": {
+    "title": "Tâches",
+    "desc": "Gérer les tâches avec l'intégration Monday.com"
+  },
   "dashboard": {
     "desc": "Bienvenue sur votre tableau de bord",
     "overview": "Aperçu",

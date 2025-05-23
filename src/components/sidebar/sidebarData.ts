@@ -9,6 +9,7 @@ import {
   Factory,
   Server,
   GitBranch,
+  CheckSquare,
 } from 'lucide-react';
 
 import { Role } from '@/types/service/userServiceType';
@@ -41,96 +42,3 @@ export type SidebarData = {
   }[];
 };
 
-export const sidebarData: SidebarData = {
-  user: {
-    name: 'User',
-    email: 'user@example.com',
-  },
-  teams: [
-    {
-      name: 'TeamA',
-      logo: Code2,
-      plan: 'fr',
-    },
-    {
-      name: 'Team B',
-      logo: Building,
-      plan: 'swi',
-    },
-    {
-      name: 'Team C',
-      logo: Factory,
-      plan: 'us',
-    },
-  ],
-  navGroups: [
-    {
-      title: 'Overview',
-      items: [
-        {
-          title: 'Dashboard',
-          href: '/dashboard',
-          icon: LayoutDashboard,
-          roles: ['admin', 'developer', 'tester', 'viewer'],
-        },
-      ],
-    },
-    {
-      title: 'Main',
-      items: [
-        {
-          title: 'Deployment',
-          href: '/deployment',
-          icon: Rocket,
-          roles: ['admin', 'developer', 'tester'],
-        },
-        {
-          title: 'Reports',
-          href: '/reports',
-          icon: BarChart3,
-          roles: ['admin', 'developer', 'tester', 'viewer'],
-        },
-      ],
-    },
-    {
-      title: 'Environment',
-      items: [
-        {
-          title: 'Hosts',
-          href: '/hosts',
-          icon: Server,
-          roles: ['admin', 'developer', 'tester'],
-        },
-        {
-          title: 'Repositories',
-          href: '/repositories',
-          icon: GitBranch,
-          roles: ['admin', 'developer'],
-        },
-      ],
-    },
-    {
-      title: 'Admin',
-      items: [
-        {
-          title: 'Settings',
-          href: '/settings',
-          icon: Settings,
-          roles: ['admin'],
-        },
-        {
-          title: 'Team',
-          href: '/team',
-          icon: Users,
-          roles: ['admin'],
-        },
-        {
-          title: 'Billing',
-          href: '/billing',
-          icon: Building,
-          roles: ['admin'],
-        },
-      ],
-    },
-  ],
-};

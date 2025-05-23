@@ -64,6 +64,10 @@
     "title": "Browser",
     "desc": "Run browser automation tests"
   },
+  "tasks": {
+    "title": "Tasks",
+    "desc": "Manage tasks with Monday.com integration"
+  },
   "chat": {
     "title": "Chat",
     "desc": "Chat with AI"

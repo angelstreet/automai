@@ -18,6 +18,9 @@ import {
   MessageCircle,
   Code,
   Wrench,
+  CheckSquare,
+  Book,
+  Bug,
 } from 'lucide-react';
 
 import { Role } from '@/types/service/userServiceType';
@@ -113,6 +116,29 @@ export const sidebarNavigationData: SidebarNavigationData = {
           title: 'Reports',
           href: '/reports',
           icon: BarChart3,
+          roles: ['admin', 'developer', 'tester', 'viewer'],
+        },
+      ],
+    },
+    {
+      title: 'Add-on',
+      items: [
+        {
+          title: 'Tasks',
+          href: '/tasks',
+          icon: CheckSquare,
+          roles: ['admin', 'developer', 'tester', 'viewer'],
+        },
+        {
+          title: 'Documentation',
+          href: '/doc',
+          icon: Book,
+          roles: ['admin', 'developer', 'tester', 'viewer'],
+        },
+        {
+          title: 'Issues',
+          href: '/issues',
+          icon: Bug,
           roles: ['admin', 'developer', 'tester', 'viewer'],
         },
       ],
