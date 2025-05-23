@@ -114,8 +114,53 @@ export async function connectToHost(hostId: string, androidDeviceId: string) {
       return { success: false, error: result.error || 'Failed to connect to ADB device' };
     }
 
+    console.log(`[@action:adbActions:connectToHost] ADB connect command executed`);
+
+    // Verify the device is actually connected by checking adb devices
+    const devicesCommand = `adb devices`;
+    console.log(`[@action:adbActions:connectToHost] Verifying connection with: ${devicesCommand}`);
+
+    const devicesResult = await executeOnConnection(hostId, devicesCommand);
+    if (!devicesResult.success) {
+      await closeConnection(hostId);
+      return { success: false, error: devicesResult.error || 'Failed to verify device connection' };
+    }
+
+    // Check if our device appears in the devices list
+    const devicesOutput = devicesResult.data?.stdout || '';
+    console.log(`[@action:adbActions:connectToHost] ADB devices output: ${devicesOutput}`);
+
+    const deviceLines = devicesOutput
+      .split('\n')
+      .filter((line) => line.trim() && !line.includes('List of devices'));
+    const deviceFound = deviceLines.find((line) => line.includes(androidDeviceId));
+
+    if (!deviceFound) {
+      await closeConnection(hostId);
+      return {
+        success: false,
+        error: `Device ${androidDeviceId} not found in adb devices list`,
+      };
+    }
+
+    if (deviceFound.includes('offline')) {
+      await closeConnection(hostId);
+      return {
+        success: false,
+        error: `Device ${androidDeviceId} is offline. Please check device connection and enable USB debugging.`,
+      };
+    }
+
+    if (!deviceFound.includes('device')) {
+      await closeConnection(hostId);
+      return {
+        success: false,
+        error: `Device ${androidDeviceId} status: ${deviceFound.split('\t')[1] || 'unknown'}`,
+      };
+    }
+
     console.log(
-      `[@action:adbActions:connectToHost] Successfully connected to device ${androidDeviceId}`,
+      `[@action:adbActions:connectToHost] Successfully connected to device ${androidDeviceId} - verified in adb devices`,
     );
     return { success: true };
   } catch (error: any) {

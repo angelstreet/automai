@@ -2,6 +2,7 @@
 
 import { X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useToast } from '@/components/shadcn/use-toast';
 
 import { connectToHost, disconnectFromHost } from '@/app/actions/adbActions';
 
@@ -19,6 +20,7 @@ export function RecDeviceModal({ device, isOpen, onClose }: DeviceModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [isDisconnected, setIsDisconnected] = useState(false);
   const [showRemote, setShowRemote] = useState(false);
+  const { toast } = useToast();
   const connectionCheckRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const hlsRef = useRef<any>(null);
@@ -60,11 +62,21 @@ export function RecDeviceModal({ device, isOpen, onClose }: DeviceModalProps) {
         );
         if (!result.success) {
           console.error('[@component:RecDeviceModal] Failed to connect:', result.error);
+          toast({
+            title: 'Connection Failed',
+            description: result.error || 'Failed to connect to device',
+            variant: 'destructive',
+          });
           return;
         }
         console.log('[@component:RecDeviceModal] Successfully connected to host');
       } catch (error) {
         console.error('[@component:RecDeviceModal] Error connecting to host:', error);
+        toast({
+          title: 'Connection Error',
+          description: error instanceof Error ? error.message : 'Unknown error occurred',
+          variant: 'destructive',
+        });
         return;
       }
     } else if (!newShowRemote && androidDevice.remoteConfig) {
@@ -74,6 +86,11 @@ export function RecDeviceModal({ device, isOpen, onClose }: DeviceModalProps) {
         await disconnectFromHost(androidDevice.remoteConfig.hostId);
       } catch (error) {
         console.error('[@component:RecDeviceModal] Error disconnecting from host:', error);
+        toast({
+          title: 'Disconnection Error',
+          description: error instanceof Error ? error.message : 'Failed to disconnect cleanly',
+          variant: 'destructive',
+        });
       }
     }
 
