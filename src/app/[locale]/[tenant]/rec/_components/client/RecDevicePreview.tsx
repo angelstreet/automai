@@ -225,7 +225,29 @@ export function RecDevicePreview({ device, onClick }: DevicePreviewProps) {
         {isStreaming && (
           <div
             className="absolute inset-0 z-10 bg-transparent cursor-pointer"
-            onClick={handleClick}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+
+              if (clickTimeoutRef.current) {
+                // Double click detected - open modal
+                clearTimeout(clickTimeoutRef.current);
+                clickTimeoutRef.current = null;
+                onClick(device);
+              } else {
+                // Single click - stop streaming
+                clickTimeoutRef.current = setTimeout(() => {
+                  clickTimeoutRef.current = null;
+                  // For Android devices, stop HLS streaming
+                  if (device.type !== 'host') {
+                    stopStreaming();
+                  } else {
+                    // For VNC hosts, stop VNC streaming
+                    stopVncStreaming();
+                  }
+                }, 250);
+              }
+            }}
             title="Click to stop stream or double-click to open modal"
           />
         )}
@@ -322,11 +344,28 @@ export function RecDevicePreview({ device, onClick }: DevicePreviewProps) {
           />
         )}
 
-        {/* Invisible click layer when streaming - prevents iframe from capturing mouse events */}
+        {/* Invisible click layer when streaming - ensures consistent mouse event handling */}
         {isStreaming && (
           <div
             className="absolute inset-0 z-10 bg-transparent cursor-pointer"
-            onClick={handleClick}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+
+              if (clickTimeoutRef.current) {
+                // Double click detected - open modal
+                clearTimeout(clickTimeoutRef.current);
+                clickTimeoutRef.current = null;
+                onClick(device);
+              } else {
+                // Single click - stop streaming
+                clickTimeoutRef.current = setTimeout(() => {
+                  clickTimeoutRef.current = null;
+                  // For VNC hosts, stop VNC streaming
+                  stopVncStreaming();
+                }, 250);
+              }
+            }}
             title="Click to interact with VNC or double-click to open modal"
           />
         )}
