@@ -84,7 +84,7 @@ export function RecAndroidPhoneRemote({
     if (isDumpingElements || isConnecting) return;
 
     setIsDumpingElements(true);
-    setElementsStatus('Dumping UI elements...');
+    // setElementsStatus('Dumping UI elements...');
 
     try {
       // Get device resolution first
