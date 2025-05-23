@@ -2,140 +2,93 @@
 
 import { useEffect, useState } from 'react';
 
-import { Host } from '@/types/component/hostComponentType';
-
-import { RecStreamModal } from './RecStreamModal';
-import { RecVncModal } from './RecVncModal';
+import { DeviceConfig } from '../types/recDeviceTypes';
+import { RecDeviceModal } from './RecDeviceModal';
 
 /**
  * Event constants for Rec feature
  */
 export const RecEvents = {
-  // UI Control Events
-  OPEN_VNC_VIEWER: 'OPEN_VNC_VIEWER',
-  CLOSE_VNC_VIEWER: 'CLOSE_VNC_VIEWER',
-  OPEN_STREAM_VIEWER: 'OPEN_STREAM_VIEWER',
-  CLOSE_STREAM_VIEWER: 'CLOSE_STREAM_VIEWER',
+  // Device Control Events
+  OPEN_DEVICE_VIEWER: 'OPEN_DEVICE_VIEWER',
+  CLOSE_DEVICE_VIEWER: 'CLOSE_DEVICE_VIEWER',
 
   // Data Refresh Events
-  REFRESH_REC_HOSTS: 'REFRESH_REC_HOSTS',
-};
+  REFRESH_REC_DEVICES: 'REFRESH_REC_DEVICES',
+} as const;
 
 /**
  * Event listener component for Rec feature
- * Handles events related to VNC viewer and rec functionality
+ * Handles events related to device viewing and rec functionality
  */
 export function RecEventListener() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [currentHost, setCurrentHost] = useState<Host | null>(null);
-
-  const [isStreamModalOpen, setIsStreamModalOpen] = useState(false);
-  const [streamData, setStreamData] = useState<{
-    streamUrl: string;
-    title: string;
-    hostId?: string;
-    deviceId?: string;
-  } | null>(null);
+  const [currentDevice, setCurrentDevice] = useState<DeviceConfig | null>(null);
 
   useEffect(() => {
     console.log('[@component:RecEventListener] Initializing event listeners');
 
-    // Handler for opening VNC viewer
-    const handleOpenVncViewer = (event: CustomEvent) => {
-      const { host } = event.detail;
-      if (host) {
-        console.log(`[@component:RecEventListener] Opening VNC modal for host: ${host.id}`);
-        setCurrentHost(host);
+    // Handler for opening device viewer
+    const handleOpenDeviceViewer = (event: CustomEvent) => {
+      const { device } = event.detail;
+      if (device) {
+        console.log(
+          `[@component:RecEventListener] Opening device modal for: ${device.name} (${device.type})`,
+        );
+        setCurrentDevice(device);
         setIsModalOpen(true);
       } else {
-        console.error('[@component:RecEventListener] Missing host data for VNC viewer');
+        console.error('[@component:RecEventListener] Missing device data for viewer');
       }
     };
 
-    // Handler for closing VNC viewer
-    const handleCloseVncViewer = () => {
-      console.log('[@component:RecEventListener] Closing VNC modal');
+    // Handler for closing device viewer
+    const handleCloseDeviceViewer = () => {
+      console.log('[@component:RecEventListener] Closing device modal');
       setIsModalOpen(false);
+      setCurrentDevice(null);
     };
 
-    // Handler for opening stream viewer
-    const handleOpenStreamViewer = (event: CustomEvent) => {
-      const { streamUrl, title, hostId, deviceId } = event.detail;
-      if (streamUrl) {
-        console.log(`[@component:RecEventListener] Opening stream modal for: ${streamUrl}`);
-        setStreamData({ streamUrl, title, hostId, deviceId });
-        setIsStreamModalOpen(true);
-      } else {
-        console.error('[@component:RecEventListener] Missing stream URL for stream viewer');
-      }
-    };
-
-    // Handler for closing stream viewer
-    const handleCloseStreamViewer = () => {
-      console.log('[@component:RecEventListener] Closing stream modal');
-      setIsStreamModalOpen(false);
-    };
-
-    // Handler for refreshing rec hosts
-    const handleRefreshRecHosts = () => {
-      console.log('[@component:RecEventListener] Refreshing rec hosts');
-      // Dispatch a hosts updated event to trigger refetch in useRecHosts
-      window.dispatchEvent(new Event('HOSTS_UPDATED'));
+    // Handler for refreshing rec devices
+    const handleRefreshRecDevices = () => {
+      console.log('[@component:RecEventListener] Refreshing rec devices');
+      // Dispatch a devices updated event to trigger refetch in hooks
+      window.dispatchEvent(new Event('DEVICES_UPDATED'));
     };
 
     // Register event listeners with TypeScript cast for CustomEvent
-    window.addEventListener(RecEvents.OPEN_VNC_VIEWER, handleOpenVncViewer as EventListener);
-    window.addEventListener(RecEvents.CLOSE_VNC_VIEWER, handleCloseVncViewer as EventListener);
-    window.addEventListener(RecEvents.OPEN_STREAM_VIEWER, handleOpenStreamViewer as EventListener);
+    window.addEventListener(RecEvents.OPEN_DEVICE_VIEWER, handleOpenDeviceViewer as EventListener);
     window.addEventListener(
-      RecEvents.CLOSE_STREAM_VIEWER,
-      handleCloseStreamViewer as EventListener,
+      RecEvents.CLOSE_DEVICE_VIEWER,
+      handleCloseDeviceViewer as EventListener,
     );
-    window.addEventListener(RecEvents.REFRESH_REC_HOSTS, handleRefreshRecHosts as EventListener);
+    window.addEventListener(
+      RecEvents.REFRESH_REC_DEVICES,
+      handleRefreshRecDevices as EventListener,
+    );
 
     // Cleanup function to remove event listeners when component unmounts
     return () => {
       console.log('[@component:RecEventListener] Cleaning up event listeners');
-      window.removeEventListener(RecEvents.OPEN_VNC_VIEWER, handleOpenVncViewer as EventListener);
-      window.removeEventListener(RecEvents.CLOSE_VNC_VIEWER, handleCloseVncViewer as EventListener);
       window.removeEventListener(
-        RecEvents.OPEN_STREAM_VIEWER,
-        handleOpenStreamViewer as EventListener,
+        RecEvents.OPEN_DEVICE_VIEWER,
+        handleOpenDeviceViewer as EventListener,
       );
       window.removeEventListener(
-        RecEvents.CLOSE_STREAM_VIEWER,
-        handleCloseStreamViewer as EventListener,
+        RecEvents.CLOSE_DEVICE_VIEWER,
+        handleCloseDeviceViewer as EventListener,
       );
       window.removeEventListener(
-        RecEvents.REFRESH_REC_HOSTS,
-        handleRefreshRecHosts as EventListener,
+        RecEvents.REFRESH_REC_DEVICES,
+        handleRefreshRecDevices as EventListener,
       );
     };
   }, []);
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
+    setCurrentDevice(null);
   };
 
-  const handleCloseStreamModal = () => {
-    setIsStreamModalOpen(false);
-  };
-
-  return (
-    <>
-      {currentHost && (
-        <RecVncModal host={currentHost} isOpen={isModalOpen} onClose={handleCloseModal} />
-      )}
-      {streamData && (
-        <RecStreamModal
-          streamUrl={streamData.streamUrl}
-          title={streamData.title}
-          isOpen={isStreamModalOpen}
-          onClose={handleCloseStreamModal}
-          hostId={streamData.hostId}
-          deviceId={streamData.deviceId}
-        />
-      )}
-    </>
-  );
+  return <RecDeviceModal device={currentDevice} isOpen={isModalOpen} onClose={handleCloseModal} />;
 }

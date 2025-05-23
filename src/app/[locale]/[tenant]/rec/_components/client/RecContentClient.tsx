@@ -3,10 +3,10 @@
 import { useRecHosts } from '@/hooks/useRecHosts';
 
 import { RecEventListener } from './RecEventListener';
-import { RecVncPreviewGrid } from './RecVncPreviewGrid';
+import { RecPreviewGrid } from './RecPreviewGrid';
 
 /**
- * Client component for displaying and managing rec
+ * Client component for displaying and managing rec devices
  */
 export function RecContentClient() {
   // Use the rec hosts hook to fetch and manage host data
@@ -14,9 +14,9 @@ export function RecContentClient() {
 
   return (
     <div className="space-y-4 p-4">
-      <RecVncPreviewGrid hosts={hosts} isLoading={loading} error={error} />
+      <RecPreviewGrid hosts={hosts} isLoading={loading} error={error} />
 
-      {/* Event listener component to handle rec/VNC events */}
+      {/* Event listener component to handle rec device events */}
       <RecEventListener />
     </div>
   );

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 
+import { RecStreamPreview } from './RecStreamPreview';
 import { RecStreamModal } from './RecStreamModal';
 
 interface RecUsbAdbStreamProps {
@@ -13,7 +14,7 @@ export function RecUsbAdbStream({ hostId, mobileName = 'Android Device' }: RecUs
   const [showStream, setShowStream] = useState(false);
 
   // Hardcoded values as per requirements
-  const streamUrl = 'https://77.56.53.130:444/adbstream/output.m3u8';
+  const streamUrl = 'https://77.56.53.130:444/stream/output.m3u8';
   const deviceId = '192.168.1.29';
 
   const handleOpenStream = () => {
@@ -26,12 +27,7 @@ export function RecUsbAdbStream({ hostId, mobileName = 'Android Device' }: RecUs
 
   return (
     <>
-      <button
-        onClick={handleOpenStream}
-        className="flex items-center px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-      >
-        View USB Mobile Screen
-      </button>
+      <RecStreamPreview streamUrl={streamUrl} title={mobileName} onClick={handleOpenStream} />
 
       {showStream && (
         <RecStreamModal
