@@ -232,9 +232,8 @@ export function RecAndroidPhoneRemote({
       const result = await clickElement(hostId, deviceId, element);
 
       if (result.success) {
-        setLastAction(
-          `Clicked element: ${element.text || element.resourceId || element.contentDesc}`,
-        );
+        // Clear the action status on success - the dropdown shows the selected element
+        setLastAction(null);
         // Update selected element in UI for visual feedback
         setSelectedElement(element);
         // Schedule auto-dump after successful element click
