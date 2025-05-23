@@ -8,16 +8,20 @@ interface FileInfo {
   size: number;
   language: string;
   content?: string; // Optional, loaded on demand
+  isModified?: boolean; // Track if file has been modified
 }
 
 interface MonacoEditorClientProps {
   file: FileInfo;
+  onFileChange?: (file: FileInfo) => void; // Callback when file content changes
 }
 
-export default function MonacoEditorClient({ file }: MonacoEditorClientProps) {
+export default function MonacoEditorClient({ file, onFileChange }: MonacoEditorClientProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const monacoInstanceRef = useRef<any>(null);
   const [isInitializing, setIsInitializing] = useState(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const originalContentRef = useRef<string>('');
 
   console.log('[@component:MonacoEditorClient] Rendering with file:', file.name);
   console.log('[@component:MonacoEditorClient] File content exists?', !!file.content);
@@ -29,6 +33,9 @@ export default function MonacoEditorClient({ file }: MonacoEditorClientProps) {
 
     // Capture the ref value for cleanup
     const currentEditor = editorRef.current;
+
+    // Reset original content when file changes
+    originalContentRef.current = file.content || '';
 
     // Only initialize if we have content
     if (!file.content) {
@@ -151,7 +158,7 @@ export default function MonacoEditorClient({ file }: MonacoEditorClientProps) {
           lineNumbers: 'on',
           roundedSelection: false,
           scrollBeyondLastLine: false,
-          readOnly: true,
+          readOnly: false, // Make editor editable
           minimap: {
             enabled: false, // Disable minimap to prevent buffer allocation errors
           },
@@ -235,6 +242,49 @@ export default function MonacoEditorClient({ file }: MonacoEditorClientProps) {
 
         console.log('[@component:MonacoEditorClient] Monaco editor created successfully');
 
+        // Store original content for comparison
+        originalContentRef.current = file.content || '';
+
+        // Add debounced change listener for auto-save to memory
+        editor.onDidChangeModelContent(() => {
+          const currentContent = editor.getValue();
+
+          // Clear any existing timeout
+          if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+          }
+
+          // Set new timeout for debounced save (500ms after user stops typing)
+          saveTimeoutRef.current = setTimeout(() => {
+            // Check if content actually changed from original
+            const hasChanged = currentContent !== originalContentRef.current;
+
+            console.log('[@component:MonacoEditorClient] Debounced auto-save triggered:', {
+              hasChanged,
+              originalLength: originalContentRef.current.length,
+              currentLength: currentContent.length,
+              fileName: file.name,
+            });
+
+            if (hasChanged && onFileChange) {
+              console.log('[@component:MonacoEditorClient] Saving changes to memory (debounced)');
+
+              // Create updated file object with new content and modified flag
+              const updatedFile: FileInfo = {
+                ...file,
+                content: currentContent,
+                isModified: true,
+              };
+
+              // Update original content reference
+              originalContentRef.current = currentContent;
+
+              // Save to memory via callback (non-blocking)
+              onFileChange(updatedFile);
+            }
+          }, 500); // 500ms delay after user stops typing
+        });
+
         monacoInstanceRef.current = editor;
         setIsInitializing(false);
         clearTimeout(timeout);
@@ -251,6 +301,12 @@ export default function MonacoEditorClient({ file }: MonacoEditorClientProps) {
     return () => {
       console.log('[@component:MonacoEditorClient] useEffect cleanup - Component unmounting');
       console.log('[@component:MonacoEditorClient] Disposing Monaco editor');
+
+      // Clear any pending save timeout
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
 
       // Dispose Monaco editor
       if (monacoInstanceRef.current) {
@@ -274,7 +330,7 @@ export default function MonacoEditorClient({ file }: MonacoEditorClientProps) {
         container.style.cssText = 'width: 100%; height: 100%;';
       }
     };
-  }, [file.content, file.language]); // Re-run when content or language changes
+  }, [file, onFileChange]); // Re-run when file or callback changes
 
   // Always render the container div and overlay loading states
   return (

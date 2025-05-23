@@ -42,6 +42,7 @@ interface FileInfo {
   size: number;
   language: string;
   content?: string; // Optional, loaded on demand
+  isModified?: boolean; // Track if file has been modified
 }
 
 interface Repository {
@@ -172,6 +173,25 @@ export default function CodeEditorClient() {
     setStatus(newStatus);
   };
 
+  const handleFileChange = (updatedFile: FileInfo) => {
+    console.log('[@component:CodeEditorClient] File changed, saving to memory:', updatedFile.path);
+
+    // Update current file with new content
+    setCurrentFile(updatedFile);
+
+    // Update the file in repository state
+    if (repository) {
+      const updatedRepository = {
+        ...repository,
+        files: repository.files.map((f) => (f.path === updatedFile.path ? updatedFile : f)),
+      };
+      setRepository(updatedRepository);
+    }
+
+    // Update status to show auto-save
+    setStatus(`Editing ${updatedFile.name}`);
+  };
+
   return (
     <div className="h-full flex bg-background overflow-hidden">
       {/* Activity Bar */}
@@ -263,7 +283,11 @@ export default function CodeEditorClient() {
         {/* Editor - Completely remove any overflow handling */}
         <div className="flex-1 overflow-hidden">
           {currentFile ? (
-            <MonacoEditorClient key={currentFile.path} file={currentFile} />
+            <MonacoEditorClient
+              key={currentFile.path}
+              file={currentFile}
+              onFileChange={handleFileChange}
+            />
           ) : (
             <div className="h-full flex items-center justify-center bg-background">
               <Card className="p-8 text-center max-w-md mx-auto">

@@ -9,6 +9,7 @@ interface FileInfo {
   size: number;
   language: string;
   content?: string; // Optional, loaded on demand
+  isModified?: boolean; // Track if file has been modified
 }
 
 interface FileExplorerClientProps {
@@ -161,6 +162,11 @@ export default function FileExplorerClient({
           <span className="text-sm truncate" title={node.name}>
             {node.name}
           </span>
+          {node.file.isModified && (
+            <span className="text-xs text-orange-500 font-semibold ml-1" title="Modified">
+              M
+            </span>
+          )}
         </div>
       );
     }
