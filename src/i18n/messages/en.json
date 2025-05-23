@@ -70,7 +70,7 @@
   },
   "code": {
     "title": "Code",
-    "desc": "Write and run code with Stackblitz"
+    "desc": "Write code with Monaco Editor"
   },
   "common": {
     "actions": "Actions",
