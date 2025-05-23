@@ -93,7 +93,6 @@ const CryptoWidget = () => {
           </div>
         ))}
       </div>
-
     </div>
   );
 };

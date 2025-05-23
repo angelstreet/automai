@@ -89,16 +89,16 @@ const DraggableWidget: React.FC<DraggableWidgetProps> = ({
           {children}
         </div>
 
-        {/* Internal drag zones overlay - dark overlays inside the widget, highly visible */}
+        {/* Internal drag zones overlay - dark overlays inside the widget, subtle */}
         <div className="absolute inset-0 pointer-events-none rounded-lg overflow-hidden z-30">
           {/* Top drag zone */}
-          <div className="absolute top-0 left-0 right-0 h-4 bg-black/50 pointer-events-auto cursor-grab"></div>
+          <div className="absolute top-0 left-0 right-0 h-2 bg-black/20 pointer-events-auto cursor-grab"></div>
           {/* Bottom drag zone */}
-          <div className="absolute bottom-0 left-0 right-0 h-4 bg-black/50 pointer-events-auto cursor-grab"></div>
+          <div className="absolute bottom-0 left-0 right-0 h-2 bg-black/20 pointer-events-auto cursor-grab"></div>
           {/* Left drag zone */}
-          <div className="absolute top-4 bottom-4 left-0 w-4 bg-black/50 pointer-events-auto cursor-grab"></div>
+          <div className="absolute top-2 bottom-2 left-0 w-2 bg-black/20 pointer-events-auto cursor-grab"></div>
           {/* Right drag zone */}
-          <div className="absolute top-4 bottom-4 right-0 w-4 bg-black/50 pointer-events-auto cursor-grab"></div>
+          <div className="absolute top-2 bottom-2 right-0 w-2 bg-black/20 pointer-events-auto cursor-grab"></div>
         </div>
       </div>
     </div>
