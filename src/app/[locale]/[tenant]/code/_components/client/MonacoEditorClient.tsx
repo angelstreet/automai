@@ -70,12 +70,20 @@ export default function MonacoEditorClient({ file }: MonacoEditorClientProps) {
 
         console.log('[@component:MonacoEditorClient] DOM element cleaned for initialization');
 
-        // Configure Monaco Environment for Next.js - disable workers to prevent errors
+        // Configure Monaco Environment for Next.js - completely disable workers
         if (typeof window !== 'undefined') {
           (window as any).MonacoEnvironment = {
-            getWorker: function (_workerId: string, _label: string) {
-              // Return null to disable web workers and run everything in main thread
-              return null;
+            getWorker: function () {
+              // Return a simple fake worker to prevent all worker-related errors
+              return {
+                postMessage: () => {},
+                terminate: () => {},
+                addEventListener: () => {},
+                removeEventListener: () => {},
+                onerror: null,
+                onmessage: null,
+                onmessageerror: null,
+              } as any;
             },
           };
         }
@@ -148,7 +156,7 @@ export default function MonacoEditorClient({ file }: MonacoEditorClientProps) {
             enabled: false, // Disable minimap to prevent buffer allocation errors
           },
           wordWrap: 'on',
-          folding: !isVeryLargeFile, // Disable folding for very large files
+          folding: false, // Disable folding to prevent worker-dependent features
           glyphMargin: true,
           lineDecorationsWidth: 10,
           lineNumbersMinChars: 3,
@@ -158,11 +166,53 @@ export default function MonacoEditorClient({ file }: MonacoEditorClientProps) {
             verticalScrollbarSize: 17,
             horizontalScrollbarSize: 17,
           },
-          // Performance optimizations for large files
-          links: !isVeryLargeFile,
-          occurrencesHighlight: !isVeryLargeFile ? 'singleFile' : 'off',
-          renderLineHighlight: isVeryLargeFile ? 'none' : 'line',
-          selectionHighlight: !isVeryLargeFile,
+          // Simplified configuration to avoid worker issues
+          links: false,
+          occurrencesHighlight: 'off',
+          renderLineHighlight: 'none',
+          selectionHighlight: false,
+          colorDecorators: false,
+          hover: {
+            enabled: false,
+          },
+          lightbulb: {
+            enabled: 'off' as any, // Use 'off' instead of false
+          },
+          parameterHints: {
+            enabled: false,
+          },
+          suggest: {
+            showKeywords: false,
+            showSnippets: false,
+            showValues: false,
+            showMethods: false,
+            showFunctions: false,
+            showConstructors: false,
+            showFields: false,
+            showVariables: false,
+            showClasses: false,
+            showStructs: false,
+            showInterfaces: false,
+            showModules: false,
+            showProperties: false,
+            showEvents: false,
+            showOperators: false,
+            showUnits: false,
+            showColors: false,
+            showFiles: false,
+            showReferences: false,
+            showFolders: false,
+            showTypeParameters: false,
+            showUsers: false,
+            showIssues: false,
+          },
+          quickSuggestions: false,
+          suggestOnTriggerCharacters: false,
+          acceptSuggestionOnCommitCharacter: false,
+          acceptSuggestionOnEnter: 'off',
+          wordBasedSuggestions: 'off' as any, // Use 'off' instead of false
+          contextmenu: false,
+          codeLens: false,
         });
 
         console.log('[@component:MonacoEditorClient] Monaco editor created successfully');
