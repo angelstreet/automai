@@ -31,14 +31,26 @@ import {
   clickElement,
   connectToHost,
   disconnectFromHost,
+  getDeviceResolution,
 } from '@/app/actions/adbActions';
 
 interface RecAndroidPhoneRemoteProps {
   hostId: string;
   deviceId: string;
+  onElementsUpdate?: (
+    elements: AndroidElement[],
+    deviceWidth: number,
+    deviceHeight: number,
+  ) => void;
+  onOverlayToggle?: (visible: boolean) => void;
 }
 
-export function RecAndroidPhoneRemote({ hostId, deviceId }: RecAndroidPhoneRemoteProps) {
+export function RecAndroidPhoneRemote({
+  hostId,
+  deviceId,
+  onElementsUpdate,
+  onOverlayToggle,
+}: RecAndroidPhoneRemoteProps) {
   const [lastAction, setLastAction] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isConnecting, setIsConnecting] = useState(true);
@@ -55,6 +67,11 @@ export function RecAndroidPhoneRemote({ hostId, deviceId }: RecAndroidPhoneRemot
   const [isDumpingElements, setIsDumpingElements] = useState(false);
   const [isClickingElement, setIsClickingElement] = useState(false);
   const [elementsStatus, setElementsStatus] = useState<string>('');
+  const [deviceResolution, setDeviceResolution] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+  const [showOverlay, setShowOverlay] = useState(false);
 
   // Handle key button press
   const handleKeyPress = async (key: AdbKeyType) => {
@@ -131,12 +148,27 @@ export function RecAndroidPhoneRemote({ hostId, deviceId }: RecAndroidPhoneRemot
     setElementsStatus('Dumping UI elements...');
 
     try {
+      // Get device resolution first
+      const resolutionResult = await getDeviceResolution(hostId, deviceId);
+      if (!resolutionResult.success || !resolutionResult.width || !resolutionResult.height) {
+        setElementsStatus(`Error getting resolution: ${resolutionResult.error}`);
+        return;
+      }
+
+      setDeviceResolution({ width: resolutionResult.width, height: resolutionResult.height });
+
+      // Then dump UI elements
       const result = await dumpUIElements(hostId, deviceId);
 
       if (result.success) {
         setElements(result.elements);
         setSelectedElement(null);
         setElementsStatus(`Found ${result.totalCount} elements`);
+        setShowOverlay(true);
+
+        // Notify parent component
+        onElementsUpdate?.(result.elements, resolutionResult.width, resolutionResult.height);
+        onOverlayToggle?.(true);
       } else {
         setElementsStatus(`Error: ${result.error}`);
       }
@@ -167,6 +199,12 @@ export function RecAndroidPhoneRemote({ hostId, deviceId }: RecAndroidPhoneRemot
     } finally {
       setIsClickingElement(false);
     }
+  };
+
+  // Clear overlay
+  const handleClearOverlay = () => {
+    setShowOverlay(false);
+    onOverlayToggle?.(false);
   };
 
   // Establish SSH + ADB connection on mount
@@ -418,13 +456,22 @@ export function RecAndroidPhoneRemote({ hostId, deviceId }: RecAndroidPhoneRemot
           <Search size={12} />
           UI Elements {elements.length > 0 && `(${elements.length})`}
         </h4>
-        <button
-          onClick={handleDumpElements}
-          disabled={isDumpingElements || isLoading || isConnecting}
-          className="w-full p-1.5 bg-orange-600 text-white rounded text-xs hover:bg-orange-700 disabled:opacity-50 mb-1"
-        >
-          {isDumpingElements ? 'Dumping...' : 'Dump Elements'}
-        </button>
+        <div className="grid grid-cols-2 gap-1 mb-1">
+          <button
+            onClick={handleDumpElements}
+            disabled={isDumpingElements || isLoading || isConnecting}
+            className="p-1.5 bg-orange-600 text-white rounded text-xs hover:bg-orange-700 disabled:opacity-50"
+          >
+            {isDumpingElements ? 'Dumping...' : 'Dump'}
+          </button>
+          <button
+            onClick={handleClearOverlay}
+            disabled={!showOverlay || isLoading || isConnecting}
+            className="p-1.5 bg-gray-600 text-white rounded text-xs hover:bg-gray-700 disabled:opacity-50"
+          >
+            Clear
+          </button>
+        </div>
         {/* Only show loading/error status, not success count */}
         {elementsStatus && !elementsStatus.startsWith('Found') && (
           <div className="text-xs text-center text-gray-500 dark:text-gray-400 py-0.5 mb-1">

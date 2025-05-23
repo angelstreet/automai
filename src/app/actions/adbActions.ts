@@ -691,3 +691,39 @@ export async function clickElement(
     return { success: false, error: error.message };
   }
 }
+
+/**
+ * Get device screen resolution
+ */
+export async function getDeviceResolution(
+  hostId: string,
+  deviceId: string,
+): Promise<{ success: boolean; width?: number; height?: number; error?: string }> {
+  try {
+    console.log(
+      `[@action:adbActions:getDeviceResolution] Getting resolution for device ${deviceId}`,
+    );
+
+    const result = await executeOnConnection(hostId, `adb -s ${deviceId} shell wm size`);
+
+    if (!result.success || !result.data?.stdout) {
+      return { success: false, error: result.error || 'No output received' };
+    }
+
+    // Parse output like "Physical size: 1080x2340"
+    const match = result.data.stdout.match(/(\d+)x(\d+)/);
+    if (!match) {
+      return { success: false, error: 'Could not parse screen resolution' };
+    }
+
+    const width = parseInt(match[1]);
+    const height = parseInt(match[2]);
+
+    console.log(`[@action:adbActions:getDeviceResolution] Device resolution: ${width}x${height}`);
+
+    return { success: true, width, height };
+  } catch (error: any) {
+    console.error(`[@action:adbActions:getDeviceResolution] Error:`, error);
+    return { success: false, error: error.message };
+  }
+}

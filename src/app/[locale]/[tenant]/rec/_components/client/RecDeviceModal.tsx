@@ -9,6 +9,8 @@ import { connectToHost, disconnectFromHost } from '@/app/actions/adbActions';
 import { DeviceConfig, DeviceModalProps, RemoteType } from '../types/recDeviceTypes';
 import { RecAndroidPhoneRemote } from './RecAndroidPhoneRemote';
 import { RecAndroidTvRemote } from './RecAndroidTvRemote';
+import { UIElementsOverlay } from './UIElementsOverlay';
+import { AndroidElement } from '@/app/actions/adbActions';
 
 /**
  * Unified device modal component
@@ -26,10 +28,38 @@ export function RecDeviceModal({ device, isOpen, onClose }: DeviceModalProps) {
   const hlsRef = useRef<any>(null);
   const isDisconnectedRef = useRef(false);
 
+  // Overlay state
+  const [overlayElements, setOverlayElements] = useState<AndroidElement[]>([]);
+  const [deviceResolution, setDeviceResolution] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+  const [showOverlay, setShowOverlay] = useState(false);
+  const [selectedElementId, setSelectedElementId] = useState<number | undefined>();
+
   // Keep the ref in sync with the state
   useEffect(() => {
     isDisconnectedRef.current = isDisconnected;
   }, [isDisconnected]);
+
+  // Handle overlay callbacks from remote components
+  const handleElementsUpdate = (
+    elements: AndroidElement[],
+    deviceWidth: number,
+    deviceHeight: number,
+  ) => {
+    setOverlayElements(elements);
+    setDeviceResolution({ width: deviceWidth, height: deviceHeight });
+    setSelectedElementId(undefined);
+  };
+
+  const handleOverlayToggle = (visible: boolean) => {
+    setShowOverlay(visible);
+    if (!visible) {
+      setOverlayElements([]);
+      setSelectedElementId(undefined);
+    }
+  };
 
   // Handle modal close
   const handleClose = useCallback(() => {
@@ -39,6 +69,9 @@ export function RecDeviceModal({ device, isOpen, onClose }: DeviceModalProps) {
         console.error('[@component:RecDeviceModal] Error disconnecting on close:', error);
       });
     }
+
+    // Clear overlay when closing modal
+    handleOverlayToggle(false);
 
     // Always hide remote when closing modal
     setShowRemote(false);
@@ -92,6 +125,9 @@ export function RecDeviceModal({ device, isOpen, onClose }: DeviceModalProps) {
           variant: 'destructive',
         });
       }
+
+      // Clear overlay when hiding remote
+      handleOverlayToggle(false);
     }
 
     setShowRemote(newShowRemote);
@@ -306,12 +342,16 @@ export function RecDeviceModal({ device, isOpen, onClose }: DeviceModalProps) {
           <RecAndroidTvRemote
             hostId={androidDevice.remoteConfig.hostId}
             deviceId={androidDevice.remoteConfig.deviceId}
+            onElementsUpdate={handleElementsUpdate}
+            onOverlayToggle={handleOverlayToggle}
           />
         )}
         {deviceInfo.remoteType === 'androidPhone' && (
           <RecAndroidPhoneRemote
             hostId={androidDevice.remoteConfig.hostId}
             deviceId={androidDevice.remoteConfig.deviceId}
+            onElementsUpdate={handleElementsUpdate}
+            onOverlayToggle={handleOverlayToggle}
           />
         )}
       </div>
@@ -357,6 +397,18 @@ export function RecDeviceModal({ device, isOpen, onClose }: DeviceModalProps) {
           {/* Remote Control Panel */}
           {renderRemoteControl()}
         </div>
+
+        {/* UI Elements Overlay */}
+        {device.type !== 'host' && showOverlay && deviceResolution && (
+          <UIElementsOverlay
+            elements={overlayElements}
+            videoElement={videoRef.current}
+            deviceWidth={deviceResolution.width}
+            deviceHeight={deviceResolution.height}
+            isVisible={showOverlay}
+            selectedElementId={selectedElementId}
+          />
+        )}
       </div>
     </div>
   );
