@@ -93,9 +93,9 @@ function WidgetContentClient() {
   };
 
   return (
-    <div className="relative w-full h-screen bg-transparent p-8 overflow-hidden">
-      {/* Widget Container */}
-      <div className="relative w-full h-full">
+    <div className="relative w-full max-h-screen h-screen bg-transparent overflow-hidden">
+      {/* Widget Container with internal padding */}
+      <div className="relative w-full h-full p-8 overflow-hidden">
         {/* Calculator Widget */}
         <DraggableWidget
           position={getWidgetPosition('calculator')}

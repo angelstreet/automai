@@ -71,8 +71,8 @@ const DraggableWidget: React.FC<DraggableWidgetProps> = ({
   return (
     <div
       ref={widgetRef}
-      className={`absolute select-none transition-all duration-200 ${
-        isDragging ? 'opacity-80 z-50 scale-105' : 'z-10'
+      className={`absolute select-none ${
+        isDragging ? 'z-50' : 'z-10'
       } ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
       style={{
         left: `${position.x}px`,
