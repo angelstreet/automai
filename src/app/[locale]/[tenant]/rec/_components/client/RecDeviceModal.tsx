@@ -2,15 +2,15 @@
 
 import { X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+
+import { connectToHost, disconnectFromHost, AndroidElement } from '@/app/actions/adbActions';
 import { useToast } from '@/components/shadcn/use-toast';
 
-import { connectToHost, disconnectFromHost } from '@/app/actions/adbActions';
-
 import { DeviceConfig, DeviceModalProps, RemoteType } from '../types/recDeviceTypes';
+
 import { RecAndroidPhoneRemote } from './RecAndroidPhoneRemote';
 import { RecAndroidTvRemote } from './RecAndroidTvRemote';
 import { UIElementsOverlay } from './UIElementsOverlay';
-import { AndroidElement } from '@/app/actions/adbActions';
 
 /**
  * Unified device modal component

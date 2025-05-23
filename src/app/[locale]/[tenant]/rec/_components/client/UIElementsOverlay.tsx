@@ -212,23 +212,6 @@ export function UIElementsOverlay({
 
   return (
     <div ref={overlayRef} className="fixed z-50" style={{ position: 'fixed' }}>
-      {/* Debug: Show calculated video content area with a dashed border */}
-      {scaledElements.length > 0 && (
-        <div
-          className="absolute border-2 border-dashed border-white opacity-50 pointer-events-none"
-          style={{
-            left: '0px',
-            top: '0px',
-            width: '100%',
-            height: '100%',
-          }}
-        >
-          <div className="absolute top-2 left-2 bg-white text-black text-xs px-2 py-1 rounded">
-            DEBUG: Video Area
-          </div>
-        </div>
-      )}
-
       {scaledElements.map((element, index) => (
         <div
           key={element.id}
