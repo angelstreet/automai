@@ -2,7 +2,6 @@
 import { WebSocketServer, WebSocket } from 'ws';
 // @ts-ignore - Add ts-ignore for the websockify import since it doesn't have type definitions
 import { createProxyServer } from 'websockify';
-import { logUtils } from '../utils/logUtils';
 import { IncomingMessage } from 'http';
 import { Socket } from 'net';
 import { WebSocketConnection } from '@/types/component/sshComponentType';

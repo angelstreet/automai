@@ -13,7 +13,7 @@ export function RecUsbAdbStream({ hostId, mobileName = 'Android Device' }: RecUs
   const [showStream, setShowStream] = useState(false);
 
   // Hardcoded values as per requirements
-  const streamUrl = 'http://77.56.53.130:8081/adbstream/output.m3u8';
+  const streamUrl = 'https://77.56.53.130:444/adbstream/output.m3u8';
   const deviceId = '192.168.1.29';
 
   const handleOpenStream = () => {

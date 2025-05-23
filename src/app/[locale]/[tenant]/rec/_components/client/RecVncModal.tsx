@@ -66,7 +66,7 @@ export function RecVncModal({ host, isOpen, onClose }: RecVncModalProps) {
   }
 
   // VNC URL format with password param if available
-  const vncUrl = `http://${host.ip}:${vnc_port}/vnc_lite.html?host=${host.ip}&port=${vnc_port}&path=websockify&encrypt=0${vnc_password ? `&password=${vnc_password}` : ''}`;
+  const vncUrl = `https://${host.ip}:${vnc_port}/vnc/vnc_lite.html?host=${host.ip}&port=${vnc_port}&path=websockify&encrypt=0${vnc_password ? `&password=${vnc_password}` : ''}`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90">

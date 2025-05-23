@@ -24,7 +24,7 @@ export function RecVncPreview({ host }: { host: Host }) {
   }
 
   // VNC URL format - adding viewOnly=1 for preview mode and password if available
-  const vncUrl = `http://${host.ip}:${vnc_port}/vnc_lite.html?host=${host.ip}&port=${vnc_port}&path=websockify&encrypt=0&view_only=1${vnc_password ? `&password=${vnc_password}` : ''}`;
+  const vncUrl = `https://${host.ip}:${vnc_port}/vnc/vnc_lite.html?host=${host.ip}&port=${vnc_port}&path=websockify&encrypt=0&view_only=1${vnc_password ? `&password=${vnc_password}` : ''}`;
 
   // Handle iframe load
   const handleIframeLoad = () => {

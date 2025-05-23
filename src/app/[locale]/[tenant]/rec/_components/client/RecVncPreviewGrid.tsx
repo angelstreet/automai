@@ -59,7 +59,7 @@ export function RecVncPreviewGrid({ hosts, isLoading, error }: RecVncPreviewGrid
     window.dispatchEvent(
       new CustomEvent(RecEvents.OPEN_STREAM_VIEWER, {
         detail: {
-          streamUrl: 'http://77.56.53.130:8081/stream/output.m3u8',
+          streamUrl: 'https://77.56.53.130:444/stream/output.m3u8',
           title: 'Live',
           hostId: streamHostId,
           deviceId: androidDeviceId,
@@ -73,7 +73,7 @@ export function RecVncPreviewGrid({ hosts, isLoading, error }: RecVncPreviewGrid
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {/* Hardcoded M3U8 stream preview */}
         <RecStreamPreview
-          streamUrl="http://77.56.53.130:8081/stream/output.m3u8"
+          streamUrl="https://77.56.53.130:444/stream/output.m3u8"
           title="Live"
           onClick={handleOpenStreamViewer}
         />
@@ -95,7 +95,7 @@ export function RecVncPreviewGrid({ hosts, isLoading, error }: RecVncPreviewGrid
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
       {/* Hardcoded M3U8 stream preview */}
       <RecStreamPreview
-        streamUrl="http://77.56.53.130:8081/stream/output.m3u8"
+        streamUrl="https://77.56.53.130:444/stream/output.m3u8"
         title="Live"
         onClick={handleOpenStreamViewer}
       />
