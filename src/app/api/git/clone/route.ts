@@ -7,7 +7,7 @@ import { rimraf } from 'rimraf';
 interface FileInfo {
   name: string;
   path: string;
-  content: string;
+  size: number;
   language: string;
 }
 
@@ -48,8 +48,8 @@ const getLanguageFromFileName = (fileName: string): string => {
   return languageMap[extension || ''] || 'plaintext';
 };
 
-const getAllFilesRecursively = async (dir: string, basePath: string = ''): Promise<string[]> => {
-  const allFiles: string[] = [];
+const getAllFilesRecursively = async (dir: string, basePath: string = ''): Promise<FileInfo[]> => {
+  const allFiles: FileInfo[] = [];
 
   try {
     const items = await fs.readdir(dir);
@@ -112,7 +112,13 @@ const getAllFilesRecursively = async (dir: string, basePath: string = ''): Promi
               item.toLowerCase().includes(name),
             )
           ) {
-            allFiles.push(relativePath);
+            const fileName = item;
+            allFiles.push({
+              name: fileName,
+              path: relativePath,
+              size: stat.size,
+              language: getLanguageFromFileName(fileName),
+            });
           }
         }
       } catch (statError) {
@@ -165,49 +171,26 @@ export async function POST(request: NextRequest) {
       const repoName = url.split('/').pop()?.replace('.git', '') || 'repository';
 
       // Read all files from the cloned repository
-      const allFilePaths = await getAllFilesRecursively(tempDir);
-      console.log('[@api:git/clone] Found', allFilePaths.length, 'files');
+      const allFiles = await getAllFilesRecursively(tempDir);
+      console.log('[@api:git/clone] Found', allFiles.length, 'files');
 
-      // Create FileInfo objects with actual file content
-      const files: FileInfo[] = [];
-      for (const filePath of allFilePaths.slice(0, 100)) {
-        // Limit to 100 files for performance
-        try {
-          const fullPath = path.join(tempDir, filePath);
-          const content = await fs.readFile(fullPath, 'utf8');
-          const fileName = filePath.split('/').pop() || filePath;
+      // Store the repository temporarily for file access
+      // We'll keep the temp directory for a while to allow file fetching
+      const repoId = `repo-${Date.now()}`;
+      const repoTempDir = path.join(process.cwd(), 'temp', repoId);
 
-          files.push({
-            name: fileName,
-            path: filePath,
-            content: content,
-            language: getLanguageFromFileName(fileName),
-          });
-        } catch (readError) {
-          console.warn(`[@api:git/clone] Could not read file ${filePath}:`, readError);
-          // Add placeholder for unreadable files
-          const fileName = filePath.split('/').pop() || filePath;
-          files.push({
-            name: fileName,
-            path: filePath,
-            content: `// Could not load file content for ${filePath}`,
-            language: getLanguageFromFileName(fileName),
-          });
-        }
-      }
+      // Rename temp directory to use consistent ID
+      await fs.rename(tempDir, repoTempDir);
 
-      console.log('[@api:git/clone] Successfully loaded', files.length, 'files');
-
-      // Cleanup: Remove temporary directory
-      await rimraf(tempDir);
-      console.log('[@api:git/clone] Cleaned up temporary directory');
+      console.log('[@api:git/clone] Repository stored temporarily as:', repoId);
 
       return NextResponse.json({
         success: true,
         repository: {
+          id: repoId, // Add repository ID for file fetching
           url,
           name: repoName,
-          files,
+          files: allFiles, // Just file tree, no content
         },
       });
     } catch (cloneError: any) {

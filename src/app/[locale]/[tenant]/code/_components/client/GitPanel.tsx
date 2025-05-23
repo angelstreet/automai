@@ -12,18 +12,20 @@ import { Input } from '@/components/shadcn/input';
 interface FileInfo {
   name: string;
   path: string;
-  content: string;
+  size: number;
   language: string;
+  content?: string; // Optional, loaded on demand
 }
 
 interface Repository {
+  id: string;
   url: string;
   name: string;
   files: FileInfo[];
 }
 
 interface GitPanelProps {
-  onFilesLoaded: (files: FileInfo[]) => void;
+  onFilesLoaded: (repository: Repository) => void;
   onStatusUpdate: (status: string) => void;
 }
 
@@ -79,10 +81,8 @@ export default function GitPanel({ onFilesLoaded, onStatusUpdate }: GitPanelProp
         console.log('[@component:GitPanel] Loaded', data.repository.files.length, 'files');
 
         setRepository(data.repository);
-        onFilesLoaded(data.repository.files);
-        onStatusUpdate(
-          `Successfully loaded ${data.repository.files.length} files from ${data.repository.name}`,
-        );
+        onFilesLoaded(data.repository);
+        onStatusUpdate(`Repository cloned successfully`);
       } else {
         throw new Error('Invalid response from server');
       }
@@ -99,7 +99,7 @@ export default function GitPanel({ onFilesLoaded, onStatusUpdate }: GitPanelProp
     console.log('[@component:GitPanel] Clearing repository data');
     setRepository(null);
     setError(null);
-    onFilesLoaded([]);
+    onFilesLoaded({ id: '', url: '', name: '', files: [] });
     onStatusUpdate('Repository cleared');
   };
 

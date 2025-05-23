@@ -1,6 +1,7 @@
 'use client';
 
 import { FolderOpen, GitBranch } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import React, { useState } from 'react';
 
 import { Badge } from '@/components/shadcn/badge';
@@ -8,29 +9,56 @@ import { Card } from '@/components/shadcn/card';
 
 import FileExplorer from './FileExplorer';
 import GitPanel from './GitPanel';
-import MonacoEditor from './MonacoEditor';
+
+// Dynamic import for MonacoEditor to prevent SSR issues
+const MonacoEditor = dynamic(() => import('./MonacoEditor'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-full flex items-center justify-center bg-background">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+        <p className="text-muted-foreground text-sm">Loading Monaco Editor...</p>
+      </div>
+    </div>
+  ),
+});
 
 interface FileInfo {
   name: string;
   path: string;
-  content: string;
+  size: number;
   language: string;
+  content?: string; // Optional, loaded on demand
+}
+
+interface Repository {
+  id: string;
+  url: string;
+  name: string;
+  files: FileInfo[];
 }
 
 export default function CodeEditorClient() {
   const [activeTab, setActiveTab] = useState<'explorer' | 'git'>('git');
-  const [files, setFiles] = useState<FileInfo[]>([]);
+  const [repository, setRepository] = useState<Repository | null>(null);
   const [currentFile, setCurrentFile] = useState<FileInfo | null>(null);
+  const [loadingFile, setLoadingFile] = useState<string | null>(null);
   const [status, setStatus] = useState('Ready to clone repository');
 
-  const handleFilesLoaded = (loadedFiles: FileInfo[]) => {
-    console.log('[@component:CodeEditorClient] Files loaded:', loadedFiles.length);
-    setFiles(loadedFiles);
+  const handleRepositoryLoaded = (repo: Repository) => {
+    console.log(
+      '[@component:CodeEditorClient] Repository loaded:',
+      repo.name,
+      'with',
+      repo.files.length,
+      'files',
+    );
+    setRepository(repo);
 
     // Auto-select a good default file to display
-    if (loadedFiles.length > 0) {
+    if (repo.files.length > 0) {
       const defaultFile =
-        loadedFiles.find(
+        repo.files.find(
           (f) =>
             f.name.toLowerCase() === 'readme.md' ||
             f.name.toLowerCase() === 'index.js' ||
@@ -39,16 +67,71 @@ export default function CodeEditorClient() {
             f.name.toLowerCase() === 'main.ts' ||
             f.name.toLowerCase() === 'app.js' ||
             f.name.toLowerCase() === 'app.ts',
-        ) || loadedFiles[0];
+        ) || repo.files[0];
 
-      setCurrentFile(defaultFile);
+      handleFileSelect(defaultFile);
       setActiveTab('explorer');
     }
+
+    setStatus(`Repository loaded: ${repo.files.length} files`);
   };
 
-  const handleFileSelect = (file: FileInfo) => {
+  const handleFileSelect = async (file: FileInfo) => {
     console.log('[@component:CodeEditorClient] File selected:', file.path);
-    setCurrentFile(file);
+
+    // If file content is already loaded, use it
+    if (file.content !== undefined) {
+      setCurrentFile(file);
+      return;
+    }
+
+    // Load file content on demand
+    if (!repository) return;
+
+    setLoadingFile(file.path);
+    setStatus(`Loading ${file.name}...`);
+
+    try {
+      const response = await fetch('/api/git/file', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          repoId: repository.id,
+          filePath: file.path,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to load file content');
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Update file in repository with loaded content
+        const fileWithContent = { ...file, content: data.content };
+        setCurrentFile(fileWithContent);
+
+        // Update repository state to cache the loaded content
+        setRepository((prev) =>
+          prev
+            ? {
+                ...prev,
+                files: prev.files.map((f) => (f.path === file.path ? fileWithContent : f)),
+              }
+            : null,
+        );
+
+        setStatus(`Loaded ${file.name}`);
+      }
+    } catch (error) {
+      console.error('[@component:CodeEditorClient] Failed to load file:', error);
+      setStatus(`Failed to load ${file.name}`);
+    } finally {
+      setLoadingFile(null);
+    }
   };
 
   const handleStatusUpdate = (newStatus: string) => {
@@ -97,13 +180,13 @@ export default function CodeEditorClient() {
         <div className="flex-1 overflow-hidden">
           {activeTab === 'explorer' && (
             <FileExplorer
-              files={files}
+              files={repository?.files || []}
               onFileSelect={handleFileSelect}
               selectedFilePath={currentFile?.path}
             />
           )}
           {activeTab === 'git' && (
-            <GitPanel onFilesLoaded={handleFilesLoaded} onStatusUpdate={handleStatusUpdate} />
+            <GitPanel onFilesLoaded={handleRepositoryLoaded} onStatusUpdate={handleStatusUpdate} />
           )}
         </div>
       </div>

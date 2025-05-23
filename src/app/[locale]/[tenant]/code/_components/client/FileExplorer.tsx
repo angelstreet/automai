@@ -6,8 +6,9 @@ import { ChevronRight, ChevronDown, Folder, File } from 'lucide-react';
 interface FileInfo {
   name: string;
   path: string;
-  content: string;
+  size: number;
   language: string;
+  content?: string; // Optional, loaded on demand
 }
 
 interface FileExplorerProps {
