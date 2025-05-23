@@ -1,40 +1,77 @@
 'use client';
 
-import { useState } from 'react';
-import { AI_MODELS } from '../../constants';
+import { AI_MODELS, MODEL_SELECTION } from '../../constants';
+
+import { useChatContext } from './ChatContext';
 
 /**
  * Chat header component - contains model selection and API token input
  */
 export default function ChatHeader() {
-  const [selectedModel, setSelectedModel] = useState(AI_MODELS[0].id);
+  const { selectedModels, setSelectedModels } = useChatContext();
+
+  const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    const isSelected = selectedModels.includes(value);
+
+    if (isSelected) {
+      // Remove if already selected (but keep at least 1)
+      if (selectedModels.length > MODEL_SELECTION.MIN_MODELS) {
+        setSelectedModels(selectedModels.filter((id) => id !== value));
+      }
+    } else {
+      // Add if not selected (up to max)
+      if (selectedModels.length < MODEL_SELECTION.MAX_MODELS) {
+        setSelectedModels([...selectedModels, value]);
+      }
+    }
+  };
 
   return (
     <div className="flex items-center justify-between px-4 py-2 h-full">
       {/* Model Selection */}
       <div className="flex items-center space-x-3">
-        <label htmlFor="model-select" className="text-sm font-medium text-foreground">
-          Model:
-        </label>
+        {/* Selected Models Display */}
+        <div className="flex flex-wrap gap-1">
+          {selectedModels.map((modelId) => {
+            const model = AI_MODELS.find((m) => m.id === modelId);
+            return (
+              <span
+                key={modelId}
+                className="px-2 py-1 text-xs bg-primary text-primary-foreground rounded-full"
+              >
+                {model?.name}
+              </span>
+            );
+          })}
+        </div>
+
+        {/* Dropdown for adding/removing models */}
         <select
-          id="model-select"
-          value={selectedModel}
-          onChange={(e) => setSelectedModel(e.target.value)}
-          className="px-3 py-1.5 bg-background border border-border rounded-md text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
+          onChange={handleModelChange}
+          value=""
+          className="px-2 py-1.5 w-32 bg-background border border-border rounded-md text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
         >
-          {AI_MODELS.map((model) => (
-            <option key={model.id} value={model.id}>
-              {model.name} ({model.provider})
-            </option>
-          ))}
+          <option value="">Select...</option>
+          {AI_MODELS.map((model) => {
+            const isSelected = selectedModels.includes(model.id);
+            const canAdd = selectedModels.length < MODEL_SELECTION.MAX_MODELS;
+            const canRemove = selectedModels.length > MODEL_SELECTION.MIN_MODELS;
+            const isDisabled = isSelected ? !canRemove : !canAdd;
+
+            return (
+              <option key={model.id} value={model.id} disabled={isDisabled}>
+                {isSelected ? '✓ ' : '+ '}
+                {model.name}
+              </option>
+            );
+          })}
         </select>
       </div>
 
       {/* API Token Input */}
       <div className="flex items-center space-x-2">
-        <label htmlFor="api-token" className="text-sm font-medium text-foreground">
-          API Token:
-        </label>
+        <label htmlFor="api-token" className="text-sm font-medium text-foreground"></label>
         <input
           id="api-token"
           type="password"

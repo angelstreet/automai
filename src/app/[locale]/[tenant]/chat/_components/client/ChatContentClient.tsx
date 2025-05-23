@@ -3,6 +3,7 @@
 import { CHAT_LAYOUT } from '../../constants';
 
 import ChatArea from './ChatArea';
+import { ChatProvider } from './ChatContext';
 import ChatHeader from './ChatHeader';
 import ChatHistoryPanel from './ChatHistoryPanel';
 import MessageInput from './MessageInput';
@@ -14,35 +15,37 @@ export { ChatContentClient as default, ChatContentClient };
 
 function ChatContentClient() {
   return (
-    <div className="flex h-full bg-transparent">
-      {/* History Panel - Left Sidebar */}
-      <div
-        className={`${CHAT_LAYOUT.SIDEBAR_WIDTH} bg-background/80 backdrop-blur-sm border-r border-border flex flex-col`}
-      >
-        <ChatHistoryPanel />
-      </div>
-
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Header with Models Selection and API Token */}
+    <ChatProvider>
+      <div className="flex h-full bg-transparent">
+        {/* History Panel - Left Sidebar */}
         <div
-          className={`${CHAT_LAYOUT.HEADER_HEIGHT} bg-background/80 backdrop-blur-sm border-b border-border flex-shrink-0`}
+          className={`${CHAT_LAYOUT.SIDEBAR_WIDTH} bg-background/80 backdrop-blur-sm border-r border-border flex flex-col`}
         >
-          <ChatHeader />
+          <ChatHistoryPanel />
         </div>
 
-        {/* Chat Messages Area */}
-        <div className="flex-1 min-h-0 overflow-hidden">
-          <ChatArea />
-        </div>
+        {/* Main Chat Area */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Header with Models Selection and API Token */}
+          <div
+            className={`${CHAT_LAYOUT.HEADER_HEIGHT} bg-background/80 backdrop-blur-sm border-b border-border flex-shrink-0`}
+          >
+            <ChatHeader />
+          </div>
 
-        {/* Message Input */}
-        <div
-          className={`${CHAT_LAYOUT.MESSAGE_INPUT_HEIGHT} bg-background/80 backdrop-blur-sm border-t border-border flex-shrink-0`}
-        >
-          <MessageInput />
+          {/* Chat Messages Area */}
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <ChatArea />
+          </div>
+
+          {/* Message Input */}
+          <div
+            className={`${CHAT_LAYOUT.MESSAGE_INPUT_HEIGHT} bg-background/80 backdrop-blur-sm border-t border-border flex-shrink-0`}
+          >
+            <MessageInput />
+          </div>
         </div>
       </div>
-    </div>
+    </ChatProvider>
   );
 }
