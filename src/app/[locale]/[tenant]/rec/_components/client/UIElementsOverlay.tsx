@@ -98,7 +98,7 @@ export function UIElementsOverlay({
       // Video is taller - letterboxed left/right
       actualVideoWidth = videoRect.height * videoAspectRatio;
       actualVideoHeight = videoRect.height;
-      offsetX = (videoRect.width - actualVideoWidth) / 2 + 34;
+      offsetX = (videoRect.width - actualVideoWidth) / 2 + 33;
       offsetY = 0;
     }
 
