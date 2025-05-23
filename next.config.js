@@ -52,6 +52,8 @@ const nextConfig = {
       npm: false,
       crypto: require.resolve('crypto-browserify'),
       stream: require.resolve('stream-browserify'),
+      path: require.resolve('path-browserify'),
+      buffer: require.resolve('buffer'),
     };
     config.module = config.module || {};
     config.module.exprContextCritical = false;
@@ -101,6 +103,24 @@ const nextConfig = {
     config.experiments = {
       ...config.experiments,
       topLevelAwait: true,
+    };
+
+    // Add support for isomorphic-git in browser
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@isomorphic-git/lightning-fs': '@isomorphic-git/lightning-fs',
+    };
+
+    // Monaco Editor webpack configuration
+    config.module.rules.push({
+      test: /\.worker\.js$/,
+      use: { loader: 'worker-loader' },
+    });
+
+    // Ensure Monaco Editor workers are handled correctly
+    config.output = {
+      ...config.output,
+      globalObject: 'self',
     };
 
     return config;

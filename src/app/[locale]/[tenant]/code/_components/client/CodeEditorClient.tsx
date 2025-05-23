@@ -161,11 +161,13 @@ export function CodeEditorClient() {
         console.log('[@component:CodeEditorClient] Starting real repository clone:', url);
 
         // Dynamic imports for isomorphic-git
-        const [git, http, { LightningFS }] = await Promise.all([
+        const [git, http] = await Promise.all([
           import('isomorphic-git'),
           import('isomorphic-git/http/web'),
-          import('@isomorphic-git/lightning-fs'),
         ]);
+
+        // Import LightningFS separately
+        const LightningFS = (await import('@isomorphic-git/lightning-fs')).default;
 
         // Create file system
         const fs = new LightningFS('fs');
