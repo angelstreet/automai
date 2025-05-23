@@ -45,6 +45,47 @@ export default function MonacoEditorClient({ file }: MonacoEditorClientProps) {
         console.log('[@component:MonacoEditorClient] Starting Monaco editor initialization...');
         setIsInitializing(true);
 
+        // Configure Monaco Environment for Next.js
+        if (typeof window !== 'undefined') {
+          (window as any).MonacoEnvironment = {
+            getWorker: function (_workerId: string, label: string) {
+              const getWorkerModule = (moduleUrl: string, label: string) => {
+                return new Worker(moduleUrl, {
+                  name: label,
+                  type: 'module',
+                });
+              };
+
+              switch (label) {
+                case 'json':
+                  return getWorkerModule(
+                    '/monaco-editor/min/vs/language/json/json.worker.js',
+                    label,
+                  );
+                case 'css':
+                case 'scss':
+                case 'less':
+                  return getWorkerModule('/monaco-editor/min/vs/language/css/css.worker.js', label);
+                case 'html':
+                case 'handlebars':
+                case 'razor':
+                  return getWorkerModule(
+                    '/monaco-editor/min/vs/language/html/html.worker.js',
+                    label,
+                  );
+                case 'typescript':
+                case 'javascript':
+                  return getWorkerModule(
+                    '/monaco-editor/min/vs/language/typescript/ts.worker.js',
+                    label,
+                  );
+                default:
+                  return getWorkerModule('/monaco-editor/min/vs/editor/editor.worker.js', label);
+              }
+            },
+          };
+        }
+
         // Set a timeout to prevent infinite loading
         const timeout = setTimeout(() => {
           console.error(
@@ -154,8 +195,8 @@ export default function MonacoEditorClient({ file }: MonacoEditorClientProps) {
   // Always render the container div and overlay loading states
   return (
     <div className="relative h-full w-full">
-      {/* Editor container - always rendered */}
-      <div ref={editorRef} className="h-full w-full" />
+      {/* Editor container - remove Tailwind classes to prevent Monaco conflicts */}
+      <div ref={editorRef} style={{ width: '100%', height: '100%' }} />
 
       {/* Loading overlay */}
       {(!file.content || isInitializing) && (
