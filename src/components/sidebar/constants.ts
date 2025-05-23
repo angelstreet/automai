@@ -15,6 +15,8 @@ import {
   Key,
   Globe,
   EyeIcon,
+  MessageCircle,
+  Code,
 } from 'lucide-react';
 
 import { Role } from '@/types/service/userServiceType';
@@ -70,6 +72,18 @@ export const sidebarNavigationData: SidebarNavigationData = {
     {
       title: 'Main',
       items: [
+        {
+          title: 'Chat',
+          href: '/chat',
+          icon: MessageCircle,
+          roles: ['admin', 'developer', 'tester', 'viewer'],
+        },
+        {
+          title: 'Code',
+          href: '/code',
+          icon: Code,
+          roles: ['admin', 'developer', 'tester', 'viewer'],
+        },
         {
           title: 'Browser',
           href: '/browser',

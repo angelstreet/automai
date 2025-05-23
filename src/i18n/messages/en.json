@@ -64,6 +64,14 @@
     "title": "Browser",
     "desc": "Run browser automation tests"
   },
+  "chat": {
+    "title": "Chat",
+    "desc": "Chat with AI"
+  },
+  "code": {
+    "title": "Code",
+    "desc": "Write and run code with Stackblitz"
+  },
   "common": {
     "actions": "Actions",
     "all": "All",
