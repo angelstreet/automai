@@ -610,5 +610,9 @@
     "roles_viewer": "Viewer",
     "roles_viewer_read_only": "Viewer (Read-Only)",
     "title": "Team Management"
+  },
+  "widget": {
+    "title": "Widget",
+    "desc": "Widget and Tools"
   }
 }

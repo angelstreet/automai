@@ -17,6 +17,7 @@ import {
   EyeIcon,
   MessageCircle,
   Code,
+  Wrench,
 } from 'lucide-react';
 
 import { Role } from '@/types/service/userServiceType';
@@ -65,6 +66,12 @@ export const sidebarNavigationData: SidebarNavigationData = {
           title: 'Dashboard',
           href: '/dashboard',
           icon: LayoutDashboard,
+          roles: ['admin', 'developer', 'tester', 'viewer'],
+        },
+        {
+          title: 'Widget',
+          href: '/widget',
+          icon: Wrench,
           roles: ['admin', 'developer', 'tester', 'viewer'],
         },
       ],
