@@ -100,7 +100,7 @@ export default function MonacoEditorClient({ file }: MonacoEditorClientProps) {
           scrollBeyondLastLine: false,
           readOnly: true,
           minimap: {
-            enabled: !isLargeFile, // Disable minimap for large files
+            enabled: false, // Disable minimap to prevent buffer allocation errors
           },
           wordWrap: 'on',
           folding: !isVeryLargeFile, // Disable folding for very large files
