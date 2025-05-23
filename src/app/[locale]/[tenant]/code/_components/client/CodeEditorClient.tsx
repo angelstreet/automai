@@ -90,22 +90,30 @@ export default function CodeEditorClient() {
 
   const handleFileSelect = async (file: FileInfo) => {
     console.log('[@component:CodeEditorClient] File selected:', file.path);
+    console.log('[@component:CodeEditorClient] File has content?', file.content !== undefined);
+    console.log('[@component:CodeEditorClient] Current file path:', currentFile?.path);
 
     // Prevent infinite loop - if same file is already selected, don't reload
     if (currentFile?.path === file.path && file.content !== undefined) {
+      console.log('[@component:CodeEditorClient] File already loaded, skipping');
       return;
     }
 
     // If file content is already loaded, use it
     if (file.content !== undefined) {
+      console.log('[@component:CodeEditorClient] Using cached content for:', file.name);
       setCurrentFile(file);
       setStatus(`Viewing ${file.name}`);
       return;
     }
 
     // Load file content on demand
-    if (!repository) return;
+    if (!repository) {
+      console.log('[@component:CodeEditorClient] No repository available');
+      return;
+    }
 
+    console.log('[@component:CodeEditorClient] Loading content for:', file.name);
     setStatus(`Loading ${file.name}...`);
 
     try {
@@ -120,30 +128,38 @@ export default function CodeEditorClient() {
         }),
       });
 
+      console.log('[@component:CodeEditorClient] API response status:', response.status);
+
       if (!response.ok) {
         throw new Error('Failed to load file content');
       }
 
       const data = await response.json();
+      console.log('[@component:CodeEditorClient] API response data:', data);
 
       if (data.success) {
         // Create new file object with content
         const fileWithContent = { ...file, content: data.content };
-
-        // Set as current file immediately
-        setCurrentFile(fileWithContent);
-
-        // Update repository state to cache the loaded content
-        setRepository((prev) =>
-          prev
-            ? {
-                ...prev,
-                files: prev.files.map((f) => (f.path === file.path ? fileWithContent : f)),
-              }
-            : null,
+        console.log(
+          '[@component:CodeEditorClient] File content loaded, length:',
+          data.content?.length || 0,
         );
 
+        // Batch both state updates to prevent mount/unmount cycling
+        const updatedRepository = repository
+          ? {
+              ...repository,
+              files: repository.files.map((f) => (f.path === file.path ? fileWithContent : f)),
+            }
+          : null;
+
+        // Update repository first, then current file in same render cycle
+        setRepository(updatedRepository);
+        setCurrentFile(fileWithContent);
         setStatus(`Loaded ${file.name}`);
+      } else {
+        console.error('[@component:CodeEditorClient] API returned success: false');
+        setStatus(`Failed to load ${file.name}`);
       }
     } catch (error) {
       console.error('[@component:CodeEditorClient] Failed to load file:', error);
@@ -247,7 +263,7 @@ export default function CodeEditorClient() {
         {/* Editor */}
         <div className="flex-1">
           {currentFile ? (
-            <MonacoEditorClient file={currentFile} />
+            <MonacoEditorClient key={currentFile.path} file={currentFile} />
           ) : (
             <div className="h-full flex items-center justify-center bg-background">
               <Card className="p-8 text-center max-w-md mx-auto">

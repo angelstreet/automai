@@ -82,6 +82,7 @@ export default function GitPanelClient({ onFilesLoaded, onStatusUpdate }: GitPan
           data.repository.name,
         );
         console.log('[@component:GitPanelClient] Loaded', data.repository.files.length, 'files');
+        console.log('[@component:GitPanelClient] Sample file structure:', data.repository.files[0]);
 
         setRepository(data.repository);
         onFilesLoaded(data.repository);

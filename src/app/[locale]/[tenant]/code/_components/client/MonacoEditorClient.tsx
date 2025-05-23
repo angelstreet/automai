@@ -17,41 +17,73 @@ interface MonacoEditorClientProps {
 export default function MonacoEditorClient({ file }: MonacoEditorClientProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const monacoInstanceRef = useRef<any>(null);
-  const [isDisposed, setIsDisposed] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isInitializing, setIsInitializing] = useState(false);
 
-  // If file has no content, show loading state
-  if (!file.content) {
-    return (
-      <div className="h-full flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-          <p className="text-muted-foreground text-sm">Loading {file.name}...</p>
-        </div>
-      </div>
-    );
-  }
+  console.log('[@component:MonacoEditorClient] Rendering with file:', file.name);
+  console.log('[@component:MonacoEditorClient] File content exists?', !!file.content);
+  console.log('[@component:MonacoEditorClient] File content length:', file.content?.length || 0);
 
   useEffect(() => {
-    if (!editorRef.current || !file.content) return;
+    console.log('[@component:MonacoEditorClient] useEffect triggered - Component mounted');
+    console.log('[@component:MonacoEditorClient] editorRef.current exists?', !!editorRef.current);
 
-    let isMounted = true;
+    // Only initialize if we have content
+    if (!file.content) {
+      console.log('[@component:MonacoEditorClient] No content available, skipping initialization');
+      return;
+    }
 
     const initializeEditor = async () => {
+      if (!editorRef.current) {
+        console.error(
+          '[@component:MonacoEditorClient] DOM element not ready on initialization attempt',
+        );
+        return;
+      }
+
       try {
-        console.log('[@component:MonacoEditorClient] Loading Monaco editor...');
+        console.log('[@component:MonacoEditorClient] Starting Monaco editor initialization...');
+        setIsInitializing(true);
+
+        // Set a timeout to prevent infinite loading
+        const timeout = setTimeout(() => {
+          console.error(
+            '[@component:MonacoEditorClient] Timeout: Monaco editor initialization took too long',
+          );
+          setIsInitializing(false);
+        }, 10000); // 10 seconds timeout
 
         // Dynamic import to prevent SSR issues
         const monaco = await import('monaco-editor');
+        console.log('[@component:MonacoEditorClient] Monaco imported successfully');
 
-        if (!isMounted || !editorRef.current || !file.content) return;
+        if (!editorRef.current || !file.content) {
+          console.log(
+            '[@component:MonacoEditorClient] Element or content lost during Monaco import',
+          );
+          clearTimeout(timeout);
+          setIsInitializing(false);
+          return;
+        }
 
         console.log('[@component:MonacoEditorClient] Initializing Monaco editor');
+        console.log('[@component:MonacoEditorClient] Editor container dimensions:', {
+          width: editorRef.current.offsetWidth,
+          height: editorRef.current.offsetHeight,
+        });
 
         // Determine if file is too large for minimap
         const isLargeFile = file.content.length > 50000; // 50KB threshold
         const lineCount = file.content.split('\n').length;
         const isVeryLargeFile = lineCount > 1000 || file.content.length > 100000;
+
+        console.log('[@component:MonacoEditorClient] File stats:', {
+          contentLength: file.content.length,
+          lineCount,
+          isLargeFile,
+          isVeryLargeFile,
+          language: file.language,
+        });
 
         // Create Monaco editor instance with performance optimizations
         const editor = monaco.editor.create(editorRef.current, {
@@ -83,18 +115,20 @@ export default function MonacoEditorClient({ file }: MonacoEditorClientProps) {
           },
           // Performance optimizations for large files
           links: !isVeryLargeFile,
-          occurrencesHighlight: !isVeryLargeFile,
+          occurrencesHighlight: !isVeryLargeFile ? 'singleFile' : 'off',
           renderLineHighlight: isVeryLargeFile ? 'none' : 'line',
           selectionHighlight: !isVeryLargeFile,
         });
 
-        if (isMounted) {
-          monacoInstanceRef.current = editor;
-          setIsLoading(false);
-        }
+        console.log('[@component:MonacoEditorClient] Monaco editor created successfully');
+
+        monacoInstanceRef.current = editor;
+        setIsInitializing(false);
+        clearTimeout(timeout);
+        console.log('[@component:MonacoEditorClient] Editor initialization complete');
       } catch (error) {
         console.error('[@component:MonacoEditorClient] Failed to initialize Monaco:', error);
-        setIsLoading(false);
+        setIsInitializing(false);
       }
     };
 
@@ -102,10 +136,8 @@ export default function MonacoEditorClient({ file }: MonacoEditorClientProps) {
 
     // Cleanup function
     return () => {
-      isMounted = false;
+      console.log('[@component:MonacoEditorClient] useEffect cleanup - Component unmounting');
       console.log('[@component:MonacoEditorClient] Disposing Monaco editor');
-      setIsDisposed(true);
-
       if (monacoInstanceRef.current) {
         try {
           if (typeof monacoInstanceRef.current.dispose === 'function') {
@@ -119,20 +151,23 @@ export default function MonacoEditorClient({ file }: MonacoEditorClientProps) {
     };
   }, [file.content, file.language]); // Re-run when content or language changes
 
-  if (isLoading) {
-    return (
-      <div className="h-full flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-          <p className="text-muted-foreground text-sm">Loading Monaco Editor...</p>
-        </div>
-      </div>
-    );
-  }
-
+  // Always render the container div and overlay loading states
   return (
     <div className="relative h-full w-full">
+      {/* Editor container - always rendered */}
       <div ref={editorRef} className="h-full w-full" />
+
+      {/* Loading overlay */}
+      {(!file.content || isInitializing) && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background z-10">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+            <p className="text-muted-foreground text-sm">
+              {!file.content ? `Loading ${file.name}...` : 'Initializing Monaco Editor...'}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
-} 
+}
