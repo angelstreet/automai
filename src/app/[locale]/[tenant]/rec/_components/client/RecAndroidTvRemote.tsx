@@ -17,9 +17,14 @@ import {
   FastForward,
   Rewind,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
-import { AdbKeyType, executeAdbKeyCommand } from '@/app/actions/adbActions';
+import {
+  AdbKeyType,
+  executeAdbKeyCommand,
+  connectToHost,
+  disconnectFromHost,
+} from '@/app/actions/adbActions';
 
 interface RecAndroidTvRemoteProps {
   hostId: string;
@@ -29,10 +34,52 @@ interface RecAndroidTvRemoteProps {
 export function RecAndroidTvRemote({ hostId, deviceId }: RecAndroidTvRemoteProps) {
   const [lastAction, setLastAction] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(true);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+
+  // Establish SSH + ADB connection on mount
+  useEffect(() => {
+    const establishConnection = async () => {
+      setIsConnecting(true);
+      setConnectionError(null);
+      setLastAction('Connecting to TV device...');
+
+      try {
+        // Add a timeout to prevent hanging
+        const connectionPromise = connectToHost(hostId, deviceId);
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Connection timeout after 30 seconds')), 30000),
+        );
+
+        const result = (await Promise.race([connectionPromise, timeoutPromise])) as any;
+        if (result.success) {
+          setLastAction('Connected successfully');
+          setConnectionError(null);
+        } else {
+          setConnectionError(result.error || 'Failed to connect');
+          setLastAction(`Connection failed: ${result.error}`);
+        }
+      } catch (error: any) {
+        setConnectionError(error.message);
+        setLastAction(`Connection error: ${error.message}`);
+      } finally {
+        setIsConnecting(false);
+      }
+    };
+
+    establishConnection();
+
+    // Cleanup: disconnect when component unmounts
+    return () => {
+      disconnectFromHost(hostId).catch((err) => {
+        console.error('Failed to disconnect on unmount:', err);
+      });
+    };
+  }, [hostId, deviceId]);
 
   // Handle key button press
   const handleKeyPress = async (key: AdbKeyType) => {
-    if (isLoading) return;
+    if (isLoading || isConnecting) return;
 
     setIsLoading(true);
     setLastAction(`Sending ${key}...`);
@@ -56,12 +103,24 @@ export function RecAndroidTvRemote({ hostId, deviceId }: RecAndroidTvRemoteProps
     <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded-lg w-full max-w-xs">
       <h3 className="text-sm font-medium mb-2 text-center">📺 Android TV Remote</h3>
 
+      {/* Connection status */}
+      {isConnecting && (
+        <div className="mb-2 p-2 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded text-xs text-center">
+          Connecting to TV device...
+        </div>
+      )}
+      {connectionError && (
+        <div className="mb-2 p-2 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded text-xs text-center">
+          {connectionError}
+        </div>
+      )}
+
       {/* Direction pad */}
       <div className="grid grid-cols-3 gap-2 mb-4">
         <div className="col-start-2">
           <button
             onClick={() => handleKeyPress('UP')}
-            disabled={isLoading}
+            disabled={isLoading || isConnecting}
             className="w-full p-3 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
             aria-label="Up"
           >
@@ -71,7 +130,7 @@ export function RecAndroidTvRemote({ hostId, deviceId }: RecAndroidTvRemoteProps
         <div className="col-start-1">
           <button
             onClick={() => handleKeyPress('LEFT')}
-            disabled={isLoading}
+            disabled={isLoading || isConnecting}
             className="w-full p-3 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
             aria-label="Left"
           >
@@ -81,7 +140,7 @@ export function RecAndroidTvRemote({ hostId, deviceId }: RecAndroidTvRemoteProps
         <div className="col-start-2">
           <button
             onClick={() => handleKeyPress('SELECT')}
-            disabled={isLoading}
+            disabled={isLoading || isConnecting}
             className="w-full p-3 bg-blue-600 text-white rounded flex items-center justify-center hover:bg-blue-700 disabled:opacity-50"
             aria-label="Select"
           >
@@ -91,7 +150,7 @@ export function RecAndroidTvRemote({ hostId, deviceId }: RecAndroidTvRemoteProps
         <div className="col-start-3">
           <button
             onClick={() => handleKeyPress('RIGHT')}
-            disabled={isLoading}
+            disabled={isLoading || isConnecting}
             className="w-full p-3 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
             aria-label="Right"
           >
@@ -101,7 +160,7 @@ export function RecAndroidTvRemote({ hostId, deviceId }: RecAndroidTvRemoteProps
         <div className="col-start-2">
           <button
             onClick={() => handleKeyPress('DOWN')}
-            disabled={isLoading}
+            disabled={isLoading || isConnecting}
             className="w-full p-3 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
             aria-label="Down"
           >
@@ -114,7 +173,7 @@ export function RecAndroidTvRemote({ hostId, deviceId }: RecAndroidTvRemoteProps
       <div className="grid grid-cols-4 gap-2 mb-4">
         <button
           onClick={() => handleKeyPress('MEDIA_REWIND')}
-          disabled={isLoading}
+          disabled={isLoading || isConnecting}
           className="p-2 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
           aria-label="Rewind"
         >
@@ -122,7 +181,7 @@ export function RecAndroidTvRemote({ hostId, deviceId }: RecAndroidTvRemoteProps
         </button>
         <button
           onClick={() => handleKeyPress('MEDIA_PLAY_PAUSE')}
-          disabled={isLoading}
+          disabled={isLoading || isConnecting}
           className="p-2 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
           aria-label="Play/Pause"
         >
@@ -130,7 +189,7 @@ export function RecAndroidTvRemote({ hostId, deviceId }: RecAndroidTvRemoteProps
         </button>
         <button
           onClick={() => handleKeyPress('MEDIA_PAUSE')}
-          disabled={isLoading}
+          disabled={isLoading || isConnecting}
           className="p-2 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
           aria-label="Pause"
         >
@@ -138,7 +197,7 @@ export function RecAndroidTvRemote({ hostId, deviceId }: RecAndroidTvRemoteProps
         </button>
         <button
           onClick={() => handleKeyPress('MEDIA_FAST_FORWARD')}
-          disabled={isLoading}
+          disabled={isLoading || isConnecting}
           className="p-2 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
           aria-label="Fast Forward"
         >
@@ -150,7 +209,7 @@ export function RecAndroidTvRemote({ hostId, deviceId }: RecAndroidTvRemoteProps
       <div className="grid grid-cols-3 gap-2 mb-4">
         <button
           onClick={() => handleKeyPress('BACK')}
-          disabled={isLoading}
+          disabled={isLoading || isConnecting}
           className="p-2 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
           aria-label="Back"
         >
@@ -158,7 +217,7 @@ export function RecAndroidTvRemote({ hostId, deviceId }: RecAndroidTvRemoteProps
         </button>
         <button
           onClick={() => handleKeyPress('HOME')}
-          disabled={isLoading}
+          disabled={isLoading || isConnecting}
           className="p-2 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
           aria-label="Home"
         >
@@ -166,7 +225,7 @@ export function RecAndroidTvRemote({ hostId, deviceId }: RecAndroidTvRemoteProps
         </button>
         <button
           onClick={() => handleKeyPress('MENU')}
-          disabled={isLoading}
+          disabled={isLoading || isConnecting}
           className="p-2 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
           aria-label="Menu"
         >
@@ -178,7 +237,7 @@ export function RecAndroidTvRemote({ hostId, deviceId }: RecAndroidTvRemoteProps
       <div className="grid grid-cols-4 gap-2 mb-2">
         <button
           onClick={() => handleKeyPress('VOLUME_DOWN')}
-          disabled={isLoading}
+          disabled={isLoading || isConnecting}
           className="p-2 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
           aria-label="Volume Down"
         >
@@ -186,7 +245,7 @@ export function RecAndroidTvRemote({ hostId, deviceId }: RecAndroidTvRemoteProps
         </button>
         <button
           onClick={() => handleKeyPress('VOLUME_MUTE')}
-          disabled={isLoading}
+          disabled={isLoading || isConnecting}
           className="p-2 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
           aria-label="Volume Mute"
         >
@@ -194,7 +253,7 @@ export function RecAndroidTvRemote({ hostId, deviceId }: RecAndroidTvRemoteProps
         </button>
         <button
           onClick={() => handleKeyPress('VOLUME_UP')}
-          disabled={isLoading}
+          disabled={isLoading || isConnecting}
           className="p-2 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
           aria-label="Volume Up"
         >
@@ -202,7 +261,7 @@ export function RecAndroidTvRemote({ hostId, deviceId }: RecAndroidTvRemoteProps
         </button>
         <button
           onClick={() => handleKeyPress('POWER')}
-          disabled={isLoading}
+          disabled={isLoading || isConnecting}
           className="p-2 bg-red-500 text-white rounded flex items-center justify-center hover:bg-red-600 disabled:opacity-50"
           aria-label="Power"
         >

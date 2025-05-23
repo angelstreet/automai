@@ -5,6 +5,7 @@ import { Suspense } from 'react';
 import { Host } from '@/types/component/hostComponentType';
 
 import { AndroidDeviceConfig, DeviceConfig, HostDeviceConfig } from '../types/recDeviceTypes';
+
 import { RecDevicePreview } from './RecDevicePreview';
 import { RecEvents } from './RecEventListener';
 
@@ -64,7 +65,7 @@ export function RecPreviewGrid({ hosts, isLoading, error }: RecPreviewGridProps)
       streamUrl: 'https://77.56.53.130:444/stream/output.m3u8',
       remoteConfig: {
         hostId: hosts.length > 0 ? hosts[0].id : 'default-host',
-        deviceId: '192.168.1.100:5555',
+        deviceId: '192.168.1.130:5555',
       },
     },
     {

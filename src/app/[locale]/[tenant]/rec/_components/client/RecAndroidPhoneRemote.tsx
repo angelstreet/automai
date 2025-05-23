@@ -17,9 +17,8 @@ import {
   Phone,
   Smartphone,
   Search,
-  MousePointer,
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 import {
   AdbKeyType,
@@ -30,6 +29,8 @@ import {
   launchApp,
   dumpUIElements,
   clickElement,
+  connectToHost,
+  disconnectFromHost,
 } from '@/app/actions/adbActions';
 
 interface RecAndroidPhoneRemoteProps {
@@ -40,6 +41,8 @@ interface RecAndroidPhoneRemoteProps {
 export function RecAndroidPhoneRemote({ hostId, deviceId }: RecAndroidPhoneRemoteProps) {
   const [lastAction, setLastAction] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(true);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
 
   // New state for the 3 features
   const [apps, setApps] = useState<AndroidApp[]>([]);
@@ -55,7 +58,7 @@ export function RecAndroidPhoneRemote({ hostId, deviceId }: RecAndroidPhoneRemot
 
   // Handle key button press
   const handleKeyPress = async (key: AdbKeyType) => {
-    if (isLoading) return;
+    if (isLoading || isConnecting) return;
 
     setIsLoading(true);
     setLastAction(`Sending ${key}...`);
@@ -76,8 +79,8 @@ export function RecAndroidPhoneRemote({ hostId, deviceId }: RecAndroidPhoneRemot
   };
 
   // Load installed apps
-  const handleLoadApps = async () => {
-    if (isLoadingApps) return;
+  const handleLoadApps = useCallback(async () => {
+    if (isLoadingApps || isConnecting) return;
 
     setIsLoadingApps(true);
     setAppStatus('Loading apps...');
@@ -96,11 +99,11 @@ export function RecAndroidPhoneRemote({ hostId, deviceId }: RecAndroidPhoneRemot
     } finally {
       setIsLoadingApps(false);
     }
-  };
+  }, [hostId, deviceId, isLoadingApps, isConnecting]);
 
   // Launch selected app
   const handleLaunchApp = async () => {
-    if (!selectedApp || isLoading) return;
+    if (!selectedApp || isLoading || isConnecting) return;
 
     setIsLoading(true);
     setLastAction(`Launching ${selectedApp}...`);
@@ -122,7 +125,7 @@ export function RecAndroidPhoneRemote({ hostId, deviceId }: RecAndroidPhoneRemot
 
   // Dump UI elements
   const handleDumpElements = async () => {
-    if (isDumpingElements) return;
+    if (isDumpingElements || isConnecting) return;
 
     setIsDumpingElements(true);
     setElementsStatus('Dumping UI elements...');
@@ -146,7 +149,7 @@ export function RecAndroidPhoneRemote({ hostId, deviceId }: RecAndroidPhoneRemot
 
   // Click on selected element
   const handleClickElement = async () => {
-    if (!selectedElement || isClickingElement) return;
+    if (!selectedElement || isClickingElement || isConnecting) return;
 
     setIsClickingElement(true);
     setLastAction(`Clicking element...`);
@@ -166,21 +169,58 @@ export function RecAndroidPhoneRemote({ hostId, deviceId }: RecAndroidPhoneRemot
     }
   };
 
-  // Load apps on component mount
+  // Establish SSH + ADB connection on mount
   useEffect(() => {
-    handleLoadApps();
+    const establishConnection = async () => {
+      setIsConnecting(true);
+      setConnectionError(null);
+      setLastAction('Connecting to device...');
+
+      try {
+        const result = await connectToHost(hostId, deviceId);
+        if (result.success) {
+          setLastAction('Connected successfully');
+          setConnectionError(null);
+          // Don't auto-load apps - only when user clicks refresh
+        } else {
+          setConnectionError(result.error || 'Failed to connect');
+          setLastAction(`Connection failed: ${result.error}`);
+        }
+      } catch (error: any) {
+        setConnectionError(error.message);
+        setLastAction(`Connection error: ${error.message}`);
+      } finally {
+        setIsConnecting(false);
+      }
+    };
+
+    establishConnection();
+
+    // Cleanup: disconnect when component unmounts
+    return () => {
+      disconnectFromHost(hostId).catch((err) => {
+        console.error('Failed to disconnect on unmount:', err);
+      });
+    };
   }, [hostId, deviceId]);
 
   return (
-    <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-lg w-full max-w-xs">
+    <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-lg w-full max-w-xs overflow-hidden">
       <h3 className="text-xs font-medium mb-2 text-center">📱 Android Phone Remote</h3>
+
+      {/* Connection status */}
+      {connectionError && (
+        <div className="mb-2 p-2 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded text-xs text-center">
+          {connectionError}
+        </div>
+      )}
 
       {/* Direction pad */}
       <div className="grid grid-cols-3 gap-1 mb-3">
         <div className="col-start-2">
           <button
             onClick={() => handleKeyPress('UP')}
-            disabled={isLoading}
+            disabled={isLoading || isConnecting}
             className="w-full p-1.5 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
             aria-label="Up"
           >
@@ -190,7 +230,7 @@ export function RecAndroidPhoneRemote({ hostId, deviceId }: RecAndroidPhoneRemot
         <div className="col-start-1">
           <button
             onClick={() => handleKeyPress('LEFT')}
-            disabled={isLoading}
+            disabled={isLoading || isConnecting}
             className="w-full p-1.5 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
             aria-label="Left"
           >
@@ -200,7 +240,7 @@ export function RecAndroidPhoneRemote({ hostId, deviceId }: RecAndroidPhoneRemot
         <div className="col-start-2">
           <button
             onClick={() => handleKeyPress('SELECT')}
-            disabled={isLoading}
+            disabled={isLoading || isConnecting}
             className="w-full p-1.5 bg-blue-600 text-white rounded flex items-center justify-center hover:bg-blue-700 disabled:opacity-50"
             aria-label="Select"
           >
@@ -210,7 +250,7 @@ export function RecAndroidPhoneRemote({ hostId, deviceId }: RecAndroidPhoneRemot
         <div className="col-start-3">
           <button
             onClick={() => handleKeyPress('RIGHT')}
-            disabled={isLoading}
+            disabled={isLoading || isConnecting}
             className="w-full p-1.5 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
             aria-label="Right"
           >
@@ -220,7 +260,7 @@ export function RecAndroidPhoneRemote({ hostId, deviceId }: RecAndroidPhoneRemot
         <div className="col-start-2">
           <button
             onClick={() => handleKeyPress('DOWN')}
-            disabled={isLoading}
+            disabled={isLoading || isConnecting}
             className="w-full p-1.5 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
             aria-label="Down"
           >
@@ -233,7 +273,7 @@ export function RecAndroidPhoneRemote({ hostId, deviceId }: RecAndroidPhoneRemot
       <div className="grid grid-cols-3 gap-1 mb-3">
         <button
           onClick={() => handleKeyPress('BACK')}
-          disabled={isLoading}
+          disabled={isLoading || isConnecting}
           className="p-1.5 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
           aria-label="Back"
         >
@@ -241,7 +281,7 @@ export function RecAndroidPhoneRemote({ hostId, deviceId }: RecAndroidPhoneRemot
         </button>
         <button
           onClick={() => handleKeyPress('HOME')}
-          disabled={isLoading}
+          disabled={isLoading || isConnecting}
           className="p-1.5 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
           aria-label="Home"
         >
@@ -249,7 +289,7 @@ export function RecAndroidPhoneRemote({ hostId, deviceId }: RecAndroidPhoneRemot
         </button>
         <button
           onClick={() => handleKeyPress('MENU')}
-          disabled={isLoading}
+          disabled={isLoading || isConnecting}
           className="p-1.5 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
           aria-label="Menu"
         >
@@ -261,7 +301,7 @@ export function RecAndroidPhoneRemote({ hostId, deviceId }: RecAndroidPhoneRemot
       <div className="grid grid-cols-3 gap-1 mb-3">
         <button
           onClick={() => handleKeyPress('CAMERA')}
-          disabled={isLoading}
+          disabled={isLoading || isConnecting}
           className="p-1.5 bg-green-600 text-white rounded flex items-center justify-center hover:bg-green-700 disabled:opacity-50"
           aria-label="Camera"
         >
@@ -269,7 +309,7 @@ export function RecAndroidPhoneRemote({ hostId, deviceId }: RecAndroidPhoneRemot
         </button>
         <button
           onClick={() => handleKeyPress('CALL')}
-          disabled={isLoading}
+          disabled={isLoading || isConnecting}
           className="p-1.5 bg-green-600 text-white rounded flex items-center justify-center hover:bg-green-700 disabled:opacity-50"
           aria-label="Phone"
         >
@@ -277,7 +317,7 @@ export function RecAndroidPhoneRemote({ hostId, deviceId }: RecAndroidPhoneRemot
         </button>
         <button
           onClick={() => handleKeyPress('ENDCALL')}
-          disabled={isLoading}
+          disabled={isLoading || isConnecting}
           className="p-1.5 bg-red-600 text-white rounded flex items-center justify-center hover:bg-red-700 disabled:opacity-50"
           aria-label="End Call"
         >
@@ -289,7 +329,7 @@ export function RecAndroidPhoneRemote({ hostId, deviceId }: RecAndroidPhoneRemot
       <div className="grid grid-cols-4 gap-1 mb-2">
         <button
           onClick={() => handleKeyPress('VOLUME_DOWN')}
-          disabled={isLoading}
+          disabled={isLoading || isConnecting}
           className="p-1.5 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
           aria-label="Volume Down"
         >
@@ -297,7 +337,7 @@ export function RecAndroidPhoneRemote({ hostId, deviceId }: RecAndroidPhoneRemot
         </button>
         <button
           onClick={() => handleKeyPress('VOLUME_MUTE')}
-          disabled={isLoading}
+          disabled={isLoading || isConnecting}
           className="p-1.5 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
           aria-label="Volume Mute"
         >
@@ -305,7 +345,7 @@ export function RecAndroidPhoneRemote({ hostId, deviceId }: RecAndroidPhoneRemot
         </button>
         <button
           onClick={() => handleKeyPress('VOLUME_UP')}
-          disabled={isLoading}
+          disabled={isLoading || isConnecting}
           className="p-1.5 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
           aria-label="Volume Up"
         >
@@ -313,7 +353,7 @@ export function RecAndroidPhoneRemote({ hostId, deviceId }: RecAndroidPhoneRemot
         </button>
         <button
           onClick={() => handleKeyPress('POWER')}
-          disabled={isLoading}
+          disabled={isLoading || isConnecting}
           className="p-1.5 bg-red-500 text-white rounded flex items-center justify-center hover:bg-red-600 disabled:opacity-50"
           aria-label="Power"
         >
@@ -328,13 +368,13 @@ export function RecAndroidPhoneRemote({ hostId, deviceId }: RecAndroidPhoneRemot
       <div className="mb-3">
         <h4 className="text-xs font-medium mb-1 flex items-center gap-1">
           <Smartphone size={12} />
-          App Launcher
+          App Launcher {apps.length > 0 && `(${apps.length})`}
         </h4>
         <div className="space-y-1">
           <select
             value={selectedApp}
             onChange={(e) => setSelectedApp(e.target.value)}
-            disabled={isLoadingApps || isLoading}
+            disabled={isLoadingApps || isLoading || isConnecting}
             className="w-full p-1.5 text-xs bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50"
           >
             <option value="">Select an app...</option>
@@ -347,21 +387,21 @@ export function RecAndroidPhoneRemote({ hostId, deviceId }: RecAndroidPhoneRemot
           <div className="grid grid-cols-2 gap-1">
             <button
               onClick={handleLoadApps}
-              disabled={isLoadingApps || isLoading}
+              disabled={isLoadingApps || isLoading || isConnecting}
               className="p-1.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 disabled:opacity-50"
             >
               {isLoadingApps ? 'Loading...' : 'Refresh'}
             </button>
             <button
               onClick={handleLaunchApp}
-              disabled={!selectedApp || isLoading}
+              disabled={!selectedApp || isLoading || isConnecting}
               className="p-1.5 bg-green-600 text-white rounded text-xs hover:bg-green-700 disabled:opacity-50"
             >
               Launch
             </button>
           </div>
-          {/* App status within the app section */}
-          {appStatus && (
+          {/* Only show loading/error status, not success count */}
+          {appStatus && !appStatus.startsWith('Found') && (
             <div className="text-xs text-center text-gray-500 dark:text-gray-400 py-0.5">
               {appStatus}
             </div>
@@ -372,36 +412,27 @@ export function RecAndroidPhoneRemote({ hostId, deviceId }: RecAndroidPhoneRemot
       {/* Separator between App Launcher and UI Elements */}
       <div className="border-t border-gray-300 dark:border-gray-600 my-3"></div>
 
-      {/* Feature 2: UI Element Dump */}
+      {/* Feature 2: UI Element Dump & Click */}
       <div className="mb-3">
         <h4 className="text-xs font-medium mb-1 flex items-center gap-1">
           <Search size={12} />
-          UI Elements
+          UI Elements {elements.length > 0 && `(${elements.length})`}
         </h4>
         <button
           onClick={handleDumpElements}
-          disabled={isDumpingElements || isLoading}
+          disabled={isDumpingElements || isLoading || isConnecting}
           className="w-full p-1.5 bg-orange-600 text-white rounded text-xs hover:bg-orange-700 disabled:opacity-50 mb-1"
         >
-          {isDumpingElements
-            ? 'Dumping...'
-            : `Dump Elements ${elements.length > 0 ? `(${elements.length})` : ''}`}
+          {isDumpingElements ? 'Dumping...' : 'Dump Elements'}
         </button>
-        {/* Elements status within the elements section */}
-        {elementsStatus && (
+        {/* Only show loading/error status, not success count */}
+        {elementsStatus && !elementsStatus.startsWith('Found') && (
           <div className="text-xs text-center text-gray-500 dark:text-gray-400 py-0.5 mb-1">
             {elementsStatus}
           </div>
         )}
-      </div>
-
-      {/* Feature 3: Element Clicker */}
-      {elements.length > 0 && (
-        <div className="mb-3">
-          <h4 className="text-xs font-medium mb-1 flex items-center gap-1">
-            <MousePointer size={12} />
-            Click Element
-          </h4>
+        {/* Click element dropdown - only show when elements exist */}
+        {elements.length > 0 && (
           <div className="space-y-1">
             <select
               value={selectedElement?.id || ''}
@@ -410,7 +441,7 @@ export function RecAndroidPhoneRemote({ hostId, deviceId }: RecAndroidPhoneRemot
                 const element = elements.find((el) => el.id === elementId);
                 setSelectedElement(element || null);
               }}
-              disabled={isClickingElement || isLoading}
+              disabled={isClickingElement || isLoading || isConnecting}
               className="w-full p-1.5 text-xs bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50"
             >
               <option value="">Select element to click...</option>
@@ -439,36 +470,14 @@ export function RecAndroidPhoneRemote({ hostId, deviceId }: RecAndroidPhoneRemot
             </select>
             <button
               onClick={handleClickElement}
-              disabled={!selectedElement || isClickingElement || isLoading}
+              disabled={!selectedElement || isClickingElement || isLoading || isConnecting}
               className="w-full p-1.5 bg-purple-600 text-white rounded text-xs hover:bg-purple-700 disabled:opacity-50"
             >
               {isClickingElement ? 'Clicking...' : 'Click Element'}
             </button>
-            {selectedElement && (
-              <div className="p-1.5 bg-gray-50 dark:bg-gray-700 rounded text-xs">
-                <div className="truncate">
-                  <strong>Tag:</strong> {selectedElement.tag}
-                </div>
-                {selectedElement.contentDesc !== '<no content-desc>' && (
-                  <div className="truncate">
-                    <strong>Desc:</strong> {selectedElement.contentDesc}
-                  </div>
-                )}
-                {selectedElement.text !== '<no text>' && (
-                  <div className="truncate">
-                    <strong>Text:</strong> {selectedElement.text}
-                  </div>
-                )}
-                {selectedElement.resourceId !== '<no resource-id>' && (
-                  <div className="truncate">
-                    <strong>ID:</strong> {selectedElement.resourceId}
-                  </div>
-                )}
-              </div>
-            )}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Last action status */}
       {lastAction && (

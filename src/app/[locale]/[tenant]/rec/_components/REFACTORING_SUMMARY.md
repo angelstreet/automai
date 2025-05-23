@@ -105,7 +105,7 @@ const androidTv: AndroidDeviceConfig = {
   streamUrl: 'https://server.com/stream.m3u8',
   remoteConfig: {
     hostId: 'host-123',
-    deviceId: '192.168.1.100:5555',
+    deviceId: '192.168.1.130:5555',
   },
 };
 ```
