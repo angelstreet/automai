@@ -70,43 +70,12 @@ export default function MonacoEditorClient({ file }: MonacoEditorClientProps) {
 
         console.log('[@component:MonacoEditorClient] DOM element cleaned for initialization');
 
-        // Configure Monaco Environment for Next.js
+        // Configure Monaco Environment for Next.js - disable workers to prevent errors
         if (typeof window !== 'undefined') {
           (window as any).MonacoEnvironment = {
-            getWorker: function (_workerId: string, label: string) {
-              const getWorkerModule = (moduleUrl: string, label: string) => {
-                return new Worker(moduleUrl, {
-                  name: label,
-                  type: 'module',
-                });
-              };
-
-              switch (label) {
-                case 'json':
-                  return getWorkerModule(
-                    '/monaco-editor/min/vs/language/json/json.worker.js',
-                    label,
-                  );
-                case 'css':
-                case 'scss':
-                case 'less':
-                  return getWorkerModule('/monaco-editor/min/vs/language/css/css.worker.js', label);
-                case 'html':
-                case 'handlebars':
-                case 'razor':
-                  return getWorkerModule(
-                    '/monaco-editor/min/vs/language/html/html.worker.js',
-                    label,
-                  );
-                case 'typescript':
-                case 'javascript':
-                  return getWorkerModule(
-                    '/monaco-editor/min/vs/language/typescript/ts.worker.js',
-                    label,
-                  );
-                default:
-                  return getWorkerModule('/monaco-editor/min/vs/editor/editor.worker.js', label);
-              }
+            getWorker: function (_workerId: string, _label: string) {
+              // Return null to disable web workers and run everything in main thread
+              return null;
             },
           };
         }
