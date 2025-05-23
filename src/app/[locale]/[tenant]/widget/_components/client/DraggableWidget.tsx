@@ -80,24 +80,24 @@ const DraggableWidget: React.FC<DraggableWidgetProps> = ({
       }}
       onMouseDown={handleMouseDown}
     >
-      {/* Drag zone overlay - transparent black shade around edges */}
-      <div className="absolute inset-0 pointer-events-none">
-        {/* Top drag zone */}
-        <div className="absolute top-0 left-0 right-0 h-4 bg-black/20 pointer-events-auto cursor-grab"></div>
-        {/* Bottom drag zone */}
-        <div className="absolute bottom-0 left-0 right-0 h-4 bg-black/20 pointer-events-auto cursor-grab"></div>
-        {/* Left drag zone */}
-        <div className="absolute top-4 bottom-4 left-0 w-4 bg-black/20 pointer-events-auto cursor-grab"></div>
-        {/* Right drag zone */}
-        <div className="absolute top-4 bottom-4 right-0 w-4 bg-black/20 pointer-events-auto cursor-grab"></div>
-      </div>
+      {/* Widget content with internal drag zones */}
+      <div className="relative w-full h-full">
+        {/* Content area - positioned to fill the entire widget */}
+        <div ref={contentRef} className="absolute inset-0 cursor-auto pointer-events-auto">
+          {children}
+        </div>
 
-      {/* Content area - positioned in the center, fully interactive */}
-      <div
-        ref={contentRef}
-        className="absolute top-4 left-4 right-4 bottom-4 cursor-auto pointer-events-auto"
-      >
-        {children}
+        {/* Internal drag zones overlay - inside the widget */}
+        <div className="absolute inset-0 pointer-events-none rounded-lg overflow-hidden">
+          {/* Top drag zone */}
+          <div className="absolute top-0 left-0 right-0 h-4 bg-black/15 pointer-events-auto cursor-grab"></div>
+          {/* Bottom drag zone */}
+          <div className="absolute bottom-0 left-0 right-0 h-4 bg-black/15 pointer-events-auto cursor-grab"></div>
+          {/* Left drag zone */}
+          <div className="absolute top-4 bottom-4 left-0 w-4 bg-black/15 pointer-events-auto cursor-grab"></div>
+          {/* Right drag zone */}
+          <div className="absolute top-4 bottom-4 right-0 w-4 bg-black/15 pointer-events-auto cursor-grab"></div>
+        </div>
       </div>
     </div>
   );

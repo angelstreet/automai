@@ -65,8 +65,8 @@ const StocksWidget = () => {
   };
 
   return (
-    <div className="bg-gradient-to-br from-green-600 to-blue-600 rounded-lg shadow-lg w-56 h-64 text-white relative p-4">
-      <div className="h-full relative -m-1">
+    <div className="bg-gradient-to-br from-green-600 to-blue-600 rounded-lg shadow-lg w-full h-full text-white relative">
+      <div className="h-full relative p-4">
         <h3 className="text-sm font-semibold mb-2 opacity-90 text-center pt-1">Stock Prices</h3>
 
         <div className="space-y-1.5">
