@@ -5,8 +5,12 @@ import React, { useState, useEffect } from 'react';
 const ClockWidget = () => {
   const [currentCityIndex, setCurrentCityIndex] = useState(3); // Start with Zurich
   const [, setTrigger] = useState(0); // Force re-render trigger
+  const [isClient, setIsClient] = useState(false); // Track client-side mounting
 
   useEffect(() => {
+    // Mark as client-side mounted to prevent hydration mismatch
+    setIsClient(true);
+
     const timer = setInterval(() => {
       setTrigger((prev) => prev + 1); // Force re-render every second
     }, 1000); // Update every second
@@ -77,6 +81,11 @@ const ClockWidget = () => {
     return localTime;
   };
 
+  // Get current time or fallback date for SSR
+  const getCurrentTime = () => {
+    return isClient ? getCityTime() : new Date(0); // Use epoch time as fallback
+  };
+
   return (
     <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg shadow-lg w-56 min-h-[280px] h-full text-white relative p-4">
       <div className="flex items-center justify-between mb-3">
@@ -107,7 +116,7 @@ const ClockWidget = () => {
       <div className="text-center space-y-2">
         {/* Digital Time Display */}
         <div className="font-mono text-2xl font-bold tracking-wider">
-          {formatTime(getCityTime())}
+          {isClient ? formatTime(getCurrentTime()) : '--:--:--'}
         </div>
 
         {/* City and Country */}
@@ -116,7 +125,9 @@ const ClockWidget = () => {
         </div>
 
         {/* Date Display */}
-        <div className="text-xs opacity-75 leading-relaxed">{formatDate(getCityTime())}</div>
+        <div className="text-xs opacity-75 leading-relaxed">
+          {isClient ? formatDate(getCurrentTime()) : 'Loading...'}
+        </div>
 
         {/* Time Zone */}
         <div className="text-xs opacity-60">{currentCity.timezone}</div>
@@ -140,7 +151,7 @@ const ClockWidget = () => {
             style={{
               width: '2px',
               height: '16px',
-              transform: `translate(-50%, -100%) rotate(${(getCityTime().getHours() % 12) * 30 + getCityTime().getMinutes() * 0.5}deg)`,
+              transform: `translate(-50%, -100%) rotate(${isClient ? (getCurrentTime().getHours() % 12) * 30 + getCurrentTime().getMinutes() * 0.5 : 0}deg)`,
             }}
           ></div>
 
@@ -150,7 +161,7 @@ const ClockWidget = () => {
             style={{
               width: '1px',
               height: '20px',
-              transform: `translate(-50%, -100%) rotate(${getCityTime().getMinutes() * 6}deg)`,
+              transform: `translate(-50%, -100%) rotate(${isClient ? getCurrentTime().getMinutes() * 6 : 0}deg)`,
             }}
           ></div>
         </div>

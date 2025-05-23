@@ -5,8 +5,12 @@ import React, { useState, useEffect } from 'react';
 const WeatherWidget = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [currentCityIndex, setCurrentCityIndex] = useState(3); // Start with Zurich
+  const [isClient, setIsClient] = useState(false); // Track client-side mounting
 
   useEffect(() => {
+    // Mark as client-side mounted to prevent hydration mismatch
+    setIsClient(true);
+
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 60000); // Update every minute
@@ -121,7 +125,7 @@ const WeatherWidget = () => {
         </div>
         <div className="flex justify-between items-center">
           <span className="opacity-75">Time</span>
-          <span>{formatTime(currentTime)}</span>
+          <span>{isClient ? formatTime(currentTime) : '--:--'}</span>
         </div>
       </div>
 
