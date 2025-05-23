@@ -125,16 +125,7 @@ const WeatherWidget = () => {
         </div>
       </div>
 
-      <div className="mt-3 pt-3 border-t border-white/20">
-        <div className="flex justify-between text-xs opacity-75">
-          <span>Today</span>
-          <span>{currentCity.condition}</span>
-        </div>
-        <div className="flex justify-between items-center mt-1">
-          <span className="text-sm">H: {currentCity.high}°</span>
-          <span className="text-sm">L: {currentCity.low}°</span>
-        </div>
-      </div>
+      <div className="mt-3 pt-3 border-t border-white/20"></div>
     </div>
   );
 };
