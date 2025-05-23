@@ -1,23 +1,36 @@
 'use client';
 
-import { FolderOpen, GitBranch } from 'lucide-react';
+import { FolderOpen, GitBranch, Terminal } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import React, { useState } from 'react';
 
 import { Badge } from '@/components/shadcn/badge';
 import { Card } from '@/components/shadcn/card';
 
-import FileExplorer from './FileExplorer';
-import GitPanel from './GitPanel';
+import FileExplorerClient from './FileExplorerClient';
+import GitPanelClient from './GitPanelClient';
 
 // Dynamic import for MonacoEditor to prevent SSR issues
-const MonacoEditor = dynamic(() => import('./MonacoEditor'), {
+const MonacoEditorClient = dynamic(() => import('./MonacoEditorClient'), {
   ssr: false,
   loading: () => (
     <div className="h-full flex items-center justify-center bg-background">
       <div className="text-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
         <p className="text-muted-foreground text-sm">Loading Monaco Editor...</p>
+      </div>
+    </div>
+  ),
+});
+
+// Dynamic import for Terminal to prevent SSR issues
+const TerminalPanelClient = dynamic(() => import('./TerminalPanelClient'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-full flex items-center justify-center bg-background">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+        <p className="text-muted-foreground text-sm">Loading Terminal...</p>
       </div>
     </div>
   ),
@@ -39,10 +52,9 @@ interface Repository {
 }
 
 export default function CodeEditorClient() {
-  const [activeTab, setActiveTab] = useState<'explorer' | 'git'>('git');
+  const [activeTab, setActiveTab] = useState<'explorer' | 'git' | 'terminal'>('git');
   const [repository, setRepository] = useState<Repository | null>(null);
   const [currentFile, setCurrentFile] = useState<FileInfo | null>(null);
-  const [loadingFile, setLoadingFile] = useState<string | null>(null);
   const [status, setStatus] = useState('Ready to clone repository');
 
   const handleRepositoryLoaded = (repo: Repository) => {
@@ -79,16 +91,21 @@ export default function CodeEditorClient() {
   const handleFileSelect = async (file: FileInfo) => {
     console.log('[@component:CodeEditorClient] File selected:', file.path);
 
+    // Prevent infinite loop - if same file is already selected, don't reload
+    if (currentFile?.path === file.path && file.content !== undefined) {
+      return;
+    }
+
     // If file content is already loaded, use it
     if (file.content !== undefined) {
       setCurrentFile(file);
+      setStatus(`Viewing ${file.name}`);
       return;
     }
 
     // Load file content on demand
     if (!repository) return;
 
-    setLoadingFile(file.path);
     setStatus(`Loading ${file.name}...`);
 
     try {
@@ -110,8 +127,10 @@ export default function CodeEditorClient() {
       const data = await response.json();
 
       if (data.success) {
-        // Update file in repository with loaded content
+        // Create new file object with content
         const fileWithContent = { ...file, content: data.content };
+
+        // Set as current file immediately
         setCurrentFile(fileWithContent);
 
         // Update repository state to cache the loaded content
@@ -129,8 +148,6 @@ export default function CodeEditorClient() {
     } catch (error) {
       console.error('[@component:CodeEditorClient] Failed to load file:', error);
       setStatus(`Failed to load ${file.name}`);
-    } finally {
-      setLoadingFile(null);
     }
   };
 
@@ -165,6 +182,17 @@ export default function CodeEditorClient() {
         >
           <GitBranch size={20} />
         </button>
+        <button
+          onClick={() => setActiveTab('terminal')}
+          className={`w-full h-12 flex items-center justify-center border-b transition-colors ${
+            activeTab === 'terminal'
+              ? 'bg-accent text-accent-foreground border-l-2 border-l-accent-foreground'
+              : 'hover:bg-muted text-muted-foreground'
+          }`}
+          title="Terminal"
+        >
+          <Terminal size={20} />
+        </button>
       </div>
 
       {/* Sidebar */}
@@ -172,22 +200,30 @@ export default function CodeEditorClient() {
         {/* Sidebar Header */}
         <div className="h-8 bg-muted/50 border-b flex items-center px-3">
           <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            {activeTab === 'explorer' ? 'Explorer' : 'Source Control'}
+            {activeTab === 'explorer'
+              ? 'Explorer'
+              : activeTab === 'git'
+                ? 'Source Control'
+                : 'Terminal'}
           </span>
         </div>
 
         {/* Sidebar Content */}
         <div className="flex-1 overflow-hidden">
           {activeTab === 'explorer' && (
-            <FileExplorer
+            <FileExplorerClient
               files={repository?.files || []}
               onFileSelect={handleFileSelect}
               selectedFilePath={currentFile?.path}
             />
           )}
           {activeTab === 'git' && (
-            <GitPanel onFilesLoaded={handleRepositoryLoaded} onStatusUpdate={handleStatusUpdate} />
+            <GitPanelClient
+              onFilesLoaded={handleRepositoryLoaded}
+              onStatusUpdate={handleStatusUpdate}
+            />
           )}
+          {activeTab === 'terminal' && <TerminalPanelClient />}
         </div>
       </div>
 
@@ -211,10 +247,10 @@ export default function CodeEditorClient() {
         {/* Editor */}
         <div className="flex-1">
           {currentFile ? (
-            <MonacoEditor file={currentFile} />
+            <MonacoEditorClient file={currentFile} />
           ) : (
             <div className="h-full flex items-center justify-center bg-background">
-              <Card className="p-8 text-center max-w-md">
+              <Card className="p-8 text-center max-w-md mx-auto">
                 <div className="text-6xl mb-4">👨‍💻</div>
                 <h3 className="text-lg font-semibold mb-2">Welcome to Code Explorer</h3>
                 <p className="text-muted-foreground mb-4">

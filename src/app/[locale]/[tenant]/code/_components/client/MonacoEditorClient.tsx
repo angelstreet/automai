@@ -10,11 +10,11 @@ interface FileInfo {
   content?: string; // Optional, loaded on demand
 }
 
-interface MonacoEditorProps {
+interface MonacoEditorClientProps {
   file: FileInfo;
 }
 
-export default function MonacoEditor({ file }: MonacoEditorProps) {
+export default function MonacoEditorClient({ file }: MonacoEditorClientProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const monacoInstanceRef = useRef<any>(null);
   const [isDisposed, setIsDisposed] = useState(false);
@@ -33,20 +33,20 @@ export default function MonacoEditor({ file }: MonacoEditorProps) {
   }
 
   useEffect(() => {
-    if (!editorRef.current) return;
+    if (!editorRef.current || !file.content) return;
 
     let isMounted = true;
 
     const initializeEditor = async () => {
       try {
-        console.log('[@component:MonacoEditor] Loading Monaco editor...');
+        console.log('[@component:MonacoEditorClient] Loading Monaco editor...');
 
         // Dynamic import to prevent SSR issues
         const monaco = await import('monaco-editor');
 
-        if (!isMounted || !editorRef.current) return;
+        if (!isMounted || !editorRef.current || !file.content) return;
 
-        console.log('[@component:MonacoEditor] Initializing Monaco editor');
+        console.log('[@component:MonacoEditorClient] Initializing Monaco editor');
 
         // Determine if file is too large for minimap
         const isLargeFile = file.content.length > 50000; // 50KB threshold
@@ -93,7 +93,7 @@ export default function MonacoEditor({ file }: MonacoEditorProps) {
           setIsLoading(false);
         }
       } catch (error) {
-        console.error('[@component:MonacoEditor] Failed to initialize Monaco:', error);
+        console.error('[@component:MonacoEditorClient] Failed to initialize Monaco:', error);
         setIsLoading(false);
       }
     };
@@ -103,7 +103,7 @@ export default function MonacoEditor({ file }: MonacoEditorProps) {
     // Cleanup function
     return () => {
       isMounted = false;
-      console.log('[@component:MonacoEditor] Disposing Monaco editor');
+      console.log('[@component:MonacoEditorClient] Disposing Monaco editor');
       setIsDisposed(true);
 
       if (monacoInstanceRef.current) {
@@ -112,44 +112,12 @@ export default function MonacoEditor({ file }: MonacoEditorProps) {
             monacoInstanceRef.current.dispose();
           }
         } catch (error) {
-          console.warn('[@component:MonacoEditor] Editor disposal warning:', error);
+          console.warn('[@component:MonacoEditorClient] Editor disposal warning:', error);
         }
         monacoInstanceRef.current = null;
       }
     };
-  }, []);
-
-  // Update content when file changes
-  useEffect(() => {
-    if (monacoInstanceRef.current && file && !isDisposed && !isLoading) {
-      console.log('[@component:MonacoEditor] Updating file content:', file.path);
-
-      try {
-        const isVeryLargeFile = file.content.length > 100000;
-        const contentToShow = isVeryLargeFile
-          ? file.content.substring(0, 50000) +
-            '\n\n// ... File truncated for performance (showing first 50KB)'
-          : file.content;
-
-        const model = monacoInstanceRef.current.getModel();
-        if (
-          model &&
-          typeof monacoInstanceRef.current.isDisposed === 'function' &&
-          !monacoInstanceRef.current.isDisposed()
-        ) {
-          // Import monaco dynamically for language setting
-          import('monaco-editor').then((monaco) => {
-            if (!isDisposed && monacoInstanceRef.current) {
-              model.setValue(contentToShow);
-              monaco.editor.setModelLanguage(model, file.language);
-            }
-          });
-        }
-      } catch (error) {
-        console.warn('[@component:MonacoEditor] Error updating content:', error);
-      }
-    }
-  }, [file, isDisposed, isLoading]);
+  }, [file.content, file.language]); // Re-run when content or language changes
 
   if (isLoading) {
     return (
@@ -167,4 +135,4 @@ export default function MonacoEditor({ file }: MonacoEditorProps) {
       <div ref={editorRef} className="h-full w-full" />
     </div>
   );
-}
+} 

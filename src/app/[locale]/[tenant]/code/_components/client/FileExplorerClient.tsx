@@ -11,7 +11,7 @@ interface FileInfo {
   content?: string; // Optional, loaded on demand
 }
 
-interface FileExplorerProps {
+interface FileExplorerClientProps {
   files: FileInfo[];
   onFileSelect: (file: FileInfo) => void;
   selectedFilePath?: string;
@@ -25,7 +25,11 @@ interface TreeNode {
   file?: FileInfo;
 }
 
-export default function FileExplorer({ files, onFileSelect, selectedFilePath }: FileExplorerProps) {
+export default function FileExplorerClient({
+  files,
+  onFileSelect,
+  selectedFilePath,
+}: FileExplorerClientProps) {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['/']));
 
   // Build tree structure from flat file list
@@ -96,7 +100,7 @@ export default function FileExplorer({ files, onFileSelect, selectedFilePath }: 
   };
 
   const handleFileClick = (file: FileInfo) => {
-    console.log('[@component:FileExplorer] File selected:', file.path);
+    console.log('[@component:FileExplorerClient] File selected:', file.path);
     onFileSelect(file);
   };
 
@@ -201,13 +205,8 @@ export default function FileExplorer({ files, onFileSelect, selectedFilePath }: 
   }
 
   return (
-    <div className="overflow-auto">
-      <div className="p-2">
-        <div className="text-xs font-medium text-muted-foreground mb-2 px-2">
-          EXPLORER ({files.length} files)
-        </div>
-        {fileTree.children?.map((child) => renderTreeNode(child, 0))}
-      </div>
+    <div className="h-full overflow-y-auto">
+      <div className="py-2">{fileTree.children?.map((node) => renderTreeNode(node, 0))}</div>
     </div>
   );
 }

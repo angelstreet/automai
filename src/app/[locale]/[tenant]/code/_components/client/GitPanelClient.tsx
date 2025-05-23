@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertCircle, Download, Eye, File, CheckCircle, X } from 'lucide-react';
+import { AlertCircle, Download, Eye, File, CheckCircle, X, GitBranch } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 
 import { Alert, AlertDescription } from '@/components/shadcn/alert';
@@ -24,12 +24,12 @@ interface Repository {
   files: FileInfo[];
 }
 
-interface GitPanelProps {
+interface GitPanelClientProps {
   onFilesLoaded: (repository: Repository) => void;
   onStatusUpdate: (status: string) => void;
 }
 
-export default function GitPanel({ onFilesLoaded, onStatusUpdate }: GitPanelProps) {
+export default function GitPanelClient({ onFilesLoaded, onStatusUpdate }: GitPanelClientProps) {
   const [repoUrl, setRepoUrl] = useState('');
   const [isCloning, setIsCloning] = useState(false);
   const [repository, setRepository] = useState<Repository | null>(null);
@@ -56,7 +56,7 @@ export default function GitPanel({ onFilesLoaded, onStatusUpdate }: GitPanelProp
     onStatusUpdate('Cloning repository...');
 
     try {
-      console.log('[@component:GitPanel] Starting clone via API:', repoUrl);
+      console.log('[@component:GitPanelClient] Starting clone via API:', repoUrl);
 
       const response = await fetch('/api/git/clone', {
         method: 'POST',
@@ -77,17 +77,20 @@ export default function GitPanel({ onFilesLoaded, onStatusUpdate }: GitPanelProp
       const data = await response.json();
 
       if (data.success && data.repository) {
-        console.log('[@component:GitPanel] Successfully cloned repository:', data.repository.name);
-        console.log('[@component:GitPanel] Loaded', data.repository.files.length, 'files');
+        console.log(
+          '[@component:GitPanelClient] Successfully cloned repository:',
+          data.repository.name,
+        );
+        console.log('[@component:GitPanelClient] Loaded', data.repository.files.length, 'files');
 
         setRepository(data.repository);
         onFilesLoaded(data.repository);
-        onStatusUpdate(`Repository cloned successfully`);
+        onStatusUpdate(`Explore ${data.repository.files.length} files`);
       } else {
         throw new Error('Invalid response from server');
       }
     } catch (error: any) {
-      console.error('[@component:GitPanel] Clone failed:', error);
+      console.error('[@component:GitPanelClient] Clone failed:', error);
       setError(error.message || 'Failed to clone repository');
       onStatusUpdate('Clone failed');
     } finally {
@@ -96,7 +99,7 @@ export default function GitPanel({ onFilesLoaded, onStatusUpdate }: GitPanelProp
   };
 
   const handleClear = () => {
-    console.log('[@component:GitPanel] Clearing repository data');
+    console.log('[@component:GitPanelClient] Clearing repository data');
     setRepository(null);
     setError(null);
     onFilesLoaded({ id: '', url: '', name: '', files: [] });
@@ -224,6 +227,45 @@ export default function GitPanel({ onFilesLoaded, onStatusUpdate }: GitPanelProp
               <div className="flex items-center gap-2">
                 <File size={12} />
                 <span>Ready for exploration</span>
+              </div>
+            </div>
+
+            {/* Git Operations */}
+            <div className="space-y-2 pt-2 border-t">
+              <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Git Operations
+              </h4>
+              <div className="grid grid-cols-2 gap-2">
+                <Button variant="outline" size="sm" className="text-xs h-8">
+                  📤 Push
+                </Button>
+                <Button variant="outline" size="sm" className="text-xs h-8">
+                  📥 Pull
+                </Button>
+                <Button variant="outline" size="sm" className="text-xs h-8">
+                  💾 Commit
+                </Button>
+                <Button variant="outline" size="sm" className="text-xs h-8">
+                  📊 Status
+                </Button>
+              </div>
+            </div>
+
+            {/* Repository Actions */}
+            <div className="space-y-2 pt-2 border-t">
+              <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Repository
+              </h4>
+              <div className="space-y-2">
+                <Button
+                  onClick={handleClear}
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs h-8 flex items-center gap-2"
+                >
+                  <GitBranch size={12} />
+                  Clone Another Repository
+                </Button>
               </div>
             </div>
           </CardContent>
