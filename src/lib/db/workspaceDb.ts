@@ -45,39 +45,70 @@ export async function getWorkspacesForCurrentUser(): Promise<DbResponse<Workspac
       return { success: false, error: 'User profile not found' };
     }
 
-    let queryBuilder = supabase.from('workspaces').select('*');
+    // Query all workspaces that match criteria:
+    // - Private workspaces owned by the user
+    // - Team workspaces from the user's active team
 
-    // Always include user's private workspaces
-    const userPrivateWorkspacesClause = `and(workspace_type.eq.private,profile_id.eq.${userData.user.id})`;
+    // Start with a simple select query
+    console.log(`[@db:workspaceDb:getWorkspacesForCurrentUser] Starting workspace query`);
 
-    // FIXED LOGIC: Always respect active_team for team workspaces
-    if (userProfile.active_team) {
-      // If there's an active team, show only team workspaces from THAT team
-      const teamWorkspacesClause = `and(workspace_type.eq.team,team_id.eq.${userProfile.active_team})`;
-      queryBuilder = queryBuilder.or(`${userPrivateWorkspacesClause},${teamWorkspacesClause}`);
+    // First query all private workspaces owned by the user
+    let { data: privateWorkspaces, error: privateError } = await supabase
+      .from('workspaces')
+      .select('*')
+      .eq('workspace_type', 'private')
+      .eq('profile_id', userData.user.id);
 
+    if (privateError) {
       console.log(
-        `[@db:workspaceDb:getWorkspacesForCurrentUser] Filtering by active team: ${userProfile.active_team}, showing private workspaces and team workspaces for this team only`,
+        `[@db:workspaceDb:getWorkspacesForCurrentUser] ERROR getting private workspaces: ${privateError.message}`,
       );
+      privateWorkspaces = [];
     } else {
-      // No active team selected - only show private workspaces
-      queryBuilder = queryBuilder.or(userPrivateWorkspacesClause);
       console.log(
-        `[@db:workspaceDb:getWorkspacesForCurrentUser] No active team, showing only private workspaces`,
+        `[@db:workspaceDb:getWorkspacesForCurrentUser] Found ${privateWorkspaces.length} private workspaces`,
       );
     }
 
-    const { data, error } = await queryBuilder.order('name');
+    let teamWorkspaces: any[] = [];
+    // If user has an active team, query team workspaces
+    if (userProfile.active_team) {
+      console.log(
+        `[@db:workspaceDb:getWorkspacesForCurrentUser] Querying team workspaces for team: ${userProfile.active_team}`,
+      );
 
-    if (error) {
-      console.log(`[@db:workspaceDb:getWorkspacesForCurrentUser] ERROR: ${error.message}`);
-      return { success: false, error: error.message };
+      const { data: teamWorkspacesData, error: teamError } = await supabase
+        .from('workspaces')
+        .select('*')
+        .eq('workspace_type', 'team')
+        .eq('team_id', userProfile.active_team);
+
+      if (teamError) {
+        console.log(
+          `[@db:workspaceDb:getWorkspacesForCurrentUser] ERROR getting team workspaces: ${teamError.message}`,
+        );
+      } else {
+        teamWorkspaces = teamWorkspacesData || [];
+        console.log(
+          `[@db:workspaceDb:getWorkspacesForCurrentUser] Found ${teamWorkspaces.length} team workspaces`,
+        );
+      }
+    } else {
+      console.log(
+        `[@db:workspaceDb:getWorkspacesForCurrentUser] No active team selected, skipping team workspaces`,
+      );
     }
+
+    // Combine and sort all workspaces
+    const allWorkspaces = [...privateWorkspaces, ...teamWorkspaces].sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
 
     console.log(
-      `[@db:workspaceDb:getWorkspacesForCurrentUser] Successfully retrieved ${data?.length || 0} workspaces`,
+      `[@db:workspaceDb:getWorkspacesForCurrentUser] Successfully retrieved ${allWorkspaces.length} workspaces total`,
     );
-    return { success: true, data };
+
+    return { success: true, data: allWorkspaces };
   } catch (error: any) {
     console.log(`[@db:workspaceDb:getWorkspacesForCurrentUser] CATCH ERROR: ${error.message}`);
     return {
