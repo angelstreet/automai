@@ -1,4 +1,4 @@
-import { CodeEditorClient } from './client/CodeEditorClient';
+import CodeEditorClient from './client/CodeEditorClient';
 
 /**
  * Server component for code page

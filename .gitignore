@@ -23,3 +23,6 @@ runner/python-slave-runner/files.py
 *.pyc
 nohup.out
 traces/
+
+# Git API temporary directories
+temp/

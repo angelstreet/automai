@@ -1,245 +1,239 @@
 'use client';
 
-import { useState } from 'react';
+import { AlertCircle, Download, Eye, File, CheckCircle, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+
+import { Alert, AlertDescription } from '@/components/shadcn/alert';
+import { Badge } from '@/components/shadcn/badge';
+import { Button } from '@/components/shadcn/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
+import { Input } from '@/components/shadcn/input';
+
+interface FileInfo {
+  name: string;
+  path: string;
+  content: string;
+  language: string;
+}
 
 interface Repository {
   url: string;
   name: string;
-  files: any[];
+  files: FileInfo[];
 }
 
 interface GitPanelProps {
-  repository: Repository | null;
-  onRepositoryClone: (url: string, credentials?: { username: string; password: string }) => void;
-  isLoading: boolean;
-  error?: string | null;
+  onFilesLoaded: (files: FileInfo[]) => void;
+  onStatusUpdate: (status: string) => void;
 }
 
-export function GitPanel({
-  repository,
-  onRepositoryClone,
-  isLoading,
-  error: externalError,
-}: GitPanelProps) {
+export default function GitPanel({ onFilesLoaded, onStatusUpdate }: GitPanelProps) {
   const [repoUrl, setRepoUrl] = useState('');
-  const [needsAuth, setNeedsAuth] = useState(false);
-  const [credentials, setCredentials] = useState({ username: '', password: '' });
-  const [error, setError] = useState('');
+  const [isCloning, setIsCloning] = useState(false);
+  const [repository, setRepository] = useState<Repository | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [credentials, setCredentials] = useState({
+    username: '',
+    password: '',
+  });
+  const [showCredentials, setShowCredentials] = useState(false);
 
-  // Use external error if provided, otherwise use local error
-  const displayError = externalError || error;
+  useEffect(() => {
+    // Set default repository URL for testing
+    setRepoUrl('https://github.com/angelstreet/automai.git');
+  }, []);
 
-  const isValidGitUrl = (url: string): boolean => {
-    const gitUrlPatterns = [
-      /^https:\/\/github\.com\/[\w-]+\/[\w.-]+(?:\.git)?$/,
-      /^https:\/\/gitlab\.com\/[\w-]+\/[\w.-]+(?:\.git)?$/,
-      /^https:\/\/bitbucket\.org\/[\w-]+\/[\w.-]+(?:\.git)?$/,
-      /^https:\/\/.*\.git$/,
-      /^git@.*:.*\.git$/,
-    ];
-    return gitUrlPatterns.some((pattern) => pattern.test(url));
-  };
-
-  const handleClone = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-
+  const handleClone = async () => {
     if (!repoUrl.trim()) {
       setError('Please enter a repository URL');
       return;
     }
 
-    if (!isValidGitUrl(repoUrl)) {
-      setError('Please enter a valid Git repository URL');
-      return;
+    setIsCloning(true);
+    setError(null);
+    onStatusUpdate('Cloning repository...');
+
+    try {
+      console.log('[@component:GitPanel] Starting clone via API:', repoUrl);
+
+      const response = await fetch('/api/git/clone', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          url: repoUrl,
+          credentials: showCredentials ? credentials : undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to clone repository');
+      }
+
+      const data = await response.json();
+
+      if (data.success && data.repository) {
+        console.log('[@component:GitPanel] Successfully cloned repository:', data.repository.name);
+        console.log('[@component:GitPanel] Loaded', data.repository.files.length, 'files');
+
+        setRepository(data.repository);
+        onFilesLoaded(data.repository.files);
+        onStatusUpdate(
+          `Successfully loaded ${data.repository.files.length} files from ${data.repository.name}`,
+        );
+      } else {
+        throw new Error('Invalid response from server');
+      }
+    } catch (error: any) {
+      console.error('[@component:GitPanel] Clone failed:', error);
+      setError(error.message || 'Failed to clone repository');
+      onStatusUpdate('Clone failed');
+    } finally {
+      setIsCloning(false);
     }
-
-    const authCredentials =
-      needsAuth && credentials.username && credentials.password ? credentials : undefined;
-
-    onRepositoryClone(repoUrl, authCredentials);
   };
 
-  const quickCloneOptions = [
-    {
-      name: 'Automai (This Project)',
-      url: 'https://github.com/angelstreet/automai.git',
-      description: 'Automai SaaS - Infrastructure automation platform',
-    },
-    {
-      name: 'React',
-      url: 'https://github.com/facebook/react',
-      description: 'A declarative JavaScript library for building user interfaces',
-    },
-    {
-      name: 'Vue.js',
-      url: 'https://github.com/vuejs/vue',
-      description: 'The progressive JavaScript framework',
-    },
-    {
-      name: 'Next.js',
-      url: 'https://github.com/vercel/next.js',
-      description: 'The React framework for production',
-    },
-  ];
+  const handleClear = () => {
+    console.log('[@component:GitPanel] Clearing repository data');
+    setRepository(null);
+    setError(null);
+    onFilesLoaded([]);
+    onStatusUpdate('Repository cleared');
+  };
 
-  if (repository) {
-    return (
-      <div className="p-4 space-y-4">
-        {/* Current Repository */}
-        <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-gray-300">Current Repository</h3>
-          <div className="bg-gray-800 p-3 rounded">
-            <div className="flex items-center space-x-2 mb-2">
-              <span className="text-xs">📦</span>
-              <span className="text-sm font-medium">{repository.name}</span>
-            </div>
-            <div className="text-xs text-gray-400 mb-3" title={repository.url}>
-              {repository.url}
-            </div>
-            <div className="text-xs text-green-400">✓ Repository cloned successfully</div>
-          </div>
-        </div>
-
-        {/* Git Actions */}
-        <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-gray-300">Source Control</h3>
-          <div className="space-y-2">
-            <button className="w-full bg-gray-700 hover:bg-gray-600 p-2 rounded text-sm text-left flex items-center space-x-2">
-              <span>🔄</span>
-              <span>Pull changes</span>
-            </button>
-            <button className="w-full bg-gray-700 hover:bg-gray-600 p-2 rounded text-sm text-left flex items-center space-x-2">
-              <span>📤</span>
-              <span>Push changes</span>
-            </button>
-            <button className="w-full bg-gray-700 hover:bg-gray-600 p-2 rounded text-sm text-left flex items-center space-x-2">
-              <span>🌿</span>
-              <span>Create branch</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Clone New Repository */}
-        <div className="pt-3 border-t border-gray-600">
-          <button
-            onClick={() => window.location.reload()}
-            className="w-full bg-blue-600 hover:bg-blue-700 p-2 rounded text-sm flex items-center justify-center space-x-2"
-          >
-            <span>📁</span>
-            <span>Clone Different Repository</span>
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const getGitProvider = (url: string) => {
+    if (url.includes('github.com')) return 'GitHub';
+    if (url.includes('gitlab.com')) return 'GitLab';
+    if (url.includes('bitbucket.org')) return 'Bitbucket';
+    return 'Git';
+  };
 
   return (
     <div className="p-4 space-y-4">
-      {/* Clone Repository Form */}
       <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-gray-300">Clone Repository</h3>
+        <h3 className="text-sm font-medium text-foreground">Clone Repository</h3>
 
-        <form onSubmit={handleClone} className="space-y-3">
-          <div>
-            <input
-              type="url"
-              value={repoUrl}
-              onChange={(e) => setRepoUrl(e.target.value)}
-              placeholder="Repository URL (https://github.com/user/repo)"
-              className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-              disabled={isLoading}
-            />
+        <div className="space-y-2">
+          <Input
+            placeholder="https://github.com/user/repo.git"
+            value={repoUrl}
+            onChange={(e) => setRepoUrl(e.target.value)}
+            disabled={isCloning}
+            className="text-sm"
+          />
+
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleClone}
+              disabled={isCloning || !repoUrl.trim()}
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Download size={14} />
+              {isCloning ? 'Cloning...' : 'Clone'}
+            </Button>
+
+            {repository && (
+              <Button
+                onClick={handleClear}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <X size={14} />
+                Clear
+              </Button>
+            )}
           </div>
+        </div>
 
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="git-needs-auth"
-              checked={needsAuth}
-              onChange={(e) => setNeedsAuth(e.target.checked)}
-              className="rounded"
-              disabled={isLoading}
-            />
-            <label htmlFor="git-needs-auth" className="text-xs text-gray-400">
-              Private repository
-            </label>
-          </div>
+        {/* Authentication Section */}
+        <div className="space-y-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowCredentials(!showCredentials)}
+            className="text-xs p-0 h-auto font-normal"
+          >
+            {showCredentials ? 'Hide' : 'Show'} Authentication
+          </Button>
 
-          {needsAuth && (
-            <div className="space-y-2">
-              <input
-                type="text"
-                value={credentials.username}
-                onChange={(e) => setCredentials((prev) => ({ ...prev, username: e.target.value }))}
-                placeholder="Username"
-                className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-                disabled={isLoading}
-              />
-              <input
-                type="password"
-                value={credentials.password}
-                onChange={(e) => setCredentials((prev) => ({ ...prev, password: e.target.value }))}
-                placeholder="Password/Token"
-                className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-                disabled={isLoading}
-              />
+          {showCredentials && (
+            <div className="space-y-2 p-3 border rounded-md bg-muted/30">
+              <div>
+                <label className="text-xs text-muted-foreground">Username/Token</label>
+                <Input
+                  type="text"
+                  placeholder="Username or token"
+                  value={credentials.username}
+                  onChange={(e) =>
+                    setCredentials((prev) => ({ ...prev, username: e.target.value }))
+                  }
+                  className="text-sm h-8"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Password/Token</label>
+                <Input
+                  type="password"
+                  placeholder="Password or token"
+                  value={credentials.password}
+                  onChange={(e) =>
+                    setCredentials((prev) => ({ ...prev, password: e.target.value }))
+                  }
+                  className="text-sm h-8"
+                />
+              </div>
             </div>
           )}
-
-          {displayError && (
-            <div className="text-red-400 text-xs bg-red-900/20 p-2 rounded">{displayError}</div>
-          )}
-
-          <button
-            type="submit"
-            disabled={isLoading || !repoUrl.trim()}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed p-2 rounded text-sm flex items-center justify-center space-x-2"
-          >
-            {isLoading ? (
-              <>
-                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
-                <span>Cloning...</span>
-              </>
-            ) : (
-              <>
-                <span>📥</span>
-                <span>Clone Repository</span>
-              </>
-            )}
-          </button>
-        </form>
-      </div>
-
-      {/* Quick Clone Options */}
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-gray-300">Quick Clone</h3>
-        <div className="space-y-2">
-          {quickCloneOptions.map((option) => (
-            <button
-              key={option.url}
-              onClick={() => setRepoUrl(option.url)}
-              disabled={isLoading}
-              className="w-full bg-gray-800 hover:bg-gray-700 disabled:bg-gray-800 disabled:cursor-not-allowed p-3 rounded text-left border border-gray-600"
-            >
-              <div className="text-sm font-medium text-white mb-1">{option.name}</div>
-              <div className="text-xs text-gray-400 mb-2">{option.description}</div>
-              <div className="text-xs text-blue-400 font-mono">{option.url}</div>
-            </button>
-          ))}
         </div>
       </div>
 
-      {/* Supported Providers */}
-      <div className="pt-3 border-t border-gray-600">
-        <div className="text-xs text-gray-400 text-center">
-          <div className="mb-2">Supported Git providers:</div>
-          <div className="flex justify-center space-x-4">
-            <span>GitHub</span>
-            <span>GitLab</span>
-            <span>Bitbucket</span>
-          </div>
-        </div>
+      {error && (
+        <Alert className="border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive">
+          <AlertCircle size={16} />
+          <AlertDescription className="text-sm">{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {repository && (
+        <Card className="bg-muted/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <CheckCircle size={16} className="text-green-500" />
+              {repository.name}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="text-xs">
+                {getGitProvider(repository.url)}
+              </Badge>
+              <Badge variant="outline" className="text-xs">
+                {repository.files.length} files
+              </Badge>
+            </div>
+
+            <div className="text-xs text-muted-foreground space-y-1">
+              <div className="flex items-center gap-2">
+                <Eye size={12} />
+                <span>Repository loaded successfully</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <File size={12} />
+                <span>Ready for exploration</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="text-xs text-muted-foreground space-y-1">
+        <p>• Supports GitHub, GitLab, Bitbucket, and self-hosted Git</p>
+        <p>• Authentication required for private repositories</p>
+        <p>• Use personal access tokens for better security</p>
       </div>
     </div>
   );

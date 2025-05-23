@@ -1,5 +1,8 @@
 'use client';
 
+import React, { useState, useMemo } from 'react';
+import { ChevronRight, ChevronDown, Folder, File } from 'lucide-react';
+
 interface FileInfo {
   name: string;
   path: string;
@@ -7,118 +10,202 @@ interface FileInfo {
   language: string;
 }
 
-interface Repository {
-  url: string;
-  name: string;
-  files: FileInfo[];
-}
-
 interface FileExplorerProps {
-  repository: Repository | null;
-  currentFile: FileInfo | null;
+  files: FileInfo[];
   onFileSelect: (file: FileInfo) => void;
+  selectedFilePath?: string;
 }
 
-export function FileExplorer({ repository, currentFile, onFileSelect }: FileExplorerProps) {
-  if (!repository) {
+interface TreeNode {
+  name: string;
+  path: string;
+  type: 'file' | 'folder';
+  children?: TreeNode[];
+  file?: FileInfo;
+}
+
+export default function FileExplorer({ files, onFileSelect, selectedFilePath }: FileExplorerProps) {
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['/']));
+
+  // Build tree structure from flat file list
+  const fileTree = useMemo(() => {
+    if (!files.length) return null;
+
+    const root: TreeNode = {
+      name: 'Root',
+      path: '/',
+      type: 'folder',
+      children: [],
+    };
+
+    files.forEach((file) => {
+      const pathParts = file.path.split('/').filter(Boolean);
+      let currentNode = root;
+
+      pathParts.forEach((part, index) => {
+        const currentPath = '/' + pathParts.slice(0, index + 1).join('/');
+        const isFile = index === pathParts.length - 1;
+
+        if (!currentNode.children) {
+          currentNode.children = [];
+        }
+
+        let existingNode = currentNode.children.find((child) => child.name === part);
+
+        if (!existingNode) {
+          existingNode = {
+            name: part,
+            path: currentPath,
+            type: isFile ? 'file' : 'folder',
+            children: isFile ? undefined : [],
+            file: isFile ? file : undefined,
+          };
+          currentNode.children.push(existingNode);
+        }
+
+        currentNode = existingNode;
+      });
+    });
+
+    // Sort children: folders first, then files, both alphabetically
+    const sortChildren = (node: TreeNode) => {
+      if (node.children) {
+        node.children.sort((a, b) => {
+          if (a.type !== b.type) {
+            return a.type === 'folder' ? -1 : 1;
+          }
+          return a.name.localeCompare(b.name);
+        });
+        node.children.forEach(sortChildren);
+      }
+    };
+
+    sortChildren(root);
+    return root;
+  }, [files]);
+
+  const toggleFolder = (path: string) => {
+    const newExpanded = new Set(expandedFolders);
+    if (newExpanded.has(path)) {
+      newExpanded.delete(path);
+    } else {
+      newExpanded.add(path);
+    }
+    setExpandedFolders(newExpanded);
+  };
+
+  const handleFileClick = (file: FileInfo) => {
+    console.log('[@component:FileExplorer] File selected:', file.path);
+    onFileSelect(file);
+  };
+
+  const getFileIcon = (fileName: string) => {
+    const extension = fileName.split('.').pop()?.toLowerCase();
+
+    // Language-specific icons using emoji
+    const iconMap: Record<string, string> = {
+      js: '🟨',
+      jsx: '⚛️',
+      ts: '🔷',
+      tsx: '⚛️',
+      py: '🐍',
+      rb: '💎',
+      go: '🐹',
+      rs: '🦀',
+      java: '☕',
+      php: '🐘',
+      cpp: '⚙️',
+      c: '⚙️',
+      cs: '🔵',
+      html: '🌐',
+      css: '🎨',
+      scss: '🎨',
+      sass: '🎨',
+      less: '🎨',
+      json: '📋',
+      xml: '📄',
+      md: '📝',
+      mdx: '📝',
+      yml: '⚙️',
+      yaml: '⚙️',
+      sh: '💻',
+      bash: '💻',
+      sql: '🗃️',
+      dockerfile: '🐳',
+    };
+
+    return iconMap[extension || ''] || '📄';
+  };
+
+  const renderTreeNode = (node: TreeNode, depth: number = 0) => {
+    const isExpanded = expandedFolders.has(node.path);
+    const isSelected = selectedFilePath === node.path;
+
+    if (node.type === 'file' && node.file) {
+      return (
+        <div
+          key={node.path}
+          className={`flex items-center gap-1 px-2 py-1 cursor-pointer hover:bg-muted/50 transition-colors ${
+            isSelected ? 'bg-accent' : ''
+          }`}
+          style={{ paddingLeft: `${depth * 16 + 8}px` }}
+          onClick={() => handleFileClick(node.file!)}
+        >
+          <File size={14} className="text-muted-foreground flex-shrink-0" />
+          <span className="text-xs mr-1">{getFileIcon(node.name)}</span>
+          <span className="text-sm truncate" title={node.name}>
+            {node.name}
+          </span>
+        </div>
+      );
+    }
+
+    if (node.type === 'folder') {
+      return (
+        <div key={node.path}>
+          <div
+            className="flex items-center gap-1 px-2 py-1 cursor-pointer hover:bg-muted/50 transition-colors"
+            style={{ paddingLeft: `${depth * 16 + 8}px` }}
+            onClick={() => toggleFolder(node.path)}
+          >
+            {isExpanded ? (
+              <ChevronDown size={14} className="text-muted-foreground flex-shrink-0" />
+            ) : (
+              <ChevronRight size={14} className="text-muted-foreground flex-shrink-0" />
+            )}
+            <Folder size={14} className="text-muted-foreground flex-shrink-0" />
+            <span className="text-xs mr-1">📁</span>
+            <span className="text-sm truncate font-medium" title={node.name}>
+              {node.name}
+            </span>
+          </div>
+          {isExpanded && node.children && (
+            <div>{node.children.map((child) => renderTreeNode(child, depth + 1))}</div>
+          )}
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  if (!fileTree || !files.length) {
     return (
-      <div className="p-4 text-center text-gray-400">
-        <div className="text-4xl mb-2">📁</div>
-        <p className="text-sm">No repository opened</p>
-        <p className="text-xs mt-1">Clone a repository from the Git panel</p>
+      <div className="p-4 text-center text-muted-foreground">
+        <Folder className="mx-auto mb-2" size={32} />
+        <p className="text-sm">No files to display</p>
+        <p className="text-xs">Clone a repository to explore files</p>
       </div>
     );
   }
 
-  const getFileIcon = (fileName: string): string => {
-    const extension = fileName.split('.').pop()?.toLowerCase();
-    const iconMap: Record<string, string> = {
-      js: '🟨',
-      jsx: '🟨',
-      ts: '🔷',
-      tsx: '🔷',
-      json: '⚙️',
-      md: '📝',
-      html: '🌐',
-      css: '🎨',
-      scss: '🎨',
-      py: '🐍',
-      rb: '💎',
-      go: '🔷',
-      rs: '🦀',
-      java: '☕',
-      php: '🐘',
-    };
-    return iconMap[extension || ''] || '📄';
-  };
-
-  // Group files by directory
-  const rootFiles = repository.files.filter((file) => !file.path.includes('/'));
-  const srcFiles = repository.files.filter((file) => file.path.startsWith('src/'));
-
   return (
-    <div className="p-2">
-      {/* Repository Header */}
-      <div className="mb-3 pb-2 border-b border-gray-600">
-        <div className="flex items-center space-x-2">
-          <span className="text-xs">📦</span>
-          <span className="text-sm font-medium text-gray-200">{repository.name}</span>
+    <div className="overflow-auto">
+      <div className="p-2">
+        <div className="text-xs font-medium text-muted-foreground mb-2 px-2">
+          EXPLORER ({files.length} files)
         </div>
-        <div className="text-xs text-gray-400 mt-1 truncate" title={repository.url}>
-          {repository.url}
-        </div>
-      </div>
-
-      {/* Root Files */}
-      <div className="space-y-1">
-        {rootFiles.map((file) => {
-          const isSelected = currentFile?.path === file.path;
-          return (
-            <button
-              key={file.path}
-              onClick={() => onFileSelect(file)}
-              className={`w-full flex items-center space-x-2 px-2 py-1 text-left text-sm rounded ${
-                isSelected ? 'bg-blue-600 text-white' : 'hover:bg-gray-700 text-gray-300'
-              }`}
-            >
-              <span className="text-xs">{getFileIcon(file.name)}</span>
-              <span>{file.name}</span>
-            </button>
-          );
-        })}
-
-        {/* src folder */}
-        {srcFiles.length > 0 && (
-          <>
-            <div className="flex items-center space-x-2 px-2 py-1 text-sm text-gray-300">
-              <span className="text-xs">📂</span>
-              <span>src</span>
-            </div>
-            <div className="ml-4 space-y-1">
-              {srcFiles.map((file) => {
-                const isSelected = currentFile?.path === file.path;
-                const fileName = file.path.replace('src/', '');
-                return (
-                  <button
-                    key={file.path}
-                    onClick={() => onFileSelect(file)}
-                    className={`w-full flex items-center space-x-2 px-2 py-1 text-left text-sm rounded ${
-                      isSelected ? 'bg-blue-600 text-white' : 'hover:bg-gray-700 text-gray-300'
-                    }`}
-                  >
-                    <span className="text-xs">{getFileIcon(fileName)}</span>
-                    <span>{fileName}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* File Count */}
-      <div className="mt-4 pt-2 border-t border-gray-600 text-xs text-gray-400">
-        {repository.files.length} files
+        {fileTree.children?.map((child) => renderTreeNode(child, 0))}
       </div>
     </div>
   );

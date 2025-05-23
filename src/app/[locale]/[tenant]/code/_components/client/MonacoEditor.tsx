@@ -1,143 +1,97 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
+import * as monaco from 'monaco-editor';
 
-interface MonacoEditorProps {
-  content?: string;
-  language?: string;
-  theme?: 'vs-dark' | 'vs-light';
-  onChange?: (value: string) => void;
-  height?: number;
+interface FileInfo {
+  name: string;
+  path: string;
+  content: string;
+  language: string;
 }
 
-export function MonacoEditor({
-  content = '// Welcome to the Code Editor\n// Clone a Git repository to get started',
-  language = 'javascript',
-  theme = 'vs-dark',
-  onChange,
-  height,
-}: MonacoEditorProps) {
+interface MonacoEditorProps {
+  file: FileInfo;
+}
+
+export default function MonacoEditor({ file }: MonacoEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
-  const [editor, setEditor] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const monacoInstanceRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
+  const [isDisposed, setIsDisposed] = useState(false);
 
   useEffect(() => {
-    let editorInstance: any;
+    if (!editorRef.current) return;
 
-    const initMonaco = async () => {
+    console.log('[@component:MonacoEditor] Initializing Monaco editor');
+
+    // Create Monaco editor instance
+    const editor = monaco.editor.create(editorRef.current, {
+      value: file.content,
+      language: file.language,
+      theme: 'vs-dark',
+      automaticLayout: true,
+      fontSize: 13,
+      lineNumbers: 'on',
+      roundedSelection: false,
+      scrollBeyondLastLine: false,
+      readOnly: true, // Make read-only for now
+      minimap: {
+        enabled: true,
+      },
+      wordWrap: 'on',
+      folding: true,
+      glyphMargin: true,
+      lineDecorationsWidth: 10,
+      lineNumbersMinChars: 3,
+      scrollbar: {
+        vertical: 'auto',
+        horizontal: 'auto',
+        verticalScrollbarSize: 17,
+        horizontalScrollbarSize: 17,
+      },
+    });
+
+    monacoInstanceRef.current = editor;
+
+    // Cleanup function
+    return () => {
+      console.log('[@component:MonacoEditor] Disposing Monaco editor');
+      setIsDisposed(true);
+
       try {
-        // Dynamic import to avoid SSR issues
-        const monaco = await import('monaco-editor');
-
-        // Configure Monaco for web workers
-        self.MonacoEnvironment = {
-          getWorkerUrl: function (_moduleId, label) {
-            if (label === 'json') {
-              return './monaco-editor/esm/vs/language/json/json.worker.js';
-            }
-            if (label === 'css' || label === 'scss' || label === 'less') {
-              return './monaco-editor/esm/vs/language/css/css.worker.js';
-            }
-            if (label === 'html' || label === 'handlebars' || label === 'razor') {
-              return './monaco-editor/esm/vs/language/html/html.worker.js';
-            }
-            if (label === 'typescript' || label === 'javascript') {
-              return './monaco-editor/esm/vs/language/typescript/ts.worker.js';
-            }
-            return './monaco-editor/esm/vs/editor/editor.worker.js';
-          },
-        };
-
-        if (editorRef.current) {
-          editorInstance = monaco.editor.create(editorRef.current, {
-            value: content,
-            language: language,
-            theme: theme,
-            automaticLayout: true,
-            minimap: { enabled: true },
-            fontSize: 14,
-            wordWrap: 'on',
-            lineNumbers: 'on',
-            folding: true,
-            bracketMatching: 'always',
-            autoIndent: 'full',
-            formatOnPaste: true,
-            formatOnType: true,
-            scrollBeyondLastLine: false,
-          });
-
-          // Handle content changes
-          editorInstance.onDidChangeModelContent(() => {
-            const value = editorInstance.getValue();
-            onChange?.(value);
-          });
-
-          setEditor(editorInstance);
+        // Check if editor is still valid before disposing
+        if (editor && !editor.isDisposed && !editor.isDisposed()) {
+          editor.dispose();
         }
       } catch (error) {
-        console.error('[@component:MonacoEditor] Failed to initialize Monaco:', error);
-      } finally {
-        setIsLoading(false);
+        // Silently handle disposal errors - they're common with Monaco
+        console.warn('[@component:MonacoEditor] Editor disposal warning (expected):', error);
       }
-    };
 
-    initMonaco();
-
-    return () => {
-      if (editorInstance) {
-        editorInstance.dispose();
-      }
+      monacoInstanceRef.current = null;
     };
   }, []);
 
-  // Update content when prop changes
+  // Update content when file changes
   useEffect(() => {
-    if (editor && content !== editor.getValue()) {
-      editor.setValue(content);
-    }
-  }, [editor, content]);
+    if (monacoInstanceRef.current && file && !isDisposed) {
+      console.log('[@component:MonacoEditor] Updating file content:', file.path);
 
-  // Update language when prop changes
-  useEffect(() => {
-    if (editor) {
-      const model = editor.getModel();
-      if (model) {
-        // Dynamic import for language setting
-        import('monaco-editor').then((monaco) => {
-          monaco.editor.setModelLanguage(model, language);
-        });
+      try {
+        const model = monacoInstanceRef.current.getModel();
+        if (model && !monacoInstanceRef.current.isDisposed()) {
+          model.setValue(file.content);
+          monaco.editor.setModelLanguage(model, file.language);
+        }
+      } catch (error) {
+        console.warn('[@component:MonacoEditor] Error updating content:', error);
       }
     }
-  }, [editor, language]);
-
-  // Update theme when prop changes
-  useEffect(() => {
-    if (editor) {
-      import('monaco-editor').then((monaco) => {
-        monaco.editor.setTheme(theme);
-      });
-    }
-  }, [editor, theme]);
-
-  if (isLoading) {
-    return (
-      <div
-        className="flex items-center justify-center bg-gray-900"
-        style={height ? { height: `${height}px` } : { height: '100%' }}
-      >
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
-          <p className="text-gray-400">Loading Monaco Editor...</p>
-        </div>
-      </div>
-    );
-  }
+  }, [file, isDisposed]);
 
   return (
-    <div
-      ref={editorRef}
-      className="w-full"
-      style={height ? { height: `${height}px` } : { height: '100%' }}
-    />
+    <div className="relative h-full w-full">
+      <div ref={editorRef} className="h-full w-full" />
+    </div>
   );
 }
