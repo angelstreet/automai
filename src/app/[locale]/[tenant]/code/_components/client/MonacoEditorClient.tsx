@@ -27,6 +27,9 @@ export default function MonacoEditorClient({ file }: MonacoEditorClientProps) {
     console.log('[@component:MonacoEditorClient] useEffect triggered - Component mounted');
     console.log('[@component:MonacoEditorClient] editorRef.current exists?', !!editorRef.current);
 
+    // Capture the ref value for cleanup
+    const currentEditor = editorRef.current;
+
     // Only initialize if we have content
     if (!file.content) {
       console.log('[@component:MonacoEditorClient] No content available, skipping initialization');
@@ -41,9 +44,31 @@ export default function MonacoEditorClient({ file }: MonacoEditorClientProps) {
         return;
       }
 
+      // Prevent multiple initializations
+      if (monacoInstanceRef.current) {
+        console.log('[@component:MonacoEditorClient] Editor already initialized, skipping');
+        return;
+      }
+
       try {
         console.log('[@component:MonacoEditorClient] Starting Monaco editor initialization...');
         setIsInitializing(true);
+
+        // Clean up any existing Monaco context on the DOM element
+        const container = editorRef.current;
+
+        // Remove any Monaco-specific attributes
+        container.removeAttribute('data-monaco-editor-initialized');
+        container.removeAttribute('data-keybinding-context');
+
+        // Clear any existing content and classes that Monaco might have added
+        container.innerHTML = '';
+        container.className = '';
+
+        // Reset inline styles to ensure clean state
+        container.style.cssText = 'width: 100%; height: 100%;';
+
+        console.log('[@component:MonacoEditorClient] DOM element cleaned for initialization');
 
         // Configure Monaco Environment for Next.js
         if (typeof window !== 'undefined') {
@@ -101,6 +126,16 @@ export default function MonacoEditorClient({ file }: MonacoEditorClientProps) {
         if (!editorRef.current || !file.content) {
           console.log(
             '[@component:MonacoEditorClient] Element or content lost during Monaco import',
+          );
+          clearTimeout(timeout);
+          setIsInitializing(false);
+          return;
+        }
+
+        // Double check the element is still clean
+        if (monacoInstanceRef.current) {
+          console.log(
+            '[@component:MonacoEditorClient] Editor was created during async operation, skipping',
           );
           clearTimeout(timeout);
           setIsInitializing(false);
@@ -188,6 +223,16 @@ export default function MonacoEditorClient({ file }: MonacoEditorClientProps) {
           console.warn('[@component:MonacoEditorClient] Editor disposal warning:', error);
         }
         monacoInstanceRef.current = null;
+      }
+
+      // Clean up DOM element thoroughly using captured ref
+      if (currentEditor) {
+        const container = currentEditor;
+        container.removeAttribute('data-monaco-editor-initialized');
+        container.removeAttribute('data-keybinding-context');
+        container.innerHTML = '';
+        container.className = '';
+        container.style.cssText = 'width: 100%; height: 100%;';
       }
     };
   }, [file.content, file.language]); // Re-run when content or language changes
