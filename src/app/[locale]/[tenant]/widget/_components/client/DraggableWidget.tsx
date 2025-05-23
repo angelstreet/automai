@@ -7,6 +7,7 @@ interface DraggableWidgetProps {
   position: { x: number; y: number };
   onPositionChange: (x: number, y: number) => void;
   containerBounds: { minX: number; minY: number; maxX: number; maxY: number };
+  height?: number; // Optional height prop
 }
 
 const DraggableWidget: React.FC<DraggableWidgetProps> = ({
@@ -14,6 +15,7 @@ const DraggableWidget: React.FC<DraggableWidgetProps> = ({
   position,
   onPositionChange,
   containerBounds,
+  height = 256, // Default height
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -76,27 +78,27 @@ const DraggableWidget: React.FC<DraggableWidgetProps> = ({
         left: `${position.x}px`,
         top: `${position.y}px`,
         width: '224px',
-        height: '256px',
+        height: `${height}px`,
       }}
       onMouseDown={handleMouseDown}
     >
       {/* Widget content with internal drag zones */}
       <div className="relative w-full h-full">
-        {/* Content area - positioned to fill the entire widget */}
-        <div ref={contentRef} className="absolute inset-0 cursor-auto pointer-events-auto">
+        {/* Content area - positioned to fill the entire widget with higher z-index */}
+        <div ref={contentRef} className="absolute inset-0 cursor-auto pointer-events-auto z-20">
           {children}
         </div>
 
-        {/* Internal drag zones overlay - inside the widget */}
-        <div className="absolute inset-0 pointer-events-none rounded-lg overflow-hidden">
+        {/* Internal drag zones overlay - dark overlays inside the widget, highly visible */}
+        <div className="absolute inset-0 pointer-events-none rounded-lg overflow-hidden z-30">
           {/* Top drag zone */}
-          <div className="absolute top-0 left-0 right-0 h-4 bg-black/15 pointer-events-auto cursor-grab"></div>
+          <div className="absolute top-0 left-0 right-0 h-4 bg-black/50 pointer-events-auto cursor-grab"></div>
           {/* Bottom drag zone */}
-          <div className="absolute bottom-0 left-0 right-0 h-4 bg-black/15 pointer-events-auto cursor-grab"></div>
+          <div className="absolute bottom-0 left-0 right-0 h-4 bg-black/50 pointer-events-auto cursor-grab"></div>
           {/* Left drag zone */}
-          <div className="absolute top-4 bottom-4 left-0 w-4 bg-black/15 pointer-events-auto cursor-grab"></div>
+          <div className="absolute top-4 bottom-4 left-0 w-4 bg-black/50 pointer-events-auto cursor-grab"></div>
           {/* Right drag zone */}
-          <div className="absolute top-4 bottom-4 right-0 w-4 bg-black/15 pointer-events-auto cursor-grab"></div>
+          <div className="absolute top-4 bottom-4 right-0 w-4 bg-black/50 pointer-events-auto cursor-grab"></div>
         </div>
       </div>
     </div>

@@ -86,12 +86,12 @@ const CalculatorWidget = () => {
   ];
 
   return (
-    <div className="bg-white rounded-lg shadow-lg w-56 h-64 relative p-4">
+    <div className="bg-white rounded-lg shadow-lg w-56 min-h-[288px] h-full relative p-4">
       <h3 className="text-sm font-semibold text-gray-600 mb-2 text-center">Calculator</h3>
       <div className="bg-gray-100 p-2 mb-2 rounded text-right text-lg font-mono min-h-[32px] flex items-center justify-end">
         {display}
       </div>
-      <div className="grid grid-cols-4 gap-1 h-32">
+      <div className="grid grid-cols-4 gap-1 flex-1 min-h-[144px]">
         {buttons.slice(0, 4).map((btn, idx) => (
           <button
             key={idx}

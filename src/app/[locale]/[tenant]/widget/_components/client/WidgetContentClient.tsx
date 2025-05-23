@@ -21,7 +21,17 @@ interface WidgetPosition {
 }
 
 const WIDGET_WIDTH = 224; // w-56 = 224px
-const WIDGET_HEIGHT = 280; // h-64 = 256px
+const BASE_WIDGET_HEIGHT = 256; // h-64 = 256px (base height)
+
+// Widget-specific height adjustments
+const WIDGET_HEIGHTS = {
+  calculator: BASE_WIDGET_HEIGHT + 32, // h-72 = 288px (needs more space for buttons)
+  weather: BASE_WIDGET_HEIGHT + 16, // h-68 = 272px (compact layout)
+  clock: BASE_WIDGET_HEIGHT + 24, // h-70 = 280px (medium space for analog clock)
+  crypto: BASE_WIDGET_HEIGHT + 40, // h-74 = 296px (5 items need more space)
+  stocks: BASE_WIDGET_HEIGHT + 40, // h-74 = 296px (5 items need more space)
+};
+
 const CONTAINER_PADDING = 32; // p-8 = 32px
 
 function WidgetContentClient() {
@@ -46,11 +56,12 @@ function WidgetContentClient() {
       if (typeof window !== 'undefined') {
         const containerWidth = window.innerWidth - CONTAINER_PADDING * 2;
         const containerHeight = window.innerHeight - CONTAINER_PADDING * 2;
+        const maxWidgetHeight = Math.max(...Object.values(WIDGET_HEIGHTS));
         setContainerBounds({
           minX: 0,
           minY: 0,
           maxX: Math.max(0, containerWidth - WIDGET_WIDTH),
-          maxY: Math.max(0, containerHeight - WIDGET_HEIGHT),
+          maxY: Math.max(0, containerHeight - maxWidgetHeight),
         });
       }
     };
@@ -82,7 +93,7 @@ function WidgetContentClient() {
   };
 
   return (
-    <div className="relative w-full h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8 overflow-hidden">
+    <div className="relative w-full h-screen bg-transparent p-8 overflow-hidden">
       {/* Widget Container */}
       <div className="relative w-full h-full">
         {/* Calculator Widget */}
@@ -90,6 +101,7 @@ function WidgetContentClient() {
           position={getWidgetPosition('calculator')}
           onPositionChange={(x, y) => handleWidgetDrag('calculator', x, y)}
           containerBounds={containerBounds}
+          height={WIDGET_HEIGHTS.calculator}
         >
           <CalculatorWidget />
         </DraggableWidget>
@@ -99,6 +111,7 @@ function WidgetContentClient() {
           position={getWidgetPosition('weather')}
           onPositionChange={(x, y) => handleWidgetDrag('weather', x, y)}
           containerBounds={containerBounds}
+          height={WIDGET_HEIGHTS.weather}
         >
           <WeatherWidget />
         </DraggableWidget>
@@ -108,6 +121,7 @@ function WidgetContentClient() {
           position={getWidgetPosition('clock')}
           onPositionChange={(x, y) => handleWidgetDrag('clock', x, y)}
           containerBounds={containerBounds}
+          height={WIDGET_HEIGHTS.clock}
         >
           <ClockWidget />
         </DraggableWidget>
@@ -117,6 +131,7 @@ function WidgetContentClient() {
           position={getWidgetPosition('crypto')}
           onPositionChange={(x, y) => handleWidgetDrag('crypto', x, y)}
           containerBounds={containerBounds}
+          height={WIDGET_HEIGHTS.crypto}
         >
           <CryptoWidget />
         </DraggableWidget>
@@ -126,6 +141,7 @@ function WidgetContentClient() {
           position={getWidgetPosition('stocks')}
           onPositionChange={(x, y) => handleWidgetDrag('stocks', x, y)}
           containerBounds={containerBounds}
+          height={WIDGET_HEIGHTS.stocks}
         >
           <StocksWidget />
         </DraggableWidget>

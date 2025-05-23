@@ -78,7 +78,7 @@ const ClockWidget = () => {
   };
 
   return (
-    <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg shadow-lg w-56 h-64 text-white relative p-4">
+    <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg shadow-lg w-56 min-h-[280px] h-full text-white relative p-4">
       <div className="flex items-center justify-between mb-3">
         <button
           onClick={prevCity}

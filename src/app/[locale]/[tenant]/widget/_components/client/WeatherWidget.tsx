@@ -77,7 +77,7 @@ const WeatherWidget = () => {
   };
 
   return (
-    <div className="bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg shadow-lg w-56 h-64 text-white relative p-4">
+    <div className="bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg shadow-lg w-56 min-h-[272px] h-full text-white relative p-4">
       <div className="flex items-center justify-between mb-2">
         <button
           onClick={prevCity}
