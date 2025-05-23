@@ -16,9 +16,9 @@ export default function ChatHistoryPanel() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900">Chat History</h2>
-        <button className="mt-2 w-full px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+      <div className="p-3 border-b border-border">
+        <h2 className="text-base font-semibold text-foreground mb-2">Chat History</h2>
+        <button className="w-full px-3 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
           New Chat
         </button>
       </div>
@@ -28,21 +28,27 @@ export default function ChatHistoryPanel() {
         {MOCK_CHAT_HISTORY.map((chat) => (
           <div
             key={chat.id}
-            className="p-3 mb-2 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+            className="p-2.5 mb-1.5 rounded-lg hover:bg-secondary/80 cursor-pointer transition-colors group"
           >
-            <div className="font-medium text-gray-900 text-sm truncate">{chat.title}</div>
-            <div className="text-xs text-gray-500 mt-1">
-              {chat.messageCount} messages •{' '}
-              {isClient ? chat.timestamp.toLocaleDateString() : 'Today'}
+            <div className="font-medium text-foreground text-sm truncate group-hover:text-primary">
+              {chat.title}
+            </div>
+            <div className="text-xs text-muted-foreground mt-1 flex items-center justify-between">
+              <span>{chat.messageCount} msgs</span>
+              <span>
+                {isClient
+                  ? chat.timestamp.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                  : 'Today'}
+              </span>
             </div>
           </div>
         ))}
       </div>
 
       {/* Footer */}
-      <div className="p-4 border-t border-gray-200">
-        <div className="text-xs text-gray-500 text-center">
-          Total conversations: {MOCK_CHAT_HISTORY.length}
+      <div className="p-3 border-t border-border">
+        <div className="text-xs text-muted-foreground text-center">
+          {MOCK_CHAT_HISTORY.length} conversations
         </div>
       </div>
     </div>

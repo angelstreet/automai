@@ -16,10 +16,10 @@ export const ERROR_MESSAGES = {
 
 // UI Layout Constants
 export const CHAT_LAYOUT = {
-  SIDEBAR_WIDTH: 'w-80', // 320px
-  HEADER_HEIGHT: 'h-16', // 64px
-  MESSAGE_INPUT_HEIGHT: 'h-20', // 80px
-  MIN_CHAT_HEIGHT: 'min-h-[400px]',
+  SIDEBAR_WIDTH: 'w-64', // 256px - reduced from w-80
+  HEADER_HEIGHT: 'h-14', // 56px - reduced slightly
+  MESSAGE_INPUT_HEIGHT: 'h-16', // 64px - more elegant height
+  MIN_CHAT_HEIGHT: 'min-h-0', // Allow flexible height
 } as const;
 
 // Available AI Models
@@ -30,6 +30,12 @@ export const AI_MODELS = [
   { id: 'claude-3-opus', name: 'Claude 3 Opus', provider: 'Anthropic' },
   { id: 'claude-3-haiku', name: 'Claude 3 Haiku', provider: 'Anthropic' },
 ] as const;
+
+// Multi-model settings
+export const MODEL_SELECTION = {
+  MIN_MODELS: 1,
+  MAX_MODELS: 3,
+} as const;
 
 // Chat History Mock Data (for UI layout)
 export const MOCK_CHAT_HISTORY = [
