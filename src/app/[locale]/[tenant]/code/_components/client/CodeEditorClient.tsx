@@ -83,6 +83,8 @@ export default function CodeEditorClient() {
         ) || repo.files[0];
 
       handleFileSelect(defaultFile);
+
+      // Auto-switch to explorer tab to show the files immediately
       setActiveTab('explorer');
     }
 
@@ -231,8 +233,12 @@ export default function CodeEditorClient() {
         </button>
       </div>
 
-      {/* Sidebar */}
-      <div className="w-80 bg-muted/30 border-r flex flex-col shrink-0">
+      {/* Sidebar - Full width when not in explorer mode */}
+      <div
+        className={`bg-muted/30 border-r flex flex-col shrink-0 ${
+          activeTab === 'explorer' ? 'w-80' : 'flex-1'
+        }`}
+      >
         {/* Sidebar Header */}
         <div className="h-8 bg-muted/50 border-b flex items-center px-3 shrink-0">
           <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -257,55 +263,59 @@ export default function CodeEditorClient() {
             <GitPanelClient
               onFilesLoaded={handleRepositoryLoaded}
               onStatusUpdate={handleStatusUpdate}
+              modifiedFiles={repository?.files || []}
+              repository={repository}
             />
           )}
           {activeTab === 'terminal' && <TerminalPanelClient />}
         </div>
       </div>
 
-      {/* Main Editor Area - No scrolling here, let Monaco handle it */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Status Bar */}
-        <div className="h-8 bg-muted/50 border-b flex items-center justify-between px-4 shrink-0">
-          <div className="flex items-center gap-2">
-            {currentFile && (
-              <>
-                <Badge variant="outline" className="text-xs">
-                  {currentFile.language}
-                </Badge>
-                <span className="text-xs text-muted-foreground">{currentFile.path}</span>
-              </>
+      {/* Main Editor Area - Only show when on explorer tab */}
+      {activeTab === 'explorer' && (
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Status Bar */}
+          <div className="h-8 bg-muted/50 border-b flex items-center justify-between px-4 shrink-0">
+            <div className="flex items-center gap-2">
+              {currentFile && (
+                <>
+                  <Badge variant="outline" className="text-xs">
+                    {currentFile.language}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">{currentFile.path}</span>
+                </>
+              )}
+            </div>
+            <div className="text-xs text-muted-foreground">{status}</div>
+          </div>
+
+          {/* Editor - Completely remove any overflow handling */}
+          <div className="flex-1 overflow-hidden">
+            {currentFile ? (
+              <MonacoEditorClient
+                key={currentFile.path}
+                file={currentFile}
+                onFileChange={handleFileChange}
+              />
+            ) : (
+              <div className="h-full flex items-center justify-center bg-background">
+                <Card className="p-8 text-center max-w-md mx-auto">
+                  <div className="text-6xl mb-4">👨‍💻</div>
+                  <h3 className="text-lg font-semibold mb-2">Welcome to Code Explorer</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Clone a Git repository to start exploring code with our VS Code-like interface.
+                  </p>
+                  <div className="text-sm text-muted-foreground space-y-1">
+                    <p>✨ Full syntax highlighting</p>
+                    <p>📁 File tree navigation</p>
+                    <p>🔗 Universal Git provider support</p>
+                  </div>
+                </Card>
+              </div>
             )}
           </div>
-          <div className="text-xs text-muted-foreground">{status}</div>
         </div>
-
-        {/* Editor - Completely remove any overflow handling */}
-        <div className="flex-1 overflow-hidden">
-          {currentFile ? (
-            <MonacoEditorClient
-              key={currentFile.path}
-              file={currentFile}
-              onFileChange={handleFileChange}
-            />
-          ) : (
-            <div className="h-full flex items-center justify-center bg-background">
-              <Card className="p-8 text-center max-w-md mx-auto">
-                <div className="text-6xl mb-4">👨‍💻</div>
-                <h3 className="text-lg font-semibold mb-2">Welcome to Code Explorer</h3>
-                <p className="text-muted-foreground mb-4">
-                  Clone a Git repository to start exploring code with our VS Code-like interface.
-                </p>
-                <div className="text-sm text-muted-foreground space-y-1">
-                  <p>✨ Full syntax highlighting</p>
-                  <p>📁 File tree navigation</p>
-                  <p>🔗 Universal Git provider support</p>
-                </div>
-              </Card>
-            </div>
-          )}
-        </div>
-      </div>
+      )}
     </div>
   );
 }
