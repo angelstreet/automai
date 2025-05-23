@@ -43,6 +43,7 @@ interface RecAndroidPhoneRemoteProps {
     deviceHeight: number,
   ) => void;
   onOverlayToggle?: (visible: boolean) => void;
+  onElementClickHandler?: (clickHandler: (element: AndroidElement) => void) => void;
 }
 
 export function RecAndroidPhoneRemote({
@@ -50,6 +51,7 @@ export function RecAndroidPhoneRemote({
   deviceId,
   onElementsUpdate,
   onOverlayToggle,
+  onElementClickHandler,
 }: RecAndroidPhoneRemoteProps) {
   const [lastAction, setLastAction] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -67,7 +69,7 @@ export function RecAndroidPhoneRemote({
   const [isDumpingElements, setIsDumpingElements] = useState(false);
   const [isClickingElement, setIsClickingElement] = useState(false);
   const [elementsStatus, setElementsStatus] = useState<string>('');
-  const [deviceResolution, setDeviceResolution] = useState<{
+  const [_deviceResolution, setDeviceResolution] = useState<{
     width: number;
     height: number;
   } | null>(null);
@@ -179,27 +181,59 @@ export function RecAndroidPhoneRemote({
     }
   };
 
-  // Click on selected element
-  const handleClickElement = async () => {
-    if (!selectedElement || isClickingElement || isConnecting) return;
+  // Click on any element (for overlay clicks)
+  const handleElementClick = useCallback(
+    async (element: AndroidElement) => {
+      if (isClickingElement || isConnecting) return;
 
-    setIsClickingElement(true);
-    setLastAction(`Clicking element...`);
+      setIsClickingElement(true);
+      setLastAction(`Clicking element...`);
 
-    try {
-      const result = await clickElement(hostId, deviceId, selectedElement);
+      try {
+        const result = await clickElement(hostId, deviceId, element);
 
-      if (result.success) {
-        setLastAction(`Clicked element: ${selectedElement.text || selectedElement.resourceId}`);
-      } else {
-        setLastAction(`Error clicking element: ${result.error}`);
+        if (result.success) {
+          setLastAction(
+            `Clicked element: ${element.text || element.resourceId || element.contentDesc}`,
+          );
+          // Update selected element in UI for visual feedback
+          setSelectedElement(element);
+        } else {
+          setLastAction(`Error clicking element: ${result.error}`);
+        }
+      } catch (error: any) {
+        setLastAction(`Error clicking element: ${error.message}`);
+      } finally {
+        setIsClickingElement(false);
       }
-    } catch (error: any) {
-      setLastAction(`Error clicking element: ${error.message}`);
-    } finally {
-      setIsClickingElement(false);
-    }
+    },
+    [hostId, deviceId, isClickingElement, isConnecting],
+  );
+
+  // Click on selected element (for dropdown selection)
+  const handleClickSelectedElement = async () => {
+    if (!selectedElement) return;
+    await handleElementClick(selectedElement);
   };
+
+  // Handle element click from overlay
+  const handleOverlayElementClick = useCallback(
+    (element: AndroidElement) => {
+      console.log(
+        `[@component:RecAndroidPhoneRemote] Received overlay click for element ID ${element.id}`,
+      );
+      handleElementClick(element);
+    },
+    [handleElementClick],
+  );
+
+  // Expose click handler to parent component
+  useEffect(() => {
+    if (onElementClickHandler) {
+      // Pass our click handler to the parent so it can pass it to the overlay
+      onElementClickHandler(handleOverlayElementClick);
+    }
+  }, [onElementClickHandler, handleOverlayElementClick]);
 
   // Clear overlay
   const handleClearOverlay = () => {
@@ -516,7 +550,7 @@ export function RecAndroidPhoneRemote({
               })}
             </select>
             <button
-              onClick={handleClickElement}
+              onClick={handleClickSelectedElement}
               disabled={!selectedElement || isClickingElement || isLoading || isConnecting}
               className="w-full p-1.5 bg-purple-600 text-white rounded text-xs hover:bg-purple-700 disabled:opacity-50"
             >

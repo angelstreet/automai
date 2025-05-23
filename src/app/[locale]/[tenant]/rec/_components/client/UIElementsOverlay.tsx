@@ -11,6 +11,7 @@ interface UIElementsOverlayProps {
   deviceHeight: number;
   isVisible: boolean;
   selectedElementId?: number;
+  onElementClick?: (element: AndroidElement) => void;
 }
 
 interface ScaledElement {
@@ -32,6 +33,7 @@ export function UIElementsOverlay({
   deviceHeight,
   isVisible,
   selectedElementId,
+  onElementClick,
 }: UIElementsOverlayProps) {
   const [scaledElements, setScaledElements] = useState<ScaledElement[]>([]);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -195,14 +197,25 @@ export function UIElementsOverlay({
     };
   }, [videoElement, isVisible]);
 
+  // Handle element click
+  const handleElementClick = (scaledElement: ScaledElement) => {
+    const originalElement = elements.find((el) => el.id === scaledElement.id);
+    if (originalElement && onElementClick) {
+      console.log(
+        `[@component:UIElementsOverlay] Clicked element ID ${scaledElement.id}: ${scaledElement.label}`,
+      );
+      onElementClick(originalElement);
+    }
+  };
+
   if (!isVisible || scaledElements.length === 0) return null;
 
   return (
-    <div ref={overlayRef} className="fixed pointer-events-none z-50" style={{ position: 'fixed' }}>
+    <div ref={overlayRef} className="fixed z-50" style={{ position: 'fixed' }}>
       {/* Debug: Show calculated video content area with a dashed border */}
       {scaledElements.length > 0 && (
         <div
-          className="absolute border-2 border-dashed border-white opacity-50"
+          className="absolute border-2 border-dashed border-white opacity-50 pointer-events-none"
           style={{
             left: '0px',
             top: '0px',
@@ -219,7 +232,7 @@ export function UIElementsOverlay({
       {scaledElements.map((element, index) => (
         <div
           key={element.id}
-          className="absolute border-2"
+          className="absolute border-2 cursor-pointer hover:bg-opacity-40 transition-all duration-150"
           style={{
             left: `${element.x}px`,
             top: `${element.y}px`,
@@ -229,10 +242,12 @@ export function UIElementsOverlay({
             backgroundColor: `${element.color}20`, // 20% opacity
             borderWidth: selectedElementId === element.id ? '3px' : '2px',
           }}
+          onClick={() => handleElementClick(element)}
+          title={`Click to interact with: ${element.label}`}
         >
           {/* Number label at bottom-right */}
           <div
-            className="absolute text-xs font-bold px-1 rounded"
+            className="absolute text-xs font-bold px-1 rounded pointer-events-none"
             style={{
               bottom: '0px',
               right: '0px',
@@ -248,7 +263,7 @@ export function UIElementsOverlay({
           {/* Debug coordinates for first 3 elements */}
           {index < 3 && (
             <div
-              className="absolute text-xs bg-black text-white px-1 rounded opacity-75"
+              className="absolute text-xs bg-black text-white px-1 rounded opacity-75 pointer-events-none"
               style={{
                 top: '-20px',
                 left: '0px',

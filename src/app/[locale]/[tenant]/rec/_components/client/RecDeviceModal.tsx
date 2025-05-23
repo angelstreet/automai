@@ -36,6 +36,9 @@ export function RecDeviceModal({ device, isOpen, onClose }: DeviceModalProps) {
   } | null>(null);
   const [showOverlay, setShowOverlay] = useState(false);
   const [selectedElementId, setSelectedElementId] = useState<number | undefined>();
+  const [elementClickHandler, setElementClickHandler] = useState<
+    ((element: AndroidElement) => void) | null
+  >(null);
 
   // Keep the ref in sync with the state
   useEffect(() => {
@@ -58,6 +61,21 @@ export function RecDeviceModal({ device, isOpen, onClose }: DeviceModalProps) {
     if (!visible) {
       setOverlayElements([]);
       setSelectedElementId(undefined);
+    }
+  };
+
+  // Handle element click handler from remote component
+  const handleElementClickHandler = (clickHandler: (element: AndroidElement) => void) => {
+    setElementClickHandler(() => clickHandler);
+  };
+
+  // Handle element click from overlay
+  const handleOverlayElementClick = (element: AndroidElement) => {
+    console.log(`[@component:RecDeviceModal] Overlay clicked element ID ${element.id}`);
+    if (elementClickHandler) {
+      elementClickHandler(element);
+      // Update selected element for visual feedback
+      setSelectedElementId(element.id);
     }
   };
 
@@ -344,6 +362,7 @@ export function RecDeviceModal({ device, isOpen, onClose }: DeviceModalProps) {
             deviceId={androidDevice.remoteConfig.deviceId}
             onElementsUpdate={handleElementsUpdate}
             onOverlayToggle={handleOverlayToggle}
+            onElementClickHandler={handleElementClickHandler}
           />
         )}
         {deviceInfo.remoteType === 'androidPhone' && (
@@ -352,6 +371,7 @@ export function RecDeviceModal({ device, isOpen, onClose }: DeviceModalProps) {
             deviceId={androidDevice.remoteConfig.deviceId}
             onElementsUpdate={handleElementsUpdate}
             onOverlayToggle={handleOverlayToggle}
+            onElementClickHandler={handleElementClickHandler}
           />
         )}
       </div>
@@ -407,6 +427,7 @@ export function RecDeviceModal({ device, isOpen, onClose }: DeviceModalProps) {
             deviceHeight={deviceResolution.height}
             isVisible={showOverlay}
             selectedElementId={selectedElementId}
+            onElementClick={handleOverlayElementClick}
           />
         )}
       </div>

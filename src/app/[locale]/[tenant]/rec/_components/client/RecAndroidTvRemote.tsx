@@ -24,14 +24,28 @@ import {
   executeAdbKeyCommand,
   connectToHost,
   disconnectFromHost,
+  AndroidElement,
 } from '@/app/actions/adbActions';
 
 interface RecAndroidTvRemoteProps {
   hostId: string;
   deviceId: string;
+  onElementsUpdate?: (
+    elements: AndroidElement[],
+    deviceWidth: number,
+    deviceHeight: number,
+  ) => void;
+  onOverlayToggle?: (visible: boolean) => void;
+  onElementClickHandler?: (clickHandler: (element: AndroidElement) => void) => void;
 }
 
-export function RecAndroidTvRemote({ hostId, deviceId }: RecAndroidTvRemoteProps) {
+export function RecAndroidTvRemote({
+  hostId,
+  deviceId,
+  onElementsUpdate,
+  onOverlayToggle,
+  onElementClickHandler,
+}: RecAndroidTvRemoteProps) {
   const [lastAction, setLastAction] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isConnecting, setIsConnecting] = useState(true);
