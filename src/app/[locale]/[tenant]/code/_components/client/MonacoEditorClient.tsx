@@ -165,11 +165,29 @@ export default function MonacoEditorClient({ file }: MonacoEditorClientProps) {
             horizontal: 'auto',
             verticalScrollbarSize: 17,
             horizontalScrollbarSize: 17,
+            // Ensure smooth scrolling behavior
+            useShadows: false,
+            verticalHasArrows: false,
+            horizontalHasArrows: false,
+            verticalSliderSize: 17,
+            horizontalSliderSize: 17,
+            arrowSize: 11,
           },
+          // Enable smooth scrolling and mouse wheel support
+          smoothScrolling: true,
+          mouseWheelScrollSensitivity: 1,
+          fastScrollSensitivity: 5,
+          scrollPredominantAxis: true,
+          // Ensure proper viewport handling
+          revealHorizontalRightPadding: 30,
+          scrollBeyondLastColumn: 10,
+          // Improve scroll responsiveness
+          cursorSmoothCaretAnimation: 'off',
+          disableMonospaceOptimizations: false, // Enable optimizations
+          renderLineHighlight: 'none',
           // Simplified configuration to avoid worker issues
           links: false,
           occurrencesHighlight: 'off',
-          renderLineHighlight: 'none',
           selectionHighlight: false,
           colorDecorators: false,
           hover: {
@@ -233,6 +251,8 @@ export default function MonacoEditorClient({ file }: MonacoEditorClientProps) {
     return () => {
       console.log('[@component:MonacoEditorClient] useEffect cleanup - Component unmounting');
       console.log('[@component:MonacoEditorClient] Disposing Monaco editor');
+
+      // Dispose Monaco editor
       if (monacoInstanceRef.current) {
         try {
           if (typeof monacoInstanceRef.current.dispose === 'function') {
@@ -259,8 +279,16 @@ export default function MonacoEditorClient({ file }: MonacoEditorClientProps) {
   // Always render the container div and overlay loading states
   return (
     <div className="relative h-full w-full">
-      {/* Editor container - remove Tailwind classes to prevent Monaco conflicts */}
-      <div ref={editorRef} style={{ width: '100%', height: '100%' }} />
+      {/* Monaco Editor container - simplified since no parent scroll interference */}
+      <div
+        ref={editorRef}
+        className="h-full w-full"
+        style={{
+          // Simple styling - let Monaco handle everything
+          position: 'relative',
+          overflow: 'hidden', // Monaco handles internal scrolling
+        }}
+      />
 
       {/* Loading overlay */}
       {(!file.content || isInitializing) && (

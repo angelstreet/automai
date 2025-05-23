@@ -173,9 +173,9 @@ export default function CodeEditorClient() {
   };
 
   return (
-    <div className="h-full flex bg-background">
+    <div className="h-full flex bg-background overflow-hidden">
       {/* Activity Bar */}
-      <div className="w-12 bg-muted/50 border-r flex flex-col">
+      <div className="w-12 bg-muted/50 border-r flex flex-col shrink-0">
         <button
           onClick={() => setActiveTab('explorer')}
           className={`w-full h-12 flex items-center justify-center border-b transition-colors ${
@@ -212,9 +212,9 @@ export default function CodeEditorClient() {
       </div>
 
       {/* Sidebar */}
-      <div className="w-80 bg-muted/30 border-r flex flex-col">
+      <div className="w-80 bg-muted/30 border-r flex flex-col shrink-0">
         {/* Sidebar Header */}
-        <div className="h-8 bg-muted/50 border-b flex items-center px-3">
+        <div className="h-8 bg-muted/50 border-b flex items-center px-3 shrink-0">
           <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             {activeTab === 'explorer'
               ? 'Explorer'
@@ -224,8 +224,8 @@ export default function CodeEditorClient() {
           </span>
         </div>
 
-        {/* Sidebar Content */}
-        <div className="flex-1 overflow-hidden">
+        {/* Sidebar Content - Allow scrolling only in sidebar */}
+        <div className="flex-1 overflow-y-auto">
           {activeTab === 'explorer' && (
             <FileExplorerClient
               files={repository?.files || []}
@@ -243,10 +243,10 @@ export default function CodeEditorClient() {
         </div>
       </div>
 
-      {/* Main Editor Area */}
-      <div className="flex-1 flex flex-col">
+      {/* Main Editor Area - No scrolling here, let Monaco handle it */}
+      <div className="flex-1 flex flex-col overflow-hidden">
         {/* Status Bar */}
-        <div className="h-8 bg-muted/50 border-b flex items-center justify-between px-4">
+        <div className="h-8 bg-muted/50 border-b flex items-center justify-between px-4 shrink-0">
           <div className="flex items-center gap-2">
             {currentFile && (
               <>
@@ -260,8 +260,8 @@ export default function CodeEditorClient() {
           <div className="text-xs text-muted-foreground">{status}</div>
         </div>
 
-        {/* Editor */}
-        <div className="flex-1">
+        {/* Editor - Completely remove any overflow handling */}
+        <div className="flex-1 overflow-hidden">
           {currentFile ? (
             <MonacoEditorClient key={currentFile.path} file={currentFile} />
           ) : (
