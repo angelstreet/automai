@@ -79,8 +79,8 @@ export function RecAndroidPhoneRemote({
   // Auto-dump timer ref
   const autoDumpTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Dump UI elements
-  const handleDumpElements = useCallback(async () => {
+  // Dump UI elements (not wrapped in useCallback to avoid circular deps)
+  const handleDumpElements = async () => {
     if (isDumpingElements || isConnecting) return;
 
     setIsDumpingElements(true);
@@ -108,6 +108,11 @@ export function RecAndroidPhoneRemote({
         // Notify parent component
         onElementsUpdate?.(result.elements, resolutionResult.width, resolutionResult.height);
         onOverlayToggle?.(true);
+
+        // Pass click handler to parent when overlay is shown
+        if (onElementClickHandler) {
+          onElementClickHandler(handleOverlayElementClick);
+        }
       } else {
         setElementsStatus(`Error: ${result.error}`);
       }
@@ -116,10 +121,10 @@ export function RecAndroidPhoneRemote({
     } finally {
       setIsDumpingElements(false);
     }
-  }, [hostId, deviceId, isDumpingElements, isConnecting, onElementsUpdate, onOverlayToggle]);
+  };
 
   // Auto-dump function that triggers after UI interactions
-  const scheduleAutoDump = useCallback(() => {
+  const scheduleAutoDump = () => {
     // Only auto-dump if overlay is currently visible (user is actively inspecting UI)
     if (!showOverlay) return;
 
@@ -130,13 +135,13 @@ export function RecAndroidPhoneRemote({
 
     setIsAutoDumpScheduled(true);
 
-    // Schedule new dump after 1.5 seconds
+    // Schedule new dump after 2 seconds
     autoDumpTimerRef.current = setTimeout(() => {
       console.log('[@component:RecAndroidPhoneRemote] Auto-dumping UI elements after action');
       setIsAutoDumpScheduled(false);
       handleDumpElements();
     }, 2000);
-  }, [showOverlay, handleDumpElements]);
+  };
 
   // Cleanup timer on unmount
   useEffect(() => {
@@ -217,35 +222,32 @@ export function RecAndroidPhoneRemote({
   };
 
   // Click on any element (for overlay clicks)
-  const handleElementClick = useCallback(
-    async (element: AndroidElement) => {
-      if (isClickingElement || isConnecting) return;
+  const handleElementClick = async (element: AndroidElement) => {
+    if (isClickingElement || isConnecting) return;
 
-      setIsClickingElement(true);
-      setLastAction(`Clicking element...`);
+    setIsClickingElement(true);
+    setLastAction(`Clicking element...`);
 
-      try {
-        const result = await clickElement(hostId, deviceId, element);
+    try {
+      const result = await clickElement(hostId, deviceId, element);
 
-        if (result.success) {
-          setLastAction(
-            `Clicked element: ${element.text || element.resourceId || element.contentDesc}`,
-          );
-          // Update selected element in UI for visual feedback
-          setSelectedElement(element);
-          // Schedule auto-dump after successful element click
-          scheduleAutoDump();
-        } else {
-          setLastAction(`Error clicking element: ${result.error}`);
-        }
-      } catch (error: any) {
-        setLastAction(`Error clicking element: ${error.message}`);
-      } finally {
-        setIsClickingElement(false);
+      if (result.success) {
+        setLastAction(
+          `Clicked element: ${element.text || element.resourceId || element.contentDesc}`,
+        );
+        // Update selected element in UI for visual feedback
+        setSelectedElement(element);
+        // Schedule auto-dump after successful element click
+        scheduleAutoDump();
+      } else {
+        setLastAction(`Error clicking element: ${result.error}`);
       }
-    },
-    [hostId, deviceId, isClickingElement, isConnecting, scheduleAutoDump],
-  );
+    } catch (error: any) {
+      setLastAction(`Error clicking element: ${error.message}`);
+    } finally {
+      setIsClickingElement(false);
+    }
+  };
 
   // Click on selected element (for dropdown selection)
   const handleClickSelectedElement = async () => {
@@ -254,23 +256,12 @@ export function RecAndroidPhoneRemote({
   };
 
   // Handle element click from overlay
-  const handleOverlayElementClick = useCallback(
-    (element: AndroidElement) => {
-      console.log(
-        `[@component:RecAndroidPhoneRemote] Received overlay click for element ID ${element.id}`,
-      );
-      handleElementClick(element);
-    },
-    [handleElementClick],
-  );
-
-  // Expose click handler to parent component
-  useEffect(() => {
-    if (onElementClickHandler) {
-      // Pass our click handler to the parent so it can pass it to the overlay
-      onElementClickHandler(handleOverlayElementClick);
-    }
-  }, [onElementClickHandler, handleOverlayElementClick]);
+  const handleOverlayElementClick = (element: AndroidElement) => {
+    console.log(
+      `[@component:RecAndroidPhoneRemote] Received overlay click for element ID ${element.id}`,
+    );
+    handleElementClick(element);
+  };
 
   // Clear overlay
   const handleClearOverlay = () => {

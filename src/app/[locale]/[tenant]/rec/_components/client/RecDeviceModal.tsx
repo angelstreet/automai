@@ -65,19 +65,25 @@ export function RecDeviceModal({ device, isOpen, onClose }: DeviceModalProps) {
   };
 
   // Handle element click handler from remote component
-  const handleElementClickHandler = (clickHandler: (element: AndroidElement) => void) => {
-    setElementClickHandler(() => clickHandler);
-  };
+  const handleElementClickHandler = useCallback(
+    (clickHandler: (element: AndroidElement) => void) => {
+      setElementClickHandler(() => clickHandler);
+    },
+    [],
+  );
 
   // Handle element click from overlay
-  const handleOverlayElementClick = (element: AndroidElement) => {
-    console.log(`[@component:RecDeviceModal] Overlay clicked element ID ${element.id}`);
-    if (elementClickHandler) {
-      elementClickHandler(element);
-      // Update selected element for visual feedback
-      setSelectedElementId(element.id);
-    }
-  };
+  const handleOverlayElementClick = useCallback(
+    (element: AndroidElement) => {
+      console.log(`[@component:RecDeviceModal] Overlay clicked element ID ${element.id}`);
+      if (elementClickHandler) {
+        elementClickHandler(element);
+        // Update selected element for visual feedback
+        setSelectedElementId(element.id);
+      }
+    },
+    [elementClickHandler],
+  );
 
   // Handle modal close
   const handleClose = useCallback(() => {
