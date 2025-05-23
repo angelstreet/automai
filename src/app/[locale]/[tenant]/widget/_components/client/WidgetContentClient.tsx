@@ -21,7 +21,7 @@ interface WidgetPosition {
 }
 
 const WIDGET_WIDTH = 224; // w-56 = 224px
-const WIDGET_HEIGHT = 256; // h-64 = 256px
+const WIDGET_HEIGHT = 280; // h-64 = 256px
 const CONTAINER_PADDING = 32; // p-8 = 32px
 
 function WidgetContentClient() {
@@ -33,11 +33,11 @@ function WidgetContentClient() {
   });
 
   const [widgets, setWidgets] = useState<WidgetPosition[]>([
-    { id: 'calculator', x: 50, y: 50 },
+    { id: 'calculator', x: 50, y: 10 },
     { id: 'weather', x: 300, y: 50 },
-    { id: 'clock', x: 550, y: 50 },
+    { id: 'clock', x: 550, y: 10 },
     { id: 'crypto', x: 800, y: 50 },
-    { id: 'stocks', x: 50, y: 330 },
+    { id: 'stocks', x: 150, y: 200 },
   ]);
 
   // Calculate container bounds on client side

@@ -68,39 +68,43 @@ const CryptoWidget = () => {
   };
 
   return (
-    <div className="bg-gradient-to-br from-orange-500 to-red-600 p-3 rounded-lg shadow-lg w-56 h-64 text-white relative">
-      <h3 className="text-sm font-semibold mb-2 opacity-90 pt-6">Crypto Prices</h3>
+    <div className="bg-gradient-to-br from-orange-500 to-red-600 rounded-lg shadow-lg w-full h-full text-white relative">
+      <div className="h-full relative p-4">
+        <h3 className="text-sm font-semibold mb-2 opacity-90 text-center pt-1">Crypto Prices</h3>
 
-      <div className="space-y-1.5">
-        {cryptoData.map((crypto, index) => (
-          <div
-            key={crypto.symbol}
-            className="flex items-center justify-between bg-white/10 rounded-lg p-1.5"
-          >
-            <div className="flex items-center space-x-1.5">
-              <span className="text-sm">{crypto.icon}</span>
-              <div>
-                <div className="font-semibold text-xs">{crypto.symbol}</div>
-                <div className="text-xs opacity-75">{crypto.name}</div>
+        <div className="space-y-1.5">
+          {cryptoData.map((crypto, index) => (
+            <div
+              key={crypto.symbol}
+              className="flex items-center justify-between bg-white/10 rounded-lg p-1.5"
+            >
+              <div className="flex items-center space-x-1.5">
+                <span className="text-sm">{crypto.icon}</span>
+                <div>
+                  <div className="font-semibold text-xs">{crypto.symbol}</div>
+                  <div className="text-xs opacity-75">{crypto.name}</div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="font-semibold text-xs">{formatPrice(crypto.price)}</div>
+                <div
+                  className={`text-xs ${crypto.change >= 0 ? 'text-green-300' : 'text-red-300'}`}
+                >
+                  {formatChange(crypto.change)}
+                </div>
               </div>
             </div>
-            <div className="text-right">
-              <div className="font-semibold text-xs">{formatPrice(crypto.price)}</div>
-              <div className={`text-xs ${crypto.change >= 0 ? 'text-green-300' : 'text-red-300'}`}>
-                {formatChange(crypto.change)}
-              </div>
-            </div>
+          ))}
+        </div>
+
+        <div className="absolute bottom-2 left-3 right-3">
+          <div className="text-xs opacity-60 text-center">
+            Updated:{' '}
+            {currentTime.toLocaleTimeString('en-US', {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
           </div>
-        ))}
-      </div>
-
-      <div className="absolute bottom-2 left-3 right-3">
-        <div className="text-xs opacity-60 text-center">
-          Updated:{' '}
-          {currentTime.toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
         </div>
       </div>
     </div>
