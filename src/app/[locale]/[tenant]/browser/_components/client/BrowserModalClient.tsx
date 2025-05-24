@@ -25,7 +25,6 @@ export function BrowserModalClient({ isOpen, onClose, host, sessionId }: Browser
   const [terminalSessionId, setTerminalSessionId] = useState<string | null>(null);
   const [isTerminalConnecting, setIsTerminalConnecting] = useState(false);
   const [terminalConnectionError, setTerminalConnectionError] = useState<string | null>(null);
-  const [isTerminalConnected, setIsTerminalConnected] = useState(false);
 
   // Reset state when modal opens/closes or host changes
   useEffect(() => {
@@ -37,7 +36,6 @@ export function BrowserModalClient({ isOpen, onClose, host, sessionId }: Browser
       setTerminalSessionId(null);
       setIsTerminalConnecting(false);
       setTerminalConnectionError(null);
-      setIsTerminalConnected(false);
     } else {
       setIsConnected(true);
     }
@@ -74,7 +72,21 @@ export function BrowserModalClient({ isOpen, onClose, host, sessionId }: Browser
           `[@component:BrowserModalClient] Terminal session initialized: ${result.data.sessionId}`,
         );
         setTerminalSessionId(result.data.sessionId);
-        setIsTerminalConnected(true);
+
+        // Automatically send "ok" command to get prompt
+        setTimeout(async () => {
+          try {
+            const { sendTerminalData } = await import('@/app/actions/terminalsAction');
+            // Send enter and clear to get a clean prompt
+            await sendTerminalData(result.data.sessionId, '');
+            await sendTerminalData(result.data.sessionId, 'clear');
+            console.log(
+              `[@component:BrowserModalClient] Sent enter and clear commands for clean prompt`,
+            );
+          } catch (error) {
+            console.error(`[@component:BrowserModalClient] Error sending initial commands:`, error);
+          }
+        }, 1000); // Wait 1 second for terminal to be ready
       } else {
         console.error(
           `[@component:BrowserModalClient] Failed to initialize terminal session:`,
@@ -107,7 +119,6 @@ export function BrowserModalClient({ isOpen, onClose, host, sessionId }: Browser
   const handleRetryTerminal = () => {
     setTerminalSessionId(null);
     setTerminalConnectionError(null);
-    setIsTerminalConnected(false);
   };
 
   // Handle VNC iframe load
@@ -175,30 +186,32 @@ export function BrowserModalClient({ isOpen, onClose, host, sessionId }: Browser
               </div>
             </div>
 
-            {/* Tab Navigation - moved to header */}
-            <div className="flex">
-              <button
-                onClick={() => setActiveTab('vnc')}
-                className={`px-3 py-1 text-sm font-medium rounded-l-md border transition-colors ${
-                  activeTab === 'vnc'
-                    ? 'bg-blue-500 text-white border-blue-500'
-                    : 'bg-background text-gray-500 border-gray-300 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
-                }`}
-                disabled={!vncUrl}
-              >
-                VNC {!vncUrl && '(N/A)'}
-              </button>
-              <button
-                onClick={() => setActiveTab('terminal')}
-                className={`px-3 py-1 text-sm font-medium rounded-r-md border-t border-r border-b transition-colors ${
-                  activeTab === 'terminal'
-                    ? 'bg-blue-500 text-white border-blue-500'
-                    : 'bg-background text-gray-500 border-gray-300 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
-                }`}
-                disabled={!supportsTerminal(host)}
-              >
-                Terminal {!supportsTerminal(host) && '(N/A)'}
-              </button>
+            {/* Tab Navigation - centered */}
+            <div className="absolute left-1/2 transform -translate-x-1/2">
+              <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+                <button
+                  onClick={() => setActiveTab('vnc')}
+                  className={`px-4 py-2 text-sm font-semibold rounded-md transition-all duration-200 ${
+                    activeTab === 'vnc'
+                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                  disabled={!vncUrl}
+                >
+                  VNC Display
+                </button>
+                <button
+                  onClick={() => setActiveTab('terminal')}
+                  className={`px-4 py-2 text-sm font-semibold rounded-md transition-all duration-200 ${
+                    activeTab === 'terminal'
+                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                  disabled={!supportsTerminal(host)}
+                >
+                  Terminal
+                </button>
+              </div>
             </div>
 
             <Button variant="ghost" size="sm" onClick={handleClose}>
@@ -270,31 +283,8 @@ export function BrowserModalClient({ isOpen, onClose, host, sessionId }: Browser
                 </div>
               ) : (
                 <div className="h-full bg-black">
-                  {/* Terminal Header */}
-                  <div className="px-4 py-2 border-b border-gray-700 bg-gray-900">
-                    <div className="flex items-center space-x-2 text-sm text-gray-300">
-                      <TerminalIcon className="h-4 w-4" />
-                      <span>
-                        {host.name} ({host.ip})
-                      </span>
-                      <div className="flex items-center space-x-2">
-                        {isTerminalConnecting ? (
-                          <WifiOff className="h-3 w-3 text-yellow-500 animate-pulse" />
-                        ) : isTerminalConnected ? (
-                          <Wifi className="h-3 w-3 text-green-500" />
-                        ) : (
-                          <WifiOff className="h-3 w-3 text-red-500" />
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      Use this terminal to run browser automation commands like: playwright codegen,
-                      node browser-script.js, python playwright-script.py
-                    </div>
-                  </div>
-
                   {/* Terminal Content */}
-                  <div className="h-[calc(100%-60px)]">
+                  <div className="h-full">
                     {terminalConnectionError ? (
                       <div className="flex flex-col items-center justify-center h-full text-white p-8">
                         <div className="text-center space-y-4">
@@ -328,7 +318,7 @@ export function BrowserModalClient({ isOpen, onClose, host, sessionId }: Browser
                       <TerminalEmulator
                         sessionId={terminalSessionId}
                         host={host}
-                        onConnectionStatusChange={setIsTerminalConnected}
+                        onConnectionStatusChange={() => {}}
                       />
                     ) : null}
                   </div>

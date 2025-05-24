@@ -103,9 +103,6 @@ export function TerminalEmulator({
           console.log(`[@component:TerminalEmulator] Terminal resized: ${cols}x${rows}`);
         });
 
-        // Show initial connection message and get the natural prompt
-        terminal.write(`🔗 Connected to ${host.name} (${host.ip}:${host.port || 22})\r\n`);
-
         // The persistent shell will provide its own initial prompt
         // No need to manually generate one
 
