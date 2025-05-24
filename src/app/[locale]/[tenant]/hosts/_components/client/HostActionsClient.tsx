@@ -53,6 +53,7 @@ export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActio
     ip: '',
     ip_local: '',
     device_type: '',
+    host_id: '',
   });
 
   // Derive host count from React Query's hosts data, falling back to the prop
@@ -238,6 +239,7 @@ export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActio
       ip: '',
       ip_local: '',
       device_type: '',
+      host_id: '',
     });
     // Refresh hosts list after dialog closes (in case a device was created)
     refetchHosts();

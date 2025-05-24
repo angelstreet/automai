@@ -33,6 +33,9 @@ export interface Host {
   // Device classification
   device_type?: string; // windows, linux, android_phone, android_tablet, ios_phone, ios_tablet, tv_tizen, tv_lg, tv_android, appletv, stb_eos, stb_apollo
 
+  // ADB Host Connection (for devices that need ADB)
+  host_id?: string; // ID of the SSH host that has ADB installed and can connect to this device
+
   // Authentication details
   user?: string;
   password?: string;

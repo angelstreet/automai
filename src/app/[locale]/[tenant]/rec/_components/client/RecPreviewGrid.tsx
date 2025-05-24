@@ -60,19 +60,53 @@ export function RecPreviewGrid({ hosts, isLoading, error }: RecPreviewGridProps)
   const androidDevices: AndroidDeviceConfig[] = hosts
     .filter((host) => host.type === 'device' && host.device_type?.includes('android'))
     .map((host) => {
-      // Find a host that can serve as stream server (first SSH host)
-      const streamHost =
-        hosts.find((h) => h.type === 'ssh' && h.status === 'connected') ||
-        hosts.find((h) => h.type === 'ssh');
-      const streamHostIp = streamHost?.ip || host.ip;
+      // Use the specified ADB host if available, otherwise find fallback
+      let adbHost = null;
+      let streamHostIp = host.ip;
+
+      if (host.host_id) {
+        // Use the specified ADB host
+        adbHost = hosts.find((h) => h.id === host.host_id);
+        if (adbHost) {
+          streamHostIp = adbHost.ip;
+          console.log(
+            `[@component:RecPreviewGrid] Using specified ADB host: ${adbHost.name} (${adbHost.id}) for device: ${host.name}`,
+          );
+        } else {
+          console.warn(
+            `[@component:RecPreviewGrid] Specified ADB host ${host.host_id} not found for device: ${host.name}`,
+          );
+        }
+      }
+
+      // Fallback: Find any connected SSH host if no specific host assigned or host not found
+      if (!adbHost) {
+        adbHost =
+          hosts.find((h) => h.type === 'ssh' && h.status === 'connected') ||
+          hosts.find((h) => h.type === 'ssh');
+
+        if (adbHost) {
+          streamHostIp = adbHost.ip;
+          console.warn(
+            `[@component:RecPreviewGrid] Using fallback ADB host: ${adbHost.name} (${adbHost.id}) for device: ${host.name}. Consider setting host_id in device configuration.`,
+          );
+        } else {
+          console.error(
+            `[@component:RecPreviewGrid] No ADB host available for device: ${host.name}. Device will not work properly.`,
+          );
+        }
+      }
 
       console.log(`[@component:RecPreviewGrid] Creating Android device from host: ${host.name}`, {
         deviceType: host.device_type,
-        hostId: host.id,
+        deviceId: host.id,
         localIp: host.ip_local,
         publicIp: host.ip,
-        streamHostId: streamHost?.id,
+        specifiedHostId: host.host_id,
+        resolvedAdbHostId: adbHost?.id,
+        resolvedAdbHostName: adbHost?.name,
         streamHostIp: streamHostIp,
+        hasAdbHost: !!adbHost,
       });
 
       return {
@@ -83,12 +117,15 @@ export function RecPreviewGrid({ hosts, isLoading, error }: RecPreviewGridProps)
             ? ('androidTv' as const)
             : ('androidPhone' as const),
         streamUrl: `https://${streamHostIp}:444/stream/output.m3u8`,
-        remoteConfig: {
-          hostId: streamHost?.id || host.id,
-          deviceId: host.ip_local || host.ip, // Use local IP if available, fallback to public IP
-        },
+        remoteConfig: adbHost
+          ? {
+              hostId: adbHost.id,
+              deviceId: host.ip_local || host.ip, // Use local IP if available, fallback to public IP
+            }
+          : undefined, // Don't provide remoteConfig if no ADB host available
       };
-    });
+    })
+    .filter((device) => device.remoteConfig); // Only include devices that have valid ADB host configuration
 
   console.log(
     `[@component:RecPreviewGrid] Generated ${androidDevices.length} Android devices from hosts database`,

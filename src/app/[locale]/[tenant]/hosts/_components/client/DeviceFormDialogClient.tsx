@@ -26,6 +26,7 @@ export interface DeviceFormData {
   ip: string;
   ip_local: string;
   device_type: string;
+  host_id: string; // ADB host selection - required for Android devices
 }
 
 interface DeviceFormDialogClientProps {
@@ -39,13 +40,16 @@ export function DeviceFormDialogClient({
   onChange,
   onCancel,
 }: DeviceFormDialogClientProps) {
-  const { createHost } = useHost();
-  const t = useTranslations('hosts');
+  const { createHost, hosts } = useHost();
   const c = useTranslations('common');
 
   // State for device creation
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+
+  // Get available SSH hosts for ADB selection
+  const sshHosts =
+    hosts?.filter((host) => host.type === 'ssh' && host.status === 'connected') || [];
 
   const handleInputChange = (field: string, value: string) => {
     console.log(
@@ -83,6 +87,21 @@ export function DeviceFormDialogClient({
     onChange(updatedFormData);
   };
 
+  const handleHostChange = (value: string) => {
+    console.log('[@client:DeviceFormDialogClient:handleHostChange] Host changed to:', value);
+
+    const updatedFormData = {
+      ...formData,
+      host_id: value,
+    };
+
+    console.log(
+      '[@client:DeviceFormDialogClient:handleHostChange] Updated form data:',
+      updatedFormData,
+    );
+    onChange(updatedFormData);
+  };
+
   // Create device directly without testing
   const createDevice = async () => {
     setIsCreating(true);
@@ -96,6 +115,7 @@ export function DeviceFormDialogClient({
         ip: formData.ip,
         ip_local: formData.ip_local,
         device_type: formData.device_type,
+        host_id: formData.host_id,
       });
 
       // Create the deviceData object for non-SSH devices
@@ -106,12 +126,13 @@ export function DeviceFormDialogClient({
         ip: formData.ip,
         ip_local: formData.ip_local, // Local IP should be passed through
         device_type: formData.device_type, // Device type should be passed through
+        host_id: formData.host_id, // ADB host for Android devices
         // NO PORT FIELD - let database use default (null)
-        user: null, // No SSH user needed for devices
-        username: null, // No SSH username needed for devices
-        auth_type: null, // No authentication for devices
-        password: null, // No password needed for devices
-        private_key: null, // No private key needed for devices
+        user: undefined, // No SSH user needed for devices
+        username: undefined, // No SSH username needed for devices
+        auth_type: undefined, // No authentication for devices
+        password: undefined, // No password needed for devices
+        private_key: undefined, // No private key needed for devices
         status: 'pending' as const, // Devices start as pending (no verification)
         is_windows: false, // Devices are not Windows hosts
       };
@@ -189,8 +210,15 @@ export function DeviceFormDialogClient({
   ];
 
   // Check if form is valid
+  const isAndroidDevice = formData.device_type.includes('android');
+  const requiresAdbHost = isAndroidDevice;
+
   const isFormValid =
-    formData.name.trim() && formData.ip.trim() && formData.ip_local.trim() && formData.device_type;
+    formData.name.trim() &&
+    formData.ip.trim() &&
+    formData.ip_local.trim() &&
+    formData.device_type &&
+    (!requiresAdbHost || formData.host_id); // Require host_id for Android devices
 
   return (
     <div className="grid gap-4 py-2">
@@ -274,6 +302,34 @@ export function DeviceFormDialogClient({
             onChange={(e) => handleInputChange('description', e.target.value)}
             className="min-h-[60px] py-2"
           />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-4 items-center gap-4">
+        <Label htmlFor="host-id" className="text-right">
+          ADB Host
+        </Label>
+        <div className="col-span-3">
+          <Select value={formData.host_id} onValueChange={handleHostChange}>
+            <SelectTrigger className="h-8">
+              <SelectValue placeholder="Select host with ADB" />
+            </SelectTrigger>
+            <SelectContent>
+              {sshHosts.map((host) => (
+                <SelectItem key={host.id} value={host.id}>
+                  <div className="flex items-center gap-2">
+                    <span>🖥️</span>
+                    {host.name} ({host.ip})
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {sshHosts.length === 0 && (
+            <p className="text-xs text-orange-600 mt-1">
+              No connected SSH hosts available. Add an SSH host first.
+            </p>
+          )}
         </div>
       </div>
 

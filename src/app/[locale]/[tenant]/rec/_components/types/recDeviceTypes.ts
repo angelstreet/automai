@@ -18,7 +18,7 @@ export interface BaseDeviceConfig {
 export interface AndroidDeviceConfig extends BaseDeviceConfig {
   type: 'androidTv' | 'androidPhone';
   streamUrl: string;
-  remoteConfig: {
+  remoteConfig?: {
     hostId: string;
     deviceId: string;
   };

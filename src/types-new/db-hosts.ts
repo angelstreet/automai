@@ -35,6 +35,14 @@ export interface HostsTable {
     ssh_port: number | null;
     ssh_user: string | null;
     instance_id: string | null;
+    // ADB Host Connection
+    host_id: string | null; // ID of the SSH host that has ADB installed and can connect to this device
+    ip_local: string | null; // Local/private IP address for devices
+    device_type: string | null; // Device type classification
+    auth_type: string | null; // Authentication type
+    private_key: string | null; // SSH private key
+    vnc_port: number | null; // VNC port for remote desktop
+    vnc_password: string | null; // VNC password
   };
   Insert: {
     id?: string;
@@ -66,6 +74,14 @@ export interface HostsTable {
     ssh_port?: number | null;
     ssh_user?: string | null;
     instance_id?: string | null;
+    // ADB Host Connection
+    host_id?: string | null;
+    ip_local?: string | null;
+    device_type?: string | null;
+    auth_type?: string | null;
+    private_key?: string | null;
+    vnc_port?: number | null;
+    vnc_password?: string | null;
   };
   Update: {
     id?: string;
@@ -97,6 +113,14 @@ export interface HostsTable {
     ssh_port?: number | null;
     ssh_user?: string | null;
     instance_id?: string | null;
+    // ADB Host Connection
+    host_id?: string | null;
+    ip_local?: string | null;
+    device_type?: string | null;
+    auth_type?: string | null;
+    private_key?: string | null;
+    vnc_port?: number | null;
+    vnc_password?: string | null;
   };
   Relationships: [
     {
@@ -119,7 +143,7 @@ export interface HostsTable {
       isOneToOne: false;
       referencedRelation: 'tenants';
       referencedColumns: ['id'];
-    }
+    },
   ];
 }
 
@@ -155,7 +179,7 @@ export interface HostLogsTable {
       isOneToOne: false;
       referencedRelation: 'hosts';
       referencedColumns: ['id'];
-    }
+    },
   ];
 }
 
@@ -198,7 +222,7 @@ export interface HostAnalyticsTable {
       isOneToOne: false;
       referencedRelation: 'hosts';
       referencedColumns: ['id'];
-    }
+    },
   ];
 }
 
@@ -267,7 +291,7 @@ export interface HostEventsTable {
       isOneToOne: false;
       referencedRelation: 'tenants';
       referencedColumns: ['id'];
-    }
+    },
   ];
 }
 
@@ -332,6 +356,6 @@ export interface HostMetricsTable {
       isOneToOne: false;
       referencedRelation: 'tenants';
       referencedColumns: ['id'];
-    }
+    },
   ];
 }

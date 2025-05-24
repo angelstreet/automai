@@ -109,14 +109,25 @@ export function RecDeviceModal({ device, isOpen, onClose }: DeviceModalProps) {
     const androidDevice = device as DeviceConfig & { type: 'androidTv' | 'androidPhone' };
     const newShowRemote = !showRemote;
 
+    // Check if remoteConfig is available
+    if (!androidDevice.remoteConfig) {
+      toast({
+        title: 'Remote Control Unavailable',
+        description:
+          'No ADB host configured for this device. Please configure an ADB host in the device settings.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Extract remoteConfig after null check
+    const remoteConfig = androidDevice.remoteConfig;
+
     // If showing remote, connect to SSH and ADB
-    if (newShowRemote && androidDevice.remoteConfig) {
+    if (newShowRemote) {
       try {
         console.log('[@component:RecDeviceModal] Connecting to host and ADB...');
-        const result = await connectToHost(
-          androidDevice.remoteConfig.hostId,
-          androidDevice.remoteConfig.deviceId,
-        );
+        const result = await connectToHost(remoteConfig.hostId, remoteConfig.deviceId);
         if (!result.success) {
           console.error('[@component:RecDeviceModal] Failed to connect:', result.error);
           toast({
@@ -136,11 +147,11 @@ export function RecDeviceModal({ device, isOpen, onClose }: DeviceModalProps) {
         });
         return;
       }
-    } else if (!newShowRemote && androidDevice.remoteConfig) {
+    } else {
       // If hiding remote, disconnect from SSH
       try {
         console.log('[@component:RecDeviceModal] Disconnecting from host...');
-        await disconnectFromHost(androidDevice.remoteConfig.hostId);
+        await disconnectFromHost(remoteConfig.hostId);
       } catch (error) {
         console.error('[@component:RecDeviceModal] Error disconnecting from host:', error);
         toast({
@@ -359,6 +370,20 @@ export function RecDeviceModal({ device, isOpen, onClose }: DeviceModalProps) {
     if (!showRemote || !deviceInfo.canShowRemote || device.type === 'host') return null;
 
     const androidDevice = device as DeviceConfig & { type: 'androidTv' | 'androidPhone' };
+
+    // Check if remoteConfig is available
+    if (!androidDevice.remoteConfig) {
+      return (
+        <div className="w-1/4 bg-gray-100 dark:bg-gray-900 border-l border-gray-300 dark:border-gray-700 p-4 overflow-y-auto flex flex-col items-center justify-center">
+          <div className="text-center p-4">
+            <p className="text-red-500 font-medium">Remote Control Unavailable</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+              No ADB host configured for this device.
+            </p>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div className="w-1/4 bg-gray-100 dark:bg-gray-900 border-l border-gray-300 dark:border-gray-700 p-4 overflow-y-auto flex flex-col items-center justify-center">
