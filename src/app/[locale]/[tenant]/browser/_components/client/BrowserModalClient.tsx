@@ -1,8 +1,9 @@
 'use client';
 
-import { X, Monitor, Wifi, WifiOff } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { X, Monitor, Wifi, WifiOff, Terminal as TerminalIcon } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 
+import { TerminalEmulator } from '@/app/[locale]/[tenant]/hosts/_components/client/TerminalEmulator';
 import { endBrowserSession } from '@/app/actions/browserActions';
 import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/shadcn/dialog';
@@ -20,16 +21,94 @@ export function BrowserModalClient({ isOpen, onClose, host, sessionId }: Browser
   const [isConnected, setIsConnected] = useState(false);
   const [activeTab, setActiveTab] = useState<'vnc' | 'terminal'>('vnc');
 
+  // Terminal session state (separate from browser session)
+  const [terminalSessionId, setTerminalSessionId] = useState<string | null>(null);
+  const [isTerminalConnecting, setIsTerminalConnecting] = useState(false);
+  const [terminalConnectionError, setTerminalConnectionError] = useState<string | null>(null);
+  const [isTerminalConnected, setIsTerminalConnected] = useState(false);
+
   // Reset state when modal opens/closes or host changes
   useEffect(() => {
     if (!isOpen || !host) {
       setIsVncLoading(true);
       setIsConnected(false);
       setActiveTab('vnc');
+      // Reset terminal state
+      setTerminalSessionId(null);
+      setIsTerminalConnecting(false);
+      setTerminalConnectionError(null);
+      setIsTerminalConnected(false);
     } else {
       setIsConnected(true);
     }
   }, [isOpen, host]);
+
+  // Check if host supports terminal access
+  const supportsTerminal = (host: Host): boolean => {
+    // Check if host type supports SSH or has terminal capabilities
+    return (
+      host.type === 'ssh' ||
+      host.device_type === 'server' ||
+      host.device_type === 'workstation' ||
+      host.device_type === 'laptop'
+    );
+  };
+
+  const initializeTerminalSession = useCallback(async () => {
+    if (!host) return;
+
+    console.log(
+      `[@component:BrowserModalClient] Initializing terminal session for host: ${host.name}`,
+    );
+    setIsTerminalConnecting(true);
+    setTerminalConnectionError(null);
+
+    try {
+      // Import terminal action
+      const { initTerminal } = await import('@/app/actions/terminalsAction');
+
+      const result = await initTerminal(host.id);
+
+      if (result.success && result.data) {
+        console.log(
+          `[@component:BrowserModalClient] Terminal session initialized: ${result.data.sessionId}`,
+        );
+        setTerminalSessionId(result.data.sessionId);
+        setIsTerminalConnected(true);
+      } else {
+        console.error(
+          `[@component:BrowserModalClient] Failed to initialize terminal session:`,
+          result.error,
+        );
+        setTerminalConnectionError(result.error || 'Failed to initialize terminal session');
+      }
+    } catch (error) {
+      console.error(`[@component:BrowserModalClient] Error initializing terminal session:`, error);
+      setTerminalConnectionError(error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setIsTerminalConnecting(false);
+    }
+  }, [host]);
+
+  // Initialize terminal session when switching to terminal tab
+  useEffect(() => {
+    if (
+      isOpen &&
+      host &&
+      activeTab === 'terminal' &&
+      !terminalSessionId &&
+      !isTerminalConnecting &&
+      supportsTerminal(host)
+    ) {
+      initializeTerminalSession();
+    }
+  }, [isOpen, host, activeTab, terminalSessionId, isTerminalConnecting, initializeTerminalSession]);
+
+  const handleRetryTerminal = () => {
+    setTerminalSessionId(null);
+    setTerminalConnectionError(null);
+    setIsTerminalConnected(false);
+  };
 
   // Handle VNC iframe load
   const handleVncLoad = () => {
@@ -39,13 +118,26 @@ export function BrowserModalClient({ isOpen, onClose, host, sessionId }: Browser
   const handleClose = async () => {
     console.log(`[@component:BrowserModalClient] Closing browser modal`);
 
-    // End session if active
+    // End browser session if active
     if (sessionId && host) {
       try {
         await endBrowserSession(sessionId, host.id);
-        console.log(`[@component:BrowserModalClient] Session ended: ${sessionId}`);
+        console.log(`[@component:BrowserModalClient] Browser session ended: ${sessionId}`);
       } catch (error) {
-        console.error(`[@component:BrowserModalClient] Error ending session:`, error);
+        console.error(`[@component:BrowserModalClient] Error ending browser session:`, error);
+      }
+    }
+
+    // Close terminal session if active
+    if (terminalSessionId) {
+      try {
+        const { closeTerminal } = await import('@/app/actions/terminalsAction');
+        await closeTerminal(terminalSessionId);
+        console.log(
+          `[@component:BrowserModalClient] Terminal session closed: ${terminalSessionId}`,
+        );
+      } catch (error) {
+        console.error(`[@component:BrowserModalClient] Error closing terminal session:`, error);
       }
     }
 
@@ -67,7 +159,7 @@ export function BrowserModalClient({ isOpen, onClose, host, sessionId }: Browser
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="w-[95vw] max-w-none sm:max-w-none h-[90vh] p-0 overflow-hidden [&>button]:hidden">
         <div className="flex flex-col h-full">
-          {/* Header */}
+          {/* Header with Title, Tabs, and Close Button */}
           <div className="flex items-center justify-between p-3 border-b bg-background">
             <div className="flex items-center space-x-3">
               <Monitor className="h-5 w-5" />
@@ -82,34 +174,36 @@ export function BrowserModalClient({ isOpen, onClose, host, sessionId }: Browser
                 )}
               </div>
             </div>
+
+            {/* Tab Navigation - moved to header */}
+            <div className="flex">
+              <button
+                onClick={() => setActiveTab('vnc')}
+                className={`px-3 py-1 text-sm font-medium rounded-l-md border transition-colors ${
+                  activeTab === 'vnc'
+                    ? 'bg-blue-500 text-white border-blue-500'
+                    : 'bg-background text-gray-500 border-gray-300 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
+                }`}
+                disabled={!vncUrl}
+              >
+                VNC {!vncUrl && '(N/A)'}
+              </button>
+              <button
+                onClick={() => setActiveTab('terminal')}
+                className={`px-3 py-1 text-sm font-medium rounded-r-md border-t border-r border-b transition-colors ${
+                  activeTab === 'terminal'
+                    ? 'bg-blue-500 text-white border-blue-500'
+                    : 'bg-background text-gray-500 border-gray-300 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
+                }`}
+                disabled={!supportsTerminal(host)}
+              >
+                Terminal {!supportsTerminal(host) && '(N/A)'}
+              </button>
+            </div>
+
             <Button variant="ghost" size="sm" onClick={handleClose}>
               <X className="h-4 w-4" />
             </Button>
-          </div>
-
-          {/* Tab Navigation */}
-          <div className="flex border-b bg-background">
-            <button
-              onClick={() => setActiveTab('vnc')}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === 'vnc'
-                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-              disabled={!vncUrl}
-            >
-              VNC Display {!vncUrl && '(Not Available)'}
-            </button>
-            <button
-              onClick={() => setActiveTab('terminal')}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === 'terminal'
-                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Terminal
-            </button>
           </div>
 
           {/* Content Area - Both tabs stay mounted, just hidden/shown */}
@@ -161,102 +255,89 @@ export function BrowserModalClient({ isOpen, onClose, host, sessionId }: Browser
             <div
               className={`h-full absolute inset-0 ${activeTab === 'terminal' ? 'block' : 'hidden'}`}
             >
-              <div className="h-full bg-black">
-                <BrowserTerminalClient sessionId={sessionId} host={host} />
-              </div>
+              {!supportsTerminal(host) ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center space-y-4">
+                    <TerminalIcon className="h-12 w-12 text-gray-400 mx-auto" />
+                    <h3 className="text-lg font-medium text-gray-600 dark:text-gray-400">
+                      Terminal Not Available
+                    </h3>
+                    <p className="text-gray-500 max-w-md">
+                      This host type ({host.device_type || host.type}) doesn't support terminal
+                      access.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="h-full bg-black">
+                  {/* Terminal Header */}
+                  <div className="px-4 py-2 border-b border-gray-700 bg-gray-900">
+                    <div className="flex items-center space-x-2 text-sm text-gray-300">
+                      <TerminalIcon className="h-4 w-4" />
+                      <span>
+                        {host.name} ({host.ip})
+                      </span>
+                      <div className="flex items-center space-x-2">
+                        {isTerminalConnecting ? (
+                          <WifiOff className="h-3 w-3 text-yellow-500 animate-pulse" />
+                        ) : isTerminalConnected ? (
+                          <Wifi className="h-3 w-3 text-green-500" />
+                        ) : (
+                          <WifiOff className="h-3 w-3 text-red-500" />
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Use this terminal to run browser automation commands like: playwright codegen,
+                      node browser-script.js, python playwright-script.py
+                    </div>
+                  </div>
+
+                  {/* Terminal Content */}
+                  <div className="h-[calc(100%-60px)]">
+                    {terminalConnectionError ? (
+                      <div className="flex flex-col items-center justify-center h-full text-white p-8">
+                        <div className="text-center space-y-4">
+                          <WifiOff className="h-12 w-12 text-red-400 mx-auto" />
+                          <h3 className="text-lg font-medium text-red-400">Connection Failed</h3>
+                          <p className="text-gray-300 max-w-md">{terminalConnectionError}</p>
+                          <Button variant="outline" onClick={handleRetryTerminal} className="mt-4">
+                            Retry Connection
+                          </Button>
+                        </div>
+                      </div>
+                    ) : isTerminalConnecting ? (
+                      <div className="flex items-center justify-center h-full text-white">
+                        <div className="text-center space-y-4">
+                          <TerminalIcon className="h-12 w-12 text-blue-400 mx-auto animate-pulse" />
+                          <p className="text-gray-300">Connecting to {host.name}...</p>
+                          <div className="flex space-x-1 justify-center">
+                            <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
+                            <div
+                              className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"
+                              style={{ animationDelay: '0.1s' }}
+                            ></div>
+                            <div
+                              className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"
+                              style={{ animationDelay: '0.2s' }}
+                            ></div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : terminalSessionId ? (
+                      <TerminalEmulator
+                        sessionId={terminalSessionId}
+                        host={host}
+                        onConnectionStatusChange={setIsTerminalConnected}
+                      />
+                    ) : null}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </DialogContent>
     </Dialog>
-  );
-}
-
-// Simple terminal component for browser commands
-function BrowserTerminalClient({ sessionId, host }: { sessionId: string; host: Host }) {
-  const [command, setCommand] = useState('');
-  const [output, setOutput] = useState<string[]>([]);
-  const [isExecuting, setIsExecuting] = useState(false);
-
-  const executeCommand = async () => {
-    if (!command.trim() || isExecuting) return;
-
-    setIsExecuting(true);
-    setOutput((prev) => [...prev, `$ ${command}`]);
-
-    try {
-      const { sendTerminalData } = await import('@/app/actions/terminalsAction');
-      const result = await sendTerminalData(sessionId, command);
-
-      if (result.success && result.data) {
-        const data = result.data;
-        if (data.stdout) {
-          setOutput((prev) => [...prev, data.stdout]);
-        }
-        if (data.stderr) {
-          setOutput((prev) => [...prev, `ERROR: ${data.stderr}`]);
-        }
-      } else {
-        setOutput((prev) => [...prev, `ERROR: ${result.error || 'Command failed'}`]);
-      }
-    } catch (error) {
-      setOutput((prev) => [
-        ...prev,
-        `ERROR: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      ]);
-    } finally {
-      setIsExecuting(false);
-      setCommand('');
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      executeCommand();
-    }
-  };
-
-  return (
-    <div className="h-full flex flex-col p-4 text-white font-mono text-sm">
-      <div className="flex-1 overflow-y-auto mb-4">
-        <div className="text-green-400 mb-2">
-          Connected to {host.name} ({host.ip})
-        </div>
-        <div className="text-gray-300 mb-4">
-          Use this terminal to run browser automation commands like:
-          <br />• playwright codegen
-          <br />• node browser-script.js
-          <br />• python playwright-script.py
-        </div>
-
-        {output.map((line, index) => (
-          <div key={index} className="mb-1">
-            {line}
-          </div>
-        ))}
-
-        {isExecuting && <div className="text-yellow-400">Executing...</div>}
-      </div>
-
-      <div className="flex items-center space-x-2">
-        <span className="text-green-400">$</span>
-        <input
-          type="text"
-          value={command}
-          onChange={(e) => setCommand(e.target.value)}
-          onKeyPress={handleKeyPress}
-          disabled={isExecuting}
-          placeholder="Enter command..."
-          className="flex-1 bg-transparent border-none outline-none text-white"
-        />
-        <button
-          onClick={executeCommand}
-          disabled={!command.trim() || isExecuting}
-          className="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 disabled:opacity-50"
-        >
-          Run
-        </button>
-      </div>
-    </div>
   );
 }
