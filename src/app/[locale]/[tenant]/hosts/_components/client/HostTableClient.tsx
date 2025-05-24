@@ -203,12 +203,14 @@ export function HostTableClient({
   };
 
   const handleTerminalClick = (host: Host) => {
-    const { locale, tenant } = getPathSegments();
+    console.log(`[@component:HostTableClient] Opening terminal for host: ${host.name}`);
 
-    // Build the correct path with locale and tenant
-    const terminalPath = `/${locale}/${tenant}/terminals/${host.name.toLowerCase()}`;
-    console.log(`Redirecting to terminal: ${terminalPath}`);
-    router.push(terminalPath);
+    // Dispatch event to open terminal modal
+    window.dispatchEvent(
+      new CustomEvent('OPEN_TERMINAL_MODAL', {
+        detail: { host },
+      }),
+    );
   };
 
   if (hosts.length === 0) {

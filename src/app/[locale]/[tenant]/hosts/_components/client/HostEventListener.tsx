@@ -21,6 +21,12 @@ const HostsEvents = {
   WORKSPACE_CHANGED: 'WORKSPACE_CHANGED', // Workspace changed, refresh hosts
   WORKSPACE_ITEM_ADDED: 'WORKSPACE_ITEM_ADDED', // Item added to workspace
   WORKSPACE_ITEM_REMOVED: 'WORKSPACE_ITEM_REMOVED', // Item removed from workspace
+
+  // Terminal Events
+  OPEN_TERMINAL_MODAL: 'OPEN_TERMINAL_MODAL', // Open terminal modal for a host
+  CLOSE_TERMINAL_MODAL: 'CLOSE_TERMINAL_MODAL', // Close terminal modal
+  TERMINAL_SESSION_ESTABLISHED: 'TERMINAL_SESSION_ESTABLISHED', // Terminal session established
+  TERMINAL_SESSION_CLOSED: 'TERMINAL_SESSION_CLOSED', // Terminal session closed
 };
 
 // Export the constants object

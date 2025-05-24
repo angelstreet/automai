@@ -13,6 +13,7 @@ import { Host } from '@/types/component/hostComponentType';
 import HostEventListener, { HostsEvents } from './HostEventListener';
 import { HostGridClient } from './HostGridClient';
 import { HostTableClient } from './HostTableClient';
+import { TerminalContainer } from '@/components/terminal/TerminalContainer';
 
 interface HostContentClientProps {
   initialHosts: Host[];
@@ -347,6 +348,7 @@ function HostContentClient({ initialHosts }: HostContentClientProps) {
   return (
     <>
       <HostEventListener />
+      <TerminalContainer />
       <div className="space-y-4 p-4">
         {!isClient ? (
           // Server-side placeholder with minimal content to avoid hydration mismatch

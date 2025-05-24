@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import xterm.js styles */
+@import '@xterm/xterm/css/xterm.css';
+
 /* Custom Animation for Host Status */
 @keyframes blink {
   0% {

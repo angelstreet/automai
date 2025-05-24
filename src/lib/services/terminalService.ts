@@ -1,162 +1,185 @@
 /* eslint-disable */
-import db from '@/lib/supabase/db';
+import hostDb from '@/lib/db/hostDb';
 import { logUtils } from '../utils/logUtils';
 
 class TerminalService {
   private static instance: TerminalService;
+  private activeSessions: Map<string, any> = new Map();
 
   public static getInstance(): TerminalService {
     if (!TerminalService.instance) {
-      console.debug('Creating new TerminalService instance');
+      console.debug('[@service:terminal] Creating new TerminalService instance');
       TerminalService.instance = new TerminalService();
     }
     return TerminalService.instance;
   }
 
-  async createTerminalConnection(data: {
-    hostId: string;
-    type: string;
-    username?: string;
-    password?: string;
-  }) {
-    console.info('Creating terminal connection', { hostId: data.hostId, type: data.type });
+  /**
+   * Create a terminal session using existing host data
+   */
+  async createTerminalSession(data: { hostId: string; userId: string; type: string }) {
+    console.info('[@service:terminal:createTerminalSession] Creating terminal session', {
+      hostId: data.hostId,
+      userId: data.userId,
+      type: data.type,
+    });
+
     try {
-      console.debug('Fetching host from database', { hostId: data.hostId });
-      const host = await db.host.findUnique({ where: { id: data.hostId } });
-      if (!host) {
-        console.error('Host not found', { hostId: data.hostId });
+      // Use existing hostDb layer to get host data
+      console.debug(
+        '[@service:terminal:createTerminalSession] Fetching host from database via hostDb',
+      );
+      const hostResult = await hostDb.getHostById(data.hostId);
+
+      if (!hostResult.success || !hostResult.data) {
+        console.error('[@service:terminal:createTerminalSession] Host not found', {
+          hostId: data.hostId,
+        });
         throw new Error(`Host not found: ${data.hostId}`);
       }
-      console.debug('Host found', { hostId: data.hostId, ip: host.ip });
 
-      console.debug('Inserting new connection into database', { type: data.type });
-      const connections = await db.query('connections', {
-        insert: {
-          type: data.type,
-          status: 'pending',
-          ip: host.ip,
-          port: host.port,
-          username: data.username || host.user,
-          password: data.password || host.password,
-          hostId: host.id,
-        },
-        returning: true,
+      const host = hostResult.data;
+      console.debug('[@service:terminal:createTerminalSession] Host found', {
+        hostId: data.hostId,
+        name: host.name,
+        ip: host.ip,
+        port: host.port,
       });
 
-      const connection = connections[0];
-      if (!connection) {
-        console.error('Failed to create connection record', { hostId: data.hostId });
-        throw new Error('Failed to create connection record');
-      }
+      // Generate session ID
+      const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-      console.info('Terminal connection created', { connectionId: connection.id });
-      return connection;
+      // Store session in memory (for now - could be extended to database if needed)
+      const session = {
+        id: sessionId,
+        hostId: data.hostId,
+        userId: data.userId,
+        type: data.type,
+        status: 'active',
+        host: host,
+        createdAt: new Date().toISOString(),
+      };
+
+      this.activeSessions.set(sessionId, session);
+
+      console.info('[@service:terminal:createTerminalSession] Terminal session created', {
+        sessionId,
+        hostId: data.hostId,
+      });
+
+      return session;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Error creating terminal connection', {
+      console.error('[@service:terminal:createTerminalSession] Error creating terminal session', {
         error: errorMessage,
         hostId: data.hostId,
       });
-      throw new Error(`Failed to create terminal connection: ${errorMessage}`);
+      throw new Error(`Failed to create terminal session: ${errorMessage}`);
     }
   }
 
-  async getTerminalConnection(id: string) {
-    console.info('Getting terminal connection', { connectionId: id });
-    try {
-      console.debug('Querying connection from database', { connectionId: id });
-      const connections = await db.query('connections', {
-        where: { id },
-        include: { host: true },
-      });
+  /**
+   * Get an active terminal session
+   */
+  async getTerminalSession(sessionId: string) {
+    console.info('[@service:terminal:getTerminalSession] Getting terminal session', { sessionId });
 
-      const connection = connections[0];
-      if (!connection) {
-        console.error('Connection not found', { connectionId: id });
-        return null;
-      }
-
-      console.debug('Connection retrieved', { connectionId: id, type: connection.type });
-      return connection;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Error getting terminal connection', { error: errorMessage, connectionId: id });
+    const session = this.activeSessions.get(sessionId);
+    if (!session) {
+      console.error('[@service:terminal:getTerminalSession] Session not found', { sessionId });
       return null;
     }
+
+    console.debug('[@service:terminal:getTerminalSession] Session retrieved', {
+      sessionId,
+      status: session.status,
+    });
+    return session;
   }
 
-  async updateTerminalConnectionStatus(id: string, status: string) {
-    console.info('Updating terminal connection status', { connectionId: id, status });
-    try {
-      console.debug('Updating connection status in database', { connectionId: id, status });
-      const connections = await db.query('connections', {
-        where: { id },
-        update: { status },
-        returning: true,
-      });
+  /**
+   * Update session status
+   */
+  async updateSessionStatus(sessionId: string, status: string) {
+    console.info('[@service:terminal:updateSessionStatus] Updating session status', {
+      sessionId,
+      status,
+    });
 
-      const connection = connections[0];
-      if (!connection) {
-        console.error('Connection not found for update', { connectionId: id });
-        throw new Error(`Connection not found: ${id}`);
-      }
-
-      console.debug('Connection status updated', { connectionId: id, status });
-      return connection;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Error updating terminal connection status', {
-        error: errorMessage,
-        connectionId: id,
-      });
-      throw new Error(`Failed to update terminal connection status: ${errorMessage}`);
+    const session = this.activeSessions.get(sessionId);
+    if (!session) {
+      console.error('[@service:terminal:updateSessionStatus] Session not found', { sessionId });
+      throw new Error(`Session not found: ${sessionId}`);
     }
+
+    session.status = status;
+    session.updatedAt = new Date().toISOString();
+
+    this.activeSessions.set(sessionId, session);
+
+    console.debug('[@service:terminal:updateSessionStatus] Session status updated', {
+      sessionId,
+      status,
+    });
+    return session;
   }
 
-  async closeTerminalConnection(id: string) {
-    console.info('Closing terminal connection', { connectionId: id });
-    try {
-      console.debug('Closing connection in database', { connectionId: id });
-      const connections = await db.query('connections', {
-        where: { id },
-        update: {
-          status: 'closed',
-          closedAt: new Date().toISOString(),
-        },
-        returning: true,
-      });
+  /**
+   * Close a terminal session
+   */
+  async closeSession(sessionId: string) {
+    console.info('[@service:terminal:closeSession] Closing terminal session', { sessionId });
 
-      const connection = connections[0];
-      if (!connection) {
-        console.error('Connection not found for closure', { connectionId: id });
-        throw new Error(`Connection not found: ${id}`);
-      }
+    const session = this.activeSessions.get(sessionId);
+    if (session) {
+      session.status = 'closed';
+      session.closedAt = new Date().toISOString();
 
-      console.debug('Connection closed', { connectionId: id });
-      return connection;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Error closing terminal connection', { error: errorMessage, connectionId: id });
-      throw new Error(`Failed to close terminal connection: ${errorMessage}`);
+      // Remove from active sessions after a delay to allow cleanup
+      setTimeout(() => {
+        this.activeSessions.delete(sessionId);
+        console.debug('[@service:terminal:closeSession] Session removed from memory', {
+          sessionId,
+        });
+      }, 5000);
+
+      console.debug('[@service:terminal:closeSession] Session marked as closed', { sessionId });
+      return session;
     }
+
+    console.warn('[@service:terminal:closeSession] Session not found for closure', { sessionId });
+    return null;
   }
 
-  async getTerminalConnections() {
-    console.info('Getting all terminal connections');
-    try {
-      console.debug('Querying all connections from database');
-      const connections = await db.query('connections', {
-        include: { host: true },
-        orderBy: { created_at: 'desc' },
-      });
+  /**
+   * Send data to terminal session (placeholder for future SSH integration)
+   */
+  async sendDataToSession(sessionId: string, data: string) {
+    console.info('[@service:terminal:sendDataToSession] Sending data to session', {
+      sessionId,
+      dataLength: data.length,
+    });
 
-      console.debug('Retrieved all connections', { count: connections?.length || 0 });
-      return connections || [];
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Error getting terminal connections', { error: errorMessage });
-      return [];
+    const session = this.activeSessions.get(sessionId);
+    if (!session) {
+      throw new Error(`Session not found: ${sessionId}`);
     }
+
+    // TODO: Integrate with real SSH connection
+    // For now, just log the data
+    console.debug('[@service:terminal:sendDataToSession] Data sent to session', {
+      sessionId,
+      data: data.replace(/\r?\n/g, '\\n'),
+    });
+
+    return { success: true };
+  }
+
+  /**
+   * Get all active sessions
+   */
+  getActiveSessions() {
+    return Array.from(this.activeSessions.values());
   }
 }
 
@@ -178,32 +201,40 @@ export async function initTerminalSession(params: {
   };
 }) {
   try {
-    console.info('Initializing terminal session', { 
-      hostId: params.hostId, 
-      userId: params.userId, 
-      type: params.sessionType 
-    });
-    
-    // Create a connection for this session
-    const connection = await terminalService.createTerminalConnection({
-      hostId: params.hostId,
-      type: params.sessionType,
-      username: params.connectionParams.username,
-      password: params.connectionParams.password,
-    });
-    
-    // Return session info
-    return {
-      id: connection.id,
+    console.info('[@service:terminal:initTerminalSession] Initializing terminal session', {
       hostId: params.hostId,
       userId: params.userId,
       type: params.sessionType,
-      status: 'active'
+    });
+
+    // Create a session using the terminal service
+    const session = await terminalService.createTerminalSession({
+      hostId: params.hostId,
+      userId: params.userId,
+      type: params.sessionType,
+    });
+
+    console.info('[@service:terminal:initTerminalSession] Session initialized successfully', {
+      sessionId: session.id,
+    });
+
+    // Return session info
+    return {
+      id: session.id,
+      hostId: params.hostId,
+      userId: params.userId,
+      type: params.sessionType,
+      status: 'active',
     };
   } catch (error) {
-    console.error('Error initializing terminal session', { 
+    console.error('[@service:terminal:initTerminalSession] Error initializing terminal session', {
       error: error instanceof Error ? error.message : 'Unknown error',
-      params
+      params: {
+        hostId: params.hostId,
+        userId: params.userId,
+        sessionType: params.sessionType,
+        // Don't log connection params for security
+      },
     });
     throw new Error('Failed to initialize terminal session');
   }
@@ -214,16 +245,20 @@ export async function initTerminalSession(params: {
  */
 export async function closeTerminalSession(sessionId: string) {
   try {
-    console.info('Closing terminal session', { sessionId });
-    
-    // Close the connection associated with this session
-    await terminalService.closeTerminalConnection(sessionId);
-    
-    return true;
+    console.info('[@service:terminal:closeTerminalSession] Closing terminal session', {
+      sessionId,
+    });
+
+    const result = await terminalService.closeSession(sessionId);
+
+    console.info('[@service:terminal:closeTerminalSession] Session closed successfully', {
+      sessionId,
+    });
+    return result;
   } catch (error) {
-    console.error('Error closing terminal session', { 
+    console.error('[@service:terminal:closeTerminalSession] Error closing terminal session', {
       error: error instanceof Error ? error.message : 'Unknown error',
-      sessionId
+      sessionId,
     });
     throw new Error('Failed to close terminal session');
   }
@@ -234,16 +269,19 @@ export async function closeTerminalSession(sessionId: string) {
  */
 export async function sendDataToTerminal(sessionId: string, data: string) {
   try {
-    console.info('Sending data to terminal session', { sessionId, dataLength: data.length });
-    
-    // In a real implementation, this would send the data to the terminal
-    console.debug('Terminal data sent successfully', { sessionId });
-    
-    return true;
+    console.info('[@service:terminal:sendDataToTerminal] Sending data to terminal', {
+      sessionId,
+      dataLength: data.length,
+    });
+
+    const result = await terminalService.sendDataToSession(sessionId, data);
+
+    console.debug('[@service:terminal:sendDataToTerminal] Data sent successfully', { sessionId });
+    return result;
   } catch (error) {
-    console.error('Error sending data to terminal', { 
+    console.error('[@service:terminal:sendDataToTerminal] Error sending data to terminal', {
       error: error instanceof Error ? error.message : 'Unknown error',
-      sessionId
+      sessionId,
     });
     throw new Error('Failed to send data to terminal');
   }
