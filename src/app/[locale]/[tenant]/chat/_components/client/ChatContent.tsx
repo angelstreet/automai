@@ -202,7 +202,7 @@ export default function ChatContent() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div className="flex-1 overflow-y-auto p-2 space-y-2 mt-2">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center text-muted-foreground">
@@ -218,7 +218,7 @@ export default function ChatContent() {
               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-[95%] rounded-lg px-3 py-1 ${
+                className={`max-w-[99%] rounded-lg px-3 py-1 mr-1 ${
                   message.role === 'user'
                     ? 'bg-primary text-primary-foreground'
                     : 'bg-secondary text-foreground'
