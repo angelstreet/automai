@@ -70,6 +70,47 @@ function HostCardClient({ host, onDelete, onTestConnection }: HostCardClientProp
     });
   }, [host.id, onTestConnection, onDelete]);
 
+  const getDeviceTypeBadge = (deviceType?: string) => {
+    if (!deviceType) return null;
+
+    const getBadgeColor = (type: string) => {
+      switch (type) {
+        case 'linux':
+          return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+        case 'windows':
+          return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300';
+        case 'android_phone':
+        case 'android_tablet':
+          return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+        case 'ios_phone':
+        case 'ios_tablet':
+          return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
+        case 'tv_tizen':
+        case 'tv_lg':
+        case 'tv_android':
+        case 'appletv':
+          return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
+        case 'stb_eos':
+        case 'stb_apollo':
+          return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
+        default:
+          return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
+      }
+    };
+
+    const getDisplayName = (type: string) => {
+      return type.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+    };
+
+    return (
+      <span
+        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getBadgeColor(deviceType)}`}
+      >
+        {getDisplayName(deviceType)}
+      </span>
+    );
+  };
+
   const getStatusDot = (status: string) => {
     const baseClasses = 'h-4 w-4 rounded-full transition-colors duration-300';
 
@@ -299,16 +340,19 @@ function HostCardClient({ host, onDelete, onTestConnection }: HostCardClientProp
       <Card className="relative w-[260px]">
         <CardHeader className="p-4 pb-2 flex flex-row items-start justify-between space-y-0">
           <div className="flex flex-col space-y-1.5">
-            <div className="flex items-center">
-              <div className="w-[200px] flex items-center">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center flex-1">
                 <div className="mr-2">{getStatusDot(localStatus)}</div>
                 <CardTitle className="text-base font-semibold truncate flex-1">
                   {host.name}
                 </CardTitle>
               </div>
+              {host.device_type && (
+                <div className="ml-2">{getDeviceTypeBadge(host.device_type)}</div>
+              )}
             </div>
             <CardDescription className="text-xs">
-              {host.ip}
+              {host.ip_local || host.ip}
               {host.port ? `:${host.port}` : ''}
             </CardDescription>
           </div>

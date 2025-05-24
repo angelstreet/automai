@@ -24,10 +24,14 @@ export interface Host {
   // Connection details
   type: HostConnectionType;
   ip: string;
+  ip_local?: string; // Local/private IP address
   port?: number;
   hostname?: string;
   host_type?: string;
   environment?: string;
+
+  // Device classification
+  device_type?: string; // windows, linux, android_phone, android_tablet, ios_phone, ios_tablet, tv_tizen, tv_lg, tv_android, appletv, stb_eos, stb_apollo
 
   // Authentication details
   user?: string;
