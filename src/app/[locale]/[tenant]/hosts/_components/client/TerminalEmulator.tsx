@@ -18,8 +18,8 @@ export function TerminalEmulator({
   const terminalRef = useRef<HTMLDivElement>(null);
   const terminalInstance = useRef<any>(null);
   const fitAddon = useRef<any>(null);
+  const currentInput = useRef<string>('');
   const [isTerminalReady, setIsTerminalReady] = useState(false);
-  const [currentInput, setCurrentInput] = useState('');
 
   useEffect(() => {
     let mounted = true;
@@ -95,7 +95,7 @@ export function TerminalEmulator({
 
         // Handle user input - collect input until Enter
         terminal.onData((data) => {
-          handleTerminalInput(data);
+          handleTerminalInput(data, terminal);
         });
 
         // Handle terminal resize
@@ -126,45 +126,37 @@ export function TerminalEmulator({
       }
     };
 
-    const handleTerminalInput = async (data: string) => {
-      if (!terminalInstance.current) return;
-
-      const terminal = terminalInstance.current;
-
+    const handleTerminalInput = async (data: string, terminal: any) => {
       // Handle special keys
       if (data === '\r' || data === '\n') {
         // Enter pressed - execute command
         terminal.write('\r\n');
 
-        if (currentInput.trim()) {
-          await executeCommand(currentInput.trim());
+        if (currentInput.current.trim()) {
+          await executeCommand(currentInput.current.trim(), terminal);
         }
 
-        setCurrentInput('');
-        showPrompt();
+        currentInput.current = '';
+        showPrompt(terminal);
       } else if (data === '\x7f') {
         // Backspace
-        if (currentInput.length > 0) {
-          setCurrentInput((prev) => prev.slice(0, -1));
+        if (currentInput.current.length > 0) {
+          currentInput.current = currentInput.current.slice(0, -1);
           terminal.write('\b \b');
         }
       } else if (data === '\x03') {
         // Ctrl+C
         terminal.write('^C\r\n');
-        setCurrentInput('');
-        showPrompt();
+        currentInput.current = '';
+        showPrompt(terminal);
       } else if (data.charCodeAt(0) >= 32) {
         // Printable characters
-        setCurrentInput((prev) => prev + data);
+        currentInput.current += data;
         terminal.write(data);
       }
     };
 
-    const executeCommand = async (command: string) => {
-      if (!terminalInstance.current) return;
-
-      const terminal = terminalInstance.current;
-
+    const executeCommand = async (command: string, terminal: any) => {
       try {
         console.log(`[@component:TerminalEmulator] Executing command: ${command}`);
 
@@ -172,15 +164,31 @@ export function TerminalEmulator({
         const { sendTerminalData } = await import('@/app/actions/terminalsAction');
         const result = await sendTerminalData(sessionId, command);
 
+        console.log(`[@component:TerminalEmulator] Command result:`, {
+          success: result.success,
+          hasData: !!result.data,
+          hasStdout: !!result.data?.stdout,
+          hasStderr: !!result.data?.stderr,
+          error: result.error,
+        });
+
         if (result.success && result.data) {
           // Display command output
           if (result.data.stdout) {
+            console.log(`[@component:TerminalEmulator] Writing stdout:`, result.data.stdout);
             terminal.write(result.data.stdout);
           }
           if (result.data.stderr) {
+            console.log(`[@component:TerminalEmulator] Writing stderr:`, result.data.stderr);
             terminal.write(`\x1b[31m${result.data.stderr}\x1b[0m`); // Red color for errors
           }
+
+          // If no output, show a message
+          if (!result.data.stdout && !result.data.stderr) {
+            terminal.write(`\x1b[90m(command completed with no output)\x1b[0m\r\n`);
+          }
         } else {
+          console.error(`[@component:TerminalEmulator] Command failed:`, result.error);
           terminal.write(`\x1b[31mError: ${result.error || 'Command failed'}\x1b[0m\r\n`);
         }
       } catch (error) {
@@ -191,13 +199,11 @@ export function TerminalEmulator({
       }
     };
 
-    const showPrompt = () => {
-      if (!terminalInstance.current) return;
-
+    const showPrompt = (terminal: any) => {
       if (host.is_windows) {
-        terminalInstance.current.write(`PS C:\\Users\\${host.user}> `);
+        terminal.write(`PS C:\\Users\\${host.user}> `);
       } else {
-        terminalInstance.current.write(`${host.user}@${host.name}:~$ `);
+        terminal.write(`${host.user}@${host.name}:~$ `);
       }
     };
 
@@ -240,7 +246,7 @@ export function TerminalEmulator({
         terminalInstance.current = null;
       }
     };
-  }, [sessionId, host, onConnectionStatusChange, currentInput]);
+  }, [sessionId, host, onConnectionStatusChange]);
 
   // Auto-resize when terminal becomes ready
   useEffect(() => {
