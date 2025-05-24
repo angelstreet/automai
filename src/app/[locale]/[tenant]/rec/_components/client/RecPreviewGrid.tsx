@@ -51,34 +51,48 @@ export function RecPreviewGrid({ hosts, isLoading, error }: RecPreviewGridProps)
       type: 'host' as const,
       vncConfig: {
         ip: host.ip,
-        port: host.vnc_port!,
+        port: typeof host.vnc_port === 'string' ? parseInt(host.vnc_port) : host.vnc_port!,
         password: host.vnc_password,
       },
     }));
 
-  // Create hardcoded Android devices (these would normally come from a database)
-  const androidDevices: AndroidDeviceConfig[] = [
-    {
-      id: 'android-tv-1',
-      name: 'Living Room TV',
-      type: 'androidTv',
-      streamUrl: 'https://77.56.53.130:444/stream/output.m3u8',
-      remoteConfig: {
-        hostId: hosts.length > 0 ? hosts[0].id : 'default-host',
-        deviceId: '192.168.1.130:5555',
-      },
-    },
-    {
-      id: 'android-phone-1',
-      name: 'Test Phone',
-      type: 'androidPhone',
-      streamUrl: 'https://77.56.53.130:444/stream/output.m3u8',
-      remoteConfig: {
-        hostId: hosts.length > 0 ? hosts[0].id : 'default-host',
-        deviceId: '192.168.1.29',
-      },
-    },
-  ];
+  // Get Android devices from hosts database
+  const androidDevices: AndroidDeviceConfig[] = hosts
+    .filter((host) => host.type === 'device' && host.device_type?.includes('android'))
+    .map((host) => {
+      // Find a host that can serve as stream server (first SSH host)
+      const streamHost =
+        hosts.find((h) => h.type === 'ssh' && h.status === 'connected') ||
+        hosts.find((h) => h.type === 'ssh');
+      const streamHostIp = streamHost?.ip || host.ip;
+
+      console.log(`[@component:RecPreviewGrid] Creating Android device from host: ${host.name}`, {
+        deviceType: host.device_type,
+        hostId: host.id,
+        localIp: host.ip_local,
+        publicIp: host.ip,
+        streamHostId: streamHost?.id,
+        streamHostIp: streamHostIp,
+      });
+
+      return {
+        id: host.id,
+        name: host.name,
+        type:
+          host.device_type === 'android_tablet'
+            ? ('androidTv' as const)
+            : ('androidPhone' as const),
+        streamUrl: `https://${streamHostIp}:444/stream/output.m3u8`,
+        remoteConfig: {
+          hostId: streamHost?.id || host.id,
+          deviceId: host.ip_local || host.ip, // Use local IP if available, fallback to public IP
+        },
+      };
+    });
+
+  console.log(
+    `[@component:RecPreviewGrid] Generated ${androidDevices.length} Android devices from hosts database`,
+  );
 
   // Combine all devices
   const allDevices: DeviceConfig[] = [...androidDevices, ...hostDevices];

@@ -44,26 +44,44 @@ export function RecVncPreviewGrid({ hosts, isLoading, error }: RecVncPreviewGrid
   // Filter hosts that have VNC configured (have vnc_port)
   const vnc_hosts = hosts.filter((host) => host.vnc_port);
 
-  // Get stream host ID - in a real application, this would be the actual host ID
-  // that is running the stream server and has ADB access
-  const streamHostId = hosts.length > 0 ? hosts[0].id : undefined;
+  // Get first available SSH host for streaming server
+  const streamHost =
+    hosts.find((host) => host.type === 'ssh' && host.status === 'connected') ||
+    hosts.find((host) => host.type === 'ssh');
+  const streamHostId = streamHost?.id;
+  const streamHostIp = streamHost?.ip;
 
-  // Device ID of the Android device - in a real application, this would be
-  // fetched from a database or config. For this example, we're using a placeholder.
-  const androidDeviceId = '192.168.1.130:5555';
+  // Get first Android device for USB ADB streaming
+  const androidDevice = hosts.find(
+    (host) => host.type === 'device' && host.device_type?.includes('android'),
+  );
+  const androidDeviceId = androidDevice?.ip_local || androidDevice?.ip;
+  const androidDeviceName = androidDevice?.name || 'USB Android';
+
+  // Generate dynamic stream URL
+  const streamUrl = streamHostIp
+    ? `https://${streamHostIp}:444/stream/output.m3u8`
+    : 'https://localhost:444/stream/output.m3u8';
 
   // Handle opening the stream viewer modal
   const handleOpenStreamViewer = () => {
-    // You can implement a custom event for handling the stream modal
     console.log('[@component:RecVncPreviewGrid] Stream preview clicked');
+
+    // Create a device config for the stream
+    const streamDevice = {
+      id: `stream-${streamHostId || 'default'}`,
+      name: 'Live Stream',
+      type: 'androidTv' as const,
+      streamUrl,
+      remoteConfig: {
+        hostId: streamHostId || '',
+        deviceId: androidDeviceId || '',
+      },
+    };
+
     window.dispatchEvent(
-      new CustomEvent(RecEvents.OPEN_STREAM_VIEWER, {
-        detail: {
-          streamUrl: 'https://77.56.53.130:444/stream/output.m3u8',
-          title: 'Live',
-          hostId: streamHostId,
-          deviceId: androidDeviceId,
-        },
+      new CustomEvent(RecEvents.OPEN_DEVICE_VIEWER, {
+        detail: { device: streamDevice },
       }),
     );
   };
@@ -73,13 +91,20 @@ export function RecVncPreviewGrid({ hosts, isLoading, error }: RecVncPreviewGrid
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {/* Hardcoded M3U8 stream preview */}
         <RecStreamPreview
-          streamUrl="https://77.56.53.130:444/stream/output.m3u8"
-          title="Live"
+          streamUrl={streamUrl}
+          title="Live Stream"
           onClick={handleOpenStreamViewer}
         />
 
-        {/* USB ADB stream */}
-        <RecUsbAdbStream hostId={streamHostId || ''} mobileName="USB Android" />
+        {/* USB ADB stream - now with dynamic data */}
+        {androidDevice && streamHostId && (
+          <RecUsbAdbStream
+            hostId={streamHostId}
+            mobileName={androidDeviceName}
+            streamUrl={streamUrl}
+            deviceId={androidDeviceId || ''}
+          />
+        )}
 
         <div className="flex items-center justify-center h-64 col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-3">
           <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 p-4 rounded-md text-yellow-800 dark:text-yellow-200">
@@ -95,13 +120,20 @@ export function RecVncPreviewGrid({ hosts, isLoading, error }: RecVncPreviewGrid
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
       {/* Hardcoded M3U8 stream preview */}
       <RecStreamPreview
-        streamUrl="https://77.56.53.130:444/stream/output.m3u8"
-        title="Live"
+        streamUrl={streamUrl}
+        title="Live Stream"
         onClick={handleOpenStreamViewer}
       />
 
-      {/* USB ADB stream */}
-      <RecUsbAdbStream hostId={streamHostId || ''} mobileName="USB Android" />
+      {/* USB ADB stream - now with dynamic data */}
+      {androidDevice && streamHostId && (
+        <RecUsbAdbStream
+          hostId={streamHostId}
+          mobileName={androidDeviceName}
+          streamUrl={streamUrl}
+          deviceId={androidDeviceId || ''}
+        />
+      )}
 
       {/* VNC host previews */}
       {vnc_hosts.map((host) => (

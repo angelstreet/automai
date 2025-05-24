@@ -8,14 +8,17 @@ import { RecStreamModal } from './RecStreamModal';
 interface RecUsbAdbStreamProps {
   hostId: string;
   mobileName?: string;
+  streamUrl?: string;
+  deviceId?: string;
 }
 
-export function RecUsbAdbStream({ hostId, mobileName = 'Android Device' }: RecUsbAdbStreamProps) {
+export function RecUsbAdbStream({
+  hostId,
+  mobileName = 'Android Device',
+  streamUrl = 'https://localhost:444/stream/output.m3u8', // Default fallback
+  deviceId = '127.0.0.1', // Default fallback
+}: RecUsbAdbStreamProps) {
   const [showStream, setShowStream] = useState(false);
-
-  // Hardcoded values as per requirements
-  const streamUrl = 'https://77.56.53.130:444/stream/output.m3u8';
-  const deviceId = '192.168.1.29';
 
   const handleOpenStream = () => {
     setShowStream(true);
