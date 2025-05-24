@@ -72,47 +72,6 @@ export function BrowserModalClient({ isOpen, onClose, host, sessionId }: Browser
           `[@component:BrowserModalClient] Terminal session initialized: ${result.data.sessionId}`,
         );
         setTerminalSessionId(result.data.sessionId);
-
-        // Automatically send commands to get a clean prompt
-        setTimeout(async () => {
-          try {
-            const { sendTerminalData } = await import('@/app/actions/terminalsAction');
-
-            // Send enter to establish initial prompt
-            await sendTerminalData(result.data.sessionId, '');
-            console.log(`[@component:BrowserModalClient] Sent initial enter command`);
-
-            // Wait a bit, then clear the screen
-            setTimeout(async () => {
-              try {
-                await sendTerminalData(result.data.sessionId, 'clear');
-                console.log(`[@component:BrowserModalClient] Sent clear command`);
-
-                // Wait a bit more, then send another enter to get fresh prompt
-                setTimeout(async () => {
-                  try {
-                    await sendTerminalData(result.data.sessionId, '');
-                    console.log(
-                      `[@component:BrowserModalClient] Sent final enter for fresh prompt`,
-                    );
-                  } catch (error) {
-                    console.error(
-                      `[@component:BrowserModalClient] Error sending final command:`,
-                      error,
-                    );
-                  }
-                }, 500);
-              } catch (error) {
-                console.error(
-                  `[@component:BrowserModalClient] Error sending clear command:`,
-                  error,
-                );
-              }
-            }, 500);
-          } catch (error) {
-            console.error(`[@component:BrowserModalClient] Error sending initial commands:`, error);
-          }
-        }, 2000); // Increased initial wait time to 2 seconds
       } else {
         console.error(
           `[@component:BrowserModalClient] Failed to initialize terminal session:`,
