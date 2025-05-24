@@ -34,7 +34,9 @@ export interface HostInput {
   description?: string;
   type: HostConnectionType;
   ip: string;
-  port: number;
+  ip_local?: string; // Local IP for devices
+  device_type?: string; // Device type for non-SSH devices
+  port?: number; // Optional for devices
   username?: string;
   password?: string;
   user?: string;

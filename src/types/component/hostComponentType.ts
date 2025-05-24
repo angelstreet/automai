@@ -11,7 +11,7 @@ export type HostStatus = 'connected' | 'failed' | 'pending' | 'testing' | 'deplo
 /**
  * Host connection type
  */
-export type HostConnectionType = 'ssh' | 'docker' | 'portainer';
+export type HostConnectionType = 'ssh' | 'docker' | 'portainer' | 'device';
 
 /**
  * Primary Host interface used across the application

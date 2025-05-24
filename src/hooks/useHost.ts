@@ -74,13 +74,42 @@ export function useHost(componentName = 'unknown') {
     mutationFn: (data: HostInput) => {
       // Ensure required fields have default values
       const currentDateTime = new Date().toISOString();
+
+      // Log incoming data for debugging
+      console.log('[@hook:useHost:createHostMutation] Input data:', {
+        name: data.name,
+        type: data.type,
+        ip: data.ip,
+        ip_local: data.ip_local,
+        device_type: data.device_type,
+        port: data.port,
+        status: data.status,
+        is_windows: data.is_windows,
+      });
+
       const hostData = {
         ...data,
-        status: data.status || 'connected',
+        // Only set default status to 'connected' for SSH hosts, preserve original status for devices
+        status: data.type === 'device' ? data.status || 'pending' : data.status || 'connected',
         created_at: data.created_at || currentDateTime,
         updated_at: data.updated_at || currentDateTime,
         is_windows: data.is_windows ?? false,
       };
+
+      console.log(
+        '[@hook:useHost:createHostMutation] Processed data being sent to server action:',
+        {
+          name: hostData.name,
+          type: hostData.type,
+          ip: hostData.ip,
+          ip_local: hostData.ip_local,
+          device_type: hostData.device_type,
+          port: hostData.port,
+          status: hostData.status,
+          is_windows: hostData.is_windows,
+        },
+      );
+
       return createHost(hostData);
     },
     onSuccess: (response) => {

@@ -137,6 +137,8 @@ export async function createHost(
       description: data.description || '',
       type: data.type,
       ip: data.ip,
+      ip_local: data.ip_local,
+      device_type: data.device_type,
       port: data.port || (data.type === 'ssh' ? 22 : data.type === 'docker' ? 2375 : 9000),
       user: data.user || (data as any).username || '', // Handle username/user field variation
       password: password,
@@ -155,6 +157,9 @@ export async function createHost(
       ...hostData,
       password: hostData.password ? '[ENCRYPTED DATA]' : undefined,
       private_key: hostData.private_key ? '[ENCRYPTED DATA]' : undefined,
+      // Add device-specific logging
+      ip_local: hostData.ip_local,
+      device_type: hostData.device_type,
       // Add relevant checks that the RLS policy looks for
       hasUser: !!hostData.user,
       userLength: hostData.user?.length || 0,

@@ -91,40 +91,78 @@ export function HostTableClient({
   const getDeviceTypeBadge = (deviceType?: string) => {
     if (!deviceType) return null;
 
-    const getBadgeColor = (type: string) => {
+    const getBadgeConfig = (type: string) => {
       switch (type) {
         case 'linux':
-          return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+          return {
+            color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+            label: 'Linux',
+            icon: '🐧',
+          };
         case 'windows':
-          return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300';
+          return {
+            color: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300',
+            label: 'Win',
+            icon: '🪟',
+          };
         case 'android_phone':
+          return {
+            color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+            label: 'Phone',
+            icon: '📱',
+          };
         case 'android_tablet':
-          return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+          return {
+            color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+            label: 'Tablet',
+            icon: '📱',
+          };
         case 'ios_phone':
+          return {
+            color: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300',
+            label: 'iPhone',
+            icon: '📱',
+          };
         case 'ios_tablet':
-          return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
+          return {
+            color: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300',
+            label: 'iPad',
+            icon: '📱',
+          };
         case 'tv_tizen':
         case 'tv_lg':
         case 'tv_android':
         case 'appletv':
-          return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
+          return {
+            color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
+            label: 'TV',
+            icon: '📺',
+          };
         case 'stb_eos':
         case 'stb_apollo':
-          return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
+          return {
+            color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
+            label: 'STB',
+            icon: '📦',
+          };
         default:
-          return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
+          return {
+            color: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300',
+            label: 'Device',
+            icon: '📱',
+          };
       }
     };
 
-    const getDisplayName = (type: string) => {
-      return type.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
-    };
+    const config = getBadgeConfig(deviceType);
 
     return (
       <span
-        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getBadgeColor(deviceType)}`}
+        className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${config.color}`}
+        title={deviceType.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())} // Full name on hover
       >
-        {getDisplayName(deviceType)}
+        <span className="text-xs">{config.icon}</span>
+        <span>{config.label}</span>
       </span>
     );
   };
@@ -139,8 +177,13 @@ export function HostTableClient({
     setExpandedGroups(newExpanded);
   };
 
-  const getStatusDot = (status: string) => {
+  const getStatusDot = (status: string, hostType?: string) => {
     const baseClasses = 'h-3 w-3 rounded-full';
+
+    // For devices, always show grey dot since we can't verify connectivity
+    if (hostType === 'device') {
+      return <div className={`${baseClasses} bg-gray-400`} title="Device (status unknown)" />;
+    }
 
     switch (status) {
       case 'connected':
@@ -244,7 +287,9 @@ export function HostTableClient({
                       onClick={() => selectMode && onSelect(host.id)}
                     >
                       <TableCell className="py-2 pl-8">
-                        <div className="flex justify-center">{getStatusDot(host.status)}</div>
+                        <div className="flex justify-center">
+                          {getStatusDot(host.status, host.type)}
+                        </div>
                       </TableCell>
                       <TableCell className="font-medium py-2">
                         <div className="flex items-center space-x-2">
@@ -254,7 +299,7 @@ export function HostTableClient({
                       </TableCell>
                       <TableCell className="py-2">
                         {host.ip_local || host.ip}
-                        {host.port ? `:${host.port}` : ''}
+                        {host.type !== 'device' && host.port ? `:${host.port}` : ''}
                       </TableCell>
                       <TableCell className="py-2">
                         {(() => {

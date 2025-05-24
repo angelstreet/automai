@@ -27,12 +27,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/shadcn/tooltip';
 import AddToWorkspace from '@/components/workspace/AddToWorkspace';
 import { Host } from '@/types/component/hostComponentType';
 
@@ -73,130 +67,105 @@ function HostCardClient({ host, onDelete, onTestConnection }: HostCardClientProp
   const getDeviceTypeBadge = (deviceType?: string) => {
     if (!deviceType) return null;
 
-    const getBadgeColor = (type: string) => {
+    const getBadgeConfig = (type: string) => {
       switch (type) {
         case 'linux':
-          return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+          return {
+            color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+            label: 'Linux',
+            icon: '🐧',
+          };
         case 'windows':
-          return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300';
+          return {
+            color: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300',
+            label: 'Win',
+            icon: '🪟',
+          };
         case 'android_phone':
+          return {
+            color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+            label: 'Phone',
+            icon: '📱',
+          };
         case 'android_tablet':
-          return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+          return {
+            color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+            label: 'Tablet',
+            icon: '📱',
+          };
         case 'ios_phone':
+          return {
+            color: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300',
+            label: 'iPhone',
+            icon: '📱',
+          };
         case 'ios_tablet':
-          return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
+          return {
+            color: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300',
+            label: 'iPad',
+            icon: '📱',
+          };
         case 'tv_tizen':
         case 'tv_lg':
         case 'tv_android':
         case 'appletv':
-          return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
+          return {
+            color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
+            label: 'TV',
+            icon: '📺',
+          };
         case 'stb_eos':
         case 'stb_apollo':
-          return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
+          return {
+            color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
+            label: 'STB',
+            icon: '📦',
+          };
         default:
-          return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
+          return {
+            color: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300',
+            label: 'Device',
+            icon: '📱',
+          };
       }
     };
 
-    const getDisplayName = (type: string) => {
-      return type.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
-    };
+    const config = getBadgeConfig(deviceType);
 
     return (
       <span
-        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getBadgeColor(deviceType)}`}
+        className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${config.color}`}
+        title={deviceType.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())} // Full name on hover
       >
-        {getDisplayName(deviceType)}
+        <span className="text-xs">{config.icon}</span>
+        <span>{config.label}</span>
       </span>
     );
   };
 
   const getStatusDot = (status: string) => {
-    const baseClasses = 'h-4 w-4 rounded-full transition-colors duration-300';
+    const baseClasses = 'h-3 w-3 rounded-full';
 
-    if (!status) {
-      return (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger>
-              <div className={`${baseClasses} bg-gray-400`} />
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{t('unknown')}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      );
+    // For devices, always show grey dot since we can't verify connectivity
+    if (host.type === 'device') {
+      return <div className={`${baseClasses} bg-gray-400`} title="Device (status unknown)" />;
     }
 
+    // For SSH hosts, show actual status
     switch (status) {
       case 'connected':
-        return (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <div className={`${baseClasses} bg-green-500`} />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t('connected')}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        );
+        return <div className={`${baseClasses} bg-green-500`} title={t('connected')} />;
       case 'failed':
-        return (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <div className={`${baseClasses} bg-red-500`} />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t('failed')}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        );
+        return <div className={`${baseClasses} bg-red-500`} title={t('failed')} />;
       case 'testing':
         return (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <div
-                  className={`${baseClasses} host-testing-animation ring-2 ring-yellow-300 ring-opacity-60`}
-                />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t('testing')}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        );
-      case 'pending':
-        return (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <div className={`${baseClasses} bg-yellow-500`} />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t('pending')}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <div
+            className={`${baseClasses} host-testing-animation ring-2 ring-yellow-300 ring-opacity-60`}
+            title={t('testing')}
+          />
         );
       default:
-        return (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <div className={`${baseClasses} bg-orange-500`} />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t('unknown')}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        );
+        return <div className={`${baseClasses} bg-gray-400`} title={t('unknown')} />;
     }
   };
 
@@ -353,7 +322,7 @@ function HostCardClient({ host, onDelete, onTestConnection }: HostCardClientProp
             </div>
             <CardDescription className="text-xs">
               {host.ip_local || host.ip}
-              {host.port ? `:${host.port}` : ''}
+              {host.type !== 'device' && host.port ? `:${host.port}` : ''}
             </CardDescription>
           </div>
           <div className="flex items-center space-x-2">

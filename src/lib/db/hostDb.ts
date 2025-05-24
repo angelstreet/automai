@@ -76,6 +76,25 @@ export async function getHostById(id: string): Promise<DbResponse<Host>> {
  */
 export async function createHost(host: Partial<Host>): Promise<DbResponse<Host>> {
   try {
+    console.log('[@db:hostDb:createHost] Input data received:', {
+      name: host.name,
+      description: host.description,
+      type: host.type,
+      ip: host.ip,
+      ip_local: host.ip_local,
+      device_type: host.device_type,
+      port: host.port,
+      user: host.user,
+      username: host.username,
+      auth_type: host.auth_type,
+      password: host.password ? '[REDACTED]' : null,
+      private_key: host.private_key ? '[REDACTED]' : null,
+      status: host.status,
+      is_windows: host.is_windows,
+      team_id: host.team_id,
+      creator_id: host.creator_id,
+    });
+
     console.log('[@db:hostDb:createHost] Creating host, data check:', {
       hasUser: !!host.user,
       userLength: host.user?.length || 0,
@@ -84,12 +103,17 @@ export async function createHost(host: Partial<Host>): Promise<DbResponse<Host>>
       hasTeamId: !!host.team_id,
       authType: host.auth_type,
       type: host.type,
+      hasIpLocal: !!host.ip_local,
+      hasDeviceType: !!host.device_type,
+      portValue: host.port,
     });
 
     const supabase = await createClient();
 
     // First try with auth_type and private_key fields
     try {
+      console.log('[@db:hostDb:createHost] About to insert data into Supabase...');
+
       const { data, error } = await supabase.from('hosts').insert([host]).select().single();
 
       if (error) {
@@ -103,7 +127,16 @@ export async function createHost(host: Partial<Host>): Promise<DbResponse<Host>>
         return { success: false, error: error.message };
       }
 
-      console.log('[@db:hostDb:createHost] Host created successfully with ID:', data.id);
+      console.log('[@db:hostDb:createHost] Host created successfully:', {
+        id: data.id,
+        name: data.name,
+        type: data.type,
+        ip: data.ip,
+        ip_local: data.ip_local,
+        device_type: data.device_type,
+        port: data.port,
+        status: data.status,
+      });
       return { success: true, data };
     } catch (error: any) {
       console.error('[@db:hostDb:createHost] Exception during host creation:', error);

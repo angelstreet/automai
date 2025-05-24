@@ -1,6 +1,6 @@
 'use client';
 
-import { PlusCircle, RefreshCw, Grid, List } from 'lucide-react';
+import { PlusCircle, RefreshCw, Grid, List, Smartphone } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState, useEffect, useRef } from 'react';
 
@@ -9,8 +9,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/s
 import { useHost } from '@/hooks/useHost';
 import { useHostViewStore } from '@/store/hostViewStore';
 
-import { HostFormDialogClient, FormData as ConnectionFormData } from './HostFormDialogClient';
+import { DeviceFormDialogClient, DeviceFormData } from './DeviceFormDialogClient';
 import { HostsEvents } from './HostEventListener';
+import { HostFormDialogClient, FormData as ConnectionFormData } from './HostFormDialogClient';
 
 interface HostActionsClientProps {
   hostCount?: number;
@@ -30,6 +31,7 @@ export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActio
   const { viewMode, toggleViewMode } = useHostViewStore();
 
   const [showAddHost, setShowAddHost] = useState(false);
+  const [showAddDevice, setShowAddDevice] = useState(false);
   const [isTestingHosts, setIsTestingHosts] = useState(false);
   const activeTestingHosts = useRef<Set<string>>(new Set());
 
@@ -43,6 +45,14 @@ export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActio
     authType: 'password',
     password: '',
     privateKey: '',
+  });
+
+  const [deviceFormData, setDeviceFormData] = useState<DeviceFormData>({
+    name: '',
+    description: '',
+    ip: '',
+    ip_local: '',
+    device_type: '',
   });
 
   // Derive host count from React Query's hosts data, falling back to the prop
@@ -179,6 +189,10 @@ export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActio
     setShowAddHost(true);
   };
 
+  const handleAddDevice = () => {
+    setShowAddDevice(true);
+  };
+
   const handleViewModeToggle = () => {
     console.log(
       `[@component:HostActionsClient] Toggling view mode from ${viewMode} to ${viewMode === 'grid' ? 'table' : 'grid'}`,
@@ -191,6 +205,10 @@ export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActio
 
   const handleFormChange = (newFormData: ConnectionFormData) => {
     setFormData(newFormData);
+  };
+
+  const handleDeviceFormChange = (newFormData: DeviceFormData) => {
+    setDeviceFormData(newFormData);
   };
 
   const handleDialogClose = () => {
@@ -208,6 +226,20 @@ export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActio
       privateKey: '',
     });
     // Refresh hosts list after dialog closes (in case a host was created)
+    refetchHosts();
+  };
+
+  const handleDeviceDialogClose = () => {
+    setShowAddDevice(false);
+    // Reset device form data when dialog is closed
+    setDeviceFormData({
+      name: '',
+      description: '',
+      ip: '',
+      ip_local: '',
+      device_type: '',
+    });
+    // Refresh hosts list after dialog closes (in case a device was created)
     refetchHosts();
   };
 
@@ -239,8 +271,20 @@ export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActio
           <PlusCircle className="h-4 w-4" />
           <span>{t('add_button')}</span>
         </Button>
+
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8 gap-1"
+          onClick={handleAddDevice}
+          id="add-device-button"
+        >
+          <Smartphone className="h-4 w-4" />
+          <span>Add Device</span>
+        </Button>
       </div>
 
+      {/* Host Dialog */}
       <Dialog open={showAddHost} onOpenChange={handleDialogClose}>
         <DialogContent>
           <DialogHeader>
@@ -250,6 +294,20 @@ export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActio
             formData={formData}
             onChange={handleFormChange}
             onCancel={handleDialogClose}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Device Dialog */}
+      <Dialog open={showAddDevice} onOpenChange={handleDeviceDialogClose}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Device</DialogTitle>
+          </DialogHeader>
+          <DeviceFormDialogClient
+            formData={deviceFormData}
+            onChange={handleDeviceFormChange}
+            onCancel={handleDeviceDialogClose}
           />
         </DialogContent>
       </Dialog>
