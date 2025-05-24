@@ -1,48 +1,53 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 
-import { getConversations } from '@/app/actions/chatAction';
+import {
+  getConversations,
+  deleteConversation,
+  clearConversationMessages,
+} from '@/app/actions/chatAction';
 import type { ChatConversation } from '@/lib/db/chatDb';
 import { useChatContext } from './ChatContext';
 
 /**
  * Chat history panel component - displays list of real conversations from database
+ * with delete and clear functionality
  */
 export default function ChatHistoryPanel() {
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deletingConversationId, setDeletingConversationId] = useState<string | null>(null);
+  const [clearingConversationId, setClearingConversationId] = useState<string | null>(null);
   const { setActiveConversationId, activeConversationId } = useChatContext();
 
   // Fetch conversations from database
-  useEffect(() => {
-    const fetchConversations = async () => {
-      try {
-        console.log('[@component:ChatHistoryPanel] Fetching conversations');
-        setIsLoading(true);
-        setError(null);
+  const fetchConversations = async () => {
+    try {
+      console.log('[@component:ChatHistoryPanel] Fetching conversations');
+      setIsLoading(true);
+      setError(null);
 
-        const result = await getConversations({ limit: 50 });
+      const result = await getConversations({ limit: 50 });
 
-        if (result.success && result.data) {
-          console.log(`[@component:ChatHistoryPanel] Loaded ${result.data.length} conversations`);
-          setConversations(result.data);
-        } else {
-          console.error(
-            '[@component:ChatHistoryPanel] Failed to fetch conversations:',
-            result.error,
-          );
-          setError(result.error || 'Failed to load conversations');
-        }
-      } catch (error: any) {
-        console.error('[@component:ChatHistoryPanel] Error:', error);
-        setError('Failed to load conversations');
-      } finally {
-        setIsLoading(false);
+      if (result.success && result.data) {
+        console.log(`[@component:ChatHistoryPanel] Loaded ${result.data.length} conversations`);
+        setConversations(result.data);
+      } else {
+        console.error('[@component:ChatHistoryPanel] Failed to fetch conversations:', result.error);
+        setError(result.error || 'Failed to load conversations');
       }
-    };
+    } catch (error: any) {
+      console.error('[@component:ChatHistoryPanel] Error:', error);
+      setError('Failed to load conversations');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchConversations();
 
     // Listen for new messages to refresh conversations
@@ -51,10 +56,19 @@ export default function ChatHistoryPanel() {
       fetchConversations();
     };
 
+    const handleConversationDeleted = () => {
+      console.log('[@component:ChatHistoryPanel] Refreshing conversations after deletion');
+      fetchConversations();
+    };
+
     window.addEventListener('CHAT_MESSAGE_SENT', handleNewMessage);
+    window.addEventListener('CHAT_CONVERSATION_DELETED', handleConversationDeleted);
+    window.addEventListener('CHAT_CONVERSATION_CLEARED', handleConversationDeleted);
 
     return () => {
       window.removeEventListener('CHAT_MESSAGE_SENT', handleNewMessage);
+      window.removeEventListener('CHAT_CONVERSATION_DELETED', handleConversationDeleted);
+      window.removeEventListener('CHAT_CONVERSATION_CLEARED', handleConversationDeleted);
     };
   }, []);
 
@@ -66,6 +80,89 @@ export default function ChatHistoryPanel() {
   const handleNewChat = () => {
     console.log('[@component:ChatHistoryPanel] Starting new chat');
     setActiveConversationId(null);
+  };
+
+  const handleDeleteConversation = async (
+    conversationId: string,
+    conversationTitle: string,
+    event: React.MouseEvent,
+  ) => {
+    event.stopPropagation(); // Prevent conversation selection
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete the conversation "${conversationTitle}"?\n\nThis will permanently delete all messages in this conversation.`,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      console.log(`[@component:ChatHistoryPanel] Deleting conversation: ${conversationId}`);
+      setDeletingConversationId(conversationId);
+
+      const result = await deleteConversation(conversationId);
+
+      if (result.success) {
+        toast.success('Conversation deleted successfully');
+
+        // If we deleted the active conversation, clear it
+        if (activeConversationId === conversationId) {
+          setActiveConversationId(null);
+        }
+
+        // Dispatch event for other components
+        window.dispatchEvent(
+          new CustomEvent('CHAT_CONVERSATION_DELETED', {
+            detail: { conversationId },
+          }),
+        );
+      } else {
+        toast.error(result.error || 'Failed to delete conversation');
+      }
+    } catch (error: any) {
+      console.error('[@component:ChatHistoryPanel] Delete error:', error);
+      toast.error('Failed to delete conversation');
+    } finally {
+      setDeletingConversationId(null);
+    }
+  };
+
+  const handleClearConversation = async (
+    conversationId: string,
+    conversationTitle: string,
+    event: React.MouseEvent,
+  ) => {
+    event.stopPropagation(); // Prevent conversation selection
+
+    const confirmed = window.confirm(
+      `Are you sure you want to clear all messages in "${conversationTitle}"?\n\nThis will delete all messages but keep the conversation.`,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      console.log(`[@component:ChatHistoryPanel] Clearing conversation: ${conversationId}`);
+      setClearingConversationId(conversationId);
+
+      const result = await clearConversationMessages(conversationId);
+
+      if (result.success) {
+        toast.success(`Cleared ${result.data?.count || 0} messages`);
+
+        // Dispatch event for other components
+        window.dispatchEvent(
+          new CustomEvent('CHAT_CONVERSATION_CLEARED', {
+            detail: { conversationId },
+          }),
+        );
+      } else {
+        toast.error(result.error || 'Failed to clear conversation');
+      }
+    } catch (error: any) {
+      console.error('[@component:ChatHistoryPanel] Clear error:', error);
+      toast.error('Failed to clear conversation');
+    } finally {
+      setClearingConversationId(null);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -124,14 +221,14 @@ export default function ChatHistoryPanel() {
             <div
               key={conversation.id}
               onClick={() => handleConversationClick(conversation)}
-              className={`p-2.5 mb-1.5 rounded-lg cursor-pointer transition-colors group ${
+              className={`p-2.5 mb-1.5 rounded-lg cursor-pointer transition-colors group relative ${
                 activeConversationId === conversation.id
                   ? 'bg-primary/20 border border-primary/30'
                   : 'hover:bg-secondary/80'
               }`}
             >
               <div
-                className={`font-medium text-sm truncate ${
+                className={`font-medium text-sm truncate pr-16 ${
                   activeConversationId === conversation.id
                     ? 'text-primary'
                     : 'text-foreground group-hover:text-primary'
@@ -142,6 +239,37 @@ export default function ChatHistoryPanel() {
               <div className="text-xs text-muted-foreground mt-1 flex items-center justify-between">
                 <span>{conversation.message_count} msgs</span>
                 <span>{formatDate(conversation.last_message_at)}</span>
+              </div>
+
+              {/* Action buttons - shown on hover */}
+              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center space-x-1">
+                {/* Clear conversation button */}
+                <button
+                  onClick={(e) => handleClearConversation(conversation.id, conversation.title, e)}
+                  disabled={clearingConversationId === conversation.id}
+                  className="p-1 rounded text-xs text-muted-foreground hover:text-orange-600 hover:bg-orange-100 dark:hover:bg-orange-900/20 transition-colors"
+                  title="Clear messages"
+                >
+                  {clearingConversationId === conversation.id ? (
+                    <div className="w-3 h-3 border border-orange-600 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    '🗑️'
+                  )}
+                </button>
+
+                {/* Delete conversation button */}
+                <button
+                  onClick={(e) => handleDeleteConversation(conversation.id, conversation.title, e)}
+                  disabled={deletingConversationId === conversation.id}
+                  className="p-1 rounded text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                  title="Delete conversation"
+                >
+                  {deletingConversationId === conversation.id ? (
+                    <div className="w-3 h-3 border border-destructive border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    '❌'
+                  )}
+                </button>
               </div>
             </div>
           ))}

@@ -1,6 +1,7 @@
 /**
  * Chat database table definitions
  * Aligned with Supabase schema for OpenRouter chat functionality
+ * Simplified schema - user-based only (no teams/tenants)
  */
 import { BaseRow, Json } from './db-common';
 
@@ -12,9 +13,7 @@ export interface ChatConversationsTable {
   Row: BaseRow & {
     title: string;
     summary: string | null;
-    team_id: string;
     creator_id: string;
-    tenant_id: string;
     last_message_at: string;
     model_ids: string[]; // Array of OpenRouter model IDs used in conversation
     is_active: boolean;
@@ -27,9 +26,7 @@ export interface ChatConversationsTable {
     updated_at?: string;
     title: string;
     summary?: string | null;
-    team_id: string;
-    creator_id: string;
-    tenant_id: string;
+    creator_id?: string;
     last_message_at?: string;
     model_ids?: string[];
     is_active?: boolean;
@@ -42,9 +39,7 @@ export interface ChatConversationsTable {
     updated_at?: string;
     title?: string;
     summary?: string | null;
-    team_id?: string;
     creator_id?: string;
-    tenant_id?: string;
     last_message_at?: string;
     model_ids?: string[];
     is_active?: boolean;
@@ -53,24 +48,10 @@ export interface ChatConversationsTable {
   };
   Relationships: [
     {
-      foreignKeyName: 'chat_conversations_team_id_fkey';
-      columns: ['team_id'];
-      isOneToOne: false;
-      referencedRelation: 'teams';
-      referencedColumns: ['id'];
-    },
-    {
       foreignKeyName: 'chat_conversations_creator_id_fkey';
       columns: ['creator_id'];
       isOneToOne: false;
       referencedRelation: 'profiles';
-      referencedColumns: ['id'];
-    },
-    {
-      foreignKeyName: 'chat_conversations_tenant_id_fkey';
-      columns: ['tenant_id'];
-      isOneToOne: false;
-      referencedRelation: 'tenants';
       referencedColumns: ['id'];
     },
   ];
@@ -79,6 +60,7 @@ export interface ChatConversationsTable {
 /**
  * Chat messages table schema
  * Stores individual messages with OpenRouter model responses
+ * Usage tracking: token_count for total, metadata.usage for breakdown
  */
 export interface ChatMessagesTable {
   Row: BaseRow & {
@@ -88,11 +70,10 @@ export interface ChatMessagesTable {
     model_id: string | null; // OpenRouter model ID for assistant messages
     model_name: string | null; // Display name of the model
     provider: string | null; // OpenRouter provider (e.g., 'anthropic', 'openai')
-    token_count: number | null;
-    response_time_ms: number | null;
-    error_message: string | null;
-    metadata: Json | null; // Additional OpenRouter response metadata
-    team_id: string;
+    token_count: number | null; // Total tokens used (prompt + completion)
+    response_time_ms: number | null; // Response time in milliseconds
+    error_message: string | null; // Error if response failed
+    metadata: Json | null; // Additional OpenRouter response metadata including usage breakdown
     creator_id: string;
   };
   Insert: {
@@ -109,8 +90,7 @@ export interface ChatMessagesTable {
     response_time_ms?: number | null;
     error_message?: string | null;
     metadata?: Json | null;
-    team_id: string;
-    creator_id: string;
+    creator_id?: string;
   };
   Update: {
     id?: string;
@@ -126,7 +106,6 @@ export interface ChatMessagesTable {
     response_time_ms?: number | null;
     error_message?: string | null;
     metadata?: Json | null;
-    team_id?: string;
     creator_id?: string;
   };
   Relationships: [
@@ -135,13 +114,6 @@ export interface ChatMessagesTable {
       columns: ['conversation_id'];
       isOneToOne: false;
       referencedRelation: 'chat_conversations';
-      referencedColumns: ['id'];
-    },
-    {
-      foreignKeyName: 'chat_messages_team_id_fkey';
-      columns: ['team_id'];
-      isOneToOne: false;
-      referencedRelation: 'teams';
       referencedColumns: ['id'];
     },
     {

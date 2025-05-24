@@ -5,11 +5,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import type { DbResponse } from '@/lib/utils/commonUtils';
-import type {
-  ChatConversationsTable,
-  ChatMessagesTable,
-  OpenrouterModelsTable,
-} from '@/types-new/db-chat';
+import type { ChatConversationsTable, ChatMessagesTable } from '@/types-new/db-chat';
 
 export interface ChatConversation {
   id: string;
@@ -65,9 +61,6 @@ export interface OpenRouterModel {
 export interface CreateConversationInput {
   title: string;
   summary?: string | null;
-  team_id: string;
-  creator_id: string;
-  tenant_id: string;
   model_ids?: string[];
 }
 
@@ -82,8 +75,6 @@ export interface CreateMessageInput {
   response_time_ms?: number | null;
   error_message?: string | null;
   metadata?: any;
-  team_id: string;
-  creator_id: string;
 }
 
 export interface UpdateConversationInput {
@@ -99,18 +90,17 @@ const chatDb = {
   /**
    * Get conversations for a team with optional pagination
    */
-  async getConversations(
-    teamId: string,
-    options?: { limit?: number; offset?: number },
-  ): Promise<DbResponse<ChatConversation[]>> {
+  async getConversations(options?: {
+    limit?: number;
+    offset?: number;
+  }): Promise<DbResponse<ChatConversation[]>> {
     try {
-      console.log(`[@db:chatDb:getConversations] Getting conversations for team: ${teamId}`);
+      console.log(`[@db:chatDb:getConversations] Getting conversations with RLS filtering`);
       const supabase = await createClient();
 
       let query = supabase
         .from('chat_conversations')
         .select('*')
-        .eq('team_id', teamId)
         .eq('is_active', true)
         .order('last_message_at', { ascending: false });
 
@@ -179,9 +169,6 @@ const chatDb = {
       const conversationData: ChatConversationsTable['Insert'] = {
         title: input.title,
         summary: input.summary || null,
-        team_id: input.team_id,
-        creator_id: input.creator_id,
-        tenant_id: input.tenant_id,
         last_message_at: new Date().toISOString(),
         model_ids: input.model_ids || [],
         is_active: true,
@@ -303,8 +290,6 @@ const chatDb = {
         response_time_ms: input.response_time_ms || null,
         error_message: input.error_message || null,
         metadata: input.metadata || null,
-        team_id: input.team_id,
-        creator_id: input.creator_id,
       };
 
       const { data, error } = await supabase
@@ -318,12 +303,21 @@ const chatDb = {
         return { success: false, error: error.message };
       }
 
-      // Update conversation's last_message_at and message_count
+      // Update conversation's last_message_at and increment message_count
+      // First get current message_count, then increment it
+      const { data: conversationData } = await supabase
+        .from('chat_conversations')
+        .select('message_count')
+        .eq('id', input.conversation_id)
+        .single();
+
+      const currentCount = conversationData?.message_count || 0;
+
       await supabase
         .from('chat_conversations')
         .update({
           last_message_at: new Date().toISOString(),
-          message_count: supabase.raw('message_count + 1'),
+          message_count: currentCount + 1,
           updated_at: new Date().toISOString(),
         })
         .eq('id', input.conversation_id);
@@ -337,6 +331,147 @@ const chatDb = {
   },
 
   /**
+   * Delete a conversation and all its messages
+   */
+  async deleteConversation(conversationId: string): Promise<DbResponse<{ count: number }>> {
+    try {
+      console.log(`[@db:chatDb:deleteConversation] Deleting conversation: ${conversationId}`);
+      const supabase = await createClient();
+
+      // First, delete all messages in the conversation
+      const { error: messagesError } = await supabase
+        .from('chat_messages')
+        .delete()
+        .eq('conversation_id', conversationId);
+
+      if (messagesError) {
+        console.error(
+          `[@db:chatDb:deleteConversation] Error deleting messages: ${messagesError.message}`,
+        );
+        return { success: false, error: messagesError.message };
+      }
+
+      // Then delete the conversation
+      const { data, error } = await supabase
+        .from('chat_conversations')
+        .delete()
+        .eq('id', conversationId)
+        .select('id');
+
+      if (error) {
+        console.error(
+          `[@db:chatDb:deleteConversation] Error deleting conversation: ${error.message}`,
+        );
+        return { success: false, error: error.message };
+      }
+
+      const count = data?.length || 0;
+      console.log(
+        `[@db:chatDb:deleteConversation] Successfully deleted conversation: ${conversationId}`,
+      );
+      return { success: true, data: { count } };
+    } catch (error: any) {
+      console.error(`[@db:chatDb:deleteConversation] Error: ${error.message}`);
+      return { success: false, error: error.message || 'Failed to delete conversation' };
+    }
+  },
+
+  /**
+   * Delete a specific message
+   */
+  async deleteMessage(messageId: string): Promise<DbResponse<{ conversationId: string }>> {
+    try {
+      console.log(`[@db:chatDb:deleteMessage] Deleting message: ${messageId}`);
+      const supabase = await createClient();
+
+      // Get the conversation_id before deleting
+      const { data: messageData, error: getError } = await supabase
+        .from('chat_messages')
+        .select('conversation_id')
+        .eq('id', messageId)
+        .single();
+
+      if (getError) {
+        console.error(`[@db:chatDb:deleteMessage] Error getting message: ${getError.message}`);
+        return { success: false, error: getError.message };
+      }
+
+      // Delete the message
+      const { error } = await supabase.from('chat_messages').delete().eq('id', messageId);
+
+      if (error) {
+        console.error(`[@db:chatDb:deleteMessage] Error deleting message: ${error.message}`);
+        return { success: false, error: error.message };
+      }
+
+      // Update conversation's message_count (decrement by 1, minimum 0)
+      const { data: conversationData } = await supabase
+        .from('chat_conversations')
+        .select('message_count')
+        .eq('id', messageData.conversation_id)
+        .single();
+
+      const currentCount = conversationData?.message_count || 0;
+      const newCount = Math.max(currentCount - 1, 0);
+
+      await supabase
+        .from('chat_conversations')
+        .update({
+          message_count: newCount,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', messageData.conversation_id);
+
+      console.log(`[@db:chatDb:deleteMessage] Successfully deleted message: ${messageId}`);
+      return { success: true, data: { conversationId: messageData.conversation_id } };
+    } catch (error: any) {
+      console.error(`[@db:chatDb:deleteMessage] Error: ${error.message}`);
+      return { success: false, error: error.message || 'Failed to delete message' };
+    }
+  },
+
+  /**
+   * Delete all messages in a conversation (clear conversation history)
+   */
+  async clearConversationMessages(conversationId: string): Promise<DbResponse<{ count: number }>> {
+    try {
+      console.log(
+        `[@db:chatDb:clearConversationMessages] Clearing messages for conversation: ${conversationId}`,
+      );
+      const supabase = await createClient();
+
+      // Delete all messages in the conversation
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .delete()
+        .eq('conversation_id', conversationId)
+        .select('id');
+
+      if (error) {
+        console.error(`[@db:chatDb:clearConversationMessages] Error: ${error.message}`);
+        return { success: false, error: error.message };
+      }
+
+      const count = data?.length || 0;
+
+      // Update conversation's message_count to 0
+      await supabase
+        .from('chat_conversations')
+        .update({
+          message_count: 0,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', conversationId);
+
+      console.log(`[@db:chatDb:clearConversationMessages] Successfully cleared ${count} messages`);
+      return { success: true, data: { count } };
+    } catch (error: any) {
+      console.error(`[@db:chatDb:clearConversationMessages] Error: ${error.message}`);
+      return { success: false, error: error.message || 'Failed to clear conversation messages' };
+    }
+  },
+
+  /**
    * Delete expired conversations (older than 3 days)
    */
   async deleteExpiredConversations(): Promise<DbResponse<{ count: number }>> {
@@ -346,14 +481,31 @@ const chatDb = {
 
       const now = new Date().toISOString();
 
-      // First, delete messages from expired conversations
+      // First, get the IDs of expired conversations
+      const { data: expiredConversations, error: fetchError } = await supabase
+        .from('chat_conversations')
+        .select('id')
+        .lt('expires_at', now);
+
+      if (fetchError) {
+        console.error(
+          `[@db:chatDb:deleteExpiredConversations] Error fetching expired conversations: ${fetchError.message}`,
+        );
+        return { success: false, error: fetchError.message };
+      }
+
+      if (!expiredConversations || expiredConversations.length === 0) {
+        console.log(`[@db:chatDb:deleteExpiredConversations] No expired conversations found`);
+        return { success: true, data: { count: 0 } };
+      }
+
+      const expiredIds = expiredConversations.map((conv) => conv.id);
+
+      // Delete messages from expired conversations
       const { error: messagesError } = await supabase
         .from('chat_messages')
         .delete()
-        .in(
-          'conversation_id',
-          supabase.from('chat_conversations').select('id').lt('expires_at', now),
-        );
+        .in('conversation_id', expiredIds);
 
       if (messagesError) {
         console.error(

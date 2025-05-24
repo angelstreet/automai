@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { AI_MODELS } from '../../constants';
+import { getModelById } from '../../constants';
 import { useChatContext } from './ChatContext';
 
 /**
@@ -140,38 +140,60 @@ export default function ChatArea() {
 
   const currentMessages = multiModelMessages[activeTab as keyof typeof multiModelMessages] || [];
 
-  // Get model display name
+  // Get model display name using the new helper function
   const getModelDisplayName = (modelId: string) => {
-    const model = AI_MODELS.find((m) => m.id === modelId);
+    const model = getModelById(modelId);
     if (!model) return modelId;
 
     // Simplified names for tabs
-    if (model.name.includes('Claude 3.5')) return 'Claude 3.5';
-    if (model.name.includes('Claude 3 Opus')) return 'Claude Opus';
-    if (model.name.includes('Claude 3 Haiku')) return 'Claude Haiku';
-    if (model.name.includes('GPT-4 Turbo')) return 'GPT-4 Turbo';
-    if (model.name.includes('GPT-4')) return 'GPT-4';
-    return model.name;
+    let name = model.name;
+    if (name.includes('Claude 3.5')) return 'Claude 3.5';
+    if (name.includes('Claude Opus 4')) return 'Claude Opus 4';
+    if (name.includes('Claude Sonnet 4')) return 'Claude Sonnet 4';
+    if (name.includes('Claude 3 Opus')) return 'Claude Opus';
+    if (name.includes('Claude 3 Haiku')) return 'Claude Haiku';
+    if (name.includes('GPT-4.1')) return 'GPT-4.1';
+    if (name.includes('GPT-4 Turbo')) return 'GPT-4 Turbo';
+    if (name.includes('GPT-4')) return 'GPT-4';
+    if (name.includes('o4')) return 'o4';
+    if (name.includes('o3')) return 'o3';
+    if (name.includes('Llama 4')) return 'Llama 4';
+    if (name.includes('Llama 3.3')) return 'Llama 3.3';
+    if (name.includes('Gemini 2.5')) return 'Gemini 2.5';
+    if (name.includes('Qwen3')) return 'Qwen3';
+    if (name.includes('DeepSeek')) return 'DeepSeek';
+    if (name.includes('Mistral')) return 'Mistral';
+    if (name.includes('Grok')) return 'Grok';
+
+    // Fallback to shortened name
+    if (name.length > 20) {
+      return name.substring(0, 17) + '...';
+    }
+    return name;
   };
 
   return (
     <div className="flex flex-col h-full">
       {/* Model Tabs - Only show if multiple models selected */}
       {selectedModels.length > 1 && (
-        <div className="flex border-b border-border bg-background/50">
-          {selectedModels.map((modelId) => (
-            <button
-              key={modelId}
-              onClick={() => setActiveTab(modelId)}
-              className={`px-4 py-2 text-sm transition-colors ${
-                activeTab === modelId
-                  ? 'bg-primary text-primary-foreground border-b-2 border-primary'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
-              }`}
-            >
-              {getModelDisplayName(modelId)}
-            </button>
-          ))}
+        <div className="flex border-b border-border bg-background/50 overflow-x-auto">
+          {selectedModels.map((modelId) => {
+            const model = getModelById(modelId);
+            return (
+              <button
+                key={modelId}
+                onClick={() => setActiveTab(modelId)}
+                className={`px-4 py-2 text-sm transition-colors whitespace-nowrap flex items-center gap-1 ${
+                  activeTab === modelId
+                    ? 'bg-primary text-primary-foreground border-b-2 border-primary'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
+                }`}
+              >
+                {getModelDisplayName(modelId)}
+                {model?.isFree && <span className="text-[10px]">🆓</span>}
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -187,6 +209,19 @@ export default function ChatArea() {
                   ? `Chat with ${getModelDisplayName(selectedModels[0])}`
                   : `Chat with ${selectedModels.length} selected models`}
               </div>
+              {selectedModels.length > 0 && (
+                <div className="text-xs mt-2 space-y-1">
+                  {selectedModels.map((modelId) => {
+                    const model = getModelById(modelId);
+                    return (
+                      <div key={modelId} className="flex items-center justify-center gap-1">
+                        <span>{model?.name || modelId}</span>
+                        {model?.isFree && <span className="text-green-600">FREE</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         ) : (

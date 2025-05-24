@@ -45,18 +45,13 @@ export const getConversations = cache(
     try {
       console.log('[@action:chat:getConversations] Starting to fetch conversations');
 
-      // Get current user and team
+      // Get current user for authentication
       const user = await getUser();
       if (!user) {
         return { success: false, error: 'User not authenticated' };
       }
 
-      const activeTeam = await getUserActiveTeam(user.id);
-      if (!activeTeam?.id) {
-        return { success: false, error: 'No active team found' };
-      }
-
-      const result = await chatDb.getConversations(activeTeam.id, options);
+      const result = await chatDb.getConversations(options);
 
       if (!result.success) {
         console.error('[@action:chat:getConversations] Error:', result.error);
@@ -145,7 +140,7 @@ export const getMessages = cache(
  * Create a new conversation
  */
 export async function createConversation(
-  input: Omit<CreateConversationInput, 'team_id' | 'creator_id' | 'tenant_id'>,
+  input: Omit<CreateConversationInput, never>, // No fields to omit anymore
 ): Promise<ActionResult<ChatConversation>> {
   try {
     console.log(`[@action:chat:createConversation] Creating conversation: ${input.title}`);
@@ -155,19 +150,7 @@ export async function createConversation(
       return { success: false, error: 'User not authenticated' };
     }
 
-    const activeTeam = await getUserActiveTeam(user.id);
-    if (!activeTeam?.id) {
-      return { success: false, error: 'No active team found' };
-    }
-
-    const conversationInput: CreateConversationInput = {
-      ...input,
-      team_id: activeTeam.id,
-      creator_id: user.id,
-      tenant_id: user.tenant_id,
-    };
-
-    const result = await chatDb.createConversation(conversationInput);
+    const result = await chatDb.createConversation(input);
 
     if (!result.success) {
       console.error('[@action:chat:createConversation] Error:', result.error);
@@ -192,9 +175,16 @@ export async function createConversation(
  */
 export async function sendMessage(input: SendMessageInput): Promise<
   ActionResult<{
-    conversation: ChatConversation;
-    userMessage: ChatMessage;
-    aiMessages: ChatMessage[];
+    conversation?: ChatConversation;
+    userMessage?: ChatMessage;
+    aiMessages: Array<{
+      modelId: string;
+      content: string;
+      metadata?: any;
+      error?: string;
+      responseTime: number;
+    }>;
+    conversationId: string;
   }>
 > {
   try {
@@ -205,52 +195,7 @@ export async function sendMessage(input: SendMessageInput): Promise<
       return { success: false, error: 'User not authenticated' };
     }
 
-    const activeTeam = await getUserActiveTeam(user.id);
-    if (!activeTeam?.id) {
-      return { success: false, error: 'No active team found' };
-    }
-
-    let conversation: ChatConversation;
-
-    // Create conversation if not provided
-    if (!input.conversationId) {
-      const title = input.conversationTitle || `Chat ${new Date().toLocaleDateString()}`;
-      const createResult = await chatDb.createConversation({
-        title,
-        team_id: activeTeam.id,
-        creator_id: user.id,
-        tenant_id: user.tenant_id,
-        model_ids: input.modelIds,
-      });
-
-      if (!createResult.success || !createResult.data) {
-        return { success: false, error: createResult.error || 'Failed to create conversation' };
-      }
-
-      conversation = createResult.data;
-    } else {
-      const getResult = await chatDb.getConversationById(input.conversationId);
-      if (!getResult.success || !getResult.data) {
-        return { success: false, error: getResult.error || 'Conversation not found' };
-      }
-      conversation = getResult.data;
-    }
-
-    // Create user message
-    const userMessageInput: CreateMessageInput = {
-      conversation_id: conversation.id,
-      role: 'user',
-      content: input.content,
-      team_id: activeTeam.id,
-      creator_id: user.id,
-    };
-
-    const userMessageResult = await chatDb.createMessage(userMessageInput);
-    if (!userMessageResult.success || !userMessageResult.data) {
-      return { success: false, error: userMessageResult.error || 'Failed to create user message' };
-    }
-
-    // Get OpenRouter API key from environment variables or team settings
+    // Get OpenRouter API key from environment variables
     const openrouterApiKey = process.env.OPENROUTER_API_KEY;
     if (!openrouterApiKey) {
       return { success: false, error: 'OpenRouter API key not configured' };
@@ -258,26 +203,51 @@ export async function sendMessage(input: SendMessageInput): Promise<
 
     const openRouterClient = createOpenRouterClient(openrouterApiKey);
 
-    // Get conversation history for context
-    const messagesResult = await chatDb.getMessages(conversation.id);
-    const messages = messagesResult.success ? messagesResult.data || [] : [];
+    let conversation: ChatConversation | undefined;
+    let existingMessages: ChatMessage[] = [];
 
-    // Convert to OpenRouter format
-    const openRouterMessages = messages.map((msg) => ({
-      role: msg.role,
-      content: msg.content,
-    }));
+    // If conversation exists, get it and its messages for context
+    if (input.conversationId) {
+      const getResult = await chatDb.getConversationById(input.conversationId);
+      if (!getResult.success || !getResult.data) {
+        return { success: false, error: getResult.error || 'Conversation not found' };
+      }
+      conversation = getResult.data;
 
-    const aiMessages: ChatMessage[] = [];
+      // Get existing messages for context
+      const messagesResult = await chatDb.getMessages(conversation.id);
+      existingMessages = messagesResult.success ? messagesResult.data || [] : [];
+    }
 
-    // Send to each selected model
+    // Prepare messages for OpenRouter (existing + new user message)
+    const allMessages = [
+      ...existingMessages.map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+      })),
+      {
+        role: 'user' as const,
+        content: input.content,
+      },
+    ];
+
+    const aiResponses: Array<{
+      modelId: string;
+      content: string;
+      metadata?: any;
+      error?: string;
+      responseTime: number;
+    }> = [];
+
+    // Send to each selected model and collect responses
     for (const modelId of input.modelIds) {
       try {
         const startTime = Date.now();
+        console.log(`[@action:chat:sendMessage] Sending to model: ${modelId}`);
 
         const response = await openRouterClient.createChatCompletion({
           model: modelId,
-          messages: openRouterMessages,
+          messages: allMessages,
           max_tokens: 2000,
           temperature: 0.7,
         });
@@ -287,96 +257,178 @@ export async function sendMessage(input: SendMessageInput): Promise<
         if (response.success && response.data) {
           const aiContent = response.data.choices[0]?.message?.content || 'No response generated';
 
-          // Create AI message
-          const aiMessageInput: CreateMessageInput = {
-            conversation_id: conversation.id,
-            role: 'assistant',
+          aiResponses.push({
+            modelId,
             content: aiContent,
-            model_id: modelId,
-            model_name: response.data.model,
-            provider: 'openrouter',
-            token_count: response.data.usage?.total_tokens || null,
-            response_time_ms: responseTime,
             metadata: {
               usage: response.data.usage,
               finish_reason: response.data.choices[0]?.finish_reason,
+              model_name: response.data.model,
             },
-            team_id: activeTeam.id,
-            creator_id: user.id,
-          };
+            responseTime,
+          });
 
-          const aiMessageResult = await chatDb.createMessage(aiMessageInput);
-          if (aiMessageResult.success && aiMessageResult.data) {
-            aiMessages.push(aiMessageResult.data);
-          }
+          console.log(`[@action:chat:sendMessage] Got successful response from ${modelId}`);
         } else {
-          // Create error message
-          const errorMessageInput: CreateMessageInput = {
-            conversation_id: conversation.id,
-            role: 'assistant',
+          aiResponses.push({
+            modelId,
             content: 'Sorry, I encountered an error while processing your message.',
-            model_id: modelId,
-            model_name: modelId,
-            provider: 'openrouter',
-            error_message: response.error || 'Unknown error',
-            response_time_ms: responseTime,
-            team_id: activeTeam.id,
-            creator_id: user.id,
-          };
+            error: response.error || 'Unknown error',
+            responseTime,
+          });
 
-          const errorMessageResult = await chatDb.createMessage(errorMessageInput);
-          if (errorMessageResult.success && errorMessageResult.data) {
-            aiMessages.push(errorMessageResult.data);
-          }
+          console.error(`[@action:chat:sendMessage] Error from model ${modelId}:`, response.error);
         }
       } catch (modelError: any) {
-        console.error(`[@action:chat:sendMessage] Error with model ${modelId}:`, modelError);
+        console.error(`[@action:chat:sendMessage] Exception with model ${modelId}:`, modelError);
 
-        // Create error message for this model
-        const errorMessageInput: CreateMessageInput = {
-          conversation_id: conversation.id,
-          role: 'assistant',
+        aiResponses.push({
+          modelId,
           content: 'Sorry, I encountered an error while processing your message.',
-          model_id: modelId,
-          model_name: modelId,
-          provider: 'openrouter',
-          error_message: modelError.message || 'Unknown error',
-          team_id: activeTeam.id,
-          creator_id: user.id,
-        };
-
-        const errorMessageResult = await chatDb.createMessage(errorMessageInput);
-        if (errorMessageResult.success && errorMessageResult.data) {
-          aiMessages.push(errorMessageResult.data);
-        }
+          error: modelError.message || 'Unknown error',
+          responseTime: 0,
+        });
       }
     }
 
-    // Update conversation's model_ids if needed
-    const updatedModelIds = Array.from(new Set([...conversation.model_ids, ...input.modelIds]));
-    if (updatedModelIds.length !== conversation.model_ids.length) {
-      await chatDb.updateConversation(conversation.id, {
-        model_ids: updatedModelIds,
-      });
+    // Check if we got any responses (successful or error)
+    if (aiResponses.length === 0) {
+      return { success: false, error: 'No responses received from any models' };
     }
 
-    // Revalidate chat page
-    revalidatePath('/[locale]/[tenant]/chat', 'page');
+    // Return responses immediately for display
+    // The database saving will happen in the background via a separate action
+    const conversationId = input.conversationId || 'temp-' + Date.now();
 
     console.log(
-      `[@action:chat:sendMessage] Successfully sent message and got ${aiMessages.length} AI responses`,
+      `[@action:chat:sendMessage] Returning ${aiResponses.length} AI responses for immediate display`,
     );
+
+    // Start background saving (don't await it)
+    saveMessageToDatabase({
+      conversation,
+      input,
+      aiResponses,
+    }).catch((error) => {
+      console.error('[@action:chat:sendMessage] Background save error:', error);
+    });
+
     return {
       success: true,
       data: {
         conversation,
-        userMessage: userMessageResult.data,
-        aiMessages,
+        aiMessages: aiResponses,
+        conversationId,
       },
     };
   } catch (error: any) {
     console.error('[@action:chat:sendMessage] Error:', error);
     return { success: false, error: error.message || 'Failed to send message' };
+  }
+}
+
+/**
+ * Save message to database (background operation)
+ */
+async function saveMessageToDatabase({
+  conversation,
+  input,
+  aiResponses,
+}: {
+  conversation?: ChatConversation;
+  input: SendMessageInput;
+  aiResponses: Array<{
+    modelId: string;
+    content: string;
+    metadata?: any;
+    error?: string;
+    responseTime: number;
+  }>;
+}) {
+  try {
+    console.log('[@action:chat:saveMessageToDatabase] Starting background save');
+
+    let finalConversation = conversation;
+
+    // Create conversation if it doesn't exist
+    if (!input.conversationId || !conversation) {
+      const title = input.conversationTitle || `Chat ${new Date().toLocaleDateString()}`;
+      const createResult = await chatDb.createConversation({
+        title,
+        model_ids: input.modelIds,
+      });
+
+      if (!createResult.success || !createResult.data) {
+        throw new Error(createResult.error || 'Failed to create conversation');
+      }
+
+      finalConversation = createResult.data;
+      console.log(
+        `[@action:chat:saveMessageToDatabase] Created new conversation: ${finalConversation.id}`,
+      );
+    }
+
+    if (!finalConversation) {
+      throw new Error('No conversation available for saving');
+    }
+
+    // Create user message
+    const userMessageInput: CreateMessageInput = {
+      conversation_id: finalConversation.id,
+      role: 'user',
+      content: input.content,
+    };
+
+    const userMessageResult = await chatDb.createMessage(userMessageInput);
+    if (!userMessageResult.success || !userMessageResult.data) {
+      throw new Error(userMessageResult.error || 'Failed to create user message');
+    }
+
+    console.log(
+      `[@action:chat:saveMessageToDatabase] Created user message: ${userMessageResult.data.id}`,
+    );
+
+    // Create AI messages
+    for (const response of aiResponses) {
+      const aiMessageInput: CreateMessageInput = {
+        conversation_id: finalConversation.id,
+        role: 'assistant',
+        content: response.content,
+        model_id: response.modelId,
+        model_name: response.metadata?.model_name || response.modelId,
+        provider: 'openrouter',
+        token_count: response.metadata?.usage?.total_tokens || null,
+        response_time_ms: response.responseTime,
+        error_message: response.error || null,
+        metadata: response.metadata || null,
+      };
+
+      const aiMessageResult = await chatDb.createMessage(aiMessageInput);
+      if (aiMessageResult.success && aiMessageResult.data) {
+        console.log(
+          `[@action:chat:saveMessageToDatabase] Created AI message: ${aiMessageResult.data.id}`,
+        );
+      }
+    }
+
+    // Update conversation's model_ids if needed
+    const updatedModelIds = Array.from(
+      new Set([...finalConversation.model_ids, ...input.modelIds]),
+    );
+    if (updatedModelIds.length !== finalConversation.model_ids.length) {
+      await chatDb.updateConversation(finalConversation.id, {
+        model_ids: updatedModelIds,
+      });
+      console.log(`[@action:chat:saveMessageToDatabase] Updated conversation model_ids`);
+    }
+
+    // Revalidate chat page
+    revalidatePath('/[locale]/[tenant]/chat', 'page');
+
+    console.log('[@action:chat:saveMessageToDatabase] Successfully completed background save');
+  } catch (error: any) {
+    console.error('[@action:chat:saveMessageToDatabase] Error:', error);
+    // Don't throw here since this is background operation
   }
 }
 
@@ -457,6 +509,108 @@ export async function syncOpenRouterModels(): Promise<ActionResult<{ count: numb
   } catch (error: any) {
     console.error('[@action:chat:syncOpenRouterModels] Error:', error);
     return { success: false, error: error.message || 'Failed to sync OpenRouter models' };
+  }
+}
+
+/**
+ * Delete a conversation and all its messages
+ */
+export async function deleteConversation(
+  conversationId: string,
+): Promise<ActionResult<{ count: number }>> {
+  try {
+    console.log(`[@action:chat:deleteConversation] Deleting conversation: ${conversationId}`);
+
+    const user = await getUser();
+    if (!user) {
+      return { success: false, error: 'User not authenticated' };
+    }
+
+    const result = await chatDb.deleteConversation(conversationId);
+
+    if (!result.success) {
+      console.error('[@action:chat:deleteConversation] Error:', result.error);
+      return { success: false, error: result.error };
+    }
+
+    // Revalidate chat page
+    revalidatePath('/[locale]/[tenant]/chat', 'page');
+
+    console.log(
+      `[@action:chat:deleteConversation] Successfully deleted conversation: ${conversationId}`,
+    );
+    return { success: true, data: result.data };
+  } catch (error: any) {
+    console.error('[@action:chat:deleteConversation] Error:', error);
+    return { success: false, error: error.message || 'Failed to delete conversation' };
+  }
+}
+
+/**
+ * Delete a specific message
+ */
+export async function deleteMessage(
+  messageId: string,
+): Promise<ActionResult<{ conversationId: string }>> {
+  try {
+    console.log(`[@action:chat:deleteMessage] Deleting message: ${messageId}`);
+
+    const user = await getUser();
+    if (!user) {
+      return { success: false, error: 'User not authenticated' };
+    }
+
+    const result = await chatDb.deleteMessage(messageId);
+
+    if (!result.success) {
+      console.error('[@action:chat:deleteMessage] Error:', result.error);
+      return { success: false, error: result.error };
+    }
+
+    // Revalidate chat page
+    revalidatePath('/[locale]/[tenant]/chat', 'page');
+
+    console.log(`[@action:chat:deleteMessage] Successfully deleted message: ${messageId}`);
+    return { success: true, data: result.data };
+  } catch (error: any) {
+    console.error('[@action:chat:deleteMessage] Error:', error);
+    return { success: false, error: error.message || 'Failed to delete message' };
+  }
+}
+
+/**
+ * Clear all messages in a conversation (keep conversation but delete messages)
+ */
+export async function clearConversationMessages(
+  conversationId: string,
+): Promise<ActionResult<{ count: number }>> {
+  try {
+    console.log(
+      `[@action:chat:clearConversationMessages] Clearing messages for: ${conversationId}`,
+    );
+
+    const user = await getUser();
+    if (!user) {
+      return { success: false, error: 'User not authenticated' };
+    }
+
+    const result = await chatDb.clearConversationMessages(conversationId);
+
+    if (!result.success) {
+      console.error('[@action:chat:clearConversationMessages] Error:', result.error);
+      return { success: false, error: result.error };
+    }
+
+    // Revalidate chat page
+    revalidatePath('/[locale]/[tenant]/chat', 'page');
+
+    console.log(
+      `[@action:chat:clearConversationMessages] Successfully cleared ${result.data?.count || 0} messages`,
+    );
+    return { success: true, data: result.data };
+  } catch (error: any) {
+    console.error('[@action:chat:clearConversationMessages] Error:', error);
+    return { success: false, error: error.message || 'Failed to clear conversation messages' };
   }
 }
 

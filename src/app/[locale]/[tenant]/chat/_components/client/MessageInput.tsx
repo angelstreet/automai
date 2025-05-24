@@ -1,51 +1,65 @@
 'use client';
 
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 import { sendMessage } from '@/app/actions/chatAction';
-import { CHAT_SETTINGS, ERROR_MESSAGES } from '../../constants';
+import { CHAT_SETTINGS, ERROR_MESSAGES, hasPaidModels } from '../../constants';
 import { useChatContext } from './ChatContext';
 
 /**
  * Message input component - elegant text input with send button
- * Integrates with OpenRouter backend for real chat functionality
+ * Uses toast notifications for errors, fixed height design
  */
 export default function MessageInput() {
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const {
     selectedModels,
     activeConversationId,
     setActiveConversationId,
-    isApiKeyValid,
     hasEnvApiKey,
     openRouterApiKey,
   } = useChatContext();
 
+  // Check if user has provided API key (not just env placeholder)
+  const hasUserApiKey = openRouterApiKey && openRouterApiKey !== 'env_key_available';
+
+  // API key is valid if user provided one OR env key is available
+  const isApiKeyValid = hasUserApiKey || hasEnvApiKey;
+
   const handleSend = async () => {
     if (!message.trim() || isLoading) return;
 
-    // Validate API key first
-    if (!isApiKeyValid) {
-      setError(
-        'OpenRouter API key is required. Please add your API key or configure OPENROUTER_API_KEY environment variable.',
-      );
-      return;
-    }
-
     if (selectedModels.length === 0) {
-      setError('Please select at least one AI model');
+      toast.error('Please select at least one AI model');
       return;
     }
 
     if (message.length > CHAT_SETTINGS.MAX_MESSAGE_LENGTH) {
-      setError(`Message too long. Maximum ${CHAT_SETTINGS.MAX_MESSAGE_LENGTH} characters.`);
+      toast.error(`Message too long. Maximum ${CHAT_SETTINGS.MAX_MESSAGE_LENGTH} characters.`);
+      return;
+    }
+
+    // Only show API key error if trying to use paid models without API key
+    if (!isApiKeyValid && hasPaidModels(selectedModels)) {
+      toast.error('API key required for paid models', {
+        description: 'Please add your API key or select free models only.',
+        action: {
+          label: 'Add API Key',
+          onClick: () => {
+            const key = prompt('Enter your OpenRouter API key:');
+            if (key?.trim()) {
+              console.log('API key entered by user');
+              // In a real app, you'd want a proper API key input component
+            }
+          },
+        },
+      });
       return;
     }
 
     setIsLoading(true);
-    setError(null);
     const messageContent = message.trim();
     setMessage(''); // Clear input immediately for better UX
 
@@ -55,6 +69,7 @@ export default function MessageInput() {
         modelCount: selectedModels.length,
         messageLength: messageContent.length,
         usingEnvKey: hasEnvApiKey,
+        hasPaidModels: hasPaidModels(selectedModels),
       });
 
       const result = await sendMessage({
@@ -70,36 +85,57 @@ export default function MessageInput() {
         console.log('[@component:MessageInput:handleSend] Message sent successfully');
 
         // Update conversation ID if this was a new conversation
-        if (!activeConversationId && result.data.conversation) {
-          setActiveConversationId(result.data.conversation.id);
+        if (
+          !activeConversationId &&
+          result.data.conversationId &&
+          !result.data.conversationId.startsWith('temp-')
+        ) {
+          setActiveConversationId(result.data.conversationId);
         }
 
-        // Dispatch custom event to notify other components
+        // Dispatch custom event to notify other components with immediate responses
         window.dispatchEvent(
           new CustomEvent('CHAT_MESSAGE_SENT', {
             detail: {
-              conversationId: result.data.conversation.id,
-              userMessage: result.data.userMessage,
-              aiMessages: result.data.aiMessages,
+              conversationId: result.data.conversationId,
+              userMessage: {
+                role: 'user',
+                content: messageContent,
+                timestamp: new Date().toISOString(),
+              },
+              aiMessages: result.data.aiMessages.map((msg) => ({
+                ...msg,
+                role: 'assistant',
+                timestamp: new Date().toISOString(),
+              })),
             },
           }),
         );
+
+        // Show success toast with model count
+        toast.success(`Message sent to ${result.data.aiMessages.length} model(s)`);
       } else {
         console.error('[@component:MessageInput:handleSend] Failed to send message:', result.error);
         const errorMessage = result.error || ERROR_MESSAGES.MESSAGE_SEND_FAILED;
 
         // Show specific error for API key issues
         if (errorMessage.includes('API key') || errorMessage.includes('authentication')) {
-          setError('OpenRouter API key is invalid or not configured. Please check your API key.');
+          toast.error('Invalid API key', {
+            description: 'Please check your OpenRouter API key configuration.',
+          });
         } else {
-          setError(errorMessage);
+          toast.error('Failed to send message', {
+            description: errorMessage,
+          });
         }
 
         setMessage(messageContent); // Restore message on error
       }
     } catch (error: any) {
       console.error('[@component:MessageInput:handleSend] Error sending message:', error);
-      setError(error.message || ERROR_MESSAGES.UNEXPECTED_ERROR);
+      toast.error('Unexpected error', {
+        description: error.message || ERROR_MESSAGES.UNEXPECTED_ERROR,
+      });
       setMessage(messageContent); // Restore message on error
     } finally {
       setIsLoading(false);
@@ -113,12 +149,9 @@ export default function MessageInput() {
     }
   };
 
-  const isDisabled = isLoading || selectedModels.length === 0 || !isApiKeyValid;
+  const isDisabled = isLoading || selectedModels.length === 0;
 
   const getPlaceholder = () => {
-    if (!isApiKeyValid) {
-      return 'OpenRouter API key required...';
-    }
     if (selectedModels.length === 0) {
       return 'Select AI models to start chatting...';
     }
@@ -129,123 +162,72 @@ export default function MessageInput() {
   };
 
   return (
-    <div className="flex flex-col px-4 py-3 h-full">
-      {/* Error Message */}
-      {error && (
-        <div className="mb-2 p-2 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
-          {error}
-          <button
-            onClick={() => setError(null)}
-            className="ml-2 text-destructive/60 hover:text-destructive"
+    <div className="flex items-end space-x-3 px-4 py-3 max-w-4xl mx-auto w-full">
+      {/* Text Input Container */}
+      <div className="flex-1 relative">
+        <textarea
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyPress={handleKeyPress}
+          placeholder={getPlaceholder()}
+          disabled={isDisabled}
+          className="w-full px-4 py-3 bg-background border border-border rounded-2xl resize-none text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring text-sm leading-relaxed transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          rows={1}
+          style={{
+            maxHeight: '120px',
+            minHeight: '44px',
+            resize: 'none',
+            overflow: 'auto',
+          }}
+        />
+
+        {/* Character count indicator */}
+        {message.length > 100 && (
+          <div
+            className={`absolute bottom-1 right-3 text-xs ${
+              message.length > CHAT_SETTINGS.MAX_MESSAGE_LENGTH
+                ? 'text-destructive'
+                : 'text-muted-foreground'
+            }`}
           >
-            ×
-          </button>
-        </div>
-      )}
-
-      {/* API Key Warning */}
-      {!isApiKeyValid && (
-        <div className="mb-2 p-2 bg-orange-50 border border-orange-200 rounded-lg text-orange-800 text-sm">
-          {hasEnvApiKey ? (
-            'OpenRouter API key detected in environment but not accessible from client.'
-          ) : (
-            <>
-              OpenRouter API key required.
-              {typeof window !== 'undefined' && (
-                <button
-                  onClick={() => {
-                    const key = prompt('Enter your OpenRouter API key:');
-                    if (key?.trim()) {
-                      // In a real app, you'd want a proper API key input component
-                      console.log('API key entered by user');
-                    }
-                  }}
-                  className="ml-2 underline hover:no-underline"
-                >
-                  Add API Key
-                </button>
-              )}
-            </>
-          )}
-        </div>
-      )}
-
-      <div className="flex-1 flex items-end space-x-3 max-w-4xl mx-auto w-full">
-        {/* Text Input Container */}
-        <div className="flex-1 relative">
-          <textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder={getPlaceholder()}
-            disabled={isDisabled}
-            className="w-full px-4 py-3 bg-background border border-border rounded-2xl resize-none text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring text-sm leading-relaxed transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            rows={1}
-            style={{
-              maxHeight: '120px',
-              minHeight: '44px',
-              resize: 'none',
-              overflow: 'auto',
-            }}
-          />
-
-          {/* Character count indicator */}
-          {message.length > 100 && (
-            <div
-              className={`absolute bottom-1 right-3 text-xs ${
-                message.length > CHAT_SETTINGS.MAX_MESSAGE_LENGTH
-                  ? 'text-destructive'
-                  : 'text-muted-foreground'
-              }`}
-            >
-              {message.length}/{CHAT_SETTINGS.MAX_MESSAGE_LENGTH}
-            </div>
-          )}
-        </div>
-
-        {/* Send Button */}
-        <button
-          onClick={handleSend}
-          disabled={isDisabled || !message.trim()}
-          className="p-2.5 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 relative"
-        >
-          {isLoading ? (
-            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              />
-            </svg>
-          ) : (
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-              />
-            </svg>
-          )}
-        </button>
+            {message.length}/{CHAT_SETTINGS.MAX_MESSAGE_LENGTH}
+          </div>
+        )}
       </div>
 
-      {/* Model Selection Info */}
-      {selectedModels.length > 0 && isApiKeyValid && (
-        <div className="mt-2 text-xs text-muted-foreground text-center">
-          Sending to {selectedModels.length} model{selectedModels.length > 1 ? 's' : ''}
-          {isLoading && ' • Processing...'}
-          {hasEnvApiKey && ' • Using environment API key'}
-        </div>
-      )}
+      {/* Send Button */}
+      <button
+        onClick={handleSend}
+        disabled={isDisabled || !message.trim()}
+        className="p-2.5 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 relative"
+      >
+        {isLoading ? (
+          <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            />
+          </svg>
+        ) : (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+            />
+          </svg>
+        )}
+      </button>
     </div>
   );
 }
