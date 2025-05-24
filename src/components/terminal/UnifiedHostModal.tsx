@@ -1,7 +1,16 @@
 'use client';
 
-import { X, Monitor, Wifi, WifiOff, Terminal as TerminalIcon } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import {
+  X,
+  Monitor,
+  Wifi,
+  WifiOff,
+  Terminal as TerminalIcon,
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
+} from 'lucide-react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 
 import { TerminalEmulator } from '@/app/[locale]/[tenant]/hosts/_components/client/TerminalEmulator';
 import { Button } from '@/components/shadcn/button';
@@ -27,6 +36,12 @@ export function UnifiedHostModal({
   const [isConnected, setIsConnected] = useState(false);
   const [activeTab, setActiveTab] = useState<'vnc' | 'terminal'>(defaultTab);
 
+  // VNC scaling state
+  const [vncScale, setVncScale] = useState(1);
+  const [autoFit, setAutoFit] = useState(true);
+  const vncContainerRef = useRef<HTMLDivElement>(null);
+  const vncIframeRef = useRef<HTMLIFrameElement>(null);
+
   // Terminal session state
   const [terminalSessionId, setTerminalSessionId] = useState<string | null>(null);
   const [isTerminalConnecting, setIsTerminalConnecting] = useState(false);
@@ -38,6 +53,8 @@ export function UnifiedHostModal({
       setIsVncLoading(true);
       setIsConnected(false);
       setActiveTab(defaultTab);
+      setVncScale(1);
+      setAutoFit(true);
       // Reset terminal state
       setTerminalSessionId(null);
       setIsTerminalConnecting(false);
@@ -46,6 +63,60 @@ export function UnifiedHostModal({
       setIsConnected(true);
     }
   }, [isOpen, host, defaultTab]);
+
+  // Auto-fit VNC scaling calculation
+  const calculateAutoFitScale = useCallback(() => {
+    if (!vncContainerRef.current || !autoFit) return;
+
+    const container = vncContainerRef.current;
+    const containerWidth = container.clientWidth;
+    const containerHeight = container.clientHeight;
+
+    // Assuming standard VNC resolution (can be adjusted)
+    const vncWidth = 1920; // Default VNC width
+    const vncHeight = 1080; // Default VNC height
+
+    const scaleX = containerWidth / vncWidth;
+    const scaleY = containerHeight / vncHeight;
+    const scale = Math.min(scaleX, scaleY, 1); // Don't scale up beyond 100%
+
+    console.log(`[@component:UnifiedHostModal] Auto-fit scale calculated: ${scale}`);
+    setVncScale(scale);
+  }, [autoFit]);
+
+  // Recalculate scale when container size changes or tab switches
+  useEffect(() => {
+    if (activeTab === 'vnc' && autoFit) {
+      // Small delay to ensure container is rendered
+      const timer = setTimeout(calculateAutoFitScale, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [activeTab, autoFit, calculateAutoFitScale]);
+
+  // Handle window resize for auto-fit
+  useEffect(() => {
+    if (autoFit && activeTab === 'vnc') {
+      const handleResize = () => calculateAutoFitScale();
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }
+  }, [autoFit, activeTab, calculateAutoFitScale]);
+
+  // VNC scaling controls
+  const handleZoomIn = () => {
+    setAutoFit(false);
+    setVncScale((prev) => Math.min(prev + 0.1, 2));
+  };
+
+  const handleZoomOut = () => {
+    setAutoFit(false);
+    setVncScale((prev) => Math.max(prev - 0.1, 0.3));
+  };
+
+  const handleAutoFit = () => {
+    setAutoFit(true);
+    calculateAutoFitScale();
+  };
 
   // Check if host supports terminal access
   const supportsTerminal = useCallback((hostToCheck: Host | null): boolean => {
@@ -154,6 +225,10 @@ export function UnifiedHostModal({
   // Handle VNC iframe load
   const handleVncLoad = () => {
     setIsVncLoading(false);
+    // Trigger auto-fit calculation after iframe loads
+    if (autoFit) {
+      setTimeout(calculateAutoFitScale, 500);
+    }
   };
 
   const handleClose = async () => {
@@ -190,10 +265,10 @@ export function UnifiedHostModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="w-[95vw] max-w-none sm:max-w-none h-[90vh] p-0 overflow-hidden [&>button]:hidden">
+      <DialogContent className="w-[98vw] max-w-none sm:max-w-none h-[98vh] p-0 overflow-hidden [&>button]:hidden fixed top-1 left-1/2 transform -translate-x-1/2">
         <div className="flex flex-col h-full">
-          {/* Header with Title, Tabs, and Close Button */}
-          <div className="flex items-center justify-between p-3 border-b bg-background">
+          {/* Header with Title, Tabs, Controls, and Close Button */}
+          <div className="flex items-center justify-between p-3 border-b bg-background shrink-0">
             <div className="flex items-center space-x-3">
               <Monitor className="h-5 w-5" />
               <DialogTitle className="text-lg font-semibold">{modalTitle}</DialogTitle>
@@ -236,9 +311,47 @@ export function UnifiedHostModal({
               </div>
             )}
 
-            <Button variant="ghost" size="sm" onClick={handleClose}>
-              <X className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center space-x-2">
+              {/* VNC Scaling Controls - only show when VNC tab is active */}
+              {activeTab === 'vnc' && hasVnc && (
+                <div className="flex items-center space-x-1 border-r pr-3 mr-3">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleZoomOut}
+                    title="Zoom Out"
+                    disabled={vncScale <= 0.3}
+                  >
+                    <ZoomOut className="h-4 w-4" />
+                  </Button>
+                  <span className="text-xs text-gray-500 min-w-[3rem] text-center">
+                    {Math.round(vncScale * 100)}%
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleZoomIn}
+                    title="Zoom In"
+                    disabled={vncScale >= 2}
+                  >
+                    <ZoomIn className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleAutoFit}
+                    title="Fit to Window"
+                    className={autoFit ? 'bg-blue-100 dark:bg-blue-900' : ''}
+                  >
+                    <Maximize2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+
+              <Button variant="ghost" size="sm" onClick={handleClose}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
 
           {/* Content Area */}
@@ -259,7 +372,7 @@ export function UnifiedHostModal({
                   </div>
                 </div>
               ) : (
-                <>
+                <div ref={vncContainerRef} className="h-full w-full overflow-auto bg-gray-900">
                   {/* VNC Loading State */}
                   {isVncLoading && (
                     <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800 z-10">
@@ -270,19 +383,32 @@ export function UnifiedHostModal({
                     </div>
                   )}
 
-                  {/* VNC iframe */}
-                  <iframe
-                    src={vncUrl}
-                    className="w-full h-full"
+                  {/* VNC iframe with scaling */}
+                  <div
+                    className="h-full w-full flex items-center justify-center"
                     style={{
-                      border: 'none',
-                      display: 'block',
+                      minHeight: '100%',
+                      minWidth: '100%',
                     }}
-                    sandbox="allow-scripts allow-same-origin allow-forms"
-                    onLoad={handleVncLoad}
-                    title={`VNC Stream - ${host.name}`}
-                  />
-                </>
+                  >
+                    <iframe
+                      ref={vncIframeRef}
+                      src={vncUrl}
+                      className="border-none"
+                      style={{
+                        transform: `scale(${vncScale})`,
+                        transformOrigin: 'center center',
+                        width: autoFit ? '100%' : `${100 / vncScale}%`,
+                        height: autoFit ? '100%' : `${100 / vncScale}%`,
+                        minWidth: autoFit ? '1920px' : 'auto',
+                        minHeight: autoFit ? '1080px' : 'auto',
+                      }}
+                      sandbox="allow-scripts allow-same-origin allow-forms"
+                      onLoad={handleVncLoad}
+                      title={`VNC Stream - ${host.name}`}
+                    />
+                  </div>
+                </div>
               )}
             </div>
 
