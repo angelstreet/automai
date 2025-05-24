@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useChatContext } from './ChatContext';
+import { useState, useEffect, useCallback } from 'react';
+
 import { getMessages } from '@/app/actions/chatAction';
+
+import { useChatContext } from './ChatContext';
 
 interface TokenUsage {
   promptTokens: number;
@@ -11,7 +13,7 @@ interface TokenUsage {
 }
 
 /**
- * TokenTracker component - displays cumulative token usage for the active conversation
+ * TokenTracker component - displays cumulative token usage and API key input
  */
 export function TokenTracker() {
   const [tokenUsage, setTokenUsage] = useState<TokenUsage>({
@@ -19,10 +21,10 @@ export function TokenTracker() {
     completionTokens: 0,
     totalTokens: 0,
   });
-  const { activeConversationId } = useChatContext();
+  const { activeConversationId, openRouterApiKey, setOpenRouterApiKey } = useChatContext();
 
   // Calculate token usage from messages
-  const calculateTokenUsage = async () => {
+  const calculateTokenUsage = useCallback(async () => {
     if (!activeConversationId) {
       setTokenUsage({ promptTokens: 0, completionTokens: 0, totalTokens: 0 });
       return;
@@ -51,6 +53,10 @@ export function TokenTracker() {
     } catch (error) {
       console.error('[@component:TokenTracker] Error calculating token usage:', error);
     }
+  }, [activeConversationId]);
+
+  const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setOpenRouterApiKey(e.target.value || null);
   };
 
   useEffect(() => {
@@ -75,19 +81,39 @@ export function TokenTracker() {
       window.removeEventListener('CHAT_CONVERSATION_DELETED', handleConversationChange);
       window.removeEventListener('CHAT_MESSAGE_DELETED', handleConversationChange);
     };
-  }, [activeConversationId]);
-
-  // Don't show if no active conversation or no tokens used
-  if (!activeConversationId || tokenUsage.totalTokens === 0) {
-    return null;
-  }
+  }, [activeConversationId, calculateTokenUsage]);
 
   return (
     <div className="px-4">
-      <div className="text-xs text-center text-muted-foreground">
-        Prompt: {tokenUsage.promptTokens.toLocaleString()} • Response:{' '}
-        {tokenUsage.completionTokens.toLocaleString()} • Total:{' '}
-        {tokenUsage.totalTokens.toLocaleString()}
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        {/* Token Usage */}
+        <div>
+          {activeConversationId && tokenUsage.totalTokens > 0 && (
+            <>
+              Prompt: {tokenUsage.promptTokens.toLocaleString()} • Response:{' '}
+              {tokenUsage.completionTokens.toLocaleString()} • Total:{' '}
+              {tokenUsage.totalTokens.toLocaleString()}
+            </>
+          )}
+        </div>
+
+        {/* Compact API Key Input */}
+        <div className="flex items-center gap-2">
+          <label htmlFor="api-key-compact" className="text-xs text-muted-foreground">
+            API Key:
+          </label>
+          <input
+            id="api-key-compact"
+            type="password"
+            placeholder="OpenRouter key"
+            value={openRouterApiKey === 'env_key_available' ? '' : openRouterApiKey || ''}
+            onChange={handleApiKeyChange}
+            className="px-2 py-1 w-32 bg-background border border-border rounded text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring"
+          />
+          {openRouterApiKey === 'env_key_available' && (
+            <span className="text-xs text-green-600">✓</span>
+          )}
+        </div>
       </div>
     </div>
   );

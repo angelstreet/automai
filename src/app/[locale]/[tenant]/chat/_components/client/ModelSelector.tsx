@@ -94,8 +94,8 @@ export default function ModelSelector({ className = '' }: ModelSelectorProps) {
   const getDisplayName = (model: OpenRouterModel): string => {
     // Shorten overly long names
     let name = model.name;
-    if (name.length > 35) {
-      name = name.substring(0, 32) + '...';
+    if (name.length > 50) {
+      name = name.substring(0, 47) + '...';
     }
     return name;
   };
@@ -160,7 +160,7 @@ export default function ModelSelector({ className = '' }: ModelSelectorProps) {
           <span className="text-muted-foreground">
             {selectedModels.length < MODEL_SELECTION.MAX_MODELS
               ? 'Add model...'
-              : `Max ${MODEL_SELECTION.MAX_MODELS} models selected`}
+              : `Max ${MODEL_SELECTION.MAX_MODELS} models`}
           </span>
           <svg
             className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
