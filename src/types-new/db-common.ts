@@ -46,6 +46,12 @@ export interface Database {
       // Deployment tables
       deployments: DeploymentsTable;
       deployment_logs: DeploymentLogsTable;
+
+      // Chat tables
+      chat_conversations: ChatConversationsTable;
+      chat_messages: ChatMessagesTable;
+      openrouter_models: OpenrouterModelsTable;
+
       // Subscription and resource management
       subscription_tiers: SubscriptionTiersTable;
       resource_limits: ResourceLimitsTable;
@@ -183,6 +189,10 @@ export type CICDBuildsTable = any;
 export type DeploymentsTable = any;
 export type DeploymentLogsTable = any;
 export type DeploymentCICDMappingsTable = any;
+
+export type ChatConversationsTable = any;
+export type ChatMessagesTable = any;
+export type OpenrouterModelsTable = any;
 
 export type SubscriptionTiersTable = any;
 export type ResourceLimitsTable = any;
