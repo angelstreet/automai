@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { sendMessage } from '@/app/actions/chatAction';
 import { CHAT_SETTINGS, ERROR_MESSAGES, hasPaidModels } from '../../constants';
 import { useChatContext } from './ChatContext';
+import { TokenTracker } from './TokenTracker';
 
 /**
  * Message input component - elegant text input with send button
@@ -86,7 +87,9 @@ export default function MessageInput() {
 
         // Update conversation ID if this was a new conversation
         const newConversationId = result.data.conversationId;
-        if (!activeConversationId && newConversationId && !newConversationId.startsWith('temp-')) {
+
+        // Set conversation ID immediately, even for temp IDs, so components know which conversation this is
+        if (!activeConversationId) {
           setActiveConversationId(newConversationId);
           console.log(
             `[@component:MessageInput:handleSend] Set active conversation: ${newConversationId}`,
@@ -162,68 +165,73 @@ export default function MessageInput() {
   };
 
   return (
-    <div className="flex items-end space-x-3 px-4 py-3 max-w-4xl mx-auto w-full">
-      {/* Text Input Container */}
-      <div className="flex-1 relative">
-        <textarea
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyPress={handleKeyPress}
-          placeholder={getPlaceholder()}
-          disabled={isDisabled}
-          className="w-full px-4 py-3 bg-background border border-border rounded-2xl resize-none text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring text-sm leading-relaxed transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          rows={1}
-          style={{
-            maxHeight: '120px',
-            minHeight: '44px',
-            resize: 'none',
-            overflow: 'auto',
-          }}
-        />
+    <div className="max-w-4xl mx-auto w-full">
+      {/* Token Usage Display */}
+      <TokenTracker />
 
-        {/* Character count indicator */}
-        {message.length > 100 && (
-          <div
-            className={`absolute bottom-1 right-3 text-xs ${
-              message.length > CHAT_SETTINGS.MAX_MESSAGE_LENGTH
-                ? 'text-destructive'
-                : 'text-muted-foreground'
-            }`}
-          >
-            {message.length}/{CHAT_SETTINGS.MAX_MESSAGE_LENGTH}
-          </div>
-        )}
+      <div className="flex items-end space-x-3 px-4 py-3">
+        {/* Text Input Container */}
+        <div className="flex-1 relative">
+          <textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder={getPlaceholder()}
+            disabled={isDisabled}
+            className="w-full px-4 py-3 bg-background border border-border rounded-2xl resize-none text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring text-sm leading-relaxed transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            rows={1}
+            style={{
+              maxHeight: '120px',
+              minHeight: '44px',
+              resize: 'none',
+              overflow: 'auto',
+            }}
+          />
+
+          {/* Character count indicator */}
+          {message.length > 100 && (
+            <div
+              className={`absolute bottom-1 right-3 text-xs ${
+                message.length > CHAT_SETTINGS.MAX_MESSAGE_LENGTH
+                  ? 'text-destructive'
+                  : 'text-muted-foreground'
+              }`}
+            >
+              {message.length}/{CHAT_SETTINGS.MAX_MESSAGE_LENGTH}
+            </div>
+          )}
+        </div>
+
+        {/* Send Button */}
+        <button
+          onClick={handleSend}
+          disabled={isDisabled || !message.trim()}
+          className="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 font-medium text-sm"
+        >
+          {isLoading ? (
+            <div className="flex items-center gap-2">
+              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
+              </svg>
+              <span>Sending...</span>
+            </div>
+          ) : (
+            'Send'
+          )}
+        </button>
       </div>
-
-      {/* Send Button */}
-      <button
-        onClick={handleSend}
-        disabled={isDisabled || !message.trim()}
-        className="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 font-medium text-sm"
-      >
-        {isLoading ? (
-          <div className="flex items-center gap-2">
-            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              />
-            </svg>
-            <span>Sending...</span>
-          </div>
-        ) : (
-          'Send'
-        )}
-      </button>
     </div>
   );
 }

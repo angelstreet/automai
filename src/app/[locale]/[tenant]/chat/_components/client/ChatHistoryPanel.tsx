@@ -3,11 +3,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 
-import {
-  getConversations,
-  deleteConversation,
-  clearConversationMessages,
-} from '@/app/actions/chatAction';
+import { getConversations, deleteConversation } from '@/app/actions/chatAction';
 import type { ChatConversation } from '@/lib/db/chatDb';
 import { useChatContext } from './ChatContext';
 
@@ -20,7 +16,6 @@ export default function ChatHistoryPanel() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingConversationId, setDeletingConversationId] = useState<string | null>(null);
-  const [clearingConversationId, setClearingConversationId] = useState<string | null>(null);
   const { setActiveConversationId, activeConversationId } = useChatContext();
 
   // Fetch conversations from database
@@ -63,12 +58,10 @@ export default function ChatHistoryPanel() {
 
     window.addEventListener('CHAT_MESSAGE_SENT', handleNewMessage);
     window.addEventListener('CHAT_CONVERSATION_DELETED', handleConversationDeleted);
-    window.addEventListener('CHAT_CONVERSATION_CLEARED', handleConversationDeleted);
 
     return () => {
       window.removeEventListener('CHAT_MESSAGE_SENT', handleNewMessage);
       window.removeEventListener('CHAT_CONVERSATION_DELETED', handleConversationDeleted);
-      window.removeEventListener('CHAT_CONVERSATION_CLEARED', handleConversationDeleted);
     };
   }, []);
 
@@ -88,12 +81,6 @@ export default function ChatHistoryPanel() {
     event: React.MouseEvent,
   ) => {
     event.stopPropagation(); // Prevent conversation selection
-
-    const confirmed = window.confirm(
-      `Are you sure you want to delete the conversation "${conversationTitle}"?\n\nThis will permanently delete all messages in this conversation.`,
-    );
-
-    if (!confirmed) return;
 
     try {
       console.log(`[@component:ChatHistoryPanel] Deleting conversation: ${conversationId}`);
@@ -123,45 +110,6 @@ export default function ChatHistoryPanel() {
       toast.error('Failed to delete conversation');
     } finally {
       setDeletingConversationId(null);
-    }
-  };
-
-  const handleClearConversation = async (
-    conversationId: string,
-    conversationTitle: string,
-    event: React.MouseEvent,
-  ) => {
-    event.stopPropagation(); // Prevent conversation selection
-
-    const confirmed = window.confirm(
-      `Are you sure you want to clear all messages in "${conversationTitle}"?\n\nThis will delete all messages but keep the conversation.`,
-    );
-
-    if (!confirmed) return;
-
-    try {
-      console.log(`[@component:ChatHistoryPanel] Clearing conversation: ${conversationId}`);
-      setClearingConversationId(conversationId);
-
-      const result = await clearConversationMessages(conversationId);
-
-      if (result.success) {
-        toast.success(`Cleared ${result.data?.count || 0} messages`);
-
-        // Dispatch event for other components
-        window.dispatchEvent(
-          new CustomEvent('CHAT_CONVERSATION_CLEARED', {
-            detail: { conversationId },
-          }),
-        );
-      } else {
-        toast.error(result.error || 'Failed to clear conversation');
-      }
-    } catch (error: any) {
-      console.error('[@component:ChatHistoryPanel] Clear error:', error);
-      toast.error('Failed to clear conversation');
-    } finally {
-      setClearingConversationId(null);
     }
   };
 
@@ -243,20 +191,6 @@ export default function ChatHistoryPanel() {
 
               {/* Action buttons - shown on hover */}
               <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center space-x-1">
-                {/* Clear conversation button */}
-                <button
-                  onClick={(e) => handleClearConversation(conversation.id, conversation.title, e)}
-                  disabled={clearingConversationId === conversation.id}
-                  className="p-1 rounded text-xs text-muted-foreground hover:text-orange-600 hover:bg-orange-100 dark:hover:bg-orange-900/20 transition-colors"
-                  title="Clear messages"
-                >
-                  {clearingConversationId === conversation.id ? (
-                    <div className="w-3 h-3 border border-orange-600 border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    '🗑️'
-                  )}
-                </button>
-
                 {/* Delete conversation button */}
                 <button
                   onClick={(e) => handleDeleteConversation(conversation.id, conversation.title, e)}

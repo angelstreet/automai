@@ -56,7 +56,20 @@ export default function ChatContent() {
     // Listen for new messages to display immediately
     const handleNewMessage = (event: CustomEvent) => {
       const { conversationId, userMessage, aiMessages } = event.detail;
-      if (conversationId === activeConversationId || conversationId.startsWith('temp-')) {
+
+      console.log('[@component:ChatContent] New message event received', {
+        conversationId,
+        activeConversationId,
+        aiMessageCount: aiMessages?.length,
+      });
+
+      // Show messages if this is the active conversation OR if no active conversation (new chat)
+      const shouldShow =
+        conversationId === activeConversationId ||
+        !activeConversationId ||
+        conversationId.startsWith('temp-');
+
+      if (shouldShow) {
         console.log('[@component:ChatContent] Adding messages immediately from event');
 
         // Create temporary message objects for immediate display
@@ -205,11 +218,15 @@ export default function ChatContent() {
 
   if (!activeConversationId) {
     return (
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="text-center text-muted-foreground">
-          <div className="text-6xl mb-4">💬</div>
-          <h3 className="text-xl font-semibold mb-2">Start a new conversation</h3>
-          <p className="text-sm">Select a model and send a message to begin chatting</p>
+      <div className="h-full flex flex-col">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center text-muted-foreground">
+              <div className="text-6xl mb-4">💬</div>
+              <h3 className="text-xl font-semibold mb-2">Start a new conversation</h3>
+              <p className="text-sm">Select a model and send a message to begin chatting</p>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -238,77 +255,90 @@ export default function ChatContent() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-4">
-      {messages.length === 0 ? (
-        <div className="text-center text-muted-foreground py-8">
-          <p>No messages in this conversation yet.</p>
-        </div>
-      ) : (
-        messages.map((message) => (
-          <div
-            key={message.id}
-            className={`flex group ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div
-              className={`max-w-[80%] rounded-lg p-3 relative ${
-                message.role === 'user'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-secondary text-secondary-foreground'
-              }`}
-            >
-              {/* Message header for assistant messages */}
-              {message.role === 'assistant' && (
-                <div className="flex items-center justify-between mb-2 text-xs text-muted-foreground">
-                  <div className="flex items-center space-x-2">
-                    <span>{getProviderLogo(message.provider)}</span>
-                    <span className="font-medium">
-                      {message.model_name || message.model_id || 'AI Assistant'}
-                    </span>
-                  </div>
-                  {message.token_count && <span>{message.token_count} tokens</span>}
-                </div>
-              )}
-
-              {/* Message content */}
-              <div className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</div>
-
-              {/* Error message if present */}
-              {message.error_message && (
-                <div className="mt-2 text-xs text-destructive bg-destructive/10 px-2 py-1 rounded">
-                  Error: {message.error_message}
-                </div>
-              )}
-
-              {/* Timestamp */}
-              <div
-                className={`text-xs mt-1 ${
-                  message.role === 'user' ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                }`}
-              >
-                {formatTimestamp(message.created_at)}
-              </div>
-
-              {/* Delete button - shown on hover */}
-              <button
-                onClick={(e) => handleDeleteMessage(message.id, message.content, e)}
-                disabled={deletingMessageId === message.id}
-                className={`absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-xs hover:bg-destructive/20 ${
-                  message.role === 'user'
-                    ? 'text-primary-foreground/70 hover:text-destructive'
-                    : 'text-muted-foreground hover:text-destructive'
-                }`}
-                title="Delete message"
-              >
-                {deletingMessageId === message.id ? (
-                  <div className="w-3 h-3 border border-destructive border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  '🗑️'
-                )}
-              </button>
+    <div className="h-full flex flex-col">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.length === 0 ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center text-muted-foreground">
+              <div className="text-6xl mb-4">💬</div>
+              <h3 className="text-xl font-semibold mb-2">Start a new conversation</h3>
+              <p className="text-sm">Select a model and send a message to begin chatting</p>
             </div>
           </div>
-        ))
-      )}
+        ) : (
+          messages.map((message) => (
+            <div
+              key={message.id}
+              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              <div
+                className={`max-w-[70%] rounded-2xl px-4 py-3 relative group ${
+                  message.role === 'user'
+                    ? 'bg-primary text-primary-foreground ml-12'
+                    : 'bg-secondary text-foreground mr-12'
+                }`}
+              >
+                {/* Message Header for AI responses */}
+                {message.role === 'assistant' && message.model_name && (
+                  <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground">
+                    <span>{getProviderLogo(message.provider)}</span>
+                    <span className="font-medium">{message.model_name}</span>
+                    {message.response_time_ms && (
+                      <span className="text-xs">({message.response_time_ms}ms)</span>
+                    )}
+                  </div>
+                )}
+
+                {/* Message Content */}
+                <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+                  {message.content}
+                </div>
+
+                {/* Message Footer */}
+                <div className="flex items-center justify-between mt-2 text-xs">
+                  <span
+                    className={`${
+                      message.role === 'user'
+                        ? 'text-primary-foreground/70'
+                        : 'text-muted-foreground'
+                    }`}
+                  >
+                    {formatTimestamp(message.created_at)}
+                  </span>
+
+                  {/* Token count for AI messages */}
+                  {message.role === 'assistant' && message.token_count && (
+                    <span className="text-muted-foreground text-xs">
+                      {message.token_count} tokens
+                    </span>
+                  )}
+                </div>
+
+                {/* Error message if any */}
+                {message.error_message && (
+                  <div className="mt-2 text-xs text-destructive bg-destructive/10 rounded px-2 py-1">
+                    Error: {message.error_message}
+                  </div>
+                )}
+
+                {/* Delete button on hover */}
+                <button
+                  onClick={(e) => handleDeleteMessage(message.id, message.content, e)}
+                  disabled={deletingMessageId === message.id}
+                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  title="Delete message"
+                >
+                  {deletingMessageId === message.id ? (
+                    <div className="w-3 h-3 border border-destructive border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    '🗑️'
+                  )}
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
     </div>
   );
 }
