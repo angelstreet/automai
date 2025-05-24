@@ -13,7 +13,7 @@ import { Host } from '@/types/component/hostComponentType';
 import HostEventListener, { HostsEvents } from './HostEventListener';
 import { HostGridClient } from './HostGridClient';
 import { HostTableClient } from './HostTableClient';
-import { TerminalContainer } from '@/components/terminal/TerminalContainer';
+import { TerminalContainer } from './TerminalContainer';
 
 interface HostContentClientProps {
   initialHosts: Host[];

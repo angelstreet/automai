@@ -1,5 +1,6 @@
 /* eslint-disable */
 import hostDb from '@/lib/db/hostDb';
+import sshService from './sshService';
 import { logUtils } from '../utils/logUtils';
 
 class TerminalService {
@@ -15,7 +16,7 @@ class TerminalService {
   }
 
   /**
-   * Create a terminal session using existing host data
+   * Create a terminal session using existing host data and real SSH connection
    */
   async createTerminalSession(data: { hostId: string; userId: string; type: string }) {
     console.info('[@service:terminal:createTerminalSession] Creating terminal session', {
@@ -25,31 +26,78 @@ class TerminalService {
     });
 
     try {
-      // Use existing hostDb layer to get host data
+      // Use getHostWithDecryptedCredentials instead of hostDb to get decrypted credentials
       console.debug(
-        '[@service:terminal:createTerminalSession] Fetching host from database via hostDb',
+        '[@service:terminal:createTerminalSession] Fetching host with decrypted credentials',
       );
-      const hostResult = await hostDb.getHostById(data.hostId);
+
+      // Import and use the same function that works for ADB
+      const { getHostWithDecryptedCredentials } = await import('@/app/actions/hostsAction');
+      const hostResult = await getHostWithDecryptedCredentials(data.hostId);
 
       if (!hostResult.success || !hostResult.data) {
         console.error('[@service:terminal:createTerminalSession] Host not found', {
           hostId: data.hostId,
+          error: hostResult.error,
         });
-        throw new Error(`Host not found: ${data.hostId}`);
+        throw new Error(`Host not found: ${hostResult.error || data.hostId}`);
       }
 
       const host = hostResult.data;
-      console.debug('[@service:terminal:createTerminalSession] Host found', {
-        hostId: data.hostId,
-        name: host.name,
-        ip: host.ip,
-        port: host.port,
-      });
+      console.debug(
+        '[@service:terminal:createTerminalSession] Host found with decrypted credentials',
+        {
+          hostId: data.hostId,
+          name: host.name,
+          ip: host.ip,
+          port: host.port,
+          username: host.user,
+          hasPassword: !!host.password,
+          authType: host.auth_type,
+        },
+      );
+
+      // Validate required SSH credentials
+      if (!host.user) {
+        throw new Error('Host is missing username for SSH connection');
+      }
 
       // Generate session ID
       const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-      // Store session in memory (for now - could be extended to database if needed)
+      // Create SSH connection using the same pattern as ADB actions
+      console.info('[@service:terminal:createTerminalSession] Creating SSH connection');
+      const sshOptions = {
+        host: host.ip,
+        port: host.port || 22,
+        username: host.user,
+        ...(host.auth_type === 'password' && host.password ? { password: host.password } : {}),
+        ...(host.auth_type === 'privateKey' && (host as any).privateKey
+          ? { privateKey: (host as any).privateKey }
+          : {}),
+        timeout: 10000,
+      };
+
+      console.debug('[@service:terminal:createTerminalSession] SSH options prepared', {
+        host: sshOptions.host,
+        port: sshOptions.port,
+        username: sshOptions.username,
+        authType: host.auth_type,
+        hasPassword: !!sshOptions.password,
+        hasPrivateKey: !!(sshOptions as any).privateKey,
+      });
+
+      const sshResult = await sshService.createConnection(sessionId, sshOptions);
+
+      if (!sshResult.success) {
+        console.error('[@service:terminal:createTerminalSession] SSH connection failed', {
+          error: sshResult.error,
+          sessionId,
+        });
+        throw new Error(`SSH connection failed: ${sshResult.error}`);
+      }
+
+      // Store session in memory with SSH connection info
       const session = {
         id: sessionId,
         hostId: data.hostId,
@@ -57,12 +105,13 @@ class TerminalService {
         type: data.type,
         status: 'active',
         host: host,
+        sshConnected: true,
         createdAt: new Date().toISOString(),
       };
 
       this.activeSessions.set(sessionId, session);
 
-      console.info('[@service:terminal:createTerminalSession] Terminal session created', {
+      console.info('[@service:terminal:createTerminalSession] Terminal session created with SSH', {
         sessionId,
         hostId: data.hostId,
       });
@@ -125,13 +174,17 @@ class TerminalService {
   }
 
   /**
-   * Close a terminal session
+   * Close a terminal session and SSH connection
    */
   async closeSession(sessionId: string) {
     console.info('[@service:terminal:closeSession] Closing terminal session', { sessionId });
 
     const session = this.activeSessions.get(sessionId);
     if (session) {
+      // Close SSH connection using existing sshService
+      console.info('[@service:terminal:closeSession] Closing SSH connection');
+      await sshService.closeConnection(sessionId);
+
       session.status = 'closed';
       session.closedAt = new Date().toISOString();
 
@@ -152,12 +205,12 @@ class TerminalService {
   }
 
   /**
-   * Send data to terminal session (placeholder for future SSH integration)
+   * Send data to terminal session using real SSH connection
    */
-  async sendDataToSession(sessionId: string, data: string) {
-    console.info('[@service:terminal:sendDataToSession] Sending data to session', {
+  async sendDataToSession(sessionId: string, command: string) {
+    console.info('[@service:terminal:sendDataToSession] Executing command on session', {
       sessionId,
-      dataLength: data.length,
+      command: command.replace(/\r?\n/g, '\\n'),
     });
 
     const session = this.activeSessions.get(sessionId);
@@ -165,14 +218,46 @@ class TerminalService {
       throw new Error(`Session not found: ${sessionId}`);
     }
 
-    // TODO: Integrate with real SSH connection
-    // For now, just log the data
-    console.debug('[@service:terminal:sendDataToSession] Data sent to session', {
-      sessionId,
-      data: data.replace(/\r?\n/g, '\\n'),
-    });
-
-    return { success: true };
+    // Use existing sshService to execute the command
+    try {
+      console.debug('[@service:terminal:sendDataToSession] Executing command via SSH', {
+        sessionId,
+        command,
+      });
+      
+      const result = await sshService.executeOnConnection(sessionId, command);
+      
+      if (result.success) {
+        console.debug('[@service:terminal:sendDataToSession] Command executed successfully', {
+          sessionId,
+          hasStdout: !!result.data?.stdout,
+          hasStderr: !!result.data?.stderr,
+          exitCode: result.data?.code,
+        });
+        
+        return { 
+          success: true, 
+          data: result.data 
+        };
+      } else {
+        console.error('[@service:terminal:sendDataToSession] Command execution failed', {
+          sessionId,
+          error: result.error,
+        });
+        
+        return {
+          success: false,
+          error: result.error,
+          data: result.data,
+        };
+      }
+    } catch (error) {
+      console.error('[@service:terminal:sendDataToSession] Error executing command via SSH', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        sessionId,
+      });
+      throw error;
+    }
   }
 
   /**

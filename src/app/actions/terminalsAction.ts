@@ -99,7 +99,7 @@ export async function closeTerminal(sessionId: string) {
 /**
  * Send data to a terminal session
  */
-export async function sendTerminalData(sessionId: string, data: string) {
+export async function sendTerminalData(sessionId: string, command: string) {
   try {
     // Get current user for auth checks
     const user = await getUser();
@@ -110,17 +110,36 @@ export async function sendTerminalData(sessionId: string, data: string) {
       };
     }
 
+    console.log(
+      `[@action:terminalsAction:sendTerminalData] Executing command on session ${sessionId}: ${command}`,
+    );
+
     // Import the terminal service functions
     const { sendDataToTerminal } = await import('@/lib/services/terminalService');
 
-    // Send data to terminal
-    await sendDataToTerminal(sessionId, data);
+    // Send command to terminal session - this uses the existing SSH connection
+    const result = await sendDataToTerminal(sessionId, command);
 
-    return {
-      success: true,
-    };
+    if (result.success) {
+      console.log(
+        `[@action:terminalsAction:sendTerminalData] Command executed successfully on session ${sessionId}`,
+      );
+      return {
+        success: true,
+        data: result.data,
+      };
+    } else {
+      console.error(
+        `[@action:terminalsAction:sendTerminalData] Command failed on session ${sessionId}:`,
+        result.error,
+      );
+      return {
+        success: false,
+        error: result.error || 'Failed to execute command',
+      };
+    }
   } catch (error: any) {
-    console.error('Error sending terminal data:', error);
+    console.error(`[@action:terminalsAction:sendTerminalData] Error executing command:`, error);
     return {
       success: false,
       error: error.message || 'Failed to send terminal data',

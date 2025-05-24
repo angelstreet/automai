@@ -1,10 +1,10 @@
 'use client';
 
 import { X, Terminal as TerminalIcon, Wifi, WifiOff } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
 import { Button } from '@/components/shadcn/button';
+import { Dialog, DialogContent, DialogTitle } from '@/components/shadcn/dialog';
 import { Host } from '@/types/component/hostComponentType';
 
 import { TerminalEmulator } from './TerminalEmulator';
@@ -95,10 +95,10 @@ export function TerminalModal({ isOpen, onClose, host }: TerminalModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="max-w-6xl w-full h-[550px] p-0 overflow-hidden">
+      <DialogContent className="w-[90vw] max-w-none sm:max-w-none h-[550px] p-0 overflow-hidden [&>button]:hidden">
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b bg-background">
+          <div className="flex items-center justify-between p-1 border-b bg-background">
             <div className="flex items-center space-x-3">
               <TerminalIcon className="h-5 w-5" />
               <DialogTitle className="text-lg font-semibold">Terminal - {host.name}</DialogTitle>
@@ -110,9 +110,6 @@ export function TerminalModal({ isOpen, onClose, host }: TerminalModalProps) {
                 ) : (
                   <WifiOff className="h-4 w-4 text-red-500" />
                 )}
-                <span className="text-sm text-muted-foreground">
-                  {isConnecting ? 'Connecting...' : isConnected ? 'Connected' : 'Disconnected'}
-                </span>
               </div>
             </div>
             <Button variant="ghost" size="sm" onClick={handleClose}>

@@ -7,14 +7,88 @@ import { Socket } from 'net';
 import { WebSocketConnection } from '@/types/component/sshComponentType';
 
 function handleSshConnection(ws: WebSocketConnection, connectionId: string, options: any) {
-  console.log('SSH connection handler called with options:', options);
-  ws.send(
-    JSON.stringify({
-      type: 'error',
-      message: 'SSH connection not implemented',
+  console.log('[@service:websocket:handleSshConnection] Handling SSH connection', {
+    connectionId,
+    ssh_host: options.ssh_host,
+  });
+
+  try {
+    // Get the terminal session from terminalService
+    const getSession = async () => {
+      const terminalService = (await import('./terminalService')).default;
+      return await terminalService.getTerminalSession(connectionId);
+    };
+
+    getSession()
+      .then((session) => {
+        if (!session) {
+          console.error('[@service:websocket:handleSshConnection] Session not found', {
+            connectionId,
+          });
+          ws.send(
+            JSON.stringify({
+              type: 'error',
+              error: 'Session not found',
+              connectionId,
+            }),
+          );
+          return;
+        }
+
+        if (!session.sshConnected) {
+          console.error('[@service:websocket:handleSshConnection] SSH not connected', {
+            connectionId,
+          });
+          ws.send(
+            JSON.stringify({
+              type: 'error',
+              error: 'SSH connection not established',
+              connectionId,
+            }),
+          );
+          return;
+        }
+
+        console.log('[@service:websocket:handleSshConnection] SSH session found and connected', {
+          connectionId,
+          hostId: session.hostId,
+        });
+
+        // Send connected confirmation
+        ws.send(
+          JSON.stringify({
+            type: 'connected',
+            message: 'SSH connection established',
+            connectionId,
+          }),
+        );
+      })
+      .catch((error) => {
+        console.error('[@service:websocket:handleSshConnection] Error getting session', {
+          error: error.message,
+          connectionId,
+        });
+        ws.send(
+          JSON.stringify({
+            type: 'error',
+            error: error.message,
+            connectionId,
+          }),
+        );
+      });
+  } catch (error) {
+    console.error('[@service:websocket:handleSshConnection] Error in SSH connection handler', {
+      error: error instanceof Error ? error.message : 'Unknown error',
       connectionId,
-    }),
-  );
+    });
+    ws.send(
+      JSON.stringify({
+        type: 'error',
+        error: 'SSH connection handler error',
+        connectionId,
+      }),
+    );
+  }
 }
 
 interface ExtendedWebSocket extends WebSocket {
@@ -218,19 +292,55 @@ export function handleUpgrade(request: IncomingMessage, socket: Socket, head: Bu
 }
 
 export function handleMessage(ws: WebSocketConnection, message: string): void {
-  console.debug('Received raw WebSocket message', { message });
+  console.debug('[@service:websocket:handleMessage] Received WebSocket message', { message });
   try {
     const data = JSON.parse(message);
     const ws_connectionId = (ws as any).connectionId;
-    console.info('Parsed WebSocket message', { ws_connectionId, type: data.type });
+    console.info('[@service:websocket:handleMessage] Parsed WebSocket message', {
+      ws_connectionId,
+      type: data.type,
+    });
 
-    if (data.type === 'auth') {
-      console.info('Received auth request', {
+    if (data.type === 'connect') {
+      // Handle SSH connection request from TerminalEmulator
+      console.info('[@service:websocket:handleMessage] SSH connect request', {
+        ws_connectionId,
+        host: data.host,
+        username: data.username,
+      });
+
+      handleSshConnection(ws, ws_connectionId, {
+        ssh_host: data.host,
+        ssh_port: data.port,
+        ssh_username: data.username,
+        ssh_password: data.password,
+      });
+    } else if (data.type === 'input') {
+      // Handle terminal input data
+      console.debug('[@service:websocket:handleMessage] Terminal input received', {
+        ws_connectionId,
+        dataLength: data.data?.length || 0,
+      });
+
+      // Send input to terminal session
+      handleTerminalInput(ws, ws_connectionId, data.data);
+    } else if (data.type === 'resize') {
+      // Handle terminal resize
+      console.debug('[@service:websocket:handleMessage] Terminal resize', {
+        ws_connectionId,
+        cols: data.cols,
+        rows: data.rows,
+      });
+      // TODO: Implement resize handling if needed
+    } else if (data.type === 'auth') {
+      // Legacy auth handling
+      console.info('[@service:websocket:handleMessage] Legacy auth request', {
         ws_connectionId,
         connectionType: data.connectionType,
         ssh_username: data.username || data.ssh_username,
         is_windows: data.is_windows,
       });
+
       if (data.connectionType === 'ssh') {
         handleSshConnection(ws, ws_connectionId, {
           ssh_username: data.username || data.ssh_username,
@@ -240,7 +350,9 @@ export function handleMessage(ws: WebSocketConnection, message: string): void {
           is_windows: data.is_windows,
         });
       } else {
-        console.error('Unsupported connection type', { type: data.connectionType });
+        console.error('[@service:websocket:handleMessage] Unsupported connection type', {
+          type: data.connectionType,
+        });
         ws.send(
           JSON.stringify({
             error: `Unsupported connection type: ${data.connectionType}`,
@@ -249,15 +361,67 @@ export function handleMessage(ws: WebSocketConnection, message: string): void {
         );
       }
     } else {
-      console.warn('Unknown message type', { type: data.type });
+      console.warn('[@service:websocket:handleMessage] Unknown message type', { type: data.type });
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Error processing WebSocket message', { error: errorMessage });
+    console.error('[@service:websocket:handleMessage] Error processing WebSocket message', {
+      error: errorMessage,
+    });
     ws.send(
       JSON.stringify({
         error: 'Invalid message format: ' + errorMessage,
         errorType: 'INVALID_MESSAGE',
+      }),
+    );
+  }
+}
+
+// Add terminal input handler function
+async function handleTerminalInput(
+  ws: WebSocketConnection,
+  connectionId: string,
+  inputData: string,
+) {
+  try {
+    console.debug('[@service:websocket:handleTerminalInput] Processing terminal input', {
+      connectionId,
+      dataLength: inputData?.length || 0,
+    });
+
+    // Get terminal service and send data
+    const terminalService = (await import('./terminalService')).default;
+    const result = await terminalService.sendDataToSession(connectionId, inputData);
+
+    if (result.success && result.data) {
+      // Send command output back to terminal
+      if (result.data.stdout) {
+        ws.send(
+          JSON.stringify({
+            type: 'data',
+            data: result.data.stdout,
+          }),
+        );
+      }
+      if (result.data.stderr) {
+        ws.send(
+          JSON.stringify({
+            type: 'data',
+            data: result.data.stderr,
+          }),
+        );
+      }
+    }
+  } catch (error) {
+    console.error('[@service:websocket:handleTerminalInput] Error handling terminal input', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      connectionId,
+    });
+
+    ws.send(
+      JSON.stringify({
+        type: 'error',
+        error: 'Failed to process terminal input',
       }),
     );
   }
