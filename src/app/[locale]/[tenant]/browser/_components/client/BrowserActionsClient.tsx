@@ -3,11 +3,11 @@
 import { Lock, Monitor } from 'lucide-react';
 import { useState } from 'react';
 
+import { startBrowserSession, forceTakeControlBrowserHost } from '@/app/actions/browserActions';
 import { Button } from '@/components/shadcn/button';
 import { Host } from '@/types/component/hostComponentType';
 import { User } from '@/types/service/userServiceType';
 
-import { startBrowserSession, forceTakeControlBrowserHost } from '@/app/actions/browserActions';
 import { BrowserModalClient } from './BrowserModalClient';
 
 interface BrowserActionsClientProps {
@@ -30,8 +30,17 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
     (host) => host.device_type === 'linux' || host.device_type === 'windows',
   );
 
+  const handleHostChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newValue = e.target.value;
+    console.log(`[@component:BrowserActionsClient] Host selection changed to: ${newValue}`);
+    setSelectedHostId(newValue);
+  };
+
   const handleTakeControl = async () => {
-    if (!selectedHostId) return;
+    if (!selectedHostId) {
+      console.warn(`[@component:BrowserActionsClient] No host selected for take control`);
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
@@ -81,6 +90,7 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
 
   const selectedHost = browserHosts.find((host) => host.id === selectedHostId);
   const isHostLocked = selectedHost?.reserved_by && selectedHost.reserved_by !== currentUser.id;
+  const isButtonDisabled = !selectedHostId || isLoading;
 
   if (browserHosts.length === 0) {
     return (
@@ -95,24 +105,31 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
     <>
       <div className="flex items-center gap-2">
         {/* Host Selection Dropdown */}
-        <select
-          value={selectedHostId}
-          onChange={(e) => setSelectedHostId(e.target.value)}
-          disabled={isLoading}
-          className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 min-w-[200px]"
-        >
-          <option value="">Select host...</option>
-          {browserHosts.map((host) => {
-            const isLocked = host.reserved_by && host.reserved_by !== currentUser.id;
-            const isMyHost = host.reserved_by === currentUser.id;
+        <div className="relative">
+          <select
+            value={selectedHostId}
+            onChange={handleHostChange}
+            disabled={isLoading}
+            className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 min-w-[200px] cursor-pointer [&>option]:bg-white [&>option]:dark:bg-gray-700 [&>option]:text-black [&>option]:dark:text-white"
+            style={{
+              position: 'relative',
+              zIndex: 10,
+            }}
+          >
+            <option value="">Select host...</option>
+            {browserHosts.map((host) => {
+              const isLocked = host.reserved_by && host.reserved_by !== currentUser.id;
+              const isMyHost = host.reserved_by === currentUser.id;
 
-            return (
-              <option key={host.id} value={host.id}>
-                {host.name} ({host.device_type}){isMyHost ? ' (You)' : isLocked ? ' (Locked)' : ''}
-              </option>
-            );
-          })}
-        </select>
+              return (
+                <option key={host.id} value={host.id}>
+                  {host.name} ({host.device_type})
+                  {isMyHost ? ' (You)' : isLocked ? ' (Locked)' : ''}
+                </option>
+              );
+            })}
+          </select>
+        </div>
 
         {/* Lock Icon for Locked Hosts */}
         {isHostLocked && <Lock className="h-4 w-4 text-red-500" />}
@@ -121,7 +138,7 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
         <Button
           size="sm"
           onClick={handleTakeControl}
-          disabled={!selectedHostId || isLoading}
+          disabled={isButtonDisabled}
           className="h-8 gap-1"
         >
           <Monitor className="h-4 w-4" />

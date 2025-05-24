@@ -1,13 +1,12 @@
 'use client';
 
-import { X, Monitor, Wifi, WifiOff, Terminal } from 'lucide-react';
+import { X, Monitor, Wifi, WifiOff } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { endBrowserSession } from '@/app/actions/browserActions';
 import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/shadcn/dialog';
 import { Host } from '@/types/component/hostComponentType';
-
-import { endBrowserSession } from '@/app/actions/browserActions';
 
 interface BrowserModalClientProps {
   isOpen: boolean;
@@ -88,25 +87,6 @@ export function BrowserModalClient({ isOpen, onClose, host, sessionId }: Browser
             </Button>
           </div>
 
-          {/* Host Info */}
-          <div className="px-3 py-2 bg-gray-50 dark:bg-gray-800 border-b">
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center space-x-4">
-                <span>
-                  Host: {host.ip}:{host.port || 22}
-                </span>
-                <span>Session: {sessionId}</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                {vncPort && (
-                  <span className="text-green-600 dark:text-green-400">
-                    VNC: {host.ip}:{vncPort}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
           {/* Tab Navigation */}
           <div className="flex border-b bg-background">
             <button
@@ -132,57 +112,59 @@ export function BrowserModalClient({ isOpen, onClose, host, sessionId }: Browser
             </button>
           </div>
 
-          {/* Content Area */}
-          <div className="flex-1 overflow-hidden">
-            {activeTab === 'vnc' && (
-              <div className="h-full relative">
-                {!vncUrl ? (
-                  <div className="flex items-center justify-center h-full">
-                    <div className="text-center space-y-4">
-                      <Monitor className="h-12 w-12 text-gray-400 mx-auto" />
-                      <h3 className="text-lg font-medium text-gray-600 dark:text-gray-400">
-                        VNC Not Available
-                      </h3>
-                      <p className="text-gray-500 max-w-md">
-                        This host doesn't have VNC configured. You can still use the terminal to run
-                        browser automation scripts.
-                      </p>
-                    </div>
+          {/* Content Area - Both tabs stay mounted, just hidden/shown */}
+          <div className="flex-1 overflow-hidden relative">
+            {/* VNC Tab */}
+            <div className={`h-full absolute inset-0 ${activeTab === 'vnc' ? 'block' : 'hidden'}`}>
+              {!vncUrl ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center space-y-4">
+                    <Monitor className="h-12 w-12 text-gray-400 mx-auto" />
+                    <h3 className="text-lg font-medium text-gray-600 dark:text-gray-400">
+                      VNC Not Available
+                    </h3>
+                    <p className="text-gray-500 max-w-md">
+                      This host doesn't have VNC configured. You can still use the terminal to run
+                      browser automation scripts.
+                    </p>
                   </div>
-                ) : (
-                  <>
-                    {/* VNC Loading State */}
-                    {isVncLoading && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800 z-10">
-                        <div className="flex flex-col items-center">
-                          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-                          <span className="mt-2 text-gray-500">Connecting to VNC...</span>
-                        </div>
+                </div>
+              ) : (
+                <>
+                  {/* VNC Loading State - only show when actually loading */}
+                  {isVncLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800 z-10">
+                      <div className="flex flex-col items-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                        <span className="mt-2 text-gray-500">Connecting to VNC...</span>
                       </div>
-                    )}
+                    </div>
+                  )}
 
-                    {/* VNC iframe */}
-                    <iframe
-                      src={vncUrl}
-                      className="w-full h-full"
-                      style={{
-                        border: 'none',
-                        display: 'block',
-                      }}
-                      sandbox="allow-scripts allow-same-origin allow-forms"
-                      onLoad={handleVncLoad}
-                      title={`VNC Stream - ${host.name}`}
-                    />
-                  </>
-                )}
-              </div>
-            )}
+                  {/* VNC iframe - always mounted */}
+                  <iframe
+                    src={vncUrl}
+                    className="w-full h-full"
+                    style={{
+                      border: 'none',
+                      display: 'block',
+                    }}
+                    sandbox="allow-scripts allow-same-origin allow-forms"
+                    onLoad={handleVncLoad}
+                    title={`VNC Stream - ${host.name}`}
+                  />
+                </>
+              )}
+            </div>
 
-            {activeTab === 'terminal' && (
+            {/* Terminal Tab */}
+            <div
+              className={`h-full absolute inset-0 ${activeTab === 'terminal' ? 'block' : 'hidden'}`}
+            >
               <div className="h-full bg-black">
                 <BrowserTerminalClient sessionId={sessionId} host={host} />
               </div>
-            )}
+            </div>
           </div>
         </div>
       </DialogContent>
@@ -207,11 +189,12 @@ function BrowserTerminalClient({ sessionId, host }: { sessionId: string; host: H
       const result = await sendTerminalData(sessionId, command);
 
       if (result.success && result.data) {
-        if (result.data.stdout) {
-          setOutput((prev) => [...prev, result.data.stdout]);
+        const data = result.data;
+        if (data.stdout) {
+          setOutput((prev) => [...prev, data.stdout]);
         }
-        if (result.data.stderr) {
-          setOutput((prev) => [...prev, `ERROR: ${result.data.stderr}`]);
+        if (data.stderr) {
+          setOutput((prev) => [...prev, `ERROR: ${data.stderr}`]);
         }
       } else {
         setOutput((prev) => [...prev, `ERROR: ${result.error || 'Command failed'}`]);
