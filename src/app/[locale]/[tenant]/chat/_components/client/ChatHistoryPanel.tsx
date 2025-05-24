@@ -46,9 +46,24 @@ export default function ChatHistoryPanel() {
     fetchConversations();
 
     // Listen for new messages to refresh conversations
-    const handleNewMessage = () => {
-      console.log('[@component:ChatHistoryPanel] Refreshing conversations after new message');
-      fetchConversations();
+    const handleNewMessage = (event: CustomEvent) => {
+      console.log('[@component:ChatHistoryPanel] New message event - updating conversation count');
+      const { conversationId, aiMessages } = event.detail;
+
+      // Immediately update the conversation count in state (don't wait for DB)
+      setConversations((prev) =>
+        prev.map((conv) => {
+          if (conv.id === conversationId) {
+            const totalNewMessages = 1 + (aiMessages?.length || 0); // user + AI messages
+            return {
+              ...conv,
+              message_count: Math.max(conv.message_count + totalNewMessages, 1), // Never show 0
+              last_message_at: new Date().toISOString(),
+            };
+          }
+          return conv;
+        }),
+      );
     };
 
     const handleConversationDeleted = () => {
@@ -56,11 +71,11 @@ export default function ChatHistoryPanel() {
       fetchConversations();
     };
 
-    window.addEventListener('CHAT_MESSAGE_SENT', handleNewMessage);
+    window.addEventListener('CHAT_MESSAGE_SENT', handleNewMessage as EventListener);
     window.addEventListener('CHAT_CONVERSATION_DELETED', handleConversationDeleted);
 
     return () => {
-      window.removeEventListener('CHAT_MESSAGE_SENT', handleNewMessage);
+      window.removeEventListener('CHAT_MESSAGE_SENT', handleNewMessage as EventListener);
       window.removeEventListener('CHAT_CONVERSATION_DELETED', handleConversationDeleted);
     };
   }, []);

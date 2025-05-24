@@ -165,7 +165,7 @@ export default function MessageInput() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto w-full">
+    <div className="w-full">
       {/* Token Usage Display */}
       <TokenTracker />
 

@@ -16,7 +16,7 @@ export { ChatContentClient as default, ChatContentClient };
 function ChatContentClient() {
   return (
     <ChatProvider>
-      <div className="flex h-full bg-transparent">
+      <div className="flex h-screen bg-transparent">
         {/* History Panel - Left Sidebar */}
         <div
           className={`${CHAT_LAYOUT.SIDEBAR_WIDTH} bg-background/80 backdrop-blur-sm border-r border-border flex flex-col`}
@@ -38,10 +38,8 @@ function ChatContentClient() {
             <ChatContent />
           </div>
 
-          {/* Message Input */}
-          <div
-            className={`${CHAT_LAYOUT.MESSAGE_INPUT_HEIGHT} bg-background/80 backdrop-blur-sm border-t border-border flex-shrink-0`}
-          >
+          {/* Message Input - Fixed at bottom */}
+          <div className="flex-shrink-0 bg-background/80 backdrop-blur-sm border-t border-border">
             <MessageInput />
           </div>
         </div>

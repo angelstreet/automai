@@ -1,21 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { toast } from 'sonner';
 
-import { getMessages, deleteMessage } from '@/app/actions/chatAction';
+import { getMessages } from '@/app/actions/chatAction';
 import type { ChatMessage } from '@/lib/db/chatDb';
 import { useChatContext } from './ChatContext';
 
 /**
  * Chat content component - displays conversation messages from database
- * with individual message delete functionality
  */
 export default function ChatContent() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
   const { activeConversationId } = useChatContext();
 
   // Fetch messages when conversation changes
@@ -60,7 +57,9 @@ export default function ChatContent() {
       console.log('[@component:ChatContent] New message event received', {
         conversationId,
         activeConversationId,
+        userMessage,
         aiMessageCount: aiMessages?.length,
+        aiMessages: aiMessages, // Debug: log full AI messages
       });
 
       // Show messages if this is the active conversation OR if no active conversation (new chat)
@@ -90,32 +89,45 @@ export default function ChatContent() {
           updated_at: userMessage.timestamp,
         };
 
-        const tempAiMessages: ChatMessage[] = aiMessages.map((msg: any, index: number) => ({
-          id: 'temp-ai-' + Date.now() + '-' + index,
-          conversation_id: conversationId,
-          role: msg.role,
-          content: msg.content,
-          model_id: msg.modelId,
-          model_name: msg.metadata?.model_name || msg.modelId,
-          provider: 'openrouter',
-          token_count: msg.metadata?.usage?.total_tokens || null,
-          response_time_ms: msg.responseTime,
-          error_message: msg.error || null,
-          metadata: msg.metadata,
-          creator_id: 'temp',
-          created_at: msg.timestamp,
-          updated_at: msg.timestamp,
-        }));
+        const tempAiMessages: ChatMessage[] = aiMessages.map((msg: any, index: number) => {
+          console.log('[@component:ChatContent] Processing AI message:', msg); // Debug each AI message
+          return {
+            id: 'temp-ai-' + Date.now() + '-' + index,
+            conversation_id: conversationId,
+            role: msg.role,
+            content: msg.content,
+            model_id: msg.modelId,
+            model_name: msg.metadata?.model_name || msg.modelId,
+            provider: 'openrouter',
+            token_count: msg.metadata?.usage?.total_tokens || null,
+            response_time_ms: msg.responseTime,
+            error_message: msg.error || null,
+            metadata: msg.metadata,
+            creator_id: 'temp',
+            created_at: msg.timestamp,
+            updated_at: msg.timestamp,
+          };
+        });
 
-        // Add messages immediately for display
-        setMessages((prev) => [...prev, tempUserMessage, ...tempAiMessages]);
+        console.log('[@component:ChatContent] About to add messages:', {
+          userMessage: tempUserMessage,
+          aiMessages: tempAiMessages,
+          totalMessages: 1 + tempAiMessages.length,
+        });
 
-        // Fetch fresh data from database after a short delay to replace temp messages
-        setTimeout(() => {
-          if (conversationId && !conversationId.startsWith('temp-')) {
-            fetchMessages();
-          }
-        }, 2000);
+        // Add messages immediately for display - NO REFRESH NEEDED!
+        setMessages((prev) => {
+          const newMessages = [...prev, tempUserMessage, ...tempAiMessages];
+          console.log(
+            '[@component:ChatContent] Messages state updated, total count:',
+            newMessages.length,
+          );
+          return newMessages;
+        });
+
+        console.log(
+          '[@component:ChatContent] Messages added successfully - background save will handle persistence',
+        );
       }
     };
 
@@ -148,73 +160,6 @@ export default function ChatContent() {
       window.removeEventListener('CHAT_MESSAGE_DELETED', handleMessageDeleted);
     };
   }, [activeConversationId]);
-
-  const handleDeleteMessage = async (
-    messageId: string,
-    messageContent: string,
-    event: React.MouseEvent,
-  ) => {
-    event.stopPropagation();
-
-    const confirmed = window.confirm(
-      `Are you sure you want to delete this message?\n\n"${messageContent.slice(0, 100)}${messageContent.length > 100 ? '...' : ''}"`,
-    );
-
-    if (!confirmed) return;
-
-    try {
-      console.log(`[@component:ChatContent] Deleting message: ${messageId}`);
-      setDeletingMessageId(messageId);
-
-      const result = await deleteMessage(messageId);
-
-      if (result.success) {
-        toast.success('Message deleted successfully');
-
-        // Dispatch event for other components
-        window.dispatchEvent(
-          new CustomEvent('CHAT_MESSAGE_DELETED', {
-            detail: { messageId, conversationId: result.data?.conversationId },
-          }),
-        );
-      } else {
-        toast.error(result.error || 'Failed to delete message');
-      }
-    } catch (error: any) {
-      console.error('[@component:ChatContent] Delete error:', error);
-      toast.error('Failed to delete message');
-    } finally {
-      setDeletingMessageId(null);
-    }
-  };
-
-  const formatTimestamp = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = now.getTime() - date.getTime();
-    const diffMinutes = Math.floor(diffTime / (1000 * 60));
-
-    if (diffMinutes < 1) return 'Just now';
-    if (diffMinutes < 60) return `${diffMinutes}m ago`;
-    if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)}h ago`;
-
-    return date.toLocaleString();
-  };
-
-  const getProviderLogo = (provider: string | null) => {
-    switch (provider?.toLowerCase()) {
-      case 'anthropic':
-        return '🤖';
-      case 'openai':
-        return '🔥';
-      case 'google':
-        return '🔍';
-      case 'meta':
-        return '🦙';
-      default:
-        return '🤖';
-    }
-  };
 
   if (!activeConversationId) {
     return (
@@ -256,7 +201,7 @@ export default function ChatContent() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center text-muted-foreground">
@@ -272,68 +217,32 @@ export default function ChatContent() {
               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-[70%] rounded-2xl px-4 py-3 relative group ${
+                className={`max-w-[75%] rounded-lg px-3 py-2 ${
                   message.role === 'user'
-                    ? 'bg-primary text-primary-foreground ml-12'
-                    : 'bg-secondary text-foreground mr-12'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-secondary text-foreground'
                 }`}
               >
-                {/* Message Header for AI responses */}
-                {message.role === 'assistant' && message.model_name && (
-                  <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground">
-                    <span>{getProviderLogo(message.provider)}</span>
-                    <span className="font-medium">{message.model_name}</span>
-                    {message.response_time_ms && (
-                      <span className="text-xs">({message.response_time_ms}ms)</span>
-                    )}
-                  </div>
-                )}
-
                 {/* Message Content */}
                 <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">
                   {message.content}
                 </div>
 
-                {/* Message Footer */}
-                <div className="flex items-center justify-between mt-2 text-xs">
-                  <span
-                    className={`${
-                      message.role === 'user'
-                        ? 'text-primary-foreground/70'
-                        : 'text-muted-foreground'
-                    }`}
-                  >
-                    {formatTimestamp(message.created_at)}
-                  </span>
-
-                  {/* Token count for AI messages */}
-                  {message.role === 'assistant' && message.token_count && (
-                    <span className="text-muted-foreground text-xs">
-                      {message.token_count} tokens
-                    </span>
+                {/* Response time and tokens for AI messages */}
+                {message.role === 'assistant' &&
+                  (message.response_time_ms || message.token_count) && (
+                    <div className="mt-1 text-xs text-muted-foreground text-right">
+                      {message.response_time_ms && `(${message.response_time_ms}ms) `}
+                      {message.token_count && `${message.token_count} tokens`}
+                    </div>
                   )}
-                </div>
 
                 {/* Error message if any */}
                 {message.error_message && (
-                  <div className="mt-2 text-xs text-destructive bg-destructive/10 rounded px-2 py-1">
+                  <div className="mt-1 text-xs text-destructive bg-destructive/10 rounded px-2 py-1">
                     Error: {message.error_message}
                   </div>
                 )}
-
-                {/* Delete button on hover */}
-                <button
-                  onClick={(e) => handleDeleteMessage(message.id, message.content, e)}
-                  disabled={deletingMessageId === message.id}
-                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                  title="Delete message"
-                >
-                  {deletingMessageId === message.id ? (
-                    <div className="w-3 h-3 border border-destructive border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    '🗑️'
-                  )}
-                </button>
               </div>
             </div>
           ))

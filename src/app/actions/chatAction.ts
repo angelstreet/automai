@@ -444,16 +444,23 @@ async function saveMessageToDatabase({
       }
     }
 
-    // Update conversation's model_ids if needed
+    // Update conversation's message_count and model_ids
+    const totalNewMessages = 1 + aiResponses.length; // user message + AI responses
+    const newMessageCount = finalConversation.message_count + totalNewMessages;
+
     const updatedModelIds = Array.from(
       new Set([...finalConversation.model_ids, ...input.modelIds]),
     );
-    if (updatedModelIds.length !== finalConversation.model_ids.length) {
-      await chatDb.updateConversation(finalConversation.id, {
-        model_ids: updatedModelIds,
-      });
-      console.log(`[@action:chat:saveMessageToDatabase] Updated conversation model_ids`);
-    }
+
+    await chatDb.updateConversation(finalConversation.id, {
+      message_count: newMessageCount,
+      model_ids: updatedModelIds,
+      last_message_at: new Date().toISOString(),
+    });
+
+    console.log(
+      `[@action:chat:saveMessageToDatabase] Updated conversation: message_count=${newMessageCount}, model_ids updated`,
+    );
 
     console.log('[@action:chat:saveMessageToDatabase] Successfully completed background save');
   } catch (error: any) {

@@ -84,19 +84,10 @@ export function TokenTracker() {
 
   return (
     <div className="px-4 pb-2">
-      <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground bg-secondary/30 rounded-lg px-3 py-2">
-        <div className="flex items-center gap-1">
-          <span className="text-blue-600">📥</span>
-          <span>Prompt: {tokenUsage.promptTokens.toLocaleString()}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="text-green-600">📤</span>
-          <span>Response: {tokenUsage.completionTokens.toLocaleString()}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="text-purple-600">🔢</span>
-          <span>Total: {tokenUsage.totalTokens.toLocaleString()}</span>
-        </div>
+      <div className="text-xs text-center text-muted-foreground">
+        Prompt: {tokenUsage.promptTokens.toLocaleString()} • Response:{' '}
+        {tokenUsage.completionTokens.toLocaleString()} • Total:{' '}
+        {tokenUsage.totalTokens.toLocaleString()}
       </div>
     </div>
   );
