@@ -116,8 +116,7 @@ export default function MessageInput() {
           }),
         );
 
-        // Show success toast with model count
-        toast.success(`Message sent to ${result.data.aiMessages.length} model(s)`);
+        // Message sent successfully - no toast needed
       } else {
         console.error('[@component:MessageInput:handleSend] Failed to send message:', result.error);
         const errorMessage = result.error || ERROR_MESSAGES.MESSAGE_SEND_FAILED;

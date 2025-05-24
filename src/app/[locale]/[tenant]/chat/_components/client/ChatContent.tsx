@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 import { getMessages } from '@/app/actions/chatAction';
 import type { ChatMessage } from '@/lib/db/chatDb';
@@ -17,38 +17,38 @@ export default function ChatContent() {
   const { activeConversationId, filteredModels, getModelTextColor } = useChatContext();
 
   // Fetch messages when conversation changes
+  const fetchMessages = useCallback(async () => {
+    if (!activeConversationId) {
+      setMessages([]);
+      setError(null);
+      return;
+    }
+
+    try {
+      console.log(
+        `[@component:ChatContent] Fetching messages for conversation: ${activeConversationId}`,
+      );
+      setIsLoading(true);
+      setError(null);
+
+      const result = await getMessages(activeConversationId);
+
+      if (result.success && result.data) {
+        console.log(`[@component:ChatContent] Loaded ${result.data.length} messages`);
+        setMessages(result.data);
+      } else {
+        console.error('[@component:ChatContent] Failed to fetch messages:', result.error);
+        setError(result.error || 'Failed to load messages');
+      }
+    } catch (error: any) {
+      console.error('[@component:ChatContent] Error:', error);
+      setError('Failed to load messages');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [activeConversationId]);
+
   useEffect(() => {
-    const fetchMessages = async () => {
-      if (!activeConversationId) {
-        setMessages([]);
-        setError(null);
-        return;
-      }
-
-      try {
-        console.log(
-          `[@component:ChatContent] Fetching messages for conversation: ${activeConversationId}`,
-        );
-        setIsLoading(true);
-        setError(null);
-
-        const result = await getMessages(activeConversationId);
-
-        if (result.success && result.data) {
-          console.log(`[@component:ChatContent] Loaded ${result.data.length} messages`);
-          setMessages(result.data);
-        } else {
-          console.error('[@component:ChatContent] Failed to fetch messages:', result.error);
-          setError(result.error || 'Failed to load messages');
-        }
-      } catch (error: any) {
-        console.error('[@component:ChatContent] Error:', error);
-        setError('Failed to load messages');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchMessages();
 
     // Listen for new messages to display immediately
@@ -162,7 +162,7 @@ export default function ChatContent() {
       );
       window.removeEventListener('CHAT_MESSAGE_DELETED', handleMessageDeleted);
     };
-  }, [activeConversationId]);
+  }, [activeConversationId, fetchMessages]);
 
   if (!activeConversationId) {
     return (

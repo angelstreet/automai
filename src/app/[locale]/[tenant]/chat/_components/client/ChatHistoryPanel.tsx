@@ -104,7 +104,7 @@ export default function ChatHistoryPanel() {
       const result = await deleteConversation(conversationId);
 
       if (result.success) {
-        toast.success('Conversation deleted successfully');
+        // Conversation deleted successfully - no toast needed
 
         // If we deleted the active conversation, clear it
         if (activeConversationId === conversationId) {
@@ -118,11 +118,11 @@ export default function ChatHistoryPanel() {
           }),
         );
       } else {
-        toast.error(result.error || 'Failed to delete conversation');
+        console.error('[@component:ChatHistoryPanel] Delete error:', result.error);
       }
     } catch (error: any) {
       console.error('[@component:ChatHistoryPanel] Delete error:', error);
-      toast.error('Failed to delete conversation');
+      // Delete failed - no toast needed
     } finally {
       setDeletingConversationId(null);
     }
