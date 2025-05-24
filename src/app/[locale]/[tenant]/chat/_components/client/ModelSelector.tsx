@@ -190,8 +190,9 @@ export default function ModelSelector({ className = '' }: ModelSelectorProps) {
                 key={modelId}
                 onClick={() => toggleModelFilter(modelId)}
                 className={`px-2 py-1 text-xs rounded-full flex items-center gap-1 flex-shrink-0 transition-all hover:scale-105 ${
-                  isFiltered ? `${modelColor} text-white` : 'bg-gray-200 text-gray-600 opacity-50'
+                  isFiltered ? `${modelColor}` : 'bg-gray-200 text-gray-600 opacity-50'
                 }`}
+                style={isFiltered ? { color: 'white' } : undefined}
                 title={`Click to ${isFiltered ? 'hide' : 'show'} responses from ${model?.name || modelId}`}
               >
                 {model ? getDisplayName(model) : modelId}
