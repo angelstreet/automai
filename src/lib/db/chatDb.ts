@@ -303,25 +303,6 @@ const chatDb = {
         return { success: false, error: error.message };
       }
 
-      // Update conversation's last_message_at and increment message_count
-      // First get current message_count, then increment it
-      const { data: conversationData } = await supabase
-        .from('chat_conversations')
-        .select('message_count')
-        .eq('id', input.conversation_id)
-        .single();
-
-      const currentCount = conversationData?.message_count || 0;
-
-      await supabase
-        .from('chat_conversations')
-        .update({
-          last_message_at: new Date().toISOString(),
-          message_count: currentCount + 1,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', input.conversation_id);
-
       console.log(`[@db:chatDb:createMessage] Created message with ID: ${data.id}`);
       return { success: true, data };
     } catch (error: any) {

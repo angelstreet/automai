@@ -14,41 +14,41 @@ export default function ChatContent() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { activeConversationId, filteredModels, getModelColor } = useChatContext();
+  const { activeConversationId, filteredModels, getModelTextColor } = useChatContext();
 
   // Fetch messages when conversation changes
-  const fetchMessages = async () => {
-    if (!activeConversationId) {
-      setMessages([]);
-      setError(null);
-      return;
-    }
-
-    try {
-      console.log(
-        `[@component:ChatContent] Fetching messages for conversation: ${activeConversationId}`,
-      );
-      setIsLoading(true);
-      setError(null);
-
-      const result = await getMessages(activeConversationId);
-
-      if (result.success && result.data) {
-        console.log(`[@component:ChatContent] Loaded ${result.data.length} messages`);
-        setMessages(result.data);
-      } else {
-        console.error('[@component:ChatContent] Failed to fetch messages:', result.error);
-        setError(result.error || 'Failed to load messages');
-      }
-    } catch (error: any) {
-      console.error('[@component:ChatContent] Error:', error);
-      setError('Failed to load messages');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
+    const fetchMessages = async () => {
+      if (!activeConversationId) {
+        setMessages([]);
+        setError(null);
+        return;
+      }
+
+      try {
+        console.log(
+          `[@component:ChatContent] Fetching messages for conversation: ${activeConversationId}`,
+        );
+        setIsLoading(true);
+        setError(null);
+
+        const result = await getMessages(activeConversationId);
+
+        if (result.success && result.data) {
+          console.log(`[@component:ChatContent] Loaded ${result.data.length} messages`);
+          setMessages(result.data);
+        } else {
+          console.error('[@component:ChatContent] Failed to fetch messages:', result.error);
+          setError(result.error || 'Failed to load messages');
+        }
+      } catch (error: any) {
+        console.error('[@component:ChatContent] Error:', error);
+        setError('Failed to load messages');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     fetchMessages();
 
     // Listen for new messages to display immediately
@@ -85,6 +85,7 @@ export default function ChatContent() {
           response_time_ms: null,
           error_message: null,
           metadata: null,
+          team_id: 'temp',
           creator_id: 'temp',
           created_at: userMessage.timestamp,
           updated_at: userMessage.timestamp,
@@ -104,6 +105,7 @@ export default function ChatContent() {
             response_time_ms: msg.responseTime,
             error_message: msg.error || null,
             metadata: msg.metadata,
+            team_id: 'temp',
             creator_id: 'temp',
             created_at: msg.timestamp,
             updated_at: msg.timestamp,
@@ -220,10 +222,10 @@ export default function ChatContent() {
               return message.model_id && filteredModels.includes(message.model_id);
             })
             .map((message) => {
-              // Get model color for AI messages
-              const modelColor =
+              // Get model text color for AI messages (only for model name)
+              const modelTextColor =
                 message.role === 'assistant' && message.model_id
-                  ? getModelColor(message.model_id)
+                  ? getModelTextColor(message.model_id)
                   : '';
 
               return (
@@ -235,14 +237,12 @@ export default function ChatContent() {
                     className={`max-w-[99%] rounded-lg px-3 py-1 mr-1 ${
                       message.role === 'user'
                         ? 'bg-primary text-primary-foreground'
-                        : modelColor
-                          ? `${modelColor} text-white border-2 border-opacity-50`
-                          : 'bg-secondary text-foreground'
+                        : 'bg-secondary text-foreground'
                     }`}
                   >
                     {/* Model name badge for AI messages */}
                     {message.role === 'assistant' && message.model_name && (
-                      <div className="text-xs opacity-75 mb-1 font-medium">
+                      <div className={`text-xs opacity-75 mb-1 font-medium ${modelTextColor}`}>
                         {message.model_name}
                       </div>
                     )}

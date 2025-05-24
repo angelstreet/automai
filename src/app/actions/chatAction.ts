@@ -405,6 +405,9 @@ async function saveMessageToDatabase({
       throw new Error('No conversation available for saving');
     }
 
+    // Create all messages without individual conversation updates
+    const messageResults = [];
+
     // Create user message
     const userMessageInput: CreateMessageInput = {
       conversation_id: finalConversation.id,
@@ -420,6 +423,7 @@ async function saveMessageToDatabase({
     console.log(
       `[@action:chat:saveMessageToDatabase] Created user message: ${userMessageResult.data.id}`,
     );
+    messageResults.push(userMessageResult.data);
 
     // Create AI messages
     for (const response of aiResponses) {
@@ -441,11 +445,16 @@ async function saveMessageToDatabase({
         console.log(
           `[@action:chat:saveMessageToDatabase] Created AI message: ${aiMessageResult.data.id}`,
         );
+        messageResults.push(aiMessageResult.data);
+      } else {
+        console.error(
+          `[@action:chat:saveMessageToDatabase] Failed to create AI message for model ${response.modelId}: ${aiMessageResult.error}`,
+        );
       }
     }
 
-    // Update conversation's message_count and model_ids
-    const totalNewMessages = 1 + aiResponses.length; // user message + AI responses
+    // Update conversation once with correct counts and model IDs
+    const totalNewMessages = messageResults.length; // Only count successfully created messages
     const newMessageCount = finalConversation.message_count + totalNewMessages;
 
     const updatedModelIds = Array.from(
@@ -459,7 +468,7 @@ async function saveMessageToDatabase({
     });
 
     console.log(
-      `[@action:chat:saveMessageToDatabase] Updated conversation: message_count=${newMessageCount}, model_ids updated`,
+      `[@action:chat:saveMessageToDatabase] Updated conversation: message_count=${newMessageCount}, model_ids updated, created ${messageResults.length} messages`,
     );
 
     console.log('[@action:chat:saveMessageToDatabase] Successfully completed background save');
