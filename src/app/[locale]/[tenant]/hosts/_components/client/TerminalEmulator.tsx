@@ -106,8 +106,8 @@ export function TerminalEmulator({
         // Show initial connection message and get the natural prompt
         terminal.write(`🔗 Connected to ${host.name} (${host.ip}:${host.port || 22})\r\n`);
 
-        // Send a simple command to get the natural prompt
-        await executeCommand('', terminal, false); // Empty command to just get prompt
+        // Get the initial prompt
+        await getPrompt(terminal);
 
         setIsTerminalReady(true);
         onConnectionStatusChange(true);
@@ -168,10 +168,17 @@ export function TerminalEmulator({
           if (result.data.stderr) {
             terminal.write(result.data.stderr);
           }
+
+          // After command output, get the current prompt
+          if (command.trim()) {
+            await getPrompt(terminal);
+          }
         } else if (!result.success) {
           console.error(`[@component:TerminalEmulator] SSH command failed:`, result.error);
           if (showOutput) {
             terminal.write(`\x1b[31mSSH Error: ${result.error || 'Command failed'}\x1b[0m\r\n`);
+            // Still show prompt after error
+            await getPrompt(terminal);
           }
         }
       } catch (error) {
@@ -180,7 +187,31 @@ export function TerminalEmulator({
           terminal.write(
             `\x1b[31mError: ${error instanceof Error ? error.message : 'Unknown error'}\x1b[0m\r\n`,
           );
+          // Still show prompt after error
+          await getPrompt(terminal);
         }
+      }
+    };
+
+    const getPrompt = async (terminal: any) => {
+      try {
+        // Get current prompt by sending a command that shows the prompt format
+        const { sendTerminalData } = await import('@/app/actions/terminalsAction');
+        const result = await sendTerminalData(
+          sessionId,
+          'echo "$(whoami)@$(hostname):$(pwd | sed "s|^$HOME|~|")\\$ " | tr -d "\\n"',
+        );
+
+        if (result.success && result.data?.stdout) {
+          terminal.write(result.data.stdout);
+        } else {
+          // Fallback prompt if the command fails
+          terminal.write(`${host.user || 'user'}@${host.name}:~$ `);
+        }
+      } catch (error) {
+        console.error(`[@component:TerminalEmulator] Error getting prompt:`, error);
+        // Fallback prompt
+        terminal.write(`${host.user || 'user'}@${host.name}:~$ `);
       }
     };
 
