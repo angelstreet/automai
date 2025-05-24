@@ -19,6 +19,7 @@ export function TerminalEmulator({
   const terminalInstance = useRef<any>(null);
   const fitAddon = useRef<any>(null);
   const currentInput = useRef<string>('');
+  const currentDirectory = useRef<string>(host.is_windows ? `C:\\Users\\${host.user}` : '~'); // Track current directory
   const [isTerminalReady, setIsTerminalReady] = useState(false);
 
   useEffect(() => {
@@ -119,11 +120,7 @@ export function TerminalEmulator({
     const showInitialPrompt = (terminal: any) => {
       // Show welcome and initial prompt
       terminal.write(`\r\n🔗 Connected to ${host.name} (${host.ip}:${host.port || 22})\r\n`);
-      if (host.is_windows) {
-        terminal.write(`PS C:\\Users\\${host.user}> `);
-      } else {
-        terminal.write(`${host.user}@${host.name}:~$ `);
-      }
+      showPrompt(terminal);
     };
 
     const handleTerminalInput = async (data: string, terminal: any) => {
@@ -160,9 +157,33 @@ export function TerminalEmulator({
       try {
         console.log(`[@component:TerminalEmulator] Executing command: ${command}`);
 
+        // Handle cd command specially to track directory changes
+        let actualCommand = command;
+        let isCdCommand = false;
+
+        if (command.startsWith('cd ') || command === 'cd') {
+          isCdCommand = true;
+          const targetDir =
+            command.substring(3).trim() || (host.is_windows ? `C:\\Users\\${host.user}` : '~');
+
+          if (host.is_windows) {
+            // For Windows, first change directory, then get current directory
+            actualCommand = `cd "${targetDir}" 2>$null; if ($?) { pwd } else { Write-Error "Cannot access path" }`;
+          } else {
+            // For Linux/Unix, change directory and get pwd
+            actualCommand = `cd "${targetDir}" 2>/dev/null && pwd || echo "cd: cannot access '${targetDir}': No such file or directory"`;
+          }
+        } else if (!host.is_windows && currentDirectory.current !== '~') {
+          // For non-cd commands on Linux, prefix with cd to current directory
+          actualCommand = `cd "${currentDirectory.current}" && ${command}`;
+        } else if (host.is_windows && currentDirectory.current !== `C:\\Users\\${host.user}`) {
+          // For non-cd commands on Windows, prefix with cd to current directory
+          actualCommand = `cd "${currentDirectory.current}"; ${command}`;
+        }
+
         // Import terminal action
         const { sendTerminalData } = await import('@/app/actions/terminalsAction');
-        const result = await sendTerminalData(sessionId, command);
+        const result = await sendTerminalData(sessionId, actualCommand);
 
         console.log(`[@component:TerminalEmulator] Command result:`, {
           success: result.success,
@@ -170,22 +191,40 @@ export function TerminalEmulator({
           hasStdout: !!result.data?.stdout,
           hasStderr: !!result.data?.stderr,
           error: result.error,
+          isCdCommand,
         });
 
         if (result.success && result.data) {
-          // Display command output
-          if (result.data.stdout) {
-            console.log(`[@component:TerminalEmulator] Writing stdout:`, result.data.stdout);
-            terminal.write(result.data.stdout);
-          }
-          if (result.data.stderr) {
-            console.log(`[@component:TerminalEmulator] Writing stderr:`, result.data.stderr);
-            terminal.write(`\x1b[31m${result.data.stderr}\x1b[0m`); // Red color for errors
-          }
+          // Handle cd command results
+          if (isCdCommand) {
+            if (result.data.stdout && !result.data.stderr) {
+              // Successfully changed directory, update our tracking
+              const newDir = result.data.stdout.trim();
+              currentDirectory.current = newDir;
+              console.log(`[@component:TerminalEmulator] Directory changed to: ${newDir}`);
+              // Don't show the pwd output for cd commands
+            } else if (result.data.stderr) {
+              // Show error for failed cd
+              terminal.write(`\x1b[31m${result.data.stderr.trim()}\x1b[0m\r\n`);
+            } else {
+              // Fallback error message
+              terminal.write(`\x1b[31mcd: command failed\x1b[0m\r\n`);
+            }
+          } else {
+            // Display normal command output
+            if (result.data.stdout) {
+              console.log(`[@component:TerminalEmulator] Writing stdout:`, result.data.stdout);
+              terminal.write(result.data.stdout);
+            }
+            if (result.data.stderr) {
+              console.log(`[@component:TerminalEmulator] Writing stderr:`, result.data.stderr);
+              terminal.write(`\x1b[31m${result.data.stderr}\x1b[0m`);
+            }
 
-          // If no output, show a message
-          if (!result.data.stdout && !result.data.stderr) {
-            terminal.write(`\x1b[90m(command completed with no output)\x1b[0m\r\n`);
+            // If no output, show a message
+            if (!result.data.stdout && !result.data.stderr) {
+              terminal.write(`\x1b[90m(command completed with no output)\x1b[0m\r\n`);
+            }
           }
         } else {
           console.error(`[@component:TerminalEmulator] Command failed:`, result.error);
@@ -201,9 +240,13 @@ export function TerminalEmulator({
 
     const showPrompt = (terminal: any) => {
       if (host.is_windows) {
-        terminal.write(`PS C:\\Users\\${host.user}> `);
+        terminal.write(`PS ${currentDirectory.current}> `);
       } else {
-        terminal.write(`${host.user}@${host.name}:~$ `);
+        const shortDir =
+          currentDirectory.current === '/home/' + host.user || currentDirectory.current === '~'
+            ? '~'
+            : currentDirectory.current;
+        terminal.write(`${host.user}@${host.name}:${shortDir}$ `);
       }
     };
 
@@ -273,7 +316,7 @@ export function TerminalEmulator({
         }
       }}
     >
-      <div ref={terminalRef} className="w-full h-full" style={{ padding: '8px' }} />
+      <div ref={terminalRef} className="w-full h-full" style={{ padding: '8px 8px 48px 8px' }} />
     </div>
   );
 }
