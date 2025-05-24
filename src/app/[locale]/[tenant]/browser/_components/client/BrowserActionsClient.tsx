@@ -3,12 +3,15 @@
 import { Lock, Monitor } from 'lucide-react';
 import { useState } from 'react';
 
-import { startBrowserSession, forceTakeControlBrowserHost } from '@/app/actions/browserActions';
+import {
+  startBrowserSession,
+  forceTakeControlBrowserHost,
+  endBrowserSession,
+} from '@/app/actions/browserActions';
 import { Button } from '@/components/shadcn/button';
+import { UnifiedHostModal } from '@/components/terminal';
 import { Host } from '@/types/component/hostComponentType';
 import { User } from '@/types/service/userServiceType';
-
-import { BrowserModalClient } from './BrowserModalClient';
 
 interface BrowserActionsClientProps {
   initialHosts: Host[];
@@ -81,8 +84,19 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
     }
   };
 
-  const handleCloseModal = () => {
+  const handleCloseModal = async () => {
     console.log(`[@component:BrowserActionsClient] Closing browser modal`);
+
+    // End browser session if active
+    if (sessionId && activeHost) {
+      try {
+        await endBrowserSession(sessionId, activeHost.id);
+        console.log(`[@component:BrowserActionsClient] Browser session ended: ${sessionId}`);
+      } catch (error) {
+        console.error(`[@component:BrowserActionsClient] Error ending browser session:`, error);
+      }
+    }
+
     setIsModalOpen(false);
     setActiveHost(null);
     setSessionId(null);
@@ -119,12 +133,10 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
             <option value="">Select host...</option>
             {browserHosts.map((host) => {
               const isLocked = host.reserved_by && host.reserved_by !== currentUser.id;
-              const isMyHost = host.reserved_by === currentUser.id;
 
               return (
                 <option key={host.id} value={host.id}>
-                  {host.name} ({host.device_type})
-                  {isMyHost ? ' (You)' : isLocked ? ' (Locked)' : ''}
+                  {host.name} ({host.device_type}){isLocked ? ' (Locked)' : ''}
                 </option>
               );
             })}
@@ -158,12 +170,13 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
         </div>
       )}
 
-      {/* Browser Modal */}
-      <BrowserModalClient
+      {/* Browser Modal - Using Unified Modal */}
+      <UnifiedHostModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         host={activeHost}
-        sessionId={sessionId}
+        title={activeHost ? `Browser Automation - ${activeHost.name}` : ''}
+        defaultTab="vnc"
       />
     </>
   );

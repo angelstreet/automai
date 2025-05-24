@@ -170,12 +170,42 @@ function HostCardClient({ host, onDelete, onTestConnection }: HostCardClientProp
   };
 
   const handleTerminalClick = () => {
-    console.log(`[@component:HostCardClient] Opening terminal for host: ${host.name}`);
+    console.log(`[@component:HostCardClient] Opening remote access for host: ${host.name}`);
 
-    // Dispatch event to open terminal modal
+    // Check what capabilities the host has
+    const hasVnc = !!host.vnc_port;
+    const hasTerminal =
+      host.type === 'ssh' ||
+      host.device_type === 'server' ||
+      host.device_type === 'workstation' ||
+      host.device_type === 'laptop';
+
+    // Determine default tab and title based on capabilities
+    let defaultTab: 'vnc' | 'terminal' = 'terminal';
+    let title = `${host.name} - Terminal`;
+
+    if (hasVnc && hasTerminal) {
+      // Both available - default to VNC for better UX
+      defaultTab = 'vnc';
+      title = `${host.name} - Remote Access`;
+    } else if (hasVnc && !hasTerminal) {
+      // Only VNC available
+      defaultTab = 'vnc';
+      title = `${host.name} - VNC Display`;
+    } else if (!hasVnc && hasTerminal) {
+      // Only Terminal available
+      defaultTab = 'terminal';
+      title = `${host.name} - Terminal`;
+    }
+
+    // Dispatch event to open unified modal
     window.dispatchEvent(
-      new CustomEvent('OPEN_TERMINAL_MODAL', {
-        detail: { host },
+      new CustomEvent('OPEN_HOST_MODAL', {
+        detail: {
+          host,
+          title,
+          defaultTab,
+        },
       }),
     );
   };
@@ -333,7 +363,7 @@ function HostCardClient({ host, onDelete, onTestConnection }: HostCardClientProp
               disabled={localStatus !== 'connected'}
             >
               <Terminal className="h-4 w-4 mr-2" />
-              {t('open')}
+              {t('connect')}
             </Button>
             <p className="text-xs mt-1 text-muted-foreground">
               {host.updated_at

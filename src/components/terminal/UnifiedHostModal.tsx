@@ -4,24 +4,30 @@ import { X, Monitor, Wifi, WifiOff, Terminal as TerminalIcon } from 'lucide-reac
 import { useCallback, useEffect, useState } from 'react';
 
 import { TerminalEmulator } from '@/app/[locale]/[tenant]/hosts/_components/client/TerminalEmulator';
-import { endBrowserSession } from '@/app/actions/browserActions';
 import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/shadcn/dialog';
 import { Host } from '@/types/component/hostComponentType';
 
-interface BrowserModalClientProps {
+interface UnifiedHostModalProps {
   isOpen: boolean;
   onClose: () => void;
   host: Host | null;
-  sessionId: string | null;
+  title?: string;
+  defaultTab?: 'vnc' | 'terminal';
 }
 
-export function BrowserModalClient({ isOpen, onClose, host, sessionId }: BrowserModalClientProps) {
+export function UnifiedHostModal({
+  isOpen,
+  onClose,
+  host,
+  title,
+  defaultTab = 'vnc',
+}: UnifiedHostModalProps) {
   const [isVncLoading, setIsVncLoading] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
-  const [activeTab, setActiveTab] = useState<'vnc' | 'terminal'>('vnc');
+  const [activeTab, setActiveTab] = useState<'vnc' | 'terminal'>(defaultTab);
 
-  // Terminal session state (separate from browser session)
+  // Terminal session state
   const [terminalSessionId, setTerminalSessionId] = useState<string | null>(null);
   const [isTerminalConnecting, setIsTerminalConnecting] = useState(false);
   const [terminalConnectionError, setTerminalConnectionError] = useState<string | null>(null);
@@ -31,7 +37,7 @@ export function BrowserModalClient({ isOpen, onClose, host, sessionId }: Browser
     if (!isOpen || !host) {
       setIsVncLoading(true);
       setIsConnected(false);
-      setActiveTab('vnc');
+      setActiveTab(defaultTab);
       // Reset terminal state
       setTerminalSessionId(null);
       setIsTerminalConnecting(false);
@@ -39,24 +45,31 @@ export function BrowserModalClient({ isOpen, onClose, host, sessionId }: Browser
     } else {
       setIsConnected(true);
     }
-  }, [isOpen, host]);
+  }, [isOpen, host, defaultTab]);
 
   // Check if host supports terminal access
-  const supportsTerminal = (host: Host): boolean => {
+  const supportsTerminal = useCallback((hostToCheck: Host | null): boolean => {
+    if (!hostToCheck) return false;
     // Check if host type supports SSH or has terminal capabilities
     return (
-      host.type === 'ssh' ||
-      host.device_type === 'server' ||
-      host.device_type === 'workstation' ||
-      host.device_type === 'laptop'
+      hostToCheck.type === 'ssh' ||
+      hostToCheck.device_type === 'server' ||
+      hostToCheck.device_type === 'workstation' ||
+      hostToCheck.device_type === 'laptop'
     );
-  };
+  }, []);
+
+  // Check if host supports VNC
+  const supportsVnc = useCallback((hostToCheck: Host | null): boolean => {
+    if (!hostToCheck) return false;
+    return !!hostToCheck.vnc_port;
+  }, []);
 
   const initializeTerminalSession = useCallback(async () => {
     if (!host) return;
 
     console.log(
-      `[@component:BrowserModalClient] Initializing terminal session for host: ${host.name}`,
+      `[@component:UnifiedHostModal] Initializing terminal session for host: ${host.name}`,
     );
     setIsTerminalConnecting(true);
     setTerminalConnectionError(null);
@@ -69,18 +82,18 @@ export function BrowserModalClient({ isOpen, onClose, host, sessionId }: Browser
 
       if (result.success && result.data) {
         console.log(
-          `[@component:BrowserModalClient] Terminal session initialized: ${result.data.sessionId}`,
+          `[@component:UnifiedHostModal] Terminal session initialized: ${result.data.sessionId}`,
         );
         setTerminalSessionId(result.data.sessionId);
       } else {
         console.error(
-          `[@component:BrowserModalClient] Failed to initialize terminal session:`,
+          `[@component:UnifiedHostModal] Failed to initialize terminal session:`,
           result.error,
         );
         setTerminalConnectionError(result.error || 'Failed to initialize terminal session');
       }
     } catch (error) {
-      console.error(`[@component:BrowserModalClient] Error initializing terminal session:`, error);
+      console.error(`[@component:UnifiedHostModal] Error initializing terminal session:`, error);
       setTerminalConnectionError(error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setIsTerminalConnecting(false);
@@ -99,7 +112,39 @@ export function BrowserModalClient({ isOpen, onClose, host, sessionId }: Browser
     ) {
       initializeTerminalSession();
     }
-  }, [isOpen, host, activeTab, terminalSessionId, isTerminalConnecting, initializeTerminalSession]);
+  }, [
+    isOpen,
+    host,
+    activeTab,
+    terminalSessionId,
+    isTerminalConnecting,
+    initializeTerminalSession,
+    supportsTerminal,
+  ]);
+
+  // Determine which tabs to show - moved into useEffect to ensure consistent hook ordering
+  const [tabConfig, setTabConfig] = useState({
+    hasVnc: false,
+    hasTerminal: false,
+    showTabs: false,
+  });
+
+  useEffect(() => {
+    const hasVnc = supportsVnc(host);
+    const hasTerminal = supportsTerminal(host);
+    const showTabs = hasVnc && hasTerminal;
+
+    setTabConfig({ hasVnc, hasTerminal, showTabs });
+
+    // Auto-select available tab if current tab is not supported
+    if (!showTabs && host) {
+      if (hasTerminal && !hasVnc) {
+        setActiveTab('terminal');
+      } else if (hasVnc && !hasTerminal) {
+        setActiveTab('vnc');
+      }
+    }
+  }, [host, supportsVnc, supportsTerminal]);
 
   const handleRetryTerminal = () => {
     setTerminalSessionId(null);
@@ -112,35 +157,24 @@ export function BrowserModalClient({ isOpen, onClose, host, sessionId }: Browser
   };
 
   const handleClose = async () => {
-    console.log(`[@component:BrowserModalClient] Closing browser modal`);
-
-    // End browser session if active
-    if (sessionId && host) {
-      try {
-        await endBrowserSession(sessionId, host.id);
-        console.log(`[@component:BrowserModalClient] Browser session ended: ${sessionId}`);
-      } catch (error) {
-        console.error(`[@component:BrowserModalClient] Error ending browser session:`, error);
-      }
-    }
+    console.log(`[@component:UnifiedHostModal] Closing modal`);
 
     // Close terminal session if active
     if (terminalSessionId) {
       try {
         const { closeTerminal } = await import('@/app/actions/terminalsAction');
         await closeTerminal(terminalSessionId);
-        console.log(
-          `[@component:BrowserModalClient] Terminal session closed: ${terminalSessionId}`,
-        );
+        console.log(`[@component:UnifiedHostModal] Terminal session closed: ${terminalSessionId}`);
       } catch (error) {
-        console.error(`[@component:BrowserModalClient] Error closing terminal session:`, error);
+        console.error(`[@component:UnifiedHostModal] Error closing terminal session:`, error);
       }
     }
 
     onClose();
   };
 
-  if (!host || !sessionId) return null;
+  // Early return after all hooks are called
+  if (!host) return null;
 
   // Get VNC connection details
   const vncPort = host?.vnc_port;
@@ -151,6 +185,9 @@ export function BrowserModalClient({ isOpen, onClose, host, sessionId }: Browser
     ? `https://${host.ip}:${vncPort}/vnc/vnc_lite.html?host=${host.ip}&port=${vncPort}&path=websockify&encrypt=0${vncPassword ? `&password=${vncPassword}` : ''}`
     : null;
 
+  const { hasVnc, hasTerminal, showTabs } = tabConfig;
+  const modalTitle = title || `${host.name} - Remote Access`;
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="w-[95vw] max-w-none sm:max-w-none h-[90vh] p-0 overflow-hidden [&>button]:hidden">
@@ -159,9 +196,7 @@ export function BrowserModalClient({ isOpen, onClose, host, sessionId }: Browser
           <div className="flex items-center justify-between p-3 border-b bg-background">
             <div className="flex items-center space-x-3">
               <Monitor className="h-5 w-5" />
-              <DialogTitle className="text-lg font-semibold">
-                Browser Automation - {host.name}
-              </DialogTitle>
+              <DialogTitle className="text-lg font-semibold">{modalTitle}</DialogTitle>
               <div className="flex items-center space-x-2">
                 {isConnected ? (
                   <Wifi className="h-4 w-4 text-green-500" />
@@ -171,44 +206,46 @@ export function BrowserModalClient({ isOpen, onClose, host, sessionId }: Browser
               </div>
             </div>
 
-            {/* Tab Navigation - centered */}
-            <div className="absolute left-1/2 transform -translate-x-1/2">
-              <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-                <button
-                  onClick={() => setActiveTab('vnc')}
-                  className={`px-4 py-2 text-sm font-semibold rounded-md transition-all duration-200 ${
-                    activeTab === 'vnc'
-                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                  }`}
-                  disabled={!vncUrl}
-                >
-                  VNC Display
-                </button>
-                <button
-                  onClick={() => setActiveTab('terminal')}
-                  className={`px-4 py-2 text-sm font-semibold rounded-md transition-all duration-200 ${
-                    activeTab === 'terminal'
-                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                  }`}
-                  disabled={!supportsTerminal(host)}
-                >
-                  Terminal
-                </button>
+            {/* Tab Navigation - only show if both options available */}
+            {showTabs && (
+              <div className="absolute left-1/2 transform -translate-x-1/2">
+                <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+                  <button
+                    onClick={() => setActiveTab('vnc')}
+                    className={`px-4 py-2 text-sm font-semibold rounded-md transition-all duration-200 ${
+                      activeTab === 'vnc'
+                        ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                    disabled={!hasVnc}
+                  >
+                    VNC Display
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('terminal')}
+                    className={`px-4 py-2 text-sm font-semibold rounded-md transition-all duration-200 ${
+                      activeTab === 'terminal'
+                        ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                    disabled={!hasTerminal}
+                  >
+                    Terminal
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             <Button variant="ghost" size="sm" onClick={handleClose}>
               <X className="h-4 w-4" />
             </Button>
           </div>
 
-          {/* Content Area - Both tabs stay mounted, just hidden/shown */}
+          {/* Content Area */}
           <div className="flex-1 overflow-hidden relative">
             {/* VNC Tab */}
             <div className={`h-full absolute inset-0 ${activeTab === 'vnc' ? 'block' : 'hidden'}`}>
-              {!vncUrl ? (
+              {!hasVnc ? (
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center space-y-4">
                     <Monitor className="h-12 w-12 text-gray-400 mx-auto" />
@@ -216,14 +253,14 @@ export function BrowserModalClient({ isOpen, onClose, host, sessionId }: Browser
                       VNC Not Available
                     </h3>
                     <p className="text-gray-500 max-w-md">
-                      This host doesn't have VNC configured. You can still use the terminal to run
-                      browser automation scripts.
+                      This host doesn't have VNC configured.{' '}
+                      {hasTerminal && 'You can use the terminal instead.'}
                     </p>
                   </div>
                 </div>
               ) : (
                 <>
-                  {/* VNC Loading State - only show when actually loading */}
+                  {/* VNC Loading State */}
                   {isVncLoading && (
                     <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800 z-10">
                       <div className="flex flex-col items-center">
@@ -233,7 +270,7 @@ export function BrowserModalClient({ isOpen, onClose, host, sessionId }: Browser
                     </div>
                   )}
 
-                  {/* VNC iframe - always mounted */}
+                  {/* VNC iframe */}
                   <iframe
                     src={vncUrl}
                     className="w-full h-full"
@@ -253,7 +290,7 @@ export function BrowserModalClient({ isOpen, onClose, host, sessionId }: Browser
             <div
               className={`h-full absolute inset-0 ${activeTab === 'terminal' ? 'block' : 'hidden'}`}
             >
-              {!supportsTerminal(host) ? (
+              {!hasTerminal ? (
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center space-y-4">
                     <TerminalIcon className="h-12 w-12 text-gray-400 mx-auto" />
