@@ -150,29 +150,30 @@ export default function ModelSelector({ className = '' }: ModelSelectorProps) {
 
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
-      {/* Dropdown Trigger */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-[140px] px-3 py-2 text-sm bg-background border border-border rounded-md text-left flex items-center justify-between hover:bg-secondary/50 transition-colors"
-      >
-        <span className="text-muted-foreground">
-          {selectedModels.length < MODEL_SELECTION.MAX_MODELS
-            ? 'Add model...'
-            : `Max ${MODEL_SELECTION.MAX_MODELS} models selected`}
-        </span>
-        <svg
-          className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-
-      {/* Selected Models Display */}
+      {/* Button and Selected Models on Same Line */}
       <div className="flex items-center gap-2 mb-2">
-        <div className="flex flex-wrap gap-1">
+        {/* Dropdown Trigger */}
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-[140px] px-3 py-2 text-sm bg-background border border-border rounded-md text-left flex items-center justify-between hover:bg-secondary/50 transition-colors flex-shrink-0"
+        >
+          <span className="text-muted-foreground">
+            {selectedModels.length < MODEL_SELECTION.MAX_MODELS
+              ? 'Add model...'
+              : `Max ${MODEL_SELECTION.MAX_MODELS} models selected`}
+          </span>
+          <svg
+            className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        {/* Selected Models Display */}
+        <div className="flex flex-wrap gap-1 flex-1 min-w-0">
           {selectedModels.map((modelId) => {
             const model = getSelectedModel(modelId);
             return (

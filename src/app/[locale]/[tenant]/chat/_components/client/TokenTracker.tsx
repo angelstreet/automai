@@ -83,7 +83,7 @@ export function TokenTracker() {
   }
 
   return (
-    <div className="px-4 pb-2">
+    <div className="px-4">
       <div className="text-xs text-center text-muted-foreground">
         Prompt: {tokenUsage.promptTokens.toLocaleString()} • Response:{' '}
         {tokenUsage.completionTokens.toLocaleString()} • Total:{' '}

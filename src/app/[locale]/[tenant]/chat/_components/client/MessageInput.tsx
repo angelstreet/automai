@@ -167,10 +167,7 @@ export default function MessageInput() {
 
   return (
     <div className="w-full">
-      {/* Token Usage Display */}
-      <TokenTracker />
-
-      <div className="flex items-end space-x-3 px-4 py-3">
+      <div className="flex items-center space-x-3 px-4 py-3">
         {/* Text Input Container */}
         <div className="flex-1 relative">
           <textarea
@@ -188,7 +185,8 @@ export default function MessageInput() {
               overflow: 'auto',
             }}
           />
-
+          {/* Token Usage Display */}
+          <TokenTracker />
           {/* Character count indicator */}
           {message.length > 100 && (
             <div
