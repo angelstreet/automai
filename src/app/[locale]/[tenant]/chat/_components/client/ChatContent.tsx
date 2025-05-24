@@ -14,7 +14,7 @@ export default function ChatContent() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { activeConversationId } = useChatContext();
+  const { activeConversationId, filteredModels, getModelColor } = useChatContext();
 
   // Fetch messages when conversation changes
   const fetchMessages = async () => {
@@ -212,36 +212,68 @@ export default function ChatContent() {
             </div>
           </div>
         ) : (
-          messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div
-                className={`max-w-[99%] rounded-lg px-3 py-1 mr-1 ${
-                  message.role === 'user'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-secondary text-foreground'
-                }`}
-              >
-                {/* Message Content */}
-                <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">
-                  {message.content}
-                  <span className="ml-2 text-xs text-muted-foreground">
-                    {message.response_time_ms && `${message.response_time_ms}ms / `}
-                    {message.token_count && `${message.token_count} tokens`}
-                  </span>
-                </div>
+          messages
+            .filter((message) => {
+              // Always show user messages
+              if (message.role === 'user') return true;
+              // For AI messages, check if the model is in the filtered list
+              return message.model_id && filteredModels.includes(message.model_id);
+            })
+            .map((message) => {
+              // Get model color for AI messages
+              const modelColor =
+                message.role === 'assistant' && message.model_id
+                  ? getModelColor(message.model_id)
+                  : '';
 
-                {/* Error message if any */}
-                {message.error_message && (
-                  <div className="mt-1 text-xs text-destructive bg-destructive/10 rounded px-2 py-1">
-                    Error: {message.error_message}
+              return (
+                <div
+                  key={message.id}
+                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[99%] rounded-lg px-3 py-1 mr-1 ${
+                      message.role === 'user'
+                        ? 'bg-primary text-primary-foreground'
+                        : modelColor
+                          ? `${modelColor} text-white border-2 border-opacity-50`
+                          : 'bg-secondary text-foreground'
+                    }`}
+                  >
+                    {/* Model name badge for AI messages */}
+                    {message.role === 'assistant' && message.model_name && (
+                      <div className="text-xs opacity-75 mb-1 font-medium">
+                        {message.model_name}
+                      </div>
+                    )}
+
+                    {/* Message Content */}
+                    <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+                      {message.content}
+                      {/* Token info for all messages */}
+                      <span className="ml-2 text-xs opacity-75">
+                        {message.role === 'user' &&
+                          message.token_count &&
+                          `${message.token_count} tokens`}
+                        {message.role === 'assistant' && (
+                          <>
+                            {message.response_time_ms && `${message.response_time_ms}ms / `}
+                            {message.token_count && `${message.token_count} tokens`}
+                          </>
+                        )}
+                      </span>
+                    </div>
+
+                    {/* Error message if any */}
+                    {message.error_message && (
+                      <div className="mt-1 text-xs text-red-200 bg-red-900/20 rounded px-2 py-1">
+                        Error: {message.error_message}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </div>
-          ))
+                </div>
+              );
+            })
         )}
       </div>
     </div>

@@ -4,6 +4,10 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 
 import { MODEL_SELECTION } from '../../constants';
 
+// Model colors - consistent assignment
+const MODEL_COLORS = ['bg-red-500', 'bg-green-500', 'bg-blue-500'] as const;
+const MODEL_TEXT_COLORS = ['text-red-500', 'text-green-500', 'text-blue-500'] as const;
+
 interface ChatContextType {
   selectedModels: string[];
   setSelectedModels: (models: string[]) => void;
@@ -17,6 +21,12 @@ interface ChatContextType {
   setOpenRouterApiKey: (key: string | null) => void;
   hasEnvApiKey: boolean;
   isApiKeyValid: boolean;
+  // Model filtering
+  filteredModels: string[];
+  setFilteredModels: (models: string[]) => void;
+  getModelColor: (modelId: string) => string;
+  getModelTextColor: (modelId: string) => string;
+  toggleModelFilter: (modelId: string) => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -30,6 +40,41 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [openRouterApiKey, setOpenRouterApiKey] = useState<string | null>(null);
   const [hasEnvApiKey, setHasEnvApiKey] = useState<boolean>(false);
+  const [filteredModels, setFilteredModels] = useState<string[]>([]);
+
+  // Initialize filtered models to show all selected models
+  useEffect(() => {
+    setFilteredModels([...selectedModels]);
+  }, [selectedModels]);
+
+  // Get consistent color for a model based on its position in selectedModels
+  const getModelColor = (modelId: string): string => {
+    const index = selectedModels.indexOf(modelId);
+    return index >= 0 && index < MODEL_COLORS.length ? MODEL_COLORS[index] : 'bg-gray-500';
+  };
+
+  // Get consistent text color for a model
+  const getModelTextColor = (modelId: string): string => {
+    const index = selectedModels.indexOf(modelId);
+    return index >= 0 && index < MODEL_TEXT_COLORS.length
+      ? MODEL_TEXT_COLORS[index]
+      : 'text-gray-500';
+  };
+
+  // Toggle model filter
+  const toggleModelFilter = (modelId: string) => {
+    setFilteredModels((prev) => {
+      if (prev.includes(modelId)) {
+        // Remove from filter
+        const newFiltered = prev.filter((id) => id !== modelId);
+        // If no models left, show all
+        return newFiltered.length === 0 ? [...selectedModels] : newFiltered;
+      } else {
+        // Add to filter
+        return [...prev, modelId];
+      }
+    });
+  };
 
   // Check if environment has OPENROUTER_API_KEY on mount
   useEffect(() => {
@@ -78,6 +123,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         setOpenRouterApiKey,
         hasEnvApiKey,
         isApiKeyValid,
+        filteredModels,
+        setFilteredModels,
+        getModelColor,
+        getModelTextColor,
+        toggleModelFilter,
       }}
     >
       {children}

@@ -21,7 +21,13 @@ interface ModelSelectorProps {
  * Includes search filtering and clear free/paid indicators
  */
 export default function ModelSelector({ className = '' }: ModelSelectorProps) {
-  const { selectedModels, setSelectedModels } = useChatContext();
+  const {
+    selectedModels,
+    setSelectedModels,
+    getModelColor,
+    filteredModels: activeFilters,
+    toggleModelFilter,
+  } = useChatContext();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -48,7 +54,7 @@ export default function ModelSelector({ className = '' }: ModelSelectorProps) {
   }, [isOpen]);
 
   // Filter models based on search query
-  const filteredModels = ALL_OPENROUTER_MODELS.filter((model) => {
+  const filteredModelResults = ALL_OPENROUTER_MODELS.filter((model) => {
     if (!searchQuery.trim()) return true;
 
     const query = searchQuery.toLowerCase();
@@ -62,11 +68,11 @@ export default function ModelSelector({ className = '' }: ModelSelectorProps) {
 
   // Group models: free first, then popular paid, then others
   const groupedModels = {
-    free: filteredModels.filter((model) => model.isFree),
-    popular: filteredModels.filter(
+    free: filteredModelResults.filter((model) => model.isFree),
+    popular: filteredModelResults.filter(
       (model) => !model.isFree && POPULAR_OPENROUTER_MODELS.some((p) => p.id === model.id),
     ),
-    other: filteredModels.filter(
+    other: filteredModelResults.filter(
       (model) => !model.isFree && !POPULAR_OPENROUTER_MODELS.some((p) => p.id === model.id),
     ),
   };
@@ -151,7 +157,7 @@ export default function ModelSelector({ className = '' }: ModelSelectorProps) {
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
       {/* Button and Selected Models on Same Line */}
-      <div className="flex items-center gap-2 mb-2">
+      <div className="flex items-center gap-2 mt-2">
         {/* Dropdown Trigger */}
         <button
           onClick={() => setIsOpen(!isOpen)}
@@ -176,14 +182,21 @@ export default function ModelSelector({ className = '' }: ModelSelectorProps) {
         <div className="flex gap-1 flex-1 min-w-0 overflow-x-auto">
           {selectedModels.map((modelId) => {
             const model = getSelectedModel(modelId);
+            const modelColor = getModelColor(modelId);
+            const isFiltered = activeFilters.includes(modelId);
+
             return (
-              <span
+              <button
                 key={modelId}
-                className="px-2 py-1 text-xs bg-primary text-primary-foreground rounded-full flex items-center gap-1 flex-shrink-0"
+                onClick={() => toggleModelFilter(modelId)}
+                className={`px-2 py-1 text-xs rounded-full flex items-center gap-1 flex-shrink-0 transition-all hover:scale-105 ${
+                  isFiltered ? `${modelColor} text-white` : 'bg-gray-200 text-gray-600 opacity-50'
+                }`}
+                title={`Click to ${isFiltered ? 'hide' : 'show'} responses from ${model?.name || modelId}`}
               >
                 {model ? getDisplayName(model) : modelId}
                 {model?.isFree && <span className="text-[10px]">🆓</span>}
-              </span>
+              </button>
             );
           })}
         </div>
@@ -199,13 +212,14 @@ export default function ModelSelector({ className = '' }: ModelSelectorProps) {
               placeholder="Search models..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              autoComplete="off"
               className="w-full px-3 py-2 text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
 
           {/* Models List */}
           <div className="overflow-y-auto max-h-64">
-            {filteredModels.length === 0 ? (
+            {filteredModelResults.length === 0 ? (
               <div className="px-3 py-4 text-sm text-muted-foreground text-center">
                 No models found
               </div>
