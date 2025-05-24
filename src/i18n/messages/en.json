@@ -64,10 +64,6 @@
     "title": "Browser",
     "desc": "Run browser automation tests"
   },
-  "tasks": {
-    "title": "Tasks",
-    "desc": "Manage tasks with Monday.com integration"
-  },
   "chat": {
     "title": "Chat",
     "desc": "Chat with AI"
@@ -266,6 +262,10 @@
     "no_logs": "No logs available. Click to refresh.",
     "refresh_logs": "Refresh"
   },
+  "doc": {
+    "title": "Documentation",
+    "desc": "Manage documentation with JIRA"
+  },
   "environmentVariables": {
     "title": "Environment Variables",
     "desc": "Manage secure environment variables for your team's deployments",
@@ -370,6 +370,10 @@
     "get_started": "Get Started",
     "learn_more": "Learn More",
     "title": "Automate your infrastructure with AI"
+  },
+  "issues": {
+    "title": "Issues",
+    "desc": "Manage issues with JIRQ"
   },
   "menu": {
     "dashboard": "Dashboard",
@@ -573,6 +577,10 @@
     "settings": "Settings",
     "team": "Team",
     "templates": "Templates"
+  },
+  "thirdparty": {
+    "title": "Third Party Tools",
+    "desc": "Quick access to your favorite tools and services"
   },
   "team": {
     "admin_protection_tooltip": "Admin users cannot be edited or removed",

@@ -152,9 +152,9 @@
     "view_config": "Voir config",
     "visibility": "Visibilité"
   },
-  "tasks": {
-    "title": "Tâches",
-    "desc": "Gérer les tâches avec l'intégration Monday.com"
+  "thirdparty": {
+    "title": "Outils Tiers",
+    "desc": "Accès rapide à vos outils et services favoris"
   },
   "dashboard": {
     "desc": "Bienvenue sur votre tableau de bord",

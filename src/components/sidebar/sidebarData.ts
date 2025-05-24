@@ -1,3 +1,4 @@
+import { Role } from '@/types/service/userServiceType';
 import {
   LayoutDashboard,
   Code2,
@@ -9,10 +10,8 @@ import {
   Factory,
   Server,
   GitBranch,
-  CheckSquare,
+  ExternalLink,
 } from 'lucide-react';
-
-import { Role } from '@/types/service/userServiceType';
 
 export type SidebarData = {
   user: {
@@ -41,4 +40,3 @@ export type SidebarData = {
     }[];
   }[];
 };
-
