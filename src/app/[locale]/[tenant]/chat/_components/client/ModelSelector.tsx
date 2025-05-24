@@ -173,13 +173,13 @@ export default function ModelSelector({ className = '' }: ModelSelectorProps) {
         </button>
 
         {/* Selected Models Display */}
-        <div className="flex flex-wrap gap-1 flex-1 min-w-0">
+        <div className="flex gap-1 flex-1 min-w-0 overflow-x-auto">
           {selectedModels.map((modelId) => {
             const model = getSelectedModel(modelId);
             return (
               <span
                 key={modelId}
-                className="px-2 py-1 text-xs bg-primary text-primary-foreground rounded-full flex items-center gap-1"
+                className="px-2 py-1 text-xs bg-primary text-primary-foreground rounded-full flex items-center gap-1 flex-shrink-0"
               >
                 {model ? getDisplayName(model) : modelId}
                 {model?.isFree && <span className="text-[10px]">🆓</span>}

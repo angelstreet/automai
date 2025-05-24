@@ -16,7 +16,7 @@ export { ChatContentClient as default, ChatContentClient };
 function ChatContentClient() {
   return (
     <ChatProvider>
-      <div className="flex h-screen bg-transparent">
+      <div className="flex bg-transparent" style={{ height: 'calc(100vh - 64px)' }}>
         {/* History Panel - Left Sidebar */}
         <div
           className={`${CHAT_LAYOUT.SIDEBAR_WIDTH} bg-background/80 backdrop-blur-sm border-r border-border flex flex-col`}
