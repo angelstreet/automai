@@ -1,8 +1,18 @@
 'use client';
 
-import { Terminal, RefreshCw, XCircle, ScrollText, MoreHorizontal, FolderPlus } from 'lucide-react';
+import {
+  Terminal,
+  RefreshCw,
+  XCircle,
+  ScrollText,
+  MoreHorizontal,
+  FolderPlus,
+  ChevronDown,
+  ChevronRight,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import React, { useState } from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import {
@@ -32,6 +42,25 @@ interface HostTableClientProps {
   activeWorkspace?: string | null;
 }
 
+// Group hosts by their public IP (gateway) - same logic as grid
+function groupHostsByPublicIP(hosts: Host[]) {
+  const groups = new Map<string, Host[]>();
+
+  hosts.forEach((host) => {
+    const publicIP = host.ip;
+    if (!groups.has(publicIP)) {
+      groups.set(publicIP, []);
+    }
+    groups.get(publicIP)!.push(host);
+  });
+
+  return Array.from(groups.entries()).map(([ip, hosts]) => ({
+    publicIP: ip,
+    hosts: hosts,
+    count: hosts.length,
+  }));
+}
+
 export function HostTableClient({
   hosts,
   selectedHosts: _selectedHosts,
@@ -44,6 +73,12 @@ export function HostTableClient({
   const router = useRouter();
   const t = useTranslations('common');
 
+  // Initialize with all groups expanded
+  const hostGroups = groupHostsByPublicIP(hosts);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
+    new Set(hostGroups.map((group) => group.publicIP)),
+  );
+
   // Get locale and tenant from the current path
   const getPathSegments = () => {
     const pathSegments = window.location.pathname.split('/');
@@ -51,6 +86,57 @@ export function HostTableClient({
       locale: pathSegments[1] || 'en',
       tenant: pathSegments[2] || 'trial',
     };
+  };
+
+  const getDeviceTypeBadge = (deviceType?: string) => {
+    if (!deviceType) return null;
+
+    const getBadgeColor = (type: string) => {
+      switch (type) {
+        case 'linux':
+          return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+        case 'windows':
+          return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300';
+        case 'android_phone':
+        case 'android_tablet':
+          return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+        case 'ios_phone':
+        case 'ios_tablet':
+          return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
+        case 'tv_tizen':
+        case 'tv_lg':
+        case 'tv_android':
+        case 'appletv':
+          return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
+        case 'stb_eos':
+        case 'stb_apollo':
+          return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
+        default:
+          return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
+      }
+    };
+
+    const getDisplayName = (type: string) => {
+      return type.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+    };
+
+    return (
+      <span
+        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getBadgeColor(deviceType)}`}
+      >
+        {getDisplayName(deviceType)}
+      </span>
+    );
+  };
+
+  const toggleGroup = (publicIP: string) => {
+    const newExpanded = new Set(expandedGroups);
+    if (newExpanded.has(publicIP)) {
+      newExpanded.delete(publicIP);
+    } else {
+      newExpanded.add(publicIP);
+    }
+    setExpandedGroups(newExpanded);
   };
 
   const getStatusDot = (status: string) => {
@@ -82,6 +168,33 @@ export function HostTableClient({
     router.push(terminalPath);
   };
 
+  if (hosts.length === 0) {
+    return (
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow className="h-10">
+              <TableHead className="w-[40px] py-2">Status</TableHead>
+              <TableHead className="py-2">Name</TableHead>
+              <TableHead className="py-2">Address</TableHead>
+              <TableHead className="py-2">Last Connected</TableHead>
+              <TableHead className="w-[120px] py-2">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody key="host-table-body">
+            <TableRow>
+              <TableCell colSpan={5} className="h-24 text-center">
+                <div className="text-sm text-muted-foreground">
+                  {activeWorkspace ? 'No hosts found in this workspace' : 'No hosts found'}
+                </div>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-md border">
       <Table>
@@ -95,113 +208,142 @@ export function HostTableClient({
           </TableRow>
         </TableHeader>
         <TableBody key="host-table-body">
-          {hosts.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={5} className="h-24 text-center">
-                <div className="text-sm text-muted-foreground">
-                  {activeWorkspace ? 'No hosts found in this workspace' : 'No hosts found'}
-                </div>
-              </TableCell>
-            </TableRow>
-          ) : (
-            hosts.map((host) => (
-              <TableRow
-                key={host.id}
-                className="h-10"
-                onClick={() => selectMode && onSelect(host.id)}
-              >
-                <TableCell className="py-2">
-                  <div className="flex justify-center">{getStatusDot(host.status)}</div>
-                </TableCell>
-                <TableCell className="font-medium py-2">{host.name}</TableCell>
-                <TableCell className="py-2">
-                  {host.ip}
-                  {host.port ? `:${host.port}` : ''}
-                </TableCell>
-                <TableCell className="py-2">
-                  {(() => {
-                    switch (host.status) {
-                      case 'connected':
-                        return host.updated_at
-                          ? new Date(host.updated_at).toLocaleString()
-                          : new Date().toLocaleString();
-                      case 'testing':
-                        return <span className="text-yellow-500">{t('testing')}</span>;
-                      case 'failed':
-                        return <span className="text-red-500">{t('failed')}</span>;
-                      default:
-                        return t('never');
-                    }
-                  })()}
-                </TableCell>
-                <TableCell className="py-2">
-                  <div className="flex items-center space-x-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 w-7 p-0"
-                      onClick={() => handleTerminalClick(host)}
-                      disabled={host.status !== 'connected'}
+          {hostGroups.map(({ publicIP, hosts: groupHosts, count }) => {
+            const isExpanded = expandedGroups.has(publicIP);
+            const isStandalone = count === 1;
+
+            return (
+              <React.Fragment key={publicIP}>
+                {/* Group Header Row */}
+                <TableRow
+                  className="bg-muted/50 hover:bg-muted cursor-pointer"
+                  onClick={() => toggleGroup(publicIP)}
+                >
+                  <TableCell className="py-2">
+                    <div className="flex justify-center">
+                      {isExpanded ? (
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell colSpan={4} className="font-medium py-2 text-sm">
+                    {isStandalone
+                      ? `Standalone Device (${count} device)`
+                      : `Network: ${publicIP} (${count} ${count === 1 ? 'device' : 'devices'})`}
+                  </TableCell>
+                </TableRow>
+
+                {/* Individual Host Rows */}
+                {isExpanded &&
+                  groupHosts.map((host) => (
+                    <TableRow
+                      key={host.id}
+                      className="h-10"
+                      onClick={() => selectMode && onSelect(host.id)}
                     >
-                      <Terminal className="h-3.5 w-3.5" />
-                    </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                          <MoreHorizontal className="h-3.5 w-3.5" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-[140px]">
-                        <DropdownMenuItem
-                          key={`logs-${host.id}`}
-                          onClick={() => {
-                            const { locale, tenant } = getPathSegments();
-                            router.push(`/${locale}/${tenant}/logs/${host.name}`);
-                          }}
-                          className="py-1.5"
-                        >
-                          <ScrollText className="mr-2 h-3.5 w-3.5" />
-                          <span className="text-sm">{t('logs')}</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          key={`refresh-${host.id}`}
-                          onClick={() => onTestConnection?.(host, { skipRevalidation: false })}
-                          className="py-1.5"
-                        >
-                          <RefreshCw className="mr-2 h-3.5 w-3.5" />
-                          <span className="text-sm">{t('refresh')}</span>
-                        </DropdownMenuItem>
-                        <AddToWorkspace
-                          itemType="host"
-                          itemId={host.id}
-                          trigger={
-                            <DropdownMenuItem
-                              key={`workspace-${host.id}`}
-                              onSelect={(e) => {
-                                e.preventDefault();
-                              }}
-                              className="py-1.5"
-                            >
-                              <FolderPlus className="mr-2 h-3.5 w-3.5" />
-                              <span className="text-sm">Workspaces</span>
-                            </DropdownMenuItem>
+                      <TableCell className="py-2 pl-8">
+                        <div className="flex justify-center">{getStatusDot(host.status)}</div>
+                      </TableCell>
+                      <TableCell className="font-medium py-2">
+                        <div className="flex items-center space-x-2">
+                          <span>{host.name}</span>
+                          {host.device_type && getDeviceTypeBadge(host.device_type)}
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-2">
+                        {host.ip_local || host.ip}
+                        {host.port ? `:${host.port}` : ''}
+                      </TableCell>
+                      <TableCell className="py-2">
+                        {(() => {
+                          switch (host.status) {
+                            case 'connected':
+                              return host.updated_at
+                                ? new Date(host.updated_at).toLocaleString()
+                                : new Date().toLocaleString();
+                            case 'testing':
+                              return <span className="text-yellow-500">{t('testing')}</span>;
+                            case 'failed':
+                              return <span className="text-red-500">{t('failed')}</span>;
+                            default:
+                              return t('never');
                           }
-                        />
-                        <DropdownMenuItem
-                          key={`delete-${host.id}`}
-                          onClick={() => onDelete?.(host.id)}
-                          className="text-destructive py-1.5"
-                        >
-                          <XCircle className="mr-2 h-3.5 w-3.5" />
-                          <span className="text-sm">{t('delete')}</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))
-          )}
+                        })()}
+                      </TableCell>
+                      <TableCell className="py-2">
+                        <div className="flex items-center space-x-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 w-7 p-0"
+                            onClick={() => handleTerminalClick(host)}
+                            disabled={host.status !== 'connected'}
+                          >
+                            <Terminal className="h-3.5 w-3.5" />
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                                <MoreHorizontal className="h-3.5 w-3.5" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-[140px]">
+                              <DropdownMenuItem
+                                key={`logs-${host.id}`}
+                                onClick={() => {
+                                  const { locale, tenant } = getPathSegments();
+                                  router.push(`/${locale}/${tenant}/logs/${host.name}`);
+                                }}
+                                className="py-1.5"
+                              >
+                                <ScrollText className="mr-2 h-3.5 w-3.5" />
+                                <span className="text-sm">{t('logs')}</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                key={`refresh-${host.id}`}
+                                onClick={() =>
+                                  onTestConnection?.(host, { skipRevalidation: false })
+                                }
+                                className="py-1.5"
+                              >
+                                <RefreshCw className="mr-2 h-3.5 w-3.5" />
+                                <span className="text-sm">{t('refresh')}</span>
+                              </DropdownMenuItem>
+                              <AddToWorkspace
+                                itemType="host"
+                                itemId={host.id}
+                                trigger={
+                                  <DropdownMenuItem
+                                    key={`workspace-${host.id}`}
+                                    onSelect={(e) => {
+                                      e.preventDefault();
+                                    }}
+                                    className="py-1.5"
+                                  >
+                                    <FolderPlus className="mr-2 h-3.5 w-3.5" />
+                                    <span className="text-sm">Workspaces</span>
+                                  </DropdownMenuItem>
+                                }
+                              />
+                              <DropdownMenuItem
+                                key={`delete-${host.id}`}
+                                onClick={() => onDelete?.(host.id)}
+                                className="text-destructive py-1.5"
+                              >
+                                <XCircle className="mr-2 h-3.5 w-3.5" />
+                                <span className="text-sm">{t('delete')}</span>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+              </React.Fragment>
+            );
+          })}
         </TableBody>
       </Table>
     </div>

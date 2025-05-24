@@ -122,7 +122,7 @@ export const sidebarNavigationData: SidebarNavigationData = {
       title: 'Environment',
       items: [
         {
-          title: 'Hosts',
+          title: 'Hosts & Devices',
           href: '/hosts',
           icon: Server,
           roles: ['admin', 'developer', 'tester'],
