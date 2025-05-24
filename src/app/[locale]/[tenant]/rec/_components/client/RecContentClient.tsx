@@ -1,6 +1,7 @@
 'use client';
 
 import { useRecHosts } from '@/hooks/useRecHosts';
+import { UnifiedHostModalContainer } from '@/components/terminal';
 
 import { RecEventListener } from './RecEventListener';
 import { RecPreviewGrid } from './RecPreviewGrid';
@@ -18,6 +19,9 @@ export function RecContentClient() {
 
       {/* Event listener component to handle rec device events */}
       <RecEventListener />
+
+      {/* Unified host modal container to handle VNC viewing */}
+      <UnifiedHostModalContainer />
     </div>
   );
 }

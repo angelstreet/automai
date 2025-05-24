@@ -4,8 +4,6 @@ import { useState } from 'react';
 
 import { Host } from '@/types/component/hostComponentType';
 
-import { RecEvents } from './RecEventListener';
-
 export function RecVncPreview({ host }: { host: Host }) {
   const [isLoading, setIsLoading] = useState(true);
 
@@ -31,11 +29,18 @@ export function RecVncPreview({ host }: { host: Host }) {
     setIsLoading(false);
   };
 
-  // Handle opening the modal via event system
+  // Handle opening the unified modal for VNC viewing
   const handleOpenViewer = () => {
+    console.log(`[@component:RecVncPreview] Opening VNC viewer for host: ${host.name}`);
+
+    // Dispatch event to open unified host modal with VNC default
     window.dispatchEvent(
-      new CustomEvent(RecEvents.OPEN_VNC_VIEWER, {
-        detail: { host },
+      new CustomEvent('OPEN_HOST_MODAL', {
+        detail: {
+          host,
+          title: `${host.name} - VNC Viewer`,
+          defaultTab: 'vnc',
+        },
       }),
     );
   };

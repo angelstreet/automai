@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 
+import { Host } from '@/types/component/hostComponentType';
+
 import { DeviceConfig } from '../types/recDeviceTypes';
 import { RecDeviceModal } from './RecDeviceModal';
 
@@ -20,6 +22,8 @@ export const RecEvents = {
 /**
  * Event listener component for Rec feature
  * Handles events related to device viewing and rec functionality
+ * - Host devices (VNC): Routes to unified modal via OPEN_HOST_MODAL
+ * - Android devices: Uses RecDeviceModal for HLS streaming and remote control
  */
 export function RecEventListener() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -35,6 +39,46 @@ export function RecEventListener() {
         console.log(
           `[@component:RecEventListener] Opening device modal for: ${device.name} (${device.type})`,
         );
+
+        // Handle host devices differently - use unified modal
+        if (device.type === 'host') {
+          console.log(
+            `[@component:RecEventListener] Host device detected, routing to unified modal: ${device.name}`,
+          );
+
+          // Convert DeviceConfig back to Host object for unified modal
+          const hostObject: Host = {
+            id: device.id.replace('vnc-', ''), // Remove the 'vnc-' prefix added in RecPreviewGrid
+            name: device.name,
+            ip: device.vncConfig.ip,
+            vnc_port: device.vncConfig.port,
+            vnc_password: device.vncConfig.password,
+            type: 'ssh', // Host devices in rec are SSH hosts with VNC
+            device_type: 'server', // Default to server for SSH hosts
+            status: 'connected', // Assume connected since they're showing in rec
+            port: 22, // Default SSH port
+            username: '', // Not needed for VNC-only viewing
+            password: '', // Not needed for VNC-only viewing
+            private_key: '', // Not needed for VNC-only viewing
+            team_id: '', // Will be filled by the actual host data
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          };
+
+          // Dispatch event to open unified host modal with VNC default
+          window.dispatchEvent(
+            new CustomEvent('OPEN_HOST_MODAL', {
+              detail: {
+                host: hostObject,
+                title: `${device.name} - VNC Viewer`,
+                defaultTab: 'vnc',
+              },
+            }),
+          );
+          return;
+        }
+
+        // Handle Android devices with existing modal
         setCurrentDevice(device);
         setIsModalOpen(true);
       } else {
@@ -90,5 +134,13 @@ export function RecEventListener() {
     setCurrentDevice(null);
   };
 
-  return <RecDeviceModal device={currentDevice} isOpen={isModalOpen} onClose={handleCloseModal} />;
+  // Only render RecDeviceModal for Android devices
+  // Host devices are handled by the unified modal via event dispatch
+  return (
+    <>
+      {currentDevice && currentDevice.type !== 'host' && (
+        <RecDeviceModal device={currentDevice} isOpen={isModalOpen} onClose={handleCloseModal} />
+      )}
+    </>
+  );
 }
