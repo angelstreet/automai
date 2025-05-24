@@ -1,7 +1,6 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { cookies } from 'next/headers';
 import { cache } from 'react';
 
 import { getUser } from '@/app/actions/userAction';
@@ -57,8 +56,7 @@ export const getConversations = cache(
         return { success: false, error: 'No active team found' };
       }
 
-      const cookieStore = await cookies();
-      const result = await chatDb.getConversations(activeTeam.id, cookieStore, options);
+      const result = await chatDb.getConversations(activeTeam.id, options);
 
       if (!result.success) {
         console.error('[@action:chat:getConversations] Error:', result.error);
@@ -89,8 +87,7 @@ export const getConversationById = cache(
         return { success: false, error: 'User not authenticated' };
       }
 
-      const cookieStore = await cookies();
-      const result = await chatDb.getConversationById(conversationId, cookieStore);
+      const result = await chatDb.getConversationById(conversationId);
 
       if (!result.success) {
         console.error('[@action:chat:getConversationById] Error:', result.error);
@@ -126,8 +123,7 @@ export const getMessages = cache(
         return { success: false, error: 'User not authenticated' };
       }
 
-      const cookieStore = await cookies();
-      const result = await chatDb.getMessages(conversationId, cookieStore, options);
+      const result = await chatDb.getMessages(conversationId, options);
 
       if (!result.success) {
         console.error('[@action:chat:getMessages] Error:', result.error);
@@ -164,7 +160,6 @@ export async function createConversation(
       return { success: false, error: 'No active team found' };
     }
 
-    const cookieStore = await cookies();
     const conversationInput: CreateConversationInput = {
       ...input,
       team_id: activeTeam.id,
@@ -172,7 +167,7 @@ export async function createConversation(
       tenant_id: user.tenant_id,
     };
 
-    const result = await chatDb.createConversation(conversationInput, cookieStore);
+    const result = await chatDb.createConversation(conversationInput);
 
     if (!result.success) {
       console.error('[@action:chat:createConversation] Error:', result.error);
@@ -215,22 +210,18 @@ export async function sendMessage(input: SendMessageInput): Promise<
       return { success: false, error: 'No active team found' };
     }
 
-    const cookieStore = await cookies();
     let conversation: ChatConversation;
 
     // Create conversation if not provided
     if (!input.conversationId) {
       const title = input.conversationTitle || `Chat ${new Date().toLocaleDateString()}`;
-      const createResult = await chatDb.createConversation(
-        {
-          title,
-          team_id: activeTeam.id,
-          creator_id: user.id,
-          tenant_id: user.tenant_id,
-          model_ids: input.modelIds,
-        },
-        cookieStore,
-      );
+      const createResult = await chatDb.createConversation({
+        title,
+        team_id: activeTeam.id,
+        creator_id: user.id,
+        tenant_id: user.tenant_id,
+        model_ids: input.modelIds,
+      });
 
       if (!createResult.success || !createResult.data) {
         return { success: false, error: createResult.error || 'Failed to create conversation' };
@@ -238,7 +229,7 @@ export async function sendMessage(input: SendMessageInput): Promise<
 
       conversation = createResult.data;
     } else {
-      const getResult = await chatDb.getConversationById(input.conversationId, cookieStore);
+      const getResult = await chatDb.getConversationById(input.conversationId);
       if (!getResult.success || !getResult.data) {
         return { success: false, error: getResult.error || 'Conversation not found' };
       }
@@ -254,7 +245,7 @@ export async function sendMessage(input: SendMessageInput): Promise<
       creator_id: user.id,
     };
 
-    const userMessageResult = await chatDb.createMessage(userMessageInput, cookieStore);
+    const userMessageResult = await chatDb.createMessage(userMessageInput);
     if (!userMessageResult.success || !userMessageResult.data) {
       return { success: false, error: userMessageResult.error || 'Failed to create user message' };
     }
@@ -268,7 +259,7 @@ export async function sendMessage(input: SendMessageInput): Promise<
     const openRouterClient = createOpenRouterClient(openrouterApiKey);
 
     // Get conversation history for context
-    const messagesResult = await chatDb.getMessages(conversation.id, cookieStore);
+    const messagesResult = await chatDb.getMessages(conversation.id);
     const messages = messagesResult.success ? messagesResult.data || [] : [];
 
     // Convert to OpenRouter format
@@ -314,7 +305,7 @@ export async function sendMessage(input: SendMessageInput): Promise<
             creator_id: user.id,
           };
 
-          const aiMessageResult = await chatDb.createMessage(aiMessageInput, cookieStore);
+          const aiMessageResult = await chatDb.createMessage(aiMessageInput);
           if (aiMessageResult.success && aiMessageResult.data) {
             aiMessages.push(aiMessageResult.data);
           }
@@ -333,7 +324,7 @@ export async function sendMessage(input: SendMessageInput): Promise<
             creator_id: user.id,
           };
 
-          const errorMessageResult = await chatDb.createMessage(errorMessageInput, cookieStore);
+          const errorMessageResult = await chatDb.createMessage(errorMessageInput);
           if (errorMessageResult.success && errorMessageResult.data) {
             aiMessages.push(errorMessageResult.data);
           }
@@ -354,7 +345,7 @@ export async function sendMessage(input: SendMessageInput): Promise<
           creator_id: user.id,
         };
 
-        const errorMessageResult = await chatDb.createMessage(errorMessageInput, cookieStore);
+        const errorMessageResult = await chatDb.createMessage(errorMessageInput);
         if (errorMessageResult.success && errorMessageResult.data) {
           aiMessages.push(errorMessageResult.data);
         }
@@ -364,13 +355,9 @@ export async function sendMessage(input: SendMessageInput): Promise<
     // Update conversation's model_ids if needed
     const updatedModelIds = Array.from(new Set([...conversation.model_ids, ...input.modelIds]));
     if (updatedModelIds.length !== conversation.model_ids.length) {
-      await chatDb.updateConversation(
-        conversation.id,
-        {
-          model_ids: updatedModelIds,
-        },
-        cookieStore,
-      );
+      await chatDb.updateConversation(conversation.id, {
+        model_ids: updatedModelIds,
+      });
     }
 
     // Revalidate chat page
@@ -400,8 +387,7 @@ export const getOpenRouterModels = cache(async (): Promise<ActionResult<OpenRout
   try {
     console.log('[@action:chat:getOpenRouterModels] Getting OpenRouter models');
 
-    const cookieStore = await cookies();
-    const result = await chatDb.getOpenRouterModels(cookieStore);
+    const result = await chatDb.getOpenRouterModels();
 
     if (!result.success) {
       console.error('[@action:chat:getOpenRouterModels] Error:', result.error);
@@ -458,8 +444,7 @@ export async function syncOpenRouterModels(): Promise<ActionResult<{ count: numb
       },
     }));
 
-    const cookieStore = await cookies();
-    const upsertResult = await chatDb.upsertOpenRouterModels(dbModels, cookieStore);
+    const upsertResult = await chatDb.upsertOpenRouterModels(dbModels);
 
     if (!upsertResult.success) {
       return { success: false, error: upsertResult.error };
@@ -482,8 +467,7 @@ export async function cleanupExpiredConversations(): Promise<ActionResult<{ coun
   try {
     console.log('[@action:chat:cleanupExpiredConversations] Starting cleanup');
 
-    const cookieStore = await cookies();
-    const result = await chatDb.deleteExpiredConversations(cookieStore);
+    const result = await chatDb.deleteExpiredConversations();
 
     if (!result.success) {
       console.error('[@action:chat:cleanupExpiredConversations] Error:', result.error);
@@ -502,5 +486,36 @@ export async function cleanupExpiredConversations(): Promise<ActionResult<{ coun
   } catch (error: any) {
     console.error('[@action:chat:cleanupExpiredConversations] Error:', error);
     return { success: false, error: error.message || 'Failed to cleanup expired conversations' };
+  }
+}
+
+/**
+ * Check if the provided model IDs have any free models
+ * Free models typically end with ":free" in OpenRouter
+ */
+export async function hasFreeModelsOnly(modelIds: string[]): Promise<ActionResult<boolean>> {
+  try {
+    console.log('[@action:chat:hasFreeModelsOnly] Checking if models are free:', modelIds);
+
+    // Check if any model ends with ":free" or is in the known free models list
+    const freeModelPatterns = [
+      ':free',
+      'mistralai/devstral-small:free',
+      'nousresearch/deephermes-3-mistral-24b-preview:free',
+      'mistralai/mistral-small-3.1-24b-instruct:free',
+      'cognitivecomputations/dolphin3.0-r1-mistral-24b:free',
+    ];
+
+    const hasFreeModels = modelIds.some((modelId) =>
+      freeModelPatterns.some((pattern) =>
+        pattern.startsWith(':') ? modelId.endsWith(pattern) : modelId === pattern,
+      ),
+    );
+
+    console.log(`[@action:chat:hasFreeModelsOnly] Has free models: ${hasFreeModels}`);
+    return { success: true, data: hasFreeModels };
+  } catch (error: any) {
+    console.error('[@action:chat:hasFreeModelsOnly] Error:', error);
+    return { success: false, error: error.message || 'Failed to check free models' };
   }
 }

@@ -3,7 +3,7 @@
  * Handles conversations, messages, and OpenRouter models with 3-day retention
  */
 
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
 import type { DbResponse } from '@/lib/utils/commonUtils';
 import type {
   ChatConversationsTable,
@@ -101,12 +101,11 @@ const chatDb = {
    */
   async getConversations(
     teamId: string,
-    cookieStore?: any,
     options?: { limit?: number; offset?: number },
   ): Promise<DbResponse<ChatConversation[]>> {
     try {
       console.log(`[@db:chatDb:getConversations] Getting conversations for team: ${teamId}`);
-      const supabase = await createClient(cookieStore);
+      const supabase = await createClient();
 
       let query = supabase
         .from('chat_conversations')
@@ -141,13 +140,10 @@ const chatDb = {
   /**
    * Get conversation by ID
    */
-  async getConversationById(
-    conversationId: string,
-    cookieStore?: any,
-  ): Promise<DbResponse<ChatConversation>> {
+  async getConversationById(conversationId: string): Promise<DbResponse<ChatConversation>> {
     try {
       console.log(`[@db:chatDb:getConversationById] Getting conversation: ${conversationId}`);
-      const supabase = await createClient(cookieStore);
+      const supabase = await createClient();
 
       const { data, error } = await supabase
         .from('chat_conversations')
@@ -171,13 +167,10 @@ const chatDb = {
   /**
    * Create new conversation
    */
-  async createConversation(
-    input: CreateConversationInput,
-    cookieStore?: any,
-  ): Promise<DbResponse<ChatConversation>> {
+  async createConversation(input: CreateConversationInput): Promise<DbResponse<ChatConversation>> {
     try {
       console.log(`[@db:chatDb:createConversation] Creating conversation: ${input.title}`);
-      const supabase = await createClient(cookieStore);
+      const supabase = await createClient();
 
       // Set expiration to 3 days from now
       const expiresAt = new Date();
@@ -221,11 +214,10 @@ const chatDb = {
   async updateConversation(
     conversationId: string,
     updates: UpdateConversationInput,
-    cookieStore?: any,
   ): Promise<DbResponse<ChatConversation>> {
     try {
       console.log(`[@db:chatDb:updateConversation] Updating conversation: ${conversationId}`);
-      const supabase = await createClient(cookieStore);
+      const supabase = await createClient();
 
       const { data, error } = await supabase
         .from('chat_conversations')
@@ -255,12 +247,11 @@ const chatDb = {
    */
   async getMessages(
     conversationId: string,
-    cookieStore?: any,
     options?: { limit?: number; offset?: number },
   ): Promise<DbResponse<ChatMessage[]>> {
     try {
       console.log(`[@db:chatDb:getMessages] Getting messages for conversation: ${conversationId}`);
-      const supabase = await createClient(cookieStore);
+      const supabase = await createClient();
 
       let query = supabase
         .from('chat_messages')
@@ -294,15 +285,12 @@ const chatDb = {
   /**
    * Create new message
    */
-  async createMessage(
-    input: CreateMessageInput,
-    cookieStore?: any,
-  ): Promise<DbResponse<ChatMessage>> {
+  async createMessage(input: CreateMessageInput): Promise<DbResponse<ChatMessage>> {
     try {
       console.log(
         `[@db:chatDb:createMessage] Creating message for conversation: ${input.conversation_id}`,
       );
-      const supabase = await createClient(cookieStore);
+      const supabase = await createClient();
 
       const messageData: ChatMessagesTable['Insert'] = {
         conversation_id: input.conversation_id,
@@ -351,10 +339,10 @@ const chatDb = {
   /**
    * Delete expired conversations (older than 3 days)
    */
-  async deleteExpiredConversations(cookieStore?: any): Promise<DbResponse<{ count: number }>> {
+  async deleteExpiredConversations(): Promise<DbResponse<{ count: number }>> {
     try {
       console.log(`[@db:chatDb:deleteExpiredConversations] Deleting expired conversations`);
-      const supabase = await createClient(cookieStore);
+      const supabase = await createClient();
 
       const now = new Date().toISOString();
 
@@ -400,10 +388,10 @@ const chatDb = {
   /**
    * Get OpenRouter models
    */
-  async getOpenRouterModels(cookieStore?: any): Promise<DbResponse<OpenRouterModel[]>> {
+  async getOpenRouterModels(): Promise<DbResponse<OpenRouterModel[]>> {
     try {
       console.log(`[@db:chatDb:getOpenRouterModels] Getting OpenRouter models`);
-      const supabase = await createClient(cookieStore);
+      const supabase = await createClient();
 
       const { data, error } = await supabase
         .from('openrouter_models')
@@ -429,11 +417,10 @@ const chatDb = {
    */
   async upsertOpenRouterModels(
     models: Omit<OpenRouterModel, 'id' | 'created_at' | 'updated_at'>[],
-    cookieStore?: any,
   ): Promise<DbResponse<OpenRouterModel[]>> {
     try {
       console.log(`[@db:chatDb:upsertOpenRouterModels] Upserting ${models.length} models`);
-      const supabase = await createClient(cookieStore);
+      const supabase = await createClient();
 
       const { data, error } = await supabase
         .from('openrouter_models')

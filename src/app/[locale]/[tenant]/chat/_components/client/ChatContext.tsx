@@ -33,30 +33,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   // Check if environment has OPENROUTER_API_KEY on mount
   useEffect(() => {
-    const checkEnvApiKey = async () => {
-      try {
-        // Try to make a test request to see if env API key is available
-        const response = await fetch('/api/check-openrouter-key', {
-          method: 'POST',
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setHasEnvApiKey(data.hasKey);
-
-          if (data.hasKey) {
-            console.log('[@context:ChatProvider] Environment API key detected');
-            // Set a masked placeholder to indicate env key is available
-            setOpenRouterApiKey('env_key_available');
-          }
-        }
-      } catch (error) {
-        console.log('[@context:ChatProvider] No environment API key available');
-        setHasEnvApiKey(false);
-      }
-    };
-
-    checkEnvApiKey();
+    // Assume environment API key is available (server validates this)
+    // No client-side checking needed since server handles the API key
+    console.log('[@context:ChatProvider] Assuming environment API key is available');
+    setHasEnvApiKey(true);
+    setOpenRouterApiKey('env_key_available');
   }, []);
 
   // Update active tab when selected models change

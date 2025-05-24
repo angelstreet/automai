@@ -75,7 +75,7 @@ export default function ChatHeader() {
         <input
           id="api-token"
           type="password"
-          placeholder="Enter your API token..."
+          placeholder="OpenRouter API token..."
           className="px-3 py-1.5 w-48 bg-background border border-border rounded-md text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
         />
       </div>

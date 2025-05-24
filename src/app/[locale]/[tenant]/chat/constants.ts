@@ -35,6 +35,7 @@ export const POPULAR_OPENROUTER_MODELS = [
     provider: 'Anthropic',
     description: 'Most intelligent model, best for complex tasks',
     contextLength: 200000,
+    isFree: false,
   },
   {
     id: 'openai/gpt-4-turbo',
@@ -42,6 +43,7 @@ export const POPULAR_OPENROUTER_MODELS = [
     provider: 'OpenAI',
     description: 'Fast and capable, good for most tasks',
     contextLength: 128000,
+    isFree: false,
   },
   {
     id: 'anthropic/claude-3-haiku',
@@ -49,6 +51,7 @@ export const POPULAR_OPENROUTER_MODELS = [
     provider: 'Anthropic',
     description: 'Fastest and most affordable',
     contextLength: 200000,
+    isFree: false,
   },
   {
     id: 'meta-llama/llama-3.1-8b-instruct',
@@ -56,6 +59,7 @@ export const POPULAR_OPENROUTER_MODELS = [
     provider: 'Meta',
     description: 'Open source, good for general tasks',
     contextLength: 128000,
+    isFree: false,
   },
   {
     id: 'google/gemini-pro-1.5',
@@ -63,7 +67,50 @@ export const POPULAR_OPENROUTER_MODELS = [
     provider: 'Google',
     description: "Google's advanced model with large context",
     contextLength: 1000000,
+    isFree: false,
   },
+] as const;
+
+// Free OpenRouter Models (no API key required)
+export const FREE_OPENROUTER_MODELS = [
+  {
+    id: 'mistralai/devstral-small:free',
+    name: 'Devstral Small (Free)',
+    provider: 'Mistral',
+    description: 'Fast free model for development tasks',
+    contextLength: 32000,
+    isFree: true,
+  },
+  {
+    id: 'nousresearch/deephermes-3-mistral-24b-preview:free',
+    name: 'DeepHermes 3 Mistral 24B (Free)',
+    provider: 'Nous Research',
+    description: 'Large free model with good reasoning capabilities',
+    contextLength: 32000,
+    isFree: true,
+  },
+  {
+    id: 'mistralai/mistral-small-3.1-24b-instruct:free',
+    name: 'Mistral Small 3.1 24B (Free)',
+    provider: 'Mistral',
+    description: 'Balanced free model for general tasks',
+    contextLength: 32000,
+    isFree: true,
+  },
+  {
+    id: 'cognitivecomputations/dolphin3.0-r1-mistral-24b:free',
+    name: 'Dolphin 3.0 R1 Mistral 24B (Free)',
+    provider: 'Cognitive Computations',
+    description: 'Uncensored free model for diverse tasks',
+    contextLength: 32000,
+    isFree: true,
+  },
+] as const;
+
+// Combined models with free options first
+export const ALL_AVAILABLE_MODELS = [
+  ...FREE_OPENROUTER_MODELS,
+  ...POPULAR_OPENROUTER_MODELS,
 ] as const;
 
 // Available AI Models (backwards compatibility)
