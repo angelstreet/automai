@@ -73,20 +73,46 @@ export function BrowserModalClient({ isOpen, onClose, host, sessionId }: Browser
         );
         setTerminalSessionId(result.data.sessionId);
 
-        // Automatically send "ok" command to get prompt
+        // Automatically send commands to get a clean prompt
         setTimeout(async () => {
           try {
             const { sendTerminalData } = await import('@/app/actions/terminalsAction');
-            // Send enter and clear to get a clean prompt
+
+            // Send enter to establish initial prompt
             await sendTerminalData(result.data.sessionId, '');
-            await sendTerminalData(result.data.sessionId, 'clear');
-            console.log(
-              `[@component:BrowserModalClient] Sent enter and clear commands for clean prompt`,
-            );
+            console.log(`[@component:BrowserModalClient] Sent initial enter command`);
+
+            // Wait a bit, then clear the screen
+            setTimeout(async () => {
+              try {
+                await sendTerminalData(result.data.sessionId, 'clear');
+                console.log(`[@component:BrowserModalClient] Sent clear command`);
+
+                // Wait a bit more, then send another enter to get fresh prompt
+                setTimeout(async () => {
+                  try {
+                    await sendTerminalData(result.data.sessionId, '');
+                    console.log(
+                      `[@component:BrowserModalClient] Sent final enter for fresh prompt`,
+                    );
+                  } catch (error) {
+                    console.error(
+                      `[@component:BrowserModalClient] Error sending final command:`,
+                      error,
+                    );
+                  }
+                }, 500);
+              } catch (error) {
+                console.error(
+                  `[@component:BrowserModalClient] Error sending clear command:`,
+                  error,
+                );
+              }
+            }, 500);
           } catch (error) {
             console.error(`[@component:BrowserModalClient] Error sending initial commands:`, error);
           }
-        }, 1000); // Wait 1 second for terminal to be ready
+        }, 2000); // Increased initial wait time to 2 seconds
       } else {
         console.error(
           `[@component:BrowserModalClient] Failed to initialize terminal session:`,
