@@ -38,6 +38,9 @@ export interface SSHCommandOptions extends SSHConnectionOptions {
 // Store active SSH connections
 const activeConnections: Record<string, Client> = {};
 
+// Store active shell sessions
+const activeShells: Record<string, any> = {};
+
 /**
  * Create and store an SSH connection
  */
@@ -295,12 +298,188 @@ export async function executeCommand(
   }
 }
 
+/**
+ * Create an interactive shell session on an existing connection
+ */
+export async function createShellSession(
+  connectionId: string,
+): Promise<StandardResponse<{ shellId: string }>> {
+  try {
+    const ssh = activeConnections[connectionId];
+    if (!ssh) {
+      return {
+        success: false,
+        error: 'No active connection found',
+      };
+    }
+
+    console.log(
+      `[@service:ssh:createShellSession] Creating shell session on connection: ${connectionId}`,
+    );
+
+    const shellId = `${connectionId}_shell`;
+
+    // Create an interactive shell
+    const shell = await new Promise<any>((resolve, reject) => {
+      ssh.shell((err, stream) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(stream);
+      });
+    });
+
+    // Store the shell session
+    activeShells[shellId] = {
+      shell,
+      connectionId,
+      outputBuffer: '',
+      callbacks: new Set(),
+    };
+
+    console.log(`[@service:ssh:createShellSession] Shell session created: ${shellId}`);
+
+    return {
+      success: true,
+      data: { shellId },
+    };
+  } catch (error: any) {
+    console.error(`[@service:ssh:createShellSession] Failed to create shell: ${error.message}`);
+    return {
+      success: false,
+      error: error.message || 'Failed to create shell session',
+    };
+  }
+}
+
+/**
+ * Send data to an interactive shell session
+ */
+export async function sendToShell(
+  shellId: string,
+  data: string,
+): Promise<StandardResponse<{ sent: boolean }>> {
+  try {
+    const shellSession = activeShells[shellId];
+    if (!shellSession) {
+      return {
+        success: false,
+        error: 'No active shell session found',
+      };
+    }
+
+    console.log(`[@service:ssh:sendToShell] Sending data to shell: ${shellId}`);
+
+    // Send data to the shell
+    shellSession.shell.write(data);
+
+    return {
+      success: true,
+      data: { sent: true },
+    };
+  } catch (error: any) {
+    console.error(`[@service:ssh:sendToShell] Failed to send to shell: ${error.message}`);
+    return {
+      success: false,
+      error: error.message || 'Failed to send data to shell',
+    };
+  }
+}
+
+/**
+ * Read output from shell session
+ */
+export async function readFromShell(
+  shellId: string,
+  timeout: number = 1000,
+): Promise<StandardResponse<{ output: string }>> {
+  try {
+    const shellSession = activeShells[shellId];
+    if (!shellSession) {
+      return {
+        success: false,
+        error: 'No active shell session found',
+      };
+    }
+
+    console.log(`[@service:ssh:readFromShell] Reading from shell: ${shellId}`);
+
+    // Set up a promise to read output with timeout
+    const output = await new Promise<string>((resolve) => {
+      let buffer = '';
+
+      const onData = (data: Buffer) => {
+        buffer += data.toString();
+      };
+
+      shellSession.shell.on('data', onData);
+
+      const timeoutId = setTimeout(() => {
+        shellSession.shell.removeListener('data', onData);
+        resolve(buffer);
+      }, timeout);
+
+      // Also resolve immediately if we get a complete response
+      const checkComplete = () => {
+        if (buffer.includes('$ ') || buffer.includes('> ') || buffer.includes('# ')) {
+          clearTimeout(timeoutId);
+          shellSession.shell.removeListener('data', onData);
+          resolve(buffer);
+        }
+      };
+
+      shellSession.shell.on('data', checkComplete);
+    });
+
+    return {
+      success: true,
+      data: { output },
+    };
+  } catch (error: any) {
+    console.error(`[@service:ssh:readFromShell] Failed to read from shell: ${error.message}`);
+    return {
+      success: false,
+      error: error.message || 'Failed to read from shell',
+    };
+  }
+}
+
+/**
+ * Close a shell session
+ */
+export async function closeShellSession(shellId: string): Promise<StandardResponse<boolean>> {
+  try {
+    const shellSession = activeShells[shellId];
+    if (shellSession) {
+      console.log(`[@service:ssh:closeShellSession] Closing shell session: ${shellId}`);
+      shellSession.shell.end();
+      delete activeShells[shellId];
+    }
+
+    return {
+      success: true,
+      data: true,
+    };
+  } catch (error: any) {
+    console.error(`[@service:ssh:closeShellSession] Error closing shell: ${error.message}`);
+    return {
+      success: false,
+      error: error.message || 'Failed to close shell session',
+    };
+  }
+}
+
 // Export all SSH service functions
 const sshService = {
   createConnection,
   closeConnection,
   executeOnConnection,
   executeCommand,
+  createShellSession,
+  sendToShell,
+  readFromShell,
+  closeShellSession,
 };
 
 export default sshService;

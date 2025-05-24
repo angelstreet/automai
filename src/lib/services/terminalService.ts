@@ -106,14 +106,35 @@ class TerminalService {
         status: 'active',
         host: host,
         sshConnected: true,
+        shellId: null, // Will be set when shell is created
         createdAt: new Date().toISOString(),
       };
 
       this.activeSessions.set(sessionId, session);
 
+      // Create interactive shell session
+      console.info('[@service:terminal:createTerminalSession] Creating interactive shell');
+      const shellResult = await sshService.createShellSession(sessionId);
+
+      if (!shellResult.success) {
+        console.error('[@service:terminal:createTerminalSession] Shell creation failed', {
+          error: shellResult.error,
+          sessionId,
+        });
+        // Clean up the connection
+        await sshService.closeConnection(sessionId);
+        this.activeSessions.delete(sessionId);
+        throw new Error(`Shell creation failed: ${shellResult.error}`);
+      }
+
+      // Update session with shell ID
+      session.shellId = shellResult.data?.shellId;
+      this.activeSessions.set(sessionId, session);
+
       console.info('[@service:terminal:createTerminalSession] Terminal session created with SSH', {
         sessionId,
         hostId: data.hostId,
+        shellId: session.shellId,
       });
 
       return session;
@@ -181,7 +202,13 @@ class TerminalService {
 
     const session = this.activeSessions.get(sessionId);
     if (session) {
-      // Close SSH connection using existing sshService
+      // Close shell session first
+      if (session.shellId) {
+        console.info('[@service:terminal:closeSession] Closing shell session');
+        await sshService.closeShellSession(session.shellId);
+      }
+
+      // Close SSH connection
       console.info('[@service:terminal:closeSession] Closing SSH connection');
       await sshService.closeConnection(sessionId);
 
@@ -205,12 +232,12 @@ class TerminalService {
   }
 
   /**
-   * Send data to terminal session using real SSH connection
+   * Send data to terminal session using interactive shell
    */
-  async sendDataToSession(sessionId: string, command: string) {
-    console.info('[@service:terminal:sendDataToSession] Executing command on session', {
+  async sendDataToSession(sessionId: string, data: string) {
+    console.info('[@service:terminal:sendDataToSession] Sending data to shell session', {
       sessionId,
-      command: command.replace(/\r?\n/g, '\\n'),
+      dataLength: data.length,
     });
 
     const session = this.activeSessions.get(sessionId);
@@ -218,41 +245,67 @@ class TerminalService {
       throw new Error(`Session not found: ${sessionId}`);
     }
 
-    // Use existing sshService to execute the command
+    if (!session.shellId) {
+      throw new Error(`No shell session found for: ${sessionId}`);
+    }
+
     try {
-      console.debug('[@service:terminal:sendDataToSession] Executing command via SSH', {
+      console.debug('[@service:terminal:sendDataToSession] Sending to interactive shell', {
         sessionId,
-        command,
+        shellId: session.shellId,
+        data: data.replace(/\r?\n/g, '\\n'),
       });
-      
-      const result = await sshService.executeOnConnection(sessionId, command);
-      
-      if (result.success) {
-        console.debug('[@service:terminal:sendDataToSession] Command executed successfully', {
+
+      // Send data to interactive shell
+      const sendResult = await sshService.sendToShell(session.shellId, data + '\n');
+
+      if (!sendResult.success) {
+        console.error('[@service:terminal:sendDataToSession] Failed to send to shell', {
           sessionId,
-          hasStdout: !!result.data?.stdout,
-          hasStderr: !!result.data?.stderr,
-          exitCode: result.data?.code,
+          error: sendResult.error,
         });
-        
-        return { 
-          success: true, 
-          data: result.data 
-        };
-      } else {
-        console.error('[@service:terminal:sendDataToSession] Command execution failed', {
-          sessionId,
-          error: result.error,
-        });
-        
+
         return {
           success: false,
-          error: result.error,
-          data: result.data,
+          error: sendResult.error,
+        };
+      }
+
+      // Read response from shell
+      const readResult = await sshService.readFromShell(session.shellId, 2000);
+
+      if (readResult.success) {
+        console.debug('[@service:terminal:sendDataToSession] Received shell output', {
+          sessionId,
+          outputLength: readResult.data?.output?.length || 0,
+        });
+
+        return {
+          success: true,
+          data: {
+            stdout: readResult.data?.output || '',
+            stderr: '',
+            code: 0,
+          },
+        };
+      } else {
+        console.error('[@service:terminal:sendDataToSession] Failed to read from shell', {
+          sessionId,
+          error: readResult.error,
+        });
+
+        return {
+          success: false,
+          error: readResult.error,
+          data: {
+            stdout: '',
+            stderr: readResult.error || 'Failed to read shell output',
+            code: 1,
+          },
         };
       }
     } catch (error) {
-      console.error('[@service:terminal:sendDataToSession] Error executing command via SSH', {
+      console.error('[@service:terminal:sendDataToSession] Error with shell interaction', {
         error: error instanceof Error ? error.message : 'Unknown error',
         sessionId,
       });

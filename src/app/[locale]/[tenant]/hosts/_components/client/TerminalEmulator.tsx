@@ -106,8 +106,8 @@ export function TerminalEmulator({
         // Show initial connection message and get the natural prompt
         terminal.write(`🔗 Connected to ${host.name} (${host.ip}:${host.port || 22})\r\n`);
 
-        // Get the initial prompt
-        await getPrompt(terminal);
+        // The persistent shell will provide its own initial prompt
+        // No need to manually generate one
 
         setIsTerminalReady(true);
         onConnectionStatusChange(true);
@@ -147,13 +147,13 @@ export function TerminalEmulator({
 
     const executeCommand = async (command: string, terminal: any, showOutput: boolean = true) => {
       try {
-        console.log(`[@component:TerminalEmulator] Sending raw input: "${command}"`);
+        console.log(`[@component:TerminalEmulator] Sending to persistent shell: "${command}"`);
 
-        // Import terminal action - send raw command exactly as typed
+        // Import terminal action - send raw command to persistent shell
         const { sendTerminalData } = await import('@/app/actions/terminalsAction');
         const result = await sendTerminalData(sessionId, command);
 
-        console.log(`[@component:TerminalEmulator] Raw SSH response:`, {
+        console.log(`[@component:TerminalEmulator] Shell response:`, {
           success: result.success,
           hasStdout: !!result.data?.stdout,
           hasStderr: !!result.data?.stderr,
@@ -161,57 +161,26 @@ export function TerminalEmulator({
         });
 
         if (result.success && result.data && showOutput) {
-          // Display exact SSH output
+          // Display exact shell output
           if (result.data.stdout) {
             terminal.write(result.data.stdout);
           }
           if (result.data.stderr) {
             terminal.write(result.data.stderr);
           }
-
-          // After command output, get the current prompt
-          if (command.trim()) {
-            await getPrompt(terminal);
-          }
         } else if (!result.success) {
-          console.error(`[@component:TerminalEmulator] SSH command failed:`, result.error);
+          console.error(`[@component:TerminalEmulator] Shell command failed:`, result.error);
           if (showOutput) {
-            terminal.write(`\x1b[31mSSH Error: ${result.error || 'Command failed'}\x1b[0m\r\n`);
-            // Still show prompt after error
-            await getPrompt(terminal);
+            terminal.write(`\x1b[31mShell Error: ${result.error || 'Command failed'}\x1b[0m\r\n`);
           }
         }
       } catch (error) {
-        console.error(`[@component:TerminalEmulator] Error sending to SSH:`, error);
+        console.error(`[@component:TerminalEmulator] Error sending to shell:`, error);
         if (showOutput) {
           terminal.write(
             `\x1b[31mError: ${error instanceof Error ? error.message : 'Unknown error'}\x1b[0m\r\n`,
           );
-          // Still show prompt after error
-          await getPrompt(terminal);
         }
-      }
-    };
-
-    const getPrompt = async (terminal: any) => {
-      try {
-        // Get current prompt by sending a command that shows the prompt format
-        const { sendTerminalData } = await import('@/app/actions/terminalsAction');
-        const result = await sendTerminalData(
-          sessionId,
-          'echo "$(whoami)@$(hostname):$(pwd | sed "s|^$HOME|~|")\\$ " | tr -d "\\n"',
-        );
-
-        if (result.success && result.data?.stdout) {
-          terminal.write(result.data.stdout);
-        } else {
-          // Fallback prompt if the command fails
-          terminal.write(`${host.user || 'user'}@${host.name}:~$ `);
-        }
-      } catch (error) {
-        console.error(`[@component:TerminalEmulator] Error getting prompt:`, error);
-        // Fallback prompt
-        terminal.write(`${host.user || 'user'}@${host.name}:~$ `);
       }
     };
 
