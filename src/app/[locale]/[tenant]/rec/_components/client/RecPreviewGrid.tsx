@@ -44,9 +44,9 @@ export function RecPreviewGrid({ hosts, isLoading, error }: RecPreviewGridProps)
 
   // Convert hosts to device configurations
   const hostDevices: HostDeviceConfig[] = hosts
-    .filter((host) => host.vnc_port) // Only hosts with VNC configured
+    .filter((host) => host.vnc_port && host.type !== 'device') // Only SSH hosts with VNC configured, exclude devices
     .map((host) => ({
-      id: host.id,
+      id: `vnc-${host.id}`, // Prefix with 'vnc-' to ensure uniqueness
       name: host.name || host.ip,
       type: 'host' as const,
       vncConfig: {
@@ -76,7 +76,7 @@ export function RecPreviewGrid({ hosts, isLoading, error }: RecPreviewGridProps)
       });
 
       return {
-        id: host.id,
+        id: `android-${host.id}`, // Prefix with 'android-' to ensure uniqueness
         name: host.name,
         type:
           host.device_type === 'android_tablet'
