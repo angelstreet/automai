@@ -49,7 +49,7 @@ export interface ToolTemplate {
   description: string;
   defaultUrl: string;
   urlPlaceholder: string;
-  icon: string;
+  icon: string; // Now path to icon image
   category: (typeof TOOL_CATEGORIES)[number];
   tags: string[];
   isPopular?: boolean;
@@ -63,7 +63,7 @@ export const PREDEFINED_TOOLS: ToolTemplate[] = [
     description: 'Kanban board for agile project management',
     defaultUrl: 'https://your-domain.atlassian.net/jira/software/projects/YOUR_PROJECT/boards/1',
     urlPlaceholder: 'https://your-domain.atlassian.net/jira/software/projects/PROJECT/boards/1',
-    icon: 'Bug',
+    icon: '/icons/tools/jira.svg',
     category: 'Task',
     tags: ['agile', 'kanban', 'atlassian', 'project-management'],
     isPopular: true,
@@ -74,7 +74,7 @@ export const PREDEFINED_TOOLS: ToolTemplate[] = [
     description: 'Issue tracking and ticket management',
     defaultUrl: 'https://your-domain.atlassian.net/jira/software/projects/YOUR_PROJECT/issues',
     urlPlaceholder: 'https://your-domain.atlassian.net/jira/software/projects/PROJECT/issues',
-    icon: 'Bug',
+    icon: '/icons/tools/jira.svg',
     category: 'Task',
     tags: ['issues', 'tickets', 'atlassian', 'bug-tracking'],
     isPopular: true,
@@ -85,7 +85,7 @@ export const PREDEFINED_TOOLS: ToolTemplate[] = [
     description: 'Visual project management with boards and cards',
     defaultUrl: 'https://trello.com',
     urlPlaceholder: 'https://trello.com/b/YOUR_BOARD_ID/board-name',
-    icon: 'Bug',
+    icon: '/icons/tools/trello.svg',
     category: 'Task',
     tags: ['kanban', 'visual', 'simple', 'boards'],
     isPopular: true,
@@ -96,7 +96,7 @@ export const PREDEFINED_TOOLS: ToolTemplate[] = [
     description: 'Work operating system for teams',
     defaultUrl: 'https://monday.com',
     urlPlaceholder: 'https://your-team.monday.com/boards/12345678',
-    icon: 'Settings',
+    icon: '/icons/tools/monday.svg',
     category: 'Task',
     tags: ['work-os', 'project-management', 'collaboration'],
     isPopular: true,
@@ -109,7 +109,7 @@ export const PREDEFINED_TOOLS: ToolTemplate[] = [
     description: 'Team workspace and knowledge base',
     defaultUrl: 'https://your-domain.atlassian.net/wiki',
     urlPlaceholder: 'https://your-domain.atlassian.net/wiki/spaces/SPACE/overview',
-    icon: 'FileText',
+    icon: '/icons/tools/confluence.svg',
     category: 'Documentation',
     tags: ['wiki', 'knowledge-base', 'atlassian', 'collaboration'],
     isPopular: true,
@@ -120,7 +120,7 @@ export const PREDEFINED_TOOLS: ToolTemplate[] = [
     description: 'All-in-one workspace for notes, docs, and projects',
     defaultUrl: 'https://notion.so',
     urlPlaceholder: 'https://your-workspace.notion.site/page-id',
-    icon: 'FileText',
+    icon: '/icons/tools/notion.svg',
     category: 'Documentation',
     tags: ['workspace', 'notes', 'docs', 'database'],
     isPopular: true,
@@ -133,7 +133,7 @@ export const PREDEFINED_TOOLS: ToolTemplate[] = [
     description: 'Test management and QA tool for JIRA',
     defaultUrl: 'https://your-domain.atlassian.net/plugins/servlet/ac/com.xpandit.plugins.xray',
     urlPlaceholder: 'https://your-domain.atlassian.net/plugins/servlet/ac/com.xpandit.plugins.xray',
-    icon: 'Bug',
+    icon: '/icons/tools/xray.svg',
     category: 'Issues',
     tags: ['testing', 'qa', 'xray', 'atlassian'],
   },
@@ -143,7 +143,7 @@ export const PREDEFINED_TOOLS: ToolTemplate[] = [
     description: 'Team communication and collaboration',
     defaultUrl: 'https://slack.com',
     urlPlaceholder: 'https://your-workspace.slack.com/channels/channel-name',
-    icon: 'MessageSquare',
+    icon: '/icons/tools/slack.svg',
     category: 'Issues',
     tags: ['communication', 'chat', 'collaboration'],
     isPopular: true,
@@ -156,7 +156,7 @@ export const PREDEFINED_TOOLS: ToolTemplate[] = [
     description: 'Code repository and collaboration platform',
     defaultUrl: 'https://github.com',
     urlPlaceholder: 'https://github.com/username/repository',
-    icon: 'Github',
+    icon: '/icons/tools/github.svg',
     category: 'Software',
     tags: ['git', 'code', 'repository', 'collaboration'],
     isPopular: true,
@@ -169,7 +169,7 @@ export const PREDEFINED_TOOLS: ToolTemplate[] = [
     description: 'Online learning platform with courses from top universities',
     defaultUrl: 'https://coursera.org',
     urlPlaceholder: 'https://coursera.org/learn/course-name',
-    icon: 'GraduationCap',
+    icon: '/icons/tools/coursera.svg',
     category: 'Learning',
     tags: ['learning', 'courses', 'education', 'certification'],
     isPopular: true,
