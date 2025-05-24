@@ -87,18 +87,6 @@ export const sidebarNavigationData: SidebarNavigationData = {
           roles: ['admin', 'developer', 'tester', 'viewer'],
         },
         {
-          title: 'Code',
-          href: '/code',
-          icon: Code,
-          roles: ['admin', 'developer', 'tester', 'viewer'],
-        },
-        {
-          title: 'Browser',
-          href: '/browser',
-          icon: Globe,
-          roles: ['admin', 'developer', 'tester', 'viewer'],
-        },
-        {
           title: 'REC',
           href: '/rec',
           icon: EyeIcon,
@@ -111,20 +99,21 @@ export const sidebarNavigationData: SidebarNavigationData = {
           roles: ['admin', 'developer', 'tester'],
         },
         {
+          title: 'Browser',
+          href: '/browser',
+          icon: Globe,
+          roles: ['admin', 'developer', 'tester', 'viewer'],
+        },
+        {
+          title: 'Code',
+          href: '/code',
+          icon: Code,
+          roles: ['admin', 'developer', 'tester', 'viewer'],
+        },
+        {
           title: 'Reports',
           href: '/reports',
           icon: BarChart3,
-          roles: ['admin', 'developer', 'tester', 'viewer'],
-        },
-      ],
-    },
-    {
-      title: 'Add-on',
-      items: [
-        {
-          title: 'Third Party Tools',
-          href: '/thirdparty',
-          icon: ExternalLink,
           roles: ['admin', 'developer', 'tester', 'viewer'],
         },
       ],
@@ -149,6 +138,17 @@ export const sidebarNavigationData: SidebarNavigationData = {
           href: '/environment-variables',
           icon: Key,
           roles: ['admin'],
+        },
+      ],
+    },
+    {
+      title: 'Add-on',
+      items: [
+        {
+          title: 'Third Party Tools',
+          href: '/thirdparty',
+          icon: ExternalLink,
+          roles: ['admin', 'developer', 'tester', 'viewer'],
         },
       ],
     },

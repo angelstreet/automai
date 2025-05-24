@@ -27,26 +27,32 @@ interface ThirdPartyTool {
   sortOrder: number;
 }
 
-interface ThirdPartyContentClientProps {
-  showToolSelector: boolean;
-  onShowToolSelectorChange: (show: boolean) => void;
-}
-
-function ThirdPartyContentClient({
-  showToolSelector,
-  onShowToolSelectorChange,
-}: ThirdPartyContentClientProps) {
+function ThirdPartyContentClient() {
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [tools, setTools] = useState<ThirdPartyTool[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingTool, setEditingTool] = useState<ThirdPartyTool | null>(null);
+  const [showToolSelector, setShowToolSelector] = useState(false);
 
   // Tool selection state
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedTools, setSelectedTools] = useState<Set<string>>(new Set());
+
+  // Listen for OPEN_TOOL_SELECTOR event from ThirdPartyActionsClient
+  useEffect(() => {
+    const handleOpenToolSelector = () => {
+      setShowToolSelector(true);
+    };
+
+    window.addEventListener('OPEN_TOOL_SELECTOR', handleOpenToolSelector);
+
+    return () => {
+      window.removeEventListener('OPEN_TOOL_SELECTOR', handleOpenToolSelector);
+    };
+  }, []);
 
   // Mock existing user tools - will be replaced with API calls
   useEffect(() => {
@@ -197,7 +203,7 @@ function ThirdPartyContentClient({
 
     setTools((prev) => [...prev, ...toolsToAdd]);
     setSelectedTools(new Set());
-    onShowToolSelectorChange(false);
+    setShowToolSelector(false);
     setSearchTerm('');
     setSelectedCategory('All');
 
@@ -205,7 +211,7 @@ function ThirdPartyContentClient({
   };
 
   const handleCloseToolSelector = () => {
-    onShowToolSelectorChange(false);
+    setShowToolSelector(false);
     setSelectedTools(new Set());
     setSearchTerm('');
     setSelectedCategory('All');
@@ -328,7 +334,7 @@ function ThirdPartyContentClient({
               : `No tools in the ${activeCategory} category.`}
           </p>
           <button
-            onClick={() => onShowToolSelectorChange(true)}
+            onClick={() => setShowToolSelector(true)}
             className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
           >
             Add Your First Tool

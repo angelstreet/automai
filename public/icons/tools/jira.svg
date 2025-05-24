@@ -1,4 +1,5 @@
-<svg xmlns="https://www.svgrepo.com/show/353935/jira.svg" width="24" height="24" viewBox="0 0 24 24">
-  <rect width="24" height="24" rx="4" fill="#0052CC"/>
-  <text x="12" y="16" text-anchor="middle" fill="white" font-family="Arial" font-size="10" font-weight="bold">J</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+  <path d="M12.2 2.4L6.8 7.8c-.5.5-.5 1.3 0 1.8l5.4 5.4 5.4-5.4c.5-.5.5-1.3 0-1.8L12.2 2.4z" fill="#2684FF"/>
+  <path d="M12.2 21.6l5.4-5.4c.5-.5.5-1.3 0-1.8l-5.4-5.4-5.4 5.4c-.5.5-.5 1.3 0 1.8l5.4 5.4z" fill="#2684FF"/>
+  <circle cx="12" cy="12" r="3" fill="#fff"/>
 </svg> 
