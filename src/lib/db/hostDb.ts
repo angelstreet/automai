@@ -215,6 +215,112 @@ export async function deleteHost(id: string): Promise<DbResponse<null>> {
   }
 }
 
+/**
+ * Reserve a host for exclusive use
+ */
+export async function reserveHost(hostId: string, profileId: string): Promise<DbResponse<Host>> {
+  try {
+    console.log(`[@db:hostDb:reserveHost] Reserving host ${hostId} for user ${profileId}`);
+
+    const supabase = await createClient();
+
+    // First check if host is available
+    const { data: currentHost, error: checkError } = await supabase
+      .from('hosts')
+      .select('reserved_by')
+      .eq('id', hostId)
+      .single();
+
+    if (checkError) {
+      return { success: false, error: checkError.message };
+    }
+
+    if (currentHost.reserved_by && currentHost.reserved_by !== profileId) {
+      return { success: false, error: 'Host is already reserved by another user' };
+    }
+
+    // Reserve the host
+    const { data, error } = await supabase
+      .from('hosts')
+      .update({ reserved_by: profileId })
+      .eq('id', hostId)
+      .select()
+      .single();
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    console.log(
+      `[@db:hostDb:reserveHost] Successfully reserved host ${hostId} for user ${profileId}`,
+    );
+    return { success: true, data };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Failed to reserve host' };
+  }
+}
+
+/**
+ * Release a host reservation
+ */
+export async function releaseHost(hostId: string): Promise<DbResponse<Host>> {
+  try {
+    console.log(`[@db:hostDb:releaseHost] Releasing host ${hostId}`);
+
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+      .from('hosts')
+      .update({ reserved_by: null })
+      .eq('id', hostId)
+      .select()
+      .single();
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    console.log(`[@db:hostDb:releaseHost] Successfully released host ${hostId}`);
+    return { success: true, data };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Failed to release host' };
+  }
+}
+
+/**
+ * Force release a host (for take control functionality)
+ */
+export async function forceReleaseHost(
+  hostId: string,
+  newProfileId: string,
+): Promise<DbResponse<Host>> {
+  try {
+    console.log(
+      `[@db:hostDb:forceReleaseHost] Force releasing host ${hostId} for user ${newProfileId}`,
+    );
+
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+      .from('hosts')
+      .update({ reserved_by: newProfileId })
+      .eq('id', hostId)
+      .select()
+      .single();
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    console.log(
+      `[@db:hostDb:forceReleaseHost] Successfully force released host ${hostId} for user ${newProfileId}`,
+    );
+    return { success: true, data };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Failed to force release host' };
+  }
+}
+
 // Default export for all host database operations
 const hostDb = {
   getHosts,
@@ -223,6 +329,9 @@ const hostDb = {
   updateHost,
   updateHostStatus,
   deleteHost,
+  reserveHost,
+  releaseHost,
+  forceReleaseHost,
 };
 
 export default hostDb;

@@ -46,6 +46,9 @@ export interface Host {
   vnc_port?: string | number;
   vnc_password?: string;
 
+  // Reservation management
+  reserved_by?: string | null; // User ID who has reserved this host
+
   // Status fields
   status: HostStatus;
 
