@@ -19,7 +19,6 @@ export function TerminalEmulator({
   const terminalInstance = useRef<any>(null);
   const fitAddon = useRef<any>(null);
   const currentInput = useRef<string>('');
-  const currentDirectory = useRef<string>(host.is_windows ? `C:\\Users\\${host.user}` : '~'); // Track current directory
   const [isTerminalReady, setIsTerminalReady] = useState(false);
 
   useEffect(() => {
@@ -45,7 +44,7 @@ export function TerminalEmulator({
             background: '#1e1e1e',
             foreground: '#d4d4d4',
             cursor: '#d4d4d4',
-            selection: 'rgba(255, 255, 255, 0.3)',
+            selectionBackground: 'rgba(255, 255, 255, 0.3)',
             black: '#000000',
             red: '#cd3131',
             green: '#0dbc79',
@@ -104,8 +103,11 @@ export function TerminalEmulator({
           console.log(`[@component:TerminalEmulator] Terminal resized: ${cols}x${rows}`);
         });
 
-        // Show initial prompt
-        showInitialPrompt(terminal);
+        // Show initial connection message and get the natural prompt
+        terminal.write(`🔗 Connected to ${host.name} (${host.ip}:${host.port || 22})\r\n`);
+
+        // Send a simple command to get the natural prompt
+        await executeCommand('', terminal, false); // Empty command to just get prompt
 
         setIsTerminalReady(true);
         onConnectionStatusChange(true);
@@ -117,24 +119,14 @@ export function TerminalEmulator({
       }
     };
 
-    const showInitialPrompt = (terminal: any) => {
-      // Show welcome and initial prompt
-      terminal.write(`\r\n🔗 Connected to ${host.name} (${host.ip}:${host.port || 22})\r\n`);
-      showPrompt(terminal);
-    };
-
     const handleTerminalInput = async (data: string, terminal: any) => {
       // Handle special keys
       if (data === '\r' || data === '\n') {
         // Enter pressed - execute command
         terminal.write('\r\n');
 
-        if (currentInput.current.trim()) {
-          await executeCommand(currentInput.current.trim(), terminal);
-        }
-
+        await executeCommand(currentInput.current.trim(), terminal, true);
         currentInput.current = '';
-        showPrompt(terminal);
       } else if (data === '\x7f') {
         // Backspace
         if (currentInput.current.length > 0) {
@@ -144,8 +136,8 @@ export function TerminalEmulator({
       } else if (data === '\x03') {
         // Ctrl+C
         terminal.write('^C\r\n');
+        await executeCommand('', terminal, true); // Send Ctrl+C and get new prompt
         currentInput.current = '';
-        showPrompt(terminal);
       } else if (data.charCodeAt(0) >= 32) {
         // Printable characters
         currentInput.current += data;
@@ -153,100 +145,42 @@ export function TerminalEmulator({
       }
     };
 
-    const executeCommand = async (command: string, terminal: any) => {
+    const executeCommand = async (command: string, terminal: any, showOutput: boolean = true) => {
       try {
-        console.log(`[@component:TerminalEmulator] Executing command: ${command}`);
+        console.log(`[@component:TerminalEmulator] Sending raw input: "${command}"`);
 
-        // Handle cd command specially to track directory changes
-        let actualCommand = command;
-        let isCdCommand = false;
-
-        if (command.startsWith('cd ') || command === 'cd') {
-          isCdCommand = true;
-          const targetDir =
-            command.substring(3).trim() || (host.is_windows ? `C:\\Users\\${host.user}` : '~');
-
-          if (host.is_windows) {
-            // For Windows, first change directory, then get current directory
-            actualCommand = `cd "${targetDir}" 2>$null; if ($?) { pwd } else { Write-Error "Cannot access path" }`;
-          } else {
-            // For Linux/Unix, change directory and get pwd
-            actualCommand = `cd "${targetDir}" 2>/dev/null && pwd || echo "cd: cannot access '${targetDir}': No such file or directory"`;
-          }
-        } else if (!host.is_windows && currentDirectory.current !== '~') {
-          // For non-cd commands on Linux, prefix with cd to current directory
-          actualCommand = `cd "${currentDirectory.current}" && ${command}`;
-        } else if (host.is_windows && currentDirectory.current !== `C:\\Users\\${host.user}`) {
-          // For non-cd commands on Windows, prefix with cd to current directory
-          actualCommand = `cd "${currentDirectory.current}"; ${command}`;
-        }
-
-        // Import terminal action
+        // Import terminal action - send raw command exactly as typed
         const { sendTerminalData } = await import('@/app/actions/terminalsAction');
-        const result = await sendTerminalData(sessionId, actualCommand);
+        const result = await sendTerminalData(sessionId, command);
 
-        console.log(`[@component:TerminalEmulator] Command result:`, {
+        console.log(`[@component:TerminalEmulator] Raw SSH response:`, {
           success: result.success,
-          hasData: !!result.data,
           hasStdout: !!result.data?.stdout,
           hasStderr: !!result.data?.stderr,
           error: result.error,
-          isCdCommand,
         });
 
-        if (result.success && result.data) {
-          // Handle cd command results
-          if (isCdCommand) {
-            if (result.data.stdout && !result.data.stderr) {
-              // Successfully changed directory, update our tracking
-              const newDir = result.data.stdout.trim();
-              currentDirectory.current = newDir;
-              console.log(`[@component:TerminalEmulator] Directory changed to: ${newDir}`);
-              // Don't show the pwd output for cd commands
-            } else if (result.data.stderr) {
-              // Show error for failed cd
-              terminal.write(`\x1b[31m${result.data.stderr.trim()}\x1b[0m\r\n`);
-            } else {
-              // Fallback error message
-              terminal.write(`\x1b[31mcd: command failed\x1b[0m\r\n`);
-            }
-          } else {
-            // Display normal command output
-            if (result.data.stdout) {
-              console.log(`[@component:TerminalEmulator] Writing stdout:`, result.data.stdout);
-              terminal.write(result.data.stdout);
-            }
-            if (result.data.stderr) {
-              console.log(`[@component:TerminalEmulator] Writing stderr:`, result.data.stderr);
-              terminal.write(`\x1b[31m${result.data.stderr}\x1b[0m`);
-            }
-
-            // If no output, show a message
-            if (!result.data.stdout && !result.data.stderr) {
-              terminal.write(`\x1b[90m(command completed with no output)\x1b[0m\r\n`);
-            }
+        if (result.success && result.data && showOutput) {
+          // Display exact SSH output
+          if (result.data.stdout) {
+            terminal.write(result.data.stdout);
           }
-        } else {
-          console.error(`[@component:TerminalEmulator] Command failed:`, result.error);
-          terminal.write(`\x1b[31mError: ${result.error || 'Command failed'}\x1b[0m\r\n`);
+          if (result.data.stderr) {
+            terminal.write(result.data.stderr);
+          }
+        } else if (!result.success) {
+          console.error(`[@component:TerminalEmulator] SSH command failed:`, result.error);
+          if (showOutput) {
+            terminal.write(`\x1b[31mSSH Error: ${result.error || 'Command failed'}\x1b[0m\r\n`);
+          }
         }
       } catch (error) {
-        console.error(`[@component:TerminalEmulator] Error executing command:`, error);
-        terminal.write(
-          `\x1b[31mError: ${error instanceof Error ? error.message : 'Unknown error'}\x1b[0m\r\n`,
-        );
-      }
-    };
-
-    const showPrompt = (terminal: any) => {
-      if (host.is_windows) {
-        terminal.write(`PS ${currentDirectory.current}> `);
-      } else {
-        const shortDir =
-          currentDirectory.current === '/home/' + host.user || currentDirectory.current === '~'
-            ? '~'
-            : currentDirectory.current;
-        terminal.write(`${host.user}@${host.name}:${shortDir}$ `);
+        console.error(`[@component:TerminalEmulator] Error sending to SSH:`, error);
+        if (showOutput) {
+          terminal.write(
+            `\x1b[31mError: ${error instanceof Error ? error.message : 'Unknown error'}\x1b[0m\r\n`,
+          );
+        }
       }
     };
 
@@ -270,17 +204,18 @@ export function TerminalEmulator({
 
     window.addEventListener('resize', handleResize);
 
-    // Focus on any click in the terminal area
-    if (terminalRef.current) {
-      terminalRef.current.addEventListener('click', handleFocus);
+    // Focus on any click in the terminal area - copy ref to variable
+    const terminalElement = terminalRef.current;
+    if (terminalElement) {
+      terminalElement.addEventListener('click', handleFocus);
     }
 
     return () => {
       mounted = false;
       window.removeEventListener('resize', handleResize);
 
-      if (terminalRef.current) {
-        terminalRef.current.removeEventListener('click', handleFocus);
+      if (terminalElement) {
+        terminalElement.removeEventListener('click', handleFocus);
       }
 
       if (terminalInstance.current) {
@@ -307,16 +242,18 @@ export function TerminalEmulator({
   }, [isTerminalReady]);
 
   return (
-    <div
-      className="w-full h-full bg-[#1e1e1e] relative"
-      onClick={() => {
-        // Ensure terminal gets focus on any click
-        if (terminalInstance.current) {
-          terminalInstance.current.focus();
-        }
-      }}
-    >
-      <div ref={terminalRef} className="w-full h-full" style={{ padding: '8px 8px 48px 8px' }} />
+    <div className="flex flex-col h-full w-full bg-[#1e1e1e]">
+      <div
+        ref={terminalRef}
+        className="flex-1 w-full min-h-0"
+        style={{ padding: '8px' }}
+        onClick={() => {
+          // Ensure terminal gets focus on any click
+          if (terminalInstance.current) {
+            terminalInstance.current.focus();
+          }
+        }}
+      />
     </div>
   );
 }
