@@ -298,16 +298,38 @@ export async function sendMessage(input: SendMessageInput): Promise<
 
     // Return responses immediately for display
     // The database saving will happen in the background via a separate action
-    const conversationId = input.conversationId || 'temp-' + Date.now();
+    let conversationId = input.conversationId;
+
+    // If no conversation ID provided, we'll need to create one
+    if (!conversationId) {
+      // Create conversation immediately so we have a real ID to return
+      const title = input.conversationTitle || `Chat ${new Date().toLocaleDateString()}`;
+      const createResult = await chatDb.createConversation({
+        title,
+        model_ids: input.modelIds,
+      });
+
+      if (createResult.success && createResult.data) {
+        conversationId = createResult.data.id;
+        conversation = createResult.data;
+        console.log(`[@action:chat:sendMessage] Created new conversation: ${conversationId}`);
+      } else {
+        console.error(
+          `[@action:chat:sendMessage] Failed to create conversation: ${createResult.error}`,
+        );
+        // Fall back to temp ID if creation fails
+        conversationId = 'temp-' + Date.now();
+      }
+    }
 
     console.log(
       `[@action:chat:sendMessage] Returning ${aiResponses.length} AI responses for immediate display`,
     );
 
-    // Start background saving (don't await it)
+    // Start background saving (don't await it) - only save messages, don't create conversation again
     saveMessageToDatabase({
       conversation,
-      input,
+      input: { ...input, conversationId }, // Ensure conversationId is set
       aiResponses,
     }).catch((error) => {
       console.error('[@action:chat:sendMessage] Background save error:', error);
@@ -350,8 +372,8 @@ async function saveMessageToDatabase({
 
     let finalConversation = conversation;
 
-    // Create conversation if it doesn't exist
-    if (!input.conversationId || !conversation) {
+    // Only create conversation if we don't have one and no conversationId provided
+    if (!finalConversation && !input.conversationId) {
       const title = input.conversationTitle || `Chat ${new Date().toLocaleDateString()}`;
       const createResult = await chatDb.createConversation({
         title,
@@ -366,6 +388,17 @@ async function saveMessageToDatabase({
       console.log(
         `[@action:chat:saveMessageToDatabase] Created new conversation: ${finalConversation.id}`,
       );
+    } else if (!finalConversation && input.conversationId) {
+      // Get existing conversation
+      const getResult = await chatDb.getConversationById(input.conversationId);
+      if (getResult.success && getResult.data) {
+        finalConversation = getResult.data;
+        console.log(
+          `[@action:chat:saveMessageToDatabase] Using existing conversation: ${finalConversation.id}`,
+        );
+      } else {
+        throw new Error('Conversation not found for saving messages');
+      }
     }
 
     if (!finalConversation) {
@@ -421,9 +454,6 @@ async function saveMessageToDatabase({
       });
       console.log(`[@action:chat:saveMessageToDatabase] Updated conversation model_ids`);
     }
-
-    // Revalidate chat page
-    revalidatePath('/[locale]/[tenant]/chat', 'page');
 
     console.log('[@action:chat:saveMessageToDatabase] Successfully completed background save');
   } catch (error: any) {

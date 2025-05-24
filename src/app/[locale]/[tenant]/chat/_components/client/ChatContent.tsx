@@ -53,12 +53,56 @@ export default function ChatContent() {
   useEffect(() => {
     fetchMessages();
 
-    // Listen for new messages to refresh
+    // Listen for new messages to display immediately
     const handleNewMessage = (event: CustomEvent) => {
-      const { conversationId } = event.detail;
-      if (conversationId === activeConversationId) {
-        console.log('[@component:ChatContent] Refreshing messages after new message');
-        fetchMessages();
+      const { conversationId, userMessage, aiMessages } = event.detail;
+      if (conversationId === activeConversationId || conversationId.startsWith('temp-')) {
+        console.log('[@component:ChatContent] Adding messages immediately from event');
+
+        // Create temporary message objects for immediate display
+        const tempUserMessage: ChatMessage = {
+          id: 'temp-user-' + Date.now(),
+          conversation_id: conversationId,
+          role: userMessage.role,
+          content: userMessage.content,
+          model_id: null,
+          model_name: null,
+          provider: null,
+          token_count: null,
+          response_time_ms: null,
+          error_message: null,
+          metadata: null,
+          creator_id: 'temp',
+          created_at: userMessage.timestamp,
+          updated_at: userMessage.timestamp,
+        };
+
+        const tempAiMessages: ChatMessage[] = aiMessages.map((msg: any, index: number) => ({
+          id: 'temp-ai-' + Date.now() + '-' + index,
+          conversation_id: conversationId,
+          role: msg.role,
+          content: msg.content,
+          model_id: msg.modelId,
+          model_name: msg.metadata?.model_name || msg.modelId,
+          provider: 'openrouter',
+          token_count: msg.metadata?.usage?.total_tokens || null,
+          response_time_ms: msg.responseTime,
+          error_message: msg.error || null,
+          metadata: msg.metadata,
+          creator_id: 'temp',
+          created_at: msg.timestamp,
+          updated_at: msg.timestamp,
+        }));
+
+        // Add messages immediately for display
+        setMessages((prev) => [...prev, tempUserMessage, ...tempAiMessages]);
+
+        // Fetch fresh data from database after a short delay to replace temp messages
+        setTimeout(() => {
+          if (conversationId && !conversationId.startsWith('temp-')) {
+            fetchMessages();
+          }
+        }, 2000);
       }
     };
 

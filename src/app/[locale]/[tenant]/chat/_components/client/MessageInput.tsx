@@ -85,19 +85,19 @@ export default function MessageInput() {
         console.log('[@component:MessageInput:handleSend] Message sent successfully');
 
         // Update conversation ID if this was a new conversation
-        if (
-          !activeConversationId &&
-          result.data.conversationId &&
-          !result.data.conversationId.startsWith('temp-')
-        ) {
-          setActiveConversationId(result.data.conversationId);
+        const newConversationId = result.data.conversationId;
+        if (!activeConversationId && newConversationId && !newConversationId.startsWith('temp-')) {
+          setActiveConversationId(newConversationId);
+          console.log(
+            `[@component:MessageInput:handleSend] Set active conversation: ${newConversationId}`,
+          );
         }
 
         // Dispatch custom event to notify other components with immediate responses
         window.dispatchEvent(
           new CustomEvent('CHAT_MESSAGE_SENT', {
             detail: {
-              conversationId: result.data.conversationId,
+              conversationId: newConversationId,
               userMessage: {
                 role: 'user',
                 content: messageContent,
@@ -199,33 +199,29 @@ export default function MessageInput() {
       <button
         onClick={handleSend}
         disabled={isDisabled || !message.trim()}
-        className="p-2.5 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 relative"
+        className="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 font-medium text-sm"
       >
         {isLoading ? (
-          <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            />
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-            />
-          </svg>
+          <div className="flex items-center gap-2">
+            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              />
+            </svg>
+            <span>Sending...</span>
+          </div>
         ) : (
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-            />
-          </svg>
+          'Send'
         )}
       </button>
     </div>
