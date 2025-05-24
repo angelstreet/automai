@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+
 import {
   ALL_OPENROUTER_MODELS,
-  FREE_OPENROUTER_MODELS,
   POPULAR_OPENROUTER_MODELS,
   MODEL_SELECTION,
   type OpenRouterModel,
 } from '../../constants';
+
 import { useChatContext } from './ChatContext';
 
 interface ModelSelectorProps {
@@ -149,29 +150,10 @@ export default function ModelSelector({ className = '' }: ModelSelectorProps) {
 
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
-      {/* Selected Models Display */}
-      <div className="flex items-center gap-2 mb-2">
-        <span className="text-sm font-medium text-foreground">Models:</span>
-        <div className="flex flex-wrap gap-1">
-          {selectedModels.map((modelId) => {
-            const model = getSelectedModel(modelId);
-            return (
-              <span
-                key={modelId}
-                className="px-2 py-1 text-xs bg-primary text-primary-foreground rounded-full flex items-center gap-1"
-              >
-                {model ? getDisplayName(model) : modelId}
-                {model?.isFree && <span className="text-[10px]">🆓</span>}
-              </span>
-            );
-          })}
-        </div>
-      </div>
-
       {/* Dropdown Trigger */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-3 py-2 text-sm bg-background border border-border rounded-md text-left flex items-center justify-between hover:bg-secondary/50 transition-colors"
+        className="w-[140px] px-3 py-2 text-sm bg-background border border-border rounded-md text-left flex items-center justify-between hover:bg-secondary/50 transition-colors"
       >
         <span className="text-muted-foreground">
           {selectedModels.length < MODEL_SELECTION.MAX_MODELS
@@ -188,6 +170,23 @@ export default function ModelSelector({ className = '' }: ModelSelectorProps) {
         </svg>
       </button>
 
+      {/* Selected Models Display */}
+      <div className="flex items-center gap-2 mb-2">
+        <div className="flex flex-wrap gap-1">
+          {selectedModels.map((modelId) => {
+            const model = getSelectedModel(modelId);
+            return (
+              <span
+                key={modelId}
+                className="px-2 py-1 text-xs bg-primary text-primary-foreground rounded-full flex items-center gap-1"
+              >
+                {model ? getDisplayName(model) : modelId}
+                {model?.isFree && <span className="text-[10px]">🆓</span>}
+              </span>
+            );
+          })}
+        </div>
+      </div>
       {/* Dropdown Menu */}
       {isOpen && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-background border border-border rounded-md shadow-lg z-50 max-h-80 overflow-hidden">

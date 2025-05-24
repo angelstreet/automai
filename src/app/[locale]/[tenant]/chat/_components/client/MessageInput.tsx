@@ -4,7 +4,9 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 
 import { sendMessage } from '@/app/actions/chatAction';
+
 import { CHAT_SETTINGS, ERROR_MESSAGES, hasPaidModels } from '../../constants';
+
 import { useChatContext } from './ChatContext';
 import { TokenTracker } from './TokenTracker';
 
@@ -49,11 +51,10 @@ export default function MessageInput() {
         action: {
           label: 'Add API Key',
           onClick: () => {
-            const key = prompt('Enter your OpenRouter API key:');
-            if (key?.trim()) {
-              console.log('API key entered by user');
-              // In a real app, you'd want a proper API key input component
-            }
+            toast.info('API Key Setup', {
+              description: 'Go to Settings to configure your OpenRouter API key for paid models.',
+              duration: 5000,
+            });
           },
         },
       });

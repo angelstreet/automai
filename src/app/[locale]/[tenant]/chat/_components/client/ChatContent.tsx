@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 
 import { getMessages } from '@/app/actions/chatAction';
 import type { ChatMessage } from '@/lib/db/chatDb';
+
 import { useChatContext } from './ChatContext';
 
 /**
@@ -217,7 +218,7 @@ export default function ChatContent() {
               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-[75%] rounded-lg px-3 py-2 ${
+                className={`max-w-[95%] rounded-lg px-3 py-1 ${
                   message.role === 'user'
                     ? 'bg-primary text-primary-foreground'
                     : 'bg-secondary text-foreground'
@@ -226,16 +227,11 @@ export default function ChatContent() {
                 {/* Message Content */}
                 <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">
                   {message.content}
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    {message.response_time_ms && `${message.response_time_ms}ms / `}
+                    {message.token_count && `${message.token_count} tokens`}
+                  </span>
                 </div>
-
-                {/* Response time and tokens for AI messages */}
-                {message.role === 'assistant' &&
-                  (message.response_time_ms || message.token_count) && (
-                    <div className="mt-1 text-xs text-muted-foreground text-right">
-                      {message.response_time_ms && `(${message.response_time_ms}ms) `}
-                      {message.token_count && `${message.token_count} tokens`}
-                    </div>
-                  )}
 
                 {/* Error message if any */}
                 {message.error_message && (
