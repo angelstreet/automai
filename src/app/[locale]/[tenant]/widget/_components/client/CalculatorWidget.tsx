@@ -88,7 +88,7 @@ const CalculatorWidget = () => {
   return (
     <div className="bg-white rounded-lg shadow-lg w-56 min-h-[288px] h-full relative p-4">
       <h3 className="text-sm font-semibold text-gray-600 mb-2 text-center">Calculator</h3>
-      <div className="bg-gray-100 p-2 mb-2 rounded text-right text-lg font-mono min-h-[32px] flex items-center justify-end">
+      <div className="bg-gray-100 p-2 mb-2 rounded text-right text-lg font-mono min-h-[32px] flex items-center justify-end text-gray-900">
         {display}
       </div>
       <div className="grid grid-cols-4 gap-1 flex-1 min-h-[144px]">
@@ -141,15 +141,21 @@ const CalculatorWidget = () => {
         </button>
         <button
           onClick={buttons[14].action}
-          className="bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm font-medium col-span-2"
+          className="bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm font-medium"
         >
           {buttons[14].label}
         </button>
         <button
           onClick={buttons[15].action}
-          className="bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm font-medium"
+          className="bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm font-medium col-span-2"
         >
           {buttons[15].label}
+        </button>
+        <button
+          onClick={buttons[16].action}
+          className="bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm font-medium"
+        >
+          {buttons[16].label}
         </button>
       </div>
     </div>
