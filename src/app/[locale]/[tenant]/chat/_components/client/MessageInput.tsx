@@ -3,8 +3,8 @@
 import { useState } from 'react';
 
 import { sendMessage } from '@/app/actions/chatAction';
-import { useChatContext } from './ChatContext';
 import { CHAT_SETTINGS, ERROR_MESSAGES } from '../../constants';
+import { useChatContext } from './ChatContext';
 
 /**
  * Message input component - elegant text input with send button
@@ -14,10 +14,25 @@ export default function MessageInput() {
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { selectedModels, activeConversationId, setActiveConversationId } = useChatContext();
+  const {
+    selectedModels,
+    activeConversationId,
+    setActiveConversationId,
+    isApiKeyValid,
+    hasEnvApiKey,
+    openRouterApiKey,
+  } = useChatContext();
 
   const handleSend = async () => {
     if (!message.trim() || isLoading) return;
+
+    // Validate API key first
+    if (!isApiKeyValid) {
+      setError(
+        'OpenRouter API key is required. Please add your API key or configure OPENROUTER_API_KEY environment variable.',
+      );
+      return;
+    }
 
     if (selectedModels.length === 0) {
       setError('Please select at least one AI model');
@@ -39,6 +54,7 @@ export default function MessageInput() {
         conversationId: activeConversationId,
         modelCount: selectedModels.length,
         messageLength: messageContent.length,
+        usingEnvKey: hasEnvApiKey,
       });
 
       const result = await sendMessage({
@@ -70,7 +86,15 @@ export default function MessageInput() {
         );
       } else {
         console.error('[@component:MessageInput:handleSend] Failed to send message:', result.error);
-        setError(result.error || ERROR_MESSAGES.MESSAGE_SEND_FAILED);
+        const errorMessage = result.error || ERROR_MESSAGES.MESSAGE_SEND_FAILED;
+
+        // Show specific error for API key issues
+        if (errorMessage.includes('API key') || errorMessage.includes('authentication')) {
+          setError('OpenRouter API key is invalid or not configured. Please check your API key.');
+        } else {
+          setError(errorMessage);
+        }
+
         setMessage(messageContent); // Restore message on error
       }
     } catch (error: any) {
@@ -89,13 +113,20 @@ export default function MessageInput() {
     }
   };
 
-  const isDisabled = isLoading || selectedModels.length === 0;
-  const placeholder =
-    selectedModels.length === 0
-      ? 'Select AI models to start chatting...'
-      : isLoading
-        ? 'Sending message...'
-        : 'Start a message...';
+  const isDisabled = isLoading || selectedModels.length === 0 || !isApiKeyValid;
+
+  const getPlaceholder = () => {
+    if (!isApiKeyValid) {
+      return 'OpenRouter API key required...';
+    }
+    if (selectedModels.length === 0) {
+      return 'Select AI models to start chatting...';
+    }
+    if (isLoading) {
+      return 'Sending message...';
+    }
+    return 'Start a message...';
+  };
 
   return (
     <div className="flex flex-col px-4 py-3 h-full">
@@ -112,6 +143,33 @@ export default function MessageInput() {
         </div>
       )}
 
+      {/* API Key Warning */}
+      {!isApiKeyValid && (
+        <div className="mb-2 p-2 bg-orange-50 border border-orange-200 rounded-lg text-orange-800 text-sm">
+          {hasEnvApiKey ? (
+            'OpenRouter API key detected in environment but not accessible from client.'
+          ) : (
+            <>
+              OpenRouter API key required.
+              {typeof window !== 'undefined' && (
+                <button
+                  onClick={() => {
+                    const key = prompt('Enter your OpenRouter API key:');
+                    if (key?.trim()) {
+                      // In a real app, you'd want a proper API key input component
+                      console.log('API key entered by user');
+                    }
+                  }}
+                  className="ml-2 underline hover:no-underline"
+                >
+                  Add API Key
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
       <div className="flex-1 flex items-end space-x-3 max-w-4xl mx-auto w-full">
         {/* Text Input Container */}
         <div className="flex-1 relative">
@@ -119,7 +177,7 @@ export default function MessageInput() {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder={placeholder}
+            placeholder={getPlaceholder()}
             disabled={isDisabled}
             className="w-full px-4 py-3 bg-background border border-border rounded-2xl resize-none text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring text-sm leading-relaxed transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             rows={1}
@@ -181,10 +239,11 @@ export default function MessageInput() {
       </div>
 
       {/* Model Selection Info */}
-      {selectedModels.length > 0 && (
+      {selectedModels.length > 0 && isApiKeyValid && (
         <div className="mt-2 text-xs text-muted-foreground text-center">
           Sending to {selectedModels.length} model{selectedModels.length > 1 ? 's' : ''}
           {isLoading && ' • Processing...'}
+          {hasEnvApiKey && ' • Using environment API key'}
         </div>
       )}
     </div>

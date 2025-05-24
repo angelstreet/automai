@@ -2,11 +2,11 @@
 
 import { CHAT_LAYOUT } from '../../constants';
 
-import ChatArea from './ChatArea';
 import { ChatProvider } from './ChatContext';
 import ChatHeader from './ChatHeader';
 import ChatHistoryPanel from './ChatHistoryPanel';
 import MessageInput from './MessageInput';
+import ChatContent from './ChatContent';
 
 /**
  * Client component for displaying and managing chat interface
@@ -33,9 +33,9 @@ function ChatContentClient() {
             <ChatHeader />
           </div>
 
-          {/* Chat Messages Area */}
+          {/* Chat Messages Area - Real data from database */}
           <div className="flex-1 min-h-0 overflow-hidden">
-            <ChatArea />
+            <ChatContent />
           </div>
 
           {/* Message Input */}

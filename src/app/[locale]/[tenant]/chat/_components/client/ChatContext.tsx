@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 import { MODEL_SELECTION } from '../../constants';
 
@@ -15,6 +15,8 @@ interface ChatContextType {
   setIsLoading: (loading: boolean) => void;
   openRouterApiKey: string | null;
   setOpenRouterApiKey: (key: string | null) => void;
+  hasEnvApiKey: boolean;
+  isApiKeyValid: boolean;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -27,6 +29,35 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [openRouterApiKey, setOpenRouterApiKey] = useState<string | null>(null);
+  const [hasEnvApiKey, setHasEnvApiKey] = useState<boolean>(false);
+
+  // Check if environment has OPENROUTER_API_KEY on mount
+  useEffect(() => {
+    const checkEnvApiKey = async () => {
+      try {
+        // Try to make a test request to see if env API key is available
+        const response = await fetch('/api/check-openrouter-key', {
+          method: 'POST',
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setHasEnvApiKey(data.hasKey);
+
+          if (data.hasKey) {
+            console.log('[@context:ChatProvider] Environment API key detected');
+            // Set a masked placeholder to indicate env key is available
+            setOpenRouterApiKey('env_key_available');
+          }
+        }
+      } catch (error) {
+        console.log('[@context:ChatProvider] No environment API key available');
+        setHasEnvApiKey(false);
+      }
+    };
+
+    checkEnvApiKey();
+  }, []);
 
   // Update active tab when selected models change
   const handleSetSelectedModels = (models: string[]) => {
@@ -46,6 +77,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     setActiveConversationId(id);
   };
 
+  // Check if API key is valid (either user provided or env available)
+  const isApiKeyValid = Boolean(
+    (openRouterApiKey && openRouterApiKey !== 'env_key_available') || hasEnvApiKey,
+  );
+
   return (
     <ChatContext.Provider
       value={{
@@ -59,6 +95,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         setIsLoading,
         openRouterApiKey,
         setOpenRouterApiKey,
+        hasEnvApiKey,
+        isApiKeyValid,
       }}
     >
       {children}
