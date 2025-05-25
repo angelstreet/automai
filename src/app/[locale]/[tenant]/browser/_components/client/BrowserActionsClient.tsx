@@ -97,7 +97,7 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
       });
 
       // Step 2: Wait a moment for the server to start up
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await new Promise(resolve => setTimeout(resolve, 10000));
 
       // Step 3: Initialize the browser automation via API
       const initResult = await initializeBrowserAutomation();
