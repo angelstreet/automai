@@ -104,7 +104,7 @@ export default function BrowserAutomationClient() {
       return;
     }
 
-    if (!isInitialized || !state.serverInitialized) {
+    if (!isInitialized) {
       toast({
         title: 'Error',
         description: 'Browser automation not initialized. Please start the automation system first.',
@@ -186,10 +186,6 @@ export default function BrowserAutomationClient() {
   // Handle example task selection
   const handleExampleClick = (example: string) => {
     setState((prev) => ({ ...prev, taskInput: example }));
-    toast({
-      title: 'Example Selected',
-      description: `Selected example: "${example}"`,
-    });
   };
 
   // Copy log output to clipboard
@@ -250,7 +246,7 @@ export default function BrowserAutomationClient() {
               <Button
                 onClick={handleExecuteTask}
                 disabled={
-                  !state.serverInitialized ||
+                  !isInitialized ||
                   state.isExecuting ||
                   state.serverExecuting ||
                   !state.taskInput.trim()
