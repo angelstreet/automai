@@ -4,17 +4,27 @@ import logging
 import asyncio
 import argparse
 import time
-import zipfile
+import subprocess
+import platform
+import socket
 from dotenv import load_dotenv
-from langchain_openai import ChatOpenAI
-from browser_use import BrowserConfig, Browser, Agent, BrowserContextConfig
+from playwright.async_api import async_playwright
 
 # Flask server imports
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from datetime import datetime
-from browseruseUtils import BrowserManager
-from browseruseUtils import inject_youtube_cookies
+from utils import kill_chrome_instances, clean_user_data_dir
+
+# Conditional imports for server mode
+try:
+    from langchain_openai import ChatOpenAI
+    from browser_use import BrowserConfig, Browser, Agent, BrowserContextConfig
+    from browseruseUtils import inject_youtube_cookies
+    SERVER_IMPORTS_AVAILABLE = True
+except ImportError:
+    SERVER_IMPORTS_AVAILABLE = False
+    print("Warning: Server mode dependencies not available. Only basic browser automation will work.")
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.dirname(os.getcwd()))
@@ -48,6 +58,10 @@ if sys.platform == 'win32':
 parser = argparse.ArgumentParser(description='Run a browser automation task or start server')
 parser.add_argument('--trace_folder', type=str, default='traces', help='The folder to save the trace')
 parser.add_argument('--task', type=str, default='Go to youtube and launch a video for 10s', help='The task for the agent to perform')
+parser.add_argument('--headless', action='store_true', help='Run browser in headless mode')
+parser.add_argument('--debug', action='store_true', help='Enable debug mode')
+parser.add_argument('--executable_path', type=str, help='Path to browser executable')
+parser.add_argument('--server', action='store_true', help='Start server mode instead of running task')
 args, _ = parser.parse_known_args()
 
 # Global variables for server mode
@@ -73,6 +87,9 @@ def update_log(message: str):
 
 async def initialize_browser_server():
     """Initialize browser for server mode"""
+    if not SERVER_IMPORTS_AVAILABLE:
+        return False, "Server mode dependencies not available"
+        
     try:
         if server_state['is_initialized']:
             update_log("Browser refresh detected, cleaning up existing instance...")
@@ -132,6 +149,9 @@ async def initialize_browser_server():
 
 async def execute_task_server(task: str):
     """Execute a task in server mode"""
+    if not SERVER_IMPORTS_AVAILABLE:
+        return False, "Server mode dependencies not available", "FAILURE"
+        
     if not task or task.strip() == "":
         return False, "Please enter a task before executing", ""
 
@@ -298,7 +318,7 @@ def start_server():
     pid = os.getpid()
     
     print("🚀 Starting Browser Automation Server...")
-    print(f"📍 Server will be available at: http://localhost:5000")
+    print(f"📍 Server will be available at: http://localhost:5001")
     print(f"🆔 Process ID: {pid}")
     print("🔄 Press Ctrl+C to stop the server")
     print("-" * 50)
@@ -307,13 +327,110 @@ def start_server():
     
     try:
         print(f"✅ Flask server started successfully with PID: {pid}")
-        app.run(host='0.0.0.0', port=5000, debug=False)
+        app.run(host='0.0.0.0', port=5001, debug=False)
     except KeyboardInterrupt:
         print("\n🛑 Stopping server...")
         print("✅ Server stopped successfully")
     except Exception as e:
         print(f"❌ Error starting server: {str(e)}")
         raise
+
+# Async version of init_browser_with_remote_debugging from utils
+async def init_browser_async(playwright, headless=False, debug=True, video_dir=None, screenshots=True, video=True, source=True, executable_path=None):
+    """Initialize browser with remote debugging enabled on port 9222"""
+    
+    # Kill any existing Chrome instances and clean up
+    kill_chrome_instances()
+    clean_user_data_dir()
+    
+    # Check if port 9222 is in use and kill any process using it
+    try:
+        if is_port_in_use(9222):
+            print('Port 9222 is in use. Killing processes using this port...')
+            if platform.system() == 'Windows':
+                result = subprocess.run(['netstat', '-aon', '|', 'findstr', ':9222'], shell=True, stdout=subprocess.PIPE)
+                if result.stdout:
+                    lines = result.stdout.decode().splitlines()
+                    for line in lines:
+                        if 'LISTENING' in line:
+                            pid = line.split()[-1]
+                            os.system(f'taskkill /PID {pid} /F')
+            else:
+                os.system('lsof -ti:9222 | xargs kill -9')
+            time.sleep(1)
+    except Exception as e:
+        print(f'Error checking port usage: {str(e)}')
+    
+    # Set Chrome path based on OS if not provided
+    if not executable_path:
+        if platform.system() == 'Windows':
+            executable_path = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
+        elif platform.system() == 'Darwin':  # macOS
+            executable_path = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+        else:  # Linux
+            possible_paths = ['/usr/bin/google-chrome', '/usr/bin/chromium-browser']
+            for path in possible_paths:
+                if os.path.exists(path):
+                    executable_path = path
+                    break
+            if not executable_path:
+                raise ValueError('No Chrome executable found in common Linux paths. Please provide --executable_path.')
+    
+    print(f'Launching Chrome with remote debugging using: {executable_path}')
+    
+    # Launch Chrome with remote debugging enabled
+    debug_port = 9222
+    user_data_dir = f'/tmp/chrome_debug_profile'
+    os.makedirs(user_data_dir, exist_ok=True)
+    
+    chrome_flags = [
+        f'--remote-debugging-port={debug_port}',
+        f'--user-data-dir={user_data_dir}',
+        '--no-first-run',
+        '--no-default-browser-check',
+        '--disable-features=Translate',
+        '--disable-extensions',
+        '--disable-component-extensions-with-background-pages',
+        '--disable-background-networking',
+        '--window-position=0,0',
+        '--window-size=1080,720',
+        '--disable-gpu',
+        '--enable-unsafe-swiftshader',
+        '--hide-crash-restore-bubble',
+        '--disable-webgpu',
+        '--use-gl=swiftshader'
+    ]
+    
+    cmd_line = [executable_path] + chrome_flags
+    print(f'Launching Chrome with command: {" ".join(cmd_line)}')
+    process = subprocess.Popen(cmd_line)
+    print(f'Chrome launched with PID: {process.pid}')
+    time.sleep(10)
+    
+    print('Attempting to connect via http://127.0.0.1:9222...')
+    browser = await playwright.chromium.connect_over_cdp('http://localhost:9222')
+    print('Connected to Chrome instance via CDP on port 9222')
+    
+    context = browser.contexts[0]
+    await inject_youtube_cookies(context)
+    page = context.pages[0]
+    
+    # Start tracing if requested
+    if source:
+        await context.tracing.start(screenshots=screenshots, snapshots=True, sources=source)
+    
+    page.set_default_timeout(5000)
+    return page, context, browser, process
+
+def is_port_in_use(port):
+    """Check if a port is in use"""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(1)
+        try:
+            s.bind(('127.0.0.1', port))
+            return False
+        except socket.error:
+            return True
 
 # Function to take screenshots after each step
 async def screenshot_callback(step_number, step_description, browser_context):
@@ -326,67 +443,51 @@ async def screenshot_callback(step_number, step_description, browser_context):
     except Exception as e:
         logger.error(f"Error taking step {step_number} screenshot: {str(e)}")
 
-agent = Agent(
-    task=task, 
-    llm=llm, 
-    browser=browser,
-    register_new_step_callback=screenshot_callback
-)
-
 async def main():
     global args
     trace_folder = args.trace_folder.replace("_", " ")
     print(f"----- Trace folder: {trace_folder} -----")
     task = args.task.replace("_", " ")
     print(f"----- Task: {task} -----")
-    browser_manager = BrowserManager(trace_folder=trace_folder)
+    
+    # Create trace path
+    trace_path = os.path.join(os.getcwd(), trace_folder)
+    os.makedirs(trace_path, exist_ok=True)
+    
     result = False
+    page = None
+    context = None
+    browser = None
+    chrome_process = None
+    
     try:
-        errors, actions, logs = await browser_manager.run_task(task)
-        print("Actions:", actions)
-        print("Errors:", errors)
-        print("Logs:", logs)
-        
-        input('Press Enter to close the browser...')
-        await browser_manager.cleanup()
-        result = True
-        print("Test Success, Agent run successful")
+        async with async_playwright() as playwright:
+            # Initialize browser with remote debugging
+            page, context, browser, chrome_process = await init_browser_async(
+                playwright, 
+                headless=args.headless, 
+                debug=args.debug, 
+                video_dir=trace_folder, 
+                screenshots=True, 
+                video=True, 
+                source=True, 
+                executable_path=args.executable_path
+            )
+            await page.wait_for_timeout(5000)
+            
+            # Take a screenshot
+            timestamp = time.strftime("%Y%m%d-%H%M%S")
+            screenshot_path = os.path.join(trace_path, f"youtube_{timestamp}.png")
+            await page.screenshot(path=screenshot_path, full_page=True, timeout=20000)
+            print(f"Screenshot saved to: {screenshot_path}")
+            result = True
+            print("Browser automation ready to execute task")
+            return True
     except Exception as e:
-        print(f"Test Failed, Error during agent run: {str(e)}")
-        logger.error(f"Error during agent run: {str(e)}")
-    finally:
-        # Take a screenshot of the final state
-        try:
-            if agent.browser_context and hasattr(agent.browser_context, 'agent_current_page') and agent.browser_context.agent_current_page:
-                timestamp = time.strftime("%Y%m%d-%H%M%S")
-                screenshot_path = os.path.join(trace_path, f"final_state_{timestamp}.png")
-                await agent.browser_context.agent_current_page.screenshot(path=screenshot_path, full_page=True, timeout=20000)
-                logger.info(f"Screenshot saved to: {screenshot_path}")
-        except Exception as e:
-            logger.error(f"Error taking final screenshot: {str(e)}")
-
-        # Unzip the trace file if it exists
-        try:
-            if agent.browser_context and hasattr(agent.browser_context, 'context_id'):
-                trace_file = os.path.join(trace_path, ".zip")
-                if os.path.exists(trace_file):
-                    trace_subfolder = os.path.join(trace_path, f"trace_{agent.browser_context.context_id}")
-                    os.makedirs(trace_subfolder, exist_ok=True)
-                    with zipfile.ZipFile(trace_file, 'r') as zip_ref:
-                        zip_ref.extractall(trace_subfolder)
-                    os.remove(trace_file)
-                    logger.info(f"Trace data extracted to: {trace_subfolder}")
-                    logger.info(f"Zip file removed: {trace_file}")
-        except Exception as e:
-            logger.error(f"Error saving or extracting trace data: {str(e)}")
-        
-        if result:
-            print("Test Success, Agent run successful")
-            return sys.exit(0)
-        else:
-            print("Test Failed, Agent run failed")
-            return sys.exit(1)
+        print(f"Test Failed, Error during browser automation: {str(e)}")
+        logger.error(f"Error during browser automation: {str(e)}")
+        return False
 
 if __name__ == '__main__':
+        asyncio.run(main())        
         start_server()
-        asyncio.run(main())

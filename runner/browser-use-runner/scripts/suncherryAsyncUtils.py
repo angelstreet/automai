@@ -70,7 +70,6 @@ async def activate_semantic_placeholder(page: Page, trace_folder: str):
         await take_screenshot(page, trace_folder, 'semantic_placeholder_error')
         return False
 
-
 async def pass_login(page: Page, trace_folder: str):
     try:
         await activate_semantic_placeholder(page, trace_folder)

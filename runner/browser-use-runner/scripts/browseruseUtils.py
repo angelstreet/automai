@@ -168,8 +168,8 @@ class LogCapture:
         self.file_handler.close()
 
 class BrowserManager:
-    def __init__(self, trace_folder=None, initial_task=None):
-        # Initialize log capture
+    def __init__(self, trace_folder=None, initial_task=None, register_new_step_callback=None):
+        print(f"Init Browser Manager")
         self.log_capture = LogCapture()
         
         # Keep context of last task executed
@@ -297,13 +297,12 @@ class BrowserManager:
             
             # Combine context with new task
             full_task = f"{context}\nNew task: {task}" if context else task
-            
             # Create and run agent with full context
             agent = Agent(
                 task=full_task,
                 llm=self.llm,
                 browser_context=self.context,
-                system_prompt_class=self.get_system_prompt(),
+                #override_system_message=self.get_system_prompt(),
                 controller=self.controller,
                 max_actions_per_step=4,
                 save_conversation_path=self.save_conversation_path,

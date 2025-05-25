@@ -163,7 +163,6 @@ def init_browser_with_remote_debugging(playwright: Playwright, headless=True, de
         '--hide-crash-restore-bubble',
         '--disable-webgpu',
         '--use-gl=swiftshader'
-
     ]
     
     cmd_line = [executable_path] + chrome_flags

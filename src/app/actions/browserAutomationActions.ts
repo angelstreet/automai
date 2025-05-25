@@ -9,7 +9,7 @@ interface ActionResult<T = any> {
   data?: T;
 }
 
-const BROWSER_SERVER_URL = 'http://localhost:5000';
+const BROWSER_SERVER_URL = 'http://localhost:5001';
 
 interface BrowserServerResponse {
   success: boolean;
@@ -195,13 +195,13 @@ export async function startAutomationServerOnHost(hostId: string): Promise<Actio
       throw new Error(`Flask server is not running. Server logs: ${logOutput}`);
     }
 
-    // Step 6: Check if port 5000 is listening
+    // Step 6: Check if port 5001 is listening
     console.log(
-      '[@action:browserAutomation:startAutomationServerOnHost] Step 6: Checking port 5000',
+      '[@action:browserAutomation:startAutomationServerOnHost] Step 6: Checking port 5001',
     );
     const portResult = await terminalService.sendDataToSession(
       session.id,
-      'netstat -ln | grep :5000 && echo "PORT_LISTENING" || echo "PORT_NOT_LISTENING"',
+      'netstat -ln | grep :5001 && echo "PORT_LISTENING" || echo "PORT_NOT_LISTENING"',
     );
 
     if (portResult.success) {
@@ -216,7 +216,7 @@ export async function startAutomationServerOnHost(hostId: string): Promise<Actio
 
       if (!portOutput.includes('PORT_LISTENING')) {
         console.log(
-          '[@action:browserAutomation:startAutomationServerOnHost] Warning: Port 5000 not detected as listening',
+          '[@action:browserAutomation:startAutomationServerOnHost] Warning: Port 5001 not detected as listening',
         );
       }
     }
