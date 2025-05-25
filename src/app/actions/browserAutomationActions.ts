@@ -137,7 +137,7 @@ export async function startAutomationServerOnHost(hostId: string): Promise<Actio
     );
     const serverStartResult = await terminalService.sendDataToSession(
       session.id,
-      'python tasks.py --server > server.log 2>&1 & SERVER_PID=$! && echo "SERVER_STARTED_PID:$SERVER_PID"',
+      'python tasks.py > server.log 2>&1 & SERVER_PID=$! && echo "SERVER_STARTED_PID:$SERVER_PID"',
     );
 
     if (!serverStartResult.success) {
@@ -171,7 +171,7 @@ export async function startAutomationServerOnHost(hostId: string): Promise<Actio
 
     const verifyResult = await terminalService.sendDataToSession(
       session.id,
-      'ps aux | grep "tasks.py --server" | grep -v grep && echo "SERVER_RUNNING" || echo "SERVER_NOT_FOUND"',
+      'ps aux | grep "tasks.py" | grep -v grep && echo "SERVER_RUNNING" || echo "SERVER_NOT_FOUND"',
     );
 
     if (!verifyResult.success) {
@@ -221,39 +221,13 @@ export async function startAutomationServerOnHost(hostId: string): Promise<Actio
       }
     }
 
-    // Step 7: Test Flask server locally with curl
-    console.log(
-      '[@action:browserAutomation:startAutomationServerOnHost] Step 7: Testing Flask server with curl',
-    );
-    const curlResult = await terminalService.sendDataToSession(
-      session.id,
-      'curl -s http://localhost:5000/status && echo "FLASK_RESPONDING" || echo "FLASK_NOT_RESPONDING"',
-    );
-
-    if (curlResult.success) {
-      // Wait for curl test to complete
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      
-      const curlOutput = curlResult.data?.stdout || '';
-      console.log(
-        '[@action:browserAutomation:startAutomationServerOnHost] Flask test output:',
-        curlOutput,
-      );
-
-      if (!curlOutput.includes('FLASK_RESPONDING')) {
-        console.log(
-          '[@action:browserAutomation:startAutomationServerOnHost] Warning: Flask server not responding to HTTP requests',
-        );
-      }
-    }
-
     return {
       success: true,
       data: {
         message: processId 
           ? `Flask server started successfully with PID: ${processId}` 
           : 'Flask server started successfully (PID not captured)',
-        processId: processId,
+        processId: processId || undefined,
       },
     };
   } catch (error: any) {
@@ -265,12 +239,18 @@ export async function startAutomationServerOnHost(hostId: string): Promise<Actio
   }
 }
 
-export async function stopAutomationServerOnHost(hostId: string, processId?: string): Promise<ActionResult<{
+export async function stopAutomationServerOnHost(
+  hostId: string,
+  _processId?: string,
+): Promise<ActionResult<{
   message: string;
 }>> {
   try {
-    console.log('[@action:browserAutomation:stopAutomationServerOnHost] Stopping automation server on host:', hostId);
-    
+    console.log(
+      '[@action:browserAutomation:stopAutomationServerOnHost] Stopping automation server on host:',
+      hostId,
+    );
+
     // Get current user for auth checks
     const user = await getUser();
     if (!user) {
@@ -288,12 +268,16 @@ export async function stopAutomationServerOnHost(hostId: string, processId?: str
           'Content-Type': 'application/json',
         },
       });
-      
+
       if (response.ok) {
-        console.log('[@action:browserAutomation:stopAutomationServerOnHost] Server stopped gracefully via API');
+        console.log(
+          '[@action:browserAutomation:stopAutomationServerOnHost] Server stopped gracefully via API',
+        );
       }
-    } catch (apiError) {
-      console.log('[@action:browserAutomation:stopAutomationServerOnHost] API cleanup failed, will force stop process');
+    } catch {
+      console.log(
+        '[@action:browserAutomation:stopAutomationServerOnHost] API cleanup failed, will force stop process',
+      );
     }
 
     // Import terminal service functions
@@ -314,13 +298,17 @@ export async function stopAutomationServerOnHost(hostId: string, processId?: str
     });
 
     // Force stop the process - simplified to just pkill
-    const stopCommand = `pkill -f "python.*tasks.py.*--server" || echo "No automation server processes found"`;
-    console.log('[@action:browserAutomation:stopAutomationServerOnHost] Terminating automation server processes');
-    
+    const stopCommand = `pkill -f "python.*tasks.py" || echo "No automation server processes found"`;
+    console.log(
+      '[@action:browserAutomation:stopAutomationServerOnHost] Terminating automation server processes',
+    );
+
     const result = await terminalService.sendDataToSession(session.id, stopCommand);
 
     if (result.success) {
-      console.log('[@action:browserAutomation:stopAutomationServerOnHost] Stop command executed successfully');
+      console.log(
+        '[@action:browserAutomation:stopAutomationServerOnHost] Stop command executed successfully',
+      );
       return {
         success: true,
         data: {
@@ -339,7 +327,7 @@ export async function stopAutomationServerOnHost(hostId: string, processId?: str
   }
 }
 
-export async function getBrowserStatus(hostId: string): Promise<ActionResult<{
+export async function getBrowserStatus(_hostId: string): Promise<ActionResult<{
   initialized: boolean;
   executing: boolean;
   current_task: string | null;
@@ -348,7 +336,7 @@ export async function getBrowserStatus(hostId: string): Promise<ActionResult<{
 }>> {
   try {
     console.log('[@action:browserAutomation:getBrowserStatus] Getting browser status');
-    
+
     const response = await fetch(`${BROWSER_SERVER_URL}/status`, {
       method: 'GET',
       headers: {
@@ -364,7 +352,7 @@ export async function getBrowserStatus(hostId: string): Promise<ActionResult<{
     }
 
     const data: BrowserServerResponse = await response.json();
-    
+
     return {
       success: true,
       data: {
@@ -377,7 +365,7 @@ export async function getBrowserStatus(hostId: string): Promise<ActionResult<{
     };
   } catch (error: any) {
     console.error('[@action:browserAutomation:getBrowserStatus] Error:', error);
-    
+
     // Return default values instead of failing completely
     return {
       success: true,
@@ -392,13 +380,13 @@ export async function getBrowserStatus(hostId: string): Promise<ActionResult<{
   }
 }
 
-export async function initializeBrowserAutomation(hostId: string): Promise<ActionResult<{
+export async function initializeBrowserAutomation(_hostId: string): Promise<ActionResult<{
   message: string;
   logs: string;
 }>> {
   try {
     console.log('[@action:browserAutomation:initializeBrowserAutomation] Initializing browser');
-    
+
     const response = await fetch(`${BROWSER_SERVER_URL}/initialize`, {
       method: 'POST',
       headers: {
@@ -410,14 +398,15 @@ export async function initializeBrowserAutomation(hostId: string): Promise<Actio
       if (response.status === 403) {
         return {
           success: false,
-          error: 'Flask server not running on host. Please check if the automation server started correctly.',
+          error:
+            'Flask server not running on host. Please check if the automation server started correctly.',
         };
       }
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const data: BrowserServerResponse = await response.json();
-    
+
     if (!data.success) {
       return {
         success: false,
@@ -434,14 +423,14 @@ export async function initializeBrowserAutomation(hostId: string): Promise<Actio
     };
   } catch (error: any) {
     console.error('[@action:browserAutomation:initializeBrowserAutomation] Error:', error);
-    
+
     if (error.message.includes('fetch')) {
       return {
         success: false,
         error: 'Cannot connect to automation server. Please ensure the server is running on the host.',
       };
     }
-    
+
     return {
       success: false,
       error: error.message || 'Failed to initialize browser automation',

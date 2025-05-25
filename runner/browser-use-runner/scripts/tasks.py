@@ -46,7 +46,6 @@ if sys.platform == 'win32':
 
 # Set up argument parser
 parser = argparse.ArgumentParser(description='Run a browser automation task or start server')
-parser.add_argument('--server', action='store_true', help='Start Flask server mode')
 parser.add_argument('--headless', action='store_true', help='Run in headless mode')
 parser.add_argument('--task', type=str, default='Go to youtube and launch a video for 10s', help='The task for the agent to perform')
 parser.add_argument('--trace_folder', type=str, default='traces', help='The folder to save the trace')
@@ -372,58 +371,6 @@ async def screenshot_callback(step_number, step_description, browser_context):
             logger.info(f"Step {step_number} screenshot saved to: {screenshot_path}")
     except Exception as e:
         logger.error(f"Error taking step {step_number} screenshot: {str(e)}")
-
-# Function to inject YouTube cookies to bypass consent banners
-async def inject_youtube_cookies(browser_context):
-    """
-    Inject cookies to bypass YouTube consent banners
-    """
-    try:
-        logger.info("Injecting YouTube cookies to bypass consent banners...")
-        
-        # Ensure the session is initialized
-        session = await browser_context.get_session()
-        
-        # YouTube consent cookies - these indicate user has already accepted cookies
-        youtube_cookies = [
-            {
-                "name": "CONSENT",
-                "value": "YES+cb.20210328-17-p0.en+FX+1",  # Consent given
-                "domain": ".youtube.com",
-                "path": "/",
-                "secure": True
-            },
-            {
-                "name": "SOCS",
-                "value": "CAESEwgDEgk0ODE3Nzk3MjQaAmVuIAEaBgiA_LyaBg",  # Cookie settings
-                "domain": ".youtube.com", 
-                "path": "/",
-                "secure": True
-            },
-            {
-                "name": "__Secure-YEC",
-                "value": "CgtaWVJzVjBsVFVnOCiB8-2oBjIKCgJGUhIEGgAgVw%3D%3D",
-                "domain": ".youtube.com",
-                "path": "/",
-                "secure": True
-            },
-            # Google consent cookies (YouTube is owned by Google)
-            {
-                "name": "CONSENT",
-                "value": "YES+cb.20210328-17-p0.en+FX+1",
-                "domain": ".google.com",
-                "path": "/",
-                "secure": True
-            }
-        ]
-        
-        # Access the underlying Playwright context and use add_cookies
-        playwright_context = session.context
-        await playwright_context.add_cookies(youtube_cookies)
-        logger.info(f"Successfully injected {len(youtube_cookies)} YouTube consent cookies")
-        
-    except Exception as e:
-        logger.error(f"Error injecting YouTube cookies: {str(e)}")
 
 agent = Agent(
     task=task, 
