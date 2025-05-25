@@ -109,6 +109,8 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
     const containerWidth = container.clientWidth;
     const containerHeight = container.clientHeight;
 
+    console.log(`[@component:EmbeddedHostInterface] Container dimensions: ${containerWidth}x${containerHeight}`);
+
     // Assuming standard VNC resolution
     const vncWidth = 1920;
     const vncHeight = 1080;
@@ -118,14 +120,17 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
     
     let scale;
     if (isMaximized) {
-      // In maximized mode, prioritize width and allow higher scaling
+      // In maximized mode, allow higher scaling but still fit within container
       scale = Math.min(scaleX, scaleY, 1.5); // Allow up to 150% scaling
     } else {
-      // In normal mode, keep it more conservative
-      scale = Math.min(scaleX, scaleY, 0.8); // Max 80% for embedded view
+      // In normal mode, be more conservative
+      scale = Math.min(scaleX, scaleY, 1.0); // Max 100% for embedded view
     }
 
-    console.log(`[@component:EmbeddedHostInterface] Auto-fit scale calculated: ${scale} (maximized: ${isMaximized})`);
+    // Ensure minimum scale
+    scale = Math.max(scale, 0.1);
+
+    console.log(`[@component:EmbeddedHostInterface] Auto-fit scale calculated: ${scale} (scaleX: ${scaleX}, scaleY: ${scaleY}, maximized: ${isMaximized})`);
     setVncScale(scale);
   }, [autoFit, isMaximized]);
 
@@ -222,20 +227,6 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
     console.log(`[@component:EmbeddedHostInterface] VNC maximize mode: ${newMaximized}`);
   };
 
-  const handleFitToWidth = () => {
-    if (!vncContainerRef.current) return;
-    
-    setAutoFit(false);
-    const container = vncContainerRef.current;
-    const containerWidth = container.clientWidth;
-    const vncWidth = 1920; // Assuming standard VNC resolution
-    
-    const scale = Math.min(containerWidth / vncWidth, isMaximized ? 2.0 : 1.2);
-    setVncScale(scale);
-    
-    console.log(`[@component:EmbeddedHostInterface] Fit to width scale: ${scale}`);
-  };
-
   const handleRetryTerminal = () => {
     setTerminalSessionId(null);
     setTerminalConnectionError(null);
@@ -286,11 +277,6 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
             <CardTitle className="text-sm flex items-center gap-1.5">
               <Monitor className="h-3.5 w-3.5" />
               {host.name}
-              {isMaximized && (
-                <span className="text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-1.5 py-0.5 rounded">
-                  MAX
-                </span>
-              )}
               <div className="flex items-center ml-1">
                 {isConnected ? (
                   <Wifi className="h-3 w-3 text-green-500" />
@@ -359,17 +345,6 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={handleFitToWidth}
-                  title="Fit to Width"
-                  className="h-6 w-6 p-0"
-                >
-                  <svg className="h-2.5 w-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
-                  </svg>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
                   onClick={handleAutoFit}
                   title="Auto Fit"
                   className={`h-6 w-6 p-0 ${autoFit ? 'bg-blue-100 dark:bg-blue-900' : ''}`}
@@ -431,7 +406,7 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
                 )}
 
                 {/* VNC iframe with enhanced scaling */}
-                <div className="h-full w-full flex items-center justify-center">
+                <div className="h-full w-full flex items-center justify-center overflow-hidden">
                   <iframe
                     ref={vncIframeRef}
                     src={vncUrl || undefined}
@@ -439,12 +414,8 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
                     style={{
                       transform: `scale(${vncScale})`,
                       transformOrigin: 'center center',
-                      width: autoFit ? '100%' : `${100 / vncScale}%`,
-                      height: autoFit ? '100%' : `${100 / vncScale}%`,
-                      minWidth: autoFit ? (isMaximized ? '1920px' : '1920px') : 'auto',
-                      minHeight: autoFit ? (isMaximized ? '1080px' : '1080px') : 'auto',
-                      maxWidth: isMaximized ? 'none' : '100%',
-                      maxHeight: isMaximized ? 'none' : '100%',
+                      width: '1920px',
+                      height: '1080px',
                     }}
                     sandbox="allow-scripts allow-same-origin allow-forms"
                     onLoad={handleVncLoad}
