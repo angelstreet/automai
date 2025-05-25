@@ -141,12 +141,13 @@ async def execute_task_server(task: str):
         agent = Agent(
             task=task,
             llm=llm,
+            browser=server_state['browser'],
             browser_context=server_state['browser_context'],
         )
         
         update_log("Starting agent execution...")
         start_time = time.time()
-        await agent.run()
+        await agent.run(max_steps=10)
         execution_time = time.time() - start_time
         
         update_log("Task completed successfully")
