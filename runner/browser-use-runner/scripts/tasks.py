@@ -10,9 +10,10 @@ import socket
 from dotenv import load_dotenv
 from playwright.async_api import async_playwright
 
-# Flask server imports
-from flask import Flask, request, jsonify
-from flask_cors import CORS
+# FastAPI server imports
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from datetime import datetime
 from utils import kill_chrome_instances, clean_user_data_dir
 
@@ -74,6 +75,28 @@ async def inject_cookies_for_sites(context, sites):
     except Exception as e:
         print(f"Error injecting cookies for sites {sites}: {str(e)}")
 
+# Pydantic models for request/response
+class TaskRequest(BaseModel):
+    task: str
+
+class StatusResponse(BaseModel):
+    initialized: bool
+    executing: bool
+    current_task: str | None
+    start_time: str | None
+    logs: str
+
+class ExecuteResponse(BaseModel):
+    success: bool
+    result: str
+    status: str
+    logs: str
+
+class InitializeResponse(BaseModel):
+    success: bool
+    message: str
+    logs: str
+
 # Global variables for server mode
 app = None
 server_state = {
@@ -98,8 +121,7 @@ def update_log(message: str):
 
 
 async def execute_task_server(task: str):
-    """Execute a task in server mode"""
-    print("Executing task:", task)
+    """Execute a task in server mode - runs directly and waits for completion"""
     if not task or task.strip() == "":
         return False, "Please enter a task before executing", ""
 
@@ -112,7 +134,7 @@ async def execute_task_server(task: str):
     try:
         server_state['is_executing'] = True
         server_state['current_task'] = task
-        update_log(f"Executing new task:\n{task}")
+        update_log(f"Executing task: {task}")
         
         # Create agent for this task
         update_log("Creating agent...")
@@ -127,13 +149,16 @@ async def execute_task_server(task: str):
         await agent.run()
         execution_time = time.time() - start_time
         
+        update_log("Task completed successfully")
+        update_log(f"Execution time: {execution_time:.2f} seconds")
+        
         task_output = f"Task: {task}\n\n{'='*50}\n\n"
         task_output += "Actions performed:\n"
         task_output += f"- Task executed successfully\n"
         task_output += f"- Execution time: {execution_time:.2f} seconds\n"
-        update_log("Task completed successfully")
-        update_log(f"Execution time: {execution_time:.2f} seconds")
+        
         return True, task_output, "SUCCESS"
+        
     except Exception as e:
         error_msg = f"Error executing task: {str(e)}"
         update_log(error_msg)
@@ -276,102 +301,86 @@ async def initialize_browser_server():
         update_log(error_msg)
         return False, error_msg
 
-def run_async_in_server(coro):
-    """Helper to run async functions in sync context for server"""
-    try:
-        loop = asyncio.get_event_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-    
-    return loop.run_until_complete(coro)
-
-def create_flask_server():
-    """Create and configure Flask server"""
+def create_fastapi_server():
+    """Create and configure FastAPI server"""
     global app
-    app = Flask(__name__)
-    CORS(app)  # Enable CORS for all routes
+    app = FastAPI(title="Browser Automation Server", version="1.0.0")
     
-    @app.route('/status', methods=['GET'])
-    def get_status():
+    # Add CORS middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    
+    @app.get("/status", response_model=StatusResponse)
+    async def get_status():
         """Get current browser automation status"""
-        return jsonify({
-            'initialized': server_state['is_initialized'],
-            'executing': server_state['is_executing'],
-            'current_task': server_state['current_task'],
-            'start_time': server_state['start_time'],
-            'logs': "\n".join(server_state['log_buffer'])
-        })
+        return StatusResponse(
+            initialized=server_state['is_initialized'],
+            executing=server_state['is_executing'],
+            current_task=server_state['current_task'],
+            start_time=server_state['start_time'],
+            logs="\n".join(server_state['log_buffer'])
+        )
 
-    @app.route('/initialize', methods=['POST'])
-    def initialize():
+    @app.post("/initialize", response_model=InitializeResponse)
+    async def initialize():
         """Initialize browser automation"""
         try:
-            success, message = run_async_in_server(initialize_browser_server())
-            return jsonify({
-                'success': success,
-                'message': message,
-                'logs': "\n".join(server_state['log_buffer'])
-            })
+            success, message = await initialize_browser_server()
+            return InitializeResponse(
+                success=success,
+                message=message,
+                logs="\n".join(server_state['log_buffer'])
+            )
         except Exception as e:
-            return jsonify({
-                'success': False,
-                'message': f"Error: {str(e)}",
-                'logs': "\n".join(server_state['log_buffer'])
-            }), 500
+            raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
-    @app.route('/execute', methods=['POST'])
-    def execute_task():
+    @app.post("/execute", response_model=ExecuteResponse)
+    async def execute_task(task_request: TaskRequest):
         """Execute a browser automation task"""
         try:
-            data = request.get_json()
-            task = data.get('task', '')
+            task = task_request.task
             
-            success, result, status = run_async_in_server(execute_task_server(task))
+            # Execute the task directly
+            success, result, status = await execute_task_server(task)
             
-            return jsonify({
-                'success': success,
-                'result': result,
-                'status': status,
-                'logs': "\n".join(server_state['log_buffer'])
-            })
+            return ExecuteResponse(
+                success=success,
+                result=result,
+                status=status,
+                logs="\n".join(server_state['log_buffer'])
+            )
         except Exception as e:
-            return jsonify({
-                'success': False,
-                'result': f"Error: {str(e)}",
-                'status': 'FAILURE',
-                'logs': "\n".join(server_state['log_buffer'])
-            }), 500
+            raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
-    @app.route('/cleanup', methods=['POST'])
-    def cleanup():
+    @app.post("/cleanup")
+    async def cleanup():
         """Cleanup browser automation"""
         try:
-            success, message = run_async_in_server(cleanup_browser_server())
-            return jsonify({
-                'success': success,
-                'message': message,
-                'logs': "\n".join(server_state['log_buffer'])
-            })
+            success, message = await cleanup_browser_server()
+            return {
+                "success": success,
+                "message": message,
+                "logs": "\n".join(server_state['log_buffer'])
+            }
         except Exception as e:
-            return jsonify({
-                'success': False,
-                'message': f"Error: {str(e)}",
-                'logs': "\n".join(server_state['log_buffer'])
-            }), 500
+            raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
-    @app.route('/logs', methods=['GET'])
-    def get_logs():
+    @app.get("/logs")
+    async def get_logs():
         """Get current logs"""
-        return jsonify({
-            'logs': "\n".join(server_state['log_buffer'])
-        })
+        return {"logs": "\n".join(server_state['log_buffer'])}
     
     return app
 
 def start_server():
-    """Start the Flask server"""
+    """Start the FastAPI server with uvicorn"""
     import os
+    import uvicorn
     pid = os.getpid()
     
     print("🚀 Starting Browser Automation Server...")
@@ -380,17 +389,126 @@ def start_server():
     print("🔄 Press Ctrl+C to stop the server")
     print("-" * 50)
     
-    app = create_flask_server()
+    app = create_fastapi_server()
+    
+    # Add startup event to initialize browser
+    @app.on_event("startup")
+    async def startup_event():
+        """Initialize browser on server startup"""
+        try:
+            print("Initializing browser during server startup...")
+            success = await initialize_browser_on_startup()
+            if success:
+                print("✅ Browser initialized successfully - server ready!")
+            else:
+                print("❌ Failed to initialize browser during startup")
+        except Exception as e:
+            print(f"❌ Error during startup: {str(e)}")
     
     try:
-        print(f"✅ Flask server started successfully with PID: {pid}")
-        app.run(host='0.0.0.0', port=5001, debug=False)
+        print(f"✅ FastAPI server starting with PID: {pid}")
+        uvicorn.run(app, host="0.0.0.0", port=5001, log_level="info")
     except KeyboardInterrupt:
         print("\n🛑 Stopping server...")
         print("✅ Server stopped successfully")
     except Exception as e:
         print(f"❌ Error starting server: {str(e)}")
         raise
+
+async def initialize_browser_on_startup():
+    """Initialize browser during server startup"""
+    try:
+        trace_folder = args.trace_folder.replace("_", " ")
+        task = args.task.replace("_", " ")
+        
+        # Create trace path
+        trace_path = os.path.join(os.getcwd(), trace_folder)
+        os.makedirs(trace_path, exist_ok=True)
+        
+        # Import playwright and create instance (don't use async context manager)
+        from playwright.async_api import async_playwright
+        
+        # Create playwright instance that stays alive
+        playwright = await async_playwright().start()
+        server_state['playwright'] = playwright  # Keep reference to prevent cleanup
+        
+        # Initialize browser with remote debugging
+        page, playwright_context, playwright_browser, chrome_process = await init_browser_async(
+            playwright, 
+            headless=args.headless, 
+            debug=args.debug, 
+            video_dir=trace_folder, 
+            screenshots=True, 
+            video=True, 
+            source=True, 
+            executable_path=args.executable_path
+        )
+        
+        # Take a screenshot
+        timestamp = time.strftime("%Y%m%d-%H%M%S")
+        screenshot_path = os.path.join(trace_path, f"startup_{timestamp}.png")
+        await page.screenshot(path=screenshot_path, full_page=True, timeout=20000)
+        print(f"Screenshot saved to: {screenshot_path}")
+        
+        print("Browser initialized successfully")
+        
+        # Create browser-use Browser wrapper with CDP URL
+        browser_config = BrowserConfig(
+            cdp_url='http://localhost:9222',
+            headless=args.headless
+        )
+        browser_use_browser = Browser(config=browser_config)
+        
+        # Set the playwright browser directly to avoid reconnection
+        browser_use_browser._playwright_browser = playwright_browser
+        
+        # Create browser-use BrowserContext with proper config
+        context_config = BrowserContextConfig(
+            window_width=1080,
+            window_height=720,
+            save_recording_path=None,
+            trace_path=None,
+            cookies_file=None,
+            disable_security=False,
+            force_new_context=False  # Use existing context
+        )
+        
+        # Create BrowserContext that wraps the existing browser
+        browser_context = BrowserContext(
+            browser=browser_use_browser, 
+            config=context_config
+        )
+        
+        # Set the existing session to avoid creating a new one
+        from browser_use.browser.context import BrowserSession
+        browser_context.session = BrowserSession(
+            context=playwright_context,
+            cached_state=None
+        )
+        
+        # Set the current pages
+        browser_context.agent_current_page = page
+        browser_context.human_current_page = page
+        
+        # Store in server state
+        server_state['is_initialized'] = True
+        server_state['browser'] = browser_use_browser
+        server_state['context'] = playwright_context
+        server_state['browser_context'] = browser_context
+        server_state['chrome_process'] = chrome_process
+        
+        print("Browser context created successfully - ready for tasks!")
+        
+        # Execute initial task if provided
+        if task:
+            print(f"Executing initial task: {task}")
+            await execute_task_server(task)
+        
+        return True
+        
+    except Exception as e:
+        print(f"Failed to initialize browser during startup: {str(e)}")
+        return False
 
 # Async version of init_browser_with_remote_debugging from utils
 async def init_browser_async(playwright, headless=False, debug=True, video_dir=None, screenshots=True, video=True, source=True, executable_path=None):
@@ -503,105 +621,5 @@ async def screenshot_callback(step_number, step_description, browser_context, tr
     except Exception as e:
         print(f"Error taking step {step_number} screenshot: {str(e)}")
 
-async def main():
-    trace_folder = args.trace_folder.replace("_", " ")
-    print(f"----- Trace folder: {trace_folder} -----")
-    task = args.task.replace("_", " ")
-    print(f"----- Task: {task} -----")
-    
-    # Create trace path
-    trace_path = os.path.join(os.getcwd(), trace_folder)
-    os.makedirs(trace_path, exist_ok=True)
-    
-    # Initialize browser during startup
-    try:
-        print("Initializing browser during startup...")
-        
-        # Import playwright and create instance (don't use async context manager)
-        from playwright.async_api import async_playwright
-        
-        # Create playwright instance that stays alive
-        playwright = await async_playwright().start()
-        server_state['playwright'] = playwright  # Keep reference to prevent cleanup
-        
-        # Initialize browser with remote debugging
-        page, playwright_context, playwright_browser, chrome_process = await init_browser_async(
-            playwright, 
-            headless=args.headless, 
-            debug=args.debug, 
-            video_dir=trace_folder, 
-            screenshots=True, 
-            video=True, 
-            source=True, 
-            executable_path=args.executable_path
-        )
-        
-        # Take a screenshot
-        timestamp = time.strftime("%Y%m%d-%H%M%S")
-        screenshot_path = os.path.join(trace_path, f"startup_{timestamp}.png")
-        await page.screenshot(path=screenshot_path, full_page=True, timeout=20000)
-        print(f"Screenshot saved to: {screenshot_path}")
-        
-        print("Browser initialized successfully")
-        
-        # Create browser-use Browser wrapper with CDP URL
-        browser_config = BrowserConfig(
-            cdp_url='http://localhost:9222',
-            headless=args.headless
-        )
-        browser_use_browser = Browser(config=browser_config)
-        
-        # Set the playwright browser directly to avoid reconnection
-        browser_use_browser._playwright_browser = playwright_browser
-        
-        # Create browser-use BrowserContext with proper config
-        context_config = BrowserContextConfig(
-            window_width=1080,
-            window_height=720,
-            save_recording_path=None,
-            trace_path=None,
-            cookies_file=None,
-            disable_security=False,
-            force_new_context=False  # Use existing context
-        )
-        
-        # Create BrowserContext that wraps the existing browser
-        browser_context = BrowserContext(
-            browser=browser_use_browser, 
-            config=context_config
-        )
-        
-        # Set the existing session to avoid creating a new one
-        from browser_use.browser.context import BrowserSession
-        browser_context.session = BrowserSession(
-            context=playwright_context,
-            cached_state=None
-        )
-        
-        # Set the current pages
-        browser_context.agent_current_page = page
-        browser_context.human_current_page = page
-        
-        # Store in server state
-        server_state['is_initialized'] = True
-        server_state['browser'] = browser_use_browser
-        server_state['context'] = playwright_context
-        server_state['browser_context'] = browser_context
-        server_state['chrome_process'] = chrome_process
-        
-        print("Browser context created successfully - ready for tasks!")
-        
-        # Execute initial task if provided
-        if task:
-            print(f"Executing initial task: {task}")
-            await execute_task_server(task)
-        
-        return True
-        
-    except Exception as e:
-        print(f"Failed to initialize browser during startup: {str(e)}")
-        return False
-
 if __name__ == '__main__':
-    asyncio.run(main())
     start_server()
