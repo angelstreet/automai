@@ -52,7 +52,7 @@ if sys.platform == 'win32':
 # Set up argument parser
 parser = argparse.ArgumentParser(description='Run a browser automation task or start server')
 parser.add_argument('--trace_folder', type=str, default='traces', help='The folder to save the trace')
-parser.add_argument('--task', type=str, default='Go to youtube and launch a video for 10s', help='The task for the agent to perform')
+parser.add_argument('--task', type=str, default='', help='The task for the agent to perform')
 parser.add_argument('--headless', action='store_true', help='Run browser in headless mode')
 parser.add_argument('--debug', action='store_true', help='Enable debug mode')
 parser.add_argument('--executable_path', type=str, help='Path to browser executable')
@@ -543,7 +543,8 @@ async def main():
             server_state['context'] = playwright_context
             server_state['browser_context'] = browser_context
             
-            await execute_task_server(task)
+            if task:
+                await execute_task_server(task)
             result = True
             return True
     except Exception as e:
@@ -551,4 +552,5 @@ async def main():
         return False
 
 if __name__ == '__main__':
+    asyncio.run(main())
     start_server()
