@@ -25,6 +25,33 @@ try:
 except ImportError:
     SERVER_IMPORTS_AVAILABLE = False
     print("Warning: Server mode dependencies not available. Only basic browser automation will work.")
+    
+    # Fallback function for inject_youtube_cookies
+    async def inject_youtube_cookies(context):
+        """Fallback function when browseruseUtils is not available"""
+        try:
+            # YouTube consent cookies - these indicate user has already accepted cookies
+            youtube_cookies = [
+                {
+                    "name": "CONSENT",
+                    "value": "YES+cb.20210328-17-p0.en+FX+1",  # Consent given
+                    "domain": ".youtube.com",
+                    "path": "/",
+                    "secure": True
+                },
+                {
+                    "name": "SOCS",
+                    "value": "CAESEwgDEgk0ODE3Nzk3MjQaAmVuIAEaBgiA_LyaBg",  # Cookie settings
+                    "domain": ".youtube.com", 
+                    "path": "/",
+                    "secure": True
+                }
+            ]
+            
+            await context.add_cookies(youtube_cookies)
+            print(f"Injected {len(youtube_cookies)} YouTube consent cookies")
+        except Exception as e:
+            print(f"Error injecting YouTube cookies: {str(e)}")
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.dirname(os.getcwd()))
@@ -149,9 +176,6 @@ async def initialize_browser_server():
 
 async def execute_task_server(task: str):
     """Execute a task in server mode"""
-    if not SERVER_IMPORTS_AVAILABLE:
-        return False, "Server mode dependencies not available", "FAILURE"
-        
     if not task or task.strip() == "":
         return False, "Please enter a task before executing", ""
 
@@ -433,7 +457,7 @@ def is_port_in_use(port):
             return True
 
 # Function to take screenshots after each step
-async def screenshot_callback(step_number, step_description, browser_context):
+async def screenshot_callback(step_number, step_description, browser_context, trace_path):
     try:
         if browser_context and hasattr(browser_context, 'agent_current_page') and browser_context.agent_current_page:
             timestamp = time.strftime("%Y%m%d-%H%M%S")
@@ -473,7 +497,7 @@ async def main():
                 source=True, 
                 executable_path=args.executable_path
             )
-            await page.wait_for_timeout(5000)
+            await page.wait_for_timeout(2000)
             
             # Take a screenshot
             timestamp = time.strftime("%Y%m%d-%H%M%S")
@@ -482,6 +506,8 @@ async def main():
             print(f"Screenshot saved to: {screenshot_path}")
             result = True
             print("Browser automation ready to execute task")
+            # Note: execute_task_server is async, so we need to await it
+            await execute_task_server(task)
             return True
     except Exception as e:
         print(f"Test Failed, Error during browser automation: {str(e)}")
@@ -490,4 +516,4 @@ async def main():
 
 if __name__ == '__main__':
         asyncio.run(main())        
-        start_server()
+        #start_server()
