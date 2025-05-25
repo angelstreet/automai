@@ -151,12 +151,11 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
     }
   }, [host]);
 
-  // Initialize terminal session when switching to terminal tab
+  // Initialize terminal session when component mounts if host supports terminal
   useEffect(() => {
     if (
       isVisible &&
       host &&
-      activeTab === 'terminal' &&
       !terminalSessionId &&
       !isTerminalConnecting &&
       supportsTerminal(host)
@@ -166,7 +165,6 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
   }, [
     isVisible,
     host,
-    activeTab,
     terminalSessionId,
     isTerminalConnecting,
     initializeTerminalSession,

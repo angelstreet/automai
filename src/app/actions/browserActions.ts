@@ -102,7 +102,7 @@ export async function releaseBrowserHost(hostId: string) {
 }
 
 /**
- * Start browser session (reserve host + init terminal)
+ * Start browser session (reserve host only)
  */
 export async function startBrowserSession(hostId: string) {
   try {
@@ -116,18 +116,10 @@ export async function startBrowserSession(hostId: string) {
       return { success: false, error: 'Unauthorized' };
     }
 
-    // First reserve the host
+    // Reserve the host
     const reserveResult = await reserveHost(hostId, user.id);
     if (!reserveResult.success) {
       return { success: false, error: reserveResult.error };
-    }
-
-    // Then initialize terminal session
-    const terminalResult = await initTerminal(hostId);
-    if (!terminalResult.success) {
-      // If terminal fails, release the host
-      await releaseHost(hostId);
-      return { success: false, error: terminalResult.error };
     }
 
     console.log(
@@ -136,7 +128,7 @@ export async function startBrowserSession(hostId: string) {
     return {
       success: true,
       data: {
-        sessionId: terminalResult.data?.sessionId,
+        sessionId: null, // Terminal session will be created when user clicks Terminal tab
         host: reserveResult.data,
       },
     };
@@ -150,16 +142,18 @@ export async function startBrowserSession(hostId: string) {
 }
 
 /**
- * End browser session (close terminal + release host)
+ * End browser session (close terminal if exists + release host)
  */
-export async function endBrowserSession(sessionId: string, hostId: string) {
+export async function endBrowserSession(sessionId: string | null, hostId: string) {
   try {
     console.log(
       `[@action:browserActions:endBrowserSession] Ending browser session: ${sessionId}, host: ${hostId}`,
     );
 
-    // Close terminal session
-    await closeTerminal(sessionId);
+    // Close terminal session if it exists
+    if (sessionId) {
+      await closeTerminal(sessionId);
+    }
 
     // Release host
     await releaseBrowserHost(hostId);

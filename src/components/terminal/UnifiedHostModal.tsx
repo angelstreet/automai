@@ -171,22 +171,14 @@ export function UnifiedHostModal({
     }
   }, [host]);
 
-  // Initialize terminal session when switching to terminal tab
+  // Initialize terminal session when modal opens if host supports terminal
   useEffect(() => {
-    if (
-      isOpen &&
-      host &&
-      activeTab === 'terminal' &&
-      !terminalSessionId &&
-      !isTerminalConnecting &&
-      supportsTerminal(host)
-    ) {
+    if (isOpen && host && !terminalSessionId && !isTerminalConnecting && supportsTerminal(host)) {
       initializeTerminalSession();
     }
   }, [
     isOpen,
     host,
-    activeTab,
     terminalSessionId,
     isTerminalConnecting,
     initializeTerminalSession,
@@ -393,7 +385,7 @@ export function UnifiedHostModal({
                   >
                     <iframe
                       ref={vncIframeRef}
-                      src={vncUrl}
+                      src={vncUrl || undefined}
                       className="border-none"
                       style={{
                         transform: `scale(${vncScale})`,

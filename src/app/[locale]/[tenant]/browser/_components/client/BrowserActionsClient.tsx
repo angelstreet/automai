@@ -132,15 +132,10 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
 
       if (result.success && result.data) {
         console.log(`[@component:BrowserActionsClient] Session started successfully`);
-        if (result.data.host && result.data.sessionId) {
+        if (result.data.host) {
           setActiveHost(result.data.host);
-          setSessionId(result.data.sessionId);
+          setSessionId(result.data.sessionId); // This will be null initially
           setHasReservedHost(true); // Enable automation controls
-
-          toast({
-            title: 'Success',
-            description: `Connected to ${result.data.host.name}`,
-          });
         }
       } else {
         setError(result.error || 'Failed to start browser session');
@@ -156,30 +151,28 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
   const handleReleaseControl = async () => {
     console.log(`[@component:BrowserActionsClient] Releasing host control`);
 
-    // End browser session if active
-    if (sessionId && activeHost) {
+    // End browser session if active host exists
+    if (activeHost) {
       try {
         await endBrowserSession(sessionId, activeHost.id);
         console.log(`[@component:BrowserActionsClient] Browser session ended: ${sessionId}`);
-        setHasReservedHost(false); // Disable automation controls
-
-        // Also stop automation if it was running
-        if (isInitialized) {
-          setIsInitialized(false);
-          setStartTime(null);
-        }
-
-        toast({
-          title: 'Success',
-          description: 'Host control released',
-        });
       } catch (error) {
         console.error(`[@component:BrowserActionsClient] Error ending browser session:`, error);
       }
     }
 
+    // Always reset state regardless of session status
+    setHasReservedHost(false); // Disable automation controls
     setActiveHost(null);
     setSessionId(null);
+    setIsLoading(false); // Reset loading state
+    setError(null); // Clear any errors
+
+    // Also stop automation if it was running
+    if (isInitialized) {
+      setIsInitialized(false);
+      setStartTime(null);
+    }
   };
 
   const selectedHost = browserHosts.find((host) => host.id === selectedHostId);
