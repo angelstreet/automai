@@ -41,7 +41,7 @@ if sys.platform == 'win32':
 # Set up argument parser
 parser = argparse.ArgumentParser(description='Run a browser automation task')
 parser.add_argument('--headless', action='store_true', help='Run in headless mode')
-parser.add_argument('--task', type=str, default='Go to youtube, accept all cookies and launch a video for 10s', help='The task for the agent to perform')
+parser.add_argument('--task', type=str, default='Go to youtube, scroll down and accept all cookies, then launch a video for 10s', help='The task for the agent to perform')
 parser.add_argument('--trace_folder', type=str, default='traces', help='The folder to save the trace')
 parser.add_argument('--cookies_path', type=str, default='', help='The path to the cookies file')
 parser.add_argument('--executable_path', type=str, help='Path to Google Chrome executable, defaults to Chromium if not provided')
