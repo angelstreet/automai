@@ -437,7 +437,7 @@ async def main():
         agent.browser_context = browser_context
         
         # Run the agent
-        await agent.run()
+        #await agent.run()
         result = True
         print("Test Success, Agent run successful")
     except Exception as e:

@@ -52,83 +52,22 @@ export async function startAutomationServerOnHost(hostId: string): Promise<Actio
 
     console.log('[@action:browserAutomation:startAutomationServerOnHost] Terminal session created:', session.id);
 
-    // Execute the automation server startup command
-    // First check what's available and then start the server
-    const startCommand = `
-      echo "=== Checking environment ===" &&
-      pwd &&
-      ls -la &&
-      which python3 &&
-      echo "=== Starting automation server ===" &&
-      cd ~ &&
-      python3 -c "
-import sys
-import subprocess
-import os
-
-# Try to start the automation server
-try:
-    # Check if we have the automation script
-    script_paths = [
-        '/home/user/automai/runner/browser-use-runner/scripts/tasks.py',
-        '~/automai/runner/browser-use-runner/scripts/tasks.py',
-        './automai/runner/browser-use-runner/scripts/tasks.py'
-    ]
-    
-    script_path = None
-    for path in script_paths:
-        expanded_path = os.path.expanduser(path)
-        if os.path.exists(expanded_path):
-            script_path = expanded_path
-            break
-    
-    if script_path:
-        print(f'Found script at: {script_path}')
-        # Start the server in background
-        proc = subprocess.Popen([
-            sys.executable, script_path, '--server'
-        ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        print(f'Started automation server with PID: {proc.pid}')
-    else:
-        print('ERROR: Could not find tasks.py script')
-        print('Searched paths:', script_paths)
-except Exception as e:
-    print(f'ERROR: {e}')
-"
-    `.trim();
+    // Execute the automation server startup command - simplified to just what works manually
+    const startCommand = `source /tmp/python/venv/bin/activate && cd ~/automai/runner/browser-use-runner/scripts && python tasks.py --server &`;
     
     console.log('[@action:browserAutomation:startAutomationServerOnHost] Executing command:', startCommand);
     
     const result = await terminalService.sendDataToSession(session.id, startCommand);
 
-    if (result.success && result.data) {
-      // Extract process ID from the output - look for "Started automation server with PID: XXXX"
-      const output = result.data.stdout || '';
-      const pidMatch = output.match(/Started automation server with PID: (\d+)/);
-      const processId = pidMatch ? pidMatch[1] : null;
-      
-      console.log('[@action:browserAutomation:startAutomationServerOnHost] Command output:', output);
-      console.log('[@action:browserAutomation:startAutomationServerOnHost] Extracted process ID:', processId);
-      
-      if (processId) {
-        return {
-          success: true,
-          data: {
-            message: 'Automation server started successfully on host',
-            processId: processId,
-          },
-        };
-      } else {
-        // If no PID found, still return success but log the issue
-        console.warn('[@action:browserAutomation:startAutomationServerOnHost] No process ID found in output');
-        return {
-          success: true,
-          data: {
-            message: 'Automation server command executed (no PID captured)',
-            processId: null,
-          },
-        };
-      }
+    if (result.success) {
+      console.log('[@action:browserAutomation:startAutomationServerOnHost] Command executed successfully');
+      return {
+        success: true,
+        data: {
+          message: 'Automation server started successfully on host',
+          processId: null, // We don't need PID, will use pkill to stop
+        },
+      };
     } else {
       throw new Error(result.error || 'Failed to execute startup command');
     }
@@ -189,17 +128,9 @@ export async function stopAutomationServerOnHost(hostId: string, processId?: str
       },
     });
 
-    // Force stop the process
-    let stopCommand: string;
-    if (processId && /^\d+$/.test(processId)) {
-      // Kill specific process ID (only if it's a valid number)
-      stopCommand = `kill -TERM ${processId} 2>/dev/null || kill -9 ${processId} 2>/dev/null || echo "Process ${processId} not found"`;
-      console.log('[@action:browserAutomation:stopAutomationServerOnHost] Terminating specific process:', processId);
-    } else {
-      // Kill any python tasks.py --server process
-      stopCommand = `pkill -f "python.*tasks.py.*--server" 2>/dev/null || echo "No automation server processes found"`;
-      console.log('[@action:browserAutomation:stopAutomationServerOnHost] Terminating all automation server processes');
-    }
+    // Force stop the process - simplified to just pkill
+    const stopCommand = `pkill -f "python.*tasks.py.*--server" || echo "No automation server processes found"`;
+    console.log('[@action:browserAutomation:stopAutomationServerOnHost] Terminating automation server processes');
     
     const result = await terminalService.sendDataToSession(session.id, stopCommand);
 

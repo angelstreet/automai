@@ -1,3 +1,4 @@
 langchain-openai
 playwright
 python-dotenv   
+flasks
