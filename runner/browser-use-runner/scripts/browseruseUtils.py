@@ -199,7 +199,6 @@ class BrowserManager:
         self.context = self.create_browser_context(self.browser,highlight_elements=self.HIGHLIGHT_ELEMENTS)
         # Add reference to browser manager in context
         self.context.browser_manager = self
-        await inject_youtube_cookies(self.context)
         self.test_page = None  # Store test page reference
         self.gradio_page = None  # Store Gradio page reference
         self.initial_task = f"""
