@@ -61,8 +61,8 @@
     "yearly": "Yearly"
   },
   "browser": {
-    "title": "Browser",
-    "desc": "Run browser automation tests"
+    "title": "Browser AI",
+    "desc": "Run browser AI Tasks"
   },
   "chat": {
     "title": "Chat",
