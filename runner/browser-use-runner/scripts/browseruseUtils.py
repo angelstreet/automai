@@ -23,8 +23,11 @@ async def inject_youtube_cookies(browser_context):
         print("Injecting YouTube cookies to bypass consent banners...")
         
         # Ensure the session is initialized
-        session = await browser_context.get_session()
-        
+        if hasattr(browser_context, 'get_session'):
+            session = await browser_context.get_session()
+            playwright_context = session.context
+        else:
+            playwright_context = browser_context
         # YouTube consent cookies - these indicate user has already accepted cookies
         youtube_cookies = [
             {
@@ -59,7 +62,7 @@ async def inject_youtube_cookies(browser_context):
         ]
         
         # Access the underlying Playwright context and use add_cookies
-        playwright_context = session.context
+        
         await playwright_context.add_cookies(youtube_cookies)
         print(f"Successfully injected {len(youtube_cookies)} YouTube consent cookies")
         
