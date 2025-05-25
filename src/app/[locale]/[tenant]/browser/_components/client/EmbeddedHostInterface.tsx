@@ -109,7 +109,7 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
     const containerWidth = container.clientWidth;
     const containerHeight = container.clientHeight;
 
-    console.log(`[@component:EmbeddedHostInterface] Container dimensions: ${containerWidth}x${containerHeight}`);
+    console.log(`[@component:EmbeddedHostInterface] Container dimensions: ${containerWidth}x${containerHeight}, maximized: ${isMaximized}`);
 
     // Assuming standard VNC resolution
     const vncWidth = 1920;
@@ -121,7 +121,7 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
     let scale;
     if (isMaximized) {
       // In maximized mode, allow higher scaling but still fit within container
-      scale = Math.min(scaleX, scaleY, 1.5); // Allow up to 150% scaling
+      scale = Math.min(scaleX, scaleY, 2.0); // Allow up to 200% scaling in maximized mode
     } else {
       // In normal mode, be more conservative
       scale = Math.min(scaleX, scaleY, 1.0); // Max 100% for embedded view
@@ -130,7 +130,7 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
     // Ensure minimum scale
     scale = Math.max(scale, 0.1);
 
-    console.log(`[@component:EmbeddedHostInterface] Auto-fit scale calculated: ${scale} (scaleX: ${scaleX}, scaleY: ${scaleY}, maximized: ${isMaximized})`);
+    console.log(`[@component:EmbeddedHostInterface] Auto-fit scale calculated: ${scale} (scaleX: ${scaleX.toFixed(3)}, scaleY: ${scaleY.toFixed(3)}, maximized: ${isMaximized})`);
     setVncScale(scale);
   }, [autoFit, isMaximized]);
 
@@ -141,6 +141,25 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
       return () => clearTimeout(timer);
     }
   }, [activeTab, autoFit, isVisible, isMaximized, calculateAutoFitScale]);
+
+  // Add resize observer for more reliable auto-fit when container size changes
+  useEffect(() => {
+    if (!vncContainerRef.current || !autoFit || activeTab !== 'vnc') return;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        console.log(`[@component:EmbeddedHostInterface] Container resized: ${entry.contentRect.width}x${entry.contentRect.height}`);
+        // Debounce the calculation to avoid excessive calls
+        setTimeout(calculateAutoFitScale, 100);
+      }
+    });
+
+    resizeObserver.observe(vncContainerRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [autoFit, activeTab, calculateAutoFitScale]);
 
   const initializeTerminalSession = useCallback(async () => {
     if (!host) return;
@@ -209,22 +228,28 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
 
   const handleAutoFit = () => {
     setAutoFit(true);
-    calculateAutoFitScale();
+    // Add a small delay to ensure any pending DOM updates are complete
+    setTimeout(() => {
+      calculateAutoFitScale();
+    }, 100);
   };
 
   const handleMaximize = () => {
     const newMaximized = !isMaximized;
     setIsMaximized(newMaximized);
     
+    console.log(`[@component:EmbeddedHostInterface] VNC maximize mode: ${newMaximized}`);
+    
     // If auto-fit is enabled, recalculate scale for new mode
     if (autoFit) {
-      // Use setTimeout to ensure state update is processed
+      // Use multiple timeouts to ensure DOM has fully updated
+      // First timeout for state update, second for CSS transition completion
       setTimeout(() => {
-        calculateAutoFitScale();
+        setTimeout(() => {
+          calculateAutoFitScale();
+        }, 350); // Wait for CSS transition (300ms) + buffer
       }, 50);
     }
-    
-    console.log(`[@component:EmbeddedHostInterface] VNC maximize mode: ${newMaximized}`);
   };
 
   const handleRetryTerminal = () => {
