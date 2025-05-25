@@ -128,19 +128,19 @@ export default function BrowserAutomationClient() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-4">
+    <div className="max-w-6xl mx-auto space-y-2">
+      {/* Embedded Host Interface */}
+      <EmbeddedHostInterface host={activeHost} isVisible={!!activeHost} />
+
       {/* Task Input - Compact Version */}
       <Card>
-        <CardHeader className="pb-2">
+        <CardHeader className="pb-0 pt-3">
           <CardTitle className="text-base">Task Input</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 pt-0">
+        <CardContent className="space-y-2 pt-2 pb-3">
           {/* Task Input - Inline Label */}
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <label className="text-xs font-medium text-muted-foreground min-w-fit">
-                Task Input:
-              </label>
               <Textarea
                 placeholder="Enter your task here..."
                 value={state.taskInput}
@@ -184,19 +184,16 @@ export default function BrowserAutomationClient() {
         </CardContent>
       </Card>
 
-      {/* Embedded Host Interface */}
-      <EmbeddedHostInterface host={activeHost} isVisible={!!activeHost} />
-
       {/* Output Areas - Compact */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Task Result - Compact */}
         <Card>
-          <CardHeader className="pb-1">
+          <CardHeader className="pb-0 pt-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium">Task Result</CardTitle>
             </div>
           </CardHeader>
-          <CardContent className="pt-0">
+          <CardContent className="pt-2 pb-3">
             <Textarea
               value={state.taskResult}
               readOnly
@@ -209,7 +206,7 @@ export default function BrowserAutomationClient() {
 
         {/* Log Output - Compact */}
         <Card>
-          <CardHeader className="pb-1">
+          <CardHeader className="pb-0 pt-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium">Log Output</CardTitle>
               <Button
@@ -224,7 +221,7 @@ export default function BrowserAutomationClient() {
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="pt-0">
+          <CardContent className="pt-2 pb-3">
             <Textarea
               value={state.logOutput}
               readOnly
@@ -238,7 +235,7 @@ export default function BrowserAutomationClient() {
 
       {/* Status Bar - Compact */}
       <Card>
-        <CardContent className="py-3">
+        <CardContent className="py-2">
           <div className="flex items-center justify-between text-sm text-muted-foreground">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
