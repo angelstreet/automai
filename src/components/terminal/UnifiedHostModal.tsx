@@ -47,6 +47,18 @@ export function UnifiedHostModal({
   const [isTerminalConnecting, setIsTerminalConnecting] = useState(false);
   const [terminalConnectionError, setTerminalConnectionError] = useState<string | null>(null);
 
+  // Stable reference to host to prevent TerminalEmulator re-initialization
+  const stableHostRef = useRef<Host | null>(null);
+  if (host && (!stableHostRef.current || stableHostRef.current.id !== host.id)) {
+    stableHostRef.current = host;
+  }
+
+  // Stable callback for terminal connection status
+  const handleTerminalConnectionStatusChange = useCallback(() => {
+    // This is intentionally empty as we don't need to track connection status changes
+    // but the TerminalEmulator requires this callback
+  }, []);
+
   // Reset state when modal opens/closes or host changes
   useEffect(() => {
     if (!isOpen || !host) {
@@ -136,63 +148,6 @@ export function UnifiedHostModal({
     return !!hostToCheck.vnc_port;
   }, []);
 
-  const initializeTerminalSession = useCallback(async () => {
-    if (!host) return;
-
-    console.log(
-      `[@component:UnifiedHostModal] Initializing terminal session for host: ${host.name}`,
-    );
-    setIsTerminalConnecting(true);
-    setTerminalConnectionError(null);
-
-    try {
-      // Import terminal action
-      const { initTerminal } = await import('@/app/actions/terminalsAction');
-
-      const result = await initTerminal(host.id);
-
-      if (result.success && result.data) {
-        console.log(
-          `[@component:UnifiedHostModal] Terminal session initialized: ${result.data.sessionId}`,
-        );
-        setTerminalSessionId(result.data.sessionId);
-      } else {
-        console.error(
-          `[@component:UnifiedHostModal] Failed to initialize terminal session:`,
-          result.error,
-        );
-        setTerminalConnectionError(result.error || 'Failed to initialize terminal session');
-      }
-    } catch (error) {
-      console.error(`[@component:UnifiedHostModal] Error initializing terminal session:`, error);
-      setTerminalConnectionError(error instanceof Error ? error.message : 'Unknown error');
-    } finally {
-      setIsTerminalConnecting(false);
-    }
-  }, [host]);
-
-  // Initialize terminal session when switching to terminal tab
-  useEffect(() => {
-    if (
-      isOpen &&
-      host &&
-      activeTab === 'terminal' &&
-      !terminalSessionId &&
-      !isTerminalConnecting &&
-      supportsTerminal(host)
-    ) {
-      initializeTerminalSession();
-    }
-  }, [
-    isOpen,
-    host,
-    activeTab,
-    terminalSessionId,
-    isTerminalConnecting,
-    initializeTerminalSession,
-    supportsTerminal,
-  ]);
-
   // Determine which tabs to show - moved into useEffect to ensure consistent hook ordering
   const [tabConfig, setTabConfig] = useState({
     hasVnc: false,
@@ -216,6 +171,60 @@ export function UnifiedHostModal({
       }
     }
   }, [host, supportsVnc, supportsTerminal]);
+
+  const { hasVnc, hasTerminal, showTabs } = tabConfig;
+
+  const initializeTerminalSession = useCallback(async () => {
+    if (!stableHostRef.current) return;
+
+    console.log(
+      `[@component:UnifiedHostModal] Initializing terminal session for host: ${stableHostRef.current.name}`,
+    );
+    setIsTerminalConnecting(true);
+    setTerminalConnectionError(null);
+
+    try {
+      // Import terminal action
+      const { initTerminal } = await import('@/app/actions/terminalsAction');
+
+      const result = await initTerminal(stableHostRef.current.id);
+
+      if (result.success && result.data) {
+        console.log(
+          `[@component:UnifiedHostModal] Terminal session initialized: ${result.data.sessionId}`,
+        );
+        setTerminalSessionId(result.data.sessionId);
+      } else {
+        console.error(
+          `[@component:UnifiedHostModal] Failed to initialize terminal session:`,
+          result.error,
+        );
+        setTerminalConnectionError(result.error || 'Failed to initialize terminal session');
+      }
+    } catch (error) {
+      console.error(`[@component:UnifiedHostModal] Error initializing terminal session:`, error);
+      setTerminalConnectionError(error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setIsTerminalConnecting(false);
+    }
+  }, []);
+
+  // Initialize terminal session when modal opens and has terminal support
+  useEffect(() => {
+    if (isOpen && host && hasTerminal && !terminalSessionId && !isTerminalConnecting) {
+      console.log(
+        `[@component:UnifiedHostModal] Auto-initializing terminal session for host with terminal support`,
+      );
+      initializeTerminalSession();
+    }
+  }, [
+    isOpen,
+    host,
+    hasTerminal,
+    terminalSessionId,
+    isTerminalConnecting,
+    initializeTerminalSession,
+  ]);
 
   const handleRetryTerminal = () => {
     setTerminalSessionId(null);
@@ -260,7 +269,6 @@ export function UnifiedHostModal({
     ? `https://${host.ip}:${vncPort}/vnc/vnc_lite.html?host=${host.ip}&port=${vncPort}&path=websockify&encrypt=0${vncPassword ? `&password=${vncPassword}` : ''}`
     : null;
 
-  const { hasVnc, hasTerminal, showTabs } = tabConfig;
   const modalTitle = title || `${host.name} - Remote Access`;
 
   return (
@@ -356,8 +364,14 @@ export function UnifiedHostModal({
 
           {/* Content Area */}
           <div className="flex-1 overflow-hidden relative">
-            {/* VNC Tab */}
-            <div className={`h-full absolute inset-0 ${activeTab === 'vnc' ? 'block' : 'hidden'}`}>
+            {/* VNC Tab - Always rendered, controlled by visibility */}
+            <div
+              className="h-full absolute inset-0"
+              style={{
+                visibility: activeTab === 'vnc' ? 'visible' : 'hidden',
+                zIndex: activeTab === 'vnc' ? 10 : 0,
+              }}
+            >
               {!hasVnc ? (
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center space-y-4">
@@ -393,7 +407,7 @@ export function UnifiedHostModal({
                   >
                     <iframe
                       ref={vncIframeRef}
-                      src={vncUrl}
+                      src={vncUrl || undefined}
                       className="border-none"
                       style={{
                         transform: `scale(${vncScale})`,
@@ -412,9 +426,13 @@ export function UnifiedHostModal({
               )}
             </div>
 
-            {/* Terminal Tab */}
+            {/* Terminal Tab - Always rendered, controlled by visibility */}
             <div
-              className={`h-full absolute inset-0 ${activeTab === 'terminal' ? 'block' : 'hidden'}`}
+              className="h-full absolute inset-0"
+              style={{
+                visibility: activeTab === 'terminal' ? 'visible' : 'hidden',
+                zIndex: activeTab === 'terminal' ? 10 : 0,
+              }}
             >
               {!hasTerminal ? (
                 <div className="flex items-center justify-center h-full">
@@ -462,11 +480,11 @@ export function UnifiedHostModal({
                           </div>
                         </div>
                       </div>
-                    ) : terminalSessionId ? (
+                    ) : terminalSessionId && stableHostRef.current ? (
                       <TerminalEmulator
                         sessionId={terminalSessionId}
-                        host={host}
-                        onConnectionStatusChange={() => {}}
+                        host={stableHostRef.current}
+                        onConnectionStatusChange={handleTerminalConnectionStatusChange}
                       />
                     ) : null}
                   </div>

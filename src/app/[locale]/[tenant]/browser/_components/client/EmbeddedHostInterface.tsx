@@ -37,6 +37,18 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
   const [isTerminalConnecting, setIsTerminalConnecting] = useState(false);
   const [terminalConnectionError, setTerminalConnectionError] = useState<string | null>(null);
 
+  // Stable reference to host to prevent TerminalEmulator re-initialization
+  const stableHostRef = useRef<Host | null>(null);
+  if (host && (!stableHostRef.current || stableHostRef.current.id !== host.id)) {
+    stableHostRef.current = host;
+  }
+
+  // Stable callback for terminal connection status
+  const handleTerminalConnectionStatusChange = useCallback(() => {
+    // This is intentionally empty as we don't need to track connection status changes
+    // but the TerminalEmulator requires this callback
+  }, []);
+
   // Check if host supports terminal access
   const supportsTerminal = useCallback((hostToCheck: Host | null): boolean => {
     if (!hostToCheck) return false;
@@ -151,26 +163,21 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
     }
   }, [host]);
 
-  // Initialize terminal session when switching to terminal tab
+  // Initialize terminal session when component becomes visible and has terminal support
   useEffect(() => {
-    if (
-      isVisible &&
-      host &&
-      activeTab === 'terminal' &&
-      !terminalSessionId &&
-      !isTerminalConnecting &&
-      supportsTerminal(host)
-    ) {
+    if (isVisible && host && hasTerminal && !terminalSessionId && !isTerminalConnecting) {
+      console.log(
+        `[@component:EmbeddedHostInterface] Auto-initializing terminal session for host with terminal support`,
+      );
       initializeTerminalSession();
     }
   }, [
     isVisible,
     host,
-    activeTab,
+    hasTerminal,
     terminalSessionId,
     isTerminalConnecting,
     initializeTerminalSession,
-    supportsTerminal,
   ]);
 
   // VNC scaling controls
@@ -322,8 +329,14 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
       <CardContent className="p-0">
         {/* Content Area - Compact height */}
         <div className="h-80 overflow-hidden relative border rounded-b-lg">
-          {/* VNC Tab */}
-          <div className={`h-full absolute inset-0 ${activeTab === 'vnc' ? 'block' : 'hidden'}`}>
+          {/* VNC Tab - Always rendered, controlled by visibility */}
+          <div
+            className="h-full absolute inset-0"
+            style={{
+              visibility: activeTab === 'vnc' ? 'visible' : 'hidden',
+              zIndex: activeTab === 'vnc' ? 10 : 0,
+            }}
+          >
             {!hasVnc ? (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center space-y-3">
@@ -372,9 +385,13 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
             )}
           </div>
 
-          {/* Terminal Tab */}
+          {/* Terminal Tab - Always rendered, controlled by visibility */}
           <div
-            className={`h-full absolute inset-0 ${activeTab === 'terminal' ? 'block' : 'hidden'}`}
+            className="h-full absolute inset-0"
+            style={{
+              visibility: activeTab === 'terminal' ? 'visible' : 'hidden',
+              zIndex: activeTab === 'terminal' ? 10 : 0,
+            }}
           >
             {!hasTerminal ? (
               <div className="flex items-center justify-center h-full">
@@ -420,11 +437,11 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
                       </div>
                     </div>
                   </div>
-                ) : terminalSessionId ? (
+                ) : terminalSessionId && stableHostRef.current ? (
                   <TerminalEmulator
                     sessionId={terminalSessionId}
-                    host={host}
-                    onConnectionStatusChange={() => {}}
+                    host={stableHostRef.current}
+                    onConnectionStatusChange={handleTerminalConnectionStatusChange}
                   />
                 ) : null}
               </div>
