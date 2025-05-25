@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import { Lock, Monitor, Play, Square, Loader2 } from 'lucide-react';
+import { useState } from 'react';
 
 import {
   startBrowserSession,
@@ -9,12 +9,10 @@ import {
   endBrowserSession,
 } from '@/app/actions/browserActions';
 import { Button } from '@/components/shadcn/button';
-import { UnifiedHostModal } from '@/components/terminal';
 import { useToast } from '@/components/shadcn/use-toast';
+import { useBrowserAutomation } from '@/context';
 import { Host } from '@/types/component/hostComponentType';
 import { User } from '@/types/service/userServiceType';
-
-import { useBrowserAutomation } from '../context/BrowserAutomationContext';
 
 interface BrowserActionsClientProps {
   initialHosts: Host[];
@@ -23,16 +21,19 @@ interface BrowserActionsClientProps {
 
 export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActionsClientProps) {
   const { toast } = useToast();
-  const { isInitialized, setIsInitialized, setStartTime } = useBrowserAutomation();
-  
+  const {
+    isInitialized,
+    setIsInitialized,
+    setStartTime,
+    activeHost,
+    setActiveHost,
+    sessionId,
+    setSessionId,
+  } = useBrowserAutomation();
+
   const [selectedHostId, setSelectedHostId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Modal state
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [activeHost, setActiveHost] = useState<Host | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(null);
 
   // Browser automation state
   const [isInitializing, setIsInitializing] = useState(false);
@@ -63,7 +64,7 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
     }
 
     setIsInitializing(true);
-    
+
     toast({
       title: 'Browser Automation',
       description: 'Initializing browser automation system...',
@@ -75,7 +76,7 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
       setIsInitialized(true);
       setStartTime(startTime);
       setIsInitializing(false);
-      
+
       toast({
         title: 'Success',
         description: 'Browser automation initialized successfully!',
@@ -94,7 +95,7 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
     setTimeout(() => {
       setIsInitialized(false);
       setStartTime(null);
-      
+
       toast({
         title: 'Success',
         description: 'Browser automation stopped successfully!',
@@ -135,7 +136,11 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
           setActiveHost(result.data.host);
           setSessionId(result.data.sessionId);
           setHasReservedHost(true); // Enable automation controls
-          setIsModalOpen(true);
+
+          toast({
+            title: 'Success',
+            description: `Connected to ${result.data.host.name}`,
+          });
         }
       } else {
         setError(result.error || 'Failed to start browser session');
@@ -148,8 +153,8 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
     }
   };
 
-  const handleCloseModal = async () => {
-    console.log(`[@component:BrowserActionsClient] Closing browser modal`);
+  const handleReleaseControl = async () => {
+    console.log(`[@component:BrowserActionsClient] Releasing host control`);
 
     // End browser session if active
     if (sessionId && activeHost) {
@@ -157,18 +162,22 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
         await endBrowserSession(sessionId, activeHost.id);
         console.log(`[@component:BrowserActionsClient] Browser session ended: ${sessionId}`);
         setHasReservedHost(false); // Disable automation controls
-        
+
         // Also stop automation if it was running
         if (isInitialized) {
           setIsInitialized(false);
           setStartTime(null);
         }
+
+        toast({
+          title: 'Success',
+          description: 'Host control released',
+        });
       } catch (error) {
         console.error(`[@component:BrowserActionsClient] Error ending browser session:`, error);
       }
     }
 
-    setIsModalOpen(false);
     setActiveHost(null);
     setSessionId(null);
   };
@@ -253,16 +262,28 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
           {/* Lock Icon for Locked Hosts */}
           {isHostLocked && <Lock className="h-4 w-4 text-red-500" />}
 
-          {/* Take Control Button */}
-          <Button
-            size="sm"
-            onClick={handleTakeControl}
-            disabled={isButtonDisabled}
-            className="h-8 gap-1 w-32"
-          >
-            <Monitor className="h-4 w-4" />
-            {isLoading ? 'Taking...' : 'Take Control'}
-          </Button>
+          {/* Take Control / Release Control Button */}
+          {!hasReservedHost ? (
+            <Button
+              size="sm"
+              onClick={handleTakeControl}
+              disabled={isButtonDisabled}
+              className="h-8 gap-1 w-32"
+            >
+              <Monitor className="h-4 w-4" />
+              {isLoading ? 'Taking...' : 'Take Control'}
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              onClick={handleReleaseControl}
+              variant="outline"
+              className="h-8 gap-1 w-32"
+            >
+              <Monitor className="h-4 w-4" />
+              Release
+            </Button>
+          )}
         </div>
       </div>
 
@@ -277,15 +298,6 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
           </div>
         </div>
       )}
-
-      {/* Browser Modal - Using Unified Modal */}
-      <UnifiedHostModal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        host={activeHost}
-        title={activeHost ? `Browser Automation - ${activeHost.name}` : ''}
-        defaultTab="vnc"
-      />
     </>
   );
 }

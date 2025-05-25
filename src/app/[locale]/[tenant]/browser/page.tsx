@@ -4,8 +4,7 @@ import { getHosts } from '@/app/actions/hostsAction';
 import { getUser } from '@/app/actions/userAction';
 import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 
-import BrowserContent from './_components/BrowserContent';
-import { BrowserActionsClient } from './_components/client/BrowserActionsClient';
+import BrowserPageWrapper from './_components/BrowserPageWrapper';
 
 export default async function BrowserPage() {
   const t = await getTranslations('browser');
@@ -39,12 +38,11 @@ export default async function BrowserPage() {
   const hosts = hostsResult.data || [];
 
   return (
-    <FeaturePageContainer
+    <BrowserPageWrapper
       title={t('title')}
       description={t('desc')}
-      actions={<BrowserActionsClient initialHosts={hosts} currentUser={user} />}
-    >
-      <BrowserContent />
-    </FeaturePageContainer>
+      hosts={hosts}
+      currentUser={user}
+    />
   );
 }

@@ -93,3 +93,4 @@ export {
   TeamMemberDialogContext,
   type TeamMemberDialogContextState,
 } from './TeamMemberDialogContext';
+export { BrowserAutomationProvider, useBrowserAutomation } from './BrowserAutomationContext';

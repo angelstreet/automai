@@ -1,15 +1,15 @@
 'use client';
 
-import { useState } from 'react';
 import { Copy, Loader2, Play } from 'lucide-react';
+import { useState } from 'react';
 
-import { Badge } from '@/components/shadcn/badge';
 import { Button } from '@/components/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
 import { Textarea } from '@/components/shadcn/textarea';
 import { useToast } from '@/components/shadcn/use-toast';
+import { useBrowserAutomation } from '@/context';
 
-import { useBrowserAutomation } from '../context/BrowserAutomationContext';
+import EmbeddedHostInterface from './EmbeddedHostInterface';
 
 interface BrowserAutomationState {
   isExecuting: boolean;
@@ -22,7 +22,7 @@ const EXAMPLE_TASKS = ['Go to TV Guide', 'Click on Live TV then wait 3s'];
 
 export default function BrowserAutomationClient() {
   const { toast } = useToast();
-  const { isInitialized, startTime } = useBrowserAutomation();
+  const { isInitialized, activeHost } = useBrowserAutomation();
 
   const [state, setState] = useState<BrowserAutomationState>({
     isExecuting: false,
@@ -128,46 +128,53 @@ export default function BrowserAutomationClient() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      {/* Task Input */}
+    <div className="max-w-6xl mx-auto space-y-4">
+      {/* Task Input - Compact Version */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Task Input</CardTitle>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Task Input</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <Textarea
-            placeholder="Enter your task here..."
-            value={state.taskInput}
-            onChange={(e) => setState((prev) => ({ ...prev, taskInput: e.target.value }))}
-            rows={3}
-            className="resize-none"
-          />
+        <CardContent className="space-y-3 pt-0">
+          {/* Task Input - Inline Label */}
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-muted-foreground min-w-fit">
+                Task Input:
+              </label>
+              <Textarea
+                placeholder="Enter your task here..."
+                value={state.taskInput}
+                onChange={(e) => setState((prev) => ({ ...prev, taskInput: e.target.value }))}
+                rows={2}
+                className="resize-none text-sm flex-1"
+              />
+            </div>
 
-          <Button
-            onClick={handleExecuteTask}
-            disabled={!isInitialized || state.isExecuting || !state.taskInput.trim()}
-            className="w-full flex items-center gap-2"
-            variant="default"
-          >
-            {state.isExecuting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Play className="h-4 w-4" />
-            )}
-            {state.isExecuting ? 'Executing Task...' : 'Execute Task'}
-          </Button>
+            <Button
+              onClick={handleExecuteTask}
+              disabled={!isInitialized || state.isExecuting || !state.taskInput.trim()}
+              className="w-full flex items-center gap-2 h-8"
+              variant="default"
+              size="sm"
+            >
+              {state.isExecuting ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Play className="h-3 w-3" />
+              )}
+              {state.isExecuting ? 'Executing Task...' : 'Execute Task'}
+            </Button>
 
-          {/* Example Tasks */}
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium text-muted-foreground">Example Tasks</h4>
-            <div className="flex flex-wrap gap-2">
+            {/* Example Tasks - Inline */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-medium text-muted-foreground min-w-fit">Examples:</span>
               {EXAMPLE_TASKS.map((example, index) => (
                 <Button
                   key={index}
                   variant="outline"
                   size="sm"
                   onClick={() => handleExampleClick(example)}
-                  className="text-xs"
+                  className="text-xs h-6 px-2"
                 >
                   {example}
                 </Button>
@@ -177,54 +184,61 @@ export default function BrowserAutomationClient() {
         </CardContent>
       </Card>
 
-      {/* Output Areas */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Task Result */}
+      {/* Embedded Host Interface */}
+      <EmbeddedHostInterface host={activeHost} isVisible={!!activeHost} />
+
+      {/* Output Areas - Compact */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Task Result - Compact */}
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Task Result</CardTitle>
+          <CardHeader className="pb-1">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium">Task Result</CardTitle>
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             <Textarea
               value={state.taskResult}
               readOnly
-              rows={12}
-              className="resize-none font-mono text-sm"
+              rows={10}
+              className="resize-none font-mono text-xs"
               placeholder="Task results will appear here..."
             />
           </CardContent>
         </Card>
 
-        {/* Log Output */}
+        {/* Log Output - Compact */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-lg">Log Output</CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleCopyLogs}
-              disabled={!state.logOutput}
-              className="flex items-center gap-1"
-            >
-              <Copy className="h-3 w-3" />
-              Copy
-            </Button>
+          <CardHeader className="pb-1">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium">Log Output</CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCopyLogs}
+                disabled={!state.logOutput}
+                className="flex items-center gap-1 h-6 px-2"
+              >
+                <Copy className="h-3 w-3" />
+                <span className="text-xs">Copy</span>
+              </Button>
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             <Textarea
               value={state.logOutput}
               readOnly
-              rows={12}
-              className="resize-none font-mono text-sm"
+              rows={10}
+              className="resize-none font-mono text-xs"
               placeholder="Logs will appear here..."
             />
           </CardContent>
         </Card>
       </div>
 
-      {/* Status Bar */}
+      {/* Status Bar - Compact */}
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="py-3">
           <div className="flex items-center justify-between text-sm text-muted-foreground">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
@@ -233,7 +247,9 @@ export default function BrowserAutomationClient() {
                     isInitialized ? 'bg-green-500' : 'bg-gray-400'
                   }`}
                 />
-                <span>Browser Status: {isInitialized ? 'Ready' : 'Not Initialized'}</span>
+                <span className="text-xs">
+                  Browser: {isInitialized ? 'Ready' : 'Not Initialized'}
+                </span>
               </div>
 
               <div className="flex items-center gap-2">
@@ -242,11 +258,11 @@ export default function BrowserAutomationClient() {
                     state.isExecuting ? 'bg-yellow-500 animate-pulse' : 'bg-gray-400'
                   }`}
                 />
-                <span>Task Status: {state.isExecuting ? 'Executing' : 'Idle'}</span>
+                <span className="text-xs">Task: {state.isExecuting ? 'Executing' : 'Idle'}</span>
               </div>
             </div>
 
-            <div>Ready for automation tasks</div>
+            <div className="text-xs">Ready for automation tasks</div>
           </div>
         </CardContent>
       </Card>
