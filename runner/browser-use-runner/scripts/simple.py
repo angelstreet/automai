@@ -104,7 +104,7 @@ agent = Agent(
     task=task, 
     llm=llm, 
     browser=browser,
-    step_callback=screenshot_callback
+    register_new_step_callback=screenshot_callback
 )
 
 async def main():
