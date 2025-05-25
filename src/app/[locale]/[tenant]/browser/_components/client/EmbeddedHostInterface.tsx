@@ -29,6 +29,7 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
   // VNC scaling state
   const [vncScale, setVncScale] = useState(0.6); // Start smaller for embedded view
   const [autoFit, setAutoFit] = useState(true);
+  const [isMaximized, setIsMaximized] = useState(false); // New state for maximize mode
   const vncContainerRef = useRef<HTMLDivElement>(null);
   const vncIframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -79,6 +80,7 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
       setActiveTab('vnc');
       setVncScale(0.6);
       setAutoFit(true);
+      setIsMaximized(false); // Reset maximize state
       // Reset terminal state
       setTerminalSessionId(null);
       setIsTerminalConnecting(false);
@@ -113,11 +115,19 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
 
     const scaleX = containerWidth / vncWidth;
     const scaleY = containerHeight / vncHeight;
-    const scale = Math.min(scaleX, scaleY, 0.8); // Max 80% for embedded view
+    
+    let scale;
+    if (isMaximized) {
+      // In maximized mode, prioritize width and allow higher scaling
+      scale = Math.min(scaleX, scaleY, 1.5); // Allow up to 150% scaling
+    } else {
+      // In normal mode, keep it more conservative
+      scale = Math.min(scaleX, scaleY, 0.8); // Max 80% for embedded view
+    }
 
-    console.log(`[@component:EmbeddedHostInterface] Auto-fit scale calculated: ${scale}`);
+    console.log(`[@component:EmbeddedHostInterface] Auto-fit scale calculated: ${scale} (maximized: ${isMaximized})`);
     setVncScale(scale);
-  }, [autoFit]);
+  }, [autoFit, isMaximized]);
 
   // Recalculate scale when container size changes or tab switches
   useEffect(() => {
@@ -125,7 +135,7 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
       const timer = setTimeout(calculateAutoFitScale, 100);
       return () => clearTimeout(timer);
     }
-  }, [activeTab, autoFit, isVisible, calculateAutoFitScale]);
+  }, [activeTab, autoFit, isVisible, isMaximized, calculateAutoFitScale]);
 
   const initializeTerminalSession = useCallback(async () => {
     if (!host) return;
@@ -183,17 +193,47 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
   // VNC scaling controls
   const handleZoomIn = () => {
     setAutoFit(false);
-    setVncScale((prev) => Math.min(prev + 0.1, 1.2));
+    const maxScale = isMaximized ? 2.0 : 1.2; // Higher max scale in maximized mode
+    setVncScale((prev) => Math.min(prev + 0.1, maxScale));
   };
 
   const handleZoomOut = () => {
     setAutoFit(false);
-    setVncScale((prev) => Math.max(prev - 0.1, 0.3));
+    setVncScale((prev) => Math.max(prev - 0.1, 0.2)); // Allow smaller minimum scale
   };
 
   const handleAutoFit = () => {
     setAutoFit(true);
     calculateAutoFitScale();
+  };
+
+  const handleMaximize = () => {
+    const newMaximized = !isMaximized;
+    setIsMaximized(newMaximized);
+    
+    // If auto-fit is enabled, recalculate scale for new mode
+    if (autoFit) {
+      // Use setTimeout to ensure state update is processed
+      setTimeout(() => {
+        calculateAutoFitScale();
+      }, 50);
+    }
+    
+    console.log(`[@component:EmbeddedHostInterface] VNC maximize mode: ${newMaximized}`);
+  };
+
+  const handleFitToWidth = () => {
+    if (!vncContainerRef.current) return;
+    
+    setAutoFit(false);
+    const container = vncContainerRef.current;
+    const containerWidth = container.clientWidth;
+    const vncWidth = 1920; // Assuming standard VNC resolution
+    
+    const scale = Math.min(containerWidth / vncWidth, isMaximized ? 2.0 : 1.2);
+    setVncScale(scale);
+    
+    console.log(`[@component:EmbeddedHostInterface] Fit to width scale: ${scale}`);
   };
 
   const handleRetryTerminal = () => {
@@ -246,6 +286,11 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
             <CardTitle className="text-sm flex items-center gap-1.5">
               <Monitor className="h-3.5 w-3.5" />
               {host.name}
+              {isMaximized && (
+                <span className="text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-1.5 py-0.5 rounded">
+                  MAX
+                </span>
+              )}
               <div className="flex items-center ml-1">
                 {isConnected ? (
                   <Wifi className="h-3 w-3 text-green-500" />
@@ -293,7 +338,7 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
                   size="sm"
                   onClick={handleZoomOut}
                   title="Zoom Out"
-                  disabled={vncScale <= 0.3}
+                  disabled={vncScale <= 0.2}
                   className="h-6 w-6 p-0"
                 >
                   <ZoomOut className="h-2.5 w-2.5" />
@@ -306,7 +351,7 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
                   size="sm"
                   onClick={handleZoomIn}
                   title="Zoom In"
-                  disabled={vncScale >= 1.2}
+                  disabled={vncScale >= (isMaximized ? 2.0 : 1.2)}
                   className="h-6 w-6 p-0"
                 >
                   <ZoomIn className="h-2.5 w-2.5" />
@@ -314,11 +359,34 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
                 <Button
                   variant="ghost"
                   size="sm"
+                  onClick={handleFitToWidth}
+                  title="Fit to Width"
+                  className="h-6 w-6 p-0"
+                >
+                  <svg className="h-2.5 w-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                  </svg>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={handleAutoFit}
-                  title="Fit to Window"
+                  title="Auto Fit"
                   className={`h-6 w-6 p-0 ${autoFit ? 'bg-blue-100 dark:bg-blue-900' : ''}`}
                 >
                   <Maximize2 className="h-2.5 w-2.5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleMaximize}
+                  title={isMaximized ? "Normal View" : "Maximize View"}
+                  className={`h-6 w-6 p-0 ${isMaximized ? 'bg-green-100 dark:bg-green-900' : ''}`}
+                >
+                  <svg className="h-2.5 w-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                          d={isMaximized ? "M9 9h6v6H9z" : "M4 4h16v16H4z"} />
+                  </svg>
                 </Button>
               </div>
             )}
@@ -327,8 +395,8 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
       </CardHeader>
 
       <CardContent className="p-0">
-        {/* Content Area - Compact height */}
-        <div className="h-80 overflow-hidden relative border rounded-b-lg">
+        {/* Content Area - Dynamic height based on maximize mode */}
+        <div className={`${isMaximized ? 'h-[600px]' : 'h-80'} overflow-hidden relative border rounded-b-lg transition-all duration-300`}>
           {/* VNC Tab - Always rendered, controlled by visibility */}
           <div
             className="h-full absolute inset-0"
@@ -362,7 +430,7 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
                   </div>
                 )}
 
-                {/* VNC iframe with scaling */}
+                {/* VNC iframe with enhanced scaling */}
                 <div className="h-full w-full flex items-center justify-center">
                   <iframe
                     ref={vncIframeRef}
@@ -373,8 +441,10 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
                       transformOrigin: 'center center',
                       width: autoFit ? '100%' : `${100 / vncScale}%`,
                       height: autoFit ? '100%' : `${100 / vncScale}%`,
-                      minWidth: autoFit ? '1920px' : 'auto',
-                      minHeight: autoFit ? '1080px' : 'auto',
+                      minWidth: autoFit ? (isMaximized ? '1920px' : '1920px') : 'auto',
+                      minHeight: autoFit ? (isMaximized ? '1080px' : '1080px') : 'auto',
+                      maxWidth: isMaximized ? 'none' : '100%',
+                      maxHeight: isMaximized ? 'none' : '100%',
                     }}
                     sandbox="allow-scripts allow-same-origin allow-forms"
                     onLoad={handleVncLoad}
