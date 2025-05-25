@@ -121,13 +121,13 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
     let scale;
     if (isMaximized) {
       // In maximized mode, use the smaller scale to fit properly but be more aggressive
-      scale = Math.min(scaleX, scaleY) * 1; // Use 98% to avoid overflow
+      scale = Math.min(scaleX, scaleY) * 1.2; // Use 98% to avoid overflow
       scale = Math.min(scale, 2.0); // Still cap at 200%
     } else {
-      // In normal mode, prioritize filling height (vertical) to reduce grey areas
-      // Use the larger of the two scales but cap it reasonably
-      scale = Math.max(scaleX, scaleY * 1); // Boost vertical scaling by 20%
-      scale = Math.min(scale, 1); // Cap at 130% to avoid too much overflow
+      // In normal mode, prioritize filling the space to reduce grey areas
+      // Use a more aggressive approach to fill both width and height
+      scale = Math.max(scaleX, scaleY) * 0.63; // Use the larger scale with 95% to avoid overflow
+      scale = Math.min(scale, 1.2); // Cap at 140% to allow more aggressive scaling
     }
 
     // Ensure minimum scale
