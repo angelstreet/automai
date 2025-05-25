@@ -5,7 +5,6 @@ import asyncio
 import argparse
 import time
 import zipfile
-import json
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from browser_use import BrowserConfig, Browser, Agent, BrowserContextConfig
@@ -14,7 +13,8 @@ from browser_use import BrowserConfig, Browser, Agent, BrowserContextConfig
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from datetime import datetime
-import threading
+from browseruseUtils import BrowserManager
+from browseruseUtils import inject_youtube_cookies
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.dirname(os.getcwd()))
@@ -298,18 +298,26 @@ def create_flask_server():
 
 def start_server():
     """Start the Flask server"""
+    import os
+    pid = os.getpid()
+    
     print("🚀 Starting Browser Automation Server...")
-    print("📍 Server will be available at: http://localhost:5000")
+    print(f"📍 Server will be available at: http://localhost:5000")
+    print(f"🆔 Process ID: {pid}")
     print("🔄 Press Ctrl+C to stop the server")
     print("-" * 50)
     
     app = create_flask_server()
     
     try:
+        print(f"✅ Flask server started successfully with PID: {pid}")
         app.run(host='0.0.0.0', port=5000, debug=False)
     except KeyboardInterrupt:
         print("\n🛑 Stopping server...")
         print("✅ Server stopped successfully")
+    except Exception as e:
+        print(f"❌ Error starting server: {str(e)}")
+        raise
 
 # Original task execution code (unchanged)
 task = args.task.replace("_", " ")
@@ -425,19 +433,20 @@ agent = Agent(
 )
 
 async def main():
+    browser_manager = BrowserManager()
     result = False
     try:
-        # Initialize browser and get context
-        browser_context = await browser.new_context()
+        task = f"""
+        - Navigate to url '{browser_manager.SUNRISE_URL}'
+        - Activate semantic
+        """
+        errors, actions, logs = await browser_manager.run_task(task)
+        print("Actions:", actions)
+        print("Errors:", errors)
+        print("Logs:", logs)
         
-        # Inject YouTube cookies to bypass consent banners
-        await inject_youtube_cookies(browser_context)
-        
-        # Update agent to use the context with cookies
-        agent.browser_context = browser_context
-        
-        # Run the agent
-        #await agent.run()
+        input('Press Enter to close the browser...')
+        await browser_manager.cleanup()
         result = True
         print("Test Success, Agent run successful")
     except Exception as e:
@@ -477,9 +486,5 @@ async def main():
             return sys.exit(1)
 
 if __name__ == '__main__':
-    if args.server:
-        # Start Flask server mode
         start_server()
-    else:
-        # Run single task mode
         asyncio.run(main())

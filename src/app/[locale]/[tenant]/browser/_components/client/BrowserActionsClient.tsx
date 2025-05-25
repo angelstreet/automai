@@ -8,11 +8,11 @@ import {
   forceTakeControlBrowserHost,
   endBrowserSession,
 } from '@/app/actions/browserActions';
-import { 
-  startAutomationServerOnHost, 
+import {
+  startAutomationServerOnHost,
   stopAutomationServerOnHost,
-  initializeBrowserAutomation, 
-  cleanupBrowserAutomation 
+  initializeBrowserAutomation,
+  cleanupBrowserAutomation,
 } from '@/app/actions/browserAutomationActions';
 import { Button } from '@/components/shadcn/button';
 import { useToast } from '@/components/shadcn/use-toast';
@@ -79,7 +79,10 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
 
     try {
       // Step 1: Start the automation server on the host
-      console.log('[@component:BrowserActionsClient] Starting automation server on host:', activeHost.id);
+      console.log(
+        '[@component:BrowserActionsClient] Starting automation server on host:',
+        activeHost.id,
+      );
       const serverStartResult = await startAutomationServerOnHost(activeHost.id);
 
       if (!serverStartResult.success) {
@@ -97,7 +100,7 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
       });
 
       // Step 2: Wait a moment for the server to start up
-      await new Promise(resolve => setTimeout(resolve, 10000));
+      await new Promise((resolve) => setTimeout(resolve, 5000));
 
       // Step 3: Initialize the browser automation via API
       const initResult = await initializeBrowserAutomation();
@@ -118,7 +121,7 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
     } catch (error: any) {
       setIsInitializing(false);
       console.error('[@component:BrowserActionsClient] Error starting automation:', error);
-      
+
       // Try to cleanup the server if it was started
       if (automationProcessId && activeHost) {
         try {
@@ -155,12 +158,17 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
         if (cleanupResult.success) {
           console.log('[@component:BrowserActionsClient] Browser automation cleaned up via API');
         }
-      } catch (apiError) {
-        console.log('[@component:BrowserActionsClient] API cleanup failed, proceeding with server shutdown');
+      } catch {
+        console.log(
+          '[@component:BrowserActionsClient] API cleanup failed, proceeding with server shutdown',
+        );
       }
 
       // Step 2: Stop the automation server on the host
-      const serverStopResult = await stopAutomationServerOnHost(activeHost.id, automationProcessId || undefined);
+      const serverStopResult = await stopAutomationServerOnHost(
+        activeHost.id,
+        automationProcessId || undefined,
+      );
 
       if (serverStopResult.success) {
         setIsInitialized(false);
@@ -237,7 +245,10 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
       try {
         await handleStopAutomation();
       } catch (error) {
-        console.error(`[@component:BrowserActionsClient] Error stopping automation during release:`, error);
+        console.error(
+          `[@component:BrowserActionsClient] Error stopping automation during release:`,
+          error,
+        );
       }
     }
 

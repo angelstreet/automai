@@ -2,3 +2,4 @@ langchain-openai
 playwright
 python-dotenv   
 flasks
+flask-cors

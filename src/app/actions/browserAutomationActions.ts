@@ -1,7 +1,13 @@
 'use server';
 
 import { getUser } from '@/app/actions/userAction';
-import { ActionResult } from '@/types/context/browserContextType';
+
+// Local type definition to avoid import issues
+interface ActionResult<T = any> {
+  success: boolean;
+  error?: string;
+  data?: T;
+}
 
 const BROWSER_SERVER_URL = 'http://localhost:5000';
 
@@ -50,27 +56,206 @@ export async function startAutomationServerOnHost(hostId: string): Promise<Actio
       },
     });
 
-    console.log('[@action:browserAutomation:startAutomationServerOnHost] Terminal session created:', session.id);
+    console.log(
+      '[@action:browserAutomation:startAutomationServerOnHost] Terminal session created:',
+      session.id,
+    );
 
-    // Execute the automation server startup command - simplified to just what works manually
-    const startCommand = `source /tmp/python/venv/bin/activate && cd ~/automai/runner/browser-use-runner/scripts && python tasks.py --server &`;
-    
-    console.log('[@action:browserAutomation:startAutomationServerOnHost] Executing command:', startCommand);
-    
-    const result = await terminalService.sendDataToSession(session.id, startCommand);
+    // Step 1: Send pwd to trigger login output and ensure shell is ready
+    console.log(
+      '[@action:browserAutomation:startAutomationServerOnHost] Step 1: Triggering shell with pwd',
+    );
+    const pwdResult = await terminalService.sendDataToSession(session.id, 'pwd');
 
-    if (result.success) {
-      console.log('[@action:browserAutomation:startAutomationServerOnHost] Command executed successfully');
-      return {
-        success: true,
-        data: {
-          message: 'Automation server started successfully on host',
-          processId: null, // We don't need PID, will use pkill to stop
-        },
-      };
-    } else {
-      throw new Error(result.error || 'Failed to execute startup command');
+    if (!pwdResult.success) {
+      throw new Error('Failed to initialize shell with pwd command');
     }
+
+    console.log(
+      '[@action:browserAutomation:startAutomationServerOnHost] Shell initialized, output:',
+      pwdResult.data?.stdout || '',
+    );
+
+    // Wait for shell to be ready
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    // Step 2: Activate virtual environment
+    console.log(
+      '[@action:browserAutomation:startAutomationServerOnHost] Step 2: Activating virtual environment',
+    );
+    const venvResult = await terminalService.sendDataToSession(
+      session.id,
+      'source /tmp/python/venv/bin/activate && echo "VENV_ACTIVATED"',
+    );
+
+    if (!venvResult.success) {
+      throw new Error('Failed to activate virtual environment');
+    }
+
+    // Wait for venv activation to complete
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    const venvOutput = venvResult.data?.stdout || '';
+    console.log(
+      '[@action:browserAutomation:startAutomationServerOnHost] Venv activation output:',
+      venvOutput,
+    );
+
+    if (!venvOutput.includes('VENV_ACTIVATED')) {
+      throw new Error('Virtual environment activation failed - VENV_ACTIVATED not found in output');
+    }
+
+    // Step 3: Change directory and verify script exists
+    console.log(
+      '[@action:browserAutomation:startAutomationServerOnHost] Step 3: Checking script location',
+    );
+    const scriptCheckResult = await terminalService.sendDataToSession(
+      session.id,
+      'cd ~/automai/runner/browser-use-runner/scripts && ls -la tasks.py && echo "SCRIPT_EXISTS"',
+    );
+
+    if (!scriptCheckResult.success) {
+      throw new Error('Failed to check script location');
+    }
+
+    // Wait for script check to complete
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    const scriptOutput = scriptCheckResult.data?.stdout || '';
+    console.log(
+      '[@action:browserAutomation:startAutomationServerOnHost] Script check output:',
+      scriptOutput,
+    );
+
+    if (!scriptOutput.includes('SCRIPT_EXISTS')) {
+      throw new Error('tasks.py script not found in expected location');
+    }
+
+    // Step 4: Start the Flask server
+    console.log(
+      '[@action:browserAutomation:startAutomationServerOnHost] Step 4: Starting Flask server',
+    );
+    const serverStartResult = await terminalService.sendDataToSession(
+      session.id,
+      'python tasks.py --server > server.log 2>&1 & SERVER_PID=$! && echo "SERVER_STARTED_PID:$SERVER_PID"',
+    );
+
+    if (!serverStartResult.success) {
+      throw new Error('Failed to start Flask server');
+    }
+
+    // Wait for server start command to complete
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    const serverOutput = serverStartResult.data?.stdout || '';
+    console.log(
+      '[@action:browserAutomation:startAutomationServerOnHost] Server start output:',
+      serverOutput,
+    );
+
+    // Extract PID from output
+    const pidMatch = serverOutput.match(/SERVER_STARTED_PID:(\d+)/);
+    const processId = pidMatch ? pidMatch[1] : null;
+
+    if (!processId) {
+      console.log(
+        '[@action:browserAutomation:startAutomationServerOnHost] Warning: Could not extract PID from output',
+      );
+    }
+
+    // Step 5: Wait a moment and verify server is running
+    console.log(
+      '[@action:browserAutomation:startAutomationServerOnHost] Step 5: Waiting and verifying server',
+    );
+    await new Promise((resolve) => setTimeout(resolve, 3000)); // Wait 3 seconds
+
+    const verifyResult = await terminalService.sendDataToSession(
+      session.id,
+      'ps aux | grep "tasks.py --server" | grep -v grep && echo "SERVER_RUNNING" || echo "SERVER_NOT_FOUND"',
+    );
+
+    if (!verifyResult.success) {
+      throw new Error('Failed to verify server status');
+    }
+
+    // Wait for verification to complete
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    const verifyOutput = verifyResult.data?.stdout || '';
+    console.log(
+      '[@action:browserAutomation:startAutomationServerOnHost] Server verification output:',
+      verifyOutput,
+    );
+
+    if (!verifyOutput.includes('SERVER_RUNNING')) {
+      // Check server logs for errors
+      const logResult = await terminalService.sendDataToSession(session.id, 'tail -20 server.log');
+      const logOutput = logResult.success ? logResult.data?.stdout || '' : 'Could not read logs';
+
+      throw new Error(`Flask server is not running. Server logs: ${logOutput}`);
+    }
+
+    // Step 6: Check if port 5000 is listening
+    console.log(
+      '[@action:browserAutomation:startAutomationServerOnHost] Step 6: Checking port 5000',
+    );
+    const portResult = await terminalService.sendDataToSession(
+      session.id,
+      'netstat -ln | grep :5000 && echo "PORT_LISTENING" || echo "PORT_NOT_LISTENING"',
+    );
+
+    if (portResult.success) {
+      // Wait for port check to complete
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      
+      const portOutput = portResult.data?.stdout || '';
+      console.log(
+        '[@action:browserAutomation:startAutomationServerOnHost] Port check output:',
+        portOutput,
+      );
+
+      if (!portOutput.includes('PORT_LISTENING')) {
+        console.log(
+          '[@action:browserAutomation:startAutomationServerOnHost] Warning: Port 5000 not detected as listening',
+        );
+      }
+    }
+
+    // Step 7: Test Flask server locally with curl
+    console.log(
+      '[@action:browserAutomation:startAutomationServerOnHost] Step 7: Testing Flask server with curl',
+    );
+    const curlResult = await terminalService.sendDataToSession(
+      session.id,
+      'curl -s http://localhost:5000/status && echo "FLASK_RESPONDING" || echo "FLASK_NOT_RESPONDING"',
+    );
+
+    if (curlResult.success) {
+      // Wait for curl test to complete
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      
+      const curlOutput = curlResult.data?.stdout || '';
+      console.log(
+        '[@action:browserAutomation:startAutomationServerOnHost] Flask test output:',
+        curlOutput,
+      );
+
+      if (!curlOutput.includes('FLASK_RESPONDING')) {
+        console.log(
+          '[@action:browserAutomation:startAutomationServerOnHost] Warning: Flask server not responding to HTTP requests',
+        );
+      }
+    }
+
+    return {
+      success: true,
+      data: {
+        message: processId 
+          ? `Flask server started successfully with PID: ${processId}` 
+          : 'Flask server started successfully (PID not captured)',
+        processId: processId,
+      },
+    };
   } catch (error: any) {
     console.error('[@action:browserAutomation:startAutomationServerOnHost] Error:', error);
     return {
@@ -154,7 +339,7 @@ export async function stopAutomationServerOnHost(hostId: string, processId?: str
   }
 }
 
-export async function getBrowserStatus(): Promise<ActionResult<{
+export async function getBrowserStatus(hostId: string): Promise<ActionResult<{
   initialized: boolean;
   executing: boolean;
   current_task: string | null;
@@ -207,7 +392,7 @@ export async function getBrowserStatus(): Promise<ActionResult<{
   }
 }
 
-export async function initializeBrowserAutomation(): Promise<ActionResult<{
+export async function initializeBrowserAutomation(hostId: string): Promise<ActionResult<{
   message: string;
   logs: string;
 }>> {
