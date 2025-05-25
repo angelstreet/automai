@@ -8,6 +8,12 @@ import {
   forceTakeControlBrowserHost,
   endBrowserSession,
 } from '@/app/actions/browserActions';
+import { 
+  startAutomationServerOnHost, 
+  stopAutomationServerOnHost,
+  initializeBrowserAutomation, 
+  cleanupBrowserAutomation 
+} from '@/app/actions/browserAutomationActions';
 import { Button } from '@/components/shadcn/button';
 import { useToast } from '@/components/shadcn/use-toast';
 import { useBrowserAutomation } from '@/context';
@@ -37,6 +43,7 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
 
   // Browser automation state
   const [isInitializing, setIsInitializing] = useState(false);
+  const [automationProcessId, setAutomationProcessId] = useState<string | null>(null);
 
   // Host reservation state - tracks if current user has reserved a host
   const [hasReservedHost, setHasReservedHost] = useState(false);
@@ -54,7 +61,7 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
 
   // Initialize browser automation
   const handleInitializeAutomation = async () => {
-    if (!hasReservedHost) {
+    if (!hasReservedHost || !activeHost) {
       toast({
         title: 'Error',
         description: 'Please take control of a host first before starting automation.',
@@ -67,40 +74,114 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
 
     toast({
       title: 'Browser Automation',
-      description: 'Initializing browser automation system...',
+      description: 'Starting automation server on host...',
     });
 
-    // Simulate initialization process
-    setTimeout(() => {
-      const startTime = new Date().toLocaleString();
-      setIsInitialized(true);
-      setStartTime(startTime);
-      setIsInitializing(false);
+    try {
+      // Step 1: Start the automation server on the host
+      console.log('[@component:BrowserActionsClient] Starting automation server on host:', activeHost.id);
+      const serverStartResult = await startAutomationServerOnHost(activeHost.id);
+
+      if (!serverStartResult.success) {
+        throw new Error(serverStartResult.error || 'Failed to start automation server on host');
+      }
+
+      // Store the process ID for later cleanup
+      if (serverStartResult.data?.processId) {
+        setAutomationProcessId(serverStartResult.data.processId);
+      }
 
       toast({
-        title: 'Success',
-        description: 'Browser automation initialized successfully!',
+        title: 'Server Started',
+        description: 'Automation server started on host. Waiting for initialization...',
       });
-    }, 2000);
+
+      // Step 2: Wait a moment for the server to start up
+      await new Promise(resolve => setTimeout(resolve, 3000));
+
+      // Step 3: Initialize the browser automation via API
+      const initResult = await initializeBrowserAutomation();
+
+      if (initResult.success && initResult.data) {
+        const startTime = new Date().toLocaleString();
+        setIsInitialized(true);
+        setStartTime(startTime);
+        setIsInitializing(false);
+
+        toast({
+          title: 'Success',
+          description: 'Browser automation started successfully!',
+        });
+      } else {
+        throw new Error(initResult.error || 'Failed to initialize browser automation');
+      }
+    } catch (error: any) {
+      setIsInitializing(false);
+      console.error('[@component:BrowserActionsClient] Error starting automation:', error);
+      
+      // Try to cleanup the server if it was started
+      if (automationProcessId && activeHost) {
+        try {
+          await stopAutomationServerOnHost(activeHost.id, automationProcessId || undefined);
+          setAutomationProcessId(null);
+        } catch (cleanupError) {
+          console.error('[@component:BrowserActionsClient] Error during cleanup:', cleanupError);
+        }
+      }
+
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to start browser automation',
+        variant: 'destructive',
+      });
+    }
   };
 
   // Stop browser automation
   const handleStopAutomation = async () => {
+    if (!activeHost) {
+      return;
+    }
+
     toast({
       title: 'Browser Automation',
-      description: 'Stopping browser automation system...',
+      description: 'Stopping automation server...',
     });
 
-    // Simulate cleanup process
-    setTimeout(() => {
-      setIsInitialized(false);
-      setStartTime(null);
+    try {
+      // Step 1: Cleanup the browser automation via API
+      try {
+        const cleanupResult = await cleanupBrowserAutomation();
+        if (cleanupResult.success) {
+          console.log('[@component:BrowserActionsClient] Browser automation cleaned up via API');
+        }
+      } catch (apiError) {
+        console.log('[@component:BrowserActionsClient] API cleanup failed, proceeding with server shutdown');
+      }
 
+      // Step 2: Stop the automation server on the host
+      const serverStopResult = await stopAutomationServerOnHost(activeHost.id, automationProcessId || undefined);
+
+      if (serverStopResult.success) {
+        setIsInitialized(false);
+        setStartTime(null);
+        setAutomationProcessId(null);
+
+        toast({
+          title: 'Success',
+          description: 'Browser automation stopped successfully',
+        });
+      } else {
+        throw new Error(serverStopResult.error || 'Failed to stop automation server');
+      }
+    } catch (error: any) {
+      console.error('[@component:BrowserActionsClient] Error stopping automation:', error);
       toast({
-        title: 'Success',
-        description: 'Browser automation stopped successfully!',
+        title: 'Error',
+        description: error.message || 'Failed to stop browser automation',
+        variant: 'destructive',
       });
-    }, 1000);
+    }
   };
 
   const handleTakeControl = async () => {
@@ -151,6 +232,15 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
   const handleReleaseControl = async () => {
     console.log(`[@component:BrowserActionsClient] Releasing host control`);
 
+    // Stop automation if it's running
+    if (isInitialized && activeHost) {
+      try {
+        await handleStopAutomation();
+      } catch (error) {
+        console.error(`[@component:BrowserActionsClient] Error stopping automation during release:`, error);
+      }
+    }
+
     // End browser session if active host exists
     if (activeHost) {
       try {
@@ -167,12 +257,7 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
     setSessionId(null);
     setIsLoading(false); // Reset loading state
     setError(null); // Clear any errors
-
-    // Also stop automation if it was running
-    if (isInitialized) {
-      setIsInitialized(false);
-      setStartTime(null);
-    }
+    setAutomationProcessId(null); // Clear process ID
   };
 
   const selectedHost = browserHosts.find((host) => host.id === selectedHostId);
