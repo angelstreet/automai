@@ -18,6 +18,7 @@ from utils import kill_chrome_instances, clean_user_data_dir
 
 from langchain_openai import ChatOpenAI
 from browser_use import BrowserConfig, Browser, Agent, BrowserContextConfig
+from browser_use.browser.context import BrowserContext
 from cookieManager import CookieManager
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -25,7 +26,7 @@ sys.path.append(os.path.dirname(os.getcwd()))
 
 load_dotenv()
 
-# Force UTF-8 encoding for console output on Windows
+# Force UTF didn o8 encoding for console output on Windows
 if sys.platform == 'win32':
     try:
         sys.stdout.reconfigure(encoding='utf-8')
@@ -55,8 +56,9 @@ parser.add_argument('--task', type=str, default='Go to youtube and launch a vide
 parser.add_argument('--headless', action='store_true', help='Run browser in headless mode')
 parser.add_argument('--debug', action='store_true', help='Enable debug mode')
 parser.add_argument('--executable_path', type=str, help='Path to browser executable')
-parser.add_argument('--server', action='store_true', help='Start server mode instead of running task')
 args, _ = parser.parse_known_args()
+
+llm = ChatOpenAI(model='gpt-4o', temperature=0.0)
 
 # Generic function to inject cookies for multiple sites
 async def inject_cookies_for_sites(context, sites):
@@ -77,6 +79,7 @@ app = None
 server_state = {
     'browser': None,
     'agent': None,
+    'context': None,
     'is_initialized': False,
     'is_executing': False,
     'log_buffer': [],
@@ -93,20 +96,10 @@ def update_log(message: str):
         logger.info(formatted_message)
     return "\n".join(server_state['log_buffer'])
 
-async def initialize_browser_server():
-    """Initialize browser"""
-    try:
-        server_state['is_initialized'] = True
-        update_log("Browser initialized successfully ✅")
-        return True, "Browser initialized successfully ✅"
-        
-    except Exception as e:
-        error_msg = f"Error initializing browser: {str(e)}"
-        update_log(error_msg)
-        return False, error_msg
 
 async def execute_task_server(task: str):
     """Execute a task in server mode"""
+    print("Executing task:", task)
     if not task or task.strip() == "":
         return False, "Please enter a task before executing", ""
 
@@ -121,34 +114,26 @@ async def execute_task_server(task: str):
         server_state['current_task'] = task
         update_log(f"Executing new task:\n{task}")
         
-        # Initialize the model for this task
-        llm = ChatOpenAI(model='gpt-4o', temperature=0.0)
-        
         # Create agent for this task
+        update_log("Creating agent...")
         agent = Agent(
             task=task,
             llm=llm,
-            browser=server_state['browser'],
+            browser_context=server_state['browser_context'],
         )
         
+        update_log("Starting agent execution...")
         start_time = time.time()
-        
-        # Run the agent
         await agent.run()
-        
         execution_time = time.time() - start_time
         
-        # Format the task output
         task_output = f"Task: {task}\n\n{'='*50}\n\n"
         task_output += "Actions performed:\n"
         task_output += f"- Task executed successfully\n"
         task_output += f"- Execution time: {execution_time:.2f} seconds\n"
-        
         update_log("Task completed successfully")
         update_log(f"Execution time: {execution_time:.2f} seconds")
-        
         return True, task_output, "SUCCESS"
-        
     except Exception as e:
         error_msg = f"Error executing task: {str(e)}"
         update_log(error_msg)
@@ -173,6 +158,81 @@ async def cleanup_browser_server():
             update_log(error_msg)
             return False, error_msg
     return True, "No browser instance to clean up"
+
+async def initialize_browser_server():
+    """Initialize browser for server mode"""
+    try:
+        if server_state['is_initialized']:
+            return True, "Browser already initialized"
+        
+        update_log("Initializing browser...")
+        
+        async with async_playwright() as playwright:
+            # Initialize browser with remote debugging
+            page, playwright_context, playwright_browser, chrome_process = await init_browser_async(
+                playwright, 
+                headless=args.headless, 
+                debug=args.debug, 
+                video_dir='traces', 
+                screenshots=True, 
+                video=True, 
+                source=True, 
+                executable_path=args.executable_path
+            )
+            
+            update_log("Browser initialized successfully")
+            
+            # Create browser-use Browser wrapper with CDP URL
+            browser_config = BrowserConfig(
+                cdp_url='http://localhost:9222',
+                headless=args.headless
+            )
+            browser_use_browser = Browser(config=browser_config)
+            
+            # Set the playwright browser directly to avoid reconnection
+            browser_use_browser._playwright_browser = playwright_browser
+            
+            # Create browser-use BrowserContext with proper config
+            context_config = BrowserContextConfig(
+                window_width=1080,
+                window_height=720,
+                save_recording_path=None,
+                trace_path=None,
+                cookies_file=None,
+                disable_security=False,
+                force_new_context=False  # Use existing context
+            )
+            
+            # Create BrowserContext that wraps the existing browser
+            browser_context = BrowserContext(
+                browser=browser_use_browser, 
+                config=context_config
+            )
+            
+            # Set the existing session to avoid creating a new one
+            from browser_use.browser.context import BrowserSession
+            browser_context.session = BrowserSession(
+                context=playwright_context,
+                cached_state=None
+            )
+            
+            # Set the current pages
+            browser_context.agent_current_page = page
+            browser_context.human_current_page = page
+            
+            # Store in server state
+            server_state['is_initialized'] = True
+            server_state['browser'] = browser_use_browser
+            server_state['context'] = playwright_context
+            server_state['browser_context'] = browser_context
+            
+            update_log("Browser context created successfully")
+            return True, "Browser initialized successfully"
+            
+    except Exception as e:
+        error_msg = f"Error initializing browser: {str(e)}"
+        update_log(error_msg)
+        return False, error_msg
 
 def run_async_in_server(coro):
     """Helper to run async functions in sync context for server"""
@@ -420,7 +480,7 @@ async def main():
     try:
         async with async_playwright() as playwright:
             # Initialize browser with remote debugging
-            page, context, browser, chrome_process = await init_browser_async(
+            page, playwright_context, playwright_browser, chrome_process = await init_browser_async(
                 playwright, 
                 headless=args.headless, 
                 debug=args.debug, 
@@ -436,15 +496,59 @@ async def main():
             screenshot_path = os.path.join(trace_path, f"youtube_{timestamp}.png")
             await page.screenshot(path=screenshot_path, full_page=True, timeout=20000)
             print(f"Screenshot saved to: {screenshot_path}")
-            result = True
             print("Browser automation ready to execute task")
-            # Note: execute_task_server is async, so we need to await it
+            
+            # Create browser-use Browser wrapper with CDP URL
+            from browser_use import Browser, BrowserConfig
+            browser_config = BrowserConfig(
+                cdp_url='http://localhost:9222',
+                headless=args.headless
+            )
+            browser_use_browser = Browser(config=browser_config)
+            
+            # Set the playwright browser directly to avoid reconnection
+            browser_use_browser._playwright_browser = playwright_browser
+            
+            # Create browser-use BrowserContext with proper config
+            context_config = BrowserContextConfig(
+                window_width=1080,
+                window_height=720,
+                save_recording_path=None,
+                trace_path=None,
+                cookies_file=None,
+                disable_security=False,
+                force_new_context=False  # Use existing context
+            )
+            
+            # Create BrowserContext that wraps the existing browser
+            browser_context = BrowserContext(
+                browser=browser_use_browser, 
+                config=context_config
+            )
+            
+            # Set the existing session to avoid creating a new one
+            from browser_use.browser.context import BrowserSession
+            browser_context.session = BrowserSession(
+                context=playwright_context,
+                cached_state=None
+            )
+            
+            # Set the current pages
+            browser_context.agent_current_page = page
+            browser_context.human_current_page = page
+            
+            # Store in server state
+            server_state['is_initialized'] = True
+            server_state['browser'] = browser_use_browser
+            server_state['context'] = playwright_context
+            server_state['browser_context'] = browser_context
+            
             await execute_task_server(task)
+            result = True
             return True
     except Exception as e:
         print(f"Test Failed, Error during browser automation: {str(e)}")
         return False
 
 if __name__ == '__main__':
-        asyncio.run(main())        
-        #start_server()
+    start_server()
