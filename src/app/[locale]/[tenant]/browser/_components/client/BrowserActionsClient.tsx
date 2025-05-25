@@ -268,7 +268,8 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
               size="sm"
               onClick={handleTakeControl}
               disabled={isButtonDisabled}
-              className="h-8 gap-1 w-34"
+              className="h-8 gap-1"
+              style={{ width: '136px' }}
             >
               <Monitor className="h-4 w-4" />
               {isLoading ? 'Taking...' : 'Take Control'}
@@ -278,7 +279,8 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
               size="sm"
               onClick={handleReleaseControl}
               variant="outline"
-              className="h-8 gap-1 w-34"
+              className="h-8 gap-1"
+              style={{ width: '136px' }}
             >
               <Monitor className="h-4 w-4" />
               Release

@@ -37,6 +37,28 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
   const [isTerminalConnecting, setIsTerminalConnecting] = useState(false);
   const [terminalConnectionError, setTerminalConnectionError] = useState<string | null>(null);
 
+  // Check if host supports terminal access
+  const supportsTerminal = useCallback((hostToCheck: Host | null): boolean => {
+    if (!hostToCheck) return false;
+    return (
+      hostToCheck.type === 'ssh' ||
+      hostToCheck.device_type === 'server' ||
+      hostToCheck.device_type === 'workstation' ||
+      hostToCheck.device_type === 'laptop'
+    );
+  }, []);
+
+  // Check if host supports VNC
+  const supportsVnc = useCallback((hostToCheck: Host | null): boolean => {
+    if (!hostToCheck) return false;
+    return !!hostToCheck.vnc_port;
+  }, []);
+
+  // Determine which tabs to show - moved before early return
+  const hasVnc = supportsVnc(host);
+  const hasTerminal = supportsTerminal(host);
+  const showTabs = hasVnc && hasTerminal;
+
   // Reset state when host changes
   useEffect(() => {
     if (!host) {
@@ -53,6 +75,17 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
       setIsConnected(true);
     }
   }, [host]);
+
+  // Auto-select available tab if current tab is not supported - moved before early return
+  useEffect(() => {
+    if (!showTabs && host) {
+      if (hasTerminal && !hasVnc) {
+        setActiveTab('terminal');
+      } else if (hasVnc && !hasTerminal) {
+        setActiveTab('vnc');
+      }
+    }
+  }, [host, hasVnc, hasTerminal, showTabs]);
 
   // Auto-fit VNC scaling calculation for compact view
   const calculateAutoFitScale = useCallback(() => {
@@ -82,39 +115,6 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
     }
   }, [activeTab, autoFit, isVisible, calculateAutoFitScale]);
 
-  // VNC scaling controls
-  const handleZoomIn = () => {
-    setAutoFit(false);
-    setVncScale((prev) => Math.min(prev + 0.1, 1.2));
-  };
-
-  const handleZoomOut = () => {
-    setAutoFit(false);
-    setVncScale((prev) => Math.max(prev - 0.1, 0.3));
-  };
-
-  const handleAutoFit = () => {
-    setAutoFit(true);
-    calculateAutoFitScale();
-  };
-
-  // Check if host supports terminal access
-  const supportsTerminal = useCallback((hostToCheck: Host | null): boolean => {
-    if (!hostToCheck) return false;
-    return (
-      hostToCheck.type === 'ssh' ||
-      hostToCheck.device_type === 'server' ||
-      hostToCheck.device_type === 'workstation' ||
-      hostToCheck.device_type === 'laptop'
-    );
-  }, []);
-
-  // Check if host supports VNC
-  const supportsVnc = useCallback((hostToCheck: Host | null): boolean => {
-    if (!hostToCheck) return false;
-    return !!hostToCheck.vnc_port;
-  }, []);
-
   const initializeTerminalSession = useCallback(async () => {
     if (!host) return;
 
@@ -141,7 +141,10 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
         setTerminalConnectionError(result.error || 'Failed to initialize terminal session');
       }
     } catch (error) {
-      console.error(`[@component:EmbeddedHostInterface] Error initializing terminal session:`, error);
+      console.error(
+        `[@component:EmbeddedHostInterface] Error initializing terminal session:`,
+        error,
+      );
       setTerminalConnectionError(error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setIsTerminalConnecting(false);
@@ -170,6 +173,22 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
     supportsTerminal,
   ]);
 
+  // VNC scaling controls
+  const handleZoomIn = () => {
+    setAutoFit(false);
+    setVncScale((prev) => Math.min(prev + 0.1, 1.2));
+  };
+
+  const handleZoomOut = () => {
+    setAutoFit(false);
+    setVncScale((prev) => Math.max(prev - 0.1, 0.3));
+  };
+
+  const handleAutoFit = () => {
+    setAutoFit(true);
+    calculateAutoFitScale();
+  };
+
   const handleRetryTerminal = () => {
     setTerminalSessionId(null);
     setTerminalConnectionError(null);
@@ -182,13 +201,13 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
     }
   };
 
-  // Early return if not visible or no host
+  // Early return if not visible or no host - moved after all hooks
   if (!isVisible || !host) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Monitor className="h-5 w-5" />
+        <CardHeader className="py-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Monitor className="h-4 w-4" />
             Host Interface
           </CardTitle>
         </CardHeader>
@@ -205,22 +224,6 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
     );
   }
 
-  // Determine which tabs to show
-  const hasVnc = supportsVnc(host);
-  const hasTerminal = supportsTerminal(host);
-  const showTabs = hasVnc && hasTerminal;
-
-  // Auto-select available tab if current tab is not supported
-  useEffect(() => {
-    if (!showTabs && host) {
-      if (hasTerminal && !hasVnc) {
-        setActiveTab('terminal');
-      } else if (hasVnc && !hasTerminal) {
-        setActiveTab('vnc');
-      }
-    }
-  }, [host, hasVnc, hasTerminal, showTabs]);
-
   // Get VNC connection details
   const vncPort = host?.vnc_port;
   const vncPassword = host?.vnc_password;
@@ -230,35 +233,65 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
 
   return (
     <Card>
-      <CardHeader className="pb-3">
+      <CardHeader className="py-1.5 px-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Monitor className="h-5 w-5" />
-            {host.name}
-            <div className="flex items-center ml-2">
-              {isConnected ? (
-                <Wifi className="h-4 w-4 text-green-500" />
-              ) : (
-                <WifiOff className="h-4 w-4 text-red-500" />
-              )}
-            </div>
-          </CardTitle>
+          <div className="flex items-center gap-3">
+            <CardTitle className="text-sm flex items-center gap-1.5">
+              <Monitor className="h-3.5 w-3.5" />
+              {host.name}
+              <div className="flex items-center ml-1">
+                {isConnected ? (
+                  <Wifi className="h-3 w-3 text-green-500" />
+                ) : (
+                  <WifiOff className="h-3 w-3 text-red-500" />
+                )}
+              </div>
+            </CardTitle>
 
-          <div className="flex items-center space-x-2">
+            {/* Tab Navigation - inline with header */}
+            {showTabs && (
+              <div className="flex bg-gray-100 dark:bg-gray-800 rounded p-0.5">
+                <button
+                  onClick={() => setActiveTab('vnc')}
+                  className={`px-2 py-1 text-xs font-medium rounded transition-all duration-200 ${
+                    activeTab === 'vnc'
+                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                  disabled={!hasVnc}
+                >
+                  VNC
+                </button>
+                <button
+                  onClick={() => setActiveTab('terminal')}
+                  className={`px-2 py-1 text-xs font-medium rounded transition-all duration-200 ${
+                    activeTab === 'terminal'
+                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                  disabled={!hasTerminal}
+                >
+                  Terminal
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center space-x-1">
             {/* VNC Scaling Controls - only show when VNC tab is active */}
             {activeTab === 'vnc' && hasVnc && (
-              <div className="flex items-center space-x-1">
+              <div className="flex items-center space-x-0.5">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleZoomOut}
                   title="Zoom Out"
                   disabled={vncScale <= 0.3}
-                  className="h-7 w-7 p-0"
+                  className="h-6 w-6 p-0"
                 >
-                  <ZoomOut className="h-3 w-3" />
+                  <ZoomOut className="h-2.5 w-2.5" />
                 </Button>
-                <span className="text-xs text-gray-500 min-w-[2.5rem] text-center">
+                <span className="text-xs text-gray-500 min-w-[2rem] text-center">
                   {Math.round(vncScale * 100)}%
                 </span>
                 <Button
@@ -267,51 +300,23 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
                   onClick={handleZoomIn}
                   title="Zoom In"
                   disabled={vncScale >= 1.2}
-                  className="h-7 w-7 p-0"
+                  className="h-6 w-6 p-0"
                 >
-                  <ZoomIn className="h-3 w-3" />
+                  <ZoomIn className="h-2.5 w-2.5" />
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleAutoFit}
                   title="Fit to Window"
-                  className={`h-7 w-7 p-0 ${autoFit ? 'bg-blue-100 dark:bg-blue-900' : ''}`}
+                  className={`h-6 w-6 p-0 ${autoFit ? 'bg-blue-100 dark:bg-blue-900' : ''}`}
                 >
-                  <Maximize2 className="h-3 w-3" />
+                  <Maximize2 className="h-2.5 w-2.5" />
                 </Button>
               </div>
             )}
           </div>
         </div>
-
-        {/* Tab Navigation - compact version */}
-        {showTabs && (
-          <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1 w-fit">
-            <button
-              onClick={() => setActiveTab('vnc')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${
-                activeTab === 'vnc'
-                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-              }`}
-              disabled={!hasVnc}
-            >
-              VNC
-            </button>
-            <button
-              onClick={() => setActiveTab('terminal')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${
-                activeTab === 'terminal'
-                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-              }`}
-              disabled={!hasTerminal}
-            >
-              Terminal
-            </button>
-          </div>
-        )}
       </CardHeader>
 
       <CardContent className="p-0">
@@ -348,7 +353,7 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
                 <div className="h-full w-full flex items-center justify-center">
                   <iframe
                     ref={vncIframeRef}
-                    src={vncUrl}
+                    src={vncUrl || undefined}
                     className="border-none"
                     style={{
                       transform: `scale(${vncScale})`,
@@ -379,7 +384,8 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
                     Terminal Not Available
                   </h3>
                   <p className="text-xs text-gray-500 max-w-xs">
-                    This host type ({host.device_type || host.type}) doesn't support terminal access.
+                    This host type ({host.device_type || host.type}) doesn't support terminal
+                    access.
                   </p>
                 </div>
               </div>

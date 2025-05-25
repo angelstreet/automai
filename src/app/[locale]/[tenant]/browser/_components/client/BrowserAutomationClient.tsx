@@ -135,12 +135,12 @@ export default function BrowserAutomationClient() {
       {/* Task Input - Compact Version */}
       <Card>
         <CardHeader className="pb-0 pt-3">
-          <CardTitle className="text-base">Task Input</CardTitle>
+          <CardTitle className="text-sm font-medium">Task Input</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 pt-2 pb-3">
           {/* Task Input - Inline Label */}
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 mb-2">
               <Textarea
                 placeholder="Enter your task here..."
                 value={state.taskInput}
