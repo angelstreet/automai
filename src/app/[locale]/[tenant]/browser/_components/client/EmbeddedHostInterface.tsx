@@ -120,15 +120,18 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
     
     let scale;
     if (isMaximized) {
-      // In maximized mode, allow higher scaling but still fit within container
-      scale = Math.min(scaleX, scaleY, 2.0); // Allow up to 200% scaling in maximized mode
+      // In maximized mode, use the smaller scale to fit properly but be more aggressive
+      scale = Math.min(scaleX, scaleY) * 1; // Use 98% to avoid overflow
+      scale = Math.min(scale, 2.0); // Still cap at 200%
     } else {
-      // In normal mode, be more conservative
-      scale = Math.min(scaleX, scaleY, 1.0); // Max 100% for embedded view
+      // In normal mode, prioritize filling height (vertical) to reduce grey areas
+      // Use the larger of the two scales but cap it reasonably
+      scale = Math.max(scaleX, scaleY * 1); // Boost vertical scaling by 20%
+      scale = Math.min(scale, 1); // Cap at 130% to avoid too much overflow
     }
 
     // Ensure minimum scale
-    scale = Math.max(scale, 0.1);
+    scale = Math.max(scale, 0.2);
 
     console.log(`[@component:EmbeddedHostInterface] Auto-fit scale calculated: ${scale} (scaleX: ${scaleX.toFixed(3)}, scaleY: ${scaleY.toFixed(3)}, maximized: ${isMaximized})`);
     setVncScale(scale);
@@ -290,8 +293,10 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
   // Get VNC connection details
   const vncPort = host?.vnc_port;
   const vncPassword = host?.vnc_password;
+  
+  // Enhanced VNC URL with additional parameters for better display
   const vncUrl = vncPort
-    ? `https://${host.ip}:${vncPort}/vnc/vnc_lite.html?host=${host.ip}&port=${vncPort}&path=websockify&encrypt=0${vncPassword ? `&password=${vncPassword}` : ''}`
+    ? `https://${host.ip}:${vncPort}/vnc/vnc_lite.html?host=${host.ip}&port=${vncPort}&path=websockify&encrypt=0${vncPassword ? `&password=${vncPassword}` : ''}&resize=off&scaling=true&show_dot=false&bell=false&shared=true&view_only=false&quality=6&compress=2&fit=true&clip=false&local_cursor=true&viewport=true&scale=true`
     : null;
 
   return (
@@ -396,7 +401,7 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
 
       <CardContent className="p-0">
         {/* Content Area - Dynamic height based on maximize mode */}
-        <div className={`${isMaximized ? 'h-[600px]' : 'h-80'} overflow-hidden relative border rounded-b-lg transition-all duration-300`}>
+        <div className={`${isMaximized ? 'h-[500px]' : 'h-80'} overflow-hidden relative border rounded-b-lg transition-all duration-300`}>
           {/* VNC Tab - Always rendered, controlled by visibility */}
           <div
             className="h-full absolute inset-0"
@@ -431,20 +436,22 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
                 )}
 
                 {/* VNC iframe with enhanced scaling */}
-                <div className="h-full w-full flex items-center justify-center overflow-hidden">
+                <div className="h-full w-full flex items-center justify-center overflow-hidden bg-black">
                   <iframe
                     ref={vncIframeRef}
                     src={vncUrl || undefined}
-                    className="border-none"
+                    className="border-none bg-transparent"
                     style={{
                       transform: `scale(${vncScale})`,
                       transformOrigin: 'center center',
                       width: '1920px',
                       height: '1080px',
+                      backgroundColor: 'transparent',
                     }}
-                    sandbox="allow-scripts allow-same-origin allow-forms"
+                    sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock"
                     onLoad={handleVncLoad}
                     title={`VNC Stream - ${host.name}`}
+                    allow="fullscreen"
                   />
                 </div>
               </div>
