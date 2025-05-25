@@ -378,10 +378,78 @@ def create_fastapi_server():
     
     return app
 
+def kill_existing_tasks_processes():
+    """Kill any existing tasks.py processes to free up the port"""
+    try:
+        current_pid = os.getpid()
+        print(f"Current process PID: {current_pid}")
+        
+        if platform.system() == 'Windows':
+            # Windows command to find and kill tasks.py processes
+            result = subprocess.run(['wmic', 'process', 'where', 'CommandLine like "%tasks.py%"', 'get', 'ProcessId'], 
+                                  capture_output=True, text=True)
+            if result.stdout:
+                lines = result.stdout.strip().split('\n')
+                for line in lines[1:]:  # Skip header
+                    if line.strip() and line.strip().isdigit():
+                        pid = int(line.strip())
+                        if pid != current_pid:
+                            print(f"Killing existing tasks.py process with PID: {pid}")
+                            os.system(f'taskkill /PID {pid} /F')
+        else:
+            # Unix/Linux command to find and kill tasks.py processes
+            result = subprocess.run(['pgrep', '-f', 'tasks.py'], capture_output=True, text=True)
+            if result.stdout:
+                pids = result.stdout.strip().split('\n')
+                for pid_str in pids:
+                    if pid_str.strip():
+                        pid = int(pid_str.strip())
+                        if pid != current_pid:
+                            print(f"Killing existing tasks.py process with PID: {pid}")
+                            os.kill(pid, 9)  # SIGKILL
+        
+        # Also kill any process using port 5001
+        if is_port_in_use(5001):
+            print('Port 5001 is in use. Killing processes using this port...')
+            if platform.system() == 'Windows':
+                result = subprocess.run(['netstat', '-aon'], capture_output=True, text=True)
+                if result.stdout:
+                    lines = result.stdout.splitlines()
+                    for line in lines:
+                        if ':5001' in line and 'LISTENING' in line:
+                            parts = line.split()
+                            if parts:
+                                pid = parts[-1]
+                                if pid.isdigit() and int(pid) != current_pid:
+                                    print(f"Killing process using port 5001, PID: {pid}")
+                                    os.system(f'taskkill /PID {pid} /F')
+            else:
+                result = subprocess.run(['lsof', '-ti:5001'], capture_output=True, text=True)
+                if result.stdout:
+                    pids = result.stdout.strip().split('\n')
+                    for pid_str in pids:
+                        if pid_str.strip():
+                            pid = int(pid_str.strip())
+                            if pid != current_pid:
+                                print(f"Killing process using port 5001, PID: {pid}")
+                                os.kill(pid, 9)
+        
+        # Wait a moment for processes to be killed
+        time.sleep(2)
+        print("Cleanup of existing processes completed")
+        
+    except Exception as e:
+        print(f'Error killing existing tasks.py processes: {str(e)}')
+
 def start_server():
     """Start the FastAPI server with uvicorn"""
     import os
     import uvicorn
+    
+    # Kill any existing tasks.py processes first
+    print("🧹 Cleaning up existing tasks.py processes...")
+    kill_existing_tasks_processes()
+    
     pid = os.getpid()
     
     print("🚀 Starting Browser Automation Server...")
