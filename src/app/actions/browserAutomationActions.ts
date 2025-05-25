@@ -187,6 +187,21 @@ export async function startAutomationServerOnHost(
       throw new Error('Failed to verify server status');
     }
 
+    // Check immediately for obvious failure
+    const immediateOutput = verifyResult.data?.stdout || '';
+    if (immediateOutput.includes('SERVER_NOT_FOUND')) {
+      console.error(
+        '[@action:browserAutomation:startAutomationServerOnHost] Server failed to start - immediate check',
+        { immediateOutput },
+      );
+      
+      // Check server logs for errors
+      const logResult = await terminalService.sendDataToSession(session.id, 'tail -20 server.log');
+      const logOutput = logResult.success ? logResult.data?.stdout || '' : 'Could not read logs';
+      
+      throw new Error(`Flask server failed to start. Server logs: ${logOutput}`);
+    }
+
     // Wait for verification to complete
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
@@ -200,6 +215,16 @@ export async function startAutomationServerOnHost(
       // Check server logs for errors
       const logResult = await terminalService.sendDataToSession(session.id, 'tail -20 server.log');
       const logOutput = logResult.success ? logResult.data?.stdout || '' : 'Could not read logs';
+
+      // Log the exact verification output for debugging
+      console.error(
+        '[@action:browserAutomation:startAutomationServerOnHost] Server verification failed',
+        {
+          verifyOutput,
+          containsServerRunning: verifyOutput.includes('SERVER_RUNNING'),
+          containsServerNotFound: verifyOutput.includes('SERVER_NOT_FOUND'),
+        },
+      );
 
       throw new Error(`Flask server is not running. Server logs: ${logOutput}`);
     }
