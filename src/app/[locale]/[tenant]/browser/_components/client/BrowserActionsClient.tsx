@@ -44,6 +44,7 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
   // Browser automation state
   const [isInitializing, setIsInitializing] = useState(false);
   const [automationProcessId, setAutomationProcessId] = useState<string | null>(null);
+  const [automationSessionId, setAutomationSessionId] = useState<string | null>(null);
 
   // Host reservation state - tracks if current user has reserved a host
   const [hasReservedHost, setHasReservedHost] = useState(false);
@@ -89,44 +90,39 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
         throw new Error(serverStartResult.error || 'Failed to start automation server on host');
       }
 
-      // Store the process ID for later cleanup
+      // Store the process ID and session ID for later operations
       if (serverStartResult.data?.processId) {
         setAutomationProcessId(serverStartResult.data.processId);
+      }
+      if (serverStartResult.data?.sessionId) {
+        setAutomationSessionId(serverStartResult.data.sessionId);
       }
 
       toast({
         title: 'Server Started',
-        description: 'Automation server started on host. Waiting for initialization...',
+        description: 'Automation server started on host. Browser automation is ready!',
       });
 
-      // Step 2: Wait a moment for the server to start up
-      await new Promise((resolve) => setTimeout(resolve, 5000));
+      // Step 2: Set initialized state directly (no fetch call needed)
+      const startTime = new Date().toLocaleString();
+      setIsInitialized(true);
+      setStartTime(startTime);
+      setIsInitializing(false);
 
-      // Step 3: Initialize the browser automation via API
-      const initResult = await initializeBrowserAutomation();
-
-      if (initResult.success && initResult.data) {
-        const startTime = new Date().toLocaleString();
-        setIsInitialized(true);
-        setStartTime(startTime);
-        setIsInitializing(false);
-
-        toast({
-          title: 'Success',
-          description: 'Browser automation started successfully!',
-        });
-      } else {
-        throw new Error(initResult.error || 'Failed to initialize browser automation');
-      }
+      toast({
+        title: 'Success',
+        description: 'Browser automation started successfully!',
+      });
     } catch (error: any) {
       setIsInitializing(false);
       console.error('[@component:BrowserActionsClient] Error starting automation:', error);
 
       // Try to cleanup the server if it was started
-      if (automationProcessId && activeHost) {
+      if (automationSessionId) {
         try {
-          await stopAutomationServerOnHost(activeHost.id, automationProcessId || undefined);
+          await stopAutomationServerOnHost(automationSessionId, automationProcessId || undefined);
           setAutomationProcessId(null);
+          setAutomationSessionId(null);
         } catch (cleanupError) {
           console.error('[@component:BrowserActionsClient] Error during cleanup:', cleanupError);
         }
@@ -142,7 +138,7 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
 
   // Stop browser automation
   const handleStopAutomation = async () => {
-    if (!activeHost) {
+    if (!automationSessionId) {
       return;
     }
 
@@ -152,21 +148,21 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
     });
 
     try {
-      // Step 1: Cleanup the browser automation via API
+      // Step 1: Cleanup the browser automation via SSH curl
       try {
-        const cleanupResult = await cleanupBrowserAutomation();
+        const cleanupResult = await cleanupBrowserAutomation(automationSessionId);
         if (cleanupResult.success) {
-          console.log('[@component:BrowserActionsClient] Browser automation cleaned up via API');
+          console.log('[@component:BrowserActionsClient] Browser automation cleaned up via SSH curl');
         }
       } catch {
         console.log(
-          '[@component:BrowserActionsClient] API cleanup failed, proceeding with server shutdown',
+          '[@component:BrowserActionsClient] SSH curl cleanup failed, proceeding with server shutdown',
         );
       }
 
       // Step 2: Stop the automation server on the host
       const serverStopResult = await stopAutomationServerOnHost(
-        activeHost.id,
+        automationSessionId,
         automationProcessId || undefined,
       );
 
@@ -174,6 +170,7 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
         setIsInitialized(false);
         setStartTime(null);
         setAutomationProcessId(null);
+        setAutomationSessionId(null);
 
         toast({
           title: 'Success',
@@ -241,7 +238,7 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
     console.log(`[@component:BrowserActionsClient] Releasing host control`);
 
     // Stop automation if it's running
-    if (isInitialized && activeHost) {
+    if (isInitialized && automationSessionId) {
       try {
         await handleStopAutomation();
       } catch (error) {
@@ -269,6 +266,7 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
     setIsLoading(false); // Reset loading state
     setError(null); // Clear any errors
     setAutomationProcessId(null); // Clear process ID
+    setAutomationSessionId(null); // Clear session ID
   };
 
   const selectedHost = browserHosts.find((host) => host.id === selectedHostId);

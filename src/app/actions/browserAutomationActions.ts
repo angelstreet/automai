@@ -1,5 +1,8 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
+import { cookies } from 'next/headers';
+
 import { getUser } from '@/app/actions/userAction';
 
 // Local type definition to avoid import issues
@@ -8,8 +11,6 @@ interface ActionResult<T = any> {
   error?: string;
   data?: T;
 }
-
-const BROWSER_SERVER_URL = 'http://localhost:5001';
 
 interface BrowserServerResponse {
   success: boolean;
@@ -23,12 +24,20 @@ interface BrowserServerResponse {
   start_time?: string;
 }
 
-export async function startAutomationServerOnHost(hostId: string): Promise<ActionResult<{
-  message: string;
-  processId?: string;
-}>> {
+export async function startAutomationServerOnHost(
+  hostId: string,
+): Promise<
+  ActionResult<{
+    message: string;
+    processId?: string;
+    sessionId: string;
+  }>
+> {
   try {
-    console.log('[@action:browserAutomation:startAutomationServerOnHost] Starting automation server on host:', hostId);
+    console.log(
+      '[@action:browserAutomation:startAutomationServerOnHost] Starting automation server on host:',
+      hostId,
+    );
     
     // Get current user for auth checks
     const user = await getUser();
@@ -228,6 +237,7 @@ export async function startAutomationServerOnHost(hostId: string): Promise<Actio
           ? `Flask server started successfully with PID: ${processId}` 
           : 'Flask server started successfully (PID not captured)',
         processId: processId || undefined,
+        sessionId: session.id,
       },
     };
   } catch (error: any) {
@@ -240,15 +250,15 @@ export async function startAutomationServerOnHost(hostId: string): Promise<Actio
 }
 
 export async function stopAutomationServerOnHost(
-  hostId: string,
+  sessionId: string,
   _processId?: string,
 ): Promise<ActionResult<{
   message: string;
 }>> {
   try {
     console.log(
-      '[@action:browserAutomation:stopAutomationServerOnHost] Stopping automation server on host:',
-      hostId,
+      '[@action:browserAutomation:stopAutomationServerOnHost] Stopping automation server using session:',
+      sessionId,
     );
 
     // Get current user for auth checks
@@ -260,42 +270,8 @@ export async function stopAutomationServerOnHost(
       };
     }
 
-    // First try to gracefully stop via API
-    try {
-      const response = await fetch(`${BROWSER_SERVER_URL}/cleanup`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        console.log(
-          '[@action:browserAutomation:stopAutomationServerOnHost] Server stopped gracefully via API',
-        );
-      }
-    } catch {
-      console.log(
-        '[@action:browserAutomation:stopAutomationServerOnHost] API cleanup failed, will force stop process',
-      );
-    }
-
-    // Import terminal service functions
-    const { initTerminalSession } = await import('@/lib/services/terminalService');
+    // Use existing session instead of creating new one
     const terminalService = (await import('@/lib/services/terminalService')).default;
-
-    // Create a terminal session for command execution
-    const session = await initTerminalSession({
-      hostId: hostId,
-      userId: user.id,
-      sessionType: 'ssh',
-      connectionParams: {
-        host: '', // Will be filled by the service from host data
-        port: 22,
-        username: '',
-        password: '',
-      },
-    });
 
     // Force stop the process - simplified to just pkill
     const stopCommand = `pkill -f "python.*tasks.py" || echo "No automation server processes found"`;
@@ -303,7 +279,7 @@ export async function stopAutomationServerOnHost(
       '[@action:browserAutomation:stopAutomationServerOnHost] Terminating automation server processes',
     );
 
-    const result = await terminalService.sendDataToSession(session.id, stopCommand);
+    const result = await terminalService.sendDataToSession(sessionId, stopCommand);
 
     if (result.success) {
       console.log(
@@ -327,7 +303,7 @@ export async function stopAutomationServerOnHost(
   }
 }
 
-export async function getBrowserStatus(_hostId: string): Promise<ActionResult<{
+export async function getBrowserStatus(sessionId: string): Promise<ActionResult<{
   initialized: boolean;
   executing: boolean;
   current_task: string | null;
@@ -335,34 +311,90 @@ export async function getBrowserStatus(_hostId: string): Promise<ActionResult<{
   logs: string;
 }>> {
   try {
-    console.log('[@action:browserAutomation:getBrowserStatus] Getting browser status');
+    console.log('[@action:browserAutomation:getBrowserStatus] Getting browser status via existing session:', sessionId);
 
-    const response = await fetch(`${BROWSER_SERVER_URL}/status`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      if (response.status === 403) {
-        throw new Error('Flask server not accessible (403). Server may not be running on host.');
-      }
-      throw new Error(`HTTP error! status: ${response.status}`);
+    // Get current user for auth checks
+    const user = await getUser();
+    if (!user) {
+      return {
+        success: true,
+        data: {
+          initialized: false,
+          executing: false,
+          current_task: null,
+          start_time: null,
+          logs: 'User not authenticated',
+        },
+      };
     }
 
-    const data: BrowserServerResponse = await response.json();
+    // Use existing session instead of creating new one
+    const terminalService = (await import('@/lib/services/terminalService')).default;
 
-    return {
-      success: true,
-      data: {
-        initialized: data.initialized || false,
-        executing: data.executing || false,
-        current_task: data.current_task || null,
-        start_time: data.start_time || null,
-        logs: data.logs || '',
-      },
-    };
+    // Execute curl command to get status from the host
+    const curlCommand = `curl -X GET http://localhost:5001/status -H "Content-Type: application/json" -w "\\nHTTP_STATUS:%{http_code}\\n" -s`;
+    
+    console.log('[@action:browserAutomation:getBrowserStatus] Executing curl command via existing session');
+    const result = await terminalService.sendDataToSession(sessionId, curlCommand);
+
+    if (!result.success) {
+      throw new Error('Failed to execute curl command via SSH');
+    }
+
+    // Wait for curl command to complete
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    const curlOutput = result.data?.stdout || '';
+    console.log('[@action:browserAutomation:getBrowserStatus] Curl output:', curlOutput);
+
+    // Parse the response
+    const httpStatusMatch = curlOutput.match(/HTTP_STATUS:(\d+)/);
+    const httpStatus = httpStatusMatch ? parseInt(httpStatusMatch[1]) : 0;
+
+    if (httpStatus !== 200) {
+      // Return default values if server is not accessible
+      return {
+        success: true,
+        data: {
+          initialized: false,
+          executing: false,
+          current_task: null,
+          start_time: null,
+          logs: `Connection error: HTTP ${httpStatus}`,
+        },
+      };
+    }
+
+    // Extract JSON response (everything before HTTP_STATUS line)
+    const jsonResponse = curlOutput.split('HTTP_STATUS:')[0].trim();
+    
+    try {
+      const data = JSON.parse(jsonResponse);
+
+      return {
+        success: true,
+        data: {
+          initialized: data.initialized || false,
+          executing: data.executing || false,
+          current_task: data.current_task || null,
+          start_time: data.start_time || null,
+          logs: data.logs || '',
+        },
+      };
+    } catch (parseError: any) {
+      console.error('[@action:browserAutomation:getBrowserStatus] Failed to parse JSON response:', parseError);
+      // Return default values if JSON parsing fails
+      return {
+        success: true,
+        data: {
+          initialized: false,
+          executing: false,
+          current_task: null,
+          start_time: null,
+          logs: `Parse error: ${parseError.message}`,
+        },
+      };
+    }
   } catch (error: any) {
     console.error('[@action:browserAutomation:getBrowserStatus] Error:', error);
 
@@ -380,57 +412,81 @@ export async function getBrowserStatus(_hostId: string): Promise<ActionResult<{
   }
 }
 
-export async function initializeBrowserAutomation(_hostId: string): Promise<ActionResult<{
+export async function initializeBrowserAutomation(sessionId: string): Promise<ActionResult<{
   message: string;
   logs: string;
 }>> {
   try {
-    console.log('[@action:browserAutomation:initializeBrowserAutomation] Initializing browser');
+    console.log('[@action:browserAutomation:initializeBrowserAutomation] Initializing browser via existing session:', sessionId);
 
-    const response = await fetch(`${BROWSER_SERVER_URL}/initialize`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    // Get current user for auth checks
+    const user = await getUser();
+    if (!user) {
+      return {
+        success: false,
+        error: 'User not authenticated',
+      };
+    }
 
-    if (!response.ok) {
-      if (response.status === 403) {
+    // Use existing session instead of creating new one
+    const terminalService = (await import('@/lib/services/terminalService')).default;
+
+    // Execute curl command to initialize browser on the host
+    const curlCommand = `curl -X POST http://localhost:5001/initialize -H "Content-Type: application/json" -w "\\nHTTP_STATUS:%{http_code}\\n" -s`;
+    
+    console.log('[@action:browserAutomation:initializeBrowserAutomation] Executing curl command via existing session');
+    const result = await terminalService.sendDataToSession(sessionId, curlCommand);
+
+    if (!result.success) {
+      throw new Error('Failed to execute curl command via SSH');
+    }
+
+    // Wait for curl command to complete
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    const curlOutput = result.data?.stdout || '';
+    console.log('[@action:browserAutomation:initializeBrowserAutomation] Curl output:', curlOutput);
+
+    // Parse the response
+    const httpStatusMatch = curlOutput.match(/HTTP_STATUS:(\d+)/);
+    const httpStatus = httpStatusMatch ? parseInt(httpStatusMatch[1]) : 0;
+
+    if (httpStatus !== 200) {
+      return {
+        success: false,
+        error: `Flask server returned HTTP ${httpStatus}. Server may not be running on host.`,
+      };
+    }
+
+    // Extract JSON response (everything before HTTP_STATUS line)
+    const jsonResponse = curlOutput.split('HTTP_STATUS:')[0].trim();
+    
+    try {
+      const data = JSON.parse(jsonResponse);
+      
+      if (!data.success) {
         return {
           success: false,
-          error:
-            'Flask server not running on host. Please check if the automation server started correctly.',
+          error: data.message || 'Failed to initialize browser',
         };
       }
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
 
-    const data: BrowserServerResponse = await response.json();
-
-    if (!data.success) {
+      return {
+        success: true,
+        data: {
+          message: data.message || 'Browser initialized successfully',
+          logs: data.logs || '',
+        },
+      };
+    } catch (parseError: any) {
+      console.error('[@action:browserAutomation:initializeBrowserAutomation] Failed to parse JSON response:', parseError);
       return {
         success: false,
-        error: data.message || 'Failed to initialize browser',
+        error: 'Invalid response from automation server',
       };
     }
-
-    return {
-      success: true,
-      data: {
-        message: data.message || 'Browser initialized successfully',
-        logs: data.logs || '',
-      },
-    };
   } catch (error: any) {
     console.error('[@action:browserAutomation:initializeBrowserAutomation] Error:', error);
-
-    if (error.message.includes('fetch')) {
-      return {
-        success: false,
-        error: 'Cannot connect to automation server. Please ensure the server is running on the host.',
-      };
-    }
-
     return {
       success: false,
       error: error.message || 'Failed to initialize browser automation',
@@ -438,37 +494,78 @@ export async function initializeBrowserAutomation(_hostId: string): Promise<Acti
   }
 }
 
-export async function executeBrowserTask(task: string): Promise<ActionResult<{
+export async function executeBrowserTask(task: string, sessionId: string): Promise<ActionResult<{
   result: string;
   status: string;
   logs: string;
 }>> {
   try {
-    console.log('[@action:browserAutomation:executeBrowserTask] Executing task:', task);
+    console.log('[@action:browserAutomation:executeBrowserTask] Executing task via existing session:', sessionId, 'Task:', task);
     
-    const response = await fetch(`${BROWSER_SERVER_URL}/execute`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ task }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    // Get current user for auth checks
+    const user = await getUser();
+    if (!user) {
+      return {
+        success: false,
+        error: 'User not authenticated',
+      };
     }
 
-    const data: BrowserServerResponse = await response.json();
+    // Use existing session instead of creating new one
+    const terminalService = (await import('@/lib/services/terminalService')).default;
+
+    // Escape the task for JSON
+    const escapedTask = task.replace(/"/g, '\\"').replace(/\n/g, '\\n');
     
-    return {
-      success: data.success,
-      data: {
-        result: data.result || '',
-        status: data.status || 'UNKNOWN',
-        logs: data.logs || '',
-      },
-      error: data.success ? undefined : (data.result || 'Task execution failed'),
-    };
+    // Execute curl command to execute task on the host
+    const curlCommand = `curl -X POST http://localhost:5001/execute -H "Content-Type: application/json" -d '{"task":"${escapedTask}"}' -w "\\nHTTP_STATUS:%{http_code}\\n" -s`;
+    
+    console.log('[@action:browserAutomation:executeBrowserTask] Executing curl command via existing session');
+    const result = await terminalService.sendDataToSession(sessionId, curlCommand);
+
+    if (!result.success) {
+      throw new Error('Failed to execute curl command via SSH');
+    }
+
+    // Wait for curl command to complete
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    const curlOutput = result.data?.stdout || '';
+    console.log('[@action:browserAutomation:executeBrowserTask] Curl output:', curlOutput);
+
+    // Parse the response
+    const httpStatusMatch = curlOutput.match(/HTTP_STATUS:(\d+)/);
+    const httpStatus = httpStatusMatch ? parseInt(httpStatusMatch[1]) : 0;
+
+    if (httpStatus !== 200) {
+      return {
+        success: false,
+        error: `Flask server returned HTTP ${httpStatus}. Server may not be running on host.`,
+      };
+    }
+
+    // Extract JSON response (everything before HTTP_STATUS line)
+    const jsonResponse = curlOutput.split('HTTP_STATUS:')[0].trim();
+    
+    try {
+      const data = JSON.parse(jsonResponse);
+      
+      return {
+        success: data.success,
+        data: {
+          result: data.result || '',
+          status: data.status || 'UNKNOWN',
+          logs: data.logs || '',
+        },
+        error: data.success ? undefined : (data.result || 'Task execution failed'),
+      };
+    } catch (parseError: any) {
+      console.error('[@action:browserAutomation:executeBrowserTask] Failed to parse JSON response:', parseError);
+      return {
+        success: false,
+        error: 'Invalid response from automation server',
+      };
+    }
   } catch (error: any) {
     console.error('[@action:browserAutomation:executeBrowserTask] Error:', error);
     return {
@@ -478,73 +575,78 @@ export async function executeBrowserTask(task: string): Promise<ActionResult<{
   }
 }
 
-export async function cleanupBrowserAutomation(): Promise<ActionResult<{
+export async function cleanupBrowserAutomation(sessionId: string): Promise<ActionResult<{
   message: string;
   logs: string;
 }>> {
   try {
-    console.log('[@action:browserAutomation:cleanupBrowserAutomation] Cleaning up browser');
+    console.log('[@action:browserAutomation:cleanupBrowserAutomation] Cleaning up browser via existing session:', sessionId);
     
-    const response = await fetch(`${BROWSER_SERVER_URL}/cleanup`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    // Get current user for auth checks
+    const user = await getUser();
+    if (!user) {
+      return {
+        success: false,
+        error: 'User not authenticated',
+      };
     }
 
-    const data: BrowserServerResponse = await response.json();
+    // Use existing session instead of creating new one
+    const terminalService = (await import('@/lib/services/terminalService')).default;
+
+    // Execute curl command to cleanup browser on the host
+    const curlCommand = `curl -X POST http://localhost:5001/cleanup -H "Content-Type: application/json" -w "\\nHTTP_STATUS:%{http_code}\\n" -s`;
     
-    return {
-      success: data.success,
-      data: {
-        message: data.message || 'Browser cleanup completed',
-        logs: data.logs || '',
-      },
-      error: data.success ? undefined : (data.message || 'Cleanup failed'),
-    };
+    console.log('[@action:browserAutomation:cleanupBrowserAutomation] Executing curl command via existing session');
+    const result = await terminalService.sendDataToSession(sessionId, curlCommand);
+
+    if (!result.success) {
+      throw new Error('Failed to execute curl command via SSH');
+    }
+
+    // Wait for curl command to complete
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    const curlOutput = result.data?.stdout || '';
+    console.log('[@action:browserAutomation:cleanupBrowserAutomation] Curl output:', curlOutput);
+
+    // Parse the response
+    const httpStatusMatch = curlOutput.match(/HTTP_STATUS:(\d+)/);
+    const httpStatus = httpStatusMatch ? parseInt(httpStatusMatch[1]) : 0;
+
+    if (httpStatus !== 200) {
+      return {
+        success: false,
+        error: `Flask server returned HTTP ${httpStatus}. Server may not be running on host.`,
+      };
+    }
+
+    // Extract JSON response (everything before HTTP_STATUS line)
+    const jsonResponse = curlOutput.split('HTTP_STATUS:')[0].trim();
+    
+    try {
+      const data = JSON.parse(jsonResponse);
+      
+      return {
+        success: data.success,
+        data: {
+          message: data.message || 'Browser cleanup completed',
+          logs: data.logs || '',
+        },
+        error: data.success ? undefined : (data.message || 'Cleanup failed'),
+      };
+    } catch (parseError: any) {
+      console.error('[@action:browserAutomation:cleanupBrowserAutomation] Failed to parse JSON response:', parseError);
+      return {
+        success: false,
+        error: 'Invalid response from automation server',
+      };
+    }
   } catch (error: any) {
     console.error('[@action:browserAutomation:cleanupBrowserAutomation] Error:', error);
     return {
       success: false,
       error: error.message || 'Failed to cleanup browser automation',
-    };
-  }
-}
-
-export async function getBrowserLogs(): Promise<ActionResult<{
-  logs: string;
-}>> {
-  try {
-    console.log('[@action:browserAutomation:getBrowserLogs] Getting browser logs');
-    
-    const response = await fetch(`${BROWSER_SERVER_URL}/logs`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data: BrowserServerResponse = await response.json();
-    
-    return {
-      success: true,
-      data: {
-        logs: data.logs || '',
-      },
-    };
-  } catch (error: any) {
-    console.error('[@action:browserAutomation:getBrowserLogs] Error:', error);
-    return {
-      success: false,
-      error: error.message || 'Failed to get browser logs',
     };
   }
 } 

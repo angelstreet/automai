@@ -30,7 +30,7 @@ const EXAMPLE_TASKS = ['Go to TV Guide', 'Click on Live TV then wait 3s'];
 
 export default function BrowserAutomationClient() {
   const { toast } = useToast();
-  const { isInitialized, activeHost } = useBrowserAutomation();
+  const { isInitialized, activeHost, sessionId } = useBrowserAutomation();
 
   const [state, setState] = useState<BrowserAutomationState>({
     isExecuting: false,
@@ -58,7 +58,11 @@ export default function BrowserAutomationClient() {
   useEffect(() => {
     const checkStatus = async () => {
       try {
-        const result = await getBrowserStatus();
+        if (!sessionId) {
+          return;
+        }
+        
+        const result = await getBrowserStatus(sessionId);
         if (result.success && result.data) {
           setState((prev) => ({
             ...prev,
@@ -81,13 +85,13 @@ export default function BrowserAutomationClient() {
       }
     };
 
-    // Only check status if automation is initialized
-    if (isInitialized) {
+    // Only check status if automation is initialized and we have a session ID
+    if (isInitialized && sessionId) {
       checkStatus();
       const interval = setInterval(checkStatus, 2000);
       return () => clearInterval(interval);
     }
-  }, [isInitialized, state.logOutput]);
+  }, [isInitialized, sessionId, state.logOutput]);
 
   // Execute task action
   const handleExecuteTask = async () => {
@@ -109,6 +113,15 @@ export default function BrowserAutomationClient() {
       return;
     }
 
+    if (!sessionId) {
+      toast({
+        title: 'Error',
+        description: 'No active session available for task execution.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setState((prev) => ({ ...prev, isExecuting: true }));
     updateLog(`Executing new task:\n${state.taskInput}`);
 
@@ -118,7 +131,7 @@ export default function BrowserAutomationClient() {
     });
 
     try {
-      const result = await executeBrowserTask(state.taskInput);
+      const result = await executeBrowserTask(state.taskInput, sessionId);
 
       if (result.success && result.data) {
         const taskOutput = `Task:\n${state.taskInput}\n\n${'='.repeat(50)}\n\nResult:\n${result.data.result}`;
