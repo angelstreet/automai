@@ -16,42 +16,9 @@ from flask_cors import CORS
 from datetime import datetime
 from utils import kill_chrome_instances, clean_user_data_dir
 
-# Conditional imports for server mode
-try:
-    from langchain_openai import ChatOpenAI
-    from browser_use import BrowserConfig, Browser, Agent, BrowserContextConfig
-    from browseruseUtils import inject_youtube_cookies
-    SERVER_IMPORTS_AVAILABLE = True
-except ImportError:
-    SERVER_IMPORTS_AVAILABLE = False
-    print("Warning: Server mode dependencies not available. Only basic browser automation will work.")
-    
-    # Fallback function for inject_youtube_cookies
-    async def inject_youtube_cookies(context):
-        """Fallback function when browseruseUtils is not available"""
-        try:
-            # YouTube consent cookies - these indicate user has already accepted cookies
-            youtube_cookies = [
-                {
-                    "name": "CONSENT",
-                    "value": "YES+cb.20210328-17-p0.en+FX+1",  # Consent given
-                    "domain": ".youtube.com",
-                    "path": "/",
-                    "secure": True
-                },
-                {
-                    "name": "SOCS",
-                    "value": "CAESEwgDEgk0ODE3Nzk3MjQaAmVuIAEaBgiA_LyaBg",  # Cookie settings
-                    "domain": ".youtube.com", 
-                    "path": "/",
-                    "secure": True
-                }
-            ]
-            
-            await context.add_cookies(youtube_cookies)
-            print(f"Injected {len(youtube_cookies)} YouTube consent cookies")
-        except Exception as e:
-            print(f"Error injecting YouTube cookies: {str(e)}")
+from langchain_openai import ChatOpenAI
+from browser_use import BrowserConfig, Browser, Agent, BrowserContextConfig
+from browseruseUtils import inject_youtube_cookies
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.dirname(os.getcwd()))
@@ -113,60 +80,10 @@ def update_log(message: str):
     return "\n".join(server_state['log_buffer'])
 
 async def initialize_browser_server():
-    """Initialize browser for server mode"""
-    if not SERVER_IMPORTS_AVAILABLE:
-        return False, "Server mode dependencies not available"
-        
+    """Initialize browser"""
     try:
-        if server_state['is_initialized']:
-            update_log("Browser refresh detected, cleaning up existing instance...")
-            await cleanup_browser_server()
-            await asyncio.sleep(1)
-        
-        server_state['log_buffer'] = []
-        server_state['start_time'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        update_log("Starting browser initialization...")
-        
-        # Initialize the model
-        llm = ChatOpenAI(model='gpt-4o', temperature=0.0)
-        
-        # Context configuration
-        trace_path = os.path.join(os.getcwd(), args.trace_folder)
-        context_config = BrowserContextConfig(
-            save_recording_path=trace_path,
-            save_downloads_path=trace_path,
-            user_data_dir='/tmp/chrome_debug_profile'
-        )
-        
-        # Browser configuration
-        browser_config = BrowserConfig(
-            headless=args.headless,
-            disable_security=False,
-            new_context_config=context_config,
-            launch_args=[
-                '--disable-blink-features=AutomationControlled',
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-accelerated-2d-canvas',
-                '--disable-gpu',
-                '--node-default-browser-check'
-            ],
-            executable_path=args.executable_path if args.executable_path else None
-        )
-        
-        server_state['browser'] = Browser(config=browser_config)
-        update_log("Browser created successfully")
-        
-        # Initialize browser context
-        browser_context = await server_state['browser'].new_context()
-        
-        # Inject YouTube cookies to bypass consent banners
-        await inject_youtube_cookies(browser_context)
-        
         server_state['is_initialized'] = True
         update_log("Browser initialized successfully ✅")
-        
         return True, "Browser initialized successfully ✅"
         
     except Exception as e:
@@ -463,12 +380,11 @@ async def screenshot_callback(step_number, step_description, browser_context, tr
             timestamp = time.strftime("%Y%m%d-%H%M%S")
             screenshot_path = os.path.join(trace_path, f"step_{step_number:03d}_{timestamp}.png")
             await browser_context.agent_current_page.screenshot(path=screenshot_path, full_page=True, timeout=20000)
-            logger.info(f"Step {step_number} screenshot saved to: {screenshot_path}")
+            print(f"Step {step_number} screenshot saved to: {screenshot_path}")
     except Exception as e:
-        logger.error(f"Error taking step {step_number} screenshot: {str(e)}")
+        print(f"Error taking step {step_number} screenshot: {str(e)}")
 
 async def main():
-    global args
     trace_folder = args.trace_folder.replace("_", " ")
     print(f"----- Trace folder: {trace_folder} -----")
     task = args.task.replace("_", " ")
@@ -497,7 +413,6 @@ async def main():
                 source=True, 
                 executable_path=args.executable_path
             )
-            await page.wait_for_timeout(2000)
             
             # Take a screenshot
             timestamp = time.strftime("%Y%m%d-%H%M%S")
@@ -511,7 +426,6 @@ async def main():
             return True
     except Exception as e:
         print(f"Test Failed, Error during browser automation: {str(e)}")
-        logger.error(f"Error during browser automation: {str(e)}")
         return False
 
 if __name__ == '__main__':

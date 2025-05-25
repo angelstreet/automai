@@ -20,7 +20,7 @@ async def inject_youtube_cookies(browser_context):
     Inject cookies to bypass YouTube consent banners
     """
     try:
-        logger.info("Injecting YouTube cookies to bypass consent banners...")
+        print("Injecting YouTube cookies to bypass consent banners...")
         
         # Ensure the session is initialized
         session = await browser_context.get_session()
@@ -61,10 +61,10 @@ async def inject_youtube_cookies(browser_context):
         # Access the underlying Playwright context and use add_cookies
         playwright_context = session.context
         await playwright_context.add_cookies(youtube_cookies)
-        logger.info(f"Successfully injected {len(youtube_cookies)} YouTube consent cookies")
+        print(f"Successfully injected {len(youtube_cookies)} YouTube consent cookies")
         
     except Exception as e:
-        logger.error(f"Error injecting YouTube cookies: {str(e)}")
+        print(f"Error injecting YouTube cookies: {str(e)}")
 
 
 class CustomController(Controller):
