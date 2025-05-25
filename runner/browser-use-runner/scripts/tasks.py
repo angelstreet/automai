@@ -46,11 +46,8 @@ if sys.platform == 'win32':
 
 # Set up argument parser
 parser = argparse.ArgumentParser(description='Run a browser automation task or start server')
-parser.add_argument('--headless', action='store_true', help='Run in headless mode')
-parser.add_argument('--task', type=str, default='Go to youtube and launch a video for 10s', help='The task for the agent to perform')
 parser.add_argument('--trace_folder', type=str, default='traces', help='The folder to save the trace')
-parser.add_argument('--cookies_path', type=str, default='', help='The path to the cookies file')
-parser.add_argument('--executable_path', type=str, help='Path to Google Chrome executable, defaults to Chromium if not provided')
+parser.add_argument('--task', type=str, default='Go to youtube and launch a video for 10s', help='The task for the agent to perform')
 args, _ = parser.parse_known_args()
 
 # Global variables for server mode
@@ -318,49 +315,6 @@ def start_server():
         print(f"❌ Error starting server: {str(e)}")
         raise
 
-# Original task execution code (unchanged)
-task = args.task.replace("_", " ")
-print(f"----- Task: {task} -----")
-
-trace_path = os.path.join(os.getcwd(), args.trace_folder)
-
-# Initialize the model
-llm = ChatOpenAI(
-    model='gpt-4o',
-    temperature=0.0
-)
-
-# Context configuration
-context_config = BrowserContextConfig(
-    save_recording_path=trace_path,
-    save_downloads_path=trace_path,
-    user_data_dir = '/tmp/chrome_debug_profile'
-    #trace_path=trace_path, # bug in patchright
-)
-
-
-# Determine headless mode based on command-line argument only
-headless = args.headless
-logger.info(f"Parsed headless argument: {args.headless}")
-
-browser_config = BrowserConfig(
-    headless=headless,
-    disable_security=False,
-    new_context_config=context_config,
-    launch_args=[
-        '--disable-blink-features=AutomationControlled',
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--disable-gpu',
-        '--node-default-browser-check'
-    ],
-    executable_path=args.executable_path if args.executable_path else None
-)
-
-browser = Browser(config=browser_config)
-
 # Function to take screenshots after each step
 async def screenshot_callback(step_number, step_description, browser_context):
     try:
@@ -380,13 +334,14 @@ agent = Agent(
 )
 
 async def main():
-    browser_manager = BrowserManager()
+    global args
+    trace_folder = args.trace_folder.replace("_", " ")
+    print(f"----- Trace folder: {trace_folder} -----")
+    task = args.task.replace("_", " ")
+    print(f"----- Task: {task} -----")
+    browser_manager = BrowserManager(trace_folder=trace_folder)
     result = False
     try:
-        task = f"""
-        - Navigate to url '{browser_manager.SUNRISE_URL}'
-        - Activate semantic
-        """
         errors, actions, logs = await browser_manager.run_task(task)
         print("Actions:", actions)
         print("Errors:", errors)

@@ -168,7 +168,7 @@ class LogCapture:
         self.file_handler.close()
 
 class BrowserManager:
-    def __init__(self):
+    def __init__(self, trace_folder=None, initial_task=None):
         # Initialize log capture
         self.log_capture = LogCapture()
         
@@ -182,7 +182,7 @@ class BrowserManager:
         self.HIGHLIGHT_ELEMENTS = os.getenv('HIGHLIGHT_ELEMENTS', 'True').lower() == 'true' 
         # Initialize paths
         self.timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        self.trace_folder = os.path.join(os.path.dirname(__file__), 'traces', self.timestamp)
+        self.trace_folder = trace_folder if trace_folder else os.path.join(os.path.dirname(__file__), 'traces', self.timestamp)
         os.makedirs(self.trace_folder, exist_ok=True)
         self.save_conversation_path = os.path.join(self.trace_folder, 'traces')
         self.screenshot_folder = os.path.join(self.trace_folder, 'screenshots')
@@ -201,7 +201,7 @@ class BrowserManager:
         self.context.browser_manager = self
         self.test_page = None  # Store test page reference
         self.gradio_page = None  # Store Gradio page reference
-        self.initial_task = f"""
+        self.initial_task = initial_task if initial_task else f"""
         - Navigate to url '{self.SUNRISE_URL}'
         - Activate semantic
         """
