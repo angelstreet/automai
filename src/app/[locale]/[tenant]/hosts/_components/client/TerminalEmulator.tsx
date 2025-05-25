@@ -133,6 +133,10 @@ export function TerminalEmulator({
       } else if (data === '\x03') {
         // Ctrl+C
         terminal.write('^C\r\n');
+        
+        // Stop any active polling when user interrupts
+        stopOutputPolling();
+        
         await executeCommand('', terminal, true); // Send Ctrl+C and get new prompt
         currentInput.current = '';
       } else if (data.charCodeAt(0) >= 32) {
@@ -147,7 +151,7 @@ export function TerminalEmulator({
         console.log(`[@component:TerminalEmulator] Sending to persistent shell: "${command}"`);
 
         // Import terminal action - send raw command to persistent shell
-        const { sendTerminalData } = await import('@/app/actions/terminalsAction');
+        const { sendTerminalData, pollTerminalOutput } = await import('@/app/actions/terminalsAction');
         const result = await sendTerminalData(sessionId, command);
 
         console.log(`[@component:TerminalEmulator] Shell response:`, {
@@ -165,6 +169,12 @@ export function TerminalEmulator({
           if (result.data.stderr) {
             terminal.write(result.data.stderr);
           }
+
+          // For commands that might be long-running, start polling for additional output
+          if (command.trim() && !command.includes('cd ') && !command.includes('ls ') && !command.includes('pwd')) {
+            console.log(`[@component:TerminalEmulator] Starting output polling for potentially long-running command`);
+            startOutputPolling(terminal, pollTerminalOutput);
+          }
         } else if (!result.success) {
           console.error(`[@component:TerminalEmulator] Shell command failed:`, result.error);
           if (showOutput) {
@@ -178,6 +188,68 @@ export function TerminalEmulator({
             `\x1b[31mError: ${error instanceof Error ? error.message : 'Unknown error'}\x1b[0m\r\n`,
           );
         }
+      }
+    };
+
+    // Polling mechanism for long-running commands
+    let pollingInterval: NodeJS.Timeout | null = null;
+    let pollCount = 0;
+    const MAX_POLLS = 120; // Poll for up to 2 minutes (120 * 1 second)
+
+    const startOutputPolling = (terminal: any, pollFunction: any) => {
+      // Clear any existing polling
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+      }
+
+      pollCount = 0;
+      pollingInterval = setInterval(async () => {
+        try {
+          pollCount++;
+          
+          // Stop polling after max attempts
+          if (pollCount > MAX_POLLS) {
+            console.log(`[@component:TerminalEmulator] Stopping output polling after ${MAX_POLLS} attempts`);
+            if (pollingInterval) {
+              clearInterval(pollingInterval);
+              pollingInterval = null;
+            }
+            return;
+          }
+
+          const pollResult = await pollFunction(sessionId, 500);
+          
+          if (pollResult.success && pollResult.data?.hasOutput && pollResult.data.stdout) {
+            console.log(`[@component:TerminalEmulator] Received additional output (poll ${pollCount})`);
+            terminal.write(pollResult.data.stdout);
+          } else if (!pollResult.success) {
+            console.error(`[@component:TerminalEmulator] Polling failed:`, pollResult.error);
+            // Don't stop polling on single failures, but log them
+          }
+
+          // If we get output that looks like a shell prompt, stop polling
+          if (pollResult.data?.stdout && 
+              (pollResult.data.stdout.includes('$ ') || 
+               pollResult.data.stdout.includes('> ') || 
+               pollResult.data.stdout.includes('# '))) {
+            console.log(`[@component:TerminalEmulator] Detected shell prompt, stopping polling`);
+            if (pollingInterval) {
+              clearInterval(pollingInterval);
+              pollingInterval = null;
+            }
+          }
+        } catch (error) {
+          console.error(`[@component:TerminalEmulator] Error during output polling:`, error);
+        }
+      }, 1000); // Poll every 1 second
+    };
+
+    const stopOutputPolling = () => {
+      if (pollingInterval) {
+        console.log(`[@component:TerminalEmulator] Stopping output polling`);
+        clearInterval(pollingInterval);
+        pollingInterval = null;
+        pollCount = 0;
       }
     };
 
@@ -214,6 +286,9 @@ export function TerminalEmulator({
       if (terminalElement) {
         terminalElement.removeEventListener('click', handleFocus);
       }
+
+      // Stop any active polling
+      stopOutputPolling();
 
       if (terminalInstance.current) {
         console.log(`[@component:TerminalEmulator] Disposing terminal`);

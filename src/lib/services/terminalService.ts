@@ -271,8 +271,8 @@ class TerminalService {
         };
       }
 
-      // Read response from shell
-      const readResult = await sshService.readFromShell(session.shellId, 2000);
+      // For long-running commands, use a shorter initial timeout and then poll
+      const readResult = await sshService.readFromShell(session.shellId, 1000);
 
       if (readResult.success) {
         console.debug('[@service:terminal:sendDataToSession] Received shell output', {
@@ -310,6 +310,76 @@ class TerminalService {
         sessionId,
       });
       throw error;
+    }
+  }
+
+  /**
+   * Poll for additional output from a shell session (for long-running commands)
+   */
+  async pollShellOutput(sessionId: string, timeoutMs: number = 500) {
+    console.debug('[@service:terminal:pollShellOutput] Polling for shell output', {
+      sessionId,
+      timeoutMs,
+    });
+
+    const session = this.activeSessions.get(sessionId);
+    if (!session) {
+      return {
+        success: false,
+        error: `Session not found: ${sessionId}`,
+      };
+    }
+
+    if (!session.shellId) {
+      return {
+        success: false,
+        error: `No shell session found for: ${sessionId}`,
+      };
+    }
+
+    try {
+      // Read any additional output with a short timeout
+      const readResult = await sshService.readFromShell(session.shellId, timeoutMs);
+
+      if (readResult.success) {
+        const output = readResult.data?.output || '';
+        
+        console.debug('[@service:terminal:pollShellOutput] Polled shell output', {
+          sessionId,
+          outputLength: output.length,
+          hasOutput: output.length > 0,
+        });
+
+        return {
+          success: true,
+          data: {
+            stdout: output,
+            stderr: '',
+            code: 0,
+            hasOutput: output.length > 0,
+          },
+        };
+      } else {
+        return {
+          success: true,
+          data: {
+            stdout: '',
+            stderr: '',
+            code: 0,
+            hasOutput: false,
+          },
+        };
+      }
+    } catch (error) {
+      console.error('[@service:terminal:pollShellOutput] Error polling shell output', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        sessionId,
+      });
+      
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
     }
   }
 
@@ -422,6 +492,32 @@ export async function sendDataToTerminal(sessionId: string, data: string) {
       sessionId,
     });
     throw new Error('Failed to send data to terminal');
+  }
+}
+
+/**
+ * Poll for additional output from a terminal session (for long-running commands)
+ */
+export async function pollTerminalOutput(sessionId: string, timeoutMs: number = 500) {
+  try {
+    console.debug('[@service:terminal:pollTerminalOutput] Polling terminal output', {
+      sessionId,
+      timeoutMs,
+    });
+
+    const result = await terminalService.pollShellOutput(sessionId, timeoutMs);
+
+    console.debug('[@service:terminal:pollTerminalOutput] Poll completed', { 
+      sessionId,
+      hasOutput: result.data?.hasOutput 
+    });
+    return result;
+  } catch (error) {
+    console.error('[@service:terminal:pollTerminalOutput] Error polling terminal output', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      sessionId,
+    });
+    throw new Error('Failed to poll terminal output');
   }
 }
 

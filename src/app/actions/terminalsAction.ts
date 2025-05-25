@@ -146,3 +146,55 @@ export async function sendTerminalData(sessionId: string, command: string) {
     };
   }
 }
+
+/**
+ * Poll for additional output from a terminal session (for long-running commands)
+ */
+export async function pollTerminalOutput(sessionId: string, timeoutMs: number = 500) {
+  try {
+    // Get current user for auth checks
+    const user = await getUser();
+    if (!user) {
+      return {
+        success: false,
+        error: 'Unauthorized',
+      };
+    }
+
+    console.debug(
+      `[@action:terminalsAction:pollTerminalOutput] Polling output for session ${sessionId}`,
+    );
+
+    // Import the terminal service functions
+    const { pollTerminalOutput } = await import('@/lib/services/terminalService');
+
+    // Poll for additional output
+    const result = await pollTerminalOutput(sessionId, timeoutMs);
+
+    if (result.success) {
+      console.debug(
+        `[@action:terminalsAction:pollTerminalOutput] Poll successful for session ${sessionId}`,
+        { hasOutput: result.data?.hasOutput }
+      );
+      return {
+        success: true,
+        data: result.data,
+      };
+    } else {
+      console.error(
+        `[@action:terminalsAction:pollTerminalOutput] Poll failed for session ${sessionId}:`,
+        result.error,
+      );
+      return {
+        success: false,
+        error: result.error || 'Failed to poll terminal output',
+      };
+    }
+  } catch (error: any) {
+    console.error(`[@action:terminalsAction:pollTerminalOutput] Error polling output:`, error);
+    return {
+      success: false,
+      error: error.message || 'Failed to poll terminal output',
+    };
+  }
+}
