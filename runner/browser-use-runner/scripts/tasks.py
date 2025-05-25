@@ -145,90 +145,132 @@ async def execute_task_server(task: str):
 
 async def cleanup_browser_server():
     """Cleanup browser resources in server mode"""
-    if server_state['browser']:
-        try:
-            update_log("Starting cleanup process...")
-            await server_state['browser'].close()
-            server_state['browser'] = None
-            server_state['is_initialized'] = False
-            update_log("Browser closed successfully")
-            return True, "Browser closed successfully"
-        except Exception as e:
-            error_msg = f"Error during cleanup: {str(e)}"
-            update_log(error_msg)
-            return False, error_msg
-    return True, "No browser instance to clean up"
+    try:
+        update_log("Starting cleanup process...")
+        
+        # Close browser context first
+        if server_state.get('browser_context'):
+            try:
+                await server_state['browser_context'].close()
+            except Exception as e:
+                update_log(f"Error closing browser context: {str(e)}")
+        
+        # Close browser-use browser
+        if server_state.get('browser'):
+            try:
+                await server_state['browser'].close()
+            except Exception as e:
+                update_log(f"Error closing browser: {str(e)}")
+        
+        # Close playwright instance
+        if server_state.get('playwright'):
+            try:
+                await server_state['playwright'].stop()
+            except Exception as e:
+                update_log(f"Error stopping playwright: {str(e)}")
+        
+        # Kill chrome process if it exists
+        if server_state.get('chrome_process'):
+            try:
+                server_state['chrome_process'].terminate()
+                server_state['chrome_process'].wait(timeout=5)
+            except Exception as e:
+                update_log(f"Error terminating chrome process: {str(e)}")
+        
+        # Clear server state
+        server_state['browser'] = None
+        server_state['context'] = None
+        server_state['browser_context'] = None
+        server_state['playwright'] = None
+        server_state['chrome_process'] = None
+        server_state['is_initialized'] = False
+        
+        update_log("Browser closed successfully")
+        return True, "Browser closed successfully"
+        
+    except Exception as e:
+        error_msg = f"Error during cleanup: {str(e)}"
+        update_log(error_msg)
+        return False, error_msg
 
 async def initialize_browser_server():
     """Initialize browser for server mode"""
     try:
         if server_state['is_initialized']:
-            return True, "Browser already initialized"
+            update_log("Browser already initialized during startup")
+            return True, "Browser already initialized and ready"
         
-        update_log("Initializing browser...")
+        update_log("Browser not initialized during startup, initializing now...")
         
-        async with async_playwright() as playwright:
-            # Initialize browser with remote debugging
-            page, playwright_context, playwright_browser, chrome_process = await init_browser_async(
-                playwright, 
-                headless=args.headless, 
-                debug=args.debug, 
-                video_dir='traces', 
-                screenshots=True, 
-                video=True, 
-                source=True, 
-                executable_path=args.executable_path
-            )
-            
-            update_log("Browser initialized successfully")
-            
-            # Create browser-use Browser wrapper with CDP URL
-            browser_config = BrowserConfig(
-                cdp_url='http://localhost:9222',
-                headless=args.headless
-            )
-            browser_use_browser = Browser(config=browser_config)
-            
-            # Set the playwright browser directly to avoid reconnection
-            browser_use_browser._playwright_browser = playwright_browser
-            
-            # Create browser-use BrowserContext with proper config
-            context_config = BrowserContextConfig(
-                window_width=1080,
-                window_height=720,
-                save_recording_path=None,
-                trace_path=None,
-                cookies_file=None,
-                disable_security=False,
-                force_new_context=False  # Use existing context
-            )
-            
-            # Create BrowserContext that wraps the existing browser
-            browser_context = BrowserContext(
-                browser=browser_use_browser, 
-                config=context_config
-            )
-            
-            # Set the existing session to avoid creating a new one
-            from browser_use.browser.context import BrowserSession
-            browser_context.session = BrowserSession(
-                context=playwright_context,
-                cached_state=None
-            )
-            
-            # Set the current pages
-            browser_context.agent_current_page = page
-            browser_context.human_current_page = page
-            
-            # Store in server state
-            server_state['is_initialized'] = True
-            server_state['browser'] = browser_use_browser
-            server_state['context'] = playwright_context
-            server_state['browser_context'] = browser_context
-            
-            update_log("Browser context created successfully")
-            return True, "Browser initialized successfully"
-            
+        # Import playwright and create instance (don't use async context manager)
+        from playwright.async_api import async_playwright
+        
+        # Create playwright instance that stays alive
+        playwright = await async_playwright().start()
+        server_state['playwright'] = playwright  # Keep reference to prevent cleanup
+        
+        # Initialize browser with remote debugging
+        page, playwright_context, playwright_browser, chrome_process = await init_browser_async(
+            playwright, 
+            headless=args.headless, 
+            debug=args.debug, 
+            video_dir='traces', 
+            screenshots=True, 
+            video=True, 
+            source=True, 
+            executable_path=args.executable_path
+        )
+        
+        update_log("Browser initialized successfully")
+        
+        # Create browser-use Browser wrapper with CDP URL
+        browser_config = BrowserConfig(
+            cdp_url='http://localhost:9222',
+            headless=args.headless
+        )
+        browser_use_browser = Browser(config=browser_config)
+        
+        # Set the playwright browser directly to avoid reconnection
+        browser_use_browser._playwright_browser = playwright_browser
+        
+        # Create browser-use BrowserContext with proper config
+        context_config = BrowserContextConfig(
+            window_width=1080,
+            window_height=720,
+            save_recording_path=None,
+            trace_path=None,
+            cookies_file=None,
+            disable_security=False,
+            force_new_context=False  # Use existing context
+        )
+        
+        # Create BrowserContext that wraps the existing browser
+        browser_context = BrowserContext(
+            browser=browser_use_browser, 
+            config=context_config
+        )
+        
+        # Set the existing session to avoid creating a new one
+        from browser_use.browser.context import BrowserSession
+        browser_context.session = BrowserSession(
+            context=playwright_context,
+            cached_state=None
+        )
+        
+        # Set the current pages
+        browser_context.agent_current_page = page
+        browser_context.human_current_page = page
+        
+        # Store in server state
+        server_state['is_initialized'] = True
+        server_state['browser'] = browser_use_browser
+        server_state['context'] = playwright_context
+        server_state['browser_context'] = browser_context
+        server_state['chrome_process'] = chrome_process
+        
+        update_log("Browser context created successfully")
+        return True, "Browser initialized successfully"
+        
     except Exception as e:
         error_msg = f"Error initializing browser: {str(e)}"
         update_log(error_msg)
@@ -471,84 +513,93 @@ async def main():
     trace_path = os.path.join(os.getcwd(), trace_folder)
     os.makedirs(trace_path, exist_ok=True)
     
-    result = False
-    page = None
-    context = None
-    browser = None
-    chrome_process = None
-    
+    # Initialize browser during startup
     try:
-        async with async_playwright() as playwright:
-            # Initialize browser with remote debugging
-            page, playwright_context, playwright_browser, chrome_process = await init_browser_async(
-                playwright, 
-                headless=args.headless, 
-                debug=args.debug, 
-                video_dir=trace_folder, 
-                screenshots=True, 
-                video=True, 
-                source=True, 
-                executable_path=args.executable_path
-            )
-            
-            # Take a screenshot
-            timestamp = time.strftime("%Y%m%d-%H%M%S")
-            screenshot_path = os.path.join(trace_path, f"youtube_{timestamp}.png")
-            await page.screenshot(path=screenshot_path, full_page=True, timeout=20000)
-            print(f"Screenshot saved to: {screenshot_path}")
-            print("Browser automation ready to execute task")
-            
-            # Create browser-use Browser wrapper with CDP URL
-            from browser_use import Browser, BrowserConfig
-            browser_config = BrowserConfig(
-                cdp_url='http://localhost:9222',
-                headless=args.headless
-            )
-            browser_use_browser = Browser(config=browser_config)
-            
-            # Set the playwright browser directly to avoid reconnection
-            browser_use_browser._playwright_browser = playwright_browser
-            
-            # Create browser-use BrowserContext with proper config
-            context_config = BrowserContextConfig(
-                window_width=1080,
-                window_height=720,
-                save_recording_path=None,
-                trace_path=None,
-                cookies_file=None,
-                disable_security=False,
-                force_new_context=False  # Use existing context
-            )
-            
-            # Create BrowserContext that wraps the existing browser
-            browser_context = BrowserContext(
-                browser=browser_use_browser, 
-                config=context_config
-            )
-            
-            # Set the existing session to avoid creating a new one
-            from browser_use.browser.context import BrowserSession
-            browser_context.session = BrowserSession(
-                context=playwright_context,
-                cached_state=None
-            )
-            
-            # Set the current pages
-            browser_context.agent_current_page = page
-            browser_context.human_current_page = page
-            
-            # Store in server state
-            server_state['is_initialized'] = True
-            server_state['browser'] = browser_use_browser
-            server_state['context'] = playwright_context
-            server_state['browser_context'] = browser_context
-            
-            if task:
-                await execute_task_server(task)
-            result = True
-            return True
+        print("Initializing browser during startup...")
+        
+        # Import playwright and create instance (don't use async context manager)
+        from playwright.async_api import async_playwright
+        
+        # Create playwright instance that stays alive
+        playwright = await async_playwright().start()
+        server_state['playwright'] = playwright  # Keep reference to prevent cleanup
+        
+        # Initialize browser with remote debugging
+        page, playwright_context, playwright_browser, chrome_process = await init_browser_async(
+            playwright, 
+            headless=args.headless, 
+            debug=args.debug, 
+            video_dir=trace_folder, 
+            screenshots=True, 
+            video=True, 
+            source=True, 
+            executable_path=args.executable_path
+        )
+        
+        # Take a screenshot
+        timestamp = time.strftime("%Y%m%d-%H%M%S")
+        screenshot_path = os.path.join(trace_path, f"startup_{timestamp}.png")
+        await page.screenshot(path=screenshot_path, full_page=True, timeout=20000)
+        print(f"Screenshot saved to: {screenshot_path}")
+        
+        print("Browser initialized successfully")
+        
+        # Create browser-use Browser wrapper with CDP URL
+        browser_config = BrowserConfig(
+            cdp_url='http://localhost:9222',
+            headless=args.headless
+        )
+        browser_use_browser = Browser(config=browser_config)
+        
+        # Set the playwright browser directly to avoid reconnection
+        browser_use_browser._playwright_browser = playwright_browser
+        
+        # Create browser-use BrowserContext with proper config
+        context_config = BrowserContextConfig(
+            window_width=1080,
+            window_height=720,
+            save_recording_path=None,
+            trace_path=None,
+            cookies_file=None,
+            disable_security=False,
+            force_new_context=False  # Use existing context
+        )
+        
+        # Create BrowserContext that wraps the existing browser
+        browser_context = BrowserContext(
+            browser=browser_use_browser, 
+            config=context_config
+        )
+        
+        # Set the existing session to avoid creating a new one
+        from browser_use.browser.context import BrowserSession
+        browser_context.session = BrowserSession(
+            context=playwright_context,
+            cached_state=None
+        )
+        
+        # Set the current pages
+        browser_context.agent_current_page = page
+        browser_context.human_current_page = page
+        
+        # Store in server state
+        server_state['is_initialized'] = True
+        server_state['browser'] = browser_use_browser
+        server_state['context'] = playwright_context
+        server_state['browser_context'] = browser_context
+        server_state['chrome_process'] = chrome_process
+        
+        print("Browser context created successfully - ready for tasks!")
+        
+        # Execute initial task if provided
+        if task:
+            print(f"Executing initial task: {task}")
+            await execute_task_server(task)
+        
+        return True
+        
     except Exception as e:
-        print(f"Test Failed, Error during browser automation: {str(e)}")
+        print(f"Failed to initialize browser during startup: {str(e)}")
         return False
 
 if __name__ == '__main__':
