@@ -1,0 +1,43 @@
+{
+  "name": "YouTube",
+  "description": "Cookies to bypass YouTube consent banners and cookie notices",
+  "domains": [".youtube.com", ".google.com"],
+  "cookies": [
+    {
+      "name": "CONSENT",
+      "value": "YES+cb.20210328-17-p0.en+FX+1",
+      "domain": ".youtube.com",
+      "path": "/",
+      "secure": true,
+      "httpOnly": false,
+      "description": "YouTube consent given"
+    },
+    {
+      "name": "SOCS",
+      "value": "CAESEwgDEgk0ODE3Nzk3MjQaAmVuIAEaBgiA_LyaBg",
+      "domain": ".youtube.com",
+      "path": "/",
+      "secure": true,
+      "httpOnly": false,
+      "description": "YouTube cookie settings"
+    },
+    {
+      "name": "__Secure-YEC",
+      "value": "CgtaWVJzVjBsVFVnOCiB8-2oBjIKCgJGUhIEGgAgVw%3D%3D",
+      "domain": ".youtube.com",
+      "path": "/",
+      "secure": true,
+      "httpOnly": false,
+      "description": "YouTube secure cookie"
+    },
+    {
+      "name": "CONSENT",
+      "value": "YES+cb.20210328-17-p0.en+FX+1",
+      "domain": ".google.com",
+      "path": "/",
+      "secure": true,
+      "httpOnly": false,
+      "description": "Google consent (YouTube parent company)"
+    }
+  ]
+} 

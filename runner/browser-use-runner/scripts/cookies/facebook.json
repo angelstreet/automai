@@ -1,0 +1,25 @@
+{
+  "name": "Facebook",
+  "description": "Cookies to bypass Facebook consent banners and cookie notices",
+  "domains": [".facebook.com", ".meta.com"],
+  "cookies": [
+    {
+      "name": "cookie_consent",
+      "value": "accepted",
+      "domain": ".facebook.com",
+      "path": "/",
+      "secure": true,
+      "httpOnly": false,
+      "description": "Facebook cookie consent"
+    },
+    {
+      "name": "locale",
+      "value": "en_US",
+      "domain": ".facebook.com",
+      "path": "/",
+      "secure": false,
+      "httpOnly": false,
+      "description": "Facebook locale setting"
+    }
+  ]
+} 

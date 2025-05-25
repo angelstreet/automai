@@ -9,7 +9,7 @@ import json
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from browser_use import BrowserConfig, Browser, Agent, BrowserContextConfig
-from browseruseUtils import inject_youtube_cookies
+from cookieManager import inject_multiple_site_cookies
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.dirname(os.getcwd()))
@@ -116,7 +116,7 @@ async def main():
         browser_context = await browser.new_context()
         
         # Inject YouTube cookies to bypass consent banners
-        await inject_youtube_cookies(browser_context)
+        await inject_multiple_site_cookies(browser_context, ['youtube'])
         
         # Update agent to use the context with cookies
         agent.browser_context = browser_context

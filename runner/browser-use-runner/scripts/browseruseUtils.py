@@ -14,61 +14,87 @@ from datetime import datetime
 from typing import Callable, Dict, Optional
 from langchain_core.language_models.chat_models import BaseChatModel
 
-# Function to inject YouTube cookies to bypass consent banners
+# Import the new cookie manager
+from cookieManager import CookieManager, inject_youtube_cookies as legacy_inject_youtube_cookies
+
+# Function to inject YouTube cookies to bypass consent banners (updated to use CookieManager)
 async def inject_youtube_cookies(browser_context):
     """
     Inject cookies to bypass YouTube consent banners
+    Uses the new CookieManager for better maintainability
+    """
+    await inject_site_cookies(browser_context, 'youtube')
+
+# New generic function to inject cookies for any site
+async def inject_site_cookies(browser_context, site_name: str):
+    """
+    Inject cookies for a specific site using the CookieManager.
+    
+    Args:
+        browser_context: Browser context
+        site_name: Name of the site (e.g., 'youtube', 'google', 'facebook')
     """
     try:
-        print("Injecting YouTube cookies to bypass consent banners...")
+        print(f"Injecting {site_name} cookies to bypass consent banners...")
         
-        # Ensure the session is initialized
-        if hasattr(browser_context, 'get_session'):
-            session = await browser_context.get_session()
-            playwright_context = session.context
-        else:
-            playwright_context = browser_context
-        # YouTube consent cookies - these indicate user has already accepted cookies
-        youtube_cookies = [
-            {
-                "name": "CONSENT",
-                "value": "YES+cb.20210328-17-p0.en+FX+1",  # Consent given
-                "domain": ".youtube.com",
-                "path": "/",
-                "secure": True
-            },
-            {
-                "name": "SOCS",
-                "value": "CAESEwgDEgk0ODE3Nzk3MjQaAmVuIAEaBgiA_LyaBg",  # Cookie settings
-                "domain": ".youtube.com", 
-                "path": "/",
-                "secure": True
-            },
-            {
-                "name": "__Secure-YEC",
-                "value": "CgtaWVJzVjBsVFVnOCiB8-2oBjIKCgJGUhIEGgAgVw%3D%3D",
-                "domain": ".youtube.com",
-                "path": "/",
-                "secure": True
-            },
-            # Google consent cookies (YouTube is owned by Google)
-            {
-                "name": "CONSENT",
-                "value": "YES+cb.20210328-17-p0.en+FX+1",
-                "domain": ".google.com",
-                "path": "/",
-                "secure": True
-            }
-        ]
-        
-        # Access the underlying Playwright context and use add_cookies
-        
-        await playwright_context.add_cookies(youtube_cookies)
-        print(f"Successfully injected {len(youtube_cookies)} YouTube consent cookies")
+        cookie_manager = CookieManager()
+        await cookie_manager.inject_cookies_for_site(browser_context, site_name)
         
     except Exception as e:
-        print(f"Error injecting YouTube cookies: {str(e)}")
+        print(f"Error injecting {site_name} cookies: {str(e)}")
+        raise
 
+# New function to inject cookies for multiple sites
+async def inject_multiple_cookies(browser_context, sites: list):
+    """
+    Inject cookies for multiple sites.
+    
+    Args:
+        browser_context: Browser context
+        sites: List of site names (e.g., ['youtube', 'google'])
+    """
+    try:
+        print(f"Injecting cookies for sites: {', '.join(sites)}")
+        
+        cookie_manager = CookieManager()
+        await cookie_manager.inject_cookies(browser_context, sites)
+        
+    except Exception as e:
+        print(f"Error injecting cookies for multiple sites: {str(e)}")
+        raise
+
+# Function to list available cookie configurations
+def get_available_cookie_configs():
+    """
+    Get list of available cookie configurations.
+    
+    Returns:
+        List of available configuration names
+    """
+    try:
+        cookie_manager = CookieManager()
+        return cookie_manager.get_available_configs()
+    except Exception as e:
+        print(f"Error getting available cookie configs: {str(e)}")
+        return []
+
+# Function to get information about a cookie configuration
+def get_cookie_config_info(config_name: str):
+    """
+    Get information about a specific cookie configuration.
+    
+    Args:
+        config_name: Name of the configuration
+        
+    Returns:
+        Dictionary with config info or None if not found
+    """
+    try:
+        cookie_manager = CookieManager()
+        return cookie_manager.get_config_info(config_name)
+    except Exception as e:
+        print(f"Error getting cookie config info: {str(e)}")
+        return None
 
 class CustomController(Controller):
     def __init__(self, screenshot_folder=None, **kwargs):

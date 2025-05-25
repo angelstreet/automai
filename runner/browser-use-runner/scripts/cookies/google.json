@@ -1,0 +1,34 @@
+{
+  "name": "Google",
+  "description": "Cookies to bypass Google consent banners and cookie notices",
+  "domains": [".google.com", ".google.co.uk", ".google.fr", ".google.de"],
+  "cookies": [
+    {
+      "name": "CONSENT",
+      "value": "YES+cb.20210328-17-p0.en+FX+1",
+      "domain": ".google.com",
+      "path": "/",
+      "secure": true,
+      "httpOnly": false,
+      "description": "Google consent given"
+    },
+    {
+      "name": "SOCS",
+      "value": "CAESEwgDEgk0ODE3Nzk3MjQaAmVuIAEaBgiA_LyaBg",
+      "domain": ".google.com",
+      "path": "/",
+      "secure": true,
+      "httpOnly": false,
+      "description": "Google cookie settings"
+    },
+    {
+      "name": "NID",
+      "value": "511=example_nid_value_for_google_services",
+      "domain": ".google.com",
+      "path": "/",
+      "secure": true,
+      "httpOnly": true,
+      "description": "Google services identifier"
+    }
+  ]
+} 

@@ -18,7 +18,7 @@ from utils import kill_chrome_instances, clean_user_data_dir
 
 from langchain_openai import ChatOpenAI
 from browser_use import BrowserConfig, Browser, Agent, BrowserContextConfig
-from browseruseUtils import inject_youtube_cookies
+from cookieManager import CookieManager
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.dirname(os.getcwd()))
@@ -57,6 +57,20 @@ parser.add_argument('--debug', action='store_true', help='Enable debug mode')
 parser.add_argument('--executable_path', type=str, help='Path to browser executable')
 parser.add_argument('--server', action='store_true', help='Start server mode instead of running task')
 args, _ = parser.parse_known_args()
+
+# Generic function to inject cookies for multiple sites
+async def inject_cookies_for_sites(context, sites):
+    """Inject cookies for multiple sites using CookieManager"""
+    try:
+        if not sites:
+            print("No cookie sites specified")
+            return
+            
+        cookie_manager = CookieManager()
+        await cookie_manager.inject_cookies(context, sites)
+        print(f"Injected cookies for sites: {', '.join(sites)}")
+    except Exception as e:
+        print(f"Error injecting cookies for sites {sites}: {str(e)}")
 
 # Global variables for server mode
 app = None
@@ -353,7 +367,10 @@ async def init_browser_async(playwright, headless=False, debug=True, video_dir=N
     print('Connected to Chrome instance via CDP on port 9222')
     
     context = browser.contexts[0]
-    await inject_youtube_cookies(context)
+    
+    # Inject YouTube cookies to bypass consent banners
+    await inject_cookies_for_sites(context, ['youtube'])
+    
     page = context.pages[0]
     
     # Start tracing if requested
