@@ -1,14 +1,8 @@
-import { getTranslations } from 'next-intl/server';
-import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
+import VirtualpytestContent from './_components/VirtualpytestContent';
 
 export default async function VirtualPyTestPage() {
-  const t = await getTranslations('virtualpytest');
-
-  return (
-    <FeaturePageContainer
-      title={t('title')}
-      description={t('desc')}
-    >
-    </FeaturePageContainer>
+  
+  return ( 
+      <VirtualpytestContent />
   );
 }

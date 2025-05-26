@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getTranslations } from 'next-intl/server';
 
 interface VirtualPyTestContentProps {
   pageMetadata?: any;
@@ -129,24 +128,6 @@ export default function VirtualPyTestContent({ pageMetadata }: VirtualPyTestCont
 
   return (
     <div className="w-full h-full">
-      <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-        <h2 className="text-lg font-semibold text-green-800 mb-2">
-          VirtualPyTest Framework
-        </h2>
-        <p className="text-green-700 text-sm">
-          Comprehensive test automation framework with device management and execution engine.
-        </p>
-        <div className="flex items-center space-x-4 mt-2">
-          <div className="flex items-center space-x-1">
-            <div className="w-2 h-2 rounded-full bg-green-500"></div>
-            <span className="text-xs text-green-600">API Connected</span>
-          </div>
-          <div className="flex items-center space-x-1">
-            <div className="w-2 h-2 rounded-full bg-green-500"></div>
-            <span className="text-xs text-green-600">Frontend Connected</span>
-          </div>
-        </div>
-      </div>
       
       <div className="w-full border border-gray-200 rounded-lg overflow-hidden shadow-sm bg-white">
         <iframe
@@ -161,12 +142,6 @@ export default function VirtualPyTestContent({ pageMetadata }: VirtualPyTestCont
       
       <div className="mt-4 text-xs text-gray-500 flex justify-between items-center">
         <span>VirtualPyTest v1.0.0 - Integrated via iframe</span>
-        <button 
-          onClick={checkServerStatus}
-          className="text-blue-600 hover:text-blue-800 hover:underline"
-        >
-          Check Status
-        </button>
       </div>
     </div>
   );

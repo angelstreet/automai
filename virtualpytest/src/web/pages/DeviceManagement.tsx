@@ -37,7 +37,7 @@ import {
   Add as AddIcon,
   Devices as DeviceIcon,
   Settings as ControllerIcon,
-  Environment as ProfileIcon,
+  Public as ProfileIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   Circle as StatusIcon,
