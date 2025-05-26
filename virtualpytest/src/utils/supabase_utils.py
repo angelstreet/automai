@@ -22,7 +22,16 @@ def save_test_case(test_case: Dict, team_id: str, creator_id: str = None) -> Non
             'start_node': test_case['start_node'],
             'steps': json.dumps(test_case.get('steps', [])),
             'team_id': team_id,
-            'creator_id': creator_id
+            'creator_id': creator_id,
+            # New Phase 2 fields
+            'device_id': test_case.get('device_id'),
+            'environment_profile_id': test_case.get('environment_profile_id'),
+            'verification_conditions': json.dumps(test_case.get('verification_conditions', [])),
+            'expected_results': json.dumps(test_case.get('expected_results', {})),
+            'execution_config': json.dumps(test_case.get('execution_config', {})),
+            'tags': test_case.get('tags', []),
+            'priority': test_case.get('priority', 1),
+            'estimated_duration': test_case.get('estimated_duration', 60)
         }).execute()
     except Exception:
         # Update existing test case
@@ -31,7 +40,16 @@ def save_test_case(test_case: Dict, team_id: str, creator_id: str = None) -> Non
             'test_type': test_case['test_type'],
             'start_node': test_case['start_node'],
             'steps': json.dumps(test_case.get('steps', [])),
-            'updated_at': datetime.now().isoformat()
+            'updated_at': datetime.now().isoformat(),
+            # New Phase 2 fields
+            'device_id': test_case.get('device_id'),
+            'environment_profile_id': test_case.get('environment_profile_id'),
+            'verification_conditions': json.dumps(test_case.get('verification_conditions', [])),
+            'expected_results': json.dumps(test_case.get('expected_results', {})),
+            'execution_config': json.dumps(test_case.get('execution_config', {})),
+            'tags': test_case.get('tags', []),
+            'priority': test_case.get('priority', 1),
+            'estimated_duration': test_case.get('estimated_duration', 60)
         }).eq('test_id', test_case['test_id']).eq('team_id', team_id).execute()
 
 def save_tree(tree: Dict, team_id: str, creator_id: str = None) -> None:
@@ -99,12 +117,17 @@ def save_result(test_id: str, name: str, test_type: str, node: str, outcome: str
 def get_test_case(test_id: str, team_id: str) -> Optional[Dict]:
     """Retrieve test case by test_id from Supabase."""
     result = supabase.table('test_cases').select(
-        'test_id', 'name', 'test_type', 'start_node', 'steps', 'created_at', 'updated_at'
+        'test_id', 'name', 'test_type', 'start_node', 'steps', 'created_at', 'updated_at',
+        'device_id', 'environment_profile_id', 'verification_conditions', 'expected_results',
+        'execution_config', 'tags', 'priority', 'estimated_duration'
     ).eq('test_id', test_id).eq('team_id', team_id).execute()
     
     if result.data:
         test_case = dict(result.data[0])
         test_case['steps'] = json.loads(test_case['steps']) if test_case['steps'] else []
+        test_case['verification_conditions'] = json.loads(test_case['verification_conditions']) if test_case['verification_conditions'] else []
+        test_case['expected_results'] = json.loads(test_case['expected_results']) if test_case['expected_results'] else {}
+        test_case['execution_config'] = json.loads(test_case['execution_config']) if test_case['execution_config'] else {}
         return test_case
     return None
 
@@ -136,13 +159,18 @@ def get_campaign(campaign_id: str, team_id: str) -> Optional[Dict]:
 def get_all_test_cases(team_id: str) -> List[Dict]:
     """Retrieve all test cases for a team from Supabase."""
     result = supabase.table('test_cases').select(
-        'test_id', 'name', 'test_type', 'start_node', 'steps', 'created_at', 'updated_at'
+        'test_id', 'name', 'test_type', 'start_node', 'steps', 'created_at', 'updated_at',
+        'device_id', 'environment_profile_id', 'verification_conditions', 'expected_results',
+        'execution_config', 'tags', 'priority', 'estimated_duration'
     ).eq('team_id', team_id).execute()
     
     test_cases = []
     for test_case in result.data:
         test_case = dict(test_case)
         test_case['steps'] = json.loads(test_case['steps']) if test_case['steps'] else []
+        test_case['verification_conditions'] = json.loads(test_case['verification_conditions']) if test_case['verification_conditions'] else []
+        test_case['expected_results'] = json.loads(test_case['expected_results']) if test_case['expected_results'] else {}
+        test_case['execution_config'] = json.loads(test_case['execution_config']) if test_case['execution_config'] else {}
         test_cases.append(test_case)
     return test_cases
 
@@ -218,4 +246,158 @@ def get_failure_rates(team_id: str) -> Dict:
             'passed_tests': 0,
             'failed_tests': 0,
             'failure_rate': 0
-        } 
+        }
+
+# =====================================================
+# DEVICE MANAGEMENT FUNCTIONS
+# =====================================================
+
+def save_device(device: Dict, team_id: str, creator_id: str = None) -> None:
+    """Save device to Supabase devices table."""
+    device_id = device.get('id', str(uuid4()))
+    
+    try:
+        supabase.table('devices').insert({
+            'id': device_id,
+            'name': device['name'],
+            'type': device['type'],
+            'model': device.get('model', ''),
+            'version': device.get('version', ''),
+            'environment': device.get('environment', 'dev'),
+            'connection_config': device.get('connection_config', {}),
+            'status': device.get('status', 'offline'),
+            'team_id': team_id
+        }).execute()
+    except Exception:
+        # Update existing device
+        supabase.table('devices').update({
+            'name': device['name'],
+            'type': device['type'],
+            'model': device.get('model', ''),
+            'version': device.get('version', ''),
+            'environment': device.get('environment', 'dev'),
+            'connection_config': device.get('connection_config', {}),
+            'status': device.get('status', 'offline'),
+            'updated_at': datetime.now().isoformat()
+        }).eq('id', device_id).eq('team_id', team_id).execute()
+
+def save_controller(controller: Dict, team_id: str, creator_id: str = None) -> None:
+    """Save controller to Supabase controllers table."""
+    controller_id = controller.get('id', str(uuid4()))
+    
+    try:
+        supabase.table('controllers').insert({
+            'id': controller_id,
+            'name': controller['name'],
+            'type': controller['type'],
+            'config': controller.get('config', {}),
+            'device_id': controller.get('device_id'),
+            'team_id': team_id
+        }).execute()
+    except Exception:
+        # Update existing controller
+        supabase.table('controllers').update({
+            'name': controller['name'],
+            'type': controller['type'],
+            'config': controller.get('config', {}),
+            'device_id': controller.get('device_id'),
+            'updated_at': datetime.now().isoformat()
+        }).eq('id', controller_id).eq('team_id', team_id).execute()
+
+def save_environment_profile(profile: Dict, team_id: str, creator_id: str = None) -> None:
+    """Save environment profile to Supabase environment_profiles table."""
+    profile_id = profile.get('id', str(uuid4()))
+    
+    try:
+        supabase.table('environment_profiles').insert({
+            'id': profile_id,
+            'name': profile['name'],
+            'device_id': profile['device_id'],
+            'remote_controller_id': profile.get('remote_controller_id'),
+            'av_controller_id': profile.get('av_controller_id'),
+            'verification_controller_id': profile.get('verification_controller_id'),
+            'team_id': team_id
+        }).execute()
+    except Exception:
+        # Update existing profile
+        supabase.table('environment_profiles').update({
+            'name': profile['name'],
+            'device_id': profile['device_id'],
+            'remote_controller_id': profile.get('remote_controller_id'),
+            'av_controller_id': profile.get('av_controller_id'),
+            'verification_controller_id': profile.get('verification_controller_id'),
+            'updated_at': datetime.now().isoformat()
+        }).eq('id', profile_id).eq('team_id', team_id).execute()
+
+def get_device(device_id: str, team_id: str) -> Optional[Dict]:
+    """Retrieve device by device_id from Supabase."""
+    result = supabase.table('devices').select(
+        'id', 'name', 'type', 'model', 'version', 'environment', 
+        'connection_config', 'status', 'created_at', 'updated_at'
+    ).eq('id', device_id).eq('team_id', team_id).execute()
+    
+    if result.data:
+        return dict(result.data[0])
+    return None
+
+def get_controller(controller_id: str, team_id: str) -> Optional[Dict]:
+    """Retrieve controller by controller_id from Supabase."""
+    result = supabase.table('controllers').select(
+        'id', 'name', 'type', 'config', 'device_id', 'created_at', 'updated_at'
+    ).eq('id', controller_id).eq('team_id', team_id).execute()
+    
+    if result.data:
+        return dict(result.data[0])
+    return None
+
+def get_environment_profile(profile_id: str, team_id: str) -> Optional[Dict]:
+    """Retrieve environment profile by profile_id from Supabase."""
+    result = supabase.table('environment_profiles').select(
+        'id', 'name', 'device_id', 'remote_controller_id', 
+        'av_controller_id', 'verification_controller_id', 'created_at', 'updated_at'
+    ).eq('id', profile_id).eq('team_id', team_id).execute()
+    
+    if result.data:
+        return dict(result.data[0])
+    return None
+
+def get_all_devices(team_id: str) -> List[Dict]:
+    """Retrieve all devices for a team from Supabase."""
+    result = supabase.table('devices').select(
+        'id', 'name', 'type', 'model', 'version', 'environment', 
+        'connection_config', 'status', 'created_at', 'updated_at'
+    ).eq('team_id', team_id).order('created_at', desc=True).execute()
+    
+    return [dict(device) for device in result.data]
+
+def get_all_controllers(team_id: str) -> List[Dict]:
+    """Retrieve all controllers for a team from Supabase."""
+    result = supabase.table('controllers').select(
+        'id', 'name', 'type', 'config', 'device_id', 'created_at', 'updated_at'
+    ).eq('team_id', team_id).order('created_at', desc=True).execute()
+    
+    return [dict(controller) for controller in result.data]
+
+def get_all_environment_profiles(team_id: str) -> List[Dict]:
+    """Retrieve all environment profiles for a team from Supabase."""
+    result = supabase.table('environment_profiles').select(
+        'id', 'name', 'device_id', 'remote_controller_id', 
+        'av_controller_id', 'verification_controller_id', 'created_at', 'updated_at'
+    ).eq('team_id', team_id).order('created_at', desc=True).execute()
+    
+    return [dict(profile) for profile in result.data]
+
+def delete_device(device_id: str, team_id: str) -> bool:
+    """Delete device from Supabase."""
+    result = supabase.table('devices').delete().eq('id', device_id).eq('team_id', team_id).execute()
+    return len(result.data) > 0
+
+def delete_controller(controller_id: str, team_id: str) -> bool:
+    """Delete controller from Supabase."""
+    result = supabase.table('controllers').delete().eq('id', controller_id).eq('team_id', team_id).execute()
+    return len(result.data) > 0
+
+def delete_environment_profile(profile_id: str, team_id: str) -> bool:
+    """Delete environment profile from Supabase."""
+    result = supabase.table('environment_profiles').delete().eq('id', profile_id).eq('team_id', team_id).execute()
+    return len(result.data) > 0 

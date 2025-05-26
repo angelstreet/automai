@@ -16,7 +16,11 @@ try:
         save_test_case, get_test_case, get_all_test_cases, delete_test_case,
         save_tree, get_tree, get_all_trees, delete_tree,
         save_campaign, get_campaign, get_all_campaigns, delete_campaign,
-        save_result, get_failure_rates, supabase
+        save_result, get_failure_rates, supabase,
+        # Device management functions
+        save_device, get_device, get_all_devices, delete_device,
+        save_controller, get_controller, get_all_controllers, delete_controller,
+        save_environment_profile, get_environment_profile, get_all_environment_profiles, delete_environment_profile
     )
     # Test the connection by checking if supabase client is available
     if supabase:
@@ -204,6 +208,157 @@ def campaign(campaign_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# =====================================================
+# DEVICE MANAGEMENT ENDPOINTS
+# =====================================================
+
+@app.route('/api/devices', methods=['GET', 'POST'])
+def devices():
+    """Device management endpoint"""
+    error = check_supabase()
+    if error:
+        return error
+        
+    team_id = get_team_id()
+    user_id = get_user_id()
+    
+    try:
+        if request.method == 'GET':
+            devices = get_all_devices(team_id)
+            return jsonify(devices)
+        elif request.method == 'POST':
+            device = request.json
+            save_device(device, team_id, user_id)
+            return jsonify({'status': 'success', 'device_id': device.get('id')})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/devices/<device_id>', methods=['GET', 'PUT', 'DELETE'])
+def device(device_id):
+    """Individual device management endpoint"""
+    error = check_supabase()
+    if error:
+        return error
+        
+    team_id = get_team_id()
+    user_id = get_user_id()
+    
+    try:
+        if request.method == 'GET':
+            device = get_device(device_id, team_id)
+            return jsonify(device if device else {})
+        elif request.method == 'PUT':
+            device = request.json
+            device['id'] = device_id
+            save_device(device, team_id, user_id)
+            return jsonify({'status': 'success'})
+        elif request.method == 'DELETE':
+            success = delete_device(device_id, team_id)
+            if success:
+                return jsonify({'status': 'success'})
+            else:
+                return jsonify({'error': 'Device not found'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/controllers', methods=['GET', 'POST'])
+def controllers():
+    """Controller management endpoint"""
+    error = check_supabase()
+    if error:
+        return error
+        
+    team_id = get_team_id()
+    user_id = get_user_id()
+    
+    try:
+        if request.method == 'GET':
+            controllers = get_all_controllers(team_id)
+            return jsonify(controllers)
+        elif request.method == 'POST':
+            controller = request.json
+            save_controller(controller, team_id, user_id)
+            return jsonify({'status': 'success', 'controller_id': controller.get('id')})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/controllers/<controller_id>', methods=['GET', 'PUT', 'DELETE'])
+def controller(controller_id):
+    """Individual controller management endpoint"""
+    error = check_supabase()
+    if error:
+        return error
+        
+    team_id = get_team_id()
+    user_id = get_user_id()
+    
+    try:
+        if request.method == 'GET':
+            controller = get_controller(controller_id, team_id)
+            return jsonify(controller if controller else {})
+        elif request.method == 'PUT':
+            controller = request.json
+            controller['id'] = controller_id
+            save_controller(controller, team_id, user_id)
+            return jsonify({'status': 'success'})
+        elif request.method == 'DELETE':
+            success = delete_controller(controller_id, team_id)
+            if success:
+                return jsonify({'status': 'success'})
+            else:
+                return jsonify({'error': 'Controller not found'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/environment-profiles', methods=['GET', 'POST'])
+def environment_profiles():
+    """Environment profile management endpoint"""
+    error = check_supabase()
+    if error:
+        return error
+        
+    team_id = get_team_id()
+    user_id = get_user_id()
+    
+    try:
+        if request.method == 'GET':
+            profiles = get_all_environment_profiles(team_id)
+            return jsonify(profiles)
+        elif request.method == 'POST':
+            profile = request.json
+            save_environment_profile(profile, team_id, user_id)
+            return jsonify({'status': 'success', 'profile_id': profile.get('id')})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/environment-profiles/<profile_id>', methods=['GET', 'PUT', 'DELETE'])
+def environment_profile(profile_id):
+    """Individual environment profile management endpoint"""
+    error = check_supabase()
+    if error:
+        return error
+        
+    team_id = get_team_id()
+    user_id = get_user_id()
+    
+    try:
+        if request.method == 'GET':
+            profile = get_environment_profile(profile_id, team_id)
+            return jsonify(profile if profile else {})
+        elif request.method == 'PUT':
+            profile = request.json
+            profile['id'] = profile_id
+            save_environment_profile(profile, team_id, user_id)
+            return jsonify({'status': 'success'})
+        elif request.method == 'DELETE':
+            success = delete_environment_profile(profile_id, team_id)
+            if success:
+                return jsonify({'status': 'success'})
+            else:
+                return jsonify({'error': 'Environment profile not found'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/stats', methods=['GET'])
 def stats():
     """Get statistics for the dashboard"""
@@ -217,15 +372,22 @@ def stats():
         test_cases = get_all_test_cases(team_id)
         trees = get_all_trees(team_id)
         campaigns = get_all_campaigns(team_id)
+        devices = get_all_devices(team_id)
+        controllers = get_all_controllers(team_id)
+        environment_profiles = get_all_environment_profiles(team_id)
         failure_rates = get_failure_rates(team_id)
         
         return jsonify({
             'test_cases_count': len(test_cases),
             'trees_count': len(trees),
             'campaigns_count': len(campaigns),
+            'devices_count': len(devices),
+            'controllers_count': len(controllers),
+            'environment_profiles_count': len(environment_profiles),
             'failure_rates': failure_rates,
             'recent_test_cases': test_cases[:5],  # Last 5 test cases
-            'recent_campaigns': campaigns[:5]     # Last 5 campaigns
+            'recent_campaigns': campaigns[:5],    # Last 5 campaigns
+            'recent_devices': devices[:5]         # Last 5 devices
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500

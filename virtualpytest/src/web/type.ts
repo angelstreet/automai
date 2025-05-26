@@ -11,6 +11,15 @@ export interface TestCase {
         conditions: { type: string; condition: string; timeout: number }[];
       };
     }[];
+    // New fields for Phase 2 device integration
+    device_id?: string;
+    environment_profile_id?: string;
+    verification_conditions?: VerificationCondition[];
+    expected_results?: { [key: string]: any };
+    execution_config?: { [key: string]: any };
+    tags?: string[];
+    priority?: number; // 1-5 scale
+    estimated_duration?: number; // in seconds
   }
   
   export interface Campaign {
@@ -43,4 +52,52 @@ export interface TestCase {
         }[];
       };
     };
+  }
+
+  // New interface for verification conditions
+  export interface VerificationCondition {
+    id: string;
+    type: 'image_appears' | 'text_appears' | 'element_exists' | 'audio_playing' | 'video_playing' | 'color_present' | 'screen_state' | 'performance_metric';
+    description: string;
+    parameters: { [key: string]: any };
+    timeout: number;
+    critical: boolean; // If true, test fails if this condition fails
+  }
+
+  // New interfaces for device management
+  export interface Device {
+    id: string;
+    name: string;
+    type: 'android_phone' | 'firetv' | 'appletv' | 'stb_eos' | 'linux' | 'windows' | 'stb';
+    model: string;
+    version: string;
+    environment: 'prod' | 'preprod' | 'dev' | 'staging';
+    connection_config: { [key: string]: any };
+    status: 'available' | 'in_use' | 'maintenance' | 'offline';
+    team_id: string;
+    created_at?: string;
+    updated_at?: string;
+  }
+
+  export interface Controller {
+    id: string;
+    name: string;
+    type: 'remote' | 'av' | 'verification';
+    config: { [key: string]: any };
+    device_id: string;
+    team_id: string;
+    created_at?: string;
+    updated_at?: string;
+  }
+
+  export interface EnvironmentProfile {
+    id: string;
+    name: string;
+    device_id: string;
+    remote_controller_id?: string;
+    av_controller_id?: string;
+    verification_controller_id?: string;
+    team_id: string;
+    created_at?: string;
+    updated_at?: string;
   }
