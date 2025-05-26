@@ -9,6 +9,28 @@ import { AndroidDeviceConfig, DeviceConfig, HostDeviceConfig } from '../types/re
 import { RecDevicePreview } from './RecDevicePreview';
 import { RecEvents } from './RecEventListener';
 
+/**
+ * Maps database device_type to internal AndroidDeviceConfig type
+ */
+function getAndroidDeviceType(deviceType?: string): 'androidTv' | 'androidPhone' {
+  if (!deviceType) return 'androidPhone';
+  
+  // TV-like devices should use androidTv type
+  const tvDeviceTypes = [
+    'android_tv',
+    'android_firetv', 
+    'android_nvidia_shield',
+    'tv_android'
+  ];
+  
+  if (tvDeviceTypes.includes(deviceType)) {
+    return 'androidTv';
+  }
+  
+  // All other Android devices (phones, tablets) use androidPhone type
+  return 'androidPhone';
+}
+
 interface RecPreviewGridProps {
   hosts: Host[];
   isLoading: boolean;
@@ -107,15 +129,13 @@ export function RecPreviewGrid({ hosts, isLoading, error }: RecPreviewGridProps)
         resolvedAdbHostName: adbHost?.name,
         streamHostIp: streamHostIp,
         hasAdbHost: !!adbHost,
+        mappedType: getAndroidDeviceType(host.device_type),
       });
 
       return {
         id: `android-${host.id}`, // Prefix with 'android-' to ensure uniqueness
         name: host.name,
-        type:
-          host.device_type === 'android_tablet'
-            ? ('androidTv' as const)
-            : ('androidPhone' as const),
+        type: getAndroidDeviceType(host.device_type),
         streamUrl: `https://${streamHostIp}:444/stream/output.m3u8`,
         remoteConfig: adbHost
           ? {
