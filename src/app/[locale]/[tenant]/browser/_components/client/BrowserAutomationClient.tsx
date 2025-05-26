@@ -106,11 +106,6 @@ export default function BrowserAutomationClient() {
 
         // Show success/failure toast based on status
         const isSuccess = result.data.status === 'SUCCESS';
-        toast({
-          title: isSuccess ? 'Success' : 'Task Completed with Issues',
-          description: isSuccess ? 'Task executed successfully!' : 'Task completed but encountered some issues',
-          variant: isSuccess ? 'default' : 'destructive',
-        });
       } else {
         setState((prev) => ({
           ...prev,

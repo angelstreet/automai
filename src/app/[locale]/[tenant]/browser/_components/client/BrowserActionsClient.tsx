@@ -140,7 +140,7 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
 
   // Stop browser automation
   const handleStopAutomation = async () => {
-    if (!automationSessionId) {
+    if (!sessionId) {
       return;
     }
 
@@ -152,7 +152,7 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
     try {
       // Step 1: Cleanup the browser automation via SSH curl
       try {
-        const cleanupResult = await cleanupBrowserAutomation(automationSessionId);
+        const cleanupResult = await cleanupBrowserAutomation(sessionId);
         if (cleanupResult.success) {
           console.log('[@component:BrowserActionsClient] Browser automation cleaned up via SSH curl');
         }
@@ -164,7 +164,7 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
 
       // Step 2: Stop the automation server on the host
       const serverStopResult = await stopAutomationServerOnHost(
-        automationSessionId,
+        sessionId,
         automationProcessId || undefined,
       );
 
@@ -240,7 +240,7 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
     console.log(`[@component:BrowserActionsClient] Releasing host control`);
 
     // Stop automation if it's running
-    if (isInitialized && automationSessionId) {
+    if (isInitialized && sessionId) {
       try {
         await handleStopAutomation();
       } catch (error) {
@@ -307,7 +307,7 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
 
           <Button
             onClick={handleStopAutomation}
-            disabled={!hasReservedHost || !isInitialized || isInitializing}
+            disabled={!hasReservedHost || !isInitialized || isInitializing || !sessionId}
             size="sm"
             variant="destructive"
             className="h-8 gap-1 w-20"
