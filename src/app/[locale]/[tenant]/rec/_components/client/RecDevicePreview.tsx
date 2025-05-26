@@ -403,8 +403,8 @@ export function RecDevicePreview({ device, onClick }: DevicePreviewProps) {
         {!isStreaming && !isLoading && !error && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
             <div className="text-center">
-              <div className="text-2xl mb-2">🖥️</div>
-              <div className="text-xs text-gray-500">Host VNC</div>
+              <div className="text-2xl mb-2">{getDeviceInfo(device).icon}</div>
+              <div className="text-xs text-gray-500">{getDeviceInfo(device).label}</div>
               <div className="text-xs text-blue-500 mt-1">Click to connect</div>
             </div>
           </div>
@@ -451,7 +451,20 @@ export function RecDevicePreview({ device, onClick }: DevicePreviewProps) {
       case 'androidPhone':
         return { icon: '📱', label: 'Android Phone', status: isStreaming ? 'STREAMING' : 'READY' };
       case 'host':
-        return { icon: '🖥️', label: 'Host VNC', status: isStreaming ? 'STREAMING' : 'READY' };
+        // Use device_type from database to show Linux/Windows instead of "Host VNC"
+        const hostDevice = device as DeviceConfig & { type: 'host'; device_type?: string };
+        let label = 'Host';
+        let icon = '🖥️';
+        
+        if (hostDevice.device_type === 'linux') {
+          label = 'Linux';
+          icon = '🐧';
+        } else if (hostDevice.device_type === 'windows') {
+          label = 'Windows';
+          icon = '🪟';
+        }
+        
+        return { icon, label, status: isStreaming ? 'STREAMING' : 'READY' };
       default:
         return { icon: '❓', label: 'Unknown', status: 'UNKNOWN' };
     }

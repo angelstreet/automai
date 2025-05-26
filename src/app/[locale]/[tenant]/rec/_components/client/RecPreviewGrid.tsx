@@ -67,16 +67,26 @@ export function RecPreviewGrid({ hosts, isLoading, error }: RecPreviewGridProps)
   // Convert hosts to device configurations
   const hostDevices: HostDeviceConfig[] = hosts
     .filter((host) => host.vnc_port && host.type !== 'device') // Only SSH hosts with VNC configured, exclude devices
-    .map((host) => ({
-      id: `vnc-${host.id}`, // Prefix with 'vnc-' to ensure uniqueness
-      name: host.name || host.ip,
-      type: 'host' as const,
-      vncConfig: {
+    .map((host) => {
+      console.log(`[@component:RecPreviewGrid] Creating VNC host device: ${host.name}`, {
+        hostType: host.type,
+        deviceType: host.device_type,
+        vncPort: host.vnc_port,
         ip: host.ip,
-        port: typeof host.vnc_port === 'string' ? parseInt(host.vnc_port) : host.vnc_port!,
-        password: host.vnc_password,
-      },
-    }));
+      });
+      
+      return {
+        id: `vnc-${host.id}`, // Prefix with 'vnc-' to ensure uniqueness
+        name: host.name || host.ip,
+        type: 'host' as const,
+        device_type: host.device_type, // Pass through device_type from database
+        vncConfig: {
+          ip: host.ip,
+          port: typeof host.vnc_port === 'string' ? parseInt(host.vnc_port) : host.vnc_port!,
+          password: host.vnc_password,
+        },
+      };
+    });
 
   // Get Android devices from hosts database
   const androidDevices: AndroidDeviceConfig[] = hosts

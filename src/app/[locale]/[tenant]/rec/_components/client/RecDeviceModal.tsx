@@ -291,7 +291,17 @@ export function RecDeviceModal({ device, isOpen, onClose }: DeviceModalProps) {
           canShowRemote: true,
         };
       case 'host':
-        return { title: 'Host VNC', remoteType: 'none' as RemoteType, canShowRemote: false };
+        // Use device_type from database to show Linux/Windows instead of "Host VNC"
+        const hostDevice = device as DeviceConfig & { type: 'host'; device_type?: string };
+        let title = 'Host VNC';
+        
+        if (hostDevice.device_type === 'linux') {
+          title = 'Linux VNC';
+        } else if (hostDevice.device_type === 'windows') {
+          title = 'Windows VNC';
+        }
+        
+        return { title, remoteType: 'none' as RemoteType, canShowRemote: false };
       default:
         return { title: 'Unknown Device', remoteType: 'none' as RemoteType, canShowRemote: false };
     }

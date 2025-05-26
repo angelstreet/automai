@@ -29,6 +29,7 @@ export interface AndroidDeviceConfig extends BaseDeviceConfig {
  */
 export interface HostDeviceConfig extends BaseDeviceConfig {
   type: 'host';
+  device_type?: string; // Device type from database (linux, windows, etc.)
   vncConfig: {
     ip: string;
     port: number;
