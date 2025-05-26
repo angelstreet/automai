@@ -1,14 +1,46 @@
+import sys
+import os
+from uuid import uuid4
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from pymongo import MongoClient
-from ..utils.db_utils import init_mongodb, save_test_case, get_test_case, save_tree, get_tree
+
+# Add the parent directory to the path to allow imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+try:
+    from utils.db_utils import init_mongodb, save_test_case, get_test_case, save_tree, get_tree
+    mongo_client = init_mongodb()
+    print("MongoDB connected successfully!")
+except Exception as e:
+    print(f"Warning: MongoDB connection failed: {e}")
+    print("Starting Flask app without MongoDB connection...")
+    mongo_client = None
 
 app = Flask(__name__)
 CORS(app)
-mongo_client = init_mongodb()
+
+def check_mongo():
+    """Helper function to check if MongoDB is available"""
+    if mongo_client is None:
+        return jsonify({'error': 'MongoDB not available'}), 503
+    return None
+
+@app.route('/api/health')
+def health():
+    """Health check endpoint"""
+    mongo_status = "connected" if mongo_client else "disconnected"
+    return jsonify({
+        'status': 'ok',
+        'mongodb': mongo_status
+    })
 
 @app.route('/api/testcases', methods=['GET', 'POST'])
 def testcases():
+    error = check_mongo()
+    if error:
+        return error
+        
     db = mongo_client['virtual_pytest']
     if request.method == 'GET':
         test_cases = list(db.test_cases.find({}, {'_id': 0}))
@@ -20,6 +52,10 @@ def testcases():
 
 @app.route('/api/testcases/<test_id>', methods=['GET', 'PUT', 'DELETE'])
 def testcase(test_id):
+    error = check_mongo()
+    if error:
+        return error
+        
     db = mongo_client['virtual_pytest']
     if request.method == 'GET':
         test_case = get_test_case(test_id, mongo_client)
@@ -35,6 +71,10 @@ def testcase(test_id):
 
 @app.route('/api/trees', methods=['GET', 'POST'])
 def trees():
+    error = check_mongo()
+    if error:
+        return error
+        
     db = mongo_client['virtual_pytest']
     if request.method == 'GET':
         trees = list(db.trees.find({}, {'_id': 0}))
@@ -46,6 +86,10 @@ def trees():
 
 @app.route('/api/trees/<tree_id>', methods=['GET', 'PUT', 'DELETE'])
 def tree(tree_id):
+    error = check_mongo()
+    if error:
+        return error
+        
     db = mongo_client['virtual_pytest']
     if request.method == 'GET':
         tree = get_tree(tree_id, mongo_client)
@@ -61,6 +105,10 @@ def tree(tree_id):
 
 @app.route('/api/campaigns', methods=['GET', 'POST'])
 def campaigns():
+    error = check_mongo()
+    if error:
+        return error
+        
     db = mongo_client['virtual_pytest']
     if request.method == 'GET':
         campaigns = list(db.campaigns.find({}, {'_id': 0}))
@@ -71,5 +119,24 @@ def campaigns():
         db.campaigns.insert_one(campaign)
         return jsonify({'status': 'success', 'campaign_id': campaign['campaign_id']})
 
+@app.route('/api/campaigns/<campaign_id>', methods=['GET', 'PUT', 'DELETE'])
+def campaign(campaign_id):
+    error = check_mongo()
+    if error:
+        return error
+        
+    db = mongo_client['virtual_pytest']
+    if request.method == 'GET':
+        campaign = db.campaigns.find_one({'campaign_id': campaign_id}, {'_id': 0})
+        return jsonify(campaign if campaign else {})
+    elif request.method == 'PUT':
+        campaign = request.json
+        campaign['campaign_id'] = campaign_id
+        db.campaigns.replace_one({'campaign_id': campaign_id}, campaign, upsert=True)
+        return jsonify({'status': 'success'})
+    elif request.method == 'DELETE':
+        db.campaigns.delete_one({'campaign_id': campaign_id})
+        return jsonify({'status': 'success'})
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5009, debug=True)
