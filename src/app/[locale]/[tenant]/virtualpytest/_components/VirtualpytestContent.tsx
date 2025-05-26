@@ -6,7 +6,7 @@ interface VirtualPyTestContentProps {
   pageMetadata?: any;
 }
 
-export default function VirtualPyTestContent({ pageMetadata }: VirtualPyTestContentProps) {
+export default function   VirtualPyTestContent({ pageMetadata }: VirtualPyTestContentProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
   const [serverStatus, setServerStatus] = useState({
@@ -58,7 +58,7 @@ export default function VirtualPyTestContent({ pageMetadata }: VirtualPyTestCont
 
   if (isLoading) {
     return (
-      <div className="w-full h-full flex items-center justify-center">
+      <div className="h-full w-full flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <h3 className="text-lg font-semibold text-gray-700 mb-2">Loading VirtualPyTest</h3>
@@ -70,7 +70,7 @@ export default function VirtualPyTestContent({ pageMetadata }: VirtualPyTestCont
 
   if (isError) {
     return (
-      <div className="w-full h-full">
+      <div className="h-full w-full overflow-auto p-4">
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
           <h2 className="text-lg font-semibold text-red-800 mb-2">
             VirtualPyTest Framework - Connection Error
@@ -127,18 +127,15 @@ export default function VirtualPyTestContent({ pageMetadata }: VirtualPyTestCont
   }
 
   return (
-    <div className="w-full h-full">
-      
-    
-        <iframe
-          src="http://localhost:5173"
-          className="w-full h-[calc(100vh)] border-0"
-          title="VirtualPyTest Interface"
-          allow="fullscreen"
-          onLoad={handleIframeLoad}
-          onError={handleIframeError}
-        />
-      </div>
-
+    <div className="h-full w-full">
+      <iframe
+        src="http://localhost:5173"
+        className="w-full h-full border-0"
+        title="VirtualPyTest Interface"
+        allow="fullscreen"
+        onLoad={handleIframeLoad}
+        onError={handleIframeError}
+      />
+    </div>
   );
 }
