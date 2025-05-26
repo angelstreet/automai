@@ -10,9 +10,30 @@ import json
 class SupabaseClient:
     def __init__(self, connection_string: str = None):
         """Initialize Supabase PostgreSQL client."""
-        self.connection_string = connection_string or os.getenv('SUPABASE_DB_URL')
+        if connection_string:
+            self.connection_string = connection_string
+        else:
+            # Construct from NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY
+            supabase_url = os.getenv('NEXT_PUBLIC_SUPABASE_URL')
+            anon_key = os.getenv('NEXT_PUBLIC_SUPABASE_ANON_KEY')
+            
+            if supabase_url and anon_key:
+                # Extract project reference from URL
+                # https://wexkgcszrwxqsthahfyq.supabase.co -> wexkgcszrwxqsthahfyq
+                project_ref = supabase_url.split('//')[1].split('.')[0]
+                
+                # Construct PostgreSQL connection string using anon key
+                self.connection_string = f"postgresql://postgres.{project_ref}:{anon_key}@aws-0-us-east-1.pooler.supabase.com:6543/postgres"
+            else:
+                raise ValueError("NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY must be set in environment variables")
+                    
         if not self.connection_string:
-            raise ValueError("SUPABASE_DB_URL environment variable is required")
+            raise ValueError("Database connection string could not be determined")
+        
+        # Extract project ref for logging (don't show the full connection string with password)
+        if 'postgres.' in self.connection_string:
+            project_ref = self.connection_string.split('postgres.')[1].split(':')[0]
+            print(f"Using connection string: postgresql://postgres.{project_ref}:***@aws-0-us-east-1.pooler.supabase.com:6543/postgres")
         
     def get_connection(self):
         """Get a database connection."""
