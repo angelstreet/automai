@@ -148,23 +148,14 @@ const Dashboard: React.FC = () => {
 
   return (
     <Box>
-      <Typography variant="h4" component="h1" gutterBottom>
-        VirtualPyTest Dashboard
-      </Typography>
-      
-      <Typography variant="body1" color="textSecondary" paragraph>
-        Welcome to the VirtualPyTest web interface. Manage your test cases, campaigns, and navigation trees.
-        Use the theme toggle in the top-right corner to switch between light, dark, and system themes.
-      </Typography>
-
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
           {error}
         </Alert>
       )}
 
       {/* Statistics Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
+      <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={4}>
           <Card>
             <CardContent>
@@ -223,7 +214,7 @@ const Dashboard: React.FC = () => {
       <Grid container spacing={3}>
         {/* Quick Actions */}
         <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3 }}>
+          <Paper sx={{ p: 2 }}>
             <Typography variant="h6" gutterBottom>
               Quick Actions
             </Typography>
@@ -268,7 +259,7 @@ const Dashboard: React.FC = () => {
 
         {/* Recent Activity */}
         <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3 }}>
+          <Paper sx={{ p: 2 }}>
             <Typography variant="h6" gutterBottom>
               Recent Activity
             </Typography>
@@ -309,10 +300,7 @@ const Dashboard: React.FC = () => {
       </Grid>
 
       {/* System Status */}
-      <Paper sx={{ p: 3, mt: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          System Status
-        </Typography>
+      <Paper sx={{ p: 1, mt: 3 }}>
         <Grid container spacing={2}>
           <Grid item xs={12} sm={6} md={3}>
             <Box display="flex" alignItems="center" gap={1}>
