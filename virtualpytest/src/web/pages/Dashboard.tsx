@@ -18,7 +18,7 @@ import {
 import {
   PlayArrow as PlayIcon,
   Add as AddIcon,
-  TestTube as TestIcon,
+  Science as TestIcon,
   Campaign as CampaignIcon,
   AccountTree as TreeIcon,
   CheckCircle as SuccessIcon,

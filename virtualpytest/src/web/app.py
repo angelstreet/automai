@@ -13,13 +13,17 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
     from utils.supabase_utils import (
-        init_supabase, save_test_case, get_test_case, get_all_test_cases, delete_test_case,
+        save_test_case, get_test_case, get_all_test_cases, delete_test_case,
         save_tree, get_tree, get_all_trees, delete_tree,
         save_campaign, get_campaign, get_all_campaigns, delete_campaign,
-        save_result, get_failure_rates
+        save_result, get_failure_rates, supabase
     )
-    supabase_client = init_supabase()
-    print("Supabase connected successfully!")
+    # Test the connection by checking if supabase client is available
+    if supabase:
+        print("Supabase connected successfully!")
+        supabase_client = True
+    else:
+        raise Exception("Supabase client not initialized")
 except Exception as e:
     print(f"Warning: Supabase connection failed: {e}")
     print("Starting Flask app without Supabase connection...")
@@ -70,11 +74,11 @@ def testcases():
     
     try:
         if request.method == 'GET':
-            test_cases = get_all_test_cases(supabase_client, team_id)
+            test_cases = get_all_test_cases(team_id)
             return jsonify(test_cases)
         elif request.method == 'POST':
             test_case = request.json
-            save_test_case(test_case, supabase_client, team_id, user_id)
+            save_test_case(test_case, team_id, user_id)
             return jsonify({'status': 'success', 'test_id': test_case['test_id']})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -90,15 +94,15 @@ def testcase(test_id):
     
     try:
         if request.method == 'GET':
-            test_case = get_test_case(test_id, supabase_client, team_id)
+            test_case = get_test_case(test_id, team_id)
             return jsonify(test_case if test_case else {})
         elif request.method == 'PUT':
             test_case = request.json
             test_case['test_id'] = test_id
-            save_test_case(test_case, supabase_client, team_id, user_id)
+            save_test_case(test_case, team_id, user_id)
             return jsonify({'status': 'success'})
         elif request.method == 'DELETE':
-            success = delete_test_case(test_id, supabase_client, team_id)
+            success = delete_test_case(test_id, team_id)
             if success:
                 return jsonify({'status': 'success'})
             else:
@@ -117,11 +121,11 @@ def trees():
     
     try:
         if request.method == 'GET':
-            trees = get_all_trees(supabase_client, team_id)
+            trees = get_all_trees(team_id)
             return jsonify(trees)
         elif request.method == 'POST':
             tree = request.json
-            save_tree(tree, supabase_client, team_id, user_id)
+            save_tree(tree, team_id, user_id)
             return jsonify({'status': 'success', 'tree_id': tree['tree_id']})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -137,15 +141,15 @@ def tree(tree_id):
     
     try:
         if request.method == 'GET':
-            tree = get_tree(tree_id, supabase_client, team_id)
+            tree = get_tree(tree_id, team_id)
             return jsonify(tree if tree else {})
         elif request.method == 'PUT':
             tree = request.json
             tree['tree_id'] = tree_id
-            save_tree(tree, supabase_client, team_id, user_id)
+            save_tree(tree, team_id, user_id)
             return jsonify({'status': 'success'})
         elif request.method == 'DELETE':
-            success = delete_tree(tree_id, supabase_client, team_id)
+            success = delete_tree(tree_id, team_id)
             if success:
                 return jsonify({'status': 'success'})
             else:
@@ -164,11 +168,11 @@ def campaigns():
     
     try:
         if request.method == 'GET':
-            campaigns = get_all_campaigns(supabase_client, team_id)
+            campaigns = get_all_campaigns(team_id)
             return jsonify(campaigns)
         elif request.method == 'POST':
             campaign = request.json
-            save_campaign(campaign, supabase_client, team_id, user_id)
+            save_campaign(campaign, team_id, user_id)
             return jsonify({'status': 'success', 'campaign_id': campaign['campaign_id']})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -184,15 +188,15 @@ def campaign(campaign_id):
     
     try:
         if request.method == 'GET':
-            campaign = get_campaign(campaign_id, supabase_client, team_id)
+            campaign = get_campaign(campaign_id, team_id)
             return jsonify(campaign if campaign else {})
         elif request.method == 'PUT':
             campaign = request.json
             campaign['campaign_id'] = campaign_id
-            save_campaign(campaign, supabase_client, team_id, user_id)
+            save_campaign(campaign, team_id, user_id)
             return jsonify({'status': 'success'})
         elif request.method == 'DELETE':
-            success = delete_campaign(campaign_id, supabase_client, team_id)
+            success = delete_campaign(campaign_id, team_id)
             if success:
                 return jsonify({'status': 'success'})
             else:
@@ -210,10 +214,10 @@ def stats():
     team_id = get_team_id()
     
     try:
-        test_cases = get_all_test_cases(supabase_client, team_id)
-        trees = get_all_trees(supabase_client, team_id)
-        campaigns = get_all_campaigns(supabase_client, team_id)
-        failure_rates = get_failure_rates(supabase_client, team_id)
+        test_cases = get_all_test_cases(team_id)
+        trees = get_all_trees(team_id)
+        campaigns = get_all_campaigns(team_id)
+        failure_rates = get_failure_rates(team_id)
         
         return jsonify({
             'test_cases_count': len(test_cases),
