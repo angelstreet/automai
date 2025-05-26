@@ -1,5 +1,5 @@
-Flask==2.3.3
+Flask==3.0.0
 Flask-CORS==4.0.0
-psycopg2-binary==2.9.7
+supabase==2.3.0
 python-dotenv==1.0.0
-supabase 
+psycopg2-binary==2.9.9 

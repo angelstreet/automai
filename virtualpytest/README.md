@@ -1,153 +1,233 @@
-# VirtualPyTest Framework
+# VirtualPyTest
 
-A modular, scalable test automation framework for device testing with MongoDB integration and flexible controller architecture.
+VirtualPyTest is an open-source web-based test management tool for creating, organizing, and managing automated test cases, campaigns, and navigation trees.
 
 ## Features
 
-- **Modular Architecture**: Separate controllers for remote control, audio/video acquisition, and verification
-- **MongoDB Integration**: Store test cases, navigation trees, and results in MongoDB
-- **Auto Test Generation**: Automatically generate tests from navigation trees
-- **Test Prioritization**: Prioritize tests based on failure rates and client data
-- **Flexible Verification**: Support for image, audio, video, and text verification
-- **Comprehensive Reporting**: Generate detailed test reports and logs
-
-## Installation
-
-1. Clone the repository:
-```bash
-git clone <repository-url>
-cd virtualpytest
-```
-
-2. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-3. Install the package:
-```bash
-pip install -e .
-```
+- **Test Case Management**: Create and manage test cases with step-by-step instructions
+- **Campaign Organization**: Group test cases into campaigns for organized execution
+- **Navigation Trees**: Define application navigation structures for test automation
+- **Team-based Access**: Multi-tenant architecture with team-based data isolation
+- **Modern UI**: Clean, responsive interface with light/dark/system theme support
+- **PostgreSQL Backend**: Robust database with Row Level Security (RLS)
 
 ## Quick Start
 
-### 1. Set up MongoDB
-Ensure MongoDB is running and accessible. The framework will create the necessary collections automatically.
+### Prerequisites
 
-### 2. Run a Sample Campaign
-```bash
-python src/main.py --campaign config/campaigns/sample_campaign.json
-```
+- Python 3.8+
+- Node.js 16+
+- PostgreSQL database (we recommend Supabase for easy setup)
 
-### 3. List Available Test Cases
-```bash
-python src/main.py --list-test-cases
-```
+### 1. Database Setup
 
-### 4. List Navigation Trees
-```bash
-python src/main.py --list-trees
-```
+#### Option A: Using Supabase (Recommended)
 
-### 5. Auto-generate Tests
-```bash
-python src/main.py --auto validateAll --tree-id generic_device_v1 --prioritize
-```
+1. Create a free account at [supabase.com](https://supabase.com)
+2. Create a new project
+3. Note your project URL and anon key from Settings > API
 
-## Usage Examples
+#### Option B: Local PostgreSQL
 
-### Running Specific Auto Tests
-```bash
-# Validate all paths in a navigation tree
-python src/main.py --auto validateAll --tree-id generic_device_v1
+1. Install PostgreSQL locally
+2. Create a new database: `createdb virtualpytest`
 
-# Validate specific nodes
-python src/main.py --auto validateSpecificNodes --tree-id generic_device_v1 --nodes Home,VideoPlayer
+### 2. Backend Setup
 
-# Validate common paths
-python src/main.py --auto validateCommonPaths --tree-id generic_device_v1
-```
+1. Navigate to the web directory:
+   ```bash
+   cd src/web
+   ```
 
-### With Prioritization
-```bash
-python src/main.py --campaign config/campaigns/sample_campaign.json --prioritize
-```
+2. Install Python dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-## Project Structure
+3. Configure environment variables:
+   ```bash
+   # Copy the example environment file
+   cp env.example .env
+   
+   # Edit .env with your database credentials
+   nano .env
+   ```
 
-```
-virtualpytest/
-├── src/
-│   ├── controllers/          # Remote, AV, and verification controllers
-│   ├── models/              # Data models (NavigationTree, etc.)
-│   ├── test_scripts/       # Test script implementations
-│   ├── utils/              # All utilities and core logic:
-│   │   ├── auto_generator_utils.py  # Auto test generation
-│   │   ├── db_utils.py             # Database operations
-│   │   ├── interpreter_utils.py    # Test execution engine
-│   │   ├── logger_utils.py         # Logging functionality
-│   │   ├── orchestrator_utils.py   # Main orchestration logic
-│   │   ├── prioritizer_utils.py    # Test prioritization
-│   │   └── report_utils.py         # Report generation
-│   └── main.py             # CLI entry point
-├── config/
-│   ├── navigation_trees/   # Navigation tree definitions
-│   ├── test_cases/         # Test case definitions
-│   ├── campaigns/          # Campaign configurations
-│   └── client_data/        # Client-specific data
-├── outputs/
-│   ├── reports/            # Generated test reports
-│   └── logs/               # Log files
-└── tests/                  # Unit tests
-```
+4. **Automated Setup** - Run the setup script:
+   ```bash
+   python setup_database.py
+   ```
+   
+   This script will:
+   - Verify your database connection
+   - Create all required tables and indexes
+   - Set up Row Level Security policies
+   - Insert demo data for testing
+
+   **Manual Setup** - Alternatively, you can set up the database manually:
+   ```bash
+   # For Supabase: Copy and paste virtualpytest_schema.sql in the SQL Editor
+   # For PostgreSQL: Run the schema file
+   psql -d virtualpytest -f virtualpytest_schema.sql
+   ```
+
+5. Start the Flask backend:
+   ```bash
+   python app.py
+   ```
+
+   The API will be available at `http://localhost:5009`
+
+### 3. Frontend Setup
+
+1. Navigate to the React app directory:
+   ```bash
+   cd src
+   ```
+
+2. Install Node.js dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+   The web interface will be available at `http://localhost:5173`
+
+## Database Schema
+
+The minimal schema includes these core tables:
+
+- **teams**: Organization/tenant isolation
+- **profiles**: User management
+- **team_members**: Team membership and roles
+- **test_cases**: Individual test case definitions
+- **navigation_trees**: Application navigation structures
+- **campaigns**: Test case groupings
+- **test_results**: Test execution results and history
+
+All tables include Row Level Security (RLS) policies to ensure team-based data isolation.
+
+## API Endpoints
+
+- `GET /api/health` - Health check
+- `GET /api/testcases` - List all test cases
+- `POST /api/testcases` - Create new test case
+- `PUT /api/testcases/<id>` - Update test case
+- `DELETE /api/testcases/<id>` - Delete test case
+- `GET /api/campaigns` - List all campaigns
+- `POST /api/campaigns` - Create new campaign
+- `PUT /api/campaigns/<id>` - Update campaign
+- `DELETE /api/campaigns/<id>` - Delete campaign
+- `GET /api/trees` - List all navigation trees
+- `POST /api/trees` - Create new navigation tree
+- `PUT /api/trees/<id>` - Update navigation tree
+- `DELETE /api/trees/<id>` - Delete navigation tree
+- `GET /api/stats` - Get dashboard statistics
 
 ## Configuration
 
-### Navigation Trees
-Define device navigation structures in `config/navigation_trees/`. See `generic_device.json` for an example.
+### Environment Variables
 
-### Test Cases
-Define manual test cases in `config/test_cases/`. See `basic_navigation.json` for an example.
+Create a `.env` file in the `src/web` directory with:
 
-### Campaigns
-Define test campaigns in `config/campaigns/`. See `sample_campaign.json` for an example.
+```env
+# For Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 
-### Client Priorities
-Define node priorities in `config/client_data/priorities.json`.
+# For local PostgreSQL (alternative)
+# DATABASE_URL=postgresql://username:password@localhost:5432/virtualpytest
+```
 
-## Extending the Framework
+### Default Data
 
-### Adding New Controllers
-1. Implement the abstract base classes in `src/controllers/`
-2. Register your controllers in the orchestrator
-3. Update campaign configurations to use your controllers
+The schema includes a demo team and user for immediate testing:
+- Team: "Demo Team"
+- User: "demo@virtualpytest.com"
 
-### Adding New Test Types
-1. Create a new test script in `src/test_scripts/`
-2. Register it in the interpreter's test_scripts dictionary
-3. Use the new test type in your test cases
+## Troubleshooting
 
-### Adding New Verification Types
-1. Extend the verification controller with new methods
-2. Update the interpreter's verification dispatch logic
-3. Use the new verification types in your navigation trees
+### Common Issues
 
-## MongoDB Schema
+1. **"Port 5009 is in use"**
+   ```bash
+   # Find and kill the process using port 5009
+   lsof -ti:5009 | xargs kill -9
+   ```
 
-The framework uses the following MongoDB collections:
-- `test_cases`: Store test case definitions
-- `trees`: Store navigation tree definitions
-- `results`: Store test execution results
-- `failure_rates`: Store node failure statistics
-- `client_priorities`: Store client-defined priorities
+2. **Database connection errors**
+   - Verify your environment variables in `.env`
+   - Check that your Supabase project is active
+   - Ensure your API key has the correct permissions
+
+3. **Frontend not loading**
+   - Make sure the backend is running on port 5009
+   - Check browser console for errors
+   - Verify Node.js dependencies are installed
+
+### Setup Script Help
+
+Run the setup script with help flag for more information:
+```bash
+python setup_database.py --help
+```
+
+## Development
+
+### Project Structure
+
+```
+src/
+├── web/
+│   ├── app.py                    # Flask backend
+│   ├── setup_database.py         # Database setup script
+│   ├── virtualpytest_schema.sql  # Database schema
+│   ├── env.example               # Environment template
+│   ├── requirements.txt          # Python dependencies
+│   ├── utils/
+│   │   └── supabase_utils.py     # Database utilities
+│   └── src/                      # React frontend
+│       ├── components/           # UI components
+│       ├── contexts/             # React contexts
+│       ├── pages/                # Page components
+│       └── types.ts              # TypeScript types
+```
+
+### Adding New Features
+
+1. Update the database schema in `virtualpytest_schema.sql`
+2. Add corresponding API endpoints in `app.py`
+3. Update the frontend components as needed
+4. Ensure RLS policies are properly configured for new tables
 
 ## Contributing
 
-1. Follow the existing code structure and patterns
-2. Add unit tests for new functionality
-3. Update documentation for new features
-4. Ensure all imports use relative paths within the package
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
 
 ## License
 
-MIT License - see LICENSE file for details.
+This project is open source and available under the MIT License.
+
+## Support
+
+For issues and questions:
+1. Check the existing issues on GitHub
+2. Create a new issue with detailed information
+3. Include steps to reproduce any bugs
+
+## Roadmap
+
+- [ ] Test execution engine integration
+- [ ] Real-time test result updates
+- [ ] Advanced reporting and analytics
+- [ ] CI/CD pipeline integration
+- [ ] Test scheduling and automation
+- [ ] Plugin system for custom test types
