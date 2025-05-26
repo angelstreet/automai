@@ -154,6 +154,7 @@ const Dashboard: React.FC = () => {
       
       <Typography variant="body1" color="textSecondary" paragraph>
         Welcome to the VirtualPyTest web interface. Manage your test cases, campaigns, and navigation trees.
+        Use the theme toggle in the top-right corner to switch between light, dark, and system themes.
       </Typography>
 
       {error && (

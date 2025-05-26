@@ -1,23 +1,58 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import { Container, AppBar, Toolbar, Typography, Button, Box } from '@mui/material';
+import { 
+  Container, 
+  AppBar, 
+  Toolbar, 
+  Typography, 
+  Button, 
+  Box,
+  Tabs,
+  Tab,
+} from '@mui/material';
+import { Science } from '@mui/icons-material';
 import TestCaseEditor from '../pages/TestCaseEditor';
 import CampaignEditor from '../pages/CampaignEditor';
 import TreeEditor from '../pages/TreeEditor';
 import Dashboard from '../pages/Dashboard';
+import ThemeToggle from './components/ThemeToggle';
 
 const App: React.FC = () => {
+  const [currentTab, setCurrentTab] = React.useState(0);
+
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setCurrentTab(newValue);
+  };
+
   return (
     <Router>
-      <AppBar position="static">
+      <AppBar position="static" elevation={1}>
         <Toolbar>
-          <Typography variant="h6" sx={{ flexGrow: 1 }}>
+          <Science sx={{ mr: 2 }} />
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             VirtualPyTest
           </Typography>
-          <Button color="inherit" component={Link} to="/">Dashboard</Button>
-          <Button color="inherit" component={Link} to="/testcases">Test Cases</Button>
-          <Button color="inherit" component={Link} to="/campaigns">Campaigns</Button>
-          <Button color="inherit" component={Link} to="/trees">Trees</Button>
+          <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
+            <Tabs 
+              value={currentTab} 
+              onChange={handleTabChange}
+              textColor="inherit"
+              indicatorColor="secondary"
+              sx={{ 
+                '& .MuiTab-root': { 
+                  color: 'inherit',
+                  minWidth: 'auto',
+                  px: 2,
+                }
+              }}
+            >
+              <Tab label="Dashboard" component={Link} to="/" />
+              <Tab label="Test Cases" component={Link} to="/testcases" />
+              <Tab label="Campaigns" component={Link} to="/campaigns" />
+              <Tab label="Trees" component={Link} to="/trees" />
+            </Tabs>
+          </Box>
+          <ThemeToggle />
         </Toolbar>
       </AppBar>
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
