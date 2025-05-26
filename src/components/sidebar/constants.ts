@@ -19,6 +19,7 @@ import {
   Code,
   Wrench,
   ExternalLink,
+  Pyramid
 } from 'lucide-react';
 
 import { Role } from '@/types/service/userServiceType';
@@ -144,6 +145,12 @@ export const sidebarNavigationData: SidebarNavigationData = {
     {
       title: 'Add-on',
       items: [
+        {
+          title: 'VirtualPyTest',
+          href: '/virtualpytest',
+          icon: Pyramid,
+          roles: ['admin', 'developer', 'tester', 'viewer'],
+        },
         {
           title: 'Third Party Tools',
           href: '/thirdparty',
