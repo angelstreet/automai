@@ -1,0 +1,15 @@
+{
+    "campaign_name": "AndroidTV_Video_Test",
+    "navigation_tree_id": "tree_generic_001",
+    "remote_controller": "AndroidTV",
+    "audio_video_acquisition": "HDMI",
+    "test_case_ids": [
+      "test_launch_video_001"
+    ],
+    "auto_tests": {
+      "mode": "validateSpecificNodes",
+      "nodes": ["VideoPlayer", "VideoPlaying"]
+    },
+    "prioritize": true,
+    "client_data_path": "config/client_data/priorities.json"
+  }

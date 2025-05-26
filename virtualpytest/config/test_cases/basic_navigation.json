@@ -1,0 +1,28 @@
+{
+  "test_id": "test_001",
+  "name": "Basic Navigation Test",
+  "test_type": "functional",
+  "start_node": "Home",
+  "steps": [
+    {
+      "target_node": "VideoPlayer",
+      "verify": {
+        "type": "compound",
+        "operator": "AND",
+        "conditions": [
+          {"type": "image_appear", "condition": "video_app_icon", "timeout": 5.0},
+          {"type": "text_appear", "condition": "Video Player", "timeout": 3.0}
+        ]
+      }
+    },
+    {
+      "target_node": "Home",
+      "verify": {
+        "type": "single",
+        "conditions": [
+          {"type": "image_appear", "condition": "home_screen", "timeout": 3.0}
+        ]
+      }
+    }
+  ]
+} 

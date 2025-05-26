@@ -1,0 +1,93 @@
+{
+    "tree_id": "tree_generic_001",
+    "device": "GenericDevice",
+    "version": "1.0",
+    "nodes": {
+      "Home": {
+        "id": "home",
+        "actions": [
+          {
+            "to": "VideoPlayer",
+            "action": "press_button",
+            "params": {"button": "video_app"},
+            "verification": {
+              "type": "compound",
+              "operator": "AND",
+              "conditions": [
+                {"type": "image_appear", "condition": "video_app_icon", "timeout": 5},
+                {"type": "text_appear", "condition": "Video App", "timeout": 5}
+              ]
+            }
+          },
+          {
+            "to": "Settings",
+            "action": "press_button",
+            "params": {"button": "settings"},
+            "verification": {
+              "type": "image_appear",
+              "condition": "settings_icon",
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "VideoPlayer": {
+        "id": "video_player",
+        "actions": [
+          {
+            "to": "Home",
+            "action": "press_button",
+            "params": {"button": "home"},
+            "verification": {
+              "type": "image_appear",
+              "condition": "home_screen",
+              "timeout": 3
+            }
+          },
+          {
+            "to": "VideoPlaying",
+            "action": "press_button",
+            "params": {"button": "play"},
+            "verification": {
+              "type": "compound",
+              "operator": "OR",
+              "conditions": [
+                {"type": "audio_appear", "condition": "video_audio", "timeout": 5},
+                {"type": "video_appear", "condition": "video_stream", "timeout": 5}
+              ]
+            }
+          }
+        ]
+      },
+      "VideoPlaying": {
+        "id": "video_playing",
+        "actions": [
+          {
+            "to": "VideoPlayer",
+            "action": "press_button",
+            "params": {"button": "stop"},
+            "verification": {
+              "type": "image_appear",
+              "condition": "video_stopped",
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "Settings": {
+        "id": "settings",
+        "actions": [
+          {
+            "to": "Home",
+            "action": "press_button",
+            "params": {"button": "home"},
+            "verification": {
+              "type": "image_appear",
+              "condition": "home_screen",
+              "timeout": 3
+            }
+          }
+        ]
+      }
+    }
+  }

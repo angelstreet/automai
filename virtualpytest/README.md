@@ -1,167 +1,153 @@
-VirtualPyTest Framework
-VirtualPyTest is a Python-based test automation framework for devices (e.g., Android, STB, Apple), using a model-data approach to minimize script duplication. It models the system under test (SUT) as a navigation tree, supports manual and auto-generated test cases, and handles functional, performance, endurance, and robustness tests. An orchestrator manages test campaigns, selecting navigation trees, controllers (e.g., Bluetooth, ADB, HDMI), and test cases. Verifications include appear/disappear for image/audio/video/text with AND/OR. Features include automatic test generation, optional data-driven prioritization, and separate reporting/logging.
-Features
+# VirtualPyTest Framework
 
-Navigation Tree: JSON-based model of SUT states (nodes) and actions/verifications (edges), supporting device variants.
-Test Types: Functional (navigate, act, verify), performance (measure KPIs), endurance (repeat actions), robustness (stress/random tests).
-Orchestrator: Configures campaigns, selecting trees, controllers, and test cases via JSON or CLI.
-Controllers: Abstract RemoteController (Bluetooth, ADB, SSH, IR), AudioVideoController (HDMI, ADB, camera), VerificationController (image/audio/video/text).
-Test Cases: Device-agnostic JSON, manual or auto-generated (validateAll, validateSpecificNodes, validateCommonPaths).
-Prioritization: Optional, based on past execution or client metrics.
-Reporting: JSON reports in outputs/reports/.
-Logging: File and SQLite logs in outputs/logs/ and data/virtual_pytest.db.
+A modular, scalable test automation framework for device testing with MongoDB integration and flexible controller architecture.
 
-Diagram
-+-----------------+       +-----------------+
-|   Test Case     |       |   Auto Test Gen |
-| (JSON, Manual)  |       | - validateAll   |
-+-----------------+       | - validateNodes |
-          |              +-----------------+
-          v                      |
-+-----------------+       +-----------------+
-|  Test Campaign  |       | Navigation Tree |
-| (JSON)          |       | (JSON)          |
-| - controllers   |       +-----------------+
-| - tree          |              |
-| - test cases    |              v
-+-----------------+       +-----------------+
-          |              | Data Prioritize |
-          v              | (Optional)      |
-+-----------------+      +-----------------+
-|   Orchestrator  |              |
-| - Load campaign |              v
-| - Run tests     |<-------------+
-+-----------------+       +-----------------+
-          |              |    Controllers  |
-          v              | - Remote        |
-+-----------------+      | - AudioVideo    |
-|   Interpreter   |----->| - Verification  |
-| - Dispatch      |      +-----------------+
-| - Execute       |              |
-+-----------------+              v
-          |              +-----------------+
-          v              | Device (SUT)    |
-+-----------------+      +-----------------+
-|    Reporter     |
-+-----------------+
-          |
-+-----------------+
-|     Logger      |
-+-----------------+
+## Features
 
-Folder Structure
-virtual_pytest/
-├── src/                    # Source code
-│   ├── controllers/        # Remote, AudioVideo, Verification controllers
-│   ├── models/            # NavigationTree model
-│   ├── interpreter/       # Test execution logic
-│   ├── auto_test/         # Auto test generation
-│   ├── prioritization/    # Optional test prioritization
-│   ├── test_scripts/      # Generic scripts (functional, performance, endurance, robustness)
-│   ├── orchestrator/      # Campaign management
-│   ├── reporting/         # Report generation
-│   ├── logging/           # Logging system
-│   └── utils/             # Database utilities
-├── config/                # Configuration files
-│   ├── navigation_trees/  # JSON navigation trees
-│   ├── test_cases/        # JSON test cases
-│   ├── campaigns/         # JSON campaign configs
-│   └── client_data/       # Client prioritization data
-├── outputs/               # Reports and logs
-│   ├── reports/           # JSON reports
-│   └── logs/              # Log files
-├── data/                  # SQLite database
-├── tests/                 # Unit tests
-├── main.py                # Entry point
-├── requirements.txt       # Dependencies
-└── README.md              # This file
+- **Modular Architecture**: Separate controllers for remote control, audio/video acquisition, and verification
+- **MongoDB Integration**: Store test cases, navigation trees, and results in MongoDB
+- **Auto Test Generation**: Automatically generate tests from navigation trees
+- **Test Prioritization**: Prioritize tests based on failure rates and client data
+- **Flexible Verification**: Support for image, audio, video, and text verification
+- **Comprehensive Reporting**: Generate detailed test reports and logs
 
-Setup
+## Installation
 
-Clone Repository:git clone <repository_url>
-cd virtual_pytest
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd virtualpytest
+```
 
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
 
-Install Dependencies:pip install -r requirements.txt
+3. Install the package:
+```bash
+pip install -e .
+```
 
-Note: Includes python, sqlite3, logging, typing. Add pybluez, opencv-python, tesseract for real controllers.
-Initialize Database:python -m src.utils.db_utils
+## Quick Start
 
-Creates data/virtual_pytest.db.
-Configure:
-Add navigation trees to config/navigation_trees/.
-Add test cases to config/test_cases/.
-Add campaign configs to config/campaigns/.
-(Optional) Add client data to config/client_data/priorities.json.
+### 1. Set up MongoDB
+Ensure MongoDB is running and accessible. The framework will create the necessary collections automatically.
 
+### 2. Run a Sample Campaign
+```bash
+python src/main.py --campaign config/campaigns/sample_campaign.json
+```
 
+### 3. List Available Test Cases
+```bash
+python src/main.py --list-test-cases
+```
 
-Usage
+### 4. List Navigation Trees
+```bash
+python src/main.py --list-trees
+```
 
-Run Campaign:python main.py --campaign config/campaigns/androidtv_video.json
+### 5. Auto-generate Tests
+```bash
+python src/main.py --auto validateAll --tree-id generic_device_v1 --prioritize
+```
 
-Executes campaign, outputs reports to outputs/reports/ and logs to outputs/logs/ and data/virtual_pytest.db.
-Interactive Mode (Future):python main.py --interactive
+## Usage Examples
 
-CLI to select tree, controllers, test cases (placeholder).
-Enable Prioritization:Set "prioritize": true in campaign JSON. Requires data in data/virtual_pytest.db or config/client_data/.
+### Running Specific Auto Tests
+```bash
+# Validate all paths in a navigation tree
+python src/main.py --auto validateAll --tree-id generic_device_v1
 
-Example Campaign
-{
-  "campaign_name": "AndroidTV_Video_Test",
-  "navigation_tree": "config/navigation_trees/generic_device.json",
-  "remote_controller": "AndroidTV",
-  "audio_video_acquisition": "HDMI",
-  "test_cases": [
-    "config/test_cases/launch_video.json"
-  ],
-  "auto_tests": {
-    "mode": "validateSpecificNodes",
-    "nodes": ["VideoPlayer"]
-  },
-  "prioritize": true
-}
+# Validate specific nodes
+python src/main.py --auto validateSpecificNodes --tree-id generic_device_v1 --nodes Home,VideoPlayer
 
-Example Test Case
-{
-  "name": "Launch Video",
-  "test_type": "functional",
-  "start_node": "Home",
-  "steps": [
-    {
-      "target_node": "VideoPlayer",
-      "verify": {
-        "type": "compound",
-        "operator": "AND",
-        "conditions": [
-          {"type": "image_appear", "condition": "video_app_icon", "timeout": 5},
-          {"type": "text_appear", "condition": "Video App", "timeout": 5}
-        ]
-      }
-    }
-  ]
-}
+# Validate common paths
+python src/main.py --auto validateCommonPaths --tree-id generic_device_v1
+```
 
-Extending Controllers
+### With Prioritization
+```bash
+python src/main.py --campaign config/campaigns/sample_campaign.json --prioritize
+```
 
-Replace placeholders (DummyRemoteController, DummyAudioVideoController, DummyVerificationController) with:
-pybluez for Bluetooth (e.g., STB_EOS).
-adb-shell for ADB (e.g., AndroidTV).
-opencv-python, tesseract for HDMI/camera verifications.
+## Project Structure
 
+```
+virtualpytest/
+├── src/
+│   ├── controllers/          # Remote, AV, and verification controllers
+│   ├── models/              # Data models (NavigationTree, etc.)
+│   ├── test_scripts/       # Test script implementations
+│   ├── utils/              # All utilities and core logic:
+│   │   ├── auto_generator_utils.py  # Auto test generation
+│   │   ├── db_utils.py             # Database operations
+│   │   ├── interpreter_utils.py    # Test execution engine
+│   │   ├── logger_utils.py         # Logging functionality
+│   │   ├── orchestrator_utils.py   # Main orchestration logic
+│   │   ├── prioritizer_utils.py    # Test prioritization
+│   │   └── report_utils.py         # Report generation
+│   └── main.py             # CLI entry point
+├── config/
+│   ├── navigation_trees/   # Navigation tree definitions
+│   ├── test_cases/         # Test case definitions
+│   ├── campaigns/          # Campaign configurations
+│   └── client_data/        # Client-specific data
+├── outputs/
+│   ├── reports/            # Generated test reports
+│   └── logs/               # Log files
+└── tests/                  # Unit tests
+```
 
-Add new device subclasses in src/controllers/remote_controller.py.
+## Configuration
 
-Notes
+### Navigation Trees
+Define device navigation structures in `config/navigation_trees/`. See `generic_device.json` for an example.
 
-Test cases are device-agnostic; controllers are specified in campaign JSON.
-Placeholders print actions/verifications (e.g., "Performing press_button").
-Auto-generation may produce many tests for large trees; configure limits.
+### Test Cases
+Define manual test cases in `config/test_cases/`. See `basic_navigation.json` for an example.
 
-Contributing
+### Campaigns
+Define test campaigns in `config/campaigns/`. See `sample_campaign.json` for an example.
 
-Add unit tests to tests/.
-Submit pull requests with clear descriptions.
+### Client Priorities
+Define node priorities in `config/client_data/priorities.json`.
 
-License
-MIT License
+## Extending the Framework
+
+### Adding New Controllers
+1. Implement the abstract base classes in `src/controllers/`
+2. Register your controllers in the orchestrator
+3. Update campaign configurations to use your controllers
+
+### Adding New Test Types
+1. Create a new test script in `src/test_scripts/`
+2. Register it in the interpreter's test_scripts dictionary
+3. Use the new test type in your test cases
+
+### Adding New Verification Types
+1. Extend the verification controller with new methods
+2. Update the interpreter's verification dispatch logic
+3. Use the new verification types in your navigation trees
+
+## MongoDB Schema
+
+The framework uses the following MongoDB collections:
+- `test_cases`: Store test case definitions
+- `trees`: Store navigation tree definitions
+- `results`: Store test execution results
+- `failure_rates`: Store node failure statistics
+- `client_priorities`: Store client-defined priorities
+
+## Contributing
+
+1. Follow the existing code structure and patterns
+2. Add unit tests for new functionality
+3. Update documentation for new features
+4. Ensure all imports use relative paths within the package
+
+## License
+
+MIT License - see LICENSE file for details.

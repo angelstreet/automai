@@ -1,0 +1,30 @@
+{
+    "test_id": "test_launch_video_001",
+    "name": "Launch Video",
+    "test_type": "functional",
+    "start_node": "Home",
+    "steps": [
+      {
+        "target_node": "VideoPlayer",
+        "verify": {
+          "type": "compound",
+          "operator": "AND",
+          "conditions": [
+            {"type": "image_appear", "condition": "video_app_icon", "timeout": 5},
+            {"type": "text_appear", "condition": "Video App", "timeout": 5}
+          ]
+        }
+      },
+      {
+        "target_node": "VideoPlaying",
+        "verify": {
+          "type": "compound",
+          "operator": "OR",
+          "conditions": [
+            {"type": "audio_appear", "condition": "video_audio", "timeout": 5},
+            {"type": "video_appear", "condition": "video_stream", "timeout": 5}
+          ]
+        }
+      }
+    ]
+  }
