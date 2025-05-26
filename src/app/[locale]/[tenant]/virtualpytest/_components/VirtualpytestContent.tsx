@@ -129,20 +129,16 @@ export default function VirtualPyTestContent({ pageMetadata }: VirtualPyTestCont
   return (
     <div className="w-full h-full">
       
-      <div className="w-full border border-gray-200 rounded-lg overflow-hidden shadow-sm bg-white">
+    
         <iframe
           src="http://localhost:5173"
-          className="w-full h-[calc(100vh-250px)] border-0"
+          className="w-full h-[calc(100vh)] border-0"
           title="VirtualPyTest Interface"
           allow="fullscreen"
           onLoad={handleIframeLoad}
           onError={handleIframeError}
         />
       </div>
-      
-      <div className="mt-4 text-xs text-gray-500 flex justify-between items-center">
-        <span>VirtualPyTest v1.0.0 - Integrated via iframe</span>
-      </div>
-    </div>
+
   );
 }

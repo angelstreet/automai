@@ -33,7 +33,7 @@ class VerificationController:
         self.verification_session_id = f"verify_{int(time.time())}"
         print(f"Verify[{self.device_name}]: Connected successfully - Session: {self.verification_session_id}")
         return True
-        
+
     def disconnect(self) -> bool:
         """Simulate disconnecting from the verification system."""
         print(f"Verify[{self.device_name}]: Disconnecting from verification system")
@@ -41,7 +41,7 @@ class VerificationController:
         self.verification_session_id = None
         print(f"Verify[{self.device_name}]: Disconnected")
         return True
-        
+
     def verify_image_appears(self, image_name: str, timeout: float = 10.0, confidence: float = 0.8) -> bool:
         """
         Verify that a specific image appears on screen.
