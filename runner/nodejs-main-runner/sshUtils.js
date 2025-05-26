@@ -33,7 +33,6 @@ async function executeSSHScripts(
   creator_id,
   env,
   config_name,
-  venvBinPath = null,
 ) {
   console.log(`[executeSSHScripts] Starting SSH script execution for job ${jobId}`);
 
@@ -111,35 +110,28 @@ async function executeSSHScripts(
     let venvPath = '';
     if (host.os !== 'windows') {
       venvPath = '/tmp/python/venv';
-      const checkVenvCommand = `test -d ${venvPath} && echo 'exists' || echo 'not exists'`;
+      
+      // Since venv is already set up in initializeJobOnHost, just verify it exists and use it
+      console.log(`[executeSSHScripts] Verifying virtual environment exists at ${venvPath} on ${host.ip}`);
+      
       try {
+        const checkVenvCommand = `test -d ${venvPath} && echo 'exists' || echo 'not exists'`;
         const venvCheckResult = await executeSSHCommand(host, sshKeyOrPass, checkVenvCommand);
-        if (venvCheckResult.stdout.includes('not exists')) {
-          console.log(
-            `[executeSSHScripts] Creating virtual environment on ${host.ip} at ${venvPath}`,
-          );
-          const createVenvCommand = `python3 -m venv ${venvPath}`;
-          await executeSSHCommand(host, sshKeyOrPass, createVenvCommand);
-          console.log(`[executeSSHScripts] Virtual environment created on ${host.ip}`);
+        
+        if (venvCheckResult.stdout.includes('exists')) {
+          console.log(`[executeSSHScripts] Using existing virtual environment on ${host.ip} at ${venvPath}`);
+          venvPrefix = `source ${venvPath}/bin/activate && `;
         } else {
-          console.log(
-            `[executeSSHScripts] Using existing virtual environment on ${host.ip} at ${venvPath}`,
-          );
+          console.log(`[executeSSHScripts] Virtual environment not found at ${venvPath} on ${host.ip}, falling back to system Python`);
+          // Fallback to system Python - this shouldn't happen if initializeJobOnHost worked correctly
+          venvPrefix = '';
         }
-        venvPrefix = `source ${venvPath}/bin/activate && `;
-        console.log(`[executeSSHScripts] Using virtual environment for host ${host.ip}`);
       } catch (error) {
-        console.error(
-          `[executeSSHScripts] Failed to setup virtual environment on ${host.ip}: ${error.message}`,
-        );
+        console.error(`[executeSSHScripts] Failed to verify virtual environment on ${host.ip}: ${error.message}`);
+        console.log(`[executeSSHScripts] Falling back to system Python on ${host.ip}`);
         // Fallback to no prefix, might fail with externally managed environment error
         venvPrefix = '';
       }
-    } else if (host.os !== 'windows' && venvBinPath) {
-      venvPrefix = `source ${venvBinPath}/activate && `;
-      console.log(
-        `[executeSSHScripts] Using provided virtual environment path for host ${host.ip}`,
-      );
     }
 
     // Process each script separately for tracking purposes

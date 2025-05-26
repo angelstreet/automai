@@ -28,27 +28,8 @@ function getFlaskServiceUrl(job_run_env) {
   }
 }
 
-// Function to handle Python virtual environment on non-Windows systems
-function handlePythonVenv() {
-  if (process.platform !== 'win32') {
-    const fs = require('fs');
-    const path = require('path');
-    const venvPath = '/tmp/python/venv';
-    const venvBinPath = path.join(venvPath, 'bin');
-
-    if (!fs.existsSync(venvPath)) {
-      console.log('[utils] Creating Python virtual environment at', venvPath);
-      const { execSync } = require('child_process');
-      execSync(`python3 -m venv ${venvPath}`, { stdio: 'inherit' });
-      console.log('[utils] Virtual environment created successfully');
-    } else {
-      console.log('[utils] Using existing Python virtual environment at', venvPath);
-    }
-
-    return venvBinPath;
-  }
-  return null;
-}
+// Virtual environment creation is handled directly on SSH hosts in jobUtils.js
+// No virtual environment should be created on the main runner node
 
 async function executeOnFlask(
   config,
@@ -101,7 +82,7 @@ async function executeOnSSH(
   config_name,
 ) {
   // Execute scripts via SSH on hosts
-  const venvBinPath = handlePythonVenv();
+  // Virtual environment creation is handled directly on SSH hosts in jobUtils.js
   const result = await executeSSHScripts(
     config,
     jobId,
@@ -113,7 +94,6 @@ async function executeOnSSH(
     creator_id,
     env,
     config_name,
-    venvBinPath,
   );
   const output = result.output;
   const overallStatus = result.overallStatus;

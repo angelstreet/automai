@@ -333,63 +333,7 @@ async function initializeJobOnHost(jobId, started_at, host, sshKeyOrPass, config
   if (host.os === 'windows') {
     pipInstallCmd = `powershell -Command "pip install -r '${jobFolderPath}/requirements.txt'"`;
   } else {
-    // Create and use virtual environment on non-Windows systems
-    const venvPath = '/tmp/python/venv';
-    const venvSetupCmd = `python3 -m venv ${venvPath}`;
-    const venvActivateCmd = `source ${venvPath}/bin/activate`;
-
-    // First check if venv exists, if not create it
-    console.log(
-      `[initializeJobOnHost] Checking and creating Python virtual environment at ${venvPath}`,
-    );
-    await new Promise((resolve, reject) => {
-      const conn = new Client();
-      const sshConfig = {
-        host: host.ip,
-        port: host.port || 22,
-        username: host.username,
-      };
-      if (host.authType === 'privateKey') {
-        sshConfig.privateKey = sshKeyOrPass;
-      } else {
-        sshConfig.password = sshKeyOrPass;
-      }
-      conn.on('ready', () => {
-        const checkVenvCmd = `test -d ${venvPath} && echo "venv exists" || (${venvSetupCmd} && echo "venv created")`;
-        conn.exec(checkVenvCmd, (err, stream) => {
-          if (err) {
-            conn.end();
-            return reject(err);
-          }
-          stream.on('close', (code) => {
-            console.log('[SSH stream close]', code);
-            conn.end();
-            if (code === 0) resolve();
-            else reject(new Error(`Virtual environment setup failed with code ${code}`));
-          });
-          stream.on('end', () => {
-            console.log('[SSH stream end]');
-          });
-          stream.on('exit', (code) => {
-            console.log('[SSH stream exit]', code);
-          });
-          stream.on('data', (data) => {
-            console.log('[SSH STDOUT]:', data.toString());
-          });
-          stream.stderr.on('data', (data) => {
-            console.log('[SSH STDERR]:', data.toString());
-          });
-        });
-      });
-      conn.on('error', (err) => reject(err));
-      conn.connect(sshConfig);
-    });
-
-    // Now use the virtual environment to install requirements
-    pipInstallCmd = `${venvActivateCmd} && pip install -r ${jobFolderPath}/requirements.txt`;
-    console.log(
-      `[initializeJobOnHost] Using virtual environment for pip install: ${pipInstallCmd}`,
-    );
+    pipInstallCmd = `pip install -r ${jobFolderPath}/requirements.txt`;
   }
   console.log(`[initializeJobOnHost] Executing command on host ${host.ip}: ${pipInstallCmd}`);
   await new Promise((resolve, reject) => {
@@ -476,11 +420,11 @@ async function finalizeJobOnHost(
   } catch (uploadError) {
     console.error(`[finalizeJobOnHost] Error uploading metadata: ${uploadError.message}`);
   }
-  // Ensure the virtual environment is activated for non-Windows hosts
+  // Ensure upload_and_report.py handles all files in the job folder
   const finalizeCommand =
     host.os === 'windows'
       ? `powershell -Command "cd '${jobFolderPath}'; python upload_and_report.py"`
-      : `cd ${jobFolderPath} && source /tmp/python/venv/bin/activate && python upload_and_report.py`;
+      : `cd ${jobFolderPath} && python upload_and_report.py`;
   const connFinalize = new Client();
 
   try {
@@ -591,3 +535,7 @@ module.exports = {
   initializeJobOnHost,
   finalizeJobOnHost,
 };
+
+
+
+
