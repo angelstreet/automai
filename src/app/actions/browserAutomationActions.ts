@@ -537,55 +537,35 @@ export async function executeBrowserTask(task: string, sessionId: string): Promi
     // Escape the task for JSON
     const escapedTask = task.replace(/"/g, '\\"').replace(/\n/g, '\\n');
     
-    // Execute curl command to execute task on the host
-    const curlCommand = `curl -X POST http://localhost:5001/execute -H "Content-Type: application/json" -d '{"task":"${escapedTask}"}' -w "\\nHTTP_STATUS:%{http_code}\\n" -s`;
+    // Execute curl command to execute task on the host - run in background
+    const curlCommand = `curl -X POST http://localhost:5001/execute -H "Content-Type: application/json" -d '{"task":"${escapedTask}"}' > /tmp/browser_task_output.log 2>&1 &`;
     
-    console.log('[@action:browserAutomation:executeBrowserTask] Executing curl command via existing session');
+    console.log('[@action:browserAutomation:executeBrowserTask] EVIDENCE: Sending curl command to host via session:', sessionId);
+    console.log('[@action:browserAutomation:executeBrowserTask] EVIDENCE: Full curl command:', curlCommand);
+    
     const result = await terminalService.sendDataToSession(sessionId, curlCommand);
 
     if (!result.success) {
       throw new Error('Failed to execute curl command via SSH');
     }
 
-    // Wait for curl command to complete
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    console.log('[@action:browserAutomation:executeBrowserTask] EVIDENCE: Command sent successfully to background');
+    
+    // Just wait a moment to ensure the command was sent
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
     const curlOutput = result.data?.stdout || '';
-    console.log('[@action:browserAutomation:executeBrowserTask] Curl output:', curlOutput);
+    console.log('[@action:browserAutomation:executeBrowserTask] EVIDENCE: Command execution output:', curlOutput);
 
-    // Parse the response
-    const httpStatusMatch = curlOutput.match(/HTTP_STATUS:(\d+)/);
-    const httpStatus = httpStatusMatch ? parseInt(httpStatusMatch[1]) : 0;
-
-    if (httpStatus !== 200) {
-      return {
-        success: false,
-        error: `Flask server returned HTTP ${httpStatus}. Server may not be running on host.`,
-      };
-    }
-
-    // Extract JSON response (everything before HTTP_STATUS line)
-    const jsonResponse = curlOutput.split('HTTP_STATUS:')[0].trim();
-    
-    try {
-      const data = JSON.parse(jsonResponse);
-      
-      return {
-        success: data.success,
-        data: {
-          result: data.result || '',
-          status: data.status || 'UNKNOWN',
-          logs: data.logs || '',
-        },
-        error: data.success ? undefined : (data.result || 'Task execution failed'),
-      };
-    } catch (parseError: any) {
-      console.error('[@action:browserAutomation:executeBrowserTask] Failed to parse JSON response:', parseError);
-      return {
-        success: false,
-        error: 'Invalid response from automation server',
-      };
-    }
+    // Return success immediately since we sent the command to background
+    return {
+      success: true,
+      data: {
+        result: `Task "${task}" has been sent to the browser automation server and is running in the background. This may take several minutes to complete.`,
+        status: 'STARTED',
+        logs: `Command sent: ${curlCommand}\nOutput: ${curlOutput}`,
+      },
+    };
   } catch (error: any) {
     console.error('[@action:browserAutomation:executeBrowserTask] Error:', error);
     return {

@@ -1,10 +1,9 @@
 'use client';
 
 import { Copy, Loader2, Play } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 import {
-  getBrowserStatus,
   executeBrowserTask,
 } from '@/app/actions/browserAutomationActions';
 import { Button } from '@/components/shadcn/button';
@@ -26,7 +25,7 @@ interface BrowserAutomationState {
   startTime: string | null;
 }
 
-const EXAMPLE_TASKS = ['Go to TV Guide', 'Click on Live TV then wait 3s'];
+const EXAMPLE_TASKS = ['Go to Youtube and launch a video', 'Go to google and search for funny cat pictures'];
 
 export default function BrowserAutomationClient() {
   const { toast } = useToast();
@@ -53,45 +52,6 @@ export default function BrowserAutomationClient() {
       logOutput: prev.logOutput ? `${prev.logOutput}\n${formattedMessage}` : formattedMessage,
     }));
   };
-
-  // Check server status periodically
-  useEffect(() => {
-    const checkStatus = async () => {
-      try {
-        if (!sessionId) {
-          return;
-        }
-        
-        const result = await getBrowserStatus(sessionId);
-        if (result.success && result.data) {
-          setState((prev) => ({
-            ...prev,
-            serverInitialized: result.data!.initialized,
-            serverExecuting: result.data!.executing,
-            currentTask: result.data!.current_task,
-            startTime: result.data!.start_time,
-          }));
-
-          // Update logs if they changed
-          if (result.data.logs && result.data.logs !== state.logOutput) {
-            setState((prev) => ({
-              ...prev,
-              logOutput: result.data!.logs,
-            }));
-          }
-        }
-      } catch (error) {
-        console.error('[@component:BrowserAutomationClient] Error checking status:', error);
-      }
-    };
-
-    // Only check status if automation is initialized and we have a session ID
-    if (isInitialized && sessionId) {
-      checkStatus();
-      const interval = setInterval(checkStatus, 2000);
-      return () => clearInterval(interval);
-    }
-  }, [isInitialized, sessionId, state.logOutput]);
 
   // Execute task action
   const handleExecuteTask = async () => {

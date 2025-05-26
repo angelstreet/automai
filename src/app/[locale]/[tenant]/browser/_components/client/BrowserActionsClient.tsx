@@ -96,6 +96,8 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
       }
       if (serverStartResult.data?.sessionId) {
         setAutomationSessionId(serverStartResult.data.sessionId);
+        // Also store in context so BrowserAutomationClient can use the same session
+        setSessionId(serverStartResult.data.sessionId);
       }
 
       toast({
