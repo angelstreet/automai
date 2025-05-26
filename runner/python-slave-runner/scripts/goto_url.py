@@ -43,7 +43,7 @@ def main():
         try:
             page = context.new_page()
             page.goto(args.url)
-            page.wait_for_timeout(2000)
+            page.wait_for_timeout(5000)
             result = True
             print(f"Test Success: Successfully navigated to {args.url}")
         except Exception as e:
