@@ -1,0 +1,10 @@
+# Supabase Database Configuration
+# Get this from your Supabase project settings > Database > Connection string
+SUPABASE_DB_URL=postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres
+
+# Example:
+# SUPABASE_DB_URL=postgresql://postgres:your_password@db.wexkgcszrwxqsthahfyq.supabase.co:5432/postgres
+
+# Flask Configuration
+FLASK_ENV=development
+FLASK_DEBUG=True 

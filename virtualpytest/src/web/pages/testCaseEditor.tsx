@@ -1,14 +1,53 @@
 import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Paper,
+  Typography,
+  TextField,
+  Button,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Card,
+  CardContent,
+  CardActions,
+  Grid,
+  IconButton,
+  Divider,
+  Alert,
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+} from '@mui/material';
+import {
+  Add as AddIcon,
+  Delete as DeleteIcon,
+  Edit as EditIcon,
+  Save as SaveIcon,
+  Cancel as CancelIcon,
+} from '@mui/icons-material';
 import { TestCase } from '../type';
 
-interface TestCaseEditorProps {
-  testId?: string;
-  onSave?: (testCase: TestCase) => void;
-  onCancel?: () => void;
-}
+const API_BASE_URL = 'http://localhost:5009/api';
 
-const TestCaseEditor: React.FC<TestCaseEditorProps> = ({ testId, onSave, onCancel }) => {
-  const [testCase, setTestCase] = useState<TestCase>({
+const TestCaseEditor: React.FC = () => {
+  const [testCases, setTestCases] = useState<TestCase[]>([]);
+  const [selectedTestCase, setSelectedTestCase] = useState<TestCase | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [formData, setFormData] = useState<TestCase>({
     test_id: '',
     name: '',
     test_type: 'functional',
@@ -16,27 +55,22 @@ const TestCaseEditor: React.FC<TestCaseEditorProps> = ({ testId, onSave, onCance
     steps: []
   });
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
   useEffect(() => {
-    if (testId) {
-      fetchTestCase(testId);
-    }
-  }, [testId]);
+    fetchTestCases();
+  }, []);
 
-  const fetchTestCase = async (id: string) => {
+  const fetchTestCases = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/testcases/${id}`);
+      const response = await fetch(`${API_BASE_URL}/testcases`);
       if (response.ok) {
         const data = await response.json();
-        setTestCase(data);
+        setTestCases(data);
       } else {
-        setError('Failed to fetch test case');
+        setError('Failed to fetch test cases');
       }
     } catch (err) {
-      setError('Error fetching test case');
+      setError('Error fetching test cases');
     } finally {
       setLoading(false);
     }
@@ -45,19 +79,22 @@ const TestCaseEditor: React.FC<TestCaseEditorProps> = ({ testId, onSave, onCance
   const handleSave = async () => {
     try {
       setLoading(true);
-      const method = testId ? 'PUT' : 'POST';
-      const url = testId ? `/api/testcases/${testId}` : '/api/testcases';
+      const method = isEditing ? 'PUT' : 'POST';
+      const url = isEditing 
+        ? `${API_BASE_URL}/testcases/${formData.test_id}` 
+        : `${API_BASE_URL}/testcases`;
       
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(testCase),
+        body: JSON.stringify(formData),
       });
 
       if (response.ok) {
-        onSave?.(testCase);
+        await fetchTestCases();
+        handleCloseDialog();
       } else {
         setError('Failed to save test case');
       }
@@ -68,8 +105,50 @@ const TestCaseEditor: React.FC<TestCaseEditorProps> = ({ testId, onSave, onCance
     }
   };
 
+  const handleDelete = async (testId: string) => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_BASE_URL}/testcases/${testId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        await fetchTestCases();
+      } else {
+        setError('Failed to delete test case');
+      }
+    } catch (err) {
+      setError('Error deleting test case');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenDialog = (testCase?: TestCase) => {
+    if (testCase) {
+      setFormData(testCase);
+      setIsEditing(true);
+    } else {
+      setFormData({
+        test_id: `test_${Date.now()}`,
+        name: '',
+        test_type: 'functional',
+        start_node: '',
+        steps: []
+      });
+      setIsEditing(false);
+    }
+    setIsDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+    setSelectedTestCase(null);
+    setError(null);
+  };
+
   const addStep = () => {
-    setTestCase(prev => ({
+    setFormData(prev => ({
       ...prev,
       steps: [...prev.steps, {
         target_node: '',
@@ -82,7 +161,7 @@ const TestCaseEditor: React.FC<TestCaseEditorProps> = ({ testId, onSave, onCance
   };
 
   const updateStep = (index: number, field: string, value: string) => {
-    setTestCase(prev => ({
+    setFormData(prev => ({
       ...prev,
       steps: prev.steps.map((step, i) => 
         i === index ? { ...step, [field]: value } : step
@@ -90,170 +169,177 @@ const TestCaseEditor: React.FC<TestCaseEditorProps> = ({ testId, onSave, onCance
     }));
   };
 
-  const updateStepCondition = (stepIndex: number, conditionIndex: number, field: string, value: string | number) => {
-    setTestCase(prev => ({
-      ...prev,
-      steps: prev.steps.map((step, i) => 
-        i === stepIndex ? {
-          ...step,
-          verify: {
-            ...step.verify,
-            conditions: step.verify.conditions.map((condition, j) =>
-              j === conditionIndex ? { ...condition, [field]: value } : condition
-            )
-          }
-        } : step
-      )
-    }));
-  };
-
   const removeStep = (index: number) => {
-    setTestCase(prev => ({
+    setFormData(prev => ({
       ...prev,
       steps: prev.steps.filter((_, i) => i !== index)
     }));
   };
 
-  const addCondition = (stepIndex: number) => {
-    setTestCase(prev => ({
-      ...prev,
-      steps: prev.steps.map((step, i) => 
-        i === stepIndex ? {
-          ...step,
-          verify: {
-            ...step.verify,
-            conditions: [...step.verify.conditions, { type: 'element_exists', condition: '', timeout: 5000 }]
-          }
-        } : step
-      )
-    }));
-  };
-
-  if (loading) return <div>Loading...</div>;
-
   return (
-    <div className="test-case-editor">
-      <h2>{testId ? 'Edit Test Case' : 'Create Test Case'}</h2>
-      
-      {error && <div className="error">{error}</div>}
-      
-      <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
-        <div className="form-group">
-          <label>Test ID:</label>
-          <input
-            type="text"
-            value={testCase.test_id}
-            onChange={(e) => setTestCase(prev => ({ ...prev, test_id: e.target.value }))}
-            required
-          />
-        </div>
+    <Box>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h4" component="h1">
+          Test Case Management
+        </Typography>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => handleOpenDialog()}
+        >
+          Create Test Case
+        </Button>
+      </Box>
 
-        <div className="form-group">
-          <label>Name:</label>
-          <input
-            type="text"
-            value={testCase.name}
-            onChange={(e) => setTestCase(prev => ({ ...prev, name: e.target.value }))}
-            required
-          />
-        </div>
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
-        <div className="form-group">
-          <label>Test Type:</label>
-          <select
-            value={testCase.test_type}
-            onChange={(e) => setTestCase(prev => ({ ...prev, test_type: e.target.value as any }))}
-          >
-            <option value="functional">Functional</option>
-            <option value="performance">Performance</option>
-            <option value="endurance">Endurance</option>
-            <option value="robustness">Robustness</option>
-          </select>
-        </div>
+      {loading && (
+        <Box display="flex" justifyContent="center" my={4}>
+          <CircularProgress />
+        </Box>
+      )}
 
-        <div className="form-group">
-          <label>Start Node:</label>
-          <input
-            type="text"
-            value={testCase.start_node}
-            onChange={(e) => setTestCase(prev => ({ ...prev, start_node: e.target.value }))}
-          />
-        </div>
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Test ID</TableCell>
+              <TableCell>Name</TableCell>
+              <TableCell>Type</TableCell>
+              <TableCell>Start Node</TableCell>
+              <TableCell>Steps</TableCell>
+              <TableCell>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {testCases.map((testCase) => (
+              <TableRow key={testCase.test_id}>
+                <TableCell>{testCase.test_id}</TableCell>
+                <TableCell>{testCase.name}</TableCell>
+                <TableCell>{testCase.test_type}</TableCell>
+                <TableCell>{testCase.start_node}</TableCell>
+                <TableCell>{testCase.steps.length}</TableCell>
+                <TableCell>
+                  <IconButton
+                    onClick={() => handleOpenDialog(testCase)}
+                    color="primary"
+                  >
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton
+                    onClick={() => handleDelete(testCase.test_id)}
+                    color="error"
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
 
-        <div className="form-group">
-          <label>Steps:</label>
-          {testCase.steps.map((step, stepIndex) => (
-            <div key={stepIndex} className="step-group">
-              <h4>Step {stepIndex + 1}</h4>
-              <div>
-                <label>Target Node:</label>
-                <input
-                  type="text"
-                  value={step.target_node}
-                  onChange={(e) => updateStep(stepIndex, 'target_node', e.target.value)}
+      {/* Edit/Create Dialog */}
+      <Dialog open={isDialogOpen} onClose={handleCloseDialog} maxWidth="md" fullWidth>
+        <DialogTitle>
+          {isEditing ? 'Edit Test Case' : 'Create Test Case'}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Test ID"
+                  value={formData.test_id}
+                  onChange={(e) => setFormData(prev => ({ ...prev, test_id: e.target.value }))}
+                  disabled={isEditing}
                 />
-              </div>
-              
-              <div>
-                <label>Verification Type:</label>
-                <select
-                  value={step.verify.type}
-                  onChange={(e) => setTestCase(prev => ({
-                    ...prev,
-                    steps: prev.steps.map((s, i) => 
-                      i === stepIndex ? {
-                        ...s,
-                        verify: { ...s.verify, type: e.target.value as 'single' | 'compound' }
-                      } : s
-                    )
-                  }))}
-                >
-                  <option value="single">Single</option>
-                  <option value="compound">Compound</option>
-                </select>
-              </div>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Name"
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Test Type</InputLabel>
+                  <Select
+                    value={formData.test_type}
+                    label="Test Type"
+                    onChange={(e) => setFormData(prev => ({ ...prev, test_type: e.target.value as any }))}
+                  >
+                    <MenuItem value="functional">Functional</MenuItem>
+                    <MenuItem value="performance">Performance</MenuItem>
+                    <MenuItem value="endurance">Endurance</MenuItem>
+                    <MenuItem value="robustness">Robustness</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Start Node"
+                  value={formData.start_node}
+                  onChange={(e) => setFormData(prev => ({ ...prev, start_node: e.target.value }))}
+                />
+              </Grid>
+            </Grid>
 
-              <div>
-                <label>Conditions:</label>
-                {step.verify.conditions.map((condition, conditionIndex) => (
-                  <div key={conditionIndex} className="condition-group">
-                    <input
-                      type="text"
-                      placeholder="Type"
-                      value={condition.type}
-                      onChange={(e) => updateStepCondition(stepIndex, conditionIndex, 'type', e.target.value)}
-                    />
-                    <input
-                      type="text"
-                      placeholder="Condition"
-                      value={condition.condition}
-                      onChange={(e) => updateStepCondition(stepIndex, conditionIndex, 'condition', e.target.value)}
-                    />
-                    <input
-                      type="number"
-                      placeholder="Timeout (ms)"
-                      value={condition.timeout}
-                      onChange={(e) => updateStepCondition(stepIndex, conditionIndex, 'timeout', parseInt(e.target.value))}
-                    />
-                  </div>
-                ))}
-                <button type="button" onClick={() => addCondition(stepIndex)}>Add Condition</button>
-              </div>
+            <Box mt={3}>
+              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                <Typography variant="h6">Steps</Typography>
+                <Button startIcon={<AddIcon />} onClick={addStep}>
+                  Add Step
+                </Button>
+              </Box>
               
-              <button type="button" onClick={() => removeStep(stepIndex)}>Remove Step</button>
-            </div>
-          ))}
-          <button type="button" onClick={addStep}>Add Step</button>
-        </div>
-
-        <div className="form-actions">
-          <button type="submit" disabled={loading}>
-            {loading ? 'Saving...' : 'Save'}
-          </button>
-          <button type="button" onClick={onCancel}>Cancel</button>
-        </div>
-      </form>
-    </div>
+              {formData.steps.map((step, index) => (
+                <Card key={index} sx={{ mb: 2 }}>
+                  <CardContent>
+                    <Typography variant="subtitle1" gutterBottom>
+                      Step {index + 1}
+                    </Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12}>
+                        <TextField
+                          fullWidth
+                          label="Target Node"
+                          value={step.target_node}
+                          onChange={(e) => updateStep(index, 'target_node', e.target.value)}
+                        />
+                      </Grid>
+                    </Grid>
+                  </CardContent>
+                  <CardActions>
+                    <Button
+                      startIcon={<DeleteIcon />}
+                      onClick={() => removeStep(index)}
+                      color="error"
+                    >
+                      Remove Step
+                    </Button>
+                  </CardActions>
+                </Card>
+              ))}
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog}>Cancel</Button>
+          <Button onClick={handleSave} variant="contained" disabled={loading}>
+            {loading ? <CircularProgress size={20} /> : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 };
 
