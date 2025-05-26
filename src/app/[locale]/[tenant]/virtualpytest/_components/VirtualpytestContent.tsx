@@ -127,7 +127,7 @@ export default function   VirtualPyTestContent({ pageMetadata }: VirtualPyTestCo
   }
 
   return (
-    <div className="h-full w-full">
+    <div className="h-full w-full overflow-hidden">
       <iframe
         src="http://localhost:5173"
         className="w-full h-full border-0"
