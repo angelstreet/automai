@@ -623,6 +623,10 @@
     "roles_viewer_read_only": "Viewer (Read-Only)",
     "title": "Team Management"
   },
+  "virtualpytest": {
+    "title": "VirtualPyTest",
+    "desc": "VirtualPyTest is model-data driven test automation framework"
+  },
   "widget": {
     "title": "Widget",
     "desc": "Widget and Tools"
