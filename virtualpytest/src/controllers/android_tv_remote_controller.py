@@ -63,144 +63,128 @@ class AndroidTVRemoteController(RemoteControllerInterface):
                 'name': 'Fire TV Remote',
                 'type': 'android_tv',
                 'image_url': '/android-tv-remote.png',
-                'default_scale': 1.2,
-                'min_scale': 0.5,
-                'max_scale': 2.0,
+                'default_scale': 0.5,
+                'min_scale': 0.1,
+                'max_scale': 0.8,
                 # General scaling and offset parameters
-                'button_scale_factor': 1.0,  # General scaling factor for all button sizes
+                'button_scale_factor': 2,  # General scaling factor for all button sizes
                 'global_offset': {
                     'x': 0,  # Global X offset for all buttons
-                    'y': 0   # Global Y offset for all buttons
+                    'y': 10   # Global Y offset for all buttons
                 }
             },
             'button_layout': {
                 'power': {
                     'key': 'POWER',
-                    'position': { 'top': 28, 'left': '50%', 'transform': 'translateX(-50%)' },
+                    'position': { 'x': 70, 'y': 28 },
                     'size': { 'width': 18, 'height': 18 },
                     'shape': 'circle',
-                    'comment': 'Power button',
-                    'local_offset': { 'x': 0, 'y': 0 }  # Individual button offset
+                    'comment': 'Power button'
                 },
                 'voice': {
                     'key': 'VOICE_ASSIST',
-                    'position': { 'top': 58, 'left': '50%', 'transform': 'translateX(-50%)' },
+                    'position': { 'x': 70, 'y': 58 },
                     'size': { 'width': 20, 'height': 20 },
                     'shape': 'circle',
-                    'comment': 'Voice/microphone button',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Voice/microphone button'
                 },
                 'nav_up': {
                     'key': 'DPAD_UP',
-                    'position': { 'top': 108, 'left': '50%', 'transform': 'translateX(-50%)' },
+                    'position': { 'x': 70, 'y': 108 },
                     'size': { 'width': 25, 'height': 15 },
                     'shape': 'rectangle',
-                    'comment': 'Navigation up',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Navigation up'
                 },
                 'nav_left': {
                     'key': 'DPAD_LEFT',
-                    'position': { 'top': 128, 'left': 45 },
+                    'position': { 'x': 45, 'y': 128 },
                     'size': { 'width': 15, 'height': 25 },
                     'shape': 'rectangle',
-                    'comment': 'Navigation left',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Navigation left'
                 },
                 'nav_center': {
                     'key': 'DPAD_CENTER',
-                    'position': { 'top': 133, 'left': '50%', 'transform': 'translateX(-50%)' },
+                    'position': { 'x': 70, 'y': 133 },
                     'size': { 'width': 20, 'height': 20 },
                     'shape': 'circle',
-                    'comment': 'Navigation center/select',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Navigation center/select'
                 },
                 'nav_right': {
                     'key': 'DPAD_RIGHT',
-                    'position': { 'top': 128, 'right': 45 },
+                    'position': { 'x': 95, 'y': 128 },
                     'size': { 'width': 15, 'height': 25 },
                     'shape': 'rectangle',
-                    'comment': 'Navigation right',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Navigation right'
                 },
                 'nav_down': {
                     'key': 'DPAD_DOWN',
-                    'position': { 'top': 158, 'left': '50%', 'transform': 'translateX(-50%)' },
+                    'position': { 'x': 70, 'y': 158 },
                     'size': { 'width': 25, 'height': 15 },
                     'shape': 'rectangle',
-                    'comment': 'Navigation down',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Navigation down'
                 },
                 'back': {
                     'key': 'BACK',
-                    'position': { 'top': 188, 'left': 35 },
+                    'position': { 'x': 35, 'y': 188 },
                     'size': { 'width': 18, 'height': 18 },
                     'shape': 'circle',
-                    'comment': 'Back button',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Back button'
                 },
                 'home': {
                     'key': 'HOME',
-                    'position': { 'top': 188, 'left': '50%', 'transform': 'translateX(-50%)' },
+                    'position': { 'x': 70, 'y': 188 },
                     'size': { 'width': 18, 'height': 18 },
                     'shape': 'circle',
-                    'comment': 'Home button',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Home button'
                 },
                 'menu': {
                     'key': 'MENU',
-                    'position': { 'top': 188, 'right': 35 },
+                    'position': { 'x': 105, 'y': 188 },
                     'size': { 'width': 18, 'height': 18 },
                     'shape': 'circle',
-                    'comment': 'Menu button',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Menu button'
                 },
                 'rewind': {
                     'key': 'MEDIA_REWIND',
-                    'position': { 'top': 228, 'left': 35 },
+                    'position': { 'x': 35, 'y': 228 },
                     'size': { 'width': 18, 'height': 18 },
                     'shape': 'circle',
-                    'comment': 'Rewind button',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Rewind button'
                 },
                 'play_pause': {
                     'key': 'MEDIA_PLAY_PAUSE',
-                    'position': { 'top': 228, 'left': '50%', 'transform': 'translateX(-50%)' },
+                    'position': { 'x': 70, 'y': 228 },
                     'size': { 'width': 18, 'height': 18 },
                     'shape': 'circle',
-                    'comment': 'Play/pause button',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Play/pause button'
                 },
                 'fast_forward': {
                     'key': 'MEDIA_FAST_FORWARD',
-                    'position': { 'top': 228, 'right': 35 },
+                    'position': { 'x': 105, 'y': 228 },
                     'size': { 'width': 18, 'height': 18 },
                     'shape': 'circle',
-                    'comment': 'Fast forward button',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Fast forward button'
                 },
                 'volume_up': {
                     'key': 'VOLUME_UP',
-                    'position': { 'top': 268, 'left': '50%', 'transform': 'translateX(-50%)' },
+                    'position': { 'x': 70, 'y': 268 },
                     'size': { 'width': 22, 'height': 22 },
                     'shape': 'circle',
-                    'comment': 'Volume up button',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Volume up button'
                 },
                 'volume_down': {
                     'key': 'VOLUME_DOWN',
-                    'position': { 'top': 300, 'left': '50%', 'transform': 'translateX(-50%)' },
+                    'position': { 'x': 70, 'y': 300 },
                     'size': { 'width': 22, 'height': 22 },
                     'shape': 'circle',
-                    'comment': 'Volume down button',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Volume down button'
                 },
                 'mute': {
                     'key': 'VOLUME_MUTE',
-                    'position': { 'top': 334, 'left': '50%', 'transform': 'translateX(-50%)' },
+                    'position': { 'x': 70, 'y': 334 },
                     'size': { 'width': 22, 'height': 22 },
                     'shape': 'circle',
-                    'comment': 'Mute button',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Mute button'
                 }
             }
         }

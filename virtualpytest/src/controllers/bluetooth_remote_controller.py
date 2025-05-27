@@ -93,195 +93,171 @@ class BluetoothRemoteController(RemoteControllerInterface):
             'button_layout': {
                 'power': {
                     'key': 'POWER',
-                    'position': { 'top': 25, 'left': '50%', 'transform': 'translateX(-50%)' },
-                    'size': { 'width': 16, 'height': 16 },
+                    'position': { 'x': 70, 'y': 28 },
+                    'size': { 'width': 18, 'height': 18 },
                     'shape': 'circle',
-                    'comment': 'Power button',
-                    'local_offset': { 'x': 0, 'y': 0 }
-                },
-                'mute': {
-                    'key': 'MUTE',
-                    'position': { 'top': 50, 'left': 20 },
-                    'size': { 'width': 14, 'height': 14 },
-                    'shape': 'circle',
-                    'comment': 'Mute button',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Power button'
                 },
                 'source': {
                     'key': 'SOURCE',
-                    'position': { 'top': 50, 'right': 20 },
-                    'size': { 'width': 14, 'height': 14 },
+                    'position': { 'x': 35, 'y': 58 },
+                    'size': { 'width': 18, 'height': 18 },
                     'shape': 'circle',
-                    'comment': 'Source/Input button',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Source/Input button'
+                },
+                'mute': {
+                    'key': 'MUTE',
+                    'position': { 'x': 105, 'y': 58 },
+                    'size': { 'width': 18, 'height': 18 },
+                    'shape': 'circle',
+                    'comment': 'Mute button'
                 },
                 'num_1': {
                     'key': '1',
-                    'position': { 'top': 80, 'left': 20 },
-                    'size': { 'width': 14, 'height': 14 },
+                    'position': { 'x': 35, 'y': 88 },
+                    'size': { 'width': 18, 'height': 18 },
                     'shape': 'circle',
-                    'comment': 'Number 1',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Number 1'
                 },
                 'num_2': {
                     'key': '2',
-                    'position': { 'top': 80, 'left': '50%', 'transform': 'translateX(-50%)' },
-                    'size': { 'width': 14, 'height': 14 },
+                    'position': { 'x': 70, 'y': 88 },
+                    'size': { 'width': 18, 'height': 18 },
                     'shape': 'circle',
-                    'comment': 'Number 2',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Number 2'
                 },
                 'num_3': {
                     'key': '3',
-                    'position': { 'top': 80, 'right': 20 },
-                    'size': { 'width': 14, 'height': 14 },
+                    'position': { 'x': 105, 'y': 88 },
+                    'size': { 'width': 18, 'height': 18 },
                     'shape': 'circle',
-                    'comment': 'Number 3',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Number 3'
                 },
                 'num_4': {
                     'key': '4',
-                    'position': { 'top': 105, 'left': 20 },
-                    'size': { 'width': 14, 'height': 14 },
+                    'position': { 'x': 35, 'y': 118 },
+                    'size': { 'width': 18, 'height': 18 },
                     'shape': 'circle',
-                    'comment': 'Number 4',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Number 4'
                 },
                 'num_5': {
                     'key': '5',
-                    'position': { 'top': 105, 'left': '50%', 'transform': 'translateX(-50%)' },
-                    'size': { 'width': 14, 'height': 14 },
+                    'position': { 'x': 70, 'y': 118 },
+                    'size': { 'width': 18, 'height': 18 },
                     'shape': 'circle',
-                    'comment': 'Number 5',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Number 5'
                 },
                 'num_6': {
                     'key': '6',
-                    'position': { 'top': 105, 'right': 20 },
-                    'size': { 'width': 14, 'height': 14 },
+                    'position': { 'x': 105, 'y': 118 },
+                    'size': { 'width': 18, 'height': 18 },
                     'shape': 'circle',
-                    'comment': 'Number 6',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Number 6'
                 },
                 'num_7': {
                     'key': '7',
-                    'position': { 'top': 130, 'left': 20 },
-                    'size': { 'width': 14, 'height': 14 },
+                    'position': { 'x': 35, 'y': 148 },
+                    'size': { 'width': 18, 'height': 18 },
                     'shape': 'circle',
-                    'comment': 'Number 7',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Number 7'
                 },
                 'num_8': {
                     'key': '8',
-                    'position': { 'top': 130, 'left': '50%', 'transform': 'translateX(-50%)' },
-                    'size': { 'width': 14, 'height': 14 },
+                    'position': { 'x': 70, 'y': 148 },
+                    'size': { 'width': 18, 'height': 18 },
                     'shape': 'circle',
-                    'comment': 'Number 8',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Number 8'
                 },
                 'num_9': {
                     'key': '9',
-                    'position': { 'top': 130, 'right': 20 },
-                    'size': { 'width': 14, 'height': 14 },
+                    'position': { 'x': 105, 'y': 148 },
+                    'size': { 'width': 18, 'height': 18 },
                     'shape': 'circle',
-                    'comment': 'Number 9',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Number 9'
                 },
                 'num_0': {
                     'key': '0',
-                    'position': { 'top': 155, 'left': '50%', 'transform': 'translateX(-50%)' },
-                    'size': { 'width': 14, 'height': 14 },
+                    'position': { 'x': 70, 'y': 178 },
+                    'size': { 'width': 18, 'height': 18 },
                     'shape': 'circle',
-                    'comment': 'Number 0',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Number 0'
                 },
                 'volume_up': {
                     'key': 'VOLUME_UP',
-                    'position': { 'top': 185, 'left': 20 },
-                    'size': { 'width': 14, 'height': 14 },
+                    'position': { 'x': 35, 'y': 208 },
+                    'size': { 'width': 18, 'height': 18 },
                     'shape': 'circle',
-                    'comment': 'Volume up',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Volume up'
                 },
                 'channel_up': {
                     'key': 'CHANNEL_UP',
-                    'position': { 'top': 185, 'right': 20 },
-                    'size': { 'width': 14, 'height': 14 },
+                    'position': { 'x': 105, 'y': 208 },
+                    'size': { 'width': 18, 'height': 18 },
                     'shape': 'circle',
-                    'comment': 'Channel up',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Channel up'
                 },
                 'volume_down': {
                     'key': 'VOLUME_DOWN',
-                    'position': { 'top': 210, 'left': 20 },
-                    'size': { 'width': 14, 'height': 14 },
+                    'position': { 'x': 35, 'y': 238 },
+                    'size': { 'width': 18, 'height': 18 },
                     'shape': 'circle',
-                    'comment': 'Volume down',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Volume down'
                 },
                 'channel_down': {
                     'key': 'CHANNEL_DOWN',
-                    'position': { 'top': 210, 'right': 20 },
-                    'size': { 'width': 14, 'height': 14 },
+                    'position': { 'x': 105, 'y': 238 },
+                    'size': { 'width': 18, 'height': 18 },
                     'shape': 'circle',
-                    'comment': 'Channel down',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Channel down'
                 },
                 'nav_up': {
                     'key': 'UP',
-                    'position': { 'top': 245, 'left': '50%', 'transform': 'translateX(-50%)' },
-                    'size': { 'width': 16, 'height': 12 },
+                    'position': { 'x': 70, 'y': 268 },
+                    'size': { 'width': 25, 'height': 15 },
                     'shape': 'rectangle',
-                    'comment': 'Navigation up',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Navigation up'
                 },
                 'nav_left': {
                     'key': 'LEFT',
-                    'position': { 'top': 262, 'left': 25 },
-                    'size': { 'width': 12, 'height': 16 },
+                    'position': { 'x': 45, 'y': 288 },
+                    'size': { 'width': 15, 'height': 25 },
                     'shape': 'rectangle',
-                    'comment': 'Navigation left',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Navigation left'
                 },
                 'nav_center': {
                     'key': 'OK',
-                    'position': { 'top': 265, 'left': '50%', 'transform': 'translateX(-50%)' },
-                    'size': { 'width': 14, 'height': 14 },
+                    'position': { 'x': 70, 'y': 293 },
+                    'size': { 'width': 20, 'height': 20 },
                     'shape': 'circle',
-                    'comment': 'Navigation center/OK',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'OK/Select'
                 },
                 'nav_right': {
                     'key': 'RIGHT',
-                    'position': { 'top': 262, 'right': 25 },
-                    'size': { 'width': 12, 'height': 16 },
+                    'position': { 'x': 95, 'y': 288 },
+                    'size': { 'width': 15, 'height': 25 },
                     'shape': 'rectangle',
-                    'comment': 'Navigation right',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Navigation right'
                 },
                 'nav_down': {
                     'key': 'DOWN',
-                    'position': { 'top': 285, 'left': '50%', 'transform': 'translateX(-50%)' },
-                    'size': { 'width': 16, 'height': 12 },
+                    'position': { 'x': 70, 'y': 318 },
+                    'size': { 'width': 25, 'height': 15 },
                     'shape': 'rectangle',
-                    'comment': 'Navigation down',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Navigation down'
                 },
                 'menu': {
                     'key': 'MENU',
-                    'position': { 'top': 315, 'left': 20 },
-                    'size': { 'width': 14, 'height': 14 },
+                    'position': { 'x': 35, 'y': 348 },
+                    'size': { 'width': 18, 'height': 18 },
                     'shape': 'circle',
-                    'comment': 'Menu button',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Menu button'
                 },
                 'back': {
                     'key': 'BACK',
-                    'position': { 'top': 315, 'right': 20 },
-                    'size': { 'width': 14, 'height': 14 },
+                    'position': { 'x': 105, 'y': 348 },
+                    'size': { 'width': 18, 'height': 18 },
                     'shape': 'circle',
-                    'comment': 'Back/Exit button',
-                    'local_offset': { 'x': 0, 'y': 0 }
+                    'comment': 'Back/Exit button'
                 }
             }
         }

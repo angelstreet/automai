@@ -113,10 +113,6 @@ interface ButtonConfig {
   size: any;
   shape: string;
   comment: string;
-  local_offset?: {
-    x: number;
-    y: number;
-  };
 }
 
 interface RemoteConfig {
@@ -174,7 +170,7 @@ const Controller: React.FC = () => {
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
   // Debug mode for button positioning
-  const [debugMode, setDebugMode] = useState(false);
+  const [showOverlays, setShowOverlays] = useState(false);
 
   // Remote scaling parameter - 1.0 = original size, 1.5 = 50% larger, etc.
   const [remoteScale, setRemoteScale] = useState(1.2); // Default to 20% larger than current
@@ -697,63 +693,51 @@ const Controller: React.FC = () => {
     // Get scaling and offset parameters from remote config
     const buttonScaleFactor = remoteConfig.remote_info.button_scale_factor || 1.0;
     const globalOffset = remoteConfig.remote_info.global_offset || { x: 0, y: 0 };
-    const localOffset = config.local_offset || { x: 0, y: 0 };
     
     // Apply scaling and offsets to position and size
-    const scaledPosition = { ...config.position };
-    const scaledSize = { ...config.size };
+    const scaledPosition = {
+      x: (config.position.x + globalOffset.x) * scale,
+      y: (config.position.y + globalOffset.y) * scale
+    };
     
-    // Scale numeric position values and apply offsets
-    if (typeof scaledPosition.top === 'number') {
-      scaledPosition.top = (scaledPosition.top * scale) + (globalOffset.y * scale) + (localOffset.y * scale);
-    }
-    if (typeof scaledPosition.left === 'number') {
-      scaledPosition.left = (scaledPosition.left * scale) + (globalOffset.x * scale) + (localOffset.x * scale);
-    }
-    if (typeof scaledPosition.right === 'number') {
-      scaledPosition.right = (scaledPosition.right * scale) + (globalOffset.x * scale) + (localOffset.x * scale);
-    }
-    if (typeof scaledPosition.bottom === 'number') {
-      scaledPosition.bottom = (scaledPosition.bottom * scale) + (globalOffset.y * scale) + (localOffset.y * scale);
-    }
-    
-    // Scale size values with button scale factor
-    if (typeof scaledSize.width === 'number') {
-      scaledSize.width = scaledSize.width * scale * buttonScaleFactor;
-    }
-    if (typeof scaledSize.height === 'number') {
-      scaledSize.height = scaledSize.height * scale * buttonScaleFactor;
-    }
-    
+    const scaledSize = {
+      width: config.size.width * buttonScaleFactor * scale,
+      height: config.size.height * buttonScaleFactor * scale
+    };
+
     return (
       <Box
         key={buttonId}
-        onClick={() => commandHandler('press_key', { key: config.key })}
+        onClick={() => commandHandler(config.key, {})}
         sx={{
           position: 'absolute',
-          ...scaledPosition,
-          ...scaledSize,
+          left: scaledPosition.x,
+          top: scaledPosition.y,
+          width: scaledSize.width,
+          height: scaledSize.height,
           borderRadius,
+          backgroundColor: showOverlays ? 'rgba(255, 255, 255, 0.3)' : 'transparent',
+          border: showOverlays ? '1px solid rgba(255, 255, 255, 0.5)' : 'none',
           cursor: 'pointer',
-          // Show overlay in debug mode or on hover
-          bgcolor: debugMode ? 'rgba(255,0,0,0.3)' : 'transparent',
-          border: debugMode ? '2px solid rgba(255,0,0,0.8)' : 'none',
-          '&:hover': {
-            bgcolor: debugMode ? 'rgba(255,0,0,0.5)' : 'rgba(255,255,255,0.2)',
-            border: debugMode ? '2px solid rgba(255,0,0,1)' : '2px solid rgba(255,255,255,0.5)'
-          },
-          // Show button ID in debug mode
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: debugMode ? `${8 * scale}px` : '0px',
-          color: debugMode ? 'white' : 'transparent',
+          fontSize: '10px',
+          color: showOverlays ? 'white' : 'transparent',
           fontWeight: 'bold',
-          textShadow: debugMode ? '1px 1px 2px black' : 'none'
+          textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+          transition: 'all 0.2s ease',
+          transform: 'translate(-50%, -50%)',
+          '&:hover': {
+            backgroundColor: 'rgba(255, 255, 255, 0.4)',
+            border: '2px solid rgba(255, 255, 255, 0.8)',
+            boxShadow: '0 0 10px rgba(255, 255, 255, 0.6)',
+            color: 'white',
+          },
         }}
-        title={`${buttonId}: ${config.comment} (Key: ${config.key})`} // Enhanced tooltip
+        title={config.comment}
       >
-        {debugMode && buttonId}
+        {showOverlays && config.key}
       </Box>
     );
   };
@@ -1068,12 +1052,12 @@ const Controller: React.FC = () => {
               <Box display="flex" alignItems="center" gap={1}>
                 {/* Show Overlays button */}
                 <Button
-                  variant={debugMode ? "contained" : "outlined"}
+                  variant={showOverlays ? "contained" : "outlined"}
                   size="small"
-                  onClick={() => setDebugMode(!debugMode)}
+                  onClick={() => setShowOverlays(!showOverlays)}
                   sx={{ minWidth: 'auto', px: 1 }}
                 >
-                  {debugMode ? 'Hide Overlays' : 'Show Overlays'}
+                  {showOverlays ? 'Hide Overlays' : 'Show Overlays'}
                 </Button>
                 
                 {/* Scale controls */}
@@ -1270,12 +1254,12 @@ const Controller: React.FC = () => {
               <Box display="flex" alignItems="center" gap={1}>
                 {/* Show Overlays button */}
                 <Button
-                  variant={debugMode ? "contained" : "outlined"}
+                  variant={showOverlays ? "contained" : "outlined"}
                   size="small"
-                  onClick={() => setDebugMode(!debugMode)}
+                  onClick={() => setShowOverlays(!showOverlays)}
                   sx={{ minWidth: 'auto', px: 1 }}
                 >
-                  {debugMode ? 'Hide Overlays' : 'Show Overlays'}
+                  {showOverlays ? 'Hide Overlays' : 'Show Overlays'}
                 </Button>
                 
                 {/* Scale controls */}
@@ -1447,12 +1431,12 @@ const Controller: React.FC = () => {
               <Box display="flex" alignItems="center" gap={1}>
                 {/* Show Overlays button */}
                 <Button
-                  variant={debugMode ? "contained" : "outlined"}
+                  variant={showOverlays ? "contained" : "outlined"}
                   size="small"
-                  onClick={() => setDebugMode(!debugMode)}
+                  onClick={() => setShowOverlays(!showOverlays)}
                   sx={{ minWidth: 'auto', px: 1 }}
                 >
-                  {debugMode ? 'Hide Overlays' : 'Show Overlays'}
+                  {showOverlays ? 'Hide Overlays' : 'Show Overlays'}
                 </Button>
                 
                 {/* Scale controls */}
