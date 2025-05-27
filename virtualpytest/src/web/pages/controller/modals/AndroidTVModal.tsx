@@ -219,7 +219,49 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
       maxWidth="lg"
       fullWidth
     >
-      <DialogTitle>Android TV Remote Control</DialogTitle>
+      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+        <Typography variant="h6">Android TV Remote Control</Typography>
+        
+        {session.connected && (
+          <Box display="flex" alignItems="center" gap={1}>
+            {/* Show Overlays button */}
+            <Button
+              variant={showOverlays ? "contained" : "outlined"}
+              size="small"
+              onClick={() => setShowOverlays(!showOverlays)}
+              sx={{ minWidth: 'auto', px: 1, fontSize: '0.7rem' }}
+            >
+              {showOverlays ? 'Hide Overlays' : 'Show Overlays'}
+            </Button>
+            
+            {/* Scale controls */}
+            <Box display="flex" alignItems="center" gap={0.5}>
+              <Typography variant="caption" sx={{ fontSize: '0.9rem' }}>
+                Scale:
+              </Typography>
+              <Button
+                size="medium"
+                onClick={() => setRemoteScale(prev => Math.max(localRemoteConfig?.remote_info.min_scale || 0.5, prev - 0.1))}
+                disabled={remoteScale <= (localRemoteConfig?.remote_info.min_scale || 0.5)}
+                sx={{ minWidth: 20, width: 20, height: 20, p: 0, fontSize: '0.7rem' }}
+              >
+                -
+              </Button>
+              <Typography variant="caption" sx={{ minWidth: 30, textAlign: 'center', fontSize: '0.8rem' }}>
+                {Math.round(remoteScale * 100)}%
+              </Typography>
+              <Button
+                size="small"
+                onClick={() => setRemoteScale(prev => Math.min(localRemoteConfig?.remote_info.max_scale || 2.0, prev + 0.1))}
+                disabled={remoteScale >= (localRemoteConfig?.remote_info.max_scale || 2.0)}
+                sx={{ minWidth: 20, width: 20, height: 20, p: 0, fontSize: '0.7rem' }}
+              >
+                +
+              </Button>
+            </Box>
+          </Box>
+        )}
+      </DialogTitle>
       <DialogContent sx={{ maxHeight: '600px', overflow: 'auto' }}>
         {!session.connected ? (
           <Grid container spacing={3}>
@@ -388,49 +430,6 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
             {/* Right Column: Remote Control */}
             <Grid item xs={6}>
               <Box sx={{ display: 'flex', flexDirection: 'column', maxHeight: '500px' }}>
-                {/* Remote Control Header */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                 
-                  
-                  <Box display="flex" alignItems="center" gap={1}>
-                    {/* Show Overlays button */}
-                    <Button
-                      variant={showOverlays ? "contained" : "outlined"}
-                      size="small"
-                      onClick={() => setShowOverlays(!showOverlays)}
-                      sx={{ minWidth: 'auto', px: 1, fontSize: '0.7rem' }}
-                    >
-                      {showOverlays ? 'Hide Overlays' : 'Show Overlays'}
-                    </Button>
-                    
-                    {/* Scale controls */}
-                    <Box display="flex" alignItems="center" gap={0.5}>
-                      <Typography variant="caption" sx={{ fontSize: '0.65rem' }}>
-                        Scale:
-                      </Typography>
-                      <Button
-                        size="small"
-                        onClick={() => setRemoteScale(prev => Math.max(localRemoteConfig?.remote_info.min_scale || 0.5, prev - 0.1))}
-                        disabled={remoteScale <= (localRemoteConfig?.remote_info.min_scale || 0.5)}
-                        sx={{ minWidth: 20, width: 20, height: 20, p: 0, fontSize: '0.7rem' }}
-                      >
-                        -
-                      </Button>
-                      <Typography variant="caption" sx={{ minWidth: 30, textAlign: 'center', fontSize: '0.65rem' }}>
-                        {Math.round(remoteScale * 100)}%
-                      </Typography>
-                      <Button
-                        size="small"
-                        onClick={() => setRemoteScale(prev => Math.min(localRemoteConfig?.remote_info.max_scale || 2.0, prev + 0.1))}
-                        disabled={remoteScale >= (localRemoteConfig?.remote_info.max_scale || 2.0)}
-                        sx={{ minWidth: 20, width: 20, height: 20, p: 0, fontSize: '0.7rem' }}
-                      >
-                        +
-                      </Button>
-                    </Box>
-                  </Box>
-                </Box>
-
                 {/* Remote Interface */}
                 <Box sx={{ 
                   display: 'flex', 
