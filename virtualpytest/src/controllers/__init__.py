@@ -12,7 +12,7 @@ from typing import Dict, Any, Optional, Type, Union
 from .base_controllers import (
     BaseController,
     RemoteControllerInterface,
-    AVControllerInterface, 
+    AVControllerInterface,
     VerificationControllerInterface,
     PowerControllerInterface
 )

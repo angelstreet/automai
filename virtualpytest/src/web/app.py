@@ -897,5 +897,29 @@ def get_android_tv_status():
             'error': f'Status check error: {str(e)}'
         }), 500
 
+@app.route('/api/virtualpytest/android-tv/defaults', methods=['GET'])
+def get_android_tv_defaults():
+    """Get default Android TV connection values from environment variables."""
+    try:
+        defaults = {
+            'host_ip': os.getenv('HOST_IP', ''),
+            'host_username': os.getenv('HOST_USERNAME', ''),
+            'host_password': os.getenv('HOST_PASSWORD', ''),
+            'host_port': os.getenv('HOST_PORT', '22'),
+            'device_ip': os.getenv('DEVICE_IP', ''),
+            'device_port': os.getenv('DEVICE_PORT', '5555')
+        }
+        
+        return jsonify({
+            'success': True,
+            'defaults': defaults
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Failed to get defaults: {str(e)}'
+        }), 500
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5009, debug=True)

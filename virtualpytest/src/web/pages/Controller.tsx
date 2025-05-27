@@ -78,6 +78,143 @@ interface AndroidTVSession {
   device_ip: string;
 }
 
+// Centralized Android TV Remote Key Mappings - Edit these to change button functions
+const ANDROID_TV_KEY_MAPPINGS = {
+  POWER: 'POWER',
+  VOICE: 'MENU',  // Voice button mapped to MENU - change as needed
+  UP: 'UP',
+  DOWN: 'DOWN',
+  LEFT: 'LEFT',
+  RIGHT: 'RIGHT',
+  SELECT: 'OK',   // Center button
+  BACK: 'BACK',
+  HOME: 'HOME',
+  MENU: 'MENU',
+  REWIND: 'REWIND',
+  PLAY_PAUSE: 'PLAY_PAUSE',
+  FAST_FORWARD: 'FAST_FORWARD',
+  VOLUME_UP: 'VOLUME_UP',
+  VOLUME_DOWN: 'VOLUME_DOWN',
+  MUTE: 'VOLUME_MUTE'
+};
+
+// Comprehensive Android TV Remote Button Configuration
+// Edit positions, sizes, and key mappings here to match your remote image
+const REMOTE_BUTTON_CONFIG = {
+  POWER: {
+    key: 'POWER',
+    position: { top: 34, left: '50%', transform: 'translateX(-50%)' },
+    size: { width: 26, height: 26 },
+    shape: 'circle', // 'circle' or 'rectangle'
+    comment: 'Power button at top center'
+  },
+  VOICE: {
+    key: 'MENU',
+    position: { top: 71, left: '50%', transform: 'translateX(-50%)' },
+    size: { width: 30, height: 30 },
+    shape: 'circle',
+    comment: 'Voice/Microphone button'
+  },
+  UP: {
+    key: 'UP',
+    position: { top: 120, left: '50%', transform: 'translateX(-50%)' },
+    size: { width: 22, height: 19 },
+    shape: 'rectangle',
+    comment: 'Navigation up'
+  },
+  DOWN: {
+    key: 'DOWN',
+    position: { top: 169, left: '50%', transform: 'translateX(-50%)' },
+    size: { width: 22, height: 19 },
+    shape: 'rectangle',
+    comment: 'Navigation down'
+  },
+  LEFT: {
+    key: 'LEFT',
+    position: { top: 144, left: 34 },
+    size: { width: 19, height: 22 },
+    shape: 'rectangle',
+    comment: 'Navigation left'
+  },
+  RIGHT: {
+    key: 'RIGHT',
+    position: { top: 144, right: 34 },
+    size: { width: 19, height: 22 },
+    shape: 'rectangle',
+    comment: 'Navigation right'
+  },
+  SELECT: {
+    key: 'OK',
+    position: { top: 133, left: '50%', transform: 'translateX(-50%)' },
+    size: { width: 34, height: 34 },
+    shape: 'circle',
+    comment: 'Center select button'
+  },
+  BACK: {
+    key: 'BACK',
+    position: { top: 203, left: 26 },
+    size: { width: 22, height: 22 },
+    shape: 'circle',
+    comment: 'Back button'
+  },
+  HOME: {
+    key: 'HOME',
+    position: { top: 203, left: '50%', transform: 'translateX(-50%)' },
+    size: { width: 22, height: 22 },
+    shape: 'circle',
+    comment: 'Home button'
+  },
+  MENU: {
+    key: 'MENU',
+    position: { top: 203, right: 26 },
+    size: { width: 22, height: 22 },
+    shape: 'circle',
+    comment: 'Menu button'
+  },
+  REWIND: {
+    key: 'REWIND',
+    position: { top: 240, left: 26 },
+    size: { width: 22, height: 22 },
+    shape: 'circle',
+    comment: 'Rewind button'
+  },
+  PLAY_PAUSE: {
+    key: 'PLAY_PAUSE',
+    position: { top: 240, left: '50%', transform: 'translateX(-50%)' },
+    size: { width: 22, height: 22 },
+    shape: 'circle',
+    comment: 'Play/Pause button'
+  },
+  FAST_FORWARD: {
+    key: 'FAST_FORWARD',
+    position: { top: 240, right: 26 },
+    size: { width: 22, height: 22 },
+    shape: 'circle',
+    comment: 'Fast forward button'
+  },
+  VOLUME_UP: {
+    key: 'VOLUME_UP',
+    position: { top: 285, left: '50%', transform: 'translateX(-50%)' },
+    size: { width: 38, height: 15 },
+    shape: 'rectangle',
+    comment: 'Volume up button'
+  },
+  VOLUME_DOWN: {
+    key: 'VOLUME_DOWN',
+    position: { top: 308, left: '50%', transform: 'translateX(-50%)' },
+    size: { width: 38, height: 15 },
+    shape: 'rectangle',
+    comment: 'Volume down button'
+  },
+  MUTE: {
+    key: 'VOLUME_MUTE',
+    position: { top: 334, left: '50%', transform: 'translateX(-50%)' },
+    size: { width: 22, height: 22 },
+    shape: 'circle',
+    comment: 'Mute button'
+  }
+};
+
 const Controller: React.FC = () => {
   const [controllerTypes, setControllerTypes] = useState<ControllerTypes | null>(null);
   const [loading, setLoading] = useState(true);
@@ -121,6 +258,32 @@ const Controller: React.FC = () => {
   });
   const [connectionLoading, setConnectionLoading] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+
+  // Debug mode for button positioning
+  const [debugMode, setDebugMode] = useState(false);
+
+  // Load default values when modal opens
+  useEffect(() => {
+    if (androidTVModalOpen) {
+      fetchDefaultValues();
+    }
+  }, [androidTVModalOpen]);
+
+  const fetchDefaultValues = async () => {
+    try {
+      const response = await fetch('http://localhost:5009/api/virtualpytest/android-tv/defaults');
+      const result = await response.json();
+      
+      if (result.success && result.defaults) {
+        setConnectionForm(prev => ({
+          ...prev,
+          ...result.defaults
+        }));
+      }
+    } catch (error) {
+      console.log('Could not load default values:', error);
+    }
+  };
 
   useEffect(() => {
     fetchControllerTypes();
@@ -352,6 +515,43 @@ const Controller: React.FC = () => {
     });
   };
 
+  // Helper function to render a button from configuration
+  const renderRemoteButton = (buttonId: string, config: any) => {
+    const borderRadius = config.shape === 'circle' ? '50%' : config.shape === 'rectangle' ? 2 : '50%';
+    
+    return (
+      <Box
+        key={buttonId}
+        onClick={() => handleRemoteCommand('press_key', { key: config.key })}
+        sx={{
+          position: 'absolute',
+          ...config.position,
+          ...config.size,
+          borderRadius,
+          cursor: 'pointer',
+          // Show overlay in debug mode or on hover
+          bgcolor: debugMode ? 'rgba(255,0,0,0.3)' : 'transparent',
+          border: debugMode ? '2px solid rgba(255,0,0,0.8)' : 'none',
+          '&:hover': {
+            bgcolor: debugMode ? 'rgba(255,0,0,0.5)' : 'rgba(255,255,255,0.2)',
+            border: debugMode ? '2px solid rgba(255,0,0,1)' : '2px solid rgba(255,255,255,0.5)'
+          },
+          // Show button ID in debug mode
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: debugMode ? '8px' : '0px',
+          color: debugMode ? 'white' : 'transparent',
+          fontWeight: 'bold',
+          textShadow: debugMode ? '1px 1px 2px black' : 'none'
+        }}
+        title={`${buttonId}: ${config.comment} (Key: ${config.key})`} // Enhanced tooltip
+      >
+        {debugMode && buttonId}
+      </Box>
+    );
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -414,16 +614,16 @@ const Controller: React.FC = () => {
                           {implementations.length} types
                         </Typography>
                         <Box display="flex" justifyContent="center" gap={0.5} flexWrap="wrap">
-                          {implementations.filter(impl => impl.status === 'available').length > 0 && (
+                          {implementations.filter((impl: ControllerType) => impl.status === 'available').length > 0 && (
                             <Chip 
-                              label={`${implementations.filter(impl => impl.status === 'available').length} Ready`}
+                              label={`${implementations.filter((impl: ControllerType) => impl.status === 'available').length} Ready`}
                               color="success" 
                               size="small" 
                             />
                           )}
-                          {implementations.filter(impl => impl.status === 'placeholder').length > 0 && (
+                          {implementations.filter((impl: ControllerType) => impl.status === 'placeholder').length > 0 && (
                             <Chip 
-                              label={`${implementations.filter(impl => impl.status === 'placeholder').length} Planned`}
+                              label={`${implementations.filter((impl: ControllerType) => impl.status === 'placeholder').length} Planned`}
                               color="default" 
                               size="small" 
                             />
@@ -463,10 +663,9 @@ const Controller: React.FC = () => {
                   </AccordionSummary>
                   <AccordionDetails>
                     <List>
-                      {implementations.map((impl, index) => (
+                      {implementations.map((impl: ControllerType, index: number) => (
                         <React.Fragment key={impl.id}>
                           <ListItem
-                            button={impl.status === 'available'}
                             onClick={() => impl.status === 'available' && handleControllerClick(type, impl)}
                             sx={{ 
                               cursor: impl.status === 'available' ? 'pointer' : 'default',
@@ -639,21 +838,34 @@ const Controller: React.FC = () => {
       <Dialog 
         open={androidTVModalOpen} 
         onClose={handleCloseModal}
-        maxWidth="md"
+        maxWidth="sm"
         fullWidth
       >
         <DialogTitle>
-          Android TV Remote Control
-          {androidTVSession.connected && (
-            <Chip 
-              label="Connected" 
-              color="success" 
-              size="small" 
-              sx={{ ml: 2 }} 
-            />
-          )}
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Box display="flex" alignItems="center">
+              Android TV Remote Control
+              {androidTVSession.connected && (
+                <Chip 
+                  label="Connected" 
+                  color="success" 
+                  size="small" 
+                  sx={{ ml: 2 }} 
+                />
+              )}
+            </Box>
+            {androidTVSession.connected && (
+              <Button
+                variant={debugMode ? "contained" : "outlined"}
+                size="small"
+                onClick={() => setDebugMode(!debugMode)}
+              >
+                {debugMode ? 'Hide Overlays' : 'Show Overlays'}
+              </Button>
+            )}
+          </Box>
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ pb: 2 }}>
           {!androidTVSession.connected ? (
             <Box sx={{ pt: 2 }}>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
@@ -729,127 +941,31 @@ const Controller: React.FC = () => {
             </Box>
           ) : (
             <Box sx={{ pt: 2 }}>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Connected to {androidTVSession.host_ip} → {androidTVSession.device_ip}
-              </Typography>
-
               {/* Android TV Remote Interface */}
-              <Grid container spacing={2} justifyContent="center">
-                {/* Navigation Pad */}
-                <Grid item xs={12} sm={6}>
-                  <Box sx={{ textAlign: 'center' }}>
-                    <Typography variant="subtitle2" sx={{ mb: 2 }}>Navigation</Typography>
-                    <Grid container spacing={1} sx={{ maxWidth: 200, mx: 'auto' }}>
-                      <Grid item xs={12}>
-                        <Button 
-                          variant="outlined" 
-                          fullWidth 
-                          onClick={() => handleRemoteCommand('press_key', { key: 'UP' })}
-                        >
-                          ↑
-                        </Button>
-                      </Grid>
-                      <Grid item xs={4}>
-                        <Button 
-                          variant="outlined" 
-                          fullWidth 
-                          onClick={() => handleRemoteCommand('press_key', { key: 'LEFT' })}
-                        >
-                          ←
-                        </Button>
-                      </Grid>
-                      <Grid item xs={4}>
-                        <Button 
-                          variant="contained" 
-                          fullWidth 
-                          onClick={() => handleRemoteCommand('press_key', { key: 'OK' })}
-                        >
-                          OK
-                        </Button>
-                      </Grid>
-                      <Grid item xs={4}>
-                        <Button 
-                          variant="outlined" 
-                          fullWidth 
-                          onClick={() => handleRemoteCommand('press_key', { key: 'RIGHT' })}
-                        >
-                          →
-                        </Button>
-                      </Grid>
-                      <Grid item xs={12}>
-                        <Button 
-                          variant="outlined" 
-                          fullWidth 
-                          onClick={() => handleRemoteCommand('press_key', { key: 'DOWN' })}
-                        >
-                          ↓
-                        </Button>
-                      </Grid>
-                    </Grid>
-                  </Box>
-                </Grid>
+              <Box sx={{ pt: 1, maxWidth: 140, mx: 'auto' }}>
+                {/* Remote Control with Real Image Background */}
+                <Box sx={{ 
+                  position: 'relative',
+                  width: 140,
+                  height: 360,
+                  mx: 'auto',
+                  backgroundImage: 'url("/android-tv-remote.png")', // You'll need to add this image to public folder
+                  backgroundSize: 'contain',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'center',
+                  // Fallback dark background if image doesn't load
+                  bgcolor: '#2a2a2a',
+                  borderRadius: 6,
+                  boxShadow: '0 8px 16px rgba(0,0,0,0.3)'
+                }}>
+                  
+                  {/* Render all buttons from configuration */}
+                  {Object.entries(REMOTE_BUTTON_CONFIG).map(([buttonId, config]) => 
+                    renderRemoteButton(buttonId, config)
+                  )}
 
-                {/* Control Buttons */}
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" sx={{ mb: 2, textAlign: 'center' }}>Controls</Typography>
-                  <Grid container spacing={1}>
-                    <Grid item xs={6}>
-                      <Button 
-                        variant="outlined" 
-                        fullWidth 
-                        onClick={() => handleRemoteCommand('press_key', { key: 'HOME' })}
-                      >
-                        Home
-                      </Button>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Button 
-                        variant="outlined" 
-                        fullWidth 
-                        onClick={() => handleRemoteCommand('press_key', { key: 'BACK' })}
-                      >
-                        Back
-                      </Button>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Button 
-                        variant="outlined" 
-                        fullWidth 
-                        onClick={() => handleRemoteCommand('press_key', { key: 'MENU' })}
-                      >
-                        Menu
-                      </Button>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Button 
-                        variant="outlined" 
-                        fullWidth 
-                        onClick={() => handleRemoteCommand('press_key', { key: 'PLAY_PAUSE' })}
-                      >
-                        Play/Pause
-                      </Button>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Button 
-                        variant="outlined" 
-                        fullWidth 
-                        onClick={() => handleRemoteCommand('press_key', { key: 'VOLUME_UP' })}
-                      >
-                        Vol +
-                      </Button>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Button 
-                        variant="outlined" 
-                        fullWidth 
-                        onClick={() => handleRemoteCommand('press_key', { key: 'VOLUME_DOWN' })}
-                      >
-                        Vol -
-                      </Button>
-                    </Grid>
-                  </Grid>
-                </Grid>
-              </Grid>
+                </Box>
+              </Box>
             </Box>
           )}
         </DialogContent>
