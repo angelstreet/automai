@@ -8,9 +8,10 @@ All actions are printed to demonstrate functionality.
 from typing import Dict, Any, Optional, List, Union
 import time
 import random
+from .base_controllers import BaseVerificationController
 
 
-class VerificationController:
+class MockVerificationController(BaseVerificationController):
     """Mock verification controller that prints actions instead of executing them."""
     
     def __init__(self, device_name: str = "Unknown Device"):
@@ -338,3 +339,7 @@ class VerificationController:
                 'state_verification', 'performance_verification'
             ]
         }
+
+
+# Backward compatibility alias
+VerificationController = MockVerificationController

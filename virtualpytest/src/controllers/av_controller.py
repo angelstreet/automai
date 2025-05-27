@@ -8,9 +8,10 @@ All actions are printed to demonstrate functionality.
 from typing import Dict, Any, Optional, List
 import time
 import random
+from .base_controllers import BaseAVController
 
 
-class AVController:
+class MockAVController(BaseAVController):
     """Mock AV controller that prints actions instead of executing them."""
     
     def __init__(self, device_name: str = "Unknown Device", capture_source: str = "HDMI"):
@@ -272,12 +273,21 @@ class AVController:
             ]
         }
 
-# Placeholder subclasses
-class HDMI_Acquisition(AVController):
+# Mock subclasses for specific capture sources
+class MockHDMI_Acquisition(MockAVController):
+    """Mock AV controller for HDMI capture."""
     pass
 
-class ADB_Acquisition(AVController):
+class MockADB_Acquisition(MockAVController):
+    """Mock AV controller for ADB-based capture."""
     pass
 
-class Camera_Acquisition(AVController):
+class MockCamera_Acquisition(MockAVController):
+    """Mock AV controller for camera-based capture."""
     pass
+
+# Backward compatibility aliases
+AVController = MockAVController
+HDMI_Acquisition = MockHDMI_Acquisition
+ADB_Acquisition = MockADB_Acquisition
+Camera_Acquisition = MockCamera_Acquisition

@@ -7,9 +7,10 @@ All actions are printed to demonstrate functionality.
 
 from typing import Dict, Any, Optional
 import time
+from .base_controllers import BaseRemoteController
 
 
-class RemoteController:
+class MockRemoteController(BaseRemoteController):
     """Mock remote controller that prints actions instead of executing them."""
     
     def __init__(self, device_type: str = "generic", device_name: str = "Unknown Device"):
@@ -193,21 +194,36 @@ class RemoteController:
             ]
         }
 
-# Placeholder subclasses for specific devices
-class AndroidPhone(RemoteController):
+# Mock subclasses for specific devices
+class MockAndroidPhone(MockRemoteController):
+    """Mock remote controller for Android phones."""
     pass
 
-class AndroidTV(RemoteController):
+class MockAndroidTV(MockRemoteController):
+    """Mock remote controller for Android TV devices."""
     pass
 
-class ApplePhone(RemoteController):
+class MockApplePhone(MockRemoteController):
+    """Mock remote controller for Apple phones."""
     pass
 
-class AppleTV(RemoteController):
+class MockAppleTV(MockRemoteController):
+    """Mock remote controller for Apple TV devices."""
     pass
 
-class STB_EOS(RemoteController):
+class MockSTB_EOS(MockRemoteController):
+    """Mock remote controller for EOS set-top boxes."""
     pass
 
-class STB_Apollo(RemoteController):
+class MockSTB_Apollo(MockRemoteController):
+    """Mock remote controller for Apollo set-top boxes."""
     pass
+
+# Backward compatibility aliases
+RemoteController = MockRemoteController
+AndroidPhone = MockAndroidPhone
+AndroidTV = MockAndroidTV
+ApplePhone = MockApplePhone
+AppleTV = MockAppleTV
+STB_EOS = MockSTB_EOS
+STB_Apollo = MockSTB_Apollo

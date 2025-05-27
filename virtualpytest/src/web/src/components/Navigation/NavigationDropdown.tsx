@@ -12,14 +12,9 @@ interface NavigationItem {
 interface NavigationDropdownProps {
   label: string;
   items: NavigationItem[];
-  isActive?: boolean;
 }
 
-const NavigationDropdown: React.FC<NavigationDropdownProps> = ({
-  label,
-  items,
-  isActive = false,
-}) => {
+const NavigationDropdown: React.FC<NavigationDropdownProps> = ({ label, items }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const location = useLocation();
   const open = Boolean(anchorEl);
