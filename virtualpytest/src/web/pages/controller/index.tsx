@@ -8,7 +8,6 @@ import {
   Alert,
   CircularProgress,
   Container,
-  Button,
 } from '@mui/material';
 
 import { ControllerTypesOverview } from './components/ControllerTypesOverview';
@@ -28,17 +27,17 @@ const ControllerPage: React.FC = () => {
 
   if (error) {
     return (
-      <Box>
+      <Container maxWidth="xl" sx={{ py: 4 }}>
         <Typography variant="h4" gutterBottom>
           Controller Configuration
         </Typography>
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
         </Alert>
-        <Button variant="contained" onClick={refetch}>
+        <button onClick={refetch}>
           Retry
-        </Button>
-      </Box>
+        </button>
+      </Container>
     );
   }
 
