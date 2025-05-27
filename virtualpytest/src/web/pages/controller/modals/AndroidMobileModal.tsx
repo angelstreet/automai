@@ -118,7 +118,7 @@ export const AndroidMobileModal: React.FC<AndroidMobileModalProps> = ({ open, on
                   label="SSH Host IP"
                   value={connectionForm.host_ip}
                   onChange={(e) => setConnectionForm(prev => ({ ...prev, host_ip: e.target.value }))}
-                  placeholder="192.168.1.100"
+                  placeholder="77.56.53.130"
                   required
                 />
               </Grid>
@@ -201,7 +201,7 @@ export const AndroidMobileModal: React.FC<AndroidMobileModalProps> = ({ open, on
                 <Box sx={{ 
                   position: 'relative',
                   width: 300,
-                  height: 550,
+                  height: 500,
                   border: '2px solid #333',
                   borderRadius: '20px',
                   backgroundColor: '#000',
