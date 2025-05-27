@@ -18,8 +18,6 @@ from .base_controllers import (
 )
 
 # Import mock implementations
-from .remote.mock import MockRemoteController
-from .audiovideo.mock import MockAVController
 from .audiovideo.hdmi_stream import HDMIStreamController
 from .verification.mock import MockVerificationController
 from .power.mock import MockPowerController
@@ -33,19 +31,13 @@ from .remote.bluetooth import BluetoothRemoteController
 # Controller type registry
 CONTROLLER_REGISTRY = {
     'remote': {
-        'mock': MockRemoteController,
         'real_android_tv': AndroidTVRemoteController,  # Real SSH+ADB-based Android TV controller
         'real_android_mobile': AndroidMobileRemoteController,  # Real SSH+ADB-based Android Mobile controller
         'ir_remote': IRRemoteController,     # IR remote with classic TV/STB buttons
         'bluetooth_remote': BluetoothRemoteController,  # Bluetooth HID remote
     },
     'av': {
-        'mock': MockAVController,
-        'hdmi': MockAVController,            # Can be replaced with real implementation
         'hdmi_stream': HDMIStreamController, # HDMI stream URL controller
-        'adb': MockAVController,             # Can be replaced with real implementation
-        'camera': MockAVController,          # Can be replaced with real implementation
-        'network': MockAVController,         # Can be replaced with real implementation
     },
     'verification': {
         'mock': MockVerificationController,
@@ -71,7 +63,7 @@ class ControllerFactory:
     
     @staticmethod
     def create_remote_controller(
-        device_type: str = "mock",
+        device_type: str = "real_android_tv",
         device_name: str = "Unknown Device",
         **kwargs
     ) -> RemoteControllerInterface:
@@ -94,7 +86,7 @@ class ControllerFactory:
     
     @staticmethod
     def create_av_controller(
-        capture_type: str = "mock",
+        capture_type: str = "hdmi_stream",
         device_name: str = "Unknown Device",
         capture_source: str = "HDMI",
         **kwargs
@@ -208,8 +200,8 @@ class DeviceControllerSet:
     def __init__(
         self,
         device_name: str,
-        remote_type: str = "mock",
-        av_type: str = "mock", 
+        remote_type: str = "real_android_tv",
+        av_type: str = "hdmi_stream", 
         verification_type: str = "mock",
         power_type: str = "mock",
         **controller_kwargs
@@ -284,7 +276,7 @@ class DeviceControllerSet:
 # Convenience functions for backward compatibility
 def create_device_controllers(
     device_name: str,
-    device_type: str = "mock",
+    device_type: str = "android_tv",
     **kwargs
 ) -> DeviceControllerSet:
     """
@@ -324,19 +316,13 @@ def create_device_controllers(
         },
         'bluetooth_device': {
             'remote_type': 'bluetooth_remote',
-            'av_type': 'hdmi',
+            'av_type': 'hdmi_stream',
             'verification_type': 'ocr',
             'power_type': 'smart_plug'  # Changed from 'network' to 'smart_plug'
-        },
-        'mock_device': {
-            'remote_type': 'mock',
-            'av_type': 'mock',
-            'verification_type': 'mock',
-            'power_type': 'mock'
         }
     }
     
-    defaults = device_defaults.get(device_type, device_defaults['mock_device'])
+    defaults = device_defaults.get(device_type, device_defaults['android_tv'])
     
     # Override with any provided kwargs
     config = {**defaults, **kwargs}
