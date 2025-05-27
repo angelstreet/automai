@@ -286,9 +286,9 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
           {/* Right Column: Mobile Features */}
           <Grid item xs={6}>
             {/* App Launcher Section */}
-            <Box sx={{ mb: 3 }}>
+            <Box sx={{ mb: 1 }}>
              
-              <Box sx={{ mb: 2 }}>
+              <Box sx={{ mb: 2, mt: 2}}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Select an app...</InputLabel>
                   <Select
@@ -359,7 +359,7 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
 
               {/* Show overlay toggle */}
               {androidElements.length > 0 && (
-                <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
                   <Button
                     variant={showOverlay ? "contained" : "outlined"}
                     size="small"
@@ -378,13 +378,13 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
               )}
 
               {dumpError && (
-                <Box sx={{ mb: 2, p: 1, bgcolor: 'error.light', borderRadius: 1 }}>
+                <Box sx={{ mb: 1, p: 1, bgcolor: 'error.light', borderRadius: 1 }}>
                   <Typography variant="caption" color="error">{dumpError}</Typography>
                 </Box>
               )}
 
               {/* Always show element selection dropdown */}
-              <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+              <FormControl fullWidth size="small" >
                 <InputLabel>Select element to click...</InputLabel>
                 <Select
                   value={selectedElement}
@@ -424,9 +424,9 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
             </Box>
 
             {/* Mobile Phone Controls */}
-            <Box sx={{ mt: 2 }}>
+            <Box>
               {/* System buttons */}
-              <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+              <Box sx={{ display: 'flex', gap: 1, mb: 1   }}>
                 <Button
                   variant="outlined"
                   size="small"
@@ -511,7 +511,7 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
             </Box>
 
             {/* Modal Controls */}
-            <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid #e0e0e0' }}>
+            <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #e0e0e0' }}>
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <Button 
                   variant="outlined"
