@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -46,12 +46,28 @@ export const AndroidMobileModal: React.FC<AndroidMobileModalProps> = ({ open, on
     fetchDefaultValues,
   } = useAndroidMobileConnection();
 
+  // Local state for dropdown selections
+  const [selectedApp, setSelectedApp] = useState('');
+  const [selectedElement, setSelectedElement] = useState('');
+  const [isDumpingUI, setIsDumpingUI] = useState(false);
+  const [dumpError, setDumpError] = useState<string | null>(null);
+
   // Load default values when modal opens
   useEffect(() => {
     if (open) {
       fetchDefaultValues();
     }
   }, [open, fetchDefaultValues]);
+
+  // Reset selections when modal closes or disconnects
+  useEffect(() => {
+    if (!open || !session.connected) {
+      setSelectedApp('');
+      setSelectedElement('');
+      setIsDumpingUI(false);
+      setDumpError(null);
+    }
+  }, [open, session.connected]);
 
   const handleCloseModal = () => {
     if (session.connected) {
@@ -74,6 +90,21 @@ export const AndroidMobileModal: React.FC<AndroidMobileModalProps> = ({ open, on
     return `${el.tag}`;
   };
 
+  // Enhanced dump UI handler with loading state
+  const handleDumpUIWithLoading = async () => {
+    setIsDumpingUI(true);
+    setDumpError(null);
+    try {
+      await handleDumpUI();
+      console.log('UI dump completed, elements found:', androidElements.length);
+    } catch (error: any) {
+      setDumpError(error.message || 'Failed to dump UI');
+      console.error('UI dump failed:', error);
+    } finally {
+      setIsDumpingUI(false);
+    }
+  };
+
   return (
     <Dialog 
       open={open} 
@@ -82,7 +113,7 @@ export const AndroidMobileModal: React.FC<AndroidMobileModalProps> = ({ open, on
       fullWidth
     >
       <DialogTitle>
-        <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ minHeight: 40 }}>
+        <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ minHeight: 24 }}>
           {/* Left side: Title and status */}
           <Box display="flex" alignItems="center" gap={1}>
             <Typography variant="h6" component="span" sx={{ fontSize: '1.1rem' }}>
@@ -98,10 +129,10 @@ export const AndroidMobileModal: React.FC<AndroidMobileModalProps> = ({ open, on
           </Box>
         </Box>
       </DialogTitle>
-      <DialogContent sx={{ pb: 1, overflow: 'hidden', maxHeight: 'none' }}>
+      <DialogContent sx={{ pb: 0.5, overflow: 'hidden', maxHeight: 'none' }}>
         {!session.connected ? (
-          <Box sx={{ pt: 2 }}>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          <Box sx={{ pt: 1 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               Enter SSH and ADB connection details to take control of the Android Mobile device.
             </Typography>
             
@@ -173,7 +204,7 @@ export const AndroidMobileModal: React.FC<AndroidMobileModalProps> = ({ open, on
             </Grid>
 
             {/* Connection Actions */}
-            <Box sx={{ mt: 3, display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+            <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
               <Button onClick={handleCloseModal}>
                 Close
               </Button>
@@ -187,7 +218,7 @@ export const AndroidMobileModal: React.FC<AndroidMobileModalProps> = ({ open, on
             </Box>
           </Box>
         ) : (
-          <Grid container spacing={3} sx={{ pt: 2, height: '80vh' }}>
+          <Grid container spacing={2} sx={{ pt: 1, height: '80vh' }}>
             {/* Left Column: Device Screen Canvas */}
             <Grid item xs={6}>
               <Box sx={{ 
@@ -289,19 +320,21 @@ export const AndroidMobileModal: React.FC<AndroidMobileModalProps> = ({ open, on
 
               {/* App Launcher Section */}
               <Box sx={{ mb: 3 }}>
-                <Typography variant="h6" sx={{ mb: 2, fontSize: '1rem' }}>
-                  📱 App Launcher {androidApps.length > 0 && `(${androidApps.length})`}
-                </Typography>
+               
                 <Box sx={{ mb: 2 }}>
                   <FormControl fullWidth size="small">
                     <InputLabel>Select an app...</InputLabel>
                     <Select
-                      value=""
+                      value={selectedApp}
                       label="Select an app..."
                       disabled={androidApps.length === 0}
                       onChange={(e) => {
-                        if (e.target.value) {
-                          handleCommand('LAUNCH_APP', { package: e.target.value });
+                        const appPackage = e.target.value;
+                        if (appPackage) {
+                          setSelectedApp(appPackage);
+                          handleCommand('LAUNCH_APP', { package: appPackage });
+                          // Clear selection after launching
+                          setTimeout(() => setSelectedApp(''), 1000);
                         }
                       }}
                     >
@@ -325,17 +358,16 @@ export const AndroidMobileModal: React.FC<AndroidMobileModalProps> = ({ open, on
 
               {/* UI Elements Section */}
               <Box sx={{ mb: 3 }}>
-                <Typography variant="h6" sx={{ mb: 2, fontSize: '1rem' }}>
-                  🔍 UI Elements {androidElements.length > 0 && `(${androidElements.length})`}
-                </Typography>
+           
                 <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
                   <Button
                     variant="contained"
                     size="small"
-                    onClick={handleDumpUI}
+                    onClick={handleDumpUIWithLoading}
+                    disabled={isDumpingUI}
                     sx={{ flex: 1 }}
                   >
-                    Dump UI
+                    {isDumpingUI ? <CircularProgress size={16} /> : 'Dump UI'}
                   </Button>
                   <Button
                     variant="outlined"
@@ -347,32 +379,99 @@ export const AndroidMobileModal: React.FC<AndroidMobileModalProps> = ({ open, on
                     Clear
                   </Button>
                 </Box>
+
+                {/* Show error if dump failed */}
+                {dumpError && (
+                  <Alert severity="error" sx={{ mb: 2, fontSize: '0.75rem' }}>
+                    {dumpError}
+                  </Alert>
+                )}
                 
-                {/* Element Selection and Click */}
+                {/* Always show element selection dropdown */}
+                <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+                  <InputLabel>Select element to click...</InputLabel>
+                  <Select
+                    value={selectedElement}
+                    label="Select element to click..."
+                    disabled={androidElements.length === 0}
+                    onChange={(e) => {
+                      const elementId = parseInt(e.target.value as string);
+                      const element = androidElements.find(el => el.id === elementId);
+                      if (element) {
+                        setSelectedElement(element.id.toString());
+                        handleClickElement(element);
+                        // Clear selection after clicking
+                        setTimeout(() => setSelectedElement(''), 1000);
+                      }
+                    }}
+                  >
+                    {androidElements.length === 0 ? (
+                      <MenuItem disabled value="">
+                        No elements found - Click "Dump UI" first
+                      </MenuItem>
+                    ) : (
+                      androidElements.map((element) => (
+                        <MenuItem key={element.id} value={element.id}>
+                          #{element.id}: {getElementDisplayName(element)}
+                        </MenuItem>
+                      ))
+                    )}
+                  </Select>
+                </FormControl>
+
+                {/* Show detailed elements list when available */}
                 {androidElements.length > 0 && (
-                  <Box>
-                    <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-                      <InputLabel>Select element to click...</InputLabel>
-                      <Select
-                        value=""
-                        label="Select element to click..."
-                        onChange={(e) => {
-                          const elementId = parseInt(e.target.value as string);
-                          const element = androidElements.find(el => el.id === elementId);
-                          if (element) {
-                            handleClickElement(element);
-                          }
+                  <Box sx={{ 
+                    maxHeight: 200, 
+                    overflow: 'auto', 
+                    border: '1px solid #e0e0e0', 
+                    borderRadius: 1,
+                    p: 1,
+                    backgroundColor: '#f9f9f9'
+                  }}>
+                    <Typography variant="caption" sx={{ fontWeight: 'bold', mb: 1, display: 'block' }}>
+                      Dumped UI Elements:
+                    </Typography>
+                    {androidElements.map((element, index) => (
+                      <Box 
+                        key={element.id} 
+                        sx={{ 
+                          mb: 1, 
+                          p: 1, 
+                          backgroundColor: 'white',
+                          borderRadius: 0.5,
+                          border: '1px solid #e0e0e0',
+                          fontSize: '0.75rem'
                         }}
                       >
-                        {androidElements.map((element) => (
-                          <MenuItem key={element.id} value={element.id}>
-                            #{element.id}: {getElementDisplayName(element)}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
+                        <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                          #{element.id} - {element.tag}
+                        </Typography>
+                        {element.text && element.text !== '<no text>' && (
+                          <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
+                            Text: "{element.text}"
+                          </Typography>
+                        )}
+                        {element.contentDesc && element.contentDesc !== '<no content-desc>' && (
+                          <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
+                            Desc: {element.contentDesc}
+                          </Typography>
+                        )}
+                        {element.resourceId && element.resourceId !== '<no resource-id>' && (
+                          <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
+                            ID: {element.resourceId}
+                          </Typography>
+                        )}
+                        <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
+                          Bounds: {element.bounds} | Clickable: {element.clickable ? 'Yes' : 'No'} | Enabled: {element.enabled ? 'Yes' : 'No'}
+                        </Typography>
+                      </Box>
+                    ))}
                   </Box>
                 )}
+
+                {/* Show status when no elements but dump was attempted */}
+               
                 
                 {/* Mobile Phone Controls */}
                 <Box sx={{ mt: 2 }}>
