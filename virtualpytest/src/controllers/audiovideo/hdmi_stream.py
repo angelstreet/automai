@@ -1,21 +1,23 @@
 """
 HDMI Stream Controller Implementation
 
-This controller handles HDMI stream URLs and provides video streaming functionality.
-It can connect to stream URLs and simulate video display (in a real implementation,
-this would integrate with video display libraries like OpenCV, VLC, or similar).
+This controller handles HDMI stream acquisition using FFmpeg and provides video streaming functionality.
+It can stream from acquisition cards, capture screenshots, and record video with rolling buffers.
+Verification functionality is handled by separate verification controllers.
 """
 
-from typing import Dict, Any, Optional
-import time
-import random
+import subprocess
 import threading
-from urllib.parse import urlparse
+import time
+import os
+import signal
+from typing import Dict, Any, Optional
+from pathlib import Path
 from ..base_controllers import AVControllerInterface
 
 
 class HDMIStreamController(AVControllerInterface):
-    """HDMI Stream controller that handles stream URLs and video display."""
+    """HDMI Stream controller that handles FFmpeg-based acquisition and streaming."""
     
     def __init__(self, device_name: str = "HDMI Stream Device", **kwargs):
         """
@@ -23,42 +25,82 @@ class HDMIStreamController(AVControllerInterface):
         
         Args:
             device_name: Name of the device for logging
-            **kwargs: Additional parameters including stream_url
+            **kwargs: Required parameters:
+                - video_device: Video input device (e.g., '/dev/video0')
+                - output_path: Output directory for stream files (e.g., '/var/www/html/stream/')
+                - stream_resolution: Resolution for streaming (default: '640x360')
+                - stream_fps: FPS for streaming (default: 12)
+                - stream_bitrate: Bitrate for streaming (default: '400k')
         """
         super().__init__(device_name, "HDMI_STREAM")
-        self.stream_url = kwargs.get('stream_url', '')
+        
+        # Required parameters
+        self.video_device = kwargs.get('video_device')
+        self.output_path = kwargs.get('output_path')
+        
+        if not self.video_device or not self.output_path:
+            raise ValueError("video_device and output_path are required parameters")
+        
+        # Stream parameters
+        self.stream_resolution = kwargs.get('stream_resolution', '640x360')
+        self.stream_fps = kwargs.get('stream_fps', 12)
+        self.stream_bitrate = kwargs.get('stream_bitrate', '400k')
+        
+        # FFmpeg processes
+        self.stream_process = None
+        self.capture_process = None
         self.is_streaming = False
-        self.stream_quality = "1920x1080"
-        self.stream_fps = 30
-        self.stream_thread = None
-        self.stream_stats = {
-            'frames_received': 0,
-            'bytes_received': 0,
-            'connection_time': 0,
-            'last_frame_time': 0
-        }
+        
+        # Rolling buffer settings
+        self.rolling_buffer_duration = 60  # seconds
+        self.rolling_buffer_timeout = 180  # 3 minutes auto-stop
+        self.rolling_buffer_thread = None
+        self.rolling_buffer_active = False
+        
+        # Paths
+        self.output_path = Path(self.output_path)
+        self.stream_file = self.output_path / "output.m3u8"
+        self.screenshots_path = self.output_path / "screenshots"
+        self.captures_path = self.output_path / "captures"
+        
+        # Create directories
+        self.screenshots_path.mkdir(parents=True, exist_ok=True)
+        self.captures_path.mkdir(parents=True, exist_ok=True)
         
     def connect(self) -> bool:
-        """Connect to the HDMI stream source."""
-        if not self.stream_url:
-            print(f"HDMI[{self.capture_source}]: ERROR - No stream URL provided")
-            return False
-            
+        """Connect to the HDMI acquisition device."""
         try:
-            print(f"HDMI[{self.capture_source}]: Connecting to stream: {self.stream_url}")
+            print(f"HDMI[{self.capture_source}]: Connecting to video device: {self.video_device}")
             
-            # Validate URL format
-            parsed_url = urlparse(self.stream_url)
-            if not parsed_url.scheme or not parsed_url.netloc:
-                print(f"HDMI[{self.capture_source}]: ERROR - Invalid stream URL format")
+            # Check if video device exists
+            if not os.path.exists(self.video_device):
+                print(f"HDMI[{self.capture_source}]: ERROR - Video device not found: {self.video_device}")
                 return False
                 
-            # Simulate connection delay
-            time.sleep(0.5)
-            
+            # Check if output directory exists and is writable
+            if not self.output_path.exists():
+                print(f"HDMI[{self.capture_source}]: Creating output directory: {self.output_path}")
+                self.output_path.mkdir(parents=True, exist_ok=True)
+                
+            if not os.access(self.output_path, os.W_OK):
+                print(f"HDMI[{self.capture_source}]: ERROR - Output directory not writable: {self.output_path}")
+                return False
+                
+            # Test FFmpeg availability
+            try:
+                result = subprocess.run(['/usr/bin/ffmpeg', '-version'], 
+                                      capture_output=True, text=True, timeout=5)
+                if result.returncode != 0:
+                    print(f"HDMI[{self.capture_source}]: ERROR - FFmpeg not available or not working")
+                    return False
+            except (subprocess.TimeoutExpired, FileNotFoundError):
+                print(f"HDMI[{self.capture_source}]: ERROR - FFmpeg not found at /usr/bin/ffmpeg")
+                return False
+                
             self.is_connected = True
-            self.stream_stats['connection_time'] = time.time()
-            print(f"HDMI[{self.capture_source}]: Connected successfully to {parsed_url.netloc}")
+            print(f"HDMI[{self.capture_source}]: Connected successfully")
+            print(f"HDMI[{self.capture_source}]: Video device: {self.video_device}")
+            print(f"HDMI[{self.capture_source}]: Output path: {self.output_path}")
             return True
             
         except Exception as e:
@@ -66,49 +108,29 @@ class HDMIStreamController(AVControllerInterface):
             return False
         
     def disconnect(self) -> bool:
-        """Disconnect from the HDMI stream source."""
-        print(f"HDMI[{self.capture_source}]: Disconnecting from stream")
+        """Disconnect from the HDMI acquisition device."""
+        print(f"HDMI[{self.capture_source}]: Disconnecting")
         
-        # Stop streaming if active
-        if self.is_streaming:
-            self.stop_video_capture()
-            
+        # Stop all active processes
+        self.stop_stream()
+        self.stop_video_capture()
+        
         self.is_connected = False
-        self.stream_url = ''
-        self.stream_stats = {
-            'frames_received': 0,
-            'bytes_received': 0,
-            'connection_time': 0,
-            'last_frame_time': 0
-        }
         print(f"HDMI[{self.capture_source}]: Disconnected")
         return True
         
-    def set_stream_url(self, stream_url: str) -> bool:
+    def start_stream(self) -> bool:
         """
-        Set the stream URL for the HDMI controller.
+        Start FFmpeg streaming from acquisition card.
         
-        Args:
-            stream_url: The stream URL to connect to (HLS, RTSP, HTTP, etc.)
-        """
-        if self.is_connected:
-            print(f"HDMI[{self.capture_source}]: Cannot change URL while connected. Disconnect first.")
-            return False
-            
-        self.stream_url = stream_url
-        print(f"HDMI[{self.capture_source}]: Stream URL set to: {stream_url}")
-        return True
-        
-    def start_video_capture(self, resolution: str = "1920x1080", fps: int = 30) -> bool:
-        """
-        Start video capture from the stream.
-        
-        Args:
-            resolution: Video resolution (e.g., "1920x1080", "1280x720")
-            fps: Frames per second
+        Command: /usr/bin/ffmpeg -f v4l2 -s 640x360 -r 12 -i /dev/video0 
+                 -c:v libx264 -preset ultrafast -b:v 400k -tune zerolatency 
+                 -g 24 -an -f hls -hls_time 2 -hls_list_size 3 
+                 -hls_flags delete_segments -hls_segment_type mpegts 
+                 /var/www/html/stream/output.m3u8
         """
         if not self.is_connected:
-            print(f"HDMI[{self.capture_source}]: ERROR - Not connected to stream")
+            print(f"HDMI[{self.capture_source}]: ERROR - Not connected")
             return False
             
         if self.is_streaming:
@@ -116,278 +138,329 @@ class HDMIStreamController(AVControllerInterface):
             return True
             
         try:
-            self.stream_quality = resolution
-            self.stream_fps = fps
-            self.capture_session_id = f"hdmi_stream_{int(time.time())}"
-            self.is_capturing_video = True
-            self.is_streaming = True
+            # Build FFmpeg command
+            cmd = [
+                '/usr/bin/ffmpeg',
+                '-f', 'v4l2',
+                '-s', self.stream_resolution,
+                '-r', str(self.stream_fps),
+                '-i', self.video_device,
+                '-c:v', 'libx264',
+                '-preset', 'ultrafast',
+                '-b:v', self.stream_bitrate,
+                '-tune', 'zerolatency',
+                '-g', '24',
+                '-an',  # No audio for streaming
+                '-f', 'hls',
+                '-hls_time', '2',
+                '-hls_list_size', '3',
+                '-hls_flags', 'delete_segments',
+                '-hls_segment_type', 'mpegts',
+                str(self.stream_file)
+            ]
             
-            # Start streaming thread (simulated)
-            self.stream_thread = threading.Thread(target=self._stream_worker, daemon=True)
-            self.stream_thread.start()
+            print(f"HDMI[{self.capture_source}]: Starting stream")
+            print(f"HDMI[{self.capture_source}]: Resolution: {self.stream_resolution}@{self.stream_fps}fps")
+            print(f"HDMI[{self.capture_source}]: Bitrate: {self.stream_bitrate}")
+            print(f"HDMI[{self.capture_source}]: Output: {self.stream_file}")
             
-            print(f"HDMI[{self.capture_source}]: Started streaming at {resolution}@{fps}fps")
-            print(f"HDMI[{self.capture_source}]: Stream session: {self.capture_session_id}")
+            # Start FFmpeg process
+            self.stream_process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            
+            # Give FFmpeg time to start
+            time.sleep(2)
+            
+            # Check if process is still running
+            if self.stream_process.poll() is None:
+                self.is_streaming = True
+                self.capture_session_id = f"hdmi_stream_{int(time.time())}"
+                print(f"HDMI[{self.capture_source}]: Stream started successfully")
+                print(f"HDMI[{self.capture_source}]: Session ID: {self.capture_session_id}")
+                return True
+            else:
+                # Process died, get error output
+                stdout, stderr = self.stream_process.communicate()
+                print(f"HDMI[{self.capture_source}]: Stream failed to start")
+                print(f"HDMI[{self.capture_source}]: Error: {stderr}")
+                self.stream_process = None
+                return False
+                
+        except Exception as e:
+            print(f"HDMI[{self.capture_source}]: Failed to start stream: {e}")
+            return False
+        
+    def stop_stream(self) -> bool:
+        """Stop FFmpeg streaming."""
+        if not self.is_streaming or not self.stream_process:
+            print(f"HDMI[{self.capture_source}]: No active stream to stop")
+            return False
+            
+        try:
+            print(f"HDMI[{self.capture_source}]: Stopping stream")
+            
+            # Send SIGTERM to FFmpeg
+            self.stream_process.terminate()
+            
+            # Wait for graceful shutdown
+            try:
+                self.stream_process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                # Force kill if needed
+                print(f"HDMI[{self.capture_source}]: Force killing stream process")
+                self.stream_process.kill()
+                self.stream_process.wait()
+                
+            self.stream_process = None
+            self.is_streaming = False
+            print(f"HDMI[{self.capture_source}]: Stream stopped")
             return True
             
         except Exception as e:
-            print(f"HDMI[{self.capture_source}]: Failed to start streaming: {e}")
+            print(f"HDMI[{self.capture_source}]: Error stopping stream: {e}")
+            return False
+        
+    def restart_stream(self) -> bool:
+        """Restart the FFmpeg stream."""
+        print(f"HDMI[{self.capture_source}]: Restarting stream")
+        self.stop_stream()
+        time.sleep(1)
+        return self.start_stream()
+        
+    def get_stream_status(self) -> Dict[str, Any]:
+        """Get current stream status."""
+        status = {
+            'is_streaming': self.is_streaming,
+            'stream_file': str(self.stream_file) if self.stream_file.exists() else None,
+            'process_running': self.stream_process is not None and self.stream_process.poll() is None,
+            'session_id': self.capture_session_id if self.is_streaming else None
+        }
+        
+        # Add file info if stream file exists
+        if self.stream_file.exists():
+            stat = self.stream_file.stat()
+            status.update({
+                'file_size': stat.st_size,
+                'last_modified': stat.st_mtime
+            })
+            
+        return status
+        
+    def take_screenshot(self, filename: str = None) -> str:
+        """
+        Take a screenshot using FFmpeg from the video device.
+        
+        Args:
+            filename: Optional filename for the screenshot
+            
+        Returns:
+            Path to the screenshot file
+        """
+        if not self.is_connected:
+            print(f"HDMI[{self.capture_source}]: ERROR - Not connected")
+            return None
+            
+        timestamp = int(time.time())
+        screenshot_name = filename or f"screenshot_{timestamp}.png"
+        screenshot_path = self.screenshots_path / screenshot_name
+        
+        try:
+            # FFmpeg command for single frame capture
+            cmd = [
+                '/usr/bin/ffmpeg',
+                '-f', 'v4l2',
+                '-i', self.video_device,
+                '-vframes', '1',
+                '-y',  # Overwrite output file
+                str(screenshot_path)
+            ]
+            
+            print(f"HDMI[{self.capture_source}]: Taking screenshot: {screenshot_name}")
+            
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+            
+            if result.returncode == 0 and screenshot_path.exists():
+                print(f"HDMI[{self.capture_source}]: Screenshot saved: {screenshot_path}")
+                return str(screenshot_path)
+            else:
+                print(f"HDMI[{self.capture_source}]: Screenshot failed: {result.stderr}")
+                return None
+                
+        except Exception as e:
+            print(f"HDMI[{self.capture_source}]: Screenshot error: {e}")
+            return None
+        
+    def start_video_capture(self, duration: float = 60.0, filename: str = None, 
+                           resolution: str = None, fps: int = None) -> bool:
+        """
+        Start video capture with rolling buffer.
+        
+        Args:
+            duration: Duration in seconds (default: 60s, max timeout: 180s)
+            filename: Optional filename for the video
+            resolution: Video resolution (default: same as stream)
+            fps: Video FPS (default: same as stream)
+        """
+        if not self.is_connected:
+            print(f"HDMI[{self.capture_source}]: ERROR - Not connected")
+            return False
+            
+        if self.is_capturing_video:
+            print(f"HDMI[{self.capture_source}]: Video capture already active")
+            return True
+            
+        # Limit duration and apply timeout
+        duration = min(duration, self.rolling_buffer_duration)
+        timeout = min(self.rolling_buffer_timeout, 180)
+        
+        timestamp = int(time.time())
+        video_name = filename or f"capture_{timestamp}.mp4"
+        video_path = self.captures_path / video_name
+        
+        # Use provided resolution/fps or defaults
+        capture_resolution = resolution or self.stream_resolution
+        capture_fps = fps or self.stream_fps
+        
+        try:
+            # FFmpeg command for video capture
+            cmd = [
+                '/usr/bin/ffmpeg',
+                '-f', 'v4l2',
+                '-s', capture_resolution,
+                '-r', str(capture_fps),
+                '-i', self.video_device,
+                '-c:v', 'libx264',
+                '-preset', 'fast',
+                '-t', str(duration),  # Duration limit
+                '-y',  # Overwrite output file
+                str(video_path)
+            ]
+            
+            print(f"HDMI[{self.capture_source}]: Starting video capture")
+            print(f"HDMI[{self.capture_source}]: Duration: {duration}s (timeout: {timeout}s)")
+            print(f"HDMI[{self.capture_source}]: Resolution: {capture_resolution}@{capture_fps}fps")
+            print(f"HDMI[{self.capture_source}]: Output: {video_path}")
+            
+            # Start capture process
+            self.capture_process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            
+            self.is_capturing_video = True
+            self.rolling_buffer_active = True
+            
+            # Start monitoring thread with timeout
+            self.rolling_buffer_thread = threading.Thread(
+                target=self._monitor_video_capture,
+                args=(video_path, timeout),
+                daemon=True
+            )
+            self.rolling_buffer_thread.start()
+            
+            return True
+            
+        except Exception as e:
+            print(f"HDMI[{self.capture_source}]: Failed to start video capture: {e}")
             return False
         
     def stop_video_capture(self) -> bool:
-        """Stop video capture from the stream."""
-        if not self.is_streaming:
-            print(f"HDMI[{self.capture_source}]: No active stream session")
+        """Stop video capture."""
+        if not self.is_capturing_video or not self.capture_process:
+            print(f"HDMI[{self.capture_source}]: No active video capture to stop")
             return False
             
-        print(f"HDMI[{self.capture_source}]: Stopping stream session: {self.capture_session_id}")
-        self.is_streaming = False
-        self.is_capturing_video = False
-        
-        # Wait for stream thread to finish
-        if self.stream_thread and self.stream_thread.is_alive():
-            self.stream_thread.join(timeout=2.0)
+        try:
+            print(f"HDMI[{self.capture_source}]: Stopping video capture")
             
-        self.capture_session_id = None
-        print(f"HDMI[{self.capture_source}]: Stream stopped")
-        return True
-        
-    def _stream_worker(self):
-        """Background worker that simulates stream processing."""
-        frame_interval = 1.0 / self.stream_fps
-        
-        while self.is_streaming and self.is_connected:
+            # Send SIGTERM to FFmpeg
+            self.capture_process.terminate()
+            
+            # Wait for graceful shutdown
             try:
-                # Simulate frame processing
-                self.stream_stats['frames_received'] += 1
-                self.stream_stats['bytes_received'] += random.randint(50000, 200000)  # Simulate frame size
-                self.stream_stats['last_frame_time'] = time.time()
+                self.capture_process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                # Force kill if needed
+                print(f"HDMI[{self.capture_source}]: Force killing capture process")
+                self.capture_process.kill()
+                self.capture_process.wait()
                 
-                # In a real implementation, this would:
-                # 1. Fetch frame data from the stream URL
-                # 2. Decode the video frame
-                # 3. Display it using a video library (OpenCV, VLC, etc.)
-                # 4. Handle stream errors and reconnection
-                
-                time.sleep(frame_interval)
-                
-            except Exception as e:
-                print(f"HDMI[{self.capture_source}]: Stream worker error: {e}")
+            self.capture_process = None
+            self.is_capturing_video = False
+            self.rolling_buffer_active = False
+            
+            print(f"HDMI[{self.capture_source}]: Video capture stopped")
+            return True
+            
+        except Exception as e:
+            print(f"HDMI[{self.capture_source}]: Error stopping video capture: {e}")
+            return False
+        
+    def _monitor_video_capture(self, video_path: Path, timeout: float):
+        """Monitor video capture process and handle timeout."""
+        start_time = time.time()
+        
+        while self.rolling_buffer_active and self.capture_process:
+            # Check if process is still running
+            if self.capture_process.poll() is not None:
+                # Process finished
+                stdout, stderr = self.capture_process.communicate()
+                if video_path.exists():
+                    print(f"HDMI[{self.capture_source}]: Video capture completed: {video_path}")
+                else:
+                    print(f"HDMI[{self.capture_source}]: Video capture failed: {stderr}")
                 break
                 
-        print(f"HDMI[{self.capture_source}]: Stream worker stopped")
-        
-    def capture_frame(self, filename: str = None) -> bool:
-        """
-        Capture a single video frame from the stream.
-        
-        Args:
-            filename: Optional filename for the captured frame
-        """
-        if not self.is_connected:
-            print(f"HDMI[{self.capture_source}]: ERROR - Not connected to stream")
-            return False
+            # Check timeout
+            if time.time() - start_time > timeout:
+                print(f"HDMI[{self.capture_source}]: Video capture timeout ({timeout}s), stopping")
+                self.stop_video_capture()
+                break
+                
+            time.sleep(1)
             
-        if not self.is_streaming:
-            print(f"HDMI[{self.capture_source}]: ERROR - Stream not active")
-            return False
-            
-        frame_name = filename or f"hdmi_frame_{int(time.time())}.png"
-        print(f"HDMI[{self.capture_source}]: Capturing frame: {frame_name}")
-        
-        # Simulate frame capture and analysis
-        simulated_brightness = random.randint(20, 80)
-        simulated_colors = random.randint(1000, 50000)
-        print(f"HDMI[{self.capture_source}]: Frame analysis - Brightness: {simulated_brightness}%, Colors detected: {simulated_colors}")
-        
-        # In a real implementation, this would save the current frame to file
-        return True
+        self.is_capturing_video = False
+        self.rolling_buffer_active = False
         
     def start_audio_capture(self, sample_rate: int = 44100, channels: int = 2) -> bool:
-        """
-        Start audio capture from the stream.
-        
-        Args:
-            sample_rate: Audio sample rate in Hz
-            channels: Number of audio channels (1=mono, 2=stereo)
-        """
-        if not self.is_connected:
-            print(f"HDMI[{self.capture_source}]: ERROR - Not connected to stream")
-            return False
-            
-        self.is_capturing_audio = True
-        channel_type = "stereo" if channels == 2 else "mono"
-        print(f"HDMI[{self.capture_source}]: Starting audio capture at {sample_rate}Hz {channel_type}")
-        return True
+        """Audio capture not implemented for HDMI stream controller."""
+        print(f"HDMI[{self.capture_source}]: Audio capture not implemented")
+        print(f"HDMI[{self.capture_source}]: Use AudioVerificationController for audio analysis")
+        return False
         
     def stop_audio_capture(self) -> bool:
-        """Stop audio capture from the stream."""
-        if not self.is_capturing_audio:
-            print(f"HDMI[{self.capture_source}]: No active audio capture session")
-            return False
-            
-        print(f"HDMI[{self.capture_source}]: Stopping audio capture")
-        self.is_capturing_audio = False
-        return True
+        """Audio capture not implemented for HDMI stream controller."""
+        return False
         
     def detect_audio_level(self) -> float:
-        """
-        Detect current audio level from the stream.
-        
-        Returns:
-            Audio level as percentage (0-100)
-        """
-        if not self.is_connected or not self.is_streaming:
-            print(f"HDMI[{self.capture_source}]: ERROR - Stream not active")
-            return 0.0
-            
-        # Simulate audio level detection
-        audio_level = random.uniform(0, 100)
-        print(f"HDMI[{self.capture_source}]: Audio level detected: {audio_level:.1f}%")
-        return audio_level
+        """Audio detection moved to AudioVerificationController."""
+        print(f"HDMI[{self.capture_source}]: Audio detection moved to AudioVerificationController")
+        return 0.0
         
     def detect_silence(self, threshold: float = 5.0, duration: float = 2.0) -> bool:
-        """
-        Detect if audio is silent in the stream.
-        
-        Args:
-            threshold: Silence threshold as percentage
-            duration: Duration to check for silence in seconds
-        """
-        if not self.is_connected or not self.is_streaming:
-            print(f"HDMI[{self.capture_source}]: ERROR - Stream not active")
-            return False
-            
-        print(f"HDMI[{self.capture_source}]: Checking for silence (threshold: {threshold}%, duration: {duration}s)")
-        
-        # Simulate silence detection
-        time.sleep(min(duration, 1.0))  # Don't actually wait the full duration in simulation
-        is_silent = random.choice([True, False])
-        result = "detected" if is_silent else "not detected"
-        print(f"HDMI[{self.capture_source}]: Silence {result}")
-        return is_silent
+        """Audio detection moved to AudioVerificationController."""
+        print(f"HDMI[{self.capture_source}]: Audio detection moved to AudioVerificationController")
+        return False
         
     def analyze_video_content(self, analysis_type: str = "motion") -> Dict[str, Any]:
-        """
-        Analyze video content from the stream.
-        
-        Args:
-            analysis_type: Type of analysis (motion, color, brightness, text)
-        """
-        if not self.is_connected or not self.is_streaming:
-            print(f"HDMI[{self.capture_source}]: ERROR - Stream not active")
-            return {}
-            
-        print(f"HDMI[{self.capture_source}]: Analyzing stream content - Type: {analysis_type}")
-        
-        # Simulate different types of analysis
-        if analysis_type == "motion":
-            motion_detected = random.choice([True, False])
-            motion_intensity = random.uniform(0, 100) if motion_detected else 0
-            result = {
-                "motion_detected": motion_detected,
-                "motion_intensity": motion_intensity,
-                "analysis_type": "motion",
-                "stream_url": self.stream_url
-            }
-        elif analysis_type == "color":
-            dominant_colors = random.sample(["red", "green", "blue", "yellow", "purple", "orange"], 3)
-            result = {
-                "dominant_colors": dominant_colors,
-                "color_count": random.randint(5, 50),
-                "analysis_type": "color",
-                "stream_url": self.stream_url
-            }
-        elif analysis_type == "brightness":
-            brightness = random.uniform(0, 100)
-            contrast = random.uniform(0, 100)
-            result = {
-                "brightness": brightness,
-                "contrast": contrast,
-                "analysis_type": "brightness",
-                "stream_url": self.stream_url
-            }
-        elif analysis_type == "text":
-            text_detected = random.choice([True, False])
-            text_regions = random.randint(0, 5) if text_detected else 0
-            result = {
-                "text_detected": text_detected,
-                "text_regions": text_regions,
-                "analysis_type": "text",
-                "stream_url": self.stream_url
-            }
-        else:
-            result = {"error": f"Unknown analysis type: {analysis_type}"}
-            
-        print(f"HDMI[{self.capture_source}]: Analysis result: {result}")
-        return result
+        """Video analysis moved to VideoVerificationController."""
+        print(f"HDMI[{self.capture_source}]: Video analysis moved to VideoVerificationController")
+        return {"error": "Use VideoVerificationController for video analysis"}
         
     def wait_for_video_change(self, timeout: float = 10.0, threshold: float = 10.0) -> bool:
-        """
-        Wait for video content to change in the stream.
-        
-        Args:
-            timeout: Maximum time to wait in seconds
-            threshold: Change threshold as percentage
-        """
-        if not self.is_connected or not self.is_streaming:
-            print(f"HDMI[{self.capture_source}]: ERROR - Stream not active")
-            return False
-            
-        print(f"HDMI[{self.capture_source}]: Waiting for video change (timeout: {timeout}s, threshold: {threshold}%)")
-        
-        # Simulate waiting and change detection
-        wait_time = random.uniform(1, min(timeout, 5))
-        time.sleep(wait_time)
-        
-        change_detected = random.choice([True, False])
-        if change_detected:
-            change_percentage = random.uniform(threshold, 100)
-            print(f"HDMI[{self.capture_source}]: Video change detected after {wait_time:.1f}s ({change_percentage:.1f}% change)")
-        else:
-            print(f"HDMI[{self.capture_source}]: No significant video change detected within timeout")
-            
-        return change_detected
+        """Video analysis moved to VideoVerificationController."""
+        print(f"HDMI[{self.capture_source}]: Video analysis moved to VideoVerificationController")
+        return False
         
     def record_session(self, duration: float, filename: str = None) -> bool:
-        """
-        Record the stream session.
-        
-        Args:
-            duration: Recording duration in seconds
-            filename: Optional filename for the recording
-        """
-        if not self.is_connected or not self.is_streaming:
-            print(f"HDMI[{self.capture_source}]: ERROR - Stream not active")
-            return False
-            
-        recording_name = filename or f"hdmi_recording_{int(time.time())}.mp4"
-        print(f"HDMI[{self.capture_source}]: Starting stream recording: {recording_name} (duration: {duration}s)")
-        
-        # Simulate recording
-        time.sleep(min(duration, 2))  # Don't actually wait the full duration in simulation
-        
-        print(f"HDMI[{self.capture_source}]: Recording completed: {recording_name}")
-        return True
-        
-    def get_stream_stats(self) -> Dict[str, Any]:
-        """Get current stream statistics."""
-        if not self.is_connected:
-            return {}
-            
-        current_time = time.time()
-        uptime = current_time - self.stream_stats['connection_time'] if self.stream_stats['connection_time'] > 0 else 0
-        
-        return {
-            'stream_url': self.stream_url,
-            'is_streaming': self.is_streaming,
-            'uptime_seconds': uptime,
-            'frames_received': self.stream_stats['frames_received'],
-            'bytes_received': self.stream_stats['bytes_received'],
-            'last_frame_time': self.stream_stats['last_frame_time'],
-            'stream_quality': self.stream_quality,
-            'stream_fps': self.stream_fps
-        }
+        """Record a video session (alias for start_video_capture)."""
+        return self.start_video_capture(duration, filename)
         
     def get_status(self) -> Dict[str, Any]:
         """Get controller status information."""
@@ -397,19 +470,22 @@ class HDMIStreamController(AVControllerInterface):
             'capture_source': self.capture_source,
             'connected': self.is_connected,
             'capturing_video': self.is_capturing_video,
-            'capturing_audio': self.is_capturing_audio,
+            'capturing_audio': False,  # Not supported
             'session_id': self.capture_session_id,
+            'video_device': self.video_device,
+            'output_path': str(self.output_path),
+            'stream_resolution': self.stream_resolution,
+            'stream_fps': self.stream_fps,
+            'stream_bitrate': self.stream_bitrate,
             'capabilities': [
-                'stream_playback', 'video_capture', 'audio_capture', 
-                'frame_analysis', 'motion_detection', 'audio_level_detection', 
-                'content_analysis', 'stream_recording'
+                'ffmpeg_streaming', 'screenshot_capture', 'video_capture', 
+                'rolling_buffer', 'parallel_operations'
             ]
         }
         
-        # Add stream-specific status
-        if self.is_connected:
-            base_status.update(self.get_stream_stats())
-            
+        # Add stream status
+        base_status.update(self.get_stream_status())
+        
         return base_status
 
 
