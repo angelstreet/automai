@@ -74,62 +74,50 @@ export function AndroidMobileOverlay({
     return null;
   };
 
-  // Calculate scaled coordinates - modified to work without screenshot element
+  // Calculate scaled coordinates - same logic as UIElementsOverlay
   useEffect(() => {
-    console.log(`[@component:AndroidMobileOverlay] useEffect triggered: isVisible=${isVisible}, elements=${elements.length}, screenshotElement=${screenshotElement ? 'available' : 'null'}`);
-    
     if (!isVisible || elements.length === 0) {
-      console.log(`[@component:AndroidMobileOverlay] Early return: isVisible=${isVisible}, elements=${elements.length}`);
       setScaledElements([]);
       return;
     }
 
-    // If no screenshot element, use the actual element bounds for positioning
+    // If no screenshot element, we can't position properly, but still create elements for debugging
     if (!screenshotElement) {
-      console.log(`[@component:AndroidMobileOverlay] No screenshot element, using element bounds for ${elements.length} elements`);
+      console.log(`[@component:AndroidMobileOverlay] No screenshot element, creating elements with original bounds`);
       
       const scaled = elements.map((element, index) => {
         const bounds = parseBounds(element.bounds);
         if (!bounds) return null;
 
-        // Use the actual bounds from the element, just like UIElementsOverlay does
-        // Apply simple scaling to fit in a reasonable area (scale down by factor of 3)
-        const scale = 0.3;
-        const x = bounds.x * scale + 100; // Offset by 100px from left
-        const y = bounds.y * scale + 200; // Offset by 200px from top
-
         const getElementLabel = (el: AndroidElement) => {
           if (el.contentDesc && el.contentDesc !== '<no content-desc>') {
-            return el.contentDesc.substring(0, 15);
+            return el.contentDesc.substring(0, 20);
           }
           if (el.text && el.text !== '<no text>') {
-            return el.text.substring(0, 15);
+            return el.text.substring(0, 20);
           }
           if (el.resourceId && el.resourceId !== '<no resource-id>') {
-            return el.resourceId.split('/').pop()?.substring(0, 15) || '';
+            return el.resourceId.split('/').pop()?.substring(0, 20) || '';
           }
-          return el.tag.substring(0, 15);
+          return el.tag.substring(0, 20);
         };
-
-        console.log(`[@component:AndroidMobileOverlay] Element ${index + 1}: bounds(${bounds.x},${bounds.y},${bounds.width},${bounds.height}) → scaled(${x.toFixed(1)},${y.toFixed(1)},${(bounds.width * scale).toFixed(1)},${(bounds.height * scale).toFixed(1)})`);
 
         return {
           id: element.id,
-          x: x,
-          y: y,
-          width: bounds.width * scale,
-          height: bounds.height * scale,
+          x: bounds.x,
+          y: bounds.y,
+          width: bounds.width,
+          height: bounds.height,
           color: COLORS[index % COLORS.length],
           label: getElementLabel(element),
         };
       }).filter(Boolean) as ScaledElement[];
 
-      console.log(`[@component:AndroidMobileOverlay] Created ${scaled.length} scaled elements using actual bounds`);
       setScaledElements(scaled);
       return;
     }
 
-    // Original screenshot-based positioning logic
+    // Original screenshot-based positioning logic (same as UIElementsOverlay)
     const imageRect = screenshotElement.getBoundingClientRect();
 
     // Debug logging
@@ -272,24 +260,6 @@ export function AndroidMobileOverlay({
 
   return (
     <div ref={overlayRef} style={{ position: 'fixed', zIndex: 999999 }}>
-      {/* Debug element - visible red box at top-left */}
-      <div style={{
-        position: 'fixed',
-        top: '10px',
-        left: '10px',
-        width: '100px',
-        height: '50px',
-        backgroundColor: 'red',
-        color: 'white',
-        zIndex: 999999,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: '12px',
-        fontWeight: 'bold'
-      }}>
-        OVERLAY DEBUG
-      </div>
       
       {scaledElements.map((element, index) => (
         <div

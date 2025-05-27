@@ -548,15 +548,12 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
       </Dialog>
 
       {/* AndroidMobileOverlay - positioned outside the dialog */}
-      {(() => {
-        console.log(`[@component:AndroidMobileModal] Overlay render check: showOverlay=${showOverlay}, elements=${androidElements.length}`);
-        return showOverlay && androidElements.length > 0;
-      })() && (
+      {showOverlay && androidElements.length > 0 && (
         <AndroidMobileOverlay
           elements={androidElements}
-          screenshotElement={null}
-          deviceWidth={1080}
-          deviceHeight={2340}
+          screenshotElement={screenshotRef.current}
+          deviceWidth={deviceResolution.width}
+          deviceHeight={deviceResolution.height}
           isVisible={showOverlay}
           selectedElementId={selectedElement ? parseInt(selectedElement) : undefined}
           onElementClick={handleOverlayElementClick}
