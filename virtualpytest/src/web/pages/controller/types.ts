@@ -99,13 +99,12 @@ export interface RemoteConfig {
 // Android Mobile specific types
 export interface AndroidElement {
   id: number;
-  text: string;
-  contentDesc: string;
-  resourceId: string;
   tag: string;
+  text: string;
+  resourceId: string;
+  contentDesc: string;
+  className: string;
   bounds: string;
-  clickable: boolean;
-  enabled: boolean;
 }
 
 export interface AndroidApp {

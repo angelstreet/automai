@@ -97,16 +97,15 @@ export const AndroidMobileModal: React.FC<AndroidMobileModalProps> = ({ open, on
     setDumpError(null);
     try {
       await handleScreenshotAndDumpUI();
-      console.log('Screenshot and UI dump completed, elements found:', androidElements.length);
+      console.log('[@component:AndroidMobileModal] Screenshot and UI dump completed, elements found:', androidElements.length);
       
-      // Check if no elements were found after a successful dump
-      if (androidElements.length === 0) {
-        setDumpError('No UI elements found on the current screen. The screen might be empty or the app might not be responding.');
-      }
+      // Note: We don't check androidElements.length here because the state update is asynchronous
+      // The backend filtering will ensure we only get useful elements
+      // If the backend returns success but no elements, it means the screen is truly empty
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to take screenshot and dump UI';
       setDumpError(errorMessage);
-      console.error('Screenshot and UI dump failed:', error);
+      console.error('[@component:AndroidMobileModal] Screenshot and UI dump failed:', error);
     } finally {
       setIsDumpingUI(false);
     }
@@ -315,8 +314,15 @@ export const AndroidMobileModal: React.FC<AndroidMobileModalProps> = ({ open, on
             <Grid item xs={6}>
               {/* App Launcher Section */}
               <Box sx={{ mb: 3 }}>
-               
-                <Box sx={{ mb: 2 }}>
+               <Button sx={{ mb: 2 }}
+                  variant="contained"
+                  size="small"
+                  onClick={handleGetApps}
+                  fullWidth
+                >
+                  Refresh Apps
+                </Button>
+                <Box >
                   <FormControl fullWidth size="small">
                     <InputLabel>Select an app...</InputLabel>
                     <Select
@@ -341,14 +347,7 @@ export const AndroidMobileModal: React.FC<AndroidMobileModalProps> = ({ open, on
                     </Select>
                   </FormControl>
                 </Box>
-                <Button
-                  variant="contained"
-                  size="small"
-                  onClick={handleGetApps}
-                  fullWidth
-                >
-                  Refresh Apps
-                </Button>
+                
               </Box>
 
               {/* UI Elements Section */}
@@ -420,126 +419,78 @@ export const AndroidMobileModal: React.FC<AndroidMobileModalProps> = ({ open, on
                     )}
                   </Select>
                 </FormControl>
+              </Box>
 
-                {/* Show compact elements list when available */}
-                {androidElements.length > 0 && (
-                  <Box sx={{ 
-                    maxHeight: 150, 
-                    overflow: 'auto', 
-                    border: '1px solid #e0e0e0', 
-                    borderRadius: 1,
-                    backgroundColor: '#f9f9f9'
-                  }}>
-                    <Typography variant="caption" sx={{ fontWeight: 'bold', p: 1, display: 'block', borderBottom: '1px solid #e0e0e0' }}>
-                      Found {androidElements.length} UI Elements
-                    </Typography>
-                    {androidElements.map((element) => (
-                      <Box 
-                        key={element.id} 
-                        sx={{ 
-                          p: 0.5, 
-                          borderBottom: '1px solid #f0f0f0',
-                          fontSize: '0.7rem',
-                          '&:hover': { backgroundColor: '#f0f0f0' },
-                          cursor: 'pointer'
-                        }}
-                        onClick={() => {
-                          setSelectedElement(element.id.toString());
-                          handleClickElement(element);
-                          setTimeout(() => setSelectedElement(''), 1000);
-                        }}
-                      >
-                        <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'primary.main', fontSize: '0.7rem' }}>
-                          #{element.id} {element.tag}
-                        </Typography>
-                        {element.text && element.text !== '<no text>' && (
-                          <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary', fontSize: '0.65rem' }}>
-                            "{element.text.length > 20 ? element.text.substring(0, 20) + '...' : element.text}"
-                          </Typography>
-                        )}
-                        {!element.text || element.text === '<no text>' ? (
-                          element.contentDesc && element.contentDesc !== '<no content-desc>' && (
-                            <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary', fontSize: '0.65rem' }}>
-                              {element.contentDesc.length > 20 ? element.contentDesc.substring(0, 20) + '...' : element.contentDesc}
-                            </Typography>
-                          )
-                        ) : null}
-                      </Box>
-                    ))}
-                  </Box>
-                )}
-
-                {/* Mobile Phone Controls */}
-                <Box sx={{ mt: 2 }}>
-                  {/* System buttons */}
-                  <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={() => handleCommand('BACK')}
-                      sx={{ flex: 1 }}
-                    >
-                      Back
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={() => handleCommand('HOME')}
-                      sx={{ flex: 1 }}
-                    >
-                      Home
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={() => handleCommand('MENU')}
-                      sx={{ flex: 1 }}
-                    >
-                      Menu
-                    </Button>
-                  </Box>
-                  
-                  {/* Volume controls */}
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={() => handleCommand('VOLUME_DOWN')}
-                      sx={{ flex: 1 }}
-                    >
-                      Vol -
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={() => handleCommand('VOLUME_UP')}
-                      sx={{ flex: 1 }}
-                    >
-                      Vol +
-                    </Button>
-                  </Box>
+              {/* Mobile Phone Controls */}
+              <Box sx={{ mt: 2 }}>
+                {/* System buttons */}
+                <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => handleCommand('BACK')}
+                    sx={{ flex: 1 }}
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => handleCommand('HOME')}
+                    sx={{ flex: 1 }}
+                  >
+                    Home
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => handleCommand('MENU')}
+                    sx={{ flex: 1 }}
+                  >
+                    Menu
+                  </Button>
                 </Box>
                 
-                {/* Modal Controls */}
-                <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid #e0e0e0' }}>
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Button 
-                      variant="outlined"
-                      onClick={handleCloseModal}
-                      sx={{ flex: 1 }}
-                    >
-                      Close
-                    </Button>
-                    <Button 
-                      variant="contained" 
-                      color="error"
-                      onClick={handleDisconnect}
-                      disabled={connectionLoading}
-                      sx={{ flex: 1 }}
-                    >
-                      {connectionLoading ? <CircularProgress size={20} /> : 'Release Control'}
-                    </Button>
-                  </Box>
+                {/* Volume controls */}
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => handleCommand('VOLUME_DOWN')}
+                    sx={{ flex: 1 }}
+                  >
+                    Vol -
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => handleCommand('VOLUME_UP')}
+                    sx={{ flex: 1 }}
+                  >
+                    Vol +
+                  </Button>
+                </Box>
+              </Box>
+              
+              {/* Modal Controls */}
+              <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid #e0e0e0' }}>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button 
+                    variant="outlined"
+                    onClick={handleCloseModal}
+                    sx={{ flex: 1 }}
+                  >
+                    Close
+                  </Button>
+                  <Button 
+                    variant="contained" 
+                    color="error"
+                    onClick={handleDisconnect}
+                    disabled={connectionLoading}
+                    sx={{ flex: 1 }}
+                  >
+                    {connectionLoading ? <CircularProgress size={20} /> : 'Release Control'}
+                  </Button>
                 </Box>
               </Box>
             </Grid>

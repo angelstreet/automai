@@ -140,14 +140,19 @@ export function useAndroidMobileConnection() {
       const result = await response.json();
       if (result.success) {
         setAndroidElements(result.elements);
-        console.log(`Dumped ${result.totalCount} UI elements`);
+        console.log(`[@hook:useAndroidMobileConnection] Dumped ${result.totalCount} UI elements`);
+        
+        // If no elements found after filtering, it means the screen has no interactive elements
+        if (result.elements.length === 0) {
+          throw new Error('No interactive UI elements found on the current screen. The screen might be empty or contain only non-interactive elements.');
+        }
       } else {
         const errorMessage = result.error || 'UI dump failed';
-        console.error('UI dump failed:', errorMessage);
+        console.error('[@hook:useAndroidMobileConnection] UI dump failed:', errorMessage);
         throw new Error(errorMessage);
       }
     } catch (err: any) {
-      console.error('UI dump error:', err);
+      console.error('[@hook:useAndroidMobileConnection] UI dump error:', err);
       throw err; // Re-throw the error so the modal can catch it
     }
   }, []);
@@ -165,11 +170,12 @@ export function useAndroidMobileConnection() {
       const result = await response.json();
       if (!result.success) {
         const errorMessage = result.error || 'Element click failed';
-        console.error('Element click failed:', errorMessage);
+        console.error('[@hook:useAndroidMobileConnection] Element click failed:', errorMessage);
         throw new Error(errorMessage);
       }
+      console.log('[@hook:useAndroidMobileConnection] Element clicked successfully:', element.id);
     } catch (err: any) {
-      console.error('Element click error:', err);
+      console.error('[@hook:useAndroidMobileConnection] Element click error:', err);
       throw err; // Re-throw the error so the modal can catch it
     }
   }, []);
@@ -183,14 +189,14 @@ export function useAndroidMobileConnection() {
       const result = await response.json();
       if (result.success) {
         setAndroidApps(result.apps);
-        console.log(`Found ${result.apps.length} installed apps`);
+        console.log(`[@hook:useAndroidMobileConnection] Found ${result.apps.length} installed apps`);
       } else {
         const errorMessage = result.error || 'Get apps failed';
-        console.error('Get apps failed:', errorMessage);
+        console.error('[@hook:useAndroidMobileConnection] Get apps failed:', errorMessage);
         throw new Error(errorMessage);
       }
     } catch (err: any) {
-      console.error('Get apps error:', err);
+      console.error('[@hook:useAndroidMobileConnection] Get apps error:', err);
       throw err; // Re-throw the error so the modal can catch it
     }
   }, []);
@@ -204,14 +210,14 @@ export function useAndroidMobileConnection() {
       const result = await response.json();
       if (result.success) {
         setAndroidScreenshot(result.screenshot);
-        console.log('Screenshot captured successfully');
+        console.log('[@hook:useAndroidMobileConnection] Screenshot captured successfully');
       } else {
         const errorMessage = result.error || 'Screenshot failed';
-        console.error('Screenshot failed:', errorMessage);
+        console.error('[@hook:useAndroidMobileConnection] Screenshot failed:', errorMessage);
         throw new Error(errorMessage);
       }
     } catch (err: any) {
-      console.error('Screenshot error:', err);
+      console.error('[@hook:useAndroidMobileConnection] Screenshot error:', err);
       throw err; // Re-throw the error so the modal can catch it
     }
   }, []);

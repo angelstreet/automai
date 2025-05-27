@@ -260,7 +260,7 @@ export async function getInstalledApps(
         }
 
         apps.push({ packageName, label });
-      } catch (err) {
+      } catch {
         // If we can't get the label, use package name
         apps.push({ packageName, label: packageName });
       }
@@ -444,7 +444,7 @@ export async function dumpUIElements(hostId: string, androidDeviceId: string): P
         const bounds = getAttr('bounds');
         const clickable = getAttr('clickable') === 'true';
         const enabled = getAttr('enabled') === 'true';
-        const displayed = getAttr('displayed') !== 'false'; // Most elements don't have this attr, so default to true
+        const _displayed = getAttr('displayed') !== 'false'; // Most elements don't have this attr, so default to true
 
         // Log details of first 10 elements for debugging
         if (i < 10) {
@@ -548,7 +548,7 @@ export async function clickElement(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     console.log(
-      `[@action:adbActions:clickElement] Attempting to click element ID=${element.id}: Resource-ID=${element.resourceId}, Text=${element.text}, Content-Desc=${element.contentDesc}`,
+      `[@action:adbActions:clickElement] Clicking on element: ${JSON.stringify(element)}`,
     );
 
     // Parse bounds to get coordinates if available
@@ -581,111 +581,12 @@ export async function clickElement(
         return { success: true };
       } else {
         console.warn(`[@action:adbActions:clickElement] Direct tap failed: ${result.error}`);
-        // Fall through to try other methods
+        return { success: false, error: result.error || 'Failed to click element' };
       }
     }
 
-    // Fallback 1: Try clicking by resource ID
-    if (
-      element.resourceId &&
-      element.resourceId !== '<no resource-id>' &&
-      element.resourceId !== 'null'
-    ) {
-      console.log(
-        `[@action:adbActions:clickElement] Trying resource ID method: ${element.resourceId}`,
-      );
-
-      // Use a simpler approach to find and click by resource ID
-      const resourceIdCommand = `adb -s ${androidDeviceId} shell "uiautomator dump /dev/stdout | grep -o 'resource-id=\"${element.resourceId}\"[^>]*bounds=\"\\[[0-9,]*\\]\\[[0-9,]*\\]\"' | head -1 | grep -o 'bounds=\"\\[[0-9,]*\\]\\[[0-9,]*\\]\"' | sed 's/bounds=\"\\[\\([0-9]*\\),\\([0-9]*\\)\\]\\[\\([0-9]*\\),\\([0-9]*\\)\\]\"/\\1 \\2 \\3 \\4/' | awk '{print (\$1+\$3)/2, (\$2+\$4)/2}'"`;
-
-      const coordResult = await executeOnConnection(hostId, resourceIdCommand);
-      if (coordResult.success && coordResult.data?.stdout?.trim()) {
-        const coords = coordResult.data.stdout.trim().split(' ');
-        if (coords.length === 2) {
-          const tapCommand = `adb -s ${androidDeviceId} shell input tap ${coords[0]} ${coords[1]}`;
-          console.log(
-            `[@action:adbActions:clickElement] Tapping at resource ID coordinates: ${coords[0]}, ${coords[1]}`,
-          );
-
-          const tapResult = await executeOnConnection(hostId, tapCommand);
-          if (tapResult.success) {
-            console.log(
-              `[@action:adbActions:clickElement] Successfully clicked element using resource ID`,
-            );
-            return { success: true };
-          }
-        }
-      }
-    }
-
-    // Fallback 2: Try clicking by text content
-    if (element.text && element.text !== '<no text>' && element.text !== '') {
-      console.log(`[@action:adbActions:clickElement] Trying text method: ${element.text}`);
-
-      // Escape special characters for grep
-      const escapedText = element.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const textCommand = `adb -s ${androidDeviceId} shell "uiautomator dump /dev/stdout | grep -o 'text=\"${escapedText}\"[^>]*bounds=\"\\[[0-9,]*\\]\\[[0-9,]*\\]\"' | head -1 | grep -o 'bounds=\"\\[[0-9,]*\\]\\[[0-9,]*\\]\"' | sed 's/bounds=\"\\[\\([0-9]*\\),\\([0-9]*\\)\\]\\[\\([0-9]*\\),\\([0-9]*\\)\\]\"/\\1 \\2 \\3 \\4/' | awk '{print (\$1+\$3)/2, (\$2+\$4)/2}'"`;
-
-      const coordResult = await executeOnConnection(hostId, textCommand);
-      if (coordResult.success && coordResult.data?.stdout?.trim()) {
-        const coords = coordResult.data.stdout.trim().split(' ');
-        if (coords.length === 2) {
-          const tapCommand = `adb -s ${androidDeviceId} shell input tap ${coords[0]} ${coords[1]}`;
-          console.log(
-            `[@action:adbActions:clickElement] Tapping at text coordinates: ${coords[0]}, ${coords[1]}`,
-          );
-
-          const tapResult = await executeOnConnection(hostId, tapCommand);
-          if (tapResult.success) {
-            console.log(
-              `[@action:adbActions:clickElement] Successfully clicked element using text`,
-            );
-            return { success: true };
-          }
-        }
-      }
-    }
-
-    // Fallback 3: Try clicking by content description
-    if (
-      element.contentDesc &&
-      element.contentDesc !== '<no content-desc>' &&
-      element.contentDesc !== ''
-    ) {
-      console.log(
-        `[@action:adbActions:clickElement] Trying content description method: ${element.contentDesc}`,
-      );
-
-      // Escape special characters for grep
-      const escapedDesc = element.contentDesc.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const descCommand = `adb -s ${androidDeviceId} shell "uiautomator dump /dev/stdout | grep -o 'content-desc=\"${escapedDesc}\"[^>]*bounds=\"\\[[0-9,]*\\]\\[[0-9,]*\\]\"' | head -1 | grep -o 'bounds=\"\\[[0-9,]*\\]\\[[0-9,]*\\]\"' | sed 's/bounds=\"\\[\\([0-9]*\\),\\([0-9]*\\)\\]\\[\\([0-9]*\\),\\([0-9]*\\)\\]\"/\\1 \\2 \\3 \\4/' | awk '{print (\$1+\$3)/2, (\$2+\$4)/2}'"`;
-
-      const coordResult = await executeOnConnection(hostId, descCommand);
-      if (coordResult.success && coordResult.data?.stdout?.trim()) {
-        const coords = coordResult.data.stdout.trim().split(' ');
-        if (coords.length === 2) {
-          const tapCommand = `adb -s ${androidDeviceId} shell input tap ${coords[0]} ${coords[1]}`;
-          console.log(
-            `[@action:adbActions:clickElement] Tapping at content-desc coordinates: ${coords[0]}, ${coords[1]}`,
-          );
-
-          const tapResult = await executeOnConnection(hostId, tapCommand);
-          if (tapResult.success) {
-            console.log(
-              `[@action:adbActions:clickElement] Successfully clicked element using content description`,
-            );
-            return { success: true };
-          }
-        }
-      }
-    }
-
-    // If all methods failed
-    console.error(`[@action:adbActions:clickElement] All click methods failed for element`);
-    return {
-      success: false,
-      error: 'Unable to click element - no viable coordinates or identifiers found',
-    };
+    // If no bounds available, return error
+    return { success: false, error: 'No bounds available for element click' };
   } catch (error: any) {
     console.error(`[@action:adbActions:clickElement] ERROR: ${error.message}`);
     return { success: false, error: error.message };

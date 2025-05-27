@@ -1500,13 +1500,12 @@ def android_mobile_dump_ui():
             for element in elements:
                 elements_data.append({
                     'id': element.id,
-                    'text': element.text,
-                    'contentDesc': element.content_desc,
-                    'resourceId': element.resource_id,
                     'tag': element.tag,
-                    'bounds': element.bounds,
-                    'clickable': element.clickable,
-                    'enabled': element.enabled
+                    'text': element.text,
+                    'resourceId': element.resource_id,
+                    'contentDesc': element.content_desc,
+                    'className': element.class_name,
+                    'bounds': element.bounds
                 })
             
             return jsonify({
