@@ -395,7 +395,7 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
                 )}
 
                 {/* Always show element selection dropdown */}
-                <FormControl fullWidth size="small" >
+                <FormControl fullWidth size="small" sx={{ maxWidth: '400px' }}>
                   <InputLabel>Select element to click...</InputLabel>
                   <Select
                     value={selectedElement}
