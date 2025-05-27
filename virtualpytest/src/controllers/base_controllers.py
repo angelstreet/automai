@@ -126,7 +126,7 @@ class RemoteControllerInterface(BaseController):
     def rewind(self) -> bool:
         """Rewind."""
         return self.press_key("REWIND")
-
+    
 
 class AVControllerInterface(BaseController):
     """
@@ -193,7 +193,7 @@ class AVControllerInterface(BaseController):
     def record_session(self, duration: float, filename: str = None) -> bool:
         """Record audio/video session. Must be implemented by subclasses."""
         pass
-
+    
 
 class VerificationControllerInterface(BaseController):
     """
@@ -310,7 +310,7 @@ class PowerControllerInterface(BaseController):
     def get_power_status(self) -> Dict[str, Any]:
         """Get current power status. Must be implemented by subclasses."""
         pass
-    
+
     # Optional power management methods with default implementations
     def soft_reboot(self, timeout: float = 60.0) -> bool:
         """Perform a soft reboot (graceful restart)."""

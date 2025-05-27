@@ -1000,8 +1000,8 @@ const Controller: React.FC = () => {
   }
 
   if (error) {
-    return (
-      <Box>
+  return (
+    <Box>
         <Typography variant="h4" gutterBottom>
           Controller Configuration
         </Typography>
@@ -1024,7 +1024,7 @@ const Controller: React.FC = () => {
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
-        </Alert>
+      </Alert>
       )}
 
       <Grid container spacing={3}>
@@ -1037,7 +1037,7 @@ const Controller: React.FC = () => {
                   Available Controller Types
                 </Typography>
               </Box>
-              
+
               {controllerTypes && (
                 <Grid container spacing={2}>
                   {Object.entries(controllerTypes).map(([type, implementations]) => (
@@ -1065,7 +1065,7 @@ const Controller: React.FC = () => {
                               label={`${implementations.filter((impl: ControllerType) => impl.status === 'placeholder').length} Planned`}
                               color="default" 
                               size="small" 
-                            />
+                  />
                           )}
                         </Box>
                       </Paper>
@@ -1084,7 +1084,7 @@ const Controller: React.FC = () => {
               <Typography variant="h6" gutterBottom>
                 Controller Implementations
               </Typography>
-              
+
               {controllerTypes && Object.entries(controllerTypes).map(([type, implementations]) => (
                 <Accordion key={type}>
                   <AccordionSummary expandIcon={<ExpandMore />}>
@@ -1101,7 +1101,7 @@ const Controller: React.FC = () => {
                     </Box>
                   </AccordionSummary>
                   <AccordionDetails>
-                    <List>
+              <List>
                       {implementations.map((impl: ControllerType, index: number) => (
                         <React.Fragment key={impl.id}>
                           <ListItem
@@ -1111,34 +1111,34 @@ const Controller: React.FC = () => {
                               '&:hover': impl.status === 'available' ? { backgroundColor: 'action.hover' } : {}
                             }}
                           >
-                            <ListItemIcon>
+                  <ListItemIcon>
                               {impl.status === 'available' ? (
                                 <ConnectedIcon color="success" />
                               ) : (
                                 <DisconnectedIcon color="disabled" />
                               )}
-                            </ListItemIcon>
-                            <ListItemText
+                  </ListItemIcon>
+                  <ListItemText
                               primary={impl.name}
                               secondary={impl.description}
-                            />
+                  />
                             <Chip 
                               label={impl.status} 
                               color={getStatusColor(impl.status) as any}
                               size="small" 
                             />
-                          </ListItem>
+                </ListItem>
                           {index < implementations.length - 1 && <Divider />}
                         </React.Fragment>
                       ))}
-                    </List>
+              </List>
                   </AccordionDetails>
                 </Accordion>
               ))}
             </CardContent>
           </Card>
         </Grid>
-      </Grid>
+        </Grid>
 
       {/* Create Controller Dialog */}
       <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} maxWidth="sm" fullWidth>
@@ -1185,7 +1185,7 @@ const Controller: React.FC = () => {
                 ))}
               </Select>
             </FormControl>
-          </Box>
+              </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setCreateDialogOpen(false)}>Cancel</Button>
@@ -1247,7 +1247,7 @@ const Controller: React.FC = () => {
               <Box sx={{ mt: 2 }}>
                 <Typography variant="h6" gutterBottom>
                   Test Results
-                </Typography>
+                    </Typography>
                 <Alert severity={testResults.success ? 'success' : 'error'} sx={{ mb: 2 }}>
                   {testResults.message}
                 </Alert>
@@ -1286,7 +1286,7 @@ const Controller: React.FC = () => {
             <Box display="flex" alignItems="center" gap={1}>
               <Typography variant="h6" component="span">
                 Android TV Remote
-              </Typography>
+                    </Typography>
               {androidTVSession.connected && (
                 <Chip 
                   label="Connected" 
@@ -1332,8 +1332,8 @@ const Controller: React.FC = () => {
                     sx={{ minWidth: 24, width: 24, height: 24, p: 0 }}
                   >
                     +
-                  </Button>
-                </Box>
+                    </Button>
+                  </Box>
               </Box>
             )}
           </Box>
@@ -1488,7 +1488,7 @@ const Controller: React.FC = () => {
             <Box display="flex" alignItems="center" gap={1}>
               <Typography variant="h6" component="span">
                 IR Remote Control
-              </Typography>
+                    </Typography>
               {irRemoteSession.connected && (
                 <Chip 
                   label="Connected" 
@@ -1515,7 +1515,7 @@ const Controller: React.FC = () => {
                 <Box display="flex" alignItems="center" gap={0.5}>
                   <Typography variant="caption" sx={{ fontSize: '0.75rem' }}>
                     Scale:
-                  </Typography>
+                    </Typography>
                   <Button
                     size="small"
                     onClick={() => setRemoteScale(prev => Math.max(irRemoteConfig?.remote_info.min_scale || 0.5, prev - 0.1))}
@@ -1534,8 +1534,8 @@ const Controller: React.FC = () => {
                     sx={{ minWidth: 24, width: 24, height: 24, p: 0 }}
                   >
                     +
-                  </Button>
-                </Box>
+                    </Button>
+                  </Box>
               </Box>
             )}
           </Box>
@@ -1665,7 +1665,7 @@ const Controller: React.FC = () => {
             <Box display="flex" alignItems="center" gap={1}>
               <Typography variant="h6" component="span" sx={{ fontSize: '1.1rem' }}>
                 Bluetooth Remote
-              </Typography>
+                    </Typography>
               {bluetoothSession.connected && (
                 <Chip 
                   label="Connected" 
@@ -1676,12 +1676,12 @@ const Controller: React.FC = () => {
             </Box>
           </Box>
         </DialogTitle>
-        <DialogContent sx={{ pb: 2 }}>
+        <DialogContent sx={{ pb: 2, overflow: 'hidden', maxHeight: 'none' }}>
           {!bluetoothSession.connected ? (
             <Box sx={{ pt: 2 }}>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                 Pair with a Bluetooth device to control it remotely using HID protocol.
-              </Typography>
+                    </Typography>
               
               {bluetoothConnectionError && (
                 <Alert severity="error" sx={{ mb: 2 }}>
@@ -1721,194 +1721,39 @@ const Controller: React.FC = () => {
               </Grid>
             </Box>
           ) : (
-            <Box sx={{ pt: 2 }}>
-              {/* Navigation Controls */}
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="h6" sx={{ mb: 2, fontSize: '1rem' }}>
-                  🎮 Navigation
-                </Typography>
+            <Box sx={{ pt: 2, display: 'flex', justifyContent: 'center', overflow: 'hidden' }}>
+              {/* Bluetooth Remote Interface */}
+              <Box sx={{ 
+                position: 'relative',
+                transform: `scale(${remoteScale})`,
+                transformOrigin: 'center top',
+                display: 'inline-block',
+                overflow: 'visible'
+              }}>
+                {/* Actual remote image */}
+                <img 
+                  src={bluetoothConfig?.remote_info.image_url || "/suncherry_remote.png"}
+                  alt={bluetoothConfig?.remote_info.name || "Sunrise Remote"}
+                  style={{
+                    display: 'block',
+                    maxWidth: '100%',
+                    height: 'auto',
+                    borderRadius: '6px',
+                    boxShadow: '0 8px 16px rgba(0,0,0,0.3)'
+                  }}
+                  onError={(e) => {
+                    // Fallback if image doesn't load
+                    e.currentTarget.style.width = '120px';
+                    e.currentTarget.style.height = '360px';
+                    e.currentTarget.style.backgroundColor = '#2a2a2a';
+                  }}
+                />
                 
-                {/* D-pad style navigation */}
-                <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1, width: 120 }}>
-                    <Box></Box>
-                    <Button
-                      variant="contained"
-                      size="small"
-                      onClick={() => handleBluetoothCommand('UP')}
-                      sx={{ minWidth: 30, height: 30 }}
-                    >
-                      ↑
-                    </Button>
-                    <Box></Box>
-                    
-                    <Button
-                      variant="contained"
-                      size="small"
-                      onClick={() => handleBluetoothCommand('LEFT')}
-                      sx={{ minWidth: 30, height: 30 }}
-                    >
-                      ←
-                    </Button>
-                    <Button
-                      variant="contained"
-                      size="small"
-                      onClick={() => handleBluetoothCommand('SELECT')}
-                      sx={{ minWidth: 30, height: 30 }}
-                    >
-                      ●
-                    </Button>
-                    <Button
-                      variant="contained"
-                      size="small"
-                      onClick={() => handleBluetoothCommand('RIGHT')}
-                      sx={{ minWidth: 30, height: 30 }}
-                    >
-                      →
-                    </Button>
-                    
-                    <Box></Box>
-                    <Button
-                      variant="contained"
-                      size="small"
-                      onClick={() => handleBluetoothCommand('DOWN')}
-                      sx={{ minWidth: 30, height: 30 }}
-                    >
-                      ↓
-                    </Button>
-                    <Box></Box>
-                  </Box>
-                </Box>
-
-                {/* System buttons */}
-                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => handleBluetoothCommand('BACK')}
-                  >
-                    Back
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => handleBluetoothCommand('HOME')}
-                  >
-                    Home
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => handleBluetoothCommand('MENU')}
-                  >
-                    Menu
-                  </Button>
-                </Box>
-              </Box>
-
-              {/* App Launcher Section */}
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="h6" sx={{ mb: 2, fontSize: '1rem' }}>
-                  📱 App Launcher {androidApps.length > 0 && `(${androidApps.length})`}
-                </Typography>
-                <Box sx={{ mb: 2 }}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Select an app...</InputLabel>
-                    <Select
-                      value=""
-                      label="Select an app..."
-                      onChange={(e) => {
-                        if (e.target.value) {
-                          handleBluetoothCommand('LAUNCH_APP', { package: e.target.value });
-                        }
-                      }}
-                      displayEmpty
-                    >
-                      {androidApps.map((app) => (
-                        <MenuItem key={app.packageName} value={app.packageName}>
-                          {app.label}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Box>
-                <Button
-                  variant="contained"
-                  size="small"
-                  onClick={handleAndroidMobileGetApps}
-                  fullWidth
-                >
-                  Refresh Apps
-                </Button>
-              </Box>
-
-              {/* UI Elements Section */}
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="h6" sx={{ mb: 2, fontSize: '1rem' }}>
-                  🔍 UI Elements {androidElements.length > 0 && `(${androidElements.length})`}
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                  <Button
-                    variant="contained"
-                    size="small"
-                    onClick={handleAndroidMobileDumpUI}
-                    sx={{ flex: 1 }}
-                  >
-                    Dump UI
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => setAndroidElements([])}
-                    disabled={androidElements.length === 0}
-                    sx={{ flex: 1 }}
-                  >
-                    Clear
-                  </Button>
-                </Box>
-                
-                {/* Element Selection and Click */}
-                {androidElements.length > 0 && (
-                  <Box>
-                    <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-                      <InputLabel>Select element to click...</InputLabel>
-                      <Select
-                        value=""
-                        label="Select element to click..."
-                        onChange={(e) => {
-                          const elementId = parseInt(e.target.value as string);
-                          const element = androidElements.find(el => el.id === elementId);
-                          if (element) {
-                            handleAndroidMobileClickElement(element);
-                          }
-                        }}
-                        displayEmpty
-                      >
-                        {androidElements.map((element) => {
-                          // Get the most meaningful identifier for display
-                          const getElementDisplayName = (el: AndroidElement) => {
-                            if (el.contentDesc && el.contentDesc !== '<no content-desc>') {
-                              return `${el.contentDesc}`;
-                            }
-                            if (el.text && el.text !== '<no text>') {
-                              return `"${el.text}"`;
-                            }
-                            if (el.resourceId && el.resourceId !== '<no resource-id>') {
-                              return `ID: ${el.resourceId}`;
-                            }
-                            return `${el.tag}`;
-                          };
-
-                          return (
-                            <MenuItem key={element.id} value={element.id}>
-                              #{element.id}: {getElementDisplayName(element)}
-                            </MenuItem>
-                          );
-                        })}
-                      </Select>
-                    </FormControl>
-                  </Box>
+                {/* Button overlays positioned absolutely over the image */}
+                {Object.entries(bluetoothConfig?.button_layout || {}).map(([buttonId, config]) => 
+                  renderRemoteButton(buttonId, config, handleBluetoothCommand, bluetoothConfig, 1)
                 )}
+
               </Box>
             </Box>
           )}
@@ -1916,7 +1761,7 @@ const Controller: React.FC = () => {
         <DialogActions>
           <Button onClick={handleCloseBluetoothModal}>
             Close
-          </Button>
+                    </Button>
           {!bluetoothSession.connected ? (
             <Button 
               variant="contained" 
@@ -1942,7 +1787,7 @@ const Controller: React.FC = () => {
       <Dialog 
         open={androidMobileModalOpen} 
         onClose={handleCloseAndroidMobileModal}
-        maxWidth="sm"
+        maxWidth="md"
         fullWidth
       >
         <DialogTitle>
@@ -1962,7 +1807,7 @@ const Controller: React.FC = () => {
             </Box>
           </Box>
         </DialogTitle>
-        <DialogContent sx={{ pb: 2 }}>
+        <DialogContent sx={{ pb: 2, overflow: 'hidden', maxHeight: 'none' }}>
           {!androidMobileSession.connected ? (
             <Box sx={{ pt: 2 }}>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
@@ -2037,15 +1882,97 @@ const Controller: React.FC = () => {
               </Grid>
             </Box>
           ) : (
-            <Box sx={{ pt: 2 }}>
-              {/* Navigation Controls */}
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="h6" sx={{ mb: 2, fontSize: '1rem' }}>
-                  🎮 Navigation
-                </Typography>
+            <Box sx={{ pt: 2, display: 'flex', justifyContent: 'space-between', overflow: 'hidden' }}>
+              {/* Left side: Device Screen Canvas */}
+              <Box sx={{ 
+                flex: 1,
+                marginRight: 3,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center'
+              }}>
                 
-                {/* D-pad style navigation */}
-                <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                {/* Device Screen Canvas */}
+                <Box sx={{ 
+                  position: 'relative',
+                  width: 300,
+                  height: 500,
+                  border: '2px solid #333',
+                  borderRadius: '20px',
+                  backgroundColor: '#000',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden'
+                }}>
+                  {/* Screenshot or placeholder */}
+                  {androidScreenshot ? (
+                    <img 
+                      src={`data:image/png;base64,${androidScreenshot}`}
+                      alt="Device Screenshot"
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'contain'
+                      }}
+                    />
+                  ) : (
+                    <>
+                      <Typography variant="body2" color="white" sx={{ textAlign: 'center', mb: 2 }}>
+                        Device Screen
+                      </Typography>
+                      <Typography variant="caption" color="gray" sx={{ textAlign: 'center' }}>
+                        Use "Screenshot" to capture current screen
+                      </Typography>
+                    </>
+                  )}
+                  
+                  {/* UI Elements Overlay */}
+                  {showOverlays && androidElements.length > 0 && (
+                    <Box sx={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      pointerEvents: 'none'
+                    }}>
+                      {/* Render UI element overlays here */}
+                      {androidElements.slice(0, 10).map((element, index) => (
+                        <Box
+                          key={element.id}
+                    sx={{
+                            position: 'absolute',
+                            left: `${10 + (index % 3) * 30}%`,
+                            top: `${20 + Math.floor(index / 3) * 15}%`,
+                            width: '25%',
+                            height: '10%',
+                            border: '1px solid rgba(255, 255, 0, 0.8)',
+                            backgroundColor: 'rgba(255, 255, 0, 0.2)',
+                            fontSize: '8px',
+                            color: 'white',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                      textAlign: 'center',
+                            overflow: 'hidden'
+                    }}
+                  >
+                          #{element.id}
+                        </Box>
+                      ))}
+                    </Box>
+                  )}
+                </Box>
+
+                {/* Navigation Controls */}
+                <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="h6" sx={{ mb: 1, fontSize: '1rem' }}>
+                    🎮 Navigation
+                    </Typography>
+                  
+                  {/* D-pad style navigation */}
                   <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1, width: 120 }}>
                     <Box></Box>
                     <Button
@@ -2094,137 +2021,150 @@ const Controller: React.FC = () => {
                     </Button>
                     <Box></Box>
                   </Box>
-                </Box>
 
-                {/* System buttons */}
-                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => handleAndroidMobileCommand('BACK')}
-                  >
-                    Back
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => handleAndroidMobileCommand('HOME')}
-                  >
-                    Home
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => handleAndroidMobileCommand('MENU')}
-                  >
-                    Menu
-                  </Button>
-                </Box>
-              </Box>
-
-              {/* App Launcher Section */}
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="h6" sx={{ mb: 2, fontSize: '1rem' }}>
-                  📱 App Launcher {androidApps.length > 0 && `(${androidApps.length})`}
-                </Typography>
-                <Box sx={{ mb: 2 }}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Select an app...</InputLabel>
-                    <Select
-                      value=""
-                      label="Select an app..."
-                      onChange={(e) => {
-                        if (e.target.value) {
-                          handleAndroidMobileCommand('LAUNCH_APP', { package: e.target.value });
-                        }
-                      }}
-                      displayEmpty
+                  {/* System buttons */}
+                  <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => handleAndroidMobileCommand('BACK')}
                     >
-                      {androidApps.map((app) => (
-                        <MenuItem key={app.packageName} value={app.packageName}>
-                          {app.label}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                      Back
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => handleAndroidMobileCommand('HOME')}
+                    >
+                      Home
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => handleAndroidMobileCommand('MENU')}
+                    >
+                      Menu
+                    </Button>
+                  </Box>
                 </Box>
-                <Button
-                  variant="contained"
-                  size="small"
-                  onClick={handleAndroidMobileGetApps}
-                  fullWidth
-                >
-                  Refresh Apps
-                </Button>
               </Box>
 
-              {/* UI Elements Section */}
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="h6" sx={{ mb: 2, fontSize: '1rem' }}>
-                  🔍 UI Elements {androidElements.length > 0 && `(${androidElements.length})`}
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+              {/* Right side: Mobile Features */}
+              <Box sx={{ flex: 1, minWidth: 300 }}>
+                {/* Screenshot Section */}
+                <Box sx={{ mb: 3 }}>
                   <Button
                     variant="contained"
                     size="small"
-                    onClick={handleAndroidMobileDumpUI}
-                    sx={{ flex: 1 }}
+                    onClick={handleAndroidMobileScreenshot}
+                    fullWidth
                   >
-                    Dump UI
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => setAndroidElements([])}
-                    disabled={androidElements.length === 0}
-                    sx={{ flex: 1 }}
-                  >
-                    Clear
+                    Take Screenshot
                   </Button>
                 </Box>
-                
-                {/* Element Selection and Click */}
-                {androidElements.length > 0 && (
-                  <Box>
-                    <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-                      <InputLabel>Select element to click...</InputLabel>
+
+                {/* App Launcher Section */}
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="h6" sx={{ mb: 2, fontSize: '1rem' }}>
+                    📱 App Launcher {androidApps.length > 0 && `(${androidApps.length})`}
+              </Typography>
+                  <Box sx={{ mb: 2 }}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Select an app...</InputLabel>
                       <Select
                         value=""
-                        label="Select element to click..."
+                        label="Select an app..."
                         onChange={(e) => {
-                          const elementId = parseInt(e.target.value as string);
-                          const element = androidElements.find(el => el.id === elementId);
-                          if (element) {
-                            handleAndroidMobileClickElement(element);
+                          if (e.target.value) {
+                            handleAndroidMobileCommand('LAUNCH_APP', { package: e.target.value });
                           }
                         }}
-                        displayEmpty
                       >
-                        {androidElements.map((element) => {
-                          // Get the most meaningful identifier for display
-                          const getElementDisplayName = (el: AndroidElement) => {
-                            if (el.contentDesc && el.contentDesc !== '<no content-desc>') {
-                              return `${el.contentDesc}`;
-                            }
-                            if (el.text && el.text !== '<no text>') {
-                              return `"${el.text}"`;
-                            }
-                            if (el.resourceId && el.resourceId !== '<no resource-id>') {
-                              return `ID: ${el.resourceId}`;
-                            }
-                            return `${el.tag}`;
-                          };
-
-                          return (
-                            <MenuItem key={element.id} value={element.id}>
-                              #{element.id}: {getElementDisplayName(element)}
-                            </MenuItem>
-                          );
-                        })}
+                        {androidApps.map((app) => (
+                          <MenuItem key={app.packageName} value={app.packageName}>
+                            {app.label}
+                          </MenuItem>
+                        ))}
                       </Select>
                     </FormControl>
                   </Box>
-                )}
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={handleAndroidMobileGetApps}
+                    fullWidth
+                  >
+                    Refresh Apps
+                </Button>
+                </Box>
+
+                {/* UI Elements Section */}
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="h6" sx={{ mb: 2, fontSize: '1rem' }}>
+                    🔍 UI Elements {androidElements.length > 0 && `(${androidElements.length})`}
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                    <Button
+                      variant="contained"
+                      size="small"
+                      onClick={handleAndroidMobileDumpUI}
+                      sx={{ flex: 1 }}
+                    >
+                      Dump UI
+                </Button>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => setAndroidElements([])}
+                      disabled={androidElements.length === 0}
+                      sx={{ flex: 1 }}
+                    >
+                      Clear
+                </Button>
+              </Box>
+                  
+                  {/* Element Selection and Click */}
+                  {androidElements.length > 0 && (
+                    <Box>
+                      <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+                        <InputLabel>Select element to click...</InputLabel>
+                        <Select
+                          value=""
+                          label="Select element to click..."
+                          onChange={(e) => {
+                            const elementId = parseInt(e.target.value as string);
+                            const element = androidElements.find(el => el.id === elementId);
+                            if (element) {
+                              handleAndroidMobileClickElement(element);
+                            }
+                          }}
+                        >
+                          {androidElements.map((element) => {
+                            // Get the most meaningful identifier for display
+                            const getElementDisplayName = (el: AndroidElement) => {
+                              if (el.contentDesc && el.contentDesc !== '<no content-desc>') {
+                                return `${el.contentDesc}`;
+                              }
+                              if (el.text && el.text !== '<no text>') {
+                                return `"${el.text}"`;
+                              }
+                              if (el.resourceId && el.resourceId !== '<no resource-id>') {
+                                return `ID: ${el.resourceId}`;
+                              }
+                              return `${el.tag}`;
+                            };
+
+                            return (
+                              <MenuItem key={element.id} value={element.id}>
+                                #{element.id}: {getElementDisplayName(element)}
+                              </MenuItem>
+                            );
+                          })}
+                        </Select>
+                      </FormControl>
+    </Box>
+                  )}
+                </Box>
               </Box>
             </Box>
           )}
