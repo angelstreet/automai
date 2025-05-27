@@ -159,6 +159,15 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
     }
   }, [androidScreenshot]);
 
+  // Auto-show overlay when elements are available
+  useEffect(() => {
+    console.log(`[@component:AndroidMobileModal] Elements updated: ${androidElements.length} elements`);
+    if (androidElements.length > 0) {
+      console.log(`[@component:AndroidMobileModal] Auto-showing overlay for ${androidElements.length} elements`);
+      setShowOverlay(true);
+    }
+  }, [androidElements]);
+
   return (
     <>
       <Dialog open={open} onClose={handleCloseModal} maxWidth="lg" fullWidth>
