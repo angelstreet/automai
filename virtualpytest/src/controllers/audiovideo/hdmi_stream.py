@@ -2,7 +2,7 @@
 HDMI Stream Controller Implementation
 
 This controller handles HDMI stream acquisition using FFmpeg and provides video streaming functionality.
-It can stream from acquisition cards, capture screenshots, and record video with rolling buffers.
+It uses systemd services for production streaming and direct FFmpeg for verification operations.
 Verification functionality is handled by separate verification controllers.
 """
 
@@ -11,13 +11,14 @@ import threading
 import time
 import os
 import signal
+import json
 from typing import Dict, Any, Optional
 from pathlib import Path
 from ..base_controllers import AVControllerInterface
 
 
 class HDMIStreamController(AVControllerInterface):
-    """HDMI Stream controller that handles FFmpeg-based acquisition and streaming."""
+    """HDMI Stream controller that handles FFmpeg-based acquisition and streaming via systemd services."""
     
     def __init__(self, device_name: str = "HDMI Stream Device", **kwargs):
         """
@@ -31,6 +32,7 @@ class HDMIStreamController(AVControllerInterface):
                 - stream_resolution: Resolution for streaming (default: '640x360')
                 - stream_fps: FPS for streaming (default: 12)
                 - stream_bitrate: Bitrate for streaming (default: '400k')
+                - service_name: systemd service name (default: 'hdmi-stream')
         """
         super().__init__(device_name, "HDMI_STREAM")
         
@@ -46,10 +48,12 @@ class HDMIStreamController(AVControllerInterface):
         self.stream_fps = kwargs.get('stream_fps', 12)
         self.stream_bitrate = kwargs.get('stream_bitrate', '400k')
         
-        # FFmpeg processes
-        self.stream_process = None
+        # Service configuration
+        self.service_name = kwargs.get('service_name', 'hdmi-stream')
+        self.service_file_path = f"/etc/systemd/system/{self.service_name}.service"
+        
+        # Direct FFmpeg processes (for verification operations only)
         self.capture_process = None
-        self.is_streaming = False
         
         # Rolling buffer settings
         self.rolling_buffer_duration = 60  # seconds
@@ -97,10 +101,27 @@ class HDMIStreamController(AVControllerInterface):
                 print(f"HDMI[{self.capture_source}]: ERROR - FFmpeg not found at /usr/bin/ffmpeg")
                 return False
                 
+            # Test systemctl availability
+            try:
+                result = subprocess.run(['systemctl', '--version'], 
+                                      capture_output=True, text=True, timeout=5)
+                if result.returncode != 0:
+                    print(f"HDMI[{self.capture_source}]: ERROR - systemctl not available")
+                    return False
+            except (subprocess.TimeoutExpired, FileNotFoundError):
+                print(f"HDMI[{self.capture_source}]: ERROR - systemctl not found")
+                return False
+                
+            # Generate systemd service file
+            if not self._create_service_file():
+                print(f"HDMI[{self.capture_source}]: ERROR - Failed to create service file")
+                return False
+                
             self.is_connected = True
             print(f"HDMI[{self.capture_source}]: Connected successfully")
             print(f"HDMI[{self.capture_source}]: Video device: {self.video_device}")
             print(f"HDMI[{self.capture_source}]: Output path: {self.output_path}")
+            print(f"HDMI[{self.capture_source}]: Service name: {self.service_name}")
             return True
             
         except Exception as e:
@@ -111,143 +132,228 @@ class HDMIStreamController(AVControllerInterface):
         """Disconnect from the HDMI acquisition device."""
         print(f"HDMI[{self.capture_source}]: Disconnecting")
         
-        # Stop all active processes
+        # Stop streaming service
         self.stop_stream()
+        
+        # Stop direct capture processes
         self.stop_video_capture()
         
         self.is_connected = False
         print(f"HDMI[{self.capture_source}]: Disconnected")
         return True
         
+    def _create_service_file(self) -> bool:
+        """Create systemd service file for HDMI streaming."""
+        try:
+            service_content = f"""[Unit]
+Description=HDMI Stream Service - {self.device_name}
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStart=/usr/bin/ffmpeg -f v4l2 -s {self.stream_resolution} -r {self.stream_fps} -i {self.video_device} -c:v libx264 -preset ultrafast -b:v {self.stream_bitrate} -tune zerolatency -g 24 -an -f hls -hls_time 2 -hls_list_size 3 -hls_flags delete_segments -hls_segment_type mpegts {self.stream_file}
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+WorkingDirectory={self.output_path}
+
+[Install]
+WantedBy=multi-user.target
+"""
+            
+            print(f"HDMI[{self.capture_source}]: Creating service file: {self.service_file_path}")
+            
+            # Write service file (requires root privileges)
+            try:
+                with open(self.service_file_path, 'w') as f:
+                    f.write(service_content)
+            except PermissionError:
+                # Try with sudo
+                process = subprocess.run(['sudo', 'tee', self.service_file_path], 
+                                       input=service_content, text=True, 
+                                       capture_output=True)
+                if process.returncode != 0:
+                    print(f"HDMI[{self.capture_source}]: ERROR - Failed to write service file: {process.stderr}")
+                    return False
+            
+            # Reload systemd daemon
+            result = subprocess.run(['sudo', 'systemctl', 'daemon-reload'], 
+                                  capture_output=True, text=True)
+            if result.returncode != 0:
+                print(f"HDMI[{self.capture_source}]: ERROR - Failed to reload systemd: {result.stderr}")
+                return False
+                
+            print(f"HDMI[{self.capture_source}]: Service file created and systemd reloaded")
+            return True
+            
+        except Exception as e:
+            print(f"HDMI[{self.capture_source}]: Error creating service file: {e}")
+            return False
+    
     def start_stream(self) -> bool:
-        """
-        Start FFmpeg streaming from acquisition card.
-        
-        Command: /usr/bin/ffmpeg -f v4l2 -s 640x360 -r 12 -i /dev/video0 
-                 -c:v libx264 -preset ultrafast -b:v 400k -tune zerolatency 
-                 -g 24 -an -f hls -hls_time 2 -hls_list_size 3 
-                 -hls_flags delete_segments -hls_segment_type mpegts 
-                 /var/www/html/stream/output.m3u8
-        """
+        """Start HDMI streaming using systemd service."""
         if not self.is_connected:
             print(f"HDMI[{self.capture_source}]: ERROR - Not connected")
             return False
             
-        if self.is_streaming:
-            print(f"HDMI[{self.capture_source}]: Stream already active")
-            return True
-            
         try:
-            # Build FFmpeg command
-            cmd = [
-                '/usr/bin/ffmpeg',
-                '-f', 'v4l2',
-                '-s', self.stream_resolution,
-                '-r', str(self.stream_fps),
-                '-i', self.video_device,
-                '-c:v', 'libx264',
-                '-preset', 'ultrafast',
-                '-b:v', self.stream_bitrate,
-                '-tune', 'zerolatency',
-                '-g', '24',
-                '-an',  # No audio for streaming
-                '-f', 'hls',
-                '-hls_time', '2',
-                '-hls_list_size', '3',
-                '-hls_flags', 'delete_segments',
-                '-hls_segment_type', 'mpegts',
-                str(self.stream_file)
-            ]
-            
-            print(f"HDMI[{self.capture_source}]: Starting stream")
+            print(f"HDMI[{self.capture_source}]: Starting streaming service: {self.service_name}")
             print(f"HDMI[{self.capture_source}]: Resolution: {self.stream_resolution}@{self.stream_fps}fps")
             print(f"HDMI[{self.capture_source}]: Bitrate: {self.stream_bitrate}")
             print(f"HDMI[{self.capture_source}]: Output: {self.stream_file}")
             
-            # Start FFmpeg process
-            self.stream_process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
-            )
+            # Start systemd service
+            result = subprocess.run(['sudo', 'systemctl', 'start', self.service_name], 
+                                  capture_output=True, text=True, timeout=30)
             
-            # Give FFmpeg time to start
-            time.sleep(2)
-            
-            # Check if process is still running
-            if self.stream_process.poll() is None:
-                self.is_streaming = True
-                self.capture_session_id = f"hdmi_stream_{int(time.time())}"
-                print(f"HDMI[{self.capture_source}]: Stream started successfully")
-                print(f"HDMI[{self.capture_source}]: Session ID: {self.capture_session_id}")
-                return True
+            if result.returncode == 0:
+                # Wait a moment for service to start
+                time.sleep(2)
+                
+                # Verify service is running
+                status = self._get_service_status()
+                if status.get('active') == 'active' and status.get('sub') == 'running':
+                    self.capture_session_id = f"hdmi_service_{int(time.time())}"
+                    print(f"HDMI[{self.capture_source}]: Streaming service started successfully")
+                    print(f"HDMI[{self.capture_source}]: Session ID: {self.capture_session_id}")
+                    return True
+                else:
+                    print(f"HDMI[{self.capture_source}]: Service started but not running properly")
+                    print(f"HDMI[{self.capture_source}]: Status: {status}")
+                    return False
             else:
-                # Process died, get error output
-                stdout, stderr = self.stream_process.communicate()
-                print(f"HDMI[{self.capture_source}]: Stream failed to start")
-                print(f"HDMI[{self.capture_source}]: Error: {stderr}")
-                self.stream_process = None
+                print(f"HDMI[{self.capture_source}]: Failed to start service: {result.stderr}")
                 return False
                 
         except Exception as e:
-            print(f"HDMI[{self.capture_source}]: Failed to start stream: {e}")
+            print(f"HDMI[{self.capture_source}]: Error starting stream: {e}")
             return False
         
     def stop_stream(self) -> bool:
-        """Stop FFmpeg streaming."""
-        if not self.is_streaming or not self.stream_process:
-            print(f"HDMI[{self.capture_source}]: No active stream to stop")
-            return False
-            
+        """Stop HDMI streaming service."""
         try:
-            print(f"HDMI[{self.capture_source}]: Stopping stream")
+            print(f"HDMI[{self.capture_source}]: Stopping streaming service: {self.service_name}")
             
-            # Send SIGTERM to FFmpeg
-            self.stream_process.terminate()
+            # Stop systemd service
+            result = subprocess.run(['sudo', 'systemctl', 'stop', self.service_name], 
+                                  capture_output=True, text=True, timeout=30)
             
-            # Wait for graceful shutdown
-            try:
-                self.stream_process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                # Force kill if needed
-                print(f"HDMI[{self.capture_source}]: Force killing stream process")
-                self.stream_process.kill()
-                self.stream_process.wait()
+            if result.returncode == 0:
+                print(f"HDMI[{self.capture_source}]: Streaming service stopped successfully")
+                return True
+            else:
+                print(f"HDMI[{self.capture_source}]: Failed to stop service: {result.stderr}")
+                return False
                 
-            self.stream_process = None
-            self.is_streaming = False
-            print(f"HDMI[{self.capture_source}]: Stream stopped")
-            return True
-            
         except Exception as e:
             print(f"HDMI[{self.capture_source}]: Error stopping stream: {e}")
             return False
         
     def restart_stream(self) -> bool:
-        """Restart the FFmpeg stream."""
-        print(f"HDMI[{self.capture_source}]: Restarting stream")
-        self.stop_stream()
-        time.sleep(1)
-        return self.start_stream()
+        """Restart HDMI streaming service."""
+        try:
+            print(f"HDMI[{self.capture_source}]: Restarting streaming service: {self.service_name}")
+            
+            # Restart systemd service
+            result = subprocess.run(['sudo', 'systemctl', 'restart', self.service_name], 
+                                  capture_output=True, text=True, timeout=30)
+            
+            if result.returncode == 0:
+                # Wait a moment for service to restart
+                time.sleep(2)
+                
+                # Verify service is running
+                status = self._get_service_status()
+                if status.get('active') == 'active' and status.get('sub') == 'running':
+                    print(f"HDMI[{self.capture_source}]: Streaming service restarted successfully")
+                    return True
+                else:
+                    print(f"HDMI[{self.capture_source}]: Service restarted but not running properly")
+                    return False
+            else:
+                print(f"HDMI[{self.capture_source}]: Failed to restart service: {result.stderr}")
+                return False
+                
+        except Exception as e:
+            print(f"HDMI[{self.capture_source}]: Error restarting stream: {e}")
+            return False
+        
+    def _get_service_status(self) -> Dict[str, Any]:
+        """Get detailed systemd service status."""
+        try:
+            # Get service status in JSON format
+            result = subprocess.run(['systemctl', 'show', self.service_name, '--output=json'], 
+                                  capture_output=True, text=True, timeout=10)
+            
+            if result.returncode == 0:
+                # Parse systemctl show output (key=value format)
+                status = {}
+                for line in result.stdout.strip().split('\n'):
+                    if '=' in line:
+                        key, value = line.split('=', 1)
+                        status[key] = value
+                
+                return {
+                    'service_name': self.service_name,
+                    'active': status.get('ActiveState', 'unknown'),
+                    'sub': status.get('SubState', 'unknown'),
+                    'load': status.get('LoadState', 'unknown'),
+                    'main_pid': status.get('MainPID', '0'),
+                    'memory_usage': status.get('MemoryCurrent', '0'),
+                    'cpu_usage': status.get('CPUUsageNSec', '0'),
+                    'restart_count': status.get('NRestarts', '0'),
+                    'last_start': status.get('ActiveEnterTimestamp', 'unknown'),
+                    'uptime': status.get('ActiveEnterTimestamp', 'unknown')
+                }
+            else:
+                return {
+                    'service_name': self.service_name,
+                    'active': 'unknown',
+                    'sub': 'unknown',
+                    'error': result.stderr
+                }
+                
+        except Exception as e:
+            return {
+                'service_name': self.service_name,
+                'active': 'error',
+                'sub': 'error',
+                'error': str(e)
+            }
         
     def get_stream_status(self) -> Dict[str, Any]:
-        """Get current stream status."""
-        status = {
-            'is_streaming': self.is_streaming,
-            'stream_file': str(self.stream_file) if self.stream_file.exists() else None,
-            'process_running': self.stream_process is not None and self.stream_process.poll() is None,
-            'session_id': self.capture_session_id if self.is_streaming else None
-        }
+        """Get current streaming service status."""
+        service_status = self._get_service_status()
         
-        # Add file info if stream file exists
+        # Check if stream file exists and get info
+        stream_info = {}
         if self.stream_file.exists():
             stat = self.stream_file.stat()
-            status.update({
+            stream_info = {
+                'stream_file_exists': True,
+                'stream_file_path': str(self.stream_file),
                 'file_size': stat.st_size,
-                'last_modified': stat.st_mtime
-            })
-            
+                'last_modified': stat.st_mtime,
+                'last_modified_ago': time.time() - stat.st_mtime
+            }
+        else:
+            stream_info = {
+                'stream_file_exists': False,
+                'stream_file_path': str(self.stream_file)
+            }
+        
+        # Combine service status with stream info
+        status = {
+            'is_streaming': service_status.get('active') == 'active' and service_status.get('sub') == 'running',
+            'session_id': self.capture_session_id if hasattr(self, 'capture_session_id') else None,
+            'service_status': service_status,
+            'stream_info': stream_info
+        }
+        
         return status
         
     def take_screenshot(self, filename: str = None) -> str:
@@ -464,6 +570,9 @@ class HDMIStreamController(AVControllerInterface):
         
     def get_status(self) -> Dict[str, Any]:
         """Get controller status information."""
+        # Get streaming service status
+        stream_status = self.get_stream_status()
+        
         base_status = {
             'controller_type': self.controller_type,
             'device_name': self.device_name,
@@ -471,20 +580,22 @@ class HDMIStreamController(AVControllerInterface):
             'connected': self.is_connected,
             'capturing_video': self.is_capturing_video,
             'capturing_audio': False,  # Not supported
-            'session_id': self.capture_session_id,
+            'session_id': self.capture_session_id if hasattr(self, 'capture_session_id') else None,
             'video_device': self.video_device,
             'output_path': str(self.output_path),
             'stream_resolution': self.stream_resolution,
             'stream_fps': self.stream_fps,
             'stream_bitrate': self.stream_bitrate,
+            'service_name': self.service_name,
+            'service_file_path': self.service_file_path,
             'capabilities': [
-                'ffmpeg_streaming', 'screenshot_capture', 'video_capture', 
-                'rolling_buffer', 'parallel_operations'
+                'systemd_service_streaming', 'screenshot_capture', 'video_capture', 
+                'rolling_buffer', 'parallel_operations', 'auto_restart'
             ]
         }
         
-        # Add stream status
-        base_status.update(self.get_stream_status())
+        # Add streaming status
+        base_status.update(stream_status)
         
         return base_status
 
