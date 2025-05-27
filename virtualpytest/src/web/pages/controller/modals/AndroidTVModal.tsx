@@ -41,7 +41,7 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
     fetchDefaultValues,
   } = useAndroidTVConnection();
 
-  const [showOverlays, setShowOverlays] = useState(false);
+  const [showOverlays, setShowOverlays] = useState(true);
   const [remoteScale, setRemoteScale] = useState(1.2);
 
   // Load default values when modal opens
@@ -80,11 +80,18 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
       min_scale: 0.3,
       max_scale: 1.0,
       button_scale_factor: 6,
-      global_offset: { x: 0, y: 0 }
+      global_offset: { x: 0, y: 0 },
+      text_style: {
+        fontSize: '24px',
+        fontWeight: 'bold',
+        color: 'white',
+        textShadow: '2px 2px 4px rgba(0,0,0,0.9)',
+      }
     },
     button_layout: {
       power: {
         key: 'POWER',
+        label: 'PWR',
         position: { x: 150, y: 150 },
         size: { width: 14, height: 14 },
         shape: 'circle',
@@ -92,6 +99,7 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
       },
       voice: {
         key: 'VOICE_ASSIST',
+        label: 'MIC',
         position: { x:320, y: 280 },
         size: { width: 20, height: 20 },
         shape: 'circle',
@@ -99,6 +107,7 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
       },
       nav_up: {
         key: 'DPAD_UP',
+        label: '▲',
         position: { x: 320, y: 440 },
         size: { width: 18, height: 10 },
         shape: 'rectangle',
@@ -106,6 +115,7 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
       },
       nav_left: {
         key: 'DPAD_LEFT',
+        label: '◄',
         position: { x: 130, y: 610 },
         size: { width: 10, height: 18 },
         shape: 'rectangle',
@@ -113,6 +123,7 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
       },
       nav_center: {
         key: 'DPAD_CENTER',
+        label: 'OK',
         position: { x: 320, y: 610 },
         size: { width: 40, height: 40 },
         shape: 'circle',
@@ -120,6 +131,7 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
       },
       nav_right: {
         key: 'DPAD_RIGHT',
+        label: '►',
         position: { x: 500, y: 610 },
         size: { width: 10, height: 18 },
         shape: 'rectangle',
@@ -127,6 +139,7 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
       },
       nav_down: {
         key: 'DPAD_DOWN',
+        label: '▼',
         position: { x: 320, y: 780 },
         size: { width: 18, height: 10 },
         shape: 'rectangle',
@@ -134,6 +147,7 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
       },
       back: {
         key: 'BACK',
+        label: '←',
         position: { x: 150, y: 940 },
         size: { width: 20, height: 20 },
         shape: 'circle',
@@ -141,6 +155,7 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
       },
       home: {
         key: 'HOME',
+        label: '🏠',
         position: { x: 490, y: 940 },
         size: { width: 20, height: 20 },
         shape: 'circle',
@@ -148,6 +163,7 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
       },
       menu: {
         key: 'MENU',
+        label: '☰',
         position: { x: 320, y: 940 },
         size: { width: 20, height: 20 },
         shape: 'circle',
@@ -155,6 +171,7 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
       },
       rewind: {
         key: 'MEDIA_REWIND',
+        label: '<<',
         position: { x: 150, y: 1100 },
         size: { width: 20, height: 20 },
         shape: 'circle',
@@ -162,6 +179,7 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
       },
       play_pause: {
         key: 'MEDIA_PLAY_PAUSE',
+        label: '⏯',
         position: { x: 320, y: 1100 },
         size: { width: 20, height: 20 },
         shape: 'circle',
@@ -169,6 +187,7 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
       },
       fast_forward: {
         key: 'MEDIA_FAST_FORWARD',
+        label: '>>',
         position: { x: 490, y: 1100 },
         size: { width: 20, height: 20 },
         shape: 'circle',
@@ -176,6 +195,7 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
       },
       volume_up: {
         key: 'VOLUME_UP',
+        label: 'V+',
         position: { x: 320, y: 1270 },
         size: { width: 20, height: 20 },
         shape: 'circle',
@@ -183,6 +203,7 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
       },
       volume_down: {
         key: 'VOLUME_DOWN',
+        label: 'V-',
         position: { x: 320, y: 1430 },
         size: { width: 20, height: 20 },
         shape: 'circle',
@@ -190,6 +211,7 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
       },
       mute: {
         key: 'VOLUME_MUTE',
+        label: 'MUTE',
         position: { x: 320, y: 1600 },
         size: { width: 20, height: 20 },
         shape: 'circle',

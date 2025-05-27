@@ -28,6 +28,7 @@ export const RemoteInterface: React.FC<RemoteInterfaceProps> = ({
     // Get scaling and offset parameters from remote config
     const buttonScaleFactor = remoteConfig.remote_info.button_scale_factor || 1.0;
     const globalOffset = remoteConfig.remote_info.global_offset || { x: 0, y: 0 };
+    const textStyle = remoteConfig.remote_info.text_style || {};
     
     // Apply scaling and offsets to position and size
     const scaledPosition = {
@@ -39,6 +40,9 @@ export const RemoteInterface: React.FC<RemoteInterfaceProps> = ({
       width: config.size.width * buttonScaleFactor * scale,
       height: config.size.height * buttonScaleFactor * scale
     };
+
+    // Determine what text to display
+    const displayText = showOverlays ? (config.label || config.key) : '';
 
     return (
       <Box
@@ -57,22 +61,22 @@ export const RemoteInterface: React.FC<RemoteInterfaceProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: '10px',
-          color: showOverlays ? 'white' : 'transparent',
-          fontWeight: 'bold',
-          textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+          fontSize: textStyle.fontSize || '10px',
+          color: showOverlays ? (textStyle.color || 'white') : 'transparent',
+          fontWeight: textStyle.fontWeight || 'bold',
+          textShadow: textStyle.textShadow || '1px 1px 2px rgba(0,0,0,0.8)',
           transition: 'all 0.2s ease',
           transform: 'translate(-50%, -50%)',
           '&:hover': {
             backgroundColor: 'rgba(255, 255, 255, 0.4)',
             border: '2px solid rgba(255, 255, 255, 0.8)',
             boxShadow: '0 0 10px rgba(255, 255, 255, 0.6)',
-            color: 'white',
+            color: textStyle.color || 'white',
           },
         }}
         title={config.comment}
       >
-        {showOverlays && config.key}
+        {displayText}
       </Box>
     );
   };
