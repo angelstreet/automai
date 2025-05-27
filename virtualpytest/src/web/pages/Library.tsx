@@ -1,4 +1,13 @@
-import React from 'react';
+import {
+  LibraryBooks as LibraryIcon,
+  Add as AddIcon,
+  Upload as UploadIcon,
+  Download as DownloadIcon,
+  Code as CodeIcon,
+  Extension as ModuleIcon,
+  Functions as FunctionIcon,
+  Folder as FolderIcon,
+} from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -20,16 +29,7 @@ import {
   ListItemText,
   ListItemIcon,
 } from '@mui/material';
-import {
-  LibraryBooks as LibraryIcon,
-  Add as AddIcon,
-  Upload as UploadIcon,
-  Download as DownloadIcon,
-  Code as CodeIcon,
-  Extension as ModuleIcon,
-  Functions as FunctionIcon,
-  Folder as FolderIcon,
-} from '@mui/icons-material';
+import React from 'react';
 
 const Library: React.FC = () => {
   return (
@@ -44,7 +44,8 @@ const Library: React.FC = () => {
       </Box>
 
       <Alert severity="info" sx={{ mb: 3 }}>
-        Test library feature is coming soon. This will allow you to manage and organize reusable test components.
+        Test library feature is coming soon. This will allow you to manage and organize reusable
+        test components.
       </Alert>
 
       <Grid container spacing={3}>
@@ -55,25 +56,15 @@ const Library: React.FC = () => {
               <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
                 <Typography variant="h6">Library Components</Typography>
                 <Box display="flex" gap={1}>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    startIcon={<UploadIcon />}
-                    disabled
-                  >
+                  <Button variant="outlined" size="small" startIcon={<UploadIcon />} disabled>
                     Import
                   </Button>
-                  <Button
-                    variant="contained"
-                    size="small"
-                    startIcon={<AddIcon />}
-                    disabled
-                  >
+                  <Button variant="contained" size="small" startIcon={<AddIcon />} disabled>
                     Add Component
                   </Button>
                 </Box>
               </Box>
-              
+
               <TableContainer component={Paper} variant="outlined">
                 <Table>
                   <TableHead>
@@ -108,32 +99,35 @@ const Library: React.FC = () => {
                 <LibraryIcon color="primary" />
                 <Typography variant="h6">Library Stats</Typography>
               </Box>
-              
+
               <Box mb={2}>
                 <Box display="flex" justifyContent="space-between" mb={1}>
                   <Typography variant="body2">Total Components</Typography>
-                  <Typography variant="body2" fontWeight="bold">0</Typography>
+                  <Typography variant="body2" fontWeight="bold">
+                    0
+                  </Typography>
                 </Box>
                 <Box display="flex" justifyContent="space-between" mb={1}>
                   <Typography variant="body2">Custom Functions</Typography>
-                  <Typography variant="body2" fontWeight="bold">0</Typography>
+                  <Typography variant="body2" fontWeight="bold">
+                    0
+                  </Typography>
                 </Box>
                 <Box display="flex" justifyContent="space-between" mb={1}>
                   <Typography variant="body2">Modules</Typography>
-                  <Typography variant="body2" fontWeight="bold">0</Typography>
+                  <Typography variant="body2" fontWeight="bold">
+                    0
+                  </Typography>
                 </Box>
                 <Box display="flex" justifyContent="space-between">
                   <Typography variant="body2">Libraries</Typography>
-                  <Typography variant="body2" fontWeight="bold">0</Typography>
+                  <Typography variant="body2" fontWeight="bold">
+                    0
+                  </Typography>
                 </Box>
               </Box>
 
-              <Button
-                variant="contained"
-                fullWidth
-                startIcon={<AddIcon />}
-                disabled
-              >
+              <Button variant="contained" fullWidth startIcon={<AddIcon />} disabled>
                 Create Library
               </Button>
             </CardContent>
@@ -147,7 +141,7 @@ const Library: React.FC = () => {
               <Typography variant="h6" gutterBottom>
                 Available Component Types
               </Typography>
-              
+
               <List>
                 <ListItem>
                   <ListItemIcon>
@@ -159,7 +153,7 @@ const Library: React.FC = () => {
                   />
                   <Chip label="0 functions" color="default" size="small" />
                 </ListItem>
-                
+
                 <ListItem>
                   <ListItemIcon>
                     <ModuleIcon color="secondary" />
@@ -170,7 +164,7 @@ const Library: React.FC = () => {
                   />
                   <Chip label="0 modules" color="default" size="small" />
                 </ListItem>
-                
+
                 <ListItem>
                   <ListItemIcon>
                     <CodeIcon color="info" />
@@ -181,7 +175,7 @@ const Library: React.FC = () => {
                   />
                   <Chip label="0 libraries" color="default" size="small" />
                 </ListItem>
-                
+
                 <ListItem>
                   <ListItemIcon>
                     <FolderIcon color="warning" />
@@ -206,13 +200,13 @@ const Library: React.FC = () => {
               </Typography>
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6} md={3}>
-                  <Box 
-                    sx={{ 
-                      p: 2, 
-                      border: 1, 
+                  <Box
+                    sx={{
+                      p: 2,
+                      border: 1,
                       borderColor: 'grey.300',
                       borderRadius: 1,
-                      textAlign: 'center'
+                      textAlign: 'center',
                     }}
                   >
                     <Typography variant="subtitle2" gutterBottom>
@@ -226,15 +220,15 @@ const Library: React.FC = () => {
                     </Button>
                   </Box>
                 </Grid>
-                
+
                 <Grid item xs={12} sm={6} md={3}>
-                  <Box 
-                    sx={{ 
-                      p: 2, 
-                      border: 1, 
+                  <Box
+                    sx={{
+                      p: 2,
+                      border: 1,
                       borderColor: 'grey.300',
                       borderRadius: 1,
-                      textAlign: 'center'
+                      textAlign: 'center',
                     }}
                   >
                     <Typography variant="subtitle2" gutterBottom>
@@ -248,15 +242,15 @@ const Library: React.FC = () => {
                     </Button>
                   </Box>
                 </Grid>
-                
+
                 <Grid item xs={12} sm={6} md={3}>
-                  <Box 
-                    sx={{ 
-                      p: 2, 
-                      border: 1, 
+                  <Box
+                    sx={{
+                      p: 2,
+                      border: 1,
                       borderColor: 'grey.300',
                       borderRadius: 1,
-                      textAlign: 'center'
+                      textAlign: 'center',
                     }}
                   >
                     <Typography variant="subtitle2" gutterBottom>
@@ -270,15 +264,15 @@ const Library: React.FC = () => {
                     </Button>
                   </Box>
                 </Grid>
-                
+
                 <Grid item xs={12} sm={6} md={3}>
-                  <Box 
-                    sx={{ 
-                      p: 2, 
-                      border: 1, 
+                  <Box
+                    sx={{
+                      p: 2,
+                      border: 1,
                       borderColor: 'grey.300',
                       borderRadius: 1,
-                      textAlign: 'center'
+                      textAlign: 'center',
                     }}
                   >
                     <Typography variant="subtitle2" gutterBottom>
@@ -301,4 +295,4 @@ const Library: React.FC = () => {
   );
 };
 
-export default Library; 
+export default Library;

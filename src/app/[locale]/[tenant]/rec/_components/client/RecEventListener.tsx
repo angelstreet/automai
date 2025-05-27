@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 
 import { Host } from '@/types/component/hostComponentType';
+import { DeviceConfig } from '@/types/recDeviceTypes';
 
-import { DeviceConfig } from '../types/recDeviceTypes';
 import { RecDeviceModal } from './RecDeviceModal';
 
 /**

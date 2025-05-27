@@ -1,7 +1,7 @@
 'use client';
 
-import { BrowserAutomationProvider } from '@/context';
 import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
+import { BrowserAutomationProvider } from '@/context';
 import { Host } from '@/types/component/hostComponentType';
 import { User } from '@/types/service/userServiceType';
 
@@ -32,4 +32,4 @@ export default function BrowserPageWrapper({
       </FeaturePageContainer>
     </BrowserAutomationProvider>
   );
-} 
+}

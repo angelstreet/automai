@@ -11,7 +11,6 @@ import {
 import {
   startAutomationServerOnHost,
   stopAutomationServerOnHost,
-  initializeBrowserAutomation,
   cleanupBrowserAutomation,
 } from '@/app/actions/browserAutomationActions';
 import { Button } from '@/components/shadcn/button';
@@ -154,7 +153,9 @@ export function BrowserActionsClient({ initialHosts, currentUser }: BrowserActio
       try {
         const cleanupResult = await cleanupBrowserAutomation(sessionId);
         if (cleanupResult.success) {
-          console.log('[@component:BrowserActionsClient] Browser automation cleaned up via SSH curl');
+          console.log(
+            '[@component:BrowserActionsClient] Browser automation cleaned up via SSH curl',
+          );
         }
       } catch {
         console.log(

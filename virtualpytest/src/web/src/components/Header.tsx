@@ -1,11 +1,7 @@
-import React from 'react';
-import {
-  AppBar,
-  Toolbar,
-  Typography,
-  Box,
-} from '@mui/material';
 import { Science } from '@mui/icons-material';
+import { AppBar, Toolbar, Typography, Box } from '@mui/material';
+import React from 'react';
+
 import ThemeToggle from './ThemeToggle';
 
 const Header: React.FC = () => {
@@ -24,4 +20,4 @@ const Header: React.FC = () => {
   );
 };
 
-export default Header; 
+export default Header;

@@ -3,8 +3,7 @@
 import { Suspense } from 'react';
 
 import { Host } from '@/types/component/hostComponentType';
-
-import { AndroidDeviceConfig, DeviceConfig, HostDeviceConfig } from '../types/recDeviceTypes';
+import { AndroidDeviceConfig, DeviceConfig, HostDeviceConfig } from '@/types/recDeviceTypes';
 
 import { RecDevicePreview } from './RecDevicePreview';
 import { RecEvents } from './RecEventListener';
@@ -14,19 +13,14 @@ import { RecEvents } from './RecEventListener';
  */
 function getAndroidDeviceType(deviceType?: string): 'androidTv' | 'androidPhone' {
   if (!deviceType) return 'androidPhone';
-  
+
   // TV-like devices should use androidTv type
-  const tvDeviceTypes = [
-    'android_tv',
-    'android_firetv', 
-    'android_nvidia_shield',
-    'tv_android'
-  ];
-  
+  const tvDeviceTypes = ['android_tv', 'android_firetv', 'android_nvidia_shield', 'tv_android'];
+
   if (tvDeviceTypes.includes(deviceType)) {
     return 'androidTv';
   }
-  
+
   // All other Android devices (phones, tablets) use androidPhone type
   return 'androidPhone';
 }
@@ -74,7 +68,7 @@ export function RecPreviewGrid({ hosts, isLoading, error }: RecPreviewGridProps)
         vncPort: host.vnc_port,
         ip: host.ip,
       });
-      
+
       return {
         id: `vnc-${host.id}`, // Prefix with 'vnc-' to ensure uniqueness
         name: host.name || host.ip,

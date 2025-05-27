@@ -1,13 +1,3 @@
-import React from 'react';
-import {
-  Box,
-  Typography,
-  Card,
-  CardContent,
-  Button,
-  Grid,
-  Alert,
-} from '@mui/material';
 import {
   Storage as CollectionIcon,
   Add as AddIcon,
@@ -15,6 +5,8 @@ import {
   VideoLibrary as VodIcon,
   Tv as ChannelIcon,
 } from '@mui/icons-material';
+import { Box, Typography, Card, CardContent, Button, Grid, Alert } from '@mui/material';
+import React from 'react';
 
 const Collections: React.FC = () => {
   return (
@@ -24,12 +16,14 @@ const Collections: React.FC = () => {
           Collections
         </Typography>
         <Typography variant="body1" color="textSecondary">
-          Manage test data collections including channel lists, VOD catalogs, and other data sets required for testing.
+          Manage test data collections including channel lists, VOD catalogs, and other data sets
+          required for testing.
         </Typography>
       </Box>
 
       <Alert severity="info" sx={{ mb: 3 }}>
-        Collections feature is coming soon. This will allow you to manage channel lists, VOD catalogs, and other test data collections.
+        Collections feature is coming soon. This will allow you to manage channel lists, VOD
+        catalogs, and other test data collections.
       </Alert>
 
       <Grid container spacing={3}>
@@ -42,12 +36,7 @@ const Collections: React.FC = () => {
                   <ChannelIcon color="primary" />
                   <Typography variant="h6">Channel Lists</Typography>
                 </Box>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  startIcon={<AddIcon />}
-                  disabled
-                >
+                <Button variant="outlined" size="small" startIcon={<AddIcon />} disabled>
                   Add
                 </Button>
               </Box>
@@ -72,12 +61,7 @@ const Collections: React.FC = () => {
                   <VodIcon color="secondary" />
                   <Typography variant="h6">VOD Catalogs</Typography>
                 </Box>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  startIcon={<AddIcon />}
-                  disabled
-                >
+                <Button variant="outlined" size="small" startIcon={<AddIcon />} disabled>
                   Add
                 </Button>
               </Box>
@@ -102,12 +86,7 @@ const Collections: React.FC = () => {
                   <ListIcon color="info" />
                   <Typography variant="h6">Test Data Sets</Typography>
                 </Box>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  startIcon={<AddIcon />}
-                  disabled
-                >
+                <Button variant="outlined" size="small" startIcon={<AddIcon />} disabled>
                   Add
                 </Button>
               </Box>
@@ -130,26 +109,13 @@ const Collections: React.FC = () => {
           Quick Actions
         </Typography>
         <Box display="flex" gap={2} flexWrap="wrap">
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            disabled
-          >
+          <Button variant="contained" startIcon={<AddIcon />} disabled>
             Import Channel List
           </Button>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            color="secondary"
-            disabled
-          >
+          <Button variant="contained" startIcon={<AddIcon />} color="secondary" disabled>
             Create VOD Catalog
           </Button>
-          <Button
-            variant="outlined"
-            startIcon={<CollectionIcon />}
-            disabled
-          >
+          <Button variant="outlined" startIcon={<CollectionIcon />} disabled>
             Manage Collections
           </Button>
         </Box>
@@ -158,4 +124,4 @@ const Collections: React.FC = () => {
   );
 };
 
-export default Collections; 
+export default Collections;

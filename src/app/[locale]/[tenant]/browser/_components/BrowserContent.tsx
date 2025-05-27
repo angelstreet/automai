@@ -6,9 +6,5 @@
 import BrowserAutomationClient from './client/BrowserAutomationClient';
 
 export default function BrowserContent() {
-  return (
-   
-      <BrowserAutomationClient />
-   
-  );
+  return <BrowserAutomationClient />;
 }

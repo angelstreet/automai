@@ -1,9 +1,10 @@
 'use client';
 
+import { Terminal, Play, Trash2 } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
+
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
-import { Terminal, Play, Trash2 } from 'lucide-react';
 
 interface TerminalLine {
   id: number;

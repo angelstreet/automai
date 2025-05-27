@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { toast } from 'sonner';
 
 import { getConversations, deleteConversation } from '@/app/actions/chatAction';
 import type { ChatConversation } from '@/lib/db/chatDb';
+
 import { useChatContext } from './ChatContext';
 
 /**

@@ -1,29 +1,23 @@
+import { Science } from '@mui/icons-material';
+import { Container, AppBar, Toolbar, Typography, Box } from '@mui/material';
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { 
-  Container, 
-  AppBar, 
-  Toolbar, 
-  Typography, 
-  Box,
-} from '@mui/material';
-import { Science } from '@mui/icons-material';
 
 // Import existing pages
-import TestCaseEditor from '../pages/testCaseEditor';
 import CampaignEditor from '../pages/CampaignEditor';
-import TreeEditor from '../pages/TreeEditor';
+import Collections from '../pages/Collections';
+import Controller from '../pages/Controller';
 import Dashboard from '../pages/Dashboard';
 import DeviceManagement from '../pages/DeviceManagement';
 
 // Import new pages
-import Collections from '../pages/Collections';
-import RunTests from '../pages/RunTests';
-import Monitoring from '../pages/Monitoring';
-import TestReports from '../pages/TestReports';
-import Controller from '../pages/Controller';
-import Library from '../pages/Library';
 import Environment from '../pages/Environment';
+import Library from '../pages/Library';
+import Monitoring from '../pages/Monitoring';
+import RunTests from '../pages/RunTests';
+import TestReports from '../pages/TestReports';
+import TreeEditor from '../pages/TreeEditor';
+import TestCaseEditor from '../pages/testCaseEditor';
 
 // Import navigation components
 import NavigationBar from './components/Navigation/NavigationBar';
@@ -45,40 +39,40 @@ const App: React.FC = () => {
             <ThemeToggle />
           </Toolbar>
         </AppBar>
-        <Container 
-          maxWidth="lg" 
-          sx={{ 
-            mt: 2, 
-            mb: 2, 
+        <Container
+          maxWidth="lg"
+          sx={{
+            mt: 2,
+            mb: 2,
             flex: 1,
             display: 'flex',
             flexDirection: 'column',
-            alignItems: 'stretch'
+            alignItems: 'stretch',
           }}
         >
           <Routes>
             {/* Dashboard */}
             <Route path="/" element={<Dashboard />} />
-            
+
             {/* Test Plan Routes */}
             <Route path="/test-plan/test-cases" element={<TestCaseEditor />} />
             <Route path="/test-plan/campaigns" element={<CampaignEditor />} />
             <Route path="/test-plan/collections" element={<Collections />} />
-            
+
             {/* Test Execution Routes */}
             <Route path="/test-execution/run-tests" element={<RunTests />} />
             <Route path="/test-execution/monitoring" element={<Monitoring />} />
-            
+
             {/* Test Results Routes */}
             <Route path="/test-results/reports" element={<TestReports />} />
-            
+
             {/* Configuration Routes */}
             <Route path="/configuration/devices" element={<DeviceManagement />} />
             <Route path="/configuration/ui-trees" element={<TreeEditor />} />
             <Route path="/configuration/controller" element={<Controller />} />
             <Route path="/configuration/library" element={<Library />} />
             <Route path="/configuration/environment" element={<Environment />} />
-            
+
             {/* Legacy routes for backward compatibility */}
             <Route path="/testcases" element={<TestCaseEditor />} />
             <Route path="/campaigns" element={<CampaignEditor />} />
@@ -91,4 +85,4 @@ const App: React.FC = () => {
   );
 };
 
-export default App; 
+export default App;

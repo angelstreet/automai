@@ -2,11 +2,11 @@
 
 import { CHAT_LAYOUT } from '../../constants';
 
+import ChatContent from './ChatContent';
 import { ChatProvider } from './ChatContext';
 import ChatHeader from './ChatHeader';
 import ChatHistoryPanel from './ChatHistoryPanel';
 import MessageInput from './MessageInput';
-import ChatContent from './ChatContent';
 
 /**
  * Client component for displaying and managing chat interface

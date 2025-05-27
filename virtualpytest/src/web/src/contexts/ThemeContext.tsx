@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
 type ThemeMode = 'light' | 'dark' | 'system';
 
@@ -32,7 +32,7 @@ export const CustomThemeProvider: React.FC<CustomThemeProviderProps> = ({ childr
   });
 
   const [systemPrefersDark, setSystemPrefersDark] = useState(
-    window.matchMedia('(prefers-color-scheme: dark)').matches
+    window.matchMedia('(prefers-color-scheme: dark)').matches,
   );
 
   // Listen for system theme changes
@@ -52,7 +52,7 @@ export const CustomThemeProvider: React.FC<CustomThemeProviderProps> = ({ childr
   }, [mode]);
 
   // Determine the actual theme mode
-  const actualMode: 'light' | 'dark' = 
+  const actualMode: 'light' | 'dark' =
     mode === 'system' ? (systemPrefersDark ? 'dark' : 'light') : mode;
 
   // Create the Material-UI theme
@@ -89,9 +89,10 @@ export const CustomThemeProvider: React.FC<CustomThemeProviderProps> = ({ childr
         styleOverrides: {
           root: {
             borderRadius: 12,
-            boxShadow: actualMode === 'dark' 
-              ? '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2)'
-              : '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+            boxShadow:
+              actualMode === 'dark'
+                ? '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2)'
+                : '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
           },
         },
       },
@@ -128,4 +129,4 @@ export const CustomThemeProvider: React.FC<CustomThemeProviderProps> = ({ childr
       </ThemeProvider>
     </ThemeContext.Provider>
   );
-}; 
+};

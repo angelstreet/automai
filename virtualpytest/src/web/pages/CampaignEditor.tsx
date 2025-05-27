@@ -1,4 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import {
+  Add as AddIcon,
+  Delete as DeleteIcon,
+  Edit as EditIcon,
+  PlayArrow as PlayIcon,
+} from '@mui/icons-material';
 import {
   Box,
   Paper,
@@ -9,9 +14,6 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  Card,
-  CardContent,
-  CardActions,
   Grid,
   IconButton,
   Alert,
@@ -31,12 +33,8 @@ import {
   Switch,
   Autocomplete,
 } from '@mui/material';
-import {
-  Add as AddIcon,
-  Delete as DeleteIcon,
-  Edit as EditIcon,
-  PlayArrow as PlayIcon,
-} from '@mui/icons-material';
+import React, { useState, useEffect } from 'react';
+
 import { Campaign, TestCase, Tree } from '../type';
 
 const API_BASE_URL = 'http://localhost:5009/api';
@@ -99,10 +97,10 @@ const CampaignEditor: React.FC = () => {
     try {
       setLoading(true);
       const method = isEditing ? 'PUT' : 'POST';
-      const url = isEditing 
-        ? `${API_BASE_URL}/campaigns/${formData.campaign_id}` 
+      const url = isEditing
+        ? `${API_BASE_URL}/campaigns/${formData.campaign_id}`
         : `${API_BASE_URL}/campaigns`;
-      
+
       const response = await fetch(url, {
         method,
         headers: {
@@ -169,12 +167,12 @@ const CampaignEditor: React.FC = () => {
   };
 
   const getTreeName = (treeId: string) => {
-    const tree = trees.find(t => t.tree_id === treeId);
+    const tree = trees.find((t) => t.tree_id === treeId);
     return tree ? `${tree.device} (${tree.version})` : treeId;
   };
 
   const getTestCaseName = (testId: string) => {
-    const testCase = testCases.find(t => t.test_id === testId);
+    const testCase = testCases.find((t) => t.test_id === testId);
     return testCase ? testCase.name : testId;
   };
 
@@ -184,11 +182,7 @@ const CampaignEditor: React.FC = () => {
         <Typography variant="h4" component="h1">
           Campaign Management
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => handleOpenDialog()}
-        >
+        <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenDialog()}>
           Create Campaign
         </Button>
       </Box>
@@ -250,16 +244,10 @@ const CampaignEditor: React.FC = () => {
                   />
                 </TableCell>
                 <TableCell>
-                  <IconButton
-                    onClick={() => handleOpenDialog(campaign)}
-                    color="primary"
-                  >
+                  <IconButton onClick={() => handleOpenDialog(campaign)} color="primary">
                     <EditIcon />
                   </IconButton>
-                  <IconButton
-                    onClick={() => handleDelete(campaign.campaign_id)}
-                    color="error"
-                  >
+                  <IconButton onClick={() => handleDelete(campaign.campaign_id)} color="error">
                     <DeleteIcon />
                   </IconButton>
                   <IconButton color="success">
@@ -274,9 +262,7 @@ const CampaignEditor: React.FC = () => {
 
       {/* Edit/Create Dialog */}
       <Dialog open={isDialogOpen} onClose={handleCloseDialog} maxWidth="md" fullWidth>
-        <DialogTitle>
-          {isEditing ? 'Edit Campaign' : 'Create Campaign'}
-        </DialogTitle>
+        <DialogTitle>{isEditing ? 'Edit Campaign' : 'Create Campaign'}</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
             <Grid container spacing={2}>
@@ -285,7 +271,9 @@ const CampaignEditor: React.FC = () => {
                   fullWidth
                   label="Campaign ID"
                   value={formData.campaign_id}
-                  onChange={(e) => setFormData(prev => ({ ...prev, campaign_id: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, campaign_id: e.target.value }))
+                  }
                   disabled={isEditing}
                 />
               </Grid>
@@ -294,7 +282,9 @@ const CampaignEditor: React.FC = () => {
                   fullWidth
                   label="Campaign Name"
                   value={formData.campaign_name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, campaign_name: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, campaign_name: e.target.value }))
+                  }
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -303,7 +293,9 @@ const CampaignEditor: React.FC = () => {
                   <Select
                     value={formData.navigation_tree_id}
                     label="Navigation Tree"
-                    onChange={(e) => setFormData(prev => ({ ...prev, navigation_tree_id: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, navigation_tree_id: e.target.value }))
+                    }
                   >
                     {trees.map((tree) => (
                       <MenuItem key={tree.tree_id} value={tree.tree_id}>
@@ -318,7 +310,9 @@ const CampaignEditor: React.FC = () => {
                   fullWidth
                   label="Remote Controller"
                   value={formData.remote_controller}
-                  onChange={(e) => setFormData(prev => ({ ...prev, remote_controller: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, remote_controller: e.target.value }))
+                  }
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -326,7 +320,9 @@ const CampaignEditor: React.FC = () => {
                   fullWidth
                   label="Audio/Video Acquisition"
                   value={formData.audio_video_acquisition}
-                  onChange={(e) => setFormData(prev => ({ ...prev, audio_video_acquisition: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, audio_video_acquisition: e.target.value }))
+                  }
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -334,7 +330,9 @@ const CampaignEditor: React.FC = () => {
                   control={
                     <Switch
                       checked={formData.prioritize}
-                      onChange={(e) => setFormData(prev => ({ ...prev, prioritize: e.target.checked }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, prioritize: e.target.checked }))
+                      }
                     />
                   }
                   label="Enable Prioritization"
@@ -345,19 +343,15 @@ const CampaignEditor: React.FC = () => {
                   multiple
                   options={testCases}
                   getOptionLabel={(option) => `${option.name} (${option.test_id})`}
-                  value={testCases.filter(tc => formData.test_case_ids.includes(tc.test_id))}
+                  value={testCases.filter((tc) => formData.test_case_ids.includes(tc.test_id))}
                   onChange={(_, newValue) => {
-                    setFormData(prev => ({
+                    setFormData((prev) => ({
                       ...prev,
-                      test_case_ids: newValue.map(tc => tc.test_id)
+                      test_case_ids: newValue.map((tc) => tc.test_id),
                     }));
                   }}
                   renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Test Cases"
-                      placeholder="Select test cases"
-                    />
+                    <TextField {...params} label="Test Cases" placeholder="Select test cases" />
                   )}
                   renderTags={(value, getTagProps) =>
                     value.map((option, index) => (
@@ -385,4 +379,4 @@ const CampaignEditor: React.FC = () => {
   );
 };
 
-export default CampaignEditor; 
+export default CampaignEditor;

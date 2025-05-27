@@ -109,7 +109,9 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
     const containerWidth = container.clientWidth;
     const containerHeight = container.clientHeight;
 
-    console.log(`[@component:EmbeddedHostInterface] Container dimensions: ${containerWidth}x${containerHeight}, maximized: ${isMaximized}`);
+    console.log(
+      `[@component:EmbeddedHostInterface] Container dimensions: ${containerWidth}x${containerHeight}, maximized: ${isMaximized}`,
+    );
 
     // Assuming standard VNC resolution
     const vncWidth = 1920;
@@ -117,7 +119,7 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
 
     const scaleX = containerWidth / vncWidth;
     const scaleY = containerHeight / vncHeight;
-    
+
     let scale;
     if (isMaximized) {
       // In maximized mode, use the smaller scale to fit properly but be more aggressive
@@ -133,7 +135,9 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
     // Ensure minimum scale
     scale = Math.max(scale, 0.2);
 
-    console.log(`[@component:EmbeddedHostInterface] Auto-fit scale calculated: ${scale} (scaleX: ${scaleX.toFixed(3)}, scaleY: ${scaleY.toFixed(3)}, maximized: ${isMaximized})`);
+    console.log(
+      `[@component:EmbeddedHostInterface] Auto-fit scale calculated: ${scale} (scaleX: ${scaleX.toFixed(3)}, scaleY: ${scaleY.toFixed(3)}, maximized: ${isMaximized})`,
+    );
     setVncScale(scale);
   }, [autoFit, isMaximized]);
 
@@ -151,7 +155,9 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
 
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        console.log(`[@component:EmbeddedHostInterface] Container resized: ${entry.contentRect.width}x${entry.contentRect.height}`);
+        console.log(
+          `[@component:EmbeddedHostInterface] Container resized: ${entry.contentRect.width}x${entry.contentRect.height}`,
+        );
         // Debounce the calculation to avoid excessive calls
         setTimeout(calculateAutoFitScale, 100);
       }
@@ -240,9 +246,9 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
   const handleMaximize = () => {
     const newMaximized = !isMaximized;
     setIsMaximized(newMaximized);
-    
+
     console.log(`[@component:EmbeddedHostInterface] VNC maximize mode: ${newMaximized}`);
-    
+
     // If auto-fit is enabled, recalculate scale for new mode
     if (autoFit) {
       // Use multiple timeouts to ensure DOM has fully updated
@@ -293,7 +299,7 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
   // Get VNC connection details
   const vncPort = host?.vnc_port;
   const vncPassword = host?.vnc_password;
-  
+
   // Enhanced VNC URL with additional parameters for better display
   const vncUrl = vncPort
     ? `https://${host.ip}:${vncPort}/vnc/vnc_lite.html?host=${host.ip}&port=${vncPort}&path=websockify&encrypt=0${vncPassword ? `&password=${vncPassword}` : ''}&resize=off&scaling=true&show_dot=false&bell=false&shared=true&view_only=false&quality=6&compress=2&fit=true&clip=false&local_cursor=true&viewport=true&scale=true`
@@ -385,12 +391,21 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
                   variant="ghost"
                   size="sm"
                   onClick={handleMaximize}
-                  title={isMaximized ? "Normal View" : "Maximize View"}
+                  title={isMaximized ? 'Normal View' : 'Maximize View'}
                   className={`h-6 w-6 p-0 ${isMaximized ? 'bg-green-100 dark:bg-green-900' : ''}`}
                 >
-                  <svg className="h-2.5 w-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                          d={isMaximized ? "M9 9h6v6H9z" : "M4 4h16v16H4z"} />
+                  <svg
+                    className="h-2.5 w-2.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d={isMaximized ? 'M9 9h6v6H9z' : 'M4 4h16v16H4z'}
+                    />
                   </svg>
                 </Button>
               </div>
@@ -401,7 +416,9 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
 
       <CardContent className="p-0">
         {/* Content Area - Dynamic height based on maximize mode */}
-        <div className={`${isMaximized ? 'h-[500px]' : 'h-80'} overflow-hidden relative border rounded-b-lg transition-all duration-300`}>
+        <div
+          className={`${isMaximized ? 'h-[500px]' : 'h-80'} overflow-hidden relative border rounded-b-lg transition-all duration-300`}
+        >
           {/* VNC Tab - Always rendered, controlled by visibility */}
           <div
             className="h-full absolute inset-0"
@@ -524,4 +541,4 @@ export default function EmbeddedHostInterface({ host, isVisible }: EmbeddedHostI
       </CardContent>
     </Card>
   );
-} 
+}

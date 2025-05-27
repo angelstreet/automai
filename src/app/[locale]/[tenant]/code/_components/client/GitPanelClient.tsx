@@ -1,23 +1,12 @@
 'use client';
 
-import {
-  AlertCircle,
-  Download,
-  Eye,
-  File,
-  CheckCircle,
-  X,
-  GitBranch,
-  MessageSquare,
-  Upload,
-} from 'lucide-react';
+import { AlertCircle, Download } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 
 import { getGitStatus, commitChanges, pushChanges } from '@/app/actions/gitActions';
 import { Alert, AlertDescription } from '@/components/shadcn/alert';
 import { Badge } from '@/components/shadcn/badge';
 import { Button } from '@/components/shadcn/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
 import { Input } from '@/components/shadcn/input';
 import { Textarea } from '@/components/shadcn/textarea';
 

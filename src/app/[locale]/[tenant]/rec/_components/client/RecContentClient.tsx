@@ -1,7 +1,7 @@
 'use client';
 
-import { useRecHosts } from '@/hooks/useRecHosts';
 import { UnifiedHostModalContainer } from '@/components/terminal';
+import { useRecHosts } from '@/hooks/useRecHosts';
 
 import { RecEventListener } from './RecEventListener';
 import { RecPreviewGrid } from './RecPreviewGrid';

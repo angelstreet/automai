@@ -1,4 +1,9 @@
-import React from 'react';
+import {
+  Settings as SettingsIcon,
+  Save as SaveIcon,
+  Refresh as RefreshIcon,
+  Security as SecurityIcon,
+} from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -12,12 +17,7 @@ import {
   FormControlLabel,
   Divider,
 } from '@mui/material';
-import {
-  Settings as SettingsIcon,
-  Save as SaveIcon,
-  Refresh as RefreshIcon,
-  Security as SecurityIcon,
-} from '@mui/icons-material';
+import React from 'react';
 
 const Environment: React.FC = () => {
   return (
@@ -32,7 +32,8 @@ const Environment: React.FC = () => {
       </Box>
 
       <Alert severity="info" sx={{ mb: 3 }}>
-        Environment configuration feature is coming soon. This will allow you to manage test environment settings.
+        Environment configuration feature is coming soon. This will allow you to manage test
+        environment settings.
       </Alert>
 
       <Grid container spacing={3}>
@@ -44,7 +45,7 @@ const Environment: React.FC = () => {
                 <SettingsIcon color="primary" />
                 <Typography variant="h6">API Configuration</Typography>
               </Box>
-              
+
               <Box component="form" sx={{ '& .MuiTextField-root': { mb: 2 } }}>
                 <TextField
                   fullWidth
@@ -66,20 +67,12 @@ const Environment: React.FC = () => {
                   defaultValue="3"
                   disabled
                 />
-                
+
                 <Box display="flex" gap={2} mt={2}>
-                  <Button
-                    variant="contained"
-                    startIcon={<SaveIcon />}
-                    disabled
-                  >
+                  <Button variant="contained" startIcon={<SaveIcon />} disabled>
                     Save
                   </Button>
-                  <Button
-                    variant="outlined"
-                    startIcon={<RefreshIcon />}
-                    disabled
-                  >
+                  <Button variant="outlined" startIcon={<RefreshIcon />} disabled>
                     Test Connection
                   </Button>
                 </Box>
@@ -96,27 +89,15 @@ const Environment: React.FC = () => {
                 <SecurityIcon color="secondary" />
                 <Typography variant="h6">Test Environment</Typography>
               </Box>
-              
+
               <Box>
-                <FormControlLabel
-                  control={<Switch disabled />}
-                  label="Enable Debug Mode"
-                />
-                <FormControlLabel
-                  control={<Switch disabled />}
-                  label="Capture Screenshots"
-                />
-                <FormControlLabel
-                  control={<Switch disabled />}
-                  label="Record Video"
-                />
-                <FormControlLabel
-                  control={<Switch disabled />}
-                  label="Verbose Logging"
-                />
-                
+                <FormControlLabel control={<Switch disabled />} label="Enable Debug Mode" />
+                <FormControlLabel control={<Switch disabled />} label="Capture Screenshots" />
+                <FormControlLabel control={<Switch disabled />} label="Record Video" />
+                <FormControlLabel control={<Switch disabled />} label="Verbose Logging" />
+
                 <Divider sx={{ my: 2 }} />
-                
+
                 <TextField
                   fullWidth
                   label="Test Data Directory"
@@ -131,13 +112,8 @@ const Environment: React.FC = () => {
                   disabled
                   sx={{ mb: 2 }}
                 />
-                
-                <Button
-                  variant="contained"
-                  startIcon={<SaveIcon />}
-                  disabled
-                  fullWidth
-                >
+
+                <Button variant="contained" startIcon={<SaveIcon />} disabled fullWidth>
                   Save Environment Settings
                 </Button>
               </Box>
@@ -152,7 +128,7 @@ const Environment: React.FC = () => {
               <Typography variant="h6" gutterBottom>
                 System Information
               </Typography>
-              
+
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6} md={3}>
                   <Box>
@@ -164,7 +140,7 @@ const Environment: React.FC = () => {
                     </Typography>
                   </Box>
                 </Grid>
-                
+
                 <Grid item xs={12} sm={6} md={3}>
                   <Box>
                     <Typography variant="body2" color="textSecondary">
@@ -175,7 +151,7 @@ const Environment: React.FC = () => {
                     </Typography>
                   </Box>
                 </Grid>
-                
+
                 <Grid item xs={12} sm={6} md={3}>
                   <Box>
                     <Typography variant="body2" color="textSecondary">
@@ -186,7 +162,7 @@ const Environment: React.FC = () => {
                     </Typography>
                   </Box>
                 </Grid>
-                
+
                 <Grid item xs={12} sm={6} md={3}>
                   <Box>
                     <Typography variant="body2" color="textSecondary">
@@ -206,4 +182,4 @@ const Environment: React.FC = () => {
   );
 };
 
-export default Environment; 
+export default Environment;

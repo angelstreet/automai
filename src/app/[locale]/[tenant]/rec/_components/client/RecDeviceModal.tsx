@@ -5,8 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { connectToHost, disconnectFromHost, AndroidElement } from '@/app/actions/adbActions';
 import { useToast } from '@/components/shadcn/use-toast';
-
-import { DeviceConfig, DeviceModalProps, RemoteType } from '../types/recDeviceTypes';
+import { DeviceConfig, DeviceModalProps, RemoteType } from '@/types/recDeviceTypes';
 
 import { RecAndroidPhoneRemote } from './RecAndroidPhoneRemote';
 import { RecAndroidTvRemote } from './RecAndroidTvRemote';
@@ -294,13 +293,13 @@ export function RecDeviceModal({ device, isOpen, onClose }: DeviceModalProps) {
         // Use device_type from database to show Linux/Windows instead of "Host VNC"
         const hostDevice = device as DeviceConfig & { type: 'host'; device_type?: string };
         let title = 'Host VNC';
-        
+
         if (hostDevice.device_type === 'linux') {
           title = 'Linux VNC';
         } else if (hostDevice.device_type === 'windows') {
           title = 'Windows VNC';
         }
-        
+
         return { title, remoteType: 'none' as RemoteType, canShowRemote: false };
       default:
         return { title: 'Unknown Device', remoteType: 'none' as RemoteType, canShowRemote: false };

@@ -1,4 +1,8 @@
-import React from 'react';
+import {
+  Visibility as MonitorIcon,
+  Timeline as MetricsIcon,
+  Speed as PerformanceIcon,
+} from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -9,11 +13,7 @@ import {
   Chip,
   LinearProgress,
 } from '@mui/material';
-import {
-  Visibility as MonitorIcon,
-  Timeline as MetricsIcon,
-  Speed as PerformanceIcon,
-} from '@mui/icons-material';
+import React from 'react';
 
 const Monitoring: React.FC = () => {
   return (
@@ -28,7 +28,8 @@ const Monitoring: React.FC = () => {
       </Box>
 
       <Alert severity="info" sx={{ mb: 3 }}>
-        Test monitoring feature is coming soon. This will provide real-time insights into test execution.
+        Test monitoring feature is coming soon. This will provide real-time insights into test
+        execution.
       </Alert>
 
       <Grid container spacing={3}>
@@ -67,11 +68,17 @@ const Monitoring: React.FC = () => {
                 <Typography variant="h6">Performance</Typography>
               </Box>
               <Box mb={2}>
-                <Typography variant="body2" gutterBottom>CPU Usage</Typography>
+                <Typography variant="body2" gutterBottom>
+                  CPU Usage
+                </Typography>
                 <LinearProgress variant="determinate" value={25} sx={{ mb: 2 }} />
-                <Typography variant="body2" gutterBottom>Memory Usage</Typography>
+                <Typography variant="body2" gutterBottom>
+                  Memory Usage
+                </Typography>
                 <LinearProgress variant="determinate" value={45} sx={{ mb: 2 }} />
-                <Typography variant="body2" gutterBottom>Network I/O</Typography>
+                <Typography variant="body2" gutterBottom>
+                  Network I/O
+                </Typography>
                 <LinearProgress variant="determinate" value={15} />
               </Box>
             </CardContent>
@@ -89,15 +96,21 @@ const Monitoring: React.FC = () => {
               <Box>
                 <Box display="flex" justifyContent="space-between" mb={1}>
                   <Typography variant="body2">Tests Run Today</Typography>
-                  <Typography variant="body2" fontWeight="bold">0</Typography>
+                  <Typography variant="body2" fontWeight="bold">
+                    0
+                  </Typography>
                 </Box>
                 <Box display="flex" justifyContent="space-between" mb={1}>
                   <Typography variant="body2">Success Rate</Typography>
-                  <Typography variant="body2" fontWeight="bold">N/A</Typography>
+                  <Typography variant="body2" fontWeight="bold">
+                    N/A
+                  </Typography>
                 </Box>
                 <Box display="flex" justifyContent="space-between">
                   <Typography variant="body2">Avg Duration</Typography>
-                  <Typography variant="body2" fontWeight="bold">N/A</Typography>
+                  <Typography variant="body2" fontWeight="bold">
+                    N/A
+                  </Typography>
                 </Box>
               </Box>
             </CardContent>
@@ -114,16 +127,16 @@ const Monitoring: React.FC = () => {
               <Typography variant="body2" color="textSecondary" mb={2}>
                 Real-time updates from running tests and system events.
               </Typography>
-              <Box 
-                sx={{ 
-                  p: 3, 
-                  textAlign: 'center', 
+              <Box
+                sx={{
+                  p: 3,
+                  textAlign: 'center',
                   backgroundColor: 'grey.50',
                   borderRadius: 1,
                   minHeight: 200,
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
                 }}
               >
                 <Typography variant="body2" color="textSecondary">
@@ -138,4 +151,4 @@ const Monitoring: React.FC = () => {
   );
 };
 
-export default Monitoring; 
+export default Monitoring;

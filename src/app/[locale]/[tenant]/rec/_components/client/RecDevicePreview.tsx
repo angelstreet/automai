@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { DeviceConfig, DevicePreviewProps } from '../types/recDeviceTypes';
+import { DeviceConfig, DevicePreviewProps } from '@/types/recDeviceTypes';
 
 /**
  * Unified device preview component
@@ -455,7 +455,7 @@ export function RecDevicePreview({ device, onClick }: DevicePreviewProps) {
         const hostDevice = device as DeviceConfig & { type: 'host'; device_type?: string };
         let label = 'Host';
         let icon = '🖥️';
-        
+
         if (hostDevice.device_type === 'linux') {
           label = 'Linux';
           icon = '🐧';
@@ -463,7 +463,7 @@ export function RecDevicePreview({ device, onClick }: DevicePreviewProps) {
           label = 'Windows';
           icon = '🪟';
         }
-        
+
         return { icon, label, status: isStreaming ? 'STREAMING' : 'READY' };
       default:
         return { icon: '❓', label: 'Unknown', status: 'UNKNOWN' };

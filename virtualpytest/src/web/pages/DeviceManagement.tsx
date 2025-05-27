@@ -1,4 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import {
+  Add as AddIcon,
+  Devices as DeviceIcon,
+  Settings as ControllerIcon,
+  Public as ProfileIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Circle as StatusIcon,
+} from '@mui/icons-material';
 import {
   Box,
   Grid,
@@ -7,10 +15,6 @@ import {
   Typography,
   Button,
   Paper,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
   Chip,
   Alert,
   CircularProgress,
@@ -33,15 +37,7 @@ import {
   TableHead,
   TableRow,
 } from '@mui/material';
-import {
-  Add as AddIcon,
-  Devices as DeviceIcon,
-  Settings as ControllerIcon,
-  Public as ProfileIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Circle as StatusIcon,
-} from '@mui/icons-material';
+import React, { useState, useEffect } from 'react';
 
 const API_BASE_URL = 'http://localhost:5009/api';
 
@@ -79,28 +75,11 @@ interface EnvironmentProfile {
   updated_at: string;
 }
 
-const DEVICE_TYPES = [
-  'android_phone',
-  'firetv',
-  'appletv',
-  'stb_eos',
-  'linux',
-  'windows',
-  'stb'
-];
+const DEVICE_TYPES = ['android_phone', 'firetv', 'appletv', 'stb_eos', 'linux', 'windows', 'stb'];
 
-const ENVIRONMENTS = [
-  'prod',
-  'preprod',
-  'dev',
-  'staging'
-];
+const ENVIRONMENTS = ['prod', 'preprod', 'dev', 'staging'];
 
-const CONTROLLER_TYPES = [
-  'remote_controller',
-  'av_controller',
-  'verification_controller'
-];
+const CONTROLLER_TYPES = ['remote_controller', 'av_controller', 'verification_controller'];
 
 const DeviceManagement: React.FC = () => {
   const [currentTab, setCurrentTab] = useState(0);
@@ -109,12 +88,12 @@ const DeviceManagement: React.FC = () => {
   const [environmentProfiles, setEnvironmentProfiles] = useState<EnvironmentProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Dialog states
   const [deviceDialogOpen, setDeviceDialogOpen] = useState(false);
   const [controllerDialogOpen, setControllerDialogOpen] = useState(false);
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
-  
+
   // Form states
   const [deviceForm, setDeviceForm] = useState({
     name: '',
@@ -122,21 +101,21 @@ const DeviceManagement: React.FC = () => {
     model: '',
     version: '',
     environment: 'dev',
-    status: 'offline'
+    status: 'offline',
   });
-  
+
   const [controllerForm, setControllerForm] = useState({
     name: '',
     type: 'remote_controller',
-    device_id: ''
+    device_id: '',
   });
-  
+
   const [profileForm, setProfileForm] = useState({
     name: '',
     device_id: '',
     remote_controller_id: '',
     av_controller_id: '',
-    verification_controller_id: ''
+    verification_controller_id: '',
   });
 
   useEffect(() => {
@@ -195,7 +174,7 @@ const DeviceManagement: React.FC = () => {
           model: '',
           version: '',
           environment: 'dev',
-          status: 'offline'
+          status: 'offline',
         });
         fetchData();
       } else {
@@ -221,7 +200,7 @@ const DeviceManagement: React.FC = () => {
         setControllerForm({
           name: '',
           type: 'remote_controller',
-          device_id: ''
+          device_id: '',
         });
         fetchData();
       } else {
@@ -249,7 +228,7 @@ const DeviceManagement: React.FC = () => {
           device_id: '',
           remote_controller_id: '',
           av_controller_id: '',
-          verification_controller_id: ''
+          verification_controller_id: '',
         });
         fetchData();
       } else {
@@ -324,12 +303,12 @@ const DeviceManagement: React.FC = () => {
   };
 
   const getDeviceName = (deviceId: string) => {
-    const device = devices.find(d => d.id === deviceId);
+    const device = devices.find((d) => d.id === deviceId);
     return device ? device.name : 'Unknown Device';
   };
 
   const getControllerName = (controllerId: string) => {
-    const controller = controllers.find(c => c.id === controllerId);
+    const controller = controllers.find((c) => c.id === controllerId);
     return controller ? controller.name : 'None';
   };
 
@@ -346,9 +325,10 @@ const DeviceManagement: React.FC = () => {
       <Typography variant="h4" component="h1" gutterBottom>
         Device Management
       </Typography>
-      
+
       <Typography variant="body1" color="textSecondary" paragraph>
-        Manage your test devices, controllers, and environment profiles for comprehensive test automation.
+        Manage your test devices, controllers, and environment profiles for comprehensive test
+        automation.
       </Typography>
 
       {error && (
@@ -367,9 +347,7 @@ const DeviceManagement: React.FC = () => {
                   <Typography color="textSecondary" gutterBottom>
                     Devices
                   </Typography>
-                  <Typography variant="h4">
-                    {devices.length}
-                  </Typography>
+                  <Typography variant="h4">{devices.length}</Typography>
                 </Box>
                 <DeviceIcon color="primary" sx={{ fontSize: 40 }} />
               </Box>
@@ -385,9 +363,7 @@ const DeviceManagement: React.FC = () => {
                   <Typography color="textSecondary" gutterBottom>
                     Controllers
                   </Typography>
-                  <Typography variant="h4">
-                    {controllers.length}
-                  </Typography>
+                  <Typography variant="h4">{controllers.length}</Typography>
                 </Box>
                 <ControllerIcon color="secondary" sx={{ fontSize: 40 }} />
               </Box>
@@ -403,9 +379,7 @@ const DeviceManagement: React.FC = () => {
                   <Typography color="textSecondary" gutterBottom>
                     Environment Profiles
                   </Typography>
-                  <Typography variant="h4">
-                    {environmentProfiles.length}
-                  </Typography>
+                  <Typography variant="h4">{environmentProfiles.length}</Typography>
                 </Box>
                 <ProfileIcon color="info" sx={{ fontSize: 40 }} />
               </Box>
@@ -461,9 +435,9 @@ const DeviceManagement: React.FC = () => {
                       <Chip label={device.environment} size="small" variant="outlined" />
                     </TableCell>
                     <TableCell>
-                      <Chip 
-                        label={device.status} 
-                        size="small" 
+                      <Chip
+                        label={device.status}
+                        size="small"
                         color={getStatusColor(device.status) as any}
                         icon={<StatusIcon />}
                       />
@@ -472,8 +446,8 @@ const DeviceManagement: React.FC = () => {
                       <IconButton size="small" color="primary">
                         <EditIcon />
                       </IconButton>
-                      <IconButton 
-                        size="small" 
+                      <IconButton
+                        size="small"
                         color="error"
                         onClick={() => handleDeleteDevice(device.id)}
                       >
@@ -526,8 +500,8 @@ const DeviceManagement: React.FC = () => {
                       <IconButton size="small" color="primary">
                         <EditIcon />
                       </IconButton>
-                      <IconButton 
-                        size="small" 
+                      <IconButton
+                        size="small"
                         color="error"
                         onClick={() => handleDeleteController(controller.id)}
                       >
@@ -575,13 +549,15 @@ const DeviceManagement: React.FC = () => {
                     <TableCell>{getDeviceName(profile.device_id)}</TableCell>
                     <TableCell>{getControllerName(profile.remote_controller_id || '')}</TableCell>
                     <TableCell>{getControllerName(profile.av_controller_id || '')}</TableCell>
-                    <TableCell>{getControllerName(profile.verification_controller_id || '')}</TableCell>
+                    <TableCell>
+                      {getControllerName(profile.verification_controller_id || '')}
+                    </TableCell>
                     <TableCell>
                       <IconButton size="small" color="primary">
                         <EditIcon />
                       </IconButton>
-                      <IconButton 
-                        size="small" 
+                      <IconButton
+                        size="small"
                         color="error"
                         onClick={() => handleDeleteProfile(profile.id)}
                       >
@@ -597,7 +573,12 @@ const DeviceManagement: React.FC = () => {
       )}
 
       {/* Device Dialog */}
-      <Dialog open={deviceDialogOpen} onClose={() => setDeviceDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={deviceDialogOpen}
+        onClose={() => setDeviceDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>Add New Device</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
@@ -652,12 +633,19 @@ const DeviceManagement: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeviceDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleCreateDevice} variant="contained">Create</Button>
+          <Button onClick={handleCreateDevice} variant="contained">
+            Create
+          </Button>
         </DialogActions>
       </Dialog>
 
       {/* Controller Dialog */}
-      <Dialog open={controllerDialogOpen} onClose={() => setControllerDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={controllerDialogOpen}
+        onClose={() => setControllerDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>Add New Controller</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
@@ -685,7 +673,9 @@ const DeviceManagement: React.FC = () => {
               <InputLabel>Assign to Device (Optional)</InputLabel>
               <Select
                 value={controllerForm.device_id}
-                onChange={(e) => setControllerForm({ ...controllerForm, device_id: e.target.value })}
+                onChange={(e) =>
+                  setControllerForm({ ...controllerForm, device_id: e.target.value })
+                }
               >
                 <MenuItem value="">None</MenuItem>
                 {devices.map((device) => (
@@ -699,12 +689,19 @@ const DeviceManagement: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setControllerDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleCreateController} variant="contained">Create</Button>
+          <Button onClick={handleCreateController} variant="contained">
+            Create
+          </Button>
         </DialogActions>
       </Dialog>
 
       {/* Environment Profile Dialog */}
-      <Dialog open={profileDialogOpen} onClose={() => setProfileDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={profileDialogOpen}
+        onClose={() => setProfileDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>Add New Environment Profile</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
@@ -732,53 +729,67 @@ const DeviceManagement: React.FC = () => {
               <InputLabel>Remote Controller</InputLabel>
               <Select
                 value={profileForm.remote_controller_id}
-                onChange={(e) => setProfileForm({ ...profileForm, remote_controller_id: e.target.value })}
+                onChange={(e) =>
+                  setProfileForm({ ...profileForm, remote_controller_id: e.target.value })
+                }
               >
                 <MenuItem value="">None</MenuItem>
-                {controllers.filter(c => c.type === 'remote_controller').map((controller) => (
-                  <MenuItem key={controller.id} value={controller.id}>
-                    {controller.name}
-                  </MenuItem>
-                ))}
+                {controllers
+                  .filter((c) => c.type === 'remote_controller')
+                  .map((controller) => (
+                    <MenuItem key={controller.id} value={controller.id}>
+                      {controller.name}
+                    </MenuItem>
+                  ))}
               </Select>
             </FormControl>
             <FormControl fullWidth margin="normal">
               <InputLabel>AV Controller</InputLabel>
               <Select
                 value={profileForm.av_controller_id}
-                onChange={(e) => setProfileForm({ ...profileForm, av_controller_id: e.target.value })}
+                onChange={(e) =>
+                  setProfileForm({ ...profileForm, av_controller_id: e.target.value })
+                }
               >
                 <MenuItem value="">None</MenuItem>
-                {controllers.filter(c => c.type === 'av_controller').map((controller) => (
-                  <MenuItem key={controller.id} value={controller.id}>
-                    {controller.name}
-                  </MenuItem>
-                ))}
+                {controllers
+                  .filter((c) => c.type === 'av_controller')
+                  .map((controller) => (
+                    <MenuItem key={controller.id} value={controller.id}>
+                      {controller.name}
+                    </MenuItem>
+                  ))}
               </Select>
             </FormControl>
             <FormControl fullWidth margin="normal">
               <InputLabel>Verification Controller</InputLabel>
               <Select
                 value={profileForm.verification_controller_id}
-                onChange={(e) => setProfileForm({ ...profileForm, verification_controller_id: e.target.value })}
+                onChange={(e) =>
+                  setProfileForm({ ...profileForm, verification_controller_id: e.target.value })
+                }
               >
                 <MenuItem value="">None</MenuItem>
-                {controllers.filter(c => c.type === 'verification_controller').map((controller) => (
-                  <MenuItem key={controller.id} value={controller.id}>
-                    {controller.name}
-                  </MenuItem>
-                ))}
+                {controllers
+                  .filter((c) => c.type === 'verification_controller')
+                  .map((controller) => (
+                    <MenuItem key={controller.id} value={controller.id}>
+                      {controller.name}
+                    </MenuItem>
+                  ))}
               </Select>
             </FormControl>
           </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setProfileDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleCreateProfile} variant="contained">Create</Button>
+          <Button onClick={handleCreateProfile} variant="contained">
+            Create
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>
   );
 };
 
-export default DeviceManagement; 
+export default DeviceManagement;

@@ -3,9 +3,7 @@
 import { Copy, Loader2, Play } from 'lucide-react';
 import { useState } from 'react';
 
-import {
-  executeBrowserTask,
-} from '@/app/actions/browserAutomationActions';
+import { executeBrowserTask } from '@/app/actions/browserAutomationActions';
 import { Button } from '@/components/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
 import { Textarea } from '@/components/shadcn/textarea';
@@ -25,7 +23,10 @@ interface BrowserAutomationState {
   startTime: string | null;
 }
 
-const EXAMPLE_TASKS = ['Go to Youtube and launch a video', 'Go to google and search for funny cat pictures'];
+const EXAMPLE_TASKS = [
+  'Go to Youtube and launch a video',
+  'Go to google and search for funny cat pictures',
+];
 
 export default function BrowserAutomationClient() {
   const { toast } = useToast();
@@ -67,7 +68,8 @@ export default function BrowserAutomationClient() {
     if (!isInitialized) {
       toast({
         title: 'Error',
-        description: 'Browser automation not initialized. Please start the automation system first.',
+        description:
+          'Browser automation not initialized. Please start the automation system first.',
         variant: 'destructive',
       });
       return;
@@ -220,7 +222,9 @@ export default function BrowserAutomationClient() {
 
               {/* Example Tasks - Inline */}
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-medium text-muted-foreground min-w-fit">Examples:</span>
+                <span className="text-xs font-medium text-muted-foreground min-w-fit">
+                  Examples:
+                </span>
                 {EXAMPLE_TASKS.map((example, index) => (
                   <Button
                     key={index}
@@ -334,4 +338,4 @@ export default function BrowserAutomationClient() {
       )}
     </div>
   );
-} 
+}

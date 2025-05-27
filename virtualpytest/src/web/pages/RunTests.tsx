@@ -1,19 +1,10 @@
-import React from 'react';
-import {
-  Box,
-  Typography,
-  Card,
-  CardContent,
-  Button,
-  Grid,
-  Alert,
-  Chip,
-} from '@mui/material';
 import {
   PlayArrow as RunIcon,
   Schedule as ScheduleIcon,
   Stop as StopIcon,
 } from '@mui/icons-material';
+import { Box, Typography, Card, CardContent, Button, Grid, Alert, Chip } from '@mui/material';
+import React from 'react';
 
 const RunTests: React.FC = () => {
   return (
@@ -28,7 +19,8 @@ const RunTests: React.FC = () => {
       </Box>
 
       <Alert severity="info" sx={{ mb: 3 }}>
-        Test execution feature is coming soon. This will allow you to run test campaigns and monitor their progress.
+        Test execution feature is coming soon. This will allow you to run test campaigns and monitor
+        their progress.
       </Alert>
 
       <Grid container spacing={3}>
@@ -44,18 +36,10 @@ const RunTests: React.FC = () => {
                 Execute a single test case or campaign immediately.
               </Typography>
               <Box display="flex" gap={2}>
-                <Button
-                  variant="contained"
-                  startIcon={<RunIcon />}
-                  disabled
-                >
+                <Button variant="contained" startIcon={<RunIcon />} disabled>
                   Run Test Case
                 </Button>
-                <Button
-                  variant="outlined"
-                  startIcon={<RunIcon />}
-                  disabled
-                >
+                <Button variant="outlined" startIcon={<RunIcon />} disabled>
                   Run Campaign
                 </Button>
               </Box>
@@ -75,18 +59,10 @@ const RunTests: React.FC = () => {
                 Schedule test campaigns to run at specific times.
               </Typography>
               <Box display="flex" gap={2}>
-                <Button
-                  variant="contained"
-                  startIcon={<ScheduleIcon />}
-                  color="secondary"
-                  disabled
-                >
+                <Button variant="contained" startIcon={<ScheduleIcon />} color="secondary" disabled>
                   Schedule Test
                 </Button>
-                <Button
-                  variant="outlined"
-                  disabled
-                >
+                <Button variant="outlined" disabled>
                   View Schedule
                 </Button>
               </Box>
@@ -113,12 +89,12 @@ const RunTests: React.FC = () => {
               <Typography variant="body2" color="textSecondary" mb={2}>
                 Currently running test campaigns and their status.
               </Typography>
-              <Box 
-                sx={{ 
-                  p: 3, 
-                  textAlign: 'center', 
+              <Box
+                sx={{
+                  p: 3,
+                  textAlign: 'center',
                   backgroundColor: 'grey.50',
-                  borderRadius: 1 
+                  borderRadius: 1,
                 }}
               >
                 <Typography variant="body2" color="textSecondary">
@@ -133,4 +109,4 @@ const RunTests: React.FC = () => {
   );
 };
 
-export default RunTests; 
+export default RunTests;

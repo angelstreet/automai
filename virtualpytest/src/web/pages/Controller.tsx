@@ -1,4 +1,12 @@
-import React from 'react';
+import {
+  Gamepad as ControllerIcon,
+  Add as AddIcon,
+  Settings as SettingsIcon,
+  Bluetooth as BluetoothIcon,
+  Usb as UsbIcon,
+  Wifi as WifiIcon,
+  Error as DisconnectedIcon,
+} from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -14,16 +22,7 @@ import {
   ListItemIcon,
   Divider,
 } from '@mui/material';
-import {
-  Gamepad as ControllerIcon,
-  Add as AddIcon,
-  Settings as SettingsIcon,
-  Bluetooth as BluetoothIcon,
-  Usb as UsbIcon,
-  Wifi as WifiIcon,
-  CheckCircle as ConnectedIcon,
-  Error as DisconnectedIcon,
-} from '@mui/icons-material';
+import React from 'react';
 
 const Controller: React.FC = () => {
   return (
@@ -38,7 +37,8 @@ const Controller: React.FC = () => {
       </Box>
 
       <Alert severity="info" sx={{ mb: 3 }}>
-        Controller configuration feature is coming soon. This will allow you to manage remote controls and input devices for testing.
+        Controller configuration feature is coming soon. This will allow you to manage remote
+        controls and input devices for testing.
       </Alert>
 
       <Grid container spacing={3}>
@@ -51,16 +51,11 @@ const Controller: React.FC = () => {
                   <ControllerIcon color="primary" />
                   <Typography variant="h6">Connected Controllers</Typography>
                 </Box>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  startIcon={<AddIcon />}
-                  disabled
-                >
+                <Button variant="outlined" size="small" startIcon={<AddIcon />} disabled>
                   Add Controller
                 </Button>
               </Box>
-              
+
               <List>
                 <ListItem>
                   <ListItemIcon>
@@ -83,7 +78,7 @@ const Controller: React.FC = () => {
               <Typography variant="h6" gutterBottom>
                 Supported Controller Types
               </Typography>
-              
+
               <List>
                 <ListItem>
                   <ListItemIcon>
@@ -95,9 +90,9 @@ const Controller: React.FC = () => {
                   />
                   <Chip label="Supported" color="success" size="small" />
                 </ListItem>
-                
+
                 <Divider />
-                
+
                 <ListItem>
                   <ListItemIcon>
                     <UsbIcon color="secondary" />
@@ -108,9 +103,9 @@ const Controller: React.FC = () => {
                   />
                   <Chip label="Supported" color="success" size="small" />
                 </ListItem>
-                
+
                 <Divider />
-                
+
                 <ListItem>
                   <ListItemIcon>
                     <WifiIcon color="info" />
@@ -134,16 +129,16 @@ const Controller: React.FC = () => {
                 <SettingsIcon color="primary" />
                 <Typography variant="h6">Controller Settings</Typography>
               </Box>
-              
+
               <Grid container spacing={3}>
                 <Grid item xs={12} sm={6} md={3}>
-                  <Box 
-                    sx={{ 
-                      p: 2, 
-                      border: 1, 
+                  <Box
+                    sx={{
+                      p: 2,
+                      border: 1,
                       borderColor: 'grey.300',
                       borderRadius: 1,
-                      textAlign: 'center'
+                      textAlign: 'center',
                     }}
                   >
                     <Typography variant="subtitle2" gutterBottom>
@@ -152,18 +147,20 @@ const Controller: React.FC = () => {
                     <Typography variant="body2" color="textSecondary" mb={2}>
                       Configure button assignments and key mappings
                     </Typography>
-                    <Button size="small" disabled>Configure</Button>
+                    <Button size="small" disabled>
+                      Configure
+                    </Button>
                   </Box>
                 </Grid>
-                
+
                 <Grid item xs={12} sm={6} md={3}>
-                  <Box 
-                    sx={{ 
-                      p: 2, 
-                      border: 1, 
+                  <Box
+                    sx={{
+                      p: 2,
+                      border: 1,
                       borderColor: 'grey.300',
                       borderRadius: 1,
-                      textAlign: 'center'
+                      textAlign: 'center',
                     }}
                   >
                     <Typography variant="subtitle2" gutterBottom>
@@ -172,18 +169,20 @@ const Controller: React.FC = () => {
                     <Typography variant="body2" color="textSecondary" mb={2}>
                       Set input delays and response timeouts
                     </Typography>
-                    <Button size="small" disabled>Configure</Button>
+                    <Button size="small" disabled>
+                      Configure
+                    </Button>
                   </Box>
                 </Grid>
-                
+
                 <Grid item xs={12} sm={6} md={3}>
-                  <Box 
-                    sx={{ 
-                      p: 2, 
-                      border: 1, 
+                  <Box
+                    sx={{
+                      p: 2,
+                      border: 1,
                       borderColor: 'grey.300',
                       borderRadius: 1,
-                      textAlign: 'center'
+                      textAlign: 'center',
                     }}
                   >
                     <Typography variant="subtitle2" gutterBottom>
@@ -192,18 +191,20 @@ const Controller: React.FC = () => {
                     <Typography variant="body2" color="textSecondary" mb={2}>
                       Automatically detect and connect controllers
                     </Typography>
-                    <Button size="small" disabled>Enable</Button>
+                    <Button size="small" disabled>
+                      Enable
+                    </Button>
                   </Box>
                 </Grid>
-                
+
                 <Grid item xs={12} sm={6} md={3}>
-                  <Box 
-                    sx={{ 
-                      p: 2, 
-                      border: 1, 
+                  <Box
+                    sx={{
+                      p: 2,
+                      border: 1,
                       borderColor: 'grey.300',
                       borderRadius: 1,
-                      textAlign: 'center'
+                      textAlign: 'center',
                     }}
                   >
                     <Typography variant="subtitle2" gutterBottom>
@@ -212,7 +213,9 @@ const Controller: React.FC = () => {
                     <Typography variant="body2" color="textSecondary" mb={2}>
                       Test controller inputs and responses
                     </Typography>
-                    <Button size="small" disabled>Start Test</Button>
+                    <Button size="small" disabled>
+                      Start Test
+                    </Button>
                   </Box>
                 </Grid>
               </Grid>
@@ -228,26 +231,13 @@ const Controller: React.FC = () => {
                 Quick Actions
               </Typography>
               <Box display="flex" gap={2} flexWrap="wrap">
-                <Button
-                  variant="contained"
-                  startIcon={<AddIcon />}
-                  disabled
-                >
+                <Button variant="contained" startIcon={<AddIcon />} disabled>
                   Scan for Controllers
                 </Button>
-                <Button
-                  variant="contained"
-                  startIcon={<SettingsIcon />}
-                  color="secondary"
-                  disabled
-                >
+                <Button variant="contained" startIcon={<SettingsIcon />} color="secondary" disabled>
                   Import Configuration
                 </Button>
-                <Button
-                  variant="outlined"
-                  startIcon={<ControllerIcon />}
-                  disabled
-                >
+                <Button variant="outlined" startIcon={<ControllerIcon />} disabled>
                   Test All Controllers
                 </Button>
               </Box>
@@ -259,4 +249,4 @@ const Controller: React.FC = () => {
   );
 };
 
-export default Controller; 
+export default Controller;

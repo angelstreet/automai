@@ -1,4 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import {
+  PlayArrow as PlayIcon,
+  Add as AddIcon,
+  Science as TestIcon,
+  Campaign as CampaignIcon,
+  AccountTree as TreeIcon,
+  CheckCircle as SuccessIcon,
+  Error as ErrorIcon,
+  Schedule as PendingIcon,
+} from '@mui/icons-material';
 import {
   Box,
   Grid,
@@ -15,16 +24,8 @@ import {
   Alert,
   CircularProgress,
 } from '@mui/material';
-import {
-  PlayArrow as PlayIcon,
-  Add as AddIcon,
-  Science as TestIcon,
-  Campaign as CampaignIcon,
-  AccountTree as TreeIcon,
-  CheckCircle as SuccessIcon,
-  Error as ErrorIcon,
-  Schedule as PendingIcon,
-} from '@mui/icons-material';
+import React, { useState, useEffect } from 'react';
+
 import { TestCase, Campaign, Tree } from '../type';
 
 const API_BASE_URL = 'http://localhost:5009/api';
@@ -47,7 +48,7 @@ const Dashboard: React.FC = () => {
     testCases: 0,
     campaigns: 0,
     trees: 0,
-    recentActivity: []
+    recentActivity: [],
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -83,14 +84,14 @@ const Dashboard: React.FC = () => {
 
       // Generate mock recent activity
       const recentActivity = [
-        ...testCases.slice(0, 3).map(tc => ({
+        ...testCases.slice(0, 3).map((tc) => ({
           id: tc.test_id,
           type: 'test' as const,
           name: tc.name,
           status: 'success' as const,
           timestamp: new Date().toISOString(),
         })),
-        ...campaigns.slice(0, 2).map(c => ({
+        ...campaigns.slice(0, 2).map((c) => ({
           id: c.campaign_id,
           type: 'campaign' as const,
           name: c.campaign_name,
@@ -164,9 +165,7 @@ const Dashboard: React.FC = () => {
                   <Typography color="textSecondary" gutterBottom>
                     Test Cases
                   </Typography>
-                  <Typography variant="h4">
-                    {stats.testCases}
-                  </Typography>
+                  <Typography variant="h4">{stats.testCases}</Typography>
                 </Box>
                 <TestIcon color="primary" sx={{ fontSize: 40 }} />
               </Box>
@@ -182,9 +181,7 @@ const Dashboard: React.FC = () => {
                   <Typography color="textSecondary" gutterBottom>
                     Campaigns
                   </Typography>
-                  <Typography variant="h4">
-                    {stats.campaigns}
-                  </Typography>
+                  <Typography variant="h4">{stats.campaigns}</Typography>
                 </Box>
                 <CampaignIcon color="secondary" sx={{ fontSize: 40 }} />
               </Box>
@@ -200,9 +197,7 @@ const Dashboard: React.FC = () => {
                   <Typography color="textSecondary" gutterBottom>
                     Navigation Trees
                   </Typography>
-                  <Typography variant="h4">
-                    {stats.trees}
-                  </Typography>
+                  <Typography variant="h4">{stats.trees}</Typography>
                 </Box>
                 <TreeIcon color="info" sx={{ fontSize: 40 }} />
               </Box>
@@ -219,12 +214,7 @@ const Dashboard: React.FC = () => {
               Quick Actions
             </Typography>
             <Box display="flex" flexDirection="column" gap={2}>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                href="/testcases"
-                fullWidth
-              >
+              <Button variant="contained" startIcon={<AddIcon />} href="/testcases" fullWidth>
                 Create New Test Case
               </Button>
               <Button
@@ -245,12 +235,7 @@ const Dashboard: React.FC = () => {
               >
                 Create Navigation Tree
               </Button>
-              <Button
-                variant="outlined"
-                startIcon={<PlayIcon />}
-                fullWidth
-                disabled
-              >
+              <Button variant="outlined" startIcon={<PlayIcon />} fullWidth disabled>
                 Run Test Campaign (Coming Soon)
               </Button>
             </Box>
@@ -267,18 +252,12 @@ const Dashboard: React.FC = () => {
               <List>
                 {stats.recentActivity.map((activity) => (
                   <ListItem key={activity.id} divider>
-                    <ListItemIcon>
-                      {getStatusIcon(activity.status)}
-                    </ListItemIcon>
+                    <ListItemIcon>{getStatusIcon(activity.status)}</ListItemIcon>
                     <ListItemText
                       primary={activity.name}
                       secondary={
                         <Box display="flex" alignItems="center" gap={1}>
-                          <Chip
-                            label={activity.type}
-                            size="small"
-                            variant="outlined"
-                          />
+                          <Chip label={activity.type} size="small" variant="outlined" />
                           <Chip
                             label={activity.status}
                             size="small"
@@ -332,4 +311,4 @@ const Dashboard: React.FC = () => {
   );
 };
 
-export default Dashboard; 
+export default Dashboard;

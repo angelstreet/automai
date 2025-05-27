@@ -1,12 +1,6 @@
-import React, { useState } from 'react';
-import {
-  Button,
-  Menu,
-  MenuItem,
-  Box,
-  Typography,
-} from '@mui/material';
 import { KeyboardArrowDown } from '@mui/icons-material';
+import { Button, Menu, MenuItem, Box, Typography } from '@mui/material';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
 interface NavigationItem {
@@ -39,7 +33,7 @@ const NavigationDropdown: React.FC<NavigationDropdownProps> = ({
   };
 
   // Check if any of the dropdown items match the current path
-  const isDropdownActive = items.some(item => location.pathname.startsWith(item.path));
+  const isDropdownActive = items.some((item) => location.pathname.startsWith(item.path));
 
   return (
     <Box>
@@ -105,4 +99,4 @@ const NavigationDropdown: React.FC<NavigationDropdownProps> = ({
   );
 };
 
-export default NavigationDropdown; 
+export default NavigationDropdown;

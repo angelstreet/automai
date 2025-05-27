@@ -1,18 +1,7 @@
+import { LightMode, DarkMode, SettingsBrightness } from '@mui/icons-material';
+import { IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Tooltip } from '@mui/material';
 import React from 'react';
-import {
-  IconButton,
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText,
-  Tooltip,
-} from '@mui/material';
-import {
-  LightMode,
-  DarkMode,
-  SettingsBrightness,
-  Palette,
-} from '@mui/icons-material';
+
 import { useTheme } from '../contexts/ThemeContext';
 
 const ThemeToggle: React.FC = () => {
@@ -96,28 +85,19 @@ const ThemeToggle: React.FC = () => {
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
       >
-        <MenuItem 
-          onClick={() => handleThemeChange('light')}
-          selected={mode === 'light'}
-        >
+        <MenuItem onClick={() => handleThemeChange('light')} selected={mode === 'light'}>
           <ListItemIcon>
             <LightMode fontSize="small" />
           </ListItemIcon>
           <ListItemText>Light</ListItemText>
         </MenuItem>
-        <MenuItem 
-          onClick={() => handleThemeChange('dark')}
-          selected={mode === 'dark'}
-        >
+        <MenuItem onClick={() => handleThemeChange('dark')} selected={mode === 'dark'}>
           <ListItemIcon>
             <DarkMode fontSize="small" />
           </ListItemIcon>
           <ListItemText>Dark</ListItemText>
         </MenuItem>
-        <MenuItem 
-          onClick={() => handleThemeChange('system')}
-          selected={mode === 'system'}
-        >
+        <MenuItem onClick={() => handleThemeChange('system')} selected={mode === 'system'}>
           <ListItemIcon>
             <SettingsBrightness fontSize="small" />
           </ListItemIcon>
@@ -128,4 +108,4 @@ const ThemeToggle: React.FC = () => {
   );
 };
 
-export default ThemeToggle; 
+export default ThemeToggle;

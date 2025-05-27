@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 
-import { RecStreamPreview } from './RecStreamPreview';
 import { RecStreamModal } from './RecStreamModal';
+import { RecStreamPreview } from './RecStreamPreview';
 
 interface RecUsbAdbStreamProps {
   hostId: string;

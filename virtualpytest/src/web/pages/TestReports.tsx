@@ -1,4 +1,8 @@
-import React from 'react';
+import {
+  Assessment as ReportsIcon,
+  Download as DownloadIcon,
+  FilterList as FilterIcon,
+} from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -7,7 +11,6 @@ import {
   Button,
   Grid,
   Alert,
-  Chip,
   Table,
   TableBody,
   TableCell,
@@ -16,12 +19,7 @@ import {
   TableRow,
   Paper,
 } from '@mui/material';
-import {
-  Assessment as ReportsIcon,
-  Download as DownloadIcon,
-  Visibility as ViewIcon,
-  FilterList as FilterIcon,
-} from '@mui/icons-material';
+import React from 'react';
 
 const TestReports: React.FC = () => {
   return (
@@ -36,7 +34,8 @@ const TestReports: React.FC = () => {
       </Box>
 
       <Alert severity="info" sx={{ mb: 3 }}>
-        Test reports feature is coming soon. This will provide detailed analytics and reporting capabilities.
+        Test reports feature is coming soon. This will provide detailed analytics and reporting
+        capabilities.
       </Alert>
 
       <Grid container spacing={3}>
@@ -47,25 +46,15 @@ const TestReports: React.FC = () => {
               <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
                 <Typography variant="h6">Recent Test Reports</Typography>
                 <Box display="flex" gap={1}>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    startIcon={<FilterIcon />}
-                    disabled
-                  >
+                  <Button variant="outlined" size="small" startIcon={<FilterIcon />} disabled>
                     Filter
                   </Button>
-                  <Button
-                    variant="contained"
-                    size="small"
-                    startIcon={<DownloadIcon />}
-                    disabled
-                  >
+                  <Button variant="contained" size="small" startIcon={<DownloadIcon />} disabled>
                     Export
                   </Button>
                 </Box>
               </Box>
-              
+
               <TableContainer component={Paper} variant="outlined">
                 <Table>
                   <TableHead>
@@ -100,32 +89,35 @@ const TestReports: React.FC = () => {
                 <ReportsIcon color="primary" />
                 <Typography variant="h6">Quick Stats</Typography>
               </Box>
-              
+
               <Box mb={2}>
                 <Box display="flex" justifyContent="space-between" mb={1}>
                   <Typography variant="body2">Total Reports</Typography>
-                  <Typography variant="body2" fontWeight="bold">0</Typography>
+                  <Typography variant="body2" fontWeight="bold">
+                    0
+                  </Typography>
                 </Box>
                 <Box display="flex" justifyContent="space-between" mb={1}>
                   <Typography variant="body2">This Week</Typography>
-                  <Typography variant="body2" fontWeight="bold">0</Typography>
+                  <Typography variant="body2" fontWeight="bold">
+                    0
+                  </Typography>
                 </Box>
                 <Box display="flex" justifyContent="space-between" mb={1}>
                   <Typography variant="body2">Success Rate</Typography>
-                  <Typography variant="body2" fontWeight="bold">N/A</Typography>
+                  <Typography variant="body2" fontWeight="bold">
+                    N/A
+                  </Typography>
                 </Box>
                 <Box display="flex" justifyContent="space-between">
                   <Typography variant="body2">Avg Duration</Typography>
-                  <Typography variant="body2" fontWeight="bold">N/A</Typography>
+                  <Typography variant="body2" fontWeight="bold">
+                    N/A
+                  </Typography>
                 </Box>
               </Box>
 
-              <Button
-                variant="contained"
-                fullWidth
-                startIcon={<ReportsIcon />}
-                disabled
-              >
+              <Button variant="contained" fullWidth startIcon={<ReportsIcon />} disabled>
                 Generate Report
               </Button>
             </CardContent>
@@ -141,13 +133,13 @@ const TestReports: React.FC = () => {
               </Typography>
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6} md={3}>
-                  <Box 
-                    sx={{ 
-                      p: 2, 
-                      border: 1, 
+                  <Box
+                    sx={{
+                      p: 2,
+                      border: 1,
                       borderColor: 'grey.300',
                       borderRadius: 1,
-                      textAlign: 'center'
+                      textAlign: 'center',
                     }}
                   >
                     <Typography variant="subtitle2" gutterBottom>
@@ -156,18 +148,20 @@ const TestReports: React.FC = () => {
                     <Typography variant="body2" color="textSecondary" mb={2}>
                       High-level overview of test execution results
                     </Typography>
-                    <Button size="small" disabled>Generate</Button>
+                    <Button size="small" disabled>
+                      Generate
+                    </Button>
                   </Box>
                 </Grid>
-                
+
                 <Grid item xs={12} sm={6} md={3}>
-                  <Box 
-                    sx={{ 
-                      p: 2, 
-                      border: 1, 
+                  <Box
+                    sx={{
+                      p: 2,
+                      border: 1,
                       borderColor: 'grey.300',
                       borderRadius: 1,
-                      textAlign: 'center'
+                      textAlign: 'center',
                     }}
                   >
                     <Typography variant="subtitle2" gutterBottom>
@@ -176,18 +170,20 @@ const TestReports: React.FC = () => {
                     <Typography variant="body2" color="textSecondary" mb={2}>
                       In-depth analysis with screenshots and logs
                     </Typography>
-                    <Button size="small" disabled>Generate</Button>
+                    <Button size="small" disabled>
+                      Generate
+                    </Button>
                   </Box>
                 </Grid>
-                
+
                 <Grid item xs={12} sm={6} md={3}>
-                  <Box 
-                    sx={{ 
-                      p: 2, 
-                      border: 1, 
+                  <Box
+                    sx={{
+                      p: 2,
+                      border: 1,
                       borderColor: 'grey.300',
                       borderRadius: 1,
-                      textAlign: 'center'
+                      textAlign: 'center',
                     }}
                   >
                     <Typography variant="subtitle2" gutterBottom>
@@ -196,18 +192,20 @@ const TestReports: React.FC = () => {
                     <Typography variant="body2" color="textSecondary" mb={2}>
                       Performance metrics and timing analysis
                     </Typography>
-                    <Button size="small" disabled>Generate</Button>
+                    <Button size="small" disabled>
+                      Generate
+                    </Button>
                   </Box>
                 </Grid>
-                
+
                 <Grid item xs={12} sm={6} md={3}>
-                  <Box 
-                    sx={{ 
-                      p: 2, 
-                      border: 1, 
+                  <Box
+                    sx={{
+                      p: 2,
+                      border: 1,
                       borderColor: 'grey.300',
                       borderRadius: 1,
-                      textAlign: 'center'
+                      textAlign: 'center',
                     }}
                   >
                     <Typography variant="subtitle2" gutterBottom>
@@ -216,7 +214,9 @@ const TestReports: React.FC = () => {
                     <Typography variant="body2" color="textSecondary" mb={2}>
                       Historical trends and patterns
                     </Typography>
-                    <Button size="small" disabled>Generate</Button>
+                    <Button size="small" disabled>
+                      Generate
+                    </Button>
                   </Box>
                 </Grid>
               </Grid>
@@ -228,4 +228,4 @@ const TestReports: React.FC = () => {
   );
 };
 
-export default TestReports; 
+export default TestReports;

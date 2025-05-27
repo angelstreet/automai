@@ -1,6 +1,3 @@
-import React from 'react';
-import { Box, Button } from '@mui/material';
-import { Link, useLocation } from 'react-router-dom';
 import {
   Science as TestIcon,
   Campaign as CampaignIcon,
@@ -14,6 +11,10 @@ import {
   Gamepad as ControllerIcon,
   LibraryBooks as LibraryIcon,
 } from '@mui/icons-material';
+import { Box, Button } from '@mui/material';
+import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
+
 import NavigationDropdown from './NavigationDropdown';
 
 const NavigationBar: React.FC = () => {
@@ -23,24 +24,52 @@ const NavigationBar: React.FC = () => {
   const testPlanItems = [
     { label: 'Test Cases', path: '/test-plan/test-cases', icon: <TestIcon fontSize="small" /> },
     { label: 'Campaigns', path: '/test-plan/campaigns', icon: <CampaignIcon fontSize="small" /> },
-    { label: 'Collections', path: '/test-plan/collections', icon: <CollectionIcon fontSize="small" /> },
+    {
+      label: 'Collections',
+      path: '/test-plan/collections',
+      icon: <CollectionIcon fontSize="small" />,
+    },
   ];
 
   const testExecutionItems = [
     { label: 'Run Tests', path: '/test-execution/run-tests', icon: <RunIcon fontSize="small" /> },
-    { label: 'Monitoring', path: '/test-execution/monitoring', icon: <MonitorIcon fontSize="small" /> },
+    {
+      label: 'Monitoring',
+      path: '/test-execution/monitoring',
+      icon: <MonitorIcon fontSize="small" />,
+    },
   ];
 
   const testResultsItems = [
-    { label: 'Test Reports', path: '/test-results/reports', icon: <ReportsIcon fontSize="small" /> },
+    {
+      label: 'Test Reports',
+      path: '/test-results/reports',
+      icon: <ReportsIcon fontSize="small" />,
+    },
   ];
 
   const configurationItems = [
-    { label: 'Device Management', path: '/configuration/devices', icon: <DevicesIcon fontSize="small" /> },
-    { label: 'User Interface', path: '/configuration/ui-trees', icon: <TreeIcon fontSize="small" /> },
-    { label: 'Controller', path: '/configuration/controller', icon: <ControllerIcon fontSize="small" /> },
+    {
+      label: 'Device Management',
+      path: '/configuration/devices',
+      icon: <DevicesIcon fontSize="small" />,
+    },
+    {
+      label: 'User Interface',
+      path: '/configuration/ui-trees',
+      icon: <TreeIcon fontSize="small" />,
+    },
+    {
+      label: 'Controller',
+      path: '/configuration/controller',
+      icon: <ControllerIcon fontSize="small" />,
+    },
     { label: 'Library', path: '/configuration/library', icon: <LibraryIcon fontSize="small" /> },
-    { label: 'Environment', path: '/configuration/environment', icon: <SettingsIcon fontSize="small" /> },
+    {
+      label: 'Environment',
+      path: '/configuration/environment',
+      icon: <SettingsIcon fontSize="small" />,
+    },
   ];
 
   return (
@@ -64,30 +93,18 @@ const NavigationBar: React.FC = () => {
       </Button>
 
       {/* Test Plan Dropdown */}
-      <NavigationDropdown
-        label="Test Plan"
-        items={testPlanItems}
-      />
+      <NavigationDropdown label="Test Plan" items={testPlanItems} />
 
       {/* Test Execution Dropdown */}
-      <NavigationDropdown
-        label="Test Execution"
-        items={testExecutionItems}
-      />
+      <NavigationDropdown label="Test Execution" items={testExecutionItems} />
 
       {/* Test Results Dropdown */}
-      <NavigationDropdown
-        label="Test Results"
-        items={testResultsItems}
-      />
+      <NavigationDropdown label="Test Results" items={testResultsItems} />
 
       {/* Configuration Dropdown */}
-      <NavigationDropdown
-        label="Configuration"
-        items={configurationItems}
-      />
+      <NavigationDropdown label="Configuration" items={configurationItems} />
     </Box>
   );
 };
 
-export default NavigationBar; 
+export default NavigationBar;

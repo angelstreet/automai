@@ -1,4 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import {
+  Add as AddIcon,
+  Delete as DeleteIcon,
+  Edit as EditIcon,
+  ExpandMore as ExpandMoreIcon,
+  AccountTree as TreeIcon,
+} from '@mui/icons-material';
 import {
   Box,
   Paper,
@@ -28,13 +34,8 @@ import {
   Chip,
   Divider,
 } from '@mui/material';
-import {
-  Add as AddIcon,
-  Delete as DeleteIcon,
-  Edit as EditIcon,
-  ExpandMore as ExpandMoreIcon,
-  AccountTree as TreeIcon,
-} from '@mui/icons-material';
+import React, { useState, useEffect } from 'react';
+
 import { Tree } from '../type';
 
 const API_BASE_URL = 'http://localhost:5009/api';
@@ -79,10 +80,8 @@ const TreeEditor: React.FC = () => {
     try {
       setLoading(true);
       const method = isEditing ? 'PUT' : 'POST';
-      const url = isEditing 
-        ? `${API_BASE_URL}/trees/${formData.tree_id}` 
-        : `${API_BASE_URL}/trees`;
-      
+      const url = isEditing ? `${API_BASE_URL}/trees/${formData.tree_id}` : `${API_BASE_URL}/trees`;
+
       const response = await fetch(url, {
         method,
         headers: {
@@ -147,20 +146,20 @@ const TreeEditor: React.FC = () => {
 
   const addNode = () => {
     const nodeId = `node_${Date.now()}`;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       nodes: {
         ...prev.nodes,
         [nodeId]: {
           id: nodeId,
-          actions: []
-        }
-      }
+          actions: [],
+        },
+      },
     }));
   };
 
   const removeNode = (nodeId: string) => {
-    setFormData(prev => {
+    setFormData((prev) => {
       const newNodes = { ...prev.nodes };
       delete newNodes[nodeId];
       return { ...prev, nodes: newNodes };
@@ -169,8 +168,8 @@ const TreeEditor: React.FC = () => {
 
   const updateNodeId = (oldId: string, newId: string) => {
     if (oldId === newId) return;
-    
-    setFormData(prev => {
+
+    setFormData((prev) => {
       const newNodes = { ...prev.nodes };
       const node = newNodes[oldId];
       if (node) {
@@ -183,7 +182,7 @@ const TreeEditor: React.FC = () => {
   };
 
   const addAction = (nodeId: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       nodes: {
         ...prev.nodes,
@@ -197,40 +196,40 @@ const TreeEditor: React.FC = () => {
               params: {},
               verification: {
                 type: 'single',
-                conditions: [{ type: 'element_exists', condition: '', timeout: 5000 }]
-              }
-            }
-          ]
-        }
-      }
+                conditions: [{ type: 'element_exists', condition: '', timeout: 5000 }],
+              },
+            },
+          ],
+        },
+      },
     }));
   };
 
   const removeAction = (nodeId: string, actionIndex: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       nodes: {
         ...prev.nodes,
         [nodeId]: {
           ...prev.nodes[nodeId],
-          actions: prev.nodes[nodeId].actions.filter((_, i) => i !== actionIndex)
-        }
-      }
+          actions: prev.nodes[nodeId].actions.filter((_, i) => i !== actionIndex),
+        },
+      },
     }));
   };
 
   const updateAction = (nodeId: string, actionIndex: number, field: string, value: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       nodes: {
         ...prev.nodes,
         [nodeId]: {
           ...prev.nodes[nodeId],
           actions: prev.nodes[nodeId].actions.map((action, i) =>
-            i === actionIndex ? { ...action, [field]: value } : action
-          )
-        }
-      }
+            i === actionIndex ? { ...action, [field]: value } : action,
+          ),
+        },
+      },
     }));
   };
 
@@ -240,11 +239,7 @@ const TreeEditor: React.FC = () => {
         <Typography variant="h4" component="h1">
           Navigation Tree Management
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => handleOpenDialog()}
-        >
+        <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenDialog()}>
           Create Tree
         </Button>
       </Box>
@@ -287,22 +282,13 @@ const TreeEditor: React.FC = () => {
                   />
                 </TableCell>
                 <TableCell>
-                  <IconButton
-                    onClick={() => setSelectedTree(tree)}
-                    color="info"
-                  >
+                  <IconButton onClick={() => setSelectedTree(tree)} color="info">
                     <TreeIcon />
                   </IconButton>
-                  <IconButton
-                    onClick={() => handleOpenDialog(tree)}
-                    color="primary"
-                  >
+                  <IconButton onClick={() => handleOpenDialog(tree)} color="primary">
                     <EditIcon />
                   </IconButton>
-                  <IconButton
-                    onClick={() => handleDelete(tree.tree_id)}
-                    color="error"
-                  >
+                  <IconButton onClick={() => handleDelete(tree.tree_id)} color="error">
                     <DeleteIcon />
                   </IconButton>
                 </TableCell>
@@ -321,7 +307,7 @@ const TreeEditor: React.FC = () => {
             </Typography>
             <Button onClick={() => setSelectedTree(null)}>Close</Button>
           </Box>
-          
+
           {Object.entries(selectedTree.nodes).map(([nodeId, node]) => (
             <Accordion key={nodeId} sx={{ mb: 1 }}>
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
@@ -335,15 +321,21 @@ const TreeEditor: React.FC = () => {
                     <CardContent>
                       <Grid container spacing={2}>
                         <Grid item xs={4}>
-                          <Typography variant="body2" color="textSecondary">To:</Typography>
+                          <Typography variant="body2" color="textSecondary">
+                            To:
+                          </Typography>
                           <Typography variant="body1">{action.to || 'N/A'}</Typography>
                         </Grid>
                         <Grid item xs={4}>
-                          <Typography variant="body2" color="textSecondary">Action:</Typography>
+                          <Typography variant="body2" color="textSecondary">
+                            Action:
+                          </Typography>
                           <Typography variant="body1">{action.action || 'N/A'}</Typography>
                         </Grid>
                         <Grid item xs={4}>
-                          <Typography variant="body2" color="textSecondary">Verification:</Typography>
+                          <Typography variant="body2" color="textSecondary">
+                            Verification:
+                          </Typography>
                           <Typography variant="body1">{action.verification.type}</Typography>
                         </Grid>
                       </Grid>
@@ -358,9 +350,7 @@ const TreeEditor: React.FC = () => {
 
       {/* Edit/Create Dialog */}
       <Dialog open={isDialogOpen} onClose={handleCloseDialog} maxWidth="lg" fullWidth>
-        <DialogTitle>
-          {isEditing ? 'Edit Tree' : 'Create Tree'}
-        </DialogTitle>
+        <DialogTitle>{isEditing ? 'Edit Tree' : 'Create Tree'}</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
             <Grid container spacing={2} sx={{ mb: 3 }}>
@@ -369,7 +359,7 @@ const TreeEditor: React.FC = () => {
                   fullWidth
                   label="Tree ID"
                   value={formData.tree_id}
-                  onChange={(e) => setFormData(prev => ({ ...prev, tree_id: e.target.value }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, tree_id: e.target.value }))}
                   disabled={isEditing}
                 />
               </Grid>
@@ -378,7 +368,7 @@ const TreeEditor: React.FC = () => {
                   fullWidth
                   label="Device"
                   value={formData.device}
-                  onChange={(e) => setFormData(prev => ({ ...prev, device: e.target.value }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, device: e.target.value }))}
                 />
               </Grid>
               <Grid item xs={12} sm={4}>
@@ -386,7 +376,7 @@ const TreeEditor: React.FC = () => {
                   fullWidth
                   label="Version"
                   value={formData.version}
-                  onChange={(e) => setFormData(prev => ({ ...prev, version: e.target.value }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, version: e.target.value }))}
                 />
               </Grid>
             </Grid>
@@ -422,11 +412,7 @@ const TreeEditor: React.FC = () => {
 
                   <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
                     <Typography variant="subtitle2">Actions</Typography>
-                    <Button
-                      startIcon={<AddIcon />}
-                      onClick={() => addAction(nodeId)}
-                      size="small"
-                    >
+                    <Button startIcon={<AddIcon />} onClick={() => addAction(nodeId)} size="small">
                       Add Action
                     </Button>
                   </Box>
@@ -440,7 +426,9 @@ const TreeEditor: React.FC = () => {
                               fullWidth
                               label="To"
                               value={action.to}
-                              onChange={(e) => updateAction(nodeId, actionIndex, 'to', e.target.value)}
+                              onChange={(e) =>
+                                updateAction(nodeId, actionIndex, 'to', e.target.value)
+                              }
                               size="small"
                             />
                           </Grid>
@@ -449,7 +437,9 @@ const TreeEditor: React.FC = () => {
                               fullWidth
                               label="Action"
                               value={action.action}
-                              onChange={(e) => updateAction(nodeId, actionIndex, 'action', e.target.value)}
+                              onChange={(e) =>
+                                updateAction(nodeId, actionIndex, 'action', e.target.value)
+                              }
                               size="small"
                             />
                           </Grid>
@@ -483,4 +473,4 @@ const TreeEditor: React.FC = () => {
   );
 };
 
-export default TreeEditor; 
+export default TreeEditor;
