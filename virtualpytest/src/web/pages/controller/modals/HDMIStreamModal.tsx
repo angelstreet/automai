@@ -33,7 +33,7 @@ interface StreamStats {
 
 export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
   // Stream configuration state
-  const [streamUrl, setStreamUrl] = useState('');
+  const [streamUrl, setStreamUrl] = useState('https://77.56.53.130:444/stream/output.m3u8');
   const [resolution, setResolution] = useState('1920x1080');
   const [fps, setFps] = useState(30);
   
@@ -72,7 +72,7 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
       };
     }
   }, [open]);
-  
+
   // Connect to stream
   const handleConnect = async () => {
     if (!streamUrl.trim()) {
@@ -299,9 +299,7 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
             {!isConnected ? (
               /* Connection Form */
               <Box>
-                <Typography variant="h6" gutterBottom>
-                  Stream Configuration
-                </Typography>
+               
                 
                 {connectionError && (
                   <Alert severity="error" sx={{ mb: 2 }}>
@@ -309,7 +307,7 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
                   </Alert>
                 )}
 
-                <Box sx={{ mb: 2 }}>
+                <Box sx={{ mb: 2, mt:1 }}>
                   <TextField
                     fullWidth
                     label="Stream URL"
@@ -345,30 +343,33 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
                   </Grid>
                 </Grid>
 
-                <Button
-                  variant="contained"
-                  onClick={handleConnect}
-                  disabled={isConnecting || !streamUrl.trim()}
-                  fullWidth
-                  startIcon={isConnecting ? <CircularProgress size={20} /> : <PlayArrow />}
-                >
-                  {isConnecting ? 'Connecting...' : 'Connect & Stream'}
-                </Button>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Button
+                    variant="contained"
+                    onClick={handleConnect}
+                    disabled={isConnecting || !streamUrl.trim()}
+                    fullWidth
+                    startIcon={isConnecting ? <CircularProgress size={20} /> : <PlayArrow />}
+                  >
+                    {isConnecting ? 'Connecting...' : 'Connect & Stream'}
+                  </Button>
+                  
+                  <Button
+                    variant="outlined"
+                    onClick={handleCloseModal}
+                    fullWidth
+                  >
+                    Close
+                  </Button>
+                </Box>
               </Box>
             ) : (
               /* Stream Controls & Stats */
               <Box>
-                <Typography variant="h6" gutterBottom>
-                  Stream Controls
-                </Typography>
+                
                 
                 <Box sx={{ mb: 2 }}>
-                  <Chip 
-                    label={isStreaming ? 'STREAMING' : 'CONNECTED'} 
-                    color={isStreaming ? 'success' : 'primary'} 
-                    icon={isStreaming ? <Videocam /> : <Settings />}
-                    sx={{ mb: 1 }}
-                  />
+                 
                 </Box>
                 
                 <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
@@ -415,14 +416,24 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
                   </Card>
                 )}
                 
-                <Button
-                  variant="outlined"
-                  color="error"
-                  onClick={handleDisconnect}
-                  fullWidth
-                >
-                  Disconnect
-                </Button>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    onClick={handleDisconnect}
+                    fullWidth
+                  >
+                    Disconnect
+                  </Button>
+                  
+                  <Button
+                    variant="outlined"
+                    onClick={handleCloseModal}
+                    fullWidth
+                  >
+                    Close
+                  </Button>
+                </Box>
               </Box>
             )}
           </Grid>
@@ -495,8 +506,8 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
                 }}>
                   <Box sx={{ textAlign: 'center', color: 'text.secondary' }}>
                     <Videocam sx={{ fontSize: 64, mb: 2, opacity: 0.5 }} />
-                    <Typography variant="h6">No Stream Connected</Typography>
-                    <Typography>Enter a stream URL to begin</Typography>
+                    <Typography variant="h6">Connecting to Stream...</Typography>
+                    <Typography>Please wait while we establish connection</Typography>
                   </Box>
                 </Box>
               )}
@@ -546,13 +557,6 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
             </Box>
           </Grid>
         </Grid>
-        
-        {/* Modal Controls */}
-        <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-          <Button onClick={handleCloseModal}>
-            Close
-          </Button>
-        </Box>
       </DialogContent>
     </Dialog>
   );
