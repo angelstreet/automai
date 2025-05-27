@@ -459,6 +459,140 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
             ]
         }
 
+    @staticmethod
+    def get_remote_config() -> Dict[str, Any]:
+        """Get the remote configuration including layout, buttons, and image."""
+        return {
+            'remote_info': {
+                'name': 'Android Mobile Remote',
+                'type': 'android_mobile',
+                'image_url': '/android-tv-remote.png',
+                'default_scale': 0.8,
+                'min_scale': 0.3,
+                'max_scale': 1.5,
+                # General scaling and offset parameters
+                'button_scale_factor': 1.5,  # General scaling factor for all button sizes
+                'global_offset': {
+                    'x': 0,  # Global X offset for all buttons
+                    'y': 0   # Global Y offset for all buttons
+                }
+            },
+            'button_layout': {
+                # Navigation buttons
+                'up': {
+                    'key': 'UP',
+                    'position': { 'x': 90, 'y': 120 },
+                    'size': { 'width': 25, 'height': 25 },
+                    'shape': 'circle',
+                    'comment': 'Up navigation'
+                },
+                'down': {
+                    'key': 'DOWN',
+                    'position': { 'x': 90, 'y': 180 },
+                    'size': { 'width': 25, 'height': 25 },
+                    'shape': 'circle',
+                    'comment': 'Down navigation'
+                },
+                'left': {
+                    'key': 'LEFT',
+                    'position': { 'x': 60, 'y': 150 },
+                    'size': { 'width': 25, 'height': 25 },
+                    'shape': 'circle',
+                    'comment': 'Left navigation'
+                },
+                'right': {
+                    'key': 'RIGHT',
+                    'position': { 'x': 120, 'y': 150 },
+                    'size': { 'width': 25, 'height': 25 },
+                    'shape': 'circle',
+                    'comment': 'Right navigation'
+                },
+                'select': {
+                    'key': 'SELECT',
+                    'position': { 'x': 90, 'y': 150 },
+                    'size': { 'width': 20, 'height': 20 },
+                    'shape': 'circle',
+                    'comment': 'Select/OK button'
+                },
+                
+                # System buttons
+                'back': {
+                    'key': 'BACK',
+                    'position': { 'x': 40, 'y': 220 },
+                    'size': { 'width': 30, 'height': 20 },
+                    'shape': 'rectangle',
+                    'comment': 'Back button'
+                },
+                'home': {
+                    'key': 'HOME',
+                    'position': { 'x': 90, 'y': 220 },
+                    'size': { 'width': 30, 'height': 20 },
+                    'shape': 'rectangle',
+                    'comment': 'Home button'
+                },
+                'menu': {
+                    'key': 'MENU',
+                    'position': { 'x': 140, 'y': 220 },
+                    'size': { 'width': 30, 'height': 20 },
+                    'shape': 'rectangle',
+                    'comment': 'Menu button'
+                },
+                
+                # Phone-specific buttons
+                'camera': {
+                    'key': 'CAMERA',
+                    'position': { 'x': 40, 'y': 260 },
+                    'size': { 'width': 25, 'height': 25 },
+                    'shape': 'circle',
+                    'comment': 'Camera button'
+                },
+                'call': {
+                    'key': 'CALL',
+                    'position': { 'x': 90, 'y': 260 },
+                    'size': { 'width': 25, 'height': 25 },
+                    'shape': 'circle',
+                    'comment': 'Call button'
+                },
+                'endcall': {
+                    'key': 'ENDCALL',
+                    'position': { 'x': 140, 'y': 260 },
+                    'size': { 'width': 25, 'height': 25 },
+                    'shape': 'circle',
+                    'comment': 'End call button'
+                },
+                
+                # Volume and power
+                'volume_down': {
+                    'key': 'VOLUME_DOWN',
+                    'position': { 'x': 30, 'y': 300 },
+                    'size': { 'width': 25, 'height': 20 },
+                    'shape': 'rectangle',
+                    'comment': 'Volume down'
+                },
+                'volume_mute': {
+                    'key': 'VOLUME_MUTE',
+                    'position': { 'x': 70, 'y': 300 },
+                    'size': { 'width': 25, 'height': 20 },
+                    'shape': 'rectangle',
+                    'comment': 'Volume mute'
+                },
+                'volume_up': {
+                    'key': 'VOLUME_UP',
+                    'position': { 'x': 110, 'y': 300 },
+                    'size': { 'width': 25, 'height': 20 },
+                    'shape': 'rectangle',
+                    'comment': 'Volume up'
+                },
+                'power': {
+                    'key': 'POWER',
+                    'position': { 'x': 150, 'y': 300 },
+                    'size': { 'width': 25, 'height': 20 },
+                    'shape': 'rectangle',
+                    'comment': 'Power button'
+                }
+            }
+        }
+
 
 # Backward compatibility alias
 RealAndroidMobileController = AndroidMobileRemoteController 

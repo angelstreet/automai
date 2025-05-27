@@ -92,6 +92,30 @@ interface BluetoothRemoteSession {
   device_name: string;
 }
 
+// Android Mobile Session interface
+interface AndroidMobileSession {
+  connected: boolean;
+  host_ip: string;
+  device_ip: string;
+}
+
+// UI Elements interfaces for Android Mobile
+interface AndroidElement {
+  id: number;
+  text: string;
+  contentDesc: string;
+  resourceId: string;
+  tag: string;
+  bounds: string;
+  clickable: boolean;
+  enabled: boolean;
+}
+
+interface AndroidApp {
+  packageName: string;
+  label: string;
+}
+
 // Remote configuration interfaces
 interface RemoteInfo {
   name: string;
@@ -136,6 +160,7 @@ const Controller: React.FC = () => {
   const [androidTVConfig, setAndroidTVConfig] = useState<RemoteConfig | null>(null);
   const [irRemoteConfig, setIrRemoteConfig] = useState<RemoteConfig | null>(null);
   const [bluetoothConfig, setBluetoothConfig] = useState<RemoteConfig | null>(null);
+  const [androidMobileConfig, setAndroidMobileConfig] = useState<RemoteConfig | null>(null);
 
   // Form state
   const [newController, setNewController] = useState({
@@ -205,12 +230,33 @@ const Controller: React.FC = () => {
   const [bluetoothConnectionLoading, setBluetoothConnectionLoading] = useState(false);
   const [bluetoothConnectionError, setBluetoothConnectionError] = useState<string | null>(null);
 
+  // Android Mobile Session State
+  const [androidMobileSession, setAndroidMobileSession] = useState<AndroidMobileSession>({
+    connected: false,
+    host_ip: '',
+    device_ip: ''
+  });
+
+  // Android Mobile Modal State
+  const [androidMobileModalOpen, setAndroidMobileModalOpen] = useState(false);
+
+  // Android Mobile UI Elements State
+  const [androidElements, setAndroidElements] = useState<AndroidElement[]>([]);
+  const [androidApps, setAndroidApps] = useState<AndroidApp[]>([]);
+
   // Load default values when modal opens
   useEffect(() => {
     if (androidTVModalOpen) {
       fetchDefaultValues();
     }
   }, [androidTVModalOpen]);
+
+  // Load default values when Android Mobile modal opens
+  useEffect(() => {
+    if (androidMobileModalOpen) {
+      fetchAndroidMobileDefaultValues();
+    }
+  }, [androidMobileModalOpen]);
 
   const fetchDefaultValues = async () => {
     try {
@@ -225,6 +271,22 @@ const Controller: React.FC = () => {
       }
     } catch (error) {
       console.log('Could not load default values:', error);
+    }
+  };
+
+  const fetchAndroidMobileDefaultValues = async () => {
+    try {
+      const response = await fetch('http://localhost:5009/api/virtualpytest/android-mobile/defaults');
+      const result = await response.json();
+      
+      if (result.success && result.defaults) {
+        setConnectionForm(prev => ({
+          ...prev,
+          ...result.defaults
+        }));
+      }
+    } catch (error) {
+      console.log('Could not load Android Mobile default values:', error);
     }
   };
 
@@ -264,10 +326,23 @@ const Controller: React.FC = () => {
       
       if (result.success && result.config) {
         setBluetoothConfig(result.config);
-        setRemoteScale(result.config.remote_info.default_scale);
       }
     } catch (error) {
       console.log('Could not load Bluetooth config:', error);
+    }
+  };
+
+  const fetchAndroidMobileConfig = async () => {
+    try {
+      const response = await fetch('http://localhost:5009/api/virtualpytest/android-mobile/config');
+      const result = await response.json();
+      
+      if (result.success && result.config) {
+        setAndroidMobileConfig(result.config);
+        setRemoteScale(result.config.remote_info.default_scale);
+      }
+    } catch (error) {
+      console.log('Could not load Android Mobile config:', error);
     }
   };
 
@@ -405,6 +480,9 @@ const Controller: React.FC = () => {
     if (category === 'remote' && controller.id === 'real_android_tv') {
       setAndroidTVModalOpen(true);
       fetchAndroidTVConfig();
+    } else if (category === 'remote' && controller.id === 'real_android_mobile') {
+      setAndroidMobileModalOpen(true);
+      fetchAndroidMobileConfig();
     } else if (category === 'remote' && controller.id === 'ir_remote') {
       setIrRemoteModalOpen(true);
       fetchIrRemoteConfig();
@@ -682,6 +760,156 @@ const Controller: React.FC = () => {
       device_name: 'TV Remote',
       pairing_pin: '0000'
     });
+  };
+
+  // Android Mobile Handlers
+  const handleAndroidMobileConnect = async () => {
+    setConnectionLoading(true);
+    setConnectionError(null);
+
+    try {
+      const response = await fetch('http://localhost:5009/api/virtualpytest/android-mobile/take-control', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(connectionForm),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setAndroidMobileSession({
+          connected: true,
+          host_ip: connectionForm.host_ip,
+          device_ip: connectionForm.device_ip
+        });
+      } else {
+        setConnectionError(result.error || 'Failed to connect');
+      }
+    } catch (err: any) {
+      setConnectionError(err.message || 'Connection failed');
+    } finally {
+      setConnectionLoading(false);
+    }
+  };
+
+  const handleAndroidMobileDisconnect = async () => {
+    setConnectionLoading(true);
+
+    try {
+      await fetch('http://localhost:5009/api/virtualpytest/android-mobile/release-control', {
+        method: 'POST',
+      });
+      
+      setAndroidMobileSession({
+        connected: false,
+        host_ip: '',
+        device_ip: ''
+      });
+      setConnectionError(null);
+      setAndroidElements([]);
+      setAndroidApps([]);
+    } catch (err: any) {
+      setAndroidMobileSession({
+        connected: false,
+        host_ip: '',
+        device_ip: ''
+      });
+    } finally {
+      setConnectionLoading(false);
+    }
+  };
+
+  const handleAndroidMobileCommand = async (command: string, params: any = {}) => {
+    try {
+      const response = await fetch('http://localhost:5009/api/virtualpytest/android-mobile/command', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ command, params }),
+      });
+
+      const result = await response.json();
+      if (!result.success) {
+        console.error('Android Mobile command failed:', result.error);
+      }
+    } catch (err: any) {
+      console.error('Android Mobile command error:', err);
+    }
+  };
+
+  const handleAndroidMobileDumpUI = async () => {
+    try {
+      const response = await fetch('http://localhost:5009/api/virtualpytest/android-mobile/dump-ui', {
+        method: 'POST',
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setAndroidElements(result.elements);
+        console.log(`Dumped ${result.totalCount} UI elements`);
+      } else {
+        console.error('UI dump failed:', result.error);
+      }
+    } catch (err: any) {
+      console.error('UI dump error:', err);
+    }
+  };
+
+  const handleAndroidMobileClickElement = async (element: AndroidElement) => {
+    try {
+      const response = await fetch('http://localhost:5009/api/virtualpytest/android-mobile/click-element', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ element }),
+      });
+
+      const result = await response.json();
+      if (!result.success) {
+        console.error('Element click failed:', result.error);
+      }
+    } catch (err: any) {
+      console.error('Element click error:', err);
+    }
+  };
+
+  const handleAndroidMobileGetApps = async () => {
+    try {
+      const response = await fetch('http://localhost:5009/api/virtualpytest/android-mobile/get-apps', {
+        method: 'POST',
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setAndroidApps(result.apps);
+        console.log(`Found ${result.apps.length} installed apps`);
+      } else {
+        console.error('Get apps failed:', result.error);
+      }
+    } catch (err: any) {
+      console.error('Get apps error:', err);
+    }
+  };
+
+  const handleCloseAndroidMobileModal = () => {
+    if (androidMobileSession.connected) {
+      handleAndroidMobileDisconnect();
+    }
+    setAndroidMobileModalOpen(false);
+    setConnectionForm({
+      host_ip: '',
+      host_username: '',
+      host_password: '',
+      host_port: '22',
+      device_ip: '',
+      device_port: '5555'
+    });
+    setAndroidElements([]);
+    setAndroidApps([]);
   };
 
   // Helper function to render a button from configuration
@@ -1171,7 +1399,8 @@ const Controller: React.FC = () => {
                 transform: `scale(${remoteScale})`,
                 transformOrigin: 'center top',
                 display: 'inline-block',
-                overflow: 'visible'
+                overflow: 'visible',
+                marginRight: 3
               }}>
                 {/* Actual remote image */}
                 <img 
@@ -1196,7 +1425,6 @@ const Controller: React.FC = () => {
                 {Object.entries(androidTVConfig?.button_layout || {}).map(([buttonId, config]) => 
                   renderRemoteButton(buttonId, config, handleRemoteCommand, androidTVConfig, 1)
                 )}
-
               </Box>
             </Box>
           )}
@@ -1570,6 +1798,371 @@ const Controller: React.FC = () => {
               disabled={bluetoothConnectionLoading}
             >
               {bluetoothConnectionLoading ? <CircularProgress size={20} /> : 'Disconnect'}
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
+
+      {/* Android Mobile Modal */}
+      <Dialog 
+        open={androidMobileModalOpen} 
+        onClose={handleCloseAndroidMobileModal}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ minHeight: 40 }}>
+            {/* Left side: Title and status */}
+            <Box display="flex" alignItems="center" gap={1}>
+              <Typography variant="h6" component="span">
+                Android Mobile Remote
+              </Typography>
+              {androidMobileSession.connected && (
+                <Chip 
+                  label="Connected" 
+                  color="success" 
+                  size="small"
+                />
+              )}
+            </Box>
+            
+            {/* Right side: Controls */}
+            {androidMobileSession.connected && (
+              <Box display="flex" alignItems="center" gap={1}>
+                {/* Show Overlays button */}
+                <Button
+                  variant={showOverlays ? "contained" : "outlined"}
+                  size="small"
+                  onClick={() => setShowOverlays(!showOverlays)}
+                  sx={{ minWidth: 'auto', px: 1 }}
+                >
+                  {showOverlays ? 'Hide Overlays' : 'Show Overlays'}
+                </Button>
+                
+                {/* Scale controls */}
+                <Box display="flex" alignItems="center" gap={0.5}>
+                  <Typography variant="caption" sx={{ fontSize: '0.75rem' }}>
+                    Scale:
+                  </Typography>
+                  <Button
+                    size="small"
+                    onClick={() => setRemoteScale(prev => Math.max(androidMobileConfig?.remote_info.min_scale || 0.5, prev - 0.1))}
+                    disabled={remoteScale <= (androidMobileConfig?.remote_info.min_scale || 0.5)}
+                    sx={{ minWidth: 24, width: 24, height: 24, p: 0 }}
+                  >
+                    -
+                  </Button>
+                  <Typography variant="caption" sx={{ minWidth: 35, textAlign: 'center', fontSize: '0.75rem' }}>
+                    {Math.round(remoteScale * 100)}%
+                  </Typography>
+                  <Button
+                    size="small"
+                    onClick={() => setRemoteScale(prev => Math.min(androidMobileConfig?.remote_info.max_scale || 2.0, prev + 0.1))}
+                    disabled={remoteScale >= (androidMobileConfig?.remote_info.max_scale || 2.0)}
+                    sx={{ minWidth: 24, width: 24, height: 24, p: 0 }}
+                  >
+                    +
+                  </Button>
+                </Box>
+              </Box>
+            )}
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ pb: 2, overflow: 'hidden', maxHeight: 'none' }}>
+          {!androidMobileSession.connected ? (
+            <Box sx={{ pt: 2 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Enter SSH and ADB connection details to take control of the Android Mobile device.
+              </Typography>
+              
+              {connectionError && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {connectionError}
+                </Alert>
+              )}
+
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="SSH Host IP"
+                    value={connectionForm.host_ip}
+                    onChange={(e) => setConnectionForm(prev => ({ ...prev, host_ip: e.target.value }))}
+                    placeholder="192.168.1.100"
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="SSH Port"
+                    value={connectionForm.host_port}
+                    onChange={(e) => setConnectionForm(prev => ({ ...prev, host_port: e.target.value }))}
+                    placeholder="22"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="SSH Username"
+                    value={connectionForm.host_username}
+                    onChange={(e) => setConnectionForm(prev => ({ ...prev, host_username: e.target.value }))}
+                    placeholder="root"
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="SSH Password"
+                    type="password"
+                    value={connectionForm.host_password}
+                    onChange={(e) => setConnectionForm(prev => ({ ...prev, host_password: e.target.value }))}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Android Device IP"
+                    value={connectionForm.device_ip}
+                    onChange={(e) => setConnectionForm(prev => ({ ...prev, device_ip: e.target.value }))}
+                    placeholder="192.168.1.101"
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="ADB Port"
+                    value={connectionForm.device_port}
+                    onChange={(e) => setConnectionForm(prev => ({ ...prev, device_port: e.target.value }))}
+                    placeholder="5555"
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+          ) : (
+            <Box sx={{ pt: 2, display: 'flex', justifyContent: 'space-between', overflow: 'hidden' }}>
+              {/* Left side: Android Mobile Remote Interface */}
+              <Box sx={{ 
+                position: 'relative',
+                transform: `scale(${remoteScale})`,
+                transformOrigin: 'center top',
+                display: 'inline-block',
+                overflow: 'visible',
+                marginRight: 3
+              }}>
+                {/* Actual remote image */}
+                <img 
+                  src={androidMobileConfig?.remote_info.image_url || "/android-mobile-remote.png"}
+                  alt={androidMobileConfig?.remote_info.name || "Android Mobile Remote"}
+                  style={{
+                    display: 'block',
+                    maxWidth: '100%',
+                    height: 'auto',
+                    borderRadius: '6px',
+                    boxShadow: '0 8px 16px rgba(0,0,0,0.3)'
+                  }}
+                  onError={(e) => {
+                    // Fallback if image doesn't load
+                    e.currentTarget.style.width = '140px';
+                    e.currentTarget.style.height = '360px';
+                    e.currentTarget.style.backgroundColor = '#2a2a2a';
+                  }}
+                />
+                
+                {/* Button overlays positioned absolutely over the image */}
+                {Object.entries(androidMobileConfig?.button_layout || {}).map(([buttonId, config]) => 
+                  renderRemoteButton(buttonId, config, handleAndroidMobileCommand, androidMobileConfig, 1)
+                )}
+              </Box>
+
+              {/* Right side: Mobile Features */}
+              <Box sx={{ flex: 1, minWidth: 300 }}>
+                {/* App Launcher Section */}
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="h6" sx={{ mb: 2, fontSize: '1rem' }}>
+                    📱 App Launcher {androidApps.length > 0 && `(${androidApps.length})`}
+                  </Typography>
+                  <Box sx={{ mb: 2 }}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Select an app...</InputLabel>
+                      <Select
+                        value=""
+                        label="Select an app..."
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            handleAndroidMobileCommand('LAUNCH_APP', { package: e.target.value });
+                          }
+                        }}
+                      >
+                        {androidApps.map((app) => (
+                          <MenuItem key={app.packageName} value={app.packageName}>
+                            {app.label}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Box>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={handleAndroidMobileGetApps}
+                    fullWidth
+                  >
+                    Refresh Apps
+                  </Button>
+                </Box>
+
+                {/* UI Elements Section */}
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="h6" sx={{ mb: 2, fontSize: '1rem' }}>
+                    🔍 UI Elements {androidElements.length > 0 && `(${androidElements.length})`}
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                    <Button
+                      variant="contained"
+                      size="small"
+                      onClick={handleAndroidMobileDumpUI}
+                      sx={{ flex: 1 }}
+                    >
+                      Dump UI
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => setAndroidElements([])}
+                      disabled={androidElements.length === 0}
+                      sx={{ flex: 1 }}
+                    >
+                      Clear
+                    </Button>
+                  </Box>
+                  
+                  {/* Element Selection and Click */}
+                  {androidElements.length > 0 && (
+                    <Box>
+                      <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+                        <InputLabel>Select element to click...</InputLabel>
+                        <Select
+                          value=""
+                          label="Select element to click..."
+                          onChange={(e) => {
+                            const elementId = parseInt(e.target.value as string);
+                            const element = androidElements.find(el => el.id === elementId);
+                            if (element) {
+                              handleAndroidMobileClickElement(element);
+                            }
+                          }}
+                        >
+                          {androidElements.map((element) => {
+                            // Get the most meaningful identifier for display
+                            const getElementDisplayName = (el: AndroidElement) => {
+                              if (el.contentDesc && el.contentDesc !== '<no content-desc>') {
+                                return `${el.contentDesc}`;
+                              }
+                              if (el.text && el.text !== '<no text>') {
+                                return `"${el.text}"`;
+                              }
+                              if (el.resourceId && el.resourceId !== '<no resource-id>') {
+                                return `ID: ${el.resourceId}`;
+                              }
+                              return `${el.tag}`;
+                            };
+
+                            return (
+                              <MenuItem key={element.id} value={element.id}>
+                                #{element.id}: {getElementDisplayName(element)}
+                              </MenuItem>
+                            );
+                          })}
+                        </Select>
+                      </FormControl>
+                    </Box>
+                  )}
+                </Box>
+
+                {/* Canvas Overlay Section */}
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="h6" sx={{ mb: 2, fontSize: '1rem' }}>
+                    🎯 Screen Overlay
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Use "Dump UI" to capture screen elements, then adjust scale and offset to align overlay with device screen.
+                  </Typography>
+                  
+                  {/* Overlay Controls */}
+                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, mb: 2 }}>
+                    <TextField
+                      label="Scale"
+                      type="number"
+                      size="small"
+                      value={1.0}
+                      inputProps={{ step: 0.1, min: 0.1, max: 3.0 }}
+                      onChange={(e) => {
+                        // Handle overlay scale change
+                        console.log('Overlay scale:', e.target.value);
+                      }}
+                    />
+                    <TextField
+                      label="Offset X"
+                      type="number"
+                      size="small"
+                      value={0}
+                      inputProps={{ step: 1 }}
+                      onChange={(e) => {
+                        // Handle overlay offset X change
+                        console.log('Overlay offset X:', e.target.value);
+                      }}
+                    />
+                    <TextField
+                      label="Offset Y"
+                      type="number"
+                      size="small"
+                      value={0}
+                      inputProps={{ step: 1 }}
+                      onChange={(e) => {
+                        // Handle overlay offset Y change
+                        console.log('Overlay offset Y:', e.target.value);
+                      }}
+                    />
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => {
+                        // Toggle overlay visibility
+                        console.log('Toggle overlay visibility');
+                      }}
+                    >
+                      Show Overlay
+                    </Button>
+                  </Box>
+                </Box>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseAndroidMobileModal}>
+            Close
+          </Button>
+          {!androidMobileSession.connected ? (
+            <Button 
+              variant="contained" 
+              onClick={handleAndroidMobileConnect}
+              disabled={connectionLoading || !connectionForm.host_ip || !connectionForm.host_username || !connectionForm.host_password || !connectionForm.device_ip}
+            >
+              {connectionLoading ? <CircularProgress size={20} /> : 'Take Control'}
+            </Button>
+          ) : (
+            <Button 
+              variant="contained" 
+              color="error"
+              onClick={handleAndroidMobileDisconnect}
+              disabled={connectionLoading}
+            >
+              {connectionLoading ? <CircularProgress size={20} /> : 'Release Control'}
             </Button>
           )}
         </DialogActions>

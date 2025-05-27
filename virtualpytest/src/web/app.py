@@ -465,10 +465,10 @@ def get_controller_types():
         # Add metadata for each controller type
         controller_metadata = {
             'remote': {
-                'mock': {'name': 'Mock Remote', 'description': 'Simulated remote for testing', 'status': 'available'},
+                'mock': {'name': 'Mock Remote', 'description': 'Mock remote controller for testing', 'status': 'available'},
                 'real_android_tv': {'name': 'Android TV (SSH+ADB)', 'description': 'Real Android TV via SSH+ADB connection', 'status': 'available'},
-                'real_android_mobile': {'name': 'Android Mobile (SSH+ADB)', 'description': 'Real Android mobile via SSH+ADB with UI automation', 'status': 'available'},
-                'ir_remote': {'name': 'IR Remote', 'description': 'Infrared remote with classic TV/STB buttons', 'status': 'available'},
+                'real_android_mobile': {'name': 'Android Mobile (SSH+ADB)', 'description': 'Real Android Mobile via SSH+ADB connection', 'status': 'available'},
+                'ir_remote': {'name': 'IR Remote', 'description': 'Infrared remote control with classic TV/STB buttons', 'status': 'available'},
                 'bluetooth_remote': {'name': 'Bluetooth Remote', 'description': 'Bluetooth HID remote control', 'status': 'available'},
             },
             'av': {
@@ -1322,6 +1322,291 @@ def get_bluetooth_remote_config():
         return jsonify({
             'success': False,
             'error': f'Failed to get config: {str(e)}'
+        }), 500
+
+# ==================== Android Mobile Remote Control Endpoints ====================
+
+@app.route('/api/virtualpytest/android-mobile/config', methods=['GET'])
+def get_android_mobile_config():
+    """Get Android Mobile remote configuration including layout, buttons, and image."""
+    try:
+        # Import the controller and get its configuration
+        from controllers.remote.android_mobile import AndroidMobileRemoteController
+        
+        config = AndroidMobileRemoteController.get_remote_config()
+        
+        return jsonify({
+            'success': True,
+            'config': config
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Failed to get config: {str(e)}'
+        }), 500
+
+@app.route('/api/virtualpytest/android-mobile/defaults', methods=['GET'])
+def get_android_mobile_defaults():
+    """Get default connection values for Android Mobile from environment variables."""
+    try:
+        defaults = {
+            'host_ip': os.getenv('HOST_IP', ''),
+            'host_username': os.getenv('HOST_USERNAME', ''),
+            'host_password': os.getenv('HOST_PASSWORD', ''),
+            'host_port': os.getenv('HOST_PORT', '22'),
+            'device_ip': os.getenv('DEVICE_IP', ''),
+            'device_port': os.getenv('DEVICE_PORT', '5555')
+        }
+        
+        return jsonify({
+            'success': True,
+            'defaults': defaults
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Failed to get defaults: {str(e)}'
+        }), 500
+
+@app.route('/api/virtualpytest/android-mobile/take-control', methods=['POST'])
+def android_mobile_take_control():
+    """Take control of Android Mobile device via SSH+ADB."""
+    try:
+        data = request.get_json()
+        
+        # Import the controller
+        from controllers.remote.android_mobile import AndroidMobileRemoteController
+        
+        # Create controller instance with connection parameters
+        controller = AndroidMobileRemoteController(
+            device_name="Android Mobile Device",
+            host_ip=data.get('host_ip'),
+            host_username=data.get('host_username'),
+            host_password=data.get('host_password'),
+            host_port=int(data.get('host_port', 22)),
+            device_ip=data.get('device_ip'),
+            adb_port=int(data.get('device_port', 5555))
+        )
+        
+        # Attempt connection
+        if controller.connect():
+            # Store controller globally for subsequent commands
+            global android_mobile_controller
+            android_mobile_controller = controller
+            
+            return jsonify({
+                'success': True,
+                'message': f'Successfully connected to Android Mobile device {data.get("device_ip")}'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to connect to Android Mobile device'
+            }), 400
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Connection error: {str(e)}'
+        }), 500
+
+@app.route('/api/virtualpytest/android-mobile/release-control', methods=['POST'])
+def android_mobile_release_control():
+    """Release control of Android Mobile device."""
+    try:
+        global android_mobile_controller
+        
+        if 'android_mobile_controller' in globals() and android_mobile_controller:
+            android_mobile_controller.disconnect()
+            android_mobile_controller = None
+            
+        return jsonify({
+            'success': True,
+            'message': 'Android Mobile control released'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Release error: {str(e)}'
+        }), 500
+
+@app.route('/api/virtualpytest/android-mobile/command', methods=['POST'])
+def android_mobile_command():
+    """Send command to Android Mobile device."""
+    try:
+        global android_mobile_controller
+        
+        if 'android_mobile_controller' not in globals() or not android_mobile_controller:
+            return jsonify({
+                'success': False,
+                'error': 'No active Android Mobile connection'
+            }), 400
+            
+        data = request.get_json()
+        command = data.get('command')
+        params = data.get('params', {})
+        
+        success = False
+        
+        if command in ['UP', 'DOWN', 'LEFT', 'RIGHT', 'SELECT', 'BACK', 'HOME', 'MENU', 
+                      'VOLUME_UP', 'VOLUME_DOWN', 'VOLUME_MUTE', 'POWER', 'CAMERA', 'CALL', 'ENDCALL']:
+            success = android_mobile_controller.press_key(command)
+        elif command == 'INPUT_TEXT':
+            text = params.get('text', '')
+            success = android_mobile_controller.input_text(text)
+        elif command == 'LAUNCH_APP':
+            package = params.get('package', '')
+            success = android_mobile_controller.launch_app(package)
+        else:
+            return jsonify({
+                'success': False,
+                'error': f'Unknown command: {command}'
+            }), 400
+            
+        return jsonify({
+            'success': success,
+            'message': f'Command {command} {"executed" if success else "failed"}'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Command error: {str(e)}'
+        }), 500
+
+@app.route('/api/virtualpytest/android-mobile/dump-ui', methods=['POST'])
+def android_mobile_dump_ui():
+    """Dump UI elements from Android Mobile device."""
+    try:
+        global android_mobile_controller
+        
+        if 'android_mobile_controller' not in globals() or not android_mobile_controller:
+            return jsonify({
+                'success': False,
+                'error': 'No active Android Mobile connection'
+            }), 400
+            
+        success, elements, error = android_mobile_controller.dump_ui_elements()
+        
+        if success:
+            # Get device resolution
+            resolution = android_mobile_controller.get_device_resolution()
+            
+            # Convert elements to JSON-serializable format
+            elements_data = []
+            for element in elements:
+                elements_data.append({
+                    'id': element.id,
+                    'text': element.text,
+                    'contentDesc': element.content_desc,
+                    'resourceId': element.resource_id,
+                    'tag': element.tag,
+                    'bounds': element.bounds,
+                    'clickable': element.clickable,
+                    'enabled': element.enabled
+                })
+            
+            return jsonify({
+                'success': True,
+                'elements': elements_data,
+                'totalCount': len(elements_data),
+                'deviceResolution': resolution
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': error
+            }), 400
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'UI dump error: {str(e)}'
+        }), 500
+
+@app.route('/api/virtualpytest/android-mobile/click-element', methods=['POST'])
+def android_mobile_click_element():
+    """Click on a UI element on Android Mobile device."""
+    try:
+        global android_mobile_controller
+        
+        if 'android_mobile_controller' not in globals() or not android_mobile_controller:
+            return jsonify({
+                'success': False,
+                'error': 'No active Android Mobile connection'
+            }), 400
+            
+        data = request.get_json()
+        element_data = data.get('element')
+        
+        if not element_data:
+            return jsonify({
+                'success': False,
+                'error': 'No element data provided'
+            }), 400
+            
+        # Import AndroidElement class
+        from controllers.lib.adbUtils import AndroidElement
+        
+        # Create AndroidElement from data
+        element = AndroidElement(
+            id=element_data.get('id'),
+            text=element_data.get('text', ''),
+            content_desc=element_data.get('contentDesc', ''),
+            resource_id=element_data.get('resourceId', ''),
+            tag=element_data.get('tag', ''),
+            bounds=element_data.get('bounds', ''),
+            clickable=element_data.get('clickable', False),
+            enabled=element_data.get('enabled', False)
+        )
+        
+        success = android_mobile_controller.click_element(element)
+        
+        return jsonify({
+            'success': success,
+            'message': f'Element click {"successful" if success else "failed"}'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Element click error: {str(e)}'
+        }), 500
+
+@app.route('/api/virtualpytest/android-mobile/get-apps', methods=['POST'])
+def android_mobile_get_apps():
+    """Get installed apps from Android Mobile device."""
+    try:
+        global android_mobile_controller
+        
+        if 'android_mobile_controller' not in globals() or not android_mobile_controller:
+            return jsonify({
+                'success': False,
+                'error': 'No active Android Mobile connection'
+            }), 400
+            
+        apps = android_mobile_controller.get_installed_apps()
+        
+        # Convert apps to JSON-serializable format
+        apps_data = []
+        for app in apps:
+            apps_data.append({
+                'packageName': app.package_name,
+                'label': app.label
+            })
+        
+        return jsonify({
+            'success': True,
+            'apps': apps_data
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Get apps error: {str(e)}'
         }), 500
 
 if __name__ == '__main__':

@@ -34,7 +34,7 @@ CONTROLLER_REGISTRY = {
     'remote': {
         'mock': MockRemoteController,
         'real_android_tv': AndroidTVRemoteController,  # Real SSH+ADB-based Android TV controller
-        'real_android_mobile': AndroidMobileRemoteController,  # Real SSH+ADB-based Android mobile controller
+        'real_android_mobile': AndroidMobileRemoteController,  # Real SSH+ADB-based Android Mobile controller
         'ir_remote': IRRemoteController,     # IR remote with classic TV/STB buttons
         'bluetooth_remote': BluetoothRemoteController,  # Bluetooth HID remote
     },
