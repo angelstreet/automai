@@ -142,10 +142,13 @@ export function useAndroidMobileConnection() {
         setAndroidElements(result.elements);
         console.log(`Dumped ${result.totalCount} UI elements`);
       } else {
-        console.error('UI dump failed:', result.error);
+        const errorMessage = result.error || 'UI dump failed';
+        console.error('UI dump failed:', errorMessage);
+        throw new Error(errorMessage);
       }
     } catch (err: any) {
       console.error('UI dump error:', err);
+      throw err; // Re-throw the error so the modal can catch it
     }
   }, []);
 
@@ -161,10 +164,13 @@ export function useAndroidMobileConnection() {
 
       const result = await response.json();
       if (!result.success) {
-        console.error('Element click failed:', result.error);
+        const errorMessage = result.error || 'Element click failed';
+        console.error('Element click failed:', errorMessage);
+        throw new Error(errorMessage);
       }
     } catch (err: any) {
       console.error('Element click error:', err);
+      throw err; // Re-throw the error so the modal can catch it
     }
   }, []);
 
@@ -179,10 +185,13 @@ export function useAndroidMobileConnection() {
         setAndroidApps(result.apps);
         console.log(`Found ${result.apps.length} installed apps`);
       } else {
-        console.error('Get apps failed:', result.error);
+        const errorMessage = result.error || 'Get apps failed';
+        console.error('Get apps failed:', errorMessage);
+        throw new Error(errorMessage);
       }
     } catch (err: any) {
       console.error('Get apps error:', err);
+      throw err; // Re-throw the error so the modal can catch it
     }
   }, []);
 
@@ -197,10 +206,13 @@ export function useAndroidMobileConnection() {
         setAndroidScreenshot(result.screenshot);
         console.log('Screenshot captured successfully');
       } else {
-        console.error('Screenshot failed:', result.error);
+        const errorMessage = result.error || 'Screenshot failed';
+        console.error('Screenshot failed:', errorMessage);
+        throw new Error(errorMessage);
       }
     } catch (err: any) {
       console.error('Screenshot error:', err);
+      throw err; // Re-throw the error so the modal can catch it
     }
   }, []);
 

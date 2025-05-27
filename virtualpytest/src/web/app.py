@@ -1553,14 +1553,15 @@ def android_mobile_click_element():
         
         # Create AndroidElement from data
         element = AndroidElement(
-            id=element_data.get('id'),
-            text=element_data.get('text', ''),
-            content_desc=element_data.get('contentDesc', ''),
-            resource_id=element_data.get('resourceId', ''),
+            element_id=element_data.get('id'),
             tag=element_data.get('tag', ''),
+            text=element_data.get('text', ''),
+            resource_id=element_data.get('resourceId', ''),
+            content_desc=element_data.get('contentDesc', ''),
+            class_name=element_data.get('className', ''),
             bounds=element_data.get('bounds', ''),
             clickable=element_data.get('clickable', False),
-            enabled=element_data.get('enabled', False)
+            enabled=element_data.get('enabled', True)
         )
         
         success = android_mobile_controller.click_element(element)

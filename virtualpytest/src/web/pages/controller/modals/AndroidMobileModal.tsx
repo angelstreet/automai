@@ -97,8 +97,14 @@ export const AndroidMobileModal: React.FC<AndroidMobileModalProps> = ({ open, on
     try {
       await handleDumpUI();
       console.log('UI dump completed, elements found:', androidElements.length);
+      
+      // Check if no elements were found after a successful dump
+      if (androidElements.length === 0) {
+        setDumpError('No UI elements found on the current screen. The screen might be empty or the app might not be responding.');
+      }
     } catch (error: any) {
-      setDumpError(error.message || 'Failed to dump UI');
+      const errorMessage = error.message || 'Failed to dump UI';
+      setDumpError(errorMessage);
       console.error('UI dump failed:', error);
     } finally {
       setIsDumpingUI(false);
