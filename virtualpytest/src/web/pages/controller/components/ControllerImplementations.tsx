@@ -31,6 +31,7 @@ import { AndroidTVModal } from '../modals/AndroidTVModal';
 import { AndroidMobileModal } from '../modals/AndroidMobileModal';
 import { IRRemoteModal } from '../modals/IRRemoteModal';
 import { BluetoothRemoteModal } from '../modals/BluetoothRemoteModal';
+import { HDMIStreamModal } from '../modals/HDMIStreamModal';
 
 interface ControllerImplementationsProps {
   controllerTypes: ControllerTypes | null;
@@ -44,6 +45,7 @@ export const ControllerImplementations: React.FC<ControllerImplementationsProps>
   const [androidMobileModalOpen, setAndroidMobileModalOpen] = useState(false);
   const [irRemoteModalOpen, setIrRemoteModalOpen] = useState(false);
   const [bluetoothModalOpen, setBluetoothModalOpen] = useState(false);
+  const [hdmiStreamModalOpen, setHdmiStreamModalOpen] = useState(false);
 
   const getControllerIcon = (type: string) => {
     switch (type) {
@@ -73,6 +75,8 @@ export const ControllerImplementations: React.FC<ControllerImplementationsProps>
       setIrRemoteModalOpen(true);
     } else if (category === 'remote' && controller.id === 'bluetooth_remote') {
       setBluetoothModalOpen(true);
+    } else if (category === 'av' && controller.id === 'hdmi_stream') {
+      setHdmiStreamModalOpen(true);
     }
   };
 
@@ -157,6 +161,10 @@ export const ControllerImplementations: React.FC<ControllerImplementationsProps>
       <BluetoothRemoteModal 
         open={bluetoothModalOpen} 
         onClose={() => setBluetoothModalOpen(false)} 
+      />
+      <HDMIStreamModal 
+        open={hdmiStreamModalOpen} 
+        onClose={() => setHdmiStreamModalOpen(false)} 
       />
     </>
   );

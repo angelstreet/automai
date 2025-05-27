@@ -6,10 +6,13 @@ Each controller provides AV functionality for different capture sources and meth
 
 Available Controllers:
 - MockAVController: Mock implementation for testing
+- HDMIStreamController: HDMI stream URL controller for video streaming
 """
 
 from .mock import MockAVController
+from .hdmi_stream import HDMIStreamController
 
 __all__ = [
-    'MockAVController'
+    'MockAVController',
+    'HDMIStreamController'
 ]

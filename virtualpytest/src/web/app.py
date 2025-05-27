@@ -474,6 +474,7 @@ def get_controller_types():
             'av': {
                 'mock': {'name': 'Mock AV', 'description': 'Simulated audio/video capture', 'status': 'available'},
                 'hdmi': {'name': 'HDMI Capture', 'description': 'HDMI video capture device', 'status': 'placeholder'},
+                'hdmi_stream': {'name': 'HDMI Stream', 'description': 'HDMI stream URL viewer and controller', 'status': 'available'},
                 'adb': {'name': 'ADB Capture', 'description': 'Android Debug Bridge capture', 'status': 'placeholder'},
                 'camera': {'name': 'Camera Capture', 'description': 'USB/IP camera capture', 'status': 'placeholder'},
             },
@@ -1641,35 +1642,224 @@ def android_mobile_get_apps():
 
 @app.route('/api/virtualpytest/android-mobile/screenshot', methods=['POST'])
 def android_mobile_screenshot():
-    """Take a screenshot of the Android Mobile device."""
+    """Take a screenshot of the Android mobile device"""
+    if not controllers_available:
+        return jsonify({'error': 'VirtualPyTest controllers not available'}), 503
+    
     try:
-        global android_mobile_controller
+        # Get the controller instance
+        controller = ControllerFactory.create_remote_controller(
+            device_type="real_android_mobile",
+            device_name="Android Mobile"
+        )
         
-        if 'android_mobile_controller' not in globals() or not android_mobile_controller:
-            return jsonify({
-                'success': False,
-                'error': 'No active Android Mobile connection'
-            }), 400
+        # Take screenshot
+        screenshot_result = controller.take_screenshot()
+        
+        return jsonify({
+            'success': True,
+            'screenshot': screenshot_result
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# =====================================================
+# HDMI STREAM CONTROLLER ENDPOINTS
+# =====================================================
+
+@app.route('/api/virtualpytest/hdmi-stream/config', methods=['GET'])
+def get_hdmi_stream_config():
+    """Get HDMI Stream controller configuration"""
+    if not controllers_available:
+        return jsonify({'error': 'VirtualPyTest controllers not available'}), 503
+    
+    try:
+        # Get the controller class to retrieve configuration
+        from controllers.audiovideo.hdmi_stream import HDMIStreamController
+        
+        # Return configuration options
+        config = {
+            'supported_protocols': ['HLS', 'RTSP', 'HTTP', 'HTTPS'],
+            'supported_resolutions': [
+                '1920x1080', '1280x720', '854x480', '640x360'
+            ],
+            'supported_fps': [15, 24, 25, 30, 50, 60],
+            'default_resolution': '1920x1080',
+            'default_fps': 30,
+            'example_urls': [
+                'https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8',
+                'https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8',
+                'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'
+            ]
+        }
+        
+        return jsonify(config)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/virtualpytest/hdmi-stream/connect', methods=['POST'])
+def connect_hdmi_stream():
+    """Connect to HDMI stream"""
+    if not controllers_available:
+        return jsonify({'error': 'VirtualPyTest controllers not available'}), 503
+    
+    try:
+        data = request.json
+        stream_url = data.get('stream_url', '')
+        resolution = data.get('resolution', '1920x1080')
+        fps = data.get('fps', 30)
+        
+        if not stream_url:
+            return jsonify({'error': 'Stream URL is required'}), 400
+        
+        # Create controller instance
+        controller = ControllerFactory.create_av_controller(
+            capture_type="hdmi_stream",
+            device_name="HDMI Stream",
+            stream_url=stream_url
+        )
+        
+        # Connect to stream
+        connection_result = controller.connect()
+        
+        if connection_result:
+            # Start video capture
+            capture_result = controller.start_video_capture(resolution, fps)
             
-        success, screenshot_data, error = android_mobile_controller.take_screenshot()
-        
-        if success:
-            return jsonify({
-                'success': True,
-                'screenshot': screenshot_data,  # Base64 encoded image
-                'format': 'png'
-            })
+            if capture_result:
+                status = controller.get_status()
+                return jsonify({
+                    'success': True,
+                    'connected': True,
+                    'streaming': True,
+                    'status': status
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'Failed to start video capture'
+                }), 500
         else:
             return jsonify({
                 'success': False,
-                'error': error
-            }), 400
+                'error': 'Failed to connect to stream'
+            }), 500
             
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/virtualpytest/hdmi-stream/disconnect', methods=['POST'])
+def disconnect_hdmi_stream():
+    """Disconnect from HDMI stream"""
+    if not controllers_available:
+        return jsonify({'error': 'VirtualPyTest controllers not available'}), 503
+    
+    try:
+        # Create controller instance (in real implementation, you'd retrieve existing instance)
+        controller = ControllerFactory.create_av_controller(
+            capture_type="hdmi_stream",
+            device_name="HDMI Stream"
+        )
+        
+        # Disconnect
+        disconnect_result = controller.disconnect()
+        
         return jsonify({
-            'success': False,
-            'error': f'Screenshot error: {str(e)}'
-        }), 500
+            'success': disconnect_result,
+            'connected': False,
+            'streaming': False
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/virtualpytest/hdmi-stream/status', methods=['GET'])
+def get_hdmi_stream_status():
+    """Get HDMI stream status"""
+    if not controllers_available:
+        return jsonify({'error': 'VirtualPyTest controllers not available'}), 503
+    
+    try:
+        # Create controller instance (in real implementation, you'd retrieve existing instance)
+        controller = ControllerFactory.create_av_controller(
+            capture_type="hdmi_stream",
+            device_name="HDMI Stream"
+        )
+        
+        status = controller.get_status()
+        
+        return jsonify({
+            'status': status,
+            'timestamp': __import__('time').time()
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/virtualpytest/hdmi-stream/control', methods=['POST'])
+def control_hdmi_stream():
+    """Control HDMI stream (start/stop capture, analyze content, etc.)"""
+    if not controllers_available:
+        return jsonify({'error': 'VirtualPyTest controllers not available'}), 503
+    
+    try:
+        data = request.json
+        action = data.get('action', '')
+        
+        # Create controller instance
+        controller = ControllerFactory.create_av_controller(
+            capture_type="hdmi_stream",
+            device_name="HDMI Stream"
+        )
+        
+        result = {'success': False}
+        
+        if action == 'start_capture':
+            resolution = data.get('resolution', '1920x1080')
+            fps = data.get('fps', 30)
+            result['success'] = controller.start_video_capture(resolution, fps)
+            result['action'] = 'start_capture'
+            
+        elif action == 'stop_capture':
+            result['success'] = controller.stop_video_capture()
+            result['action'] = 'stop_capture'
+            
+        elif action == 'capture_frame':
+            filename = data.get('filename')
+            result['success'] = controller.capture_frame(filename)
+            result['action'] = 'capture_frame'
+            
+        elif action == 'analyze_content':
+            analysis_type = data.get('analysis_type', 'motion')
+            analysis_result = controller.analyze_video_content(analysis_type)
+            result['success'] = bool(analysis_result)
+            result['analysis'] = analysis_result
+            result['action'] = 'analyze_content'
+            
+        elif action == 'detect_audio_level':
+            audio_level = controller.detect_audio_level()
+            result['success'] = True
+            result['audio_level'] = audio_level
+            result['action'] = 'detect_audio_level'
+            
+        elif action == 'record_session':
+            duration = data.get('duration', 10.0)
+            filename = data.get('filename')
+            result['success'] = controller.record_session(duration, filename)
+            result['action'] = 'record_session'
+            
+        else:
+            return jsonify({'error': f'Unknown action: {action}'}), 400
+        
+        # Get updated status
+        result['status'] = controller.get_status()
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5009, debug=True)

@@ -20,6 +20,7 @@ from .base_controllers import (
 # Import mock implementations
 from .remote.mock import MockRemoteController
 from .audiovideo.mock import MockAVController
+from .audiovideo.hdmi_stream import HDMIStreamController
 from .verification.mock import MockVerificationController
 from .power.mock import MockPowerController
 
@@ -41,6 +42,7 @@ CONTROLLER_REGISTRY = {
     'av': {
         'mock': MockAVController,
         'hdmi': MockAVController,            # Can be replaced with real implementation
+        'hdmi_stream': HDMIStreamController, # HDMI stream URL controller
         'adb': MockAVController,             # Can be replaced with real implementation
         'camera': MockAVController,          # Can be replaced with real implementation
         'network': MockAVController,         # Can be replaced with real implementation
