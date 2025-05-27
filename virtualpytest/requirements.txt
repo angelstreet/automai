@@ -1,2 +1,16 @@
-pymongo==4.8.0
+# VirtualPyTest Controller Dependencies
+
+# SSH connection support
+paramiko>=2.9.0
+
+# XML parsing for Android UI dumps
+lxml>=4.6.0
+
+# Optional: Enhanced subprocess handling
+psutil>=5.8.0
+
+# Optional: Better regex support
+regex>=2021.0.0
+
+# Type hints support
 typing-extensions>=4.0.0 

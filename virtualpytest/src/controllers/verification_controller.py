@@ -8,23 +8,21 @@ All actions are printed to demonstrate functionality.
 from typing import Dict, Any, Optional, List, Union
 import time
 import random
-from .base_controllers import BaseVerificationController
+from .base_controllers import VerificationControllerInterface
 
 
-class MockVerificationController(BaseVerificationController):
+class MockVerificationController(VerificationControllerInterface):
     """Mock verification controller that prints actions instead of executing them."""
     
-    def __init__(self, device_name: str = "Unknown Device"):
+    def __init__(self, device_name: str = "Unknown Device", **kwargs):
         """
         Initialize the verification controller.
         
         Args:
             device_name: Name of the device for logging
+            **kwargs: Additional parameters (for extensibility)
         """
-        self.device_name = device_name
-        self.is_connected = False
-        self.verification_session_id = None
-        self.verification_results = []
+        super().__init__(device_name)
         
     def connect(self) -> bool:
         """Simulate connecting to the verification system."""
@@ -304,31 +302,10 @@ class MockVerificationController(BaseVerificationController):
             print(f"Verify[{self.device_name}]: Unknown verification type: {verification_type}")
             return False
             
-    def _log_verification(self, verification_type: str, target: str, result: bool, params: Dict[str, Any]) -> None:
-        """Log verification result for reporting."""
-        log_entry = {
-            "timestamp": time.time(),
-            "type": verification_type,
-            "target": target,
-            "result": result,
-            "params": params,
-            "session_id": self.verification_session_id
-        }
-        self.verification_results.append(log_entry)
-        
-    def get_verification_results(self) -> List[Dict[str, Any]]:
-        """Get all verification results from current session."""
-        return self.verification_results.copy()
-        
-    def clear_verification_results(self) -> None:
-        """Clear verification results."""
-        print(f"Verify[{self.device_name}]: Clearing verification results ({len(self.verification_results)} entries)")
-        self.verification_results.clear()
-        
     def get_status(self) -> Dict[str, Any]:
         """Get controller status information."""
         return {
-            'controller_type': 'verification_controller',
+            'controller_type': self.controller_type,
             'device_name': self.device_name,
             'connected': self.is_connected,
             'session_id': self.verification_session_id,

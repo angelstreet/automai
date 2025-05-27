@@ -8,26 +8,22 @@ All actions are printed to demonstrate functionality.
 from typing import Dict, Any, Optional, List
 import time
 import random
-from .base_controllers import BaseAVController
+from .base_controllers import AVControllerInterface
 
 
-class MockAVController(BaseAVController):
+class MockAVController(AVControllerInterface):
     """Mock AV controller that prints actions instead of executing them."""
     
-    def __init__(self, device_name: str = "Unknown Device", capture_source: str = "HDMI"):
+    def __init__(self, device_name: str = "Unknown Device", capture_source: str = "HDMI", **kwargs):
         """
         Initialize the AV controller.
         
         Args:
             device_name: Name of the device for logging
             capture_source: Source for capture (HDMI, Network, USB, etc.)
+            **kwargs: Additional parameters (for extensibility)
         """
-        self.device_name = device_name
-        self.capture_source = capture_source
-        self.is_connected = False
-        self.is_capturing_video = False
-        self.is_capturing_audio = False
-        self.capture_session_id = None
+        super().__init__(device_name, capture_source)
         
     def connect(self) -> bool:
         """Simulate connecting to the AV capture device."""
@@ -260,7 +256,7 @@ class MockAVController(BaseAVController):
     def get_status(self) -> Dict[str, Any]:
         """Get controller status information."""
         return {
-            'controller_type': 'av_controller',
+            'controller_type': self.controller_type,
             'device_name': self.device_name,
             'capture_source': self.capture_source,
             'connected': self.is_connected,
@@ -273,18 +269,28 @@ class MockAVController(BaseAVController):
             ]
         }
 
-# Mock subclasses for specific capture sources
+
+# Capture source-specific mock controllers that can be customized later
 class MockHDMI_Acquisition(MockAVController):
     """Mock AV controller for HDMI capture."""
-    pass
+    
+    def __init__(self, device_name: str = "HDMI Device", **kwargs):
+        super().__init__(device_name, "HDMI", **kwargs)
+
 
 class MockADB_Acquisition(MockAVController):
     """Mock AV controller for ADB-based capture."""
-    pass
+    
+    def __init__(self, device_name: str = "ADB Device", **kwargs):
+        super().__init__(device_name, "ADB", **kwargs)
+
 
 class MockCamera_Acquisition(MockAVController):
     """Mock AV controller for camera-based capture."""
-    pass
+    
+    def __init__(self, device_name: str = "Camera Device", **kwargs):
+        super().__init__(device_name, "Camera", **kwargs)
+
 
 # Backward compatibility aliases
 AVController = MockAVController

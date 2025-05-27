@@ -1,37 +1,54 @@
 """
 VirtualPyTest Controller Base Classes
 
-This module defines abstract base classes for all controller types.
-These provide the interface contracts that must be implemented by both
-mock controllers (for testing) and real controllers (for actual devices).
+This module defines abstract base classes for individual controller types.
+Each controller type is completely independent and can be implemented
+separately for different devices, providing maximum flexibility.
 """
 
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional, List, Union
 
 
-class BaseRemoteController(ABC):
+class BaseController(ABC):
     """
-    Abstract base class for remote controllers.
-    
-    Defines the interface that all remote controllers must implement
-    for device navigation and control.
+    Base controller interface that all controllers must implement.
+    Provides common connection and status functionality.
     """
     
-    def __init__(self, device_type: str = "generic", device_name: str = "Unknown Device"):
-        self.device_type = device_type
+    def __init__(self, controller_type: str, device_name: str = "Unknown Device"):
+        self.controller_type = controller_type
         self.device_name = device_name
         self.is_connected = False
     
     @abstractmethod
     def connect(self) -> bool:
-        """Connect to the device. Must be implemented by subclasses."""
+        """Connect to the device/service. Must be implemented by subclasses."""
         pass
     
     @abstractmethod
     def disconnect(self) -> bool:
-        """Disconnect from the device. Must be implemented by subclasses."""
+        """Disconnect from the device/service. Must be implemented by subclasses."""
         pass
+    
+    @abstractmethod
+    def get_status(self) -> Dict[str, Any]:
+        """Get controller status information. Must be implemented by subclasses."""
+        pass
+
+
+class RemoteControllerInterface(BaseController):
+    """
+    Abstract interface for remote control functionality.
+    
+    Defines the interface that remote controllers must implement
+    for device navigation and control. Each device can have its own
+    implementation of this interface.
+    """
+    
+    def __init__(self, device_name: str = "Unknown Device", device_type: str = "generic"):
+        super().__init__("remote", device_name)
+        self.device_type = device_type
     
     @abstractmethod
     def press_key(self, key: str) -> bool:
@@ -43,7 +60,12 @@ class BaseRemoteController(ABC):
         """Input text on the device. Must be implemented by subclasses."""
         pass
     
-    # Navigation methods with default implementations using press_key
+    @abstractmethod
+    def execute_sequence(self, commands: list) -> bool:
+        """Execute a sequence of remote commands. Must be implemented by subclasses."""
+        pass
+    
+    # Optional navigation methods with default implementations
     def navigate_up(self) -> bool:
         """Navigate up in the interface."""
         return self.press_key("UP")
@@ -76,6 +98,7 @@ class BaseRemoteController(ABC):
         """Open menu."""
         return self.press_key("MENU")
     
+    # Optional media control methods
     def power(self) -> bool:
         """Toggle power."""
         return self.press_key("POWER")
@@ -103,43 +126,23 @@ class BaseRemoteController(ABC):
     def rewind(self) -> bool:
         """Rewind."""
         return self.press_key("REWIND")
-    
-    @abstractmethod
-    def execute_sequence(self, commands: list) -> bool:
-        """Execute a sequence of remote commands. Must be implemented by subclasses."""
-        pass
-    
-    @abstractmethod
-    def get_status(self) -> Dict[str, Any]:
-        """Get controller status information. Must be implemented by subclasses."""
-        pass
 
 
-class BaseAVController(ABC):
+class AVControllerInterface(BaseController):
     """
-    Abstract base class for audio/video controllers.
+    Abstract interface for audio/video capture and analysis.
     
-    Defines the interface that all A/V controllers must implement
-    for media capture and analysis.
+    Defines the interface that A/V controllers must implement
+    for media capture and analysis. Each device can have its own
+    implementation of this interface.
     """
     
     def __init__(self, device_name: str = "Unknown Device", capture_source: str = "HDMI"):
-        self.device_name = device_name
+        super().__init__("av", device_name)
         self.capture_source = capture_source
-        self.is_connected = False
         self.is_capturing_video = False
         self.is_capturing_audio = False
         self.capture_session_id = None
-    
-    @abstractmethod
-    def connect(self) -> bool:
-        """Connect to the AV capture device. Must be implemented by subclasses."""
-        pass
-    
-    @abstractmethod
-    def disconnect(self) -> bool:
-        """Disconnect from the AV capture device. Must be implemented by subclasses."""
-        pass
     
     @abstractmethod
     def start_video_capture(self, resolution: str = "1920x1080", fps: int = 30) -> bool:
@@ -190,36 +193,21 @@ class BaseAVController(ABC):
     def record_session(self, duration: float, filename: str = None) -> bool:
         """Record audio/video session. Must be implemented by subclasses."""
         pass
-    
-    @abstractmethod
-    def get_status(self) -> Dict[str, Any]:
-        """Get controller status information. Must be implemented by subclasses."""
-        pass
 
 
-class BaseVerificationController(ABC):
+class VerificationControllerInterface(BaseController):
     """
-    Abstract base class for verification controllers.
+    Abstract interface for verification and validation functionality.
     
-    Defines the interface that all verification controllers must implement
-    for test validation and verification.
+    Defines the interface that verification controllers must implement
+    for test validation. Each device can have its own implementation
+    of this interface.
     """
     
     def __init__(self, device_name: str = "Unknown Device"):
-        self.device_name = device_name
-        self.is_connected = False
+        super().__init__("verification", device_name)
         self.verification_session_id = None
         self.verification_results = []
-    
-    @abstractmethod
-    def connect(self) -> bool:
-        """Connect to the verification system. Must be implemented by subclasses."""
-        pass
-    
-    @abstractmethod
-    def disconnect(self) -> bool:
-        """Disconnect from the verification system. Must be implemented by subclasses."""
-        pass
     
     @abstractmethod
     def verify_image_appears(self, image_name: str, timeout: float = 10.0, confidence: float = 0.8) -> bool:
@@ -266,6 +254,7 @@ class BaseVerificationController(ABC):
         """Generic wait and verify method. Must be implemented by subclasses."""
         pass
     
+    # Common verification logging methods
     def _log_verification(self, verification_type: str, target: str, result: bool, params: Dict[str, Any]) -> None:
         """Log verification result for reporting. Common implementation."""
         log_entry = {
@@ -285,14 +274,81 @@ class BaseVerificationController(ABC):
     def clear_verification_results(self) -> None:
         """Clear verification results. Common implementation."""
         self.verification_results.clear()
+
+
+class PowerControllerInterface(BaseController):
+    """
+    Abstract interface for power management functionality.
+    
+    Defines the interface that power controllers must implement
+    for device power control. Each device can have its own
+    implementation of this interface.
+    """
+    
+    def __init__(self, device_name: str = "Unknown Device", power_type: str = "generic"):
+        super().__init__("power", device_name)
+        self.power_type = power_type
+        self.current_power_state = "unknown"
+        self.power_session_id = None
     
     @abstractmethod
-    def get_status(self) -> Dict[str, Any]:
-        """Get controller status information. Must be implemented by subclasses."""
+    def power_on(self, timeout: float = 30.0) -> bool:
+        """Turn the device on. Must be implemented by subclasses."""
         pass
+    
+    @abstractmethod
+    def power_off(self, force: bool = False, timeout: float = 30.0) -> bool:
+        """Turn the device off. Must be implemented by subclasses."""
+        pass
+    
+    @abstractmethod
+    def reboot(self, timeout: float = 60.0) -> bool:
+        """Restart the device. Must be implemented by subclasses."""
+        pass
+    
+    @abstractmethod
+    def get_power_status(self) -> Dict[str, Any]:
+        """Get current power status. Must be implemented by subclasses."""
+        pass
+    
+    # Optional power management methods with default implementations
+    def soft_reboot(self, timeout: float = 60.0) -> bool:
+        """Perform a soft reboot (graceful restart)."""
+        return self.reboot(timeout)
+    
+    def hard_reboot(self, timeout: float = 60.0) -> bool:
+        """Perform a hard reboot (forced restart)."""
+        return self.power_off(force=True, timeout=15.0) and self.power_on(timeout=timeout-15.0)
+    
+    def wait_for_power_state(self, expected_state: str, timeout: float = 30.0) -> bool:
+        """Wait for device to reach expected power state."""
+        import time
+        start_time = time.time()
+        
+        while time.time() - start_time < timeout:
+            status = self.get_power_status()
+            current_state = status.get('power_state', 'unknown')
+            
+            if current_state == expected_state:
+                return True
+                
+            time.sleep(1.0)
+        
+        return False
+    
+    def is_powered_on(self) -> bool:
+        """Check if device is currently powered on."""
+        status = self.get_power_status()
+        return status.get('power_state', 'unknown') == 'on'
+    
+    def is_powered_off(self) -> bool:
+        """Check if device is currently powered off."""
+        status = self.get_power_status()
+        return status.get('power_state', 'unknown') == 'off'
 
 
-# Type aliases for backward compatibility and clarity
-RemoteControllerInterface = BaseRemoteController
-AVControllerInterface = BaseAVController
-VerificationControllerInterface = BaseVerificationController 
+# Backward compatibility aliases
+BaseRemoteController = RemoteControllerInterface
+BaseAVController = AVControllerInterface
+BaseVerificationController = VerificationControllerInterface
+BasePowerController = PowerControllerInterface 

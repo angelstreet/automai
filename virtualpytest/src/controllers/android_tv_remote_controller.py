@@ -1,0 +1,459 @@
+"""
+Real Android TV Remote Controller Implementation
+
+This controller provides real Android TV remote control functionality using ADB.
+Based on the ADB actions pattern from the main application.
+"""
+
+from typing import Dict, Any, List, Optional
+import subprocess
+import time
+import json
+from base_controllers import RemoteControllerInterface
+
+
+class AndroidTVRemoteController(RemoteControllerInterface):
+    """Real Android TV remote controller using ADB commands."""
+    
+    # ADB key mappings based on the TypeScript implementation
+    ADB_KEYS = {
+        "UP": "KEYCODE_DPAD_UP",
+        "DOWN": "KEYCODE_DPAD_DOWN", 
+        "LEFT": "KEYCODE_DPAD_LEFT",
+        "RIGHT": "KEYCODE_DPAD_RIGHT",
+        "OK": "KEYCODE_DPAD_CENTER",
+        "SELECT": "KEYCODE_DPAD_CENTER",
+        "BACK": "KEYCODE_BACK",
+        "HOME": "KEYCODE_HOME",
+        "MENU": "KEYCODE_MENU",
+        "VOLUME_UP": "KEYCODE_VOLUME_UP",
+        "VOLUME_DOWN": "KEYCODE_VOLUME_DOWN",
+        "VOLUME_MUTE": "KEYCODE_VOLUME_MUTE",
+        "POWER": "KEYCODE_POWER",
+        # Media control keys
+        "PLAY_PAUSE": "KEYCODE_MEDIA_PLAY_PAUSE",
+        "PLAY": "KEYCODE_MEDIA_PLAY",
+        "PAUSE": "KEYCODE_MEDIA_PAUSE",
+        "STOP": "KEYCODE_MEDIA_STOP",
+        "REWIND": "KEYCODE_MEDIA_REWIND",
+        "FAST_FORWARD": "KEYCODE_MEDIA_FAST_FORWARD",
+        "NEXT": "KEYCODE_MEDIA_NEXT",
+        "PREVIOUS": "KEYCODE_MEDIA_PREVIOUS",
+        # Additional Android TV keys
+        "ENTER": "KEYCODE_ENTER",
+        "ESCAPE": "KEYCODE_ESCAPE",
+        "TAB": "KEYCODE_TAB",
+        "SPACE": "KEYCODE_SPACE",
+        "DEL": "KEYCODE_DEL",
+    }
+    
+    def __init__(self, device_name: str = "Android TV", device_type: str = "android_tv", **kwargs):
+        """
+        Initialize the Android TV remote controller.
+        
+        Args:
+            device_name: Name of the Android TV device
+            device_type: Type identifier for the device
+            **kwargs: Additional parameters including:
+                - device_ip: IP address of the Android TV (required)
+                - adb_port: ADB port (default: 5555)
+                - connection_timeout: Connection timeout in seconds (default: 10)
+        """
+        super().__init__(device_name, device_type)
+        self.device_ip = kwargs.get('device_ip')
+        self.adb_port = kwargs.get('adb_port', 5555)
+        self.connection_timeout = kwargs.get('connection_timeout', 10)
+        
+        if not self.device_ip:
+            raise ValueError("device_ip is required for AndroidTVRemoteController")
+            
+        self.adb_device = f"{self.device_ip}:{self.adb_port}"
+        self.device_resolution = None
+        
+    def connect(self) -> bool:
+        """Connect to the Android TV device via ADB."""
+        try:
+            print(f"Remote[{self.device_type.upper()}]: Connecting to {self.device_name} at {self.adb_device}")
+            
+            # First, try to connect to the device
+            connect_result = subprocess.run(
+                ["adb", "connect", self.adb_device],
+                capture_output=True,
+                text=True,
+                timeout=self.connection_timeout
+            )
+            
+            if connect_result.returncode != 0:
+                print(f"Remote[{self.device_type.upper()}]: ADB connect failed: {connect_result.stderr}")
+                return False
+                
+            print(f"Remote[{self.device_type.upper()}]: ADB connect output: {connect_result.stdout.strip()}")
+            
+            # Verify the device is actually connected by checking adb devices
+            devices_result = subprocess.run(
+                ["adb", "devices"],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            
+            if devices_result.returncode != 0:
+                print(f"Remote[{self.device_type.upper()}]: Failed to verify device connection")
+                return False
+                
+            devices_output = devices_result.stdout
+            print(f"Remote[{self.device_type.upper()}]: ADB devices output: {devices_output}")
+            
+            # Check if our device appears in the devices list
+            device_lines = [line.strip() for line in devices_output.split('\n') 
+                          if line.strip() and not line.startswith('List of devices')]
+            
+            device_found = None
+            for line in device_lines:
+                if self.adb_device in line:
+                    device_found = line
+                    break
+                    
+            if not device_found:
+                print(f"Remote[{self.device_type.upper()}]: Device {self.adb_device} not found in adb devices list")
+                return False
+                
+            if 'offline' in device_found:
+                print(f"Remote[{self.device_type.upper()}]: Device {self.adb_device} is offline. Please check device connection and enable USB debugging.")
+                return False
+                
+            if 'device' not in device_found:
+                status = device_found.split('\t')[1] if '\t' in device_found else 'unknown'
+                print(f"Remote[{self.device_type.upper()}]: Device {self.adb_device} status: {status}")
+                return False
+                
+            self.is_connected = True
+            print(f"Remote[{self.device_type.upper()}]: Successfully connected to {self.device_name}")
+            
+            # Get device resolution for future use
+            self._get_device_resolution()
+            
+            return True
+            
+        except subprocess.TimeoutExpired:
+            print(f"Remote[{self.device_type.upper()}]: Connection timeout after {self.connection_timeout}s")
+            return False
+        except Exception as e:
+            print(f"Remote[{self.device_type.upper()}]: Connection error: {e}")
+            return False
+            
+    def disconnect(self) -> bool:
+        """Disconnect from the Android TV device."""
+        try:
+            if self.is_connected:
+                print(f"Remote[{self.device_type.upper()}]: Disconnecting from {self.device_name}")
+                
+                disconnect_result = subprocess.run(
+                    ["adb", "disconnect", self.adb_device],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                
+                if disconnect_result.returncode == 0:
+                    print(f"Remote[{self.device_type.upper()}]: Disconnected successfully")
+                else:
+                    print(f"Remote[{self.device_type.upper()}]: Disconnect warning: {disconnect_result.stderr}")
+                    
+            self.is_connected = False
+            return True
+            
+        except Exception as e:
+            print(f"Remote[{self.device_type.upper()}]: Disconnect error: {e}")
+            self.is_connected = False
+            return False
+            
+    def press_key(self, key: str) -> bool:
+        """
+        Send a key press to the Android TV.
+        
+        Args:
+            key: Key name (e.g., "UP", "DOWN", "OK", "HOME")
+        """
+        if not self.is_connected:
+            print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
+            return False
+            
+        # Map the key to ADB keycode
+        adb_keycode = self.ADB_KEYS.get(key.upper())
+        if not adb_keycode:
+            print(f"Remote[{self.device_type.upper()}]: ERROR - Invalid key: {key}")
+            return False
+            
+        try:
+            key_command = ["adb", "-s", self.adb_device, "shell", "input", "keyevent", adb_keycode]
+            print(f"Remote[{self.device_type.upper()}]: Pressing key '{key}' (keycode: {adb_keycode})")
+            
+            result = subprocess.run(
+                key_command,
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            
+            if result.returncode == 0:
+                print(f"Remote[{self.device_type.upper()}]: Successfully pressed key '{key}'")
+                return True
+            else:
+                print(f"Remote[{self.device_type.upper()}]: Key press failed: {result.stderr}")
+                return False
+                
+        except subprocess.TimeoutExpired:
+            print(f"Remote[{self.device_type.upper()}]: Key press timeout for key '{key}'")
+            return False
+        except Exception as e:
+            print(f"Remote[{self.device_type.upper()}]: Key press error: {e}")
+            return False
+            
+    def input_text(self, text: str) -> bool:
+        """
+        Send text input to the Android TV.
+        
+        Args:
+            text: Text to input
+        """
+        if not self.is_connected:
+            print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
+            return False
+            
+        try:
+            # Escape special characters for shell
+            escaped_text = text.replace(" ", "%s").replace("'", "\\'").replace('"', '\\"')
+            
+            text_command = ["adb", "-s", self.adb_device, "shell", "input", "text", escaped_text]
+            print(f"Remote[{self.device_type.upper()}]: Sending text: '{text}'")
+            
+            result = subprocess.run(
+                text_command,
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            
+            if result.returncode == 0:
+                print(f"Remote[{self.device_type.upper()}]: Successfully sent text: '{text}'")
+                return True
+            else:
+                print(f"Remote[{self.device_type.upper()}]: Text input failed: {result.stderr}")
+                return False
+                
+        except subprocess.TimeoutExpired:
+            print(f"Remote[{self.device_type.upper()}]: Text input timeout")
+            return False
+        except Exception as e:
+            print(f"Remote[{self.device_type.upper()}]: Text input error: {e}")
+            return False
+            
+    def execute_sequence(self, commands: List[Dict[str, Any]]) -> bool:
+        """
+        Execute a sequence of commands.
+        
+        Args:
+            commands: List of command dictionaries with 'action', 'params', and optional 'delay'
+        """
+        if not self.is_connected:
+            print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
+            return False
+            
+        print(f"Remote[{self.device_type.upper()}]: Executing sequence of {len(commands)} commands")
+        
+        for i, command in enumerate(commands):
+            action = command.get('action')
+            params = command.get('params', {})
+            delay = command.get('delay', 0.5)
+            
+            print(f"Remote[{self.device_type.upper()}]: Step {i+1}: {action}")
+            
+            success = False
+            if action == 'press_key':
+                success = self.press_key(params.get('key', 'OK'))
+            elif action == 'input_text':
+                success = self.input_text(params.get('text', ''))
+            elif action == 'launch_app':
+                success = self.launch_app(params.get('package', ''))
+            elif action == 'tap':
+                x = params.get('x', 0)
+                y = params.get('y', 0)
+                success = self.tap_coordinates(x, y)
+            else:
+                print(f"Remote[{self.device_type.upper()}]: Unknown action: {action}")
+                return False
+                
+            if not success:
+                print(f"Remote[{self.device_type.upper()}]: Sequence failed at step {i+1}")
+                return False
+                
+            # Add delay between commands (except for the last one)
+            if delay > 0 and i < len(commands) - 1:
+                time.sleep(delay)
+                
+        print(f"Remote[{self.device_type.upper()}]: Sequence completed successfully")
+        return True
+        
+    def launch_app(self, package_name: str) -> bool:
+        """
+        Launch an app by package name.
+        
+        Args:
+            package_name: Android package name (e.g., "com.netflix.ninja")
+        """
+        if not self.is_connected:
+            print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
+            return False
+            
+        try:
+            launch_command = [
+                "adb", "-s", self.adb_device, "shell", "monkey", 
+                "-p", package_name, "-c", "android.intent.category.LAUNCHER", "1"
+            ]
+            print(f"Remote[{self.device_type.upper()}]: Launching app: {package_name}")
+            
+            result = subprocess.run(
+                launch_command,
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            
+            if result.returncode == 0:
+                print(f"Remote[{self.device_type.upper()}]: Successfully launched {package_name}")
+                return True
+            else:
+                print(f"Remote[{self.device_type.upper()}]: App launch failed: {result.stderr}")
+                return False
+                
+        except subprocess.TimeoutExpired:
+            print(f"Remote[{self.device_type.upper()}]: App launch timeout")
+            return False
+        except Exception as e:
+            print(f"Remote[{self.device_type.upper()}]: App launch error: {e}")
+            return False
+            
+    def tap_coordinates(self, x: int, y: int) -> bool:
+        """
+        Tap at specific screen coordinates.
+        
+        Args:
+            x: X coordinate
+            y: Y coordinate
+        """
+        if not self.is_connected:
+            print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
+            return False
+            
+        try:
+            tap_command = ["adb", "-s", self.adb_device, "shell", "input", "tap", str(x), str(y)]
+            print(f"Remote[{self.device_type.upper()}]: Tapping at coordinates ({x}, {y})")
+            
+            result = subprocess.run(
+                tap_command,
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            
+            if result.returncode == 0:
+                print(f"Remote[{self.device_type.upper()}]: Successfully tapped at ({x}, {y})")
+                return True
+            else:
+                print(f"Remote[{self.device_type.upper()}]: Tap failed: {result.stderr}")
+                return False
+                
+        except subprocess.TimeoutExpired:
+            print(f"Remote[{self.device_type.upper()}]: Tap timeout")
+            return False
+        except Exception as e:
+            print(f"Remote[{self.device_type.upper()}]: Tap error: {e}")
+            return False
+            
+    def get_installed_apps(self) -> List[Dict[str, str]]:
+        """Get list of installed apps on the device."""
+        if not self.is_connected:
+            print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
+            return []
+            
+        try:
+            # Get list of installed packages (3rd party apps only)
+            packages_command = ["adb", "-s", self.adb_device, "shell", "pm", "list", "packages", "-3"]
+            
+            result = subprocess.run(
+                packages_command,
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            
+            if result.returncode != 0:
+                print(f"Remote[{self.device_type.upper()}]: Failed to get packages list")
+                return []
+                
+            packages = []
+            for line in result.stdout.split('\n'):
+                if line.startswith('package:'):
+                    package_name = line.replace('package:', '').strip()
+                    packages.append({
+                        'packageName': package_name,
+                        'label': package_name  # Could be enhanced to get actual app labels
+                    })
+                    
+            print(f"Remote[{self.device_type.upper()}]: Found {len(packages)} installed apps")
+            return packages
+            
+        except Exception as e:
+            print(f"Remote[{self.device_type.upper()}]: Error getting apps: {e}")
+            return []
+            
+    def _get_device_resolution(self) -> Optional[Dict[str, int]]:
+        """Get the device screen resolution."""
+        try:
+            resolution_command = ["adb", "-s", self.adb_device, "shell", "wm", "size"]
+            
+            result = subprocess.run(
+                resolution_command,
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            
+            if result.returncode == 0:
+                # Parse output like "Physical size: 1920x1080"
+                output = result.stdout.strip()
+                if 'x' in output:
+                    size_part = output.split(':')[-1].strip()
+                    width, height = map(int, size_part.split('x'))
+                    self.device_resolution = {'width': width, 'height': height}
+                    print(f"Remote[{self.device_type.upper()}]: Device resolution: {width}x{height}")
+                    return self.device_resolution
+                    
+        except Exception as e:
+            print(f"Remote[{self.device_type.upper()}]: Could not get device resolution: {e}")
+            
+        return None
+        
+    def get_status(self) -> Dict[str, Any]:
+        """Get controller status information."""
+        return {
+            'controller_type': self.controller_type,
+            'device_type': self.device_type,
+            'device_name': self.device_name,
+            'device_ip': self.device_ip,
+            'adb_port': self.adb_port,
+            'adb_device': self.adb_device,
+            'connected': self.is_connected,
+            'connection_timeout': self.connection_timeout,
+            'device_resolution': self.device_resolution,
+            'supported_keys': list(self.ADB_KEYS.keys()),
+            'capabilities': [
+                'navigation', 'text_input', 'app_launch', 'coordinate_tap',
+                'media_control', 'volume_control', 'power_control'
+            ]
+        }
+
+
+# Backward compatibility alias
+RealAndroidTVController = AndroidTVRemoteController 

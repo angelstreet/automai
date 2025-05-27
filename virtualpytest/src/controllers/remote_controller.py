@@ -7,23 +7,22 @@ All actions are printed to demonstrate functionality.
 
 from typing import Dict, Any, Optional
 import time
-from .base_controllers import BaseRemoteController
+from .base_controllers import RemoteControllerInterface
 
 
-class MockRemoteController(BaseRemoteController):
+class MockRemoteController(RemoteControllerInterface):
     """Mock remote controller that prints actions instead of executing them."""
     
-    def __init__(self, device_type: str = "generic", device_name: str = "Unknown Device"):
+    def __init__(self, device_name: str = "Unknown Device", device_type: str = "generic", **kwargs):
         """
         Initialize the remote controller.
         
         Args:
-            device_type: Type of device (android_phone, firetv, appletv, etc.)
             device_name: Name of the device for logging
+            device_type: Type of device (android_phone, firetv, appletv, etc.)
+            **kwargs: Additional parameters (for extensibility)
         """
-        self.device_type = device_type
-        self.device_name = device_name
-        self.is_connected = False
+        super().__init__(device_name, device_type)
         
     def connect(self) -> bool:
         """Simulate connecting to the device."""
@@ -184,7 +183,7 @@ class MockRemoteController(BaseRemoteController):
     def get_status(self) -> Dict[str, Any]:
         """Get controller status information."""
         return {
-            'controller_type': 'remote_controller',
+            'controller_type': self.controller_type,
             'device_type': self.device_type,
             'device_name': self.device_name,
             'connected': self.is_connected,
@@ -194,30 +193,49 @@ class MockRemoteController(BaseRemoteController):
             ]
         }
 
-# Mock subclasses for specific devices
+
+# Device-specific mock controllers that can be customized later
 class MockAndroidPhone(MockRemoteController):
     """Mock remote controller for Android phones."""
-    pass
+    
+    def __init__(self, device_name: str = "Android Phone", **kwargs):
+        super().__init__(device_name, "android_phone", **kwargs)
+
 
 class MockAndroidTV(MockRemoteController):
     """Mock remote controller for Android TV devices."""
-    pass
+    
+    def __init__(self, device_name: str = "Android TV", **kwargs):
+        super().__init__(device_name, "android_tv", **kwargs)
+
 
 class MockApplePhone(MockRemoteController):
     """Mock remote controller for Apple phones."""
-    pass
+    
+    def __init__(self, device_name: str = "iPhone", **kwargs):
+        super().__init__(device_name, "apple_phone", **kwargs)
+
 
 class MockAppleTV(MockRemoteController):
     """Mock remote controller for Apple TV devices."""
-    pass
+    
+    def __init__(self, device_name: str = "Apple TV", **kwargs):
+        super().__init__(device_name, "apple_tv", **kwargs)
+
 
 class MockSTB_EOS(MockRemoteController):
     """Mock remote controller for EOS set-top boxes."""
-    pass
+    
+    def __init__(self, device_name: str = "EOS STB", **kwargs):
+        super().__init__(device_name, "stb_eos", **kwargs)
+
 
 class MockSTB_Apollo(MockRemoteController):
     """Mock remote controller for Apollo set-top boxes."""
-    pass
+    
+    def __init__(self, device_name: str = "Apollo STB", **kwargs):
+        super().__init__(device_name, "stb_apollo", **kwargs)
+
 
 # Backward compatibility aliases
 RemoteController = MockRemoteController
