@@ -217,8 +217,10 @@ export function AndroidMobileOverlay({
 
   if (!isVisible || scaledElements.length === 0) return null;
 
+  console.log('[@component:AndroidMobileOverlay] Rendering overlay with', scaledElements.length, 'elements');
+
   return (
-    <div ref={overlayRef} style={{ position: 'fixed', zIndex: 9999 }}>
+    <div ref={overlayRef} style={{ position: 'fixed', zIndex: 999999 }}>
       {scaledElements.map((element, index) => (
         <div
           key={element.id}

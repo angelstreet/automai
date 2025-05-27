@@ -539,10 +539,10 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
       </Dialog>
 
       {/* AndroidMobileOverlay - positioned outside the dialog */}
-      {showOverlay && androidElements.length > 0 && screenshotRef.current && (
+      {showOverlay && androidElements.length > 0 && (
         <AndroidMobileOverlay
           elements={androidElements}
-          screenshotElement={screenshotRef.current}
+          screenshotElement={null}
           deviceWidth={1080}
           deviceHeight={2340}
           isVisible={showOverlay}
