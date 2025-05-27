@@ -488,57 +488,7 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
     def get_remote_config() -> Dict[str, Any]:
         """Get the remote configuration including layout, buttons, and image."""
         return {
-            'remote_info': {
-                'name': 'Android Mobile Remote',
-                'type': 'android_mobile',
-                'image_url': '/android-tv-remote.png',
-                'default_scale': 0.8,
-                'min_scale': 0.3,
-                'max_scale': 1.5,
-                # General scaling and offset parameters
-                'button_scale_factor': 1.5,  # General scaling factor for all button sizes
-                'global_offset': {
-                    'x': 0,  # Global X offset for all buttons
-                    'y': 0   # Global Y offset for all buttons
-                }
-            },
             'button_layout': {
-                # Navigation buttons
-                'up': {
-                    'key': 'UP',
-                    'position': { 'x': 90, 'y': 120 },
-                    'size': { 'width': 25, 'height': 25 },
-                    'shape': 'circle',
-                    'comment': 'Up navigation'
-                },
-                'down': {
-                    'key': 'DOWN',
-                    'position': { 'x': 90, 'y': 180 },
-                    'size': { 'width': 25, 'height': 25 },
-                    'shape': 'circle',
-                    'comment': 'Down navigation'
-                },
-                'left': {
-                    'key': 'LEFT',
-                    'position': { 'x': 60, 'y': 150 },
-                    'size': { 'width': 25, 'height': 25 },
-                    'shape': 'circle',
-                    'comment': 'Left navigation'
-                },
-                'right': {
-                    'key': 'RIGHT',
-                    'position': { 'x': 120, 'y': 150 },
-                    'size': { 'width': 25, 'height': 25 },
-                    'shape': 'circle',
-                    'comment': 'Right navigation'
-                },
-                'select': {
-                    'key': 'SELECT',
-                    'position': { 'x': 90, 'y': 150 },
-                    'size': { 'width': 20, 'height': 20 },
-                    'shape': 'circle',
-                    'comment': 'Select/OK button'
-                },
                 
                 # System buttons
                 'back': {
