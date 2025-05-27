@@ -259,7 +259,7 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
                 </Box>
               ) : (
                 /* Screenshot Display */
-                <Box>
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
                   
                   {androidScreenshot ? (
                     <Box sx={{ position: 'relative', display: 'inline-block' }}>
@@ -548,7 +548,10 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
       </Dialog>
 
       {/* AndroidMobileOverlay - positioned outside the dialog */}
-      {showOverlay && androidElements.length > 0 && (
+      {(() => {
+        console.log(`[@component:AndroidMobileModal] Overlay render check: showOverlay=${showOverlay}, elements=${androidElements.length}`);
+        return showOverlay && androidElements.length > 0;
+      })() && (
         <AndroidMobileOverlay
           elements={androidElements}
           screenshotElement={null}

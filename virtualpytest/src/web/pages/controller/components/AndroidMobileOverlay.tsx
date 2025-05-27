@@ -42,6 +42,8 @@ export function AndroidMobileOverlay({
   selectedElementId,
   onElementClick,
 }: AndroidMobileOverlayProps) {
+  console.log(`[@component:AndroidMobileOverlay] Component called with: elements=${elements.length}, isVisible=${isVisible}, deviceSize=${deviceWidth}x${deviceHeight}`);
+  
   const [scaledElements, setScaledElements] = useState<ScaledElement[]>([]);
   const overlayRef = useRef<HTMLDivElement>(null);
 
@@ -72,13 +74,62 @@ export function AndroidMobileOverlay({
     return null;
   };
 
-  // Calculate scaled coordinates - same logic as UIElementsOverlay
+  // Calculate scaled coordinates - modified to work without screenshot element
   useEffect(() => {
-    if (!screenshotElement || !isVisible || elements.length === 0) {
+    console.log(`[@component:AndroidMobileOverlay] useEffect triggered: isVisible=${isVisible}, elements=${elements.length}, screenshotElement=${screenshotElement ? 'available' : 'null'}`);
+    
+    if (!isVisible || elements.length === 0) {
+      console.log(`[@component:AndroidMobileOverlay] Early return: isVisible=${isVisible}, elements=${elements.length}`);
       setScaledElements([]);
       return;
     }
 
+    // If no screenshot element, use the actual element bounds for positioning
+    if (!screenshotElement) {
+      console.log(`[@component:AndroidMobileOverlay] No screenshot element, using element bounds for ${elements.length} elements`);
+      
+      const scaled = elements.map((element, index) => {
+        const bounds = parseBounds(element.bounds);
+        if (!bounds) return null;
+
+        // Use the actual bounds from the element, just like UIElementsOverlay does
+        // Apply simple scaling to fit in a reasonable area (scale down by factor of 3)
+        const scale = 0.3;
+        const x = bounds.x * scale + 100; // Offset by 100px from left
+        const y = bounds.y * scale + 200; // Offset by 200px from top
+
+        const getElementLabel = (el: AndroidElement) => {
+          if (el.contentDesc && el.contentDesc !== '<no content-desc>') {
+            return el.contentDesc.substring(0, 15);
+          }
+          if (el.text && el.text !== '<no text>') {
+            return el.text.substring(0, 15);
+          }
+          if (el.resourceId && el.resourceId !== '<no resource-id>') {
+            return el.resourceId.split('/').pop()?.substring(0, 15) || '';
+          }
+          return el.tag.substring(0, 15);
+        };
+
+        console.log(`[@component:AndroidMobileOverlay] Element ${index + 1}: bounds(${bounds.x},${bounds.y},${bounds.width},${bounds.height}) → scaled(${x.toFixed(1)},${y.toFixed(1)},${(bounds.width * scale).toFixed(1)},${(bounds.height * scale).toFixed(1)})`);
+
+        return {
+          id: element.id,
+          x: x,
+          y: y,
+          width: bounds.width * scale,
+          height: bounds.height * scale,
+          color: COLORS[index % COLORS.length],
+          label: getElementLabel(element),
+        };
+      }).filter(Boolean) as ScaledElement[];
+
+      console.log(`[@component:AndroidMobileOverlay] Created ${scaled.length} scaled elements using actual bounds`);
+      setScaledElements(scaled);
+      return;
+    }
+
+    // Original screenshot-based positioning logic
     const imageRect = screenshotElement.getBoundingClientRect();
 
     // Debug logging
@@ -221,6 +272,25 @@ export function AndroidMobileOverlay({
 
   return (
     <div ref={overlayRef} style={{ position: 'fixed', zIndex: 999999 }}>
+      {/* Debug element - visible red box at top-left */}
+      <div style={{
+        position: 'fixed',
+        top: '10px',
+        left: '10px',
+        width: '100px',
+        height: '50px',
+        backgroundColor: 'red',
+        color: 'white',
+        zIndex: 999999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '12px',
+        fontWeight: 'bold'
+      }}>
+        OVERLAY DEBUG
+      </div>
+      
       {scaledElements.map((element, index) => (
         <div
           key={element.id}
