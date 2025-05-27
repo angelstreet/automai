@@ -106,20 +106,31 @@ export function useAndroidTVConnection() {
 
   const handleRemoteCommand = useCallback(async (command: string, params: any = {}) => {
     try {
+      console.log(`[@hook:useAndroidTVConnection] Sending remote command: ${command}`, params);
+      
+      // Format the command for the backend API
+      // The backend expects: { command: 'press_key', params: { key: 'POWER' } }
+      const requestBody = {
+        command: 'press_key',
+        params: { key: command }
+      };
+      
       const response = await fetch('http://localhost:5009/api/virtualpytest/android-tv/command', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ command, params }),
+        body: JSON.stringify(requestBody),
       });
 
       const result = await response.json();
-      if (!result.success) {
-        console.error('Remote command failed:', result.error);
+      if (result.success) {
+        console.log(`[@hook:useAndroidTVConnection] Successfully sent command: ${command}`);
+      } else {
+        console.error(`[@hook:useAndroidTVConnection] Remote command failed:`, result.error);
       }
     } catch (err: any) {
-      console.error('Remote command error:', err);
+      console.error(`[@hook:useAndroidTVConnection] Remote command error:`, err);
     }
   }, []);
 

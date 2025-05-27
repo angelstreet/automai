@@ -97,16 +97,8 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
         shape: 'circle',
         comment: 'Power button'
       },
-      voice: {
-        key: 'VOICE_ASSIST',
-        label: 'MIC',
-        position: { x:320, y: 280 },
-        size: { width: 20, height: 20 },
-        shape: 'circle',
-        comment: 'Voice/microphone button'
-      },
       nav_up: {
-        key: 'DPAD_UP',
+        key: 'UP',
         label: '▲',
         position: { x: 320, y: 440 },
         size: { width: 18, height: 10 },
@@ -114,7 +106,7 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
         comment: 'Navigation up'
       },
       nav_left: {
-        key: 'DPAD_LEFT',
+        key: 'LEFT',
         label: '◄',
         position: { x: 130, y: 610 },
         size: { width: 10, height: 18 },
@@ -122,7 +114,7 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
         comment: 'Navigation left'
       },
       nav_center: {
-        key: 'DPAD_CENTER',
+        key: 'SELECT',
         label: 'OK',
         position: { x: 320, y: 610 },
         size: { width: 40, height: 40 },
@@ -130,7 +122,7 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
         comment: 'Navigation center/select'
       },
       nav_right: {
-        key: 'DPAD_RIGHT',
+        key: 'RIGHT',
         label: '►',
         position: { x: 500, y: 610 },
         size: { width: 10, height: 18 },
@@ -138,7 +130,7 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
         comment: 'Navigation right'
       },
       nav_down: {
-        key: 'DPAD_DOWN',
+        key: 'DOWN',
         label: '▼',
         position: { x: 320, y: 780 },
         size: { width: 18, height: 10 },
@@ -170,7 +162,7 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
         comment: 'Menu button'
       },
       rewind: {
-        key: 'MEDIA_REWIND',
+        key: 'REWIND',
         label: '<<',
         position: { x: 150, y: 1100 },
         size: { width: 20, height: 20 },
@@ -178,7 +170,7 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
         comment: 'Rewind button'
       },
       play_pause: {
-        key: 'MEDIA_PLAY_PAUSE',
+        key: 'PLAY_PAUSE',
         label: '⏯',
         position: { x: 320, y: 1100 },
         size: { width: 20, height: 20 },
@@ -186,7 +178,7 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
         comment: 'Play/pause button'
       },
       fast_forward: {
-        key: 'MEDIA_FAST_FORWARD',
+        key: 'FAST_FORWARD',
         label: '>>',
         position: { x: 490, y: 1100 },
         size: { width: 20, height: 20 },
@@ -398,13 +390,7 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
               <Box sx={{ display: 'flex', flexDirection: 'column', maxHeight: '500px' }}>
                 {/* Remote Control Header */}
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip 
-                      label="Connected" 
-                      color="success" 
-                      size="small"
-                    />
-                  </Box>
+                 
                   
                   <Box display="flex" alignItems="center" gap={1}>
                     {/* Show Overlays button */}
