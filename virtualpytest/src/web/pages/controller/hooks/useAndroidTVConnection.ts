@@ -22,6 +22,7 @@ export function useAndroidTVConnection() {
   const [connectionLoading, setConnectionLoading] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [remoteConfig, setRemoteConfig] = useState<RemoteConfig | null>(null);
+  const [androidScreenshot, setAndroidScreenshot] = useState<string | null>(null);
 
   const fetchDefaultValues = useCallback(async () => {
     try {
@@ -96,11 +97,34 @@ export function useAndroidTVConnection() {
       
       setSession(initialSession);
       setConnectionError(null);
+      setAndroidScreenshot(null);
     } catch (err: any) {
       // Still reset session even if release fails
       setSession(initialSession);
     } finally {
       setConnectionLoading(false);
+    }
+  }, []);
+
+  const handleScreenshot = useCallback(async () => {
+    try {
+      console.log('[@hook:useAndroidTVConnection] Taking screenshot...');
+      const response = await fetch('http://localhost:5009/api/virtualpytest/android-tv/screenshot', {
+        method: 'POST',
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setAndroidScreenshot(result.screenshot);
+        console.log('[@hook:useAndroidTVConnection] Screenshot captured successfully');
+      } else {
+        const errorMessage = result.error || 'Screenshot failed';
+        console.error('[@hook:useAndroidTVConnection] Screenshot failed:', errorMessage);
+        throw new Error(errorMessage);
+      }
+    } catch (err: any) {
+      console.error('[@hook:useAndroidTVConnection] Screenshot error:', err);
+      throw err; // Re-throw the error so the modal can catch it
     }
   }, []);
 
@@ -141,8 +165,10 @@ export function useAndroidTVConnection() {
     connectionLoading,
     connectionError,
     remoteConfig,
+    androidScreenshot,
     handleTakeControl,
     handleReleaseControl,
+    handleScreenshot,
     handleRemoteCommand,
     fetchDefaultValues,
   };

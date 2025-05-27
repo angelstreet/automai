@@ -35,14 +35,18 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
     connectionLoading,
     connectionError,
     remoteConfig,
+    androidScreenshot,
     handleTakeControl,
     handleReleaseControl,
+    handleScreenshot,
     handleRemoteCommand,
     fetchDefaultValues,
   } = useAndroidTVConnection();
 
   const [showOverlays, setShowOverlays] = useState(true);
   const [remoteScale, setRemoteScale] = useState(1.2);
+  const [isScreenshotLoading, setIsScreenshotLoading] = useState(false);
+  const [screenshotError, setScreenshotError] = useState<string | null>(null);
 
   // Load default values when modal opens
   useEffect(() => {
@@ -65,9 +69,20 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
     onClose();
   };
 
-  const handleScreenshot = () => {
-    // TODO: Implement screenshot functionality
-    console.log('[@component:AndroidTVModal] Screenshot button clicked');
+  const handleScreenshotClick = async () => {
+    setIsScreenshotLoading(true);
+    setScreenshotError(null);
+    try {
+      console.log('[@component:AndroidTVModal] Screenshot button clicked');
+      await handleScreenshot();
+      console.log('[@component:AndroidTVModal] Screenshot captured successfully');
+    } catch (error: any) {
+      const errorMessage = error.message || 'Failed to take screenshot';
+      setScreenshotError(errorMessage);
+      console.error('[@component:AndroidTVModal] Screenshot failed:', error);
+    } finally {
+      setIsScreenshotLoading(false);
+    }
   };
 
   // Local button layout configuration for better control
@@ -220,7 +235,7 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
       fullWidth
     >
       <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
-        <Typography variant="h6">Android TV Remote Control</Typography>
+        Android TV Remote Control
         
         {session.connected && (
           <Box display="flex" alignItems="center" gap={1}>
@@ -373,31 +388,61 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
             <Grid item xs={6}>
               <Box sx={{ display: 'flex', flexDirection: 'column', maxHeight: '500px' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', flex: 1, minHeight: '300px' }}>
-                  <Box sx={{ 
-                    width: '100%', 
-                    height: 300, 
-                    border: '2px dashed #ccc', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    borderRadius: 1
-                  }}>
-                    <Typography color="textSecondary">
-                      No screenshot available. Click "Screenshot" to capture.
-                    </Typography>
-                  </Box>
+                  {androidScreenshot ? (
+                    <Box sx={{ position: 'relative', display: 'inline-block' }}>
+                      <img
+                        src={`data:image/png;base64,${androidScreenshot}`}
+                        alt="Android TV Screenshot"
+                        style={{
+                          maxWidth: '100%',
+                          maxHeight: '300px',
+                          border: '1px solid #ccc',
+                          borderRadius: '8px',
+                        }}
+                      />
+                    </Box>
+                  ) : (
+                    <Box sx={{ 
+                      width: '100%', 
+                      height: 300, 
+                      border: '2px dashed #ccc', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      borderRadius: 1
+                    }}>
+                      <Typography color="textSecondary">
+                        No screenshot available. Click "Screenshot" to capture.
+                      </Typography>
+                    </Box>
+                  )}
                 </Box>
+
+                {/* Screenshot Error Display */}
+                {screenshotError && (
+                  <Box sx={{ mt: 1, p: 1, bgcolor: 'error.light', borderRadius: 1 }}>
+                    <Typography variant="caption" color="error">{screenshotError}</Typography>
+                  </Box>
+                )}
 
                 {/* Screenshot Button */}
                 <Box sx={{ mt: 2 }}>
                   <Button
                     variant="contained"
                     size="small"
-                    onClick={handleScreenshot}
+                    onClick={handleScreenshotClick}
+                    disabled={isScreenshotLoading}
                     fullWidth
                     sx={{ fontSize: '0.9rem', py: 1 }}
                   >
-                    Screenshot
+                    {isScreenshotLoading ? (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <CircularProgress size={16} />
+                        <Typography variant="caption">Capturing...</Typography>
+                      </Box>
+                    ) : (
+                      'Screenshot'
+                    )}
                   </Button>
                 </Box>
 

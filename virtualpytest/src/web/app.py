@@ -937,11 +937,9 @@ def get_android_tv_defaults():
 
 @app.route('/api/virtualpytest/android-tv/config', methods=['GET'])
 def get_android_tv_config():
-    """Get Android TV remote configuration including layout, buttons, and image."""
+    """Get Android TV remote configuration."""
     try:
-        # Import the controller and get its configuration
         from controllers.remote.android_tv import AndroidTVRemoteController
-        
         config = AndroidTVRemoteController.get_remote_config()
         
         return jsonify({
@@ -952,7 +950,39 @@ def get_android_tv_config():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': f'Failed to get config: {str(e)}'
+            'error': f'Config error: {str(e)}'
+        }), 500
+
+@app.route('/api/virtualpytest/android-tv/screenshot', methods=['POST'])
+def android_tv_screenshot():
+    """Take a screenshot of the Android TV device."""
+    try:
+        global android_tv_session
+        
+        if not android_tv_session['connected'] or not android_tv_session['controller']:
+            return jsonify({
+                'success': False,
+                'error': 'No active Android TV connection'
+            }), 400
+            
+        success, screenshot_data, error = android_tv_session['controller'].take_screenshot()
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'screenshot': screenshot_data,  # Base64 encoded image
+                'format': 'png'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': error
+            }), 400
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Screenshot error: {str(e)}'
         }), 500
 
 # ==================== IR Remote Control Endpoints ====================
