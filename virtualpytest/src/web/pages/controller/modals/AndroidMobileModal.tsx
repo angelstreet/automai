@@ -288,7 +288,7 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
             {/* App Launcher Section */}
             <Box sx={{ mb: 1 }}>
              
-              <Box sx={{ mb: 2, mt: 2}}>
+              <Box sx={{ mb: 2, mt: 1}}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Select an app...</InputLabel>
                   <Select
@@ -359,7 +359,7 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
 
               {/* Show overlay toggle */}
               {androidElements.length > 0 && (
-                <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+                <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
                   <Button
                     variant={showOverlay ? "contained" : "outlined"}
                     size="small"
