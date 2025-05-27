@@ -216,6 +216,24 @@ export function useAndroidMobileConnection() {
     }
   }, []);
 
+  const handleScreenshotAndDumpUI = useCallback(async () => {
+    try {
+      // First take a screenshot
+      console.log('[@hook:useAndroidMobileConnection] Taking screenshot before UI dump...');
+      await handleScreenshot();
+      console.log('[@hook:useAndroidMobileConnection] Screenshot captured successfully');
+      
+      // Then dump UI elements
+      console.log('[@hook:useAndroidMobileConnection] Now dumping UI elements...');
+      await handleDumpUI();
+      
+      console.log('[@hook:useAndroidMobileConnection] Screenshot and UI dump completed successfully');
+    } catch (err: any) {
+      console.error('[@hook:useAndroidMobileConnection] Screenshot and UI dump error:', err);
+      throw err; // Re-throw the error so the modal can catch it
+    }
+  }, [handleScreenshot, handleDumpUI]);
+
   const clearElements = useCallback(() => {
     setAndroidElements([]);
   }, []);
@@ -237,6 +255,7 @@ export function useAndroidMobileConnection() {
     handleClickElement,
     handleGetApps,
     handleScreenshot,
+    handleScreenshotAndDumpUI,
     clearElements,
     fetchDefaultValues,
   };

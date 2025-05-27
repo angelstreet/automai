@@ -44,6 +44,7 @@ export const AndroidMobileModal: React.FC<AndroidMobileModalProps> = ({ open, on
     handleScreenshot,
     clearElements,
     fetchDefaultValues,
+    handleScreenshotAndDumpUI,
   } = useAndroidMobileConnection();
 
   // Local state for dropdown selections
@@ -95,17 +96,17 @@ export const AndroidMobileModal: React.FC<AndroidMobileModalProps> = ({ open, on
     setIsDumpingUI(true);
     setDumpError(null);
     try {
-      await handleDumpUI();
-      console.log('UI dump completed, elements found:', androidElements.length);
+      await handleScreenshotAndDumpUI();
+      console.log('Screenshot and UI dump completed, elements found:', androidElements.length);
       
       // Check if no elements were found after a successful dump
       if (androidElements.length === 0) {
         setDumpError('No UI elements found on the current screen. The screen might be empty or the app might not be responding.');
       }
     } catch (error: any) {
-      const errorMessage = error.message || 'Failed to dump UI';
+      const errorMessage = error.message || 'Failed to take screenshot and dump UI';
       setDumpError(errorMessage);
-      console.error('UI dump failed:', error);
+      console.error('Screenshot and UI dump failed:', error);
     } finally {
       setIsDumpingUI(false);
     }
@@ -312,18 +313,6 @@ export const AndroidMobileModal: React.FC<AndroidMobileModalProps> = ({ open, on
 
             {/* Right Column: Mobile Features */}
             <Grid item xs={6}>
-              {/* Screenshot Section */}
-              <Box sx={{ mb: 3 }}>
-                <Button
-                  variant="contained"
-                  size="small"
-                  onClick={handleScreenshot}
-                  fullWidth
-                >
-                  Take Screenshot
-                </Button>
-              </Box>
-
               {/* App Launcher Section */}
               <Box sx={{ mb: 3 }}>
                
@@ -373,7 +362,14 @@ export const AndroidMobileModal: React.FC<AndroidMobileModalProps> = ({ open, on
                     disabled={isDumpingUI}
                     sx={{ flex: 1 }}
                   >
-                    {isDumpingUI ? <CircularProgress size={16} /> : 'Dump UI'}
+                    {isDumpingUI ? (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <CircularProgress size={16} />
+                        <Typography variant="caption">Capturing...</Typography>
+                      </Box>
+                    ) : (
+                      'Screenshot & Dump UI'
+                    )}
                   </Button>
                   <Button
                     variant="outlined"
@@ -413,7 +409,7 @@ export const AndroidMobileModal: React.FC<AndroidMobileModalProps> = ({ open, on
                   >
                     {androidElements.length === 0 ? (
                       <MenuItem disabled value="">
-                        No elements found - Click "Dump UI" first
+                        No elements found - Click "Screenshot & Dump UI" first
                       </MenuItem>
                     ) : (
                       androidElements.map((element) => (
@@ -425,60 +421,54 @@ export const AndroidMobileModal: React.FC<AndroidMobileModalProps> = ({ open, on
                   </Select>
                 </FormControl>
 
-                {/* Show detailed elements list when available */}
+                {/* Show compact elements list when available */}
                 {androidElements.length > 0 && (
                   <Box sx={{ 
-                    maxHeight: 200, 
+                    maxHeight: 150, 
                     overflow: 'auto', 
                     border: '1px solid #e0e0e0', 
                     borderRadius: 1,
-                    p: 1,
                     backgroundColor: '#f9f9f9'
                   }}>
-                    <Typography variant="caption" sx={{ fontWeight: 'bold', mb: 1, display: 'block' }}>
-                      Dumped UI Elements:
+                    <Typography variant="caption" sx={{ fontWeight: 'bold', p: 1, display: 'block', borderBottom: '1px solid #e0e0e0' }}>
+                      Found {androidElements.length} UI Elements
                     </Typography>
-                    {androidElements.map((element, index) => (
+                    {androidElements.map((element) => (
                       <Box 
                         key={element.id} 
                         sx={{ 
-                          mb: 1, 
-                          p: 1, 
-                          backgroundColor: 'white',
-                          borderRadius: 0.5,
-                          border: '1px solid #e0e0e0',
-                          fontSize: '0.75rem'
+                          p: 0.5, 
+                          borderBottom: '1px solid #f0f0f0',
+                          fontSize: '0.7rem',
+                          '&:hover': { backgroundColor: '#f0f0f0' },
+                          cursor: 'pointer'
+                        }}
+                        onClick={() => {
+                          setSelectedElement(element.id.toString());
+                          handleClickElement(element);
+                          setTimeout(() => setSelectedElement(''), 1000);
                         }}
                       >
-                        <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                          #{element.id} - {element.tag}
+                        <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'primary.main', fontSize: '0.7rem' }}>
+                          #{element.id} {element.tag}
                         </Typography>
                         {element.text && element.text !== '<no text>' && (
-                          <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
-                            Text: "{element.text}"
+                          <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary', fontSize: '0.65rem' }}>
+                            "{element.text.length > 20 ? element.text.substring(0, 20) + '...' : element.text}"
                           </Typography>
                         )}
-                        {element.contentDesc && element.contentDesc !== '<no content-desc>' && (
-                          <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
-                            Desc: {element.contentDesc}
-                          </Typography>
-                        )}
-                        {element.resourceId && element.resourceId !== '<no resource-id>' && (
-                          <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
-                            ID: {element.resourceId}
-                          </Typography>
-                        )}
-                        <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
-                          Bounds: {element.bounds} | Clickable: {element.clickable ? 'Yes' : 'No'} | Enabled: {element.enabled ? 'Yes' : 'No'}
-                        </Typography>
+                        {!element.text || element.text === '<no text>' ? (
+                          element.contentDesc && element.contentDesc !== '<no content-desc>' && (
+                            <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary', fontSize: '0.65rem' }}>
+                              {element.contentDesc.length > 20 ? element.contentDesc.substring(0, 20) + '...' : element.contentDesc}
+                            </Typography>
+                          )
+                        ) : null}
                       </Box>
                     ))}
                   </Box>
                 )}
 
-                {/* Show status when no elements but dump was attempted */}
-               
-                
                 {/* Mobile Phone Controls */}
                 <Box sx={{ mt: 2 }}>
                   {/* System buttons */}
