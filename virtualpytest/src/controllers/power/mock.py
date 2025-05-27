@@ -8,7 +8,7 @@ All actions are printed to demonstrate functionality.
 from typing import Dict, Any, Optional
 import time
 import random
-from base_controllers import PowerControllerInterface
+from ..base_controllers import PowerControllerInterface
 
 
 class MockPowerController(PowerControllerInterface):

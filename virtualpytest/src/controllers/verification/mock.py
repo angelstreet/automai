@@ -5,10 +5,10 @@ This controller simulates verification and validation functionality for test aut
 All actions are printed to demonstrate functionality.
 """
 
-from typing import Dict, Any, Optional, List, Union
+from typing import Dict, Any, Optional, List, Union, Tuple
 import time
 import random
-from .base_controllers import VerificationControllerInterface
+from ..base_controllers import VerificationControllerInterface
 
 
 class MockVerificationController(VerificationControllerInterface):

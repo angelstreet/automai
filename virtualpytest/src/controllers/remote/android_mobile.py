@@ -7,10 +7,12 @@ Based on the ADB actions pattern and RecAndroidPhoneRemote component.
 """
 
 from typing import Dict, Any, List, Optional
+import subprocess
 import time
-from base_controllers import RemoteControllerInterface
-from lib.sshUtils import SSHConnection, create_ssh_connection
-from lib.adbUtils import ADBUtils, AndroidElement, AndroidApp
+import json
+from ..base_controllers import RemoteControllerInterface
+from ..lib.sshUtils import SSHConnection, create_ssh_connection
+from ..lib.adbUtils import ADBUtils, AndroidElement, AndroidApp
 
 
 class AndroidMobileRemoteController(RemoteControllerInterface):

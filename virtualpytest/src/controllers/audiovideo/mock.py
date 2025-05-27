@@ -5,10 +5,11 @@ This controller simulates audio/video capture and analysis functionality.
 All actions are printed to demonstrate functionality.
 """
 
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Tuple
 import time
 import random
-from .base_controllers import AVControllerInterface
+import os
+from ..base_controllers import AVControllerInterface
 
 
 class MockAVController(AVControllerInterface):

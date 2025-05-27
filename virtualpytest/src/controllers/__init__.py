@@ -18,16 +18,16 @@ from .base_controllers import (
 )
 
 # Import mock implementations
-from .remote_controller import MockRemoteController
-from .av_controller import MockAVController
-from .verification_controller import MockVerificationController
-from .power_controller import MockPowerController
+from .remote.mock import MockRemoteController
+from .audiovideo.mock import MockAVController
+from .verification.mock import MockVerificationController
+from .power.mock import MockPowerController
 
 # Import real implementations
-from .android_tv_remote_controller import AndroidTVRemoteController
-from .android_mobile_remote_controller import AndroidMobileRemoteController
-from .ir_remote_controller import IRRemoteController
-from .bluetooth_remote_controller import BluetoothRemoteController
+from .remote.android_tv import AndroidTVRemoteController
+from .remote.android_mobile import AndroidMobileRemoteController
+from .remote.infrared import IRRemoteController
+from .remote.bluetooth import BluetoothRemoteController
 
 # Controller type registry
 CONTROLLER_REGISTRY = {

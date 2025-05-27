@@ -9,11 +9,11 @@ from typing import Dict, Any, List, Optional
 import subprocess
 import time
 import json
-from base_controllers import RemoteControllerInterface
+from ..base_controllers import RemoteControllerInterface
 
 # Import SSH utilities
 try:
-    from lib.sshUtils import SSHConnection
+    from ..lib.sshUtils import SSHConnection
     SSH_AVAILABLE = True
 except ImportError:
     print("Warning: SSH utilities not available. SSH functionality will be limited.")

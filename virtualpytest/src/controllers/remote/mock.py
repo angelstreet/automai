@@ -7,7 +7,7 @@ All actions are printed to demonstrate functionality.
 
 from typing import Dict, Any, Optional
 import time
-from .base_controllers import RemoteControllerInterface
+from ..base_controllers import RemoteControllerInterface
 
 
 class MockRemoteController(RemoteControllerInterface):

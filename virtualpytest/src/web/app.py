@@ -940,7 +940,7 @@ def get_android_tv_config():
     """Get Android TV remote configuration including layout, buttons, and image."""
     try:
         # Import the controller and get its configuration
-        from controllers.android_tv_remote_controller import AndroidTVRemoteController
+        from controllers.remote.android_tv import AndroidTVRemoteController
         
         config = AndroidTVRemoteController.get_remote_config()
         
@@ -974,7 +974,7 @@ def connect_ir_remote():
         print(f"[@api:ir-remote:connect] Connecting to IR device: {device_path}")
         
         # Create IR remote controller
-        from controllers.ir_remote_controller import IRRemoteController
+        from controllers.remote.infrared import IRRemoteController
         
         ir_controller = IRRemoteController(
             device_name="IR Remote",
@@ -1125,7 +1125,7 @@ def get_ir_remote_config():
     """Get IR remote configuration including layout, buttons, and image."""
     try:
         # Import the controller and get its configuration
-        from controllers.ir_remote_controller import IRRemoteController
+        from controllers.remote.infrared import IRRemoteController
         
         config = IRRemoteController.get_remote_config()
         
@@ -1159,7 +1159,7 @@ def connect_bluetooth_remote():
         print(f"[@api:bluetooth-remote:connect] Connecting to Bluetooth device: {device_address}")
         
         # Create Bluetooth remote controller
-        from controllers.bluetooth_remote_controller import BluetoothRemoteController
+        from controllers.remote.bluetooth import BluetoothRemoteController
         
         bluetooth_controller = BluetoothRemoteController(
             device_name=device_name,
@@ -1309,7 +1309,7 @@ def get_bluetooth_remote_config():
     """Get Bluetooth remote configuration including layout, buttons, and image."""
     try:
         # Import the controller and get its configuration
-        from controllers.bluetooth_remote_controller import BluetoothRemoteController
+        from controllers.remote.bluetooth import BluetoothRemoteController
         
         config = BluetoothRemoteController.get_remote_config()
         

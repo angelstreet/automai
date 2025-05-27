@@ -1,84 +1,111 @@
 """
-Bluetooth Remote Controller Implementation
+IR Remote Controller Implementation
 
-This controller provides Bluetooth remote control functionality for modern devices.
-Supports Bluetooth HID (Human Interface Device) protocol for sending key commands.
+This controller provides IR (Infrared) remote control functionality for TVs, STBs, and other devices.
+Supports classic remote control buttons with standard IR keycodes.
 """
 
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
+import subprocess
 import time
-from base_controllers import RemoteControllerInterface
+import json
+from ..base_controllers import RemoteControllerInterface
 
 
-class BluetoothRemoteController(RemoteControllerInterface):
-    """Bluetooth remote controller using HID protocol."""
+class IRRemoteController(RemoteControllerInterface):
+    """IR remote controller with classic TV/STB buttons and keycodes."""
     
-    # Bluetooth HID keycodes (USB HID standard)
-    BT_KEYCODES = {
+    # Classic IR remote keycodes
+    IR_KEYCODES = {
         # Navigation
-        'UP': 0x52,
-        'DOWN': 0x51,
-        'LEFT': 0x50,
-        'RIGHT': 0x4F,
-        'OK': 0x28,      # Enter key
-        'SELECT': 0x28,  # Same as OK
+        'UP': 0x40BF,
+        'DOWN': 0xC03F,
+        'LEFT': 0x20DF,
+        'RIGHT': 0xA05F,
+        'OK': 0x609F,
+        'SELECT': 0x609F,  # Same as OK
         
         # System controls
-        'POWER': 0x66,   # Power key
-        'HOME': 0x4A,    # Home key
-        'MENU': 0x76,    # Menu key
-        'BACK': 0x29,    # Escape key
-        'EXIT': 0x29,    # Same as BACK
+        'POWER': 0x10EF,
+        'HOME': 0x02FD,
+        'MENU': 0x22DD,
+        'BACK': 0x807F,
+        'EXIT': 0x807F,  # Same as BACK
+        'INFO': 0x50AF,
+        'GUIDE': 0x708F,
+        'SETTINGS': 0x8877,
         
         # Numbers
-        '0': 0x27,
-        '1': 0x1E,
-        '2': 0x1F,
-        '3': 0x20,
-        '4': 0x21,
-        '5': 0x22,
-        '6': 0x23,
-        '7': 0x24,
-        '8': 0x25,
-        '9': 0x26,
+        '0': 0x08F7,
+        '1': 0x8877,
+        '2': 0x48B7,
+        '3': 0xC837,
+        '4': 0x28D7,
+        '5': 0xA857,
+        '6': 0x6897,
+        '7': 0xE817,
+        '8': 0x18E7,
+        '9': 0x9867,
         
         # Media controls
-        'PLAY': 0xB0,
-        'PAUSE': 0xB1,
-        'STOP': 0xB7,
-        'PLAY_PAUSE': 0xCD,
-        'NEXT': 0xB5,
-        'PREVIOUS': 0xB6,
-        'FAST_FORWARD': 0xB3,
-        'REWIND': 0xB4,
+        'PLAY': 0x906F,
+        'PAUSE': 0x50AF,
+        'STOP': 0x30CF,
+        'PLAY_PAUSE': 0x906F,
+        'RECORD': 0xB04F,
+        'REWIND': 0x708F,
+        'FAST_FORWARD': 0xF00F,
+        'PREVIOUS': 0x10EF,
+        'NEXT': 0x906F,
+        'SKIP_BACK': 0x10EF,
+        'SKIP_FORWARD': 0x906F,
         
-        # Volume controls
-        'VOLUME_UP': 0xE9,
-        'VOLUME_DOWN': 0xEA,
-        'MUTE': 0xE2,
+        # Volume and audio
+        'VOLUME_UP': 0x40BF,
+        'VOLUME_DOWN': 0xC03F,
+        'MUTE': 0x609F,
+        'AUDIO': 0xE01F,
         
-        # Letters (for text input)
-        'A': 0x04, 'B': 0x05, 'C': 0x06, 'D': 0x07, 'E': 0x08,
-        'F': 0x09, 'G': 0x0A, 'H': 0x0B, 'I': 0x0C, 'J': 0x0D,
-        'K': 0x0E, 'L': 0x0F, 'M': 0x10, 'N': 0x11, 'O': 0x12,
-        'P': 0x13, 'Q': 0x14, 'R': 0x15, 'S': 0x16, 'T': 0x17,
-        'U': 0x18, 'V': 0x19, 'W': 0x1A, 'X': 0x1B, 'Y': 0x1C,
-        'Z': 0x1D,
+        # Channel controls
+        'CHANNEL_UP': 0x00FF,
+        'CHANNEL_DOWN': 0x807F,
+        'LAST_CHANNEL': 0x20DF,
         
-        # Special keys
-        'SPACE': 0x2C,
-        'TAB': 0x2B,
-        'DELETE': 0x2A,
-        'BACKSPACE': 0x2A,
+        # Color buttons
+        'RED': 0x20DF,
+        'GREEN': 0xA05F,
+        'YELLOW': 0x609F,
+        'BLUE': 0xE01F,
+        
+        # Function buttons
+        'F1': 0x807F,
+        'F2': 0x40BF,
+        'F3': 0xC03F,
+        'F4': 0x20DF,
+        
+        # TV specific
+        'INPUT': 0x807F,
+        'SOURCE': 0x807F,  # Same as INPUT
+        'TV': 0x48B7,
+        'SUBTITLE': 0x8877,
+        'TELETEXT': 0x04FB,
+        
+        # STB specific
+        'DVR': 0x12ED,
+        'VOD': 0x52AD,
+        'INTERACTIVE': 0x32CD,
+        'FAVORITES': 0x728D,
+        'LIST': 0xB24D,
+        'SEARCH': 0x926D,
     }
 
     @staticmethod
     def get_remote_config() -> Dict[str, Any]:
-        """Get the Bluetooth remote configuration including layout, buttons, and image."""
+        """Get the IR remote configuration including layout, buttons, and image."""
         return {
             'remote_info': {
                 'name': 'Sunrise Remote',
-                'type': 'bluetooth_remote',
+                'type': 'ir_remote',
                 'image_url': '/suncherry_remote.png',
                 'default_scale': 1.2,
                 'min_scale': 0.5,
@@ -87,7 +114,7 @@ class BluetoothRemoteController(RemoteControllerInterface):
                 'button_scale_factor': 1.0,  # General scaling factor for all button sizes
                 'global_offset': {
                     'x': 0,  # Global X offset for all buttons
-                    'y': 0   # Global Y offset for all buttons
+                    'y': 30   # Global Y offset for all buttons
                 }
             },
             'button_layout': {
@@ -262,58 +289,45 @@ class BluetoothRemoteController(RemoteControllerInterface):
             }
         }
     
-    def __init__(self, device_name: str = "Bluetooth Remote", device_type: str = "bluetooth_remote", **kwargs):
+    def __init__(self, device_name: str = "IR Remote", device_type: str = "ir_remote", **kwargs):
         """
-        Initialize the Bluetooth remote controller.
+        Initialize the IR remote controller.
         
         Args:
-            device_name: Name of the Bluetooth remote device
+            device_name: Name of the IR remote device
             device_type: Type identifier for the device
             **kwargs: Additional parameters including:
-                - device_address: Bluetooth MAC address of target device
-                - pairing_pin: PIN for pairing (if required)
-                - hid_profile: HID profile to use (default: 'keyboard')
-                - connection_timeout: Connection timeout in seconds (default: 10)
+                - ir_device: IR transmitter device path (e.g., '/dev/lirc0')
+                - protocol: IR protocol (e.g., 'NEC', 'RC5', 'RC6')
+                - frequency: IR carrier frequency in Hz (default: 38000)
+                - repeat_delay: Delay between repeat signals in ms (default: 100)
         """
         super().__init__(device_name, device_type)
         
-        self.device_address = kwargs.get('device_address', '00:00:00:00:00:00')
-        self.pairing_pin = kwargs.get('pairing_pin', '0000')
-        self.hid_profile = kwargs.get('hid_profile', 'keyboard')
-        self.connection_timeout = kwargs.get('connection_timeout', 10)
+        self.ir_device = kwargs.get('ir_device', '/dev/lirc0')
+        self.protocol = kwargs.get('protocol', 'NEC')
+        self.frequency = kwargs.get('frequency', 38000)
+        self.repeat_delay = kwargs.get('repeat_delay', 100)
         
-        # Bluetooth connection state
-        self.bt_socket = None
-        self.is_paired = False
+        # IR transmission state
+        self.ir_transmitter = None
         self.last_command_time = 0
         
     def connect(self) -> bool:
-        """Connect to Bluetooth device."""
+        """Connect to IR transmitter device."""
         try:
-            print(f"Remote[{self.device_type.upper()}]: Connecting to Bluetooth device {self.device_address}")
+            print(f"Remote[{self.device_type.upper()}]: Connecting to IR device {self.ir_device}")
             
-            # In a real implementation, this would:
-            # 1. Initialize Bluetooth adapter
-            # 2. Scan for the target device
-            # 3. Pair with the device (if not already paired)
-            # 4. Connect using HID profile
+            # In a real implementation, this would initialize the IR hardware
+            # For now, we'll simulate the connection
+            print(f"Remote[{self.device_type.upper()}]: Initializing {self.protocol} protocol at {self.frequency}Hz")
             
-            print(f"Remote[{self.device_type.upper()}]: Initializing Bluetooth adapter")
-            print(f"Remote[{self.device_type.upper()}]: Scanning for device {self.device_address}")
-            
-            # Simulate pairing process
-            if not self.is_paired:
-                print(f"Remote[{self.device_type.upper()}]: Pairing with device using PIN {self.pairing_pin}")
-                time.sleep(2)  # Simulate pairing time
-                self.is_paired = True
-                print(f"Remote[{self.device_type.upper()}]: Pairing successful")
-            
-            # Simulate HID connection
-            print(f"Remote[{self.device_type.upper()}]: Connecting using HID profile: {self.hid_profile}")
-            self.bt_socket = {
-                'address': self.device_address,
-                'profile': self.hid_profile,
-                'connected': True
+            # Simulate IR device initialization
+            self.ir_transmitter = {
+                'device': self.ir_device,
+                'protocol': self.protocol,
+                'frequency': self.frequency,
+                'ready': True
             }
             
             self.is_connected = True
@@ -325,11 +339,11 @@ class BluetoothRemoteController(RemoteControllerInterface):
             return False
             
     def disconnect(self) -> bool:
-        """Disconnect from Bluetooth device."""
+        """Disconnect from IR transmitter."""
         try:
-            if self.bt_socket:
-                print(f"Remote[{self.device_type.upper()}]: Closing Bluetooth connection")
-                self.bt_socket = None
+            if self.ir_transmitter:
+                print(f"Remote[{self.device_type.upper()}]: Closing IR transmitter")
+                self.ir_transmitter = None
                 
             self.is_connected = False
             print(f"Remote[{self.device_type.upper()}]: Disconnected from {self.device_name}")
@@ -341,27 +355,33 @@ class BluetoothRemoteController(RemoteControllerInterface):
             
     def press_key(self, key: str) -> bool:
         """
-        Send Bluetooth HID key press command.
+        Send IR key press command.
         
         Args:
-            key: Key name (e.g., "POWER", "VOLUME_UP", "A", "1")
+            key: Key name (e.g., "POWER", "VOLUME_UP", "1", "OK")
         """
         if not self.is_connected:
-            print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to Bluetooth device")
+            print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to IR device")
             return False
             
         try:
-            keycode = self.BT_KEYCODES.get(key.upper())
+            keycode = self.IR_KEYCODES.get(key.upper())
             if not keycode:
                 print(f"Remote[{self.device_type.upper()}]: Unknown key: {key}")
                 return False
                 
-            print(f"Remote[{self.device_type.upper()}]: Sending Bluetooth HID command {key} (0x{keycode:02X})")
+            print(f"Remote[{self.device_type.upper()}]: Sending IR command {key} (0x{keycode:04X})")
             
-            # In a real implementation, this would send HID report
-            self._send_hid_report(keycode)
+            # Simulate IR transmission delay
+            current_time = time.time() * 1000  # Convert to milliseconds
+            if current_time - self.last_command_time < self.repeat_delay:
+                time.sleep((self.repeat_delay - (current_time - self.last_command_time)) / 1000)
             
-            self.last_command_time = time.time()
+            # In a real implementation, this would send the IR signal
+            # For now, we'll simulate the transmission
+            self._transmit_ir_signal(keycode)
+            
+            self.last_command_time = time.time() * 1000
             print(f"Remote[{self.device_type.upper()}]: Successfully sent {key}")
             return True
             
@@ -371,32 +391,29 @@ class BluetoothRemoteController(RemoteControllerInterface):
             
     def input_text(self, text: str) -> bool:
         """
-        Send text input via Bluetooth HID.
+        Send text input by pressing number keys.
         
         Args:
-            text: Text to input
+            text: Text to input (numbers only for IR remote)
         """
         if not self.is_connected:
-            print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to Bluetooth device")
+            print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to IR device")
             return False
             
         try:
             print(f"Remote[{self.device_type.upper()}]: Sending text: '{text}'")
             
+            # IR remotes typically only support numeric input
             for char in text:
-                if char == ' ':
-                    success = self.press_key('SPACE')
-                elif char.isalnum():
-                    success = self.press_key(char.upper())
+                if char.isdigit():
+                    if not self.press_key(char):
+                        print(f"Remote[{self.device_type.upper()}]: Failed to send digit: {char}")
+                        return False
+                    time.sleep(0.2)  # Small delay between digits
+                elif char == ' ':
+                    time.sleep(0.5)  # Longer pause for spaces
                 else:
-                    print(f"Remote[{self.device_type.upper()}]: Skipping unsupported character: {char}")
-                    continue
-                    
-                if not success:
-                    print(f"Remote[{self.device_type.upper()}]: Failed to send character: {char}")
-                    return False
-                    
-                time.sleep(0.1)  # Small delay between characters
+                    print(f"Remote[{self.device_type.upper()}]: Skipping non-numeric character: {char}")
             
             print(f"Remote[{self.device_type.upper()}]: Text input completed")
             return True
@@ -407,13 +424,13 @@ class BluetoothRemoteController(RemoteControllerInterface):
             
     def execute_sequence(self, commands: List[Dict[str, Any]]) -> bool:
         """
-        Execute a sequence of Bluetooth commands.
+        Execute a sequence of IR commands.
         
         Args:
             commands: List of command dictionaries with 'action', 'params', and optional 'delay'
         """
         if not self.is_connected:
-            print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to Bluetooth device")
+            print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to IR device")
             return False
             
         print(f"Remote[{self.device_type.upper()}]: Executing sequence of {len(commands)} commands")
@@ -430,8 +447,14 @@ class BluetoothRemoteController(RemoteControllerInterface):
                 success = self.press_key(params.get('key', 'OK'))
             elif action == 'input_text':
                 success = self.input_text(params.get('text', ''))
-            elif action == 'pair_device':
-                success = self.pair_device(params.get('pin', self.pairing_pin))
+            elif action == 'power_on':
+                success = self.power_on()
+            elif action == 'power_off':
+                success = self.power_off()
+            elif action == 'change_channel':
+                success = self.change_channel(params.get('channel', 1))
+            elif action == 'set_volume':
+                success = self.set_volume(params.get('level', 50))
             else:
                 print(f"Remote[{self.device_type.upper()}]: Unknown action: {action}")
                 return False
@@ -447,54 +470,107 @@ class BluetoothRemoteController(RemoteControllerInterface):
         print(f"Remote[{self.device_type.upper()}]: Sequence completed successfully")
         return True
         
-    def pair_device(self, pin: str = None) -> bool:
+    def power_on(self) -> bool:
+        """Turn device on using IR power command."""
+        return self.press_key("POWER")
+        
+    def power_off(self) -> bool:
+        """Turn device off using IR power command."""
+        return self.press_key("POWER")
+        
+    def change_channel(self, channel: int) -> bool:
         """
-        Pair with Bluetooth device.
+        Change to specific channel number.
         
         Args:
-            pin: Pairing PIN (optional, uses default if not provided)
+            channel: Channel number to tune to
         """
+        if not self.is_connected:
+            return False
+            
         try:
-            pin = pin or self.pairing_pin
-            print(f"Remote[{self.device_type.upper()}]: Pairing with device using PIN: {pin}")
+            print(f"Remote[{self.device_type.upper()}]: Changing to channel {channel}")
             
-            # In a real implementation, this would handle the pairing process
-            time.sleep(2)  # Simulate pairing time
+            # Send each digit of the channel number
+            channel_str = str(channel)
+            for digit in channel_str:
+                if not self.press_key(digit):
+                    return False
+                time.sleep(0.3)
             
-            self.is_paired = True
-            print(f"Remote[{self.device_type.upper()}]: Pairing successful")
+            # Press OK to confirm channel change
+            time.sleep(0.5)
+            return self.press_key("OK")
+            
+        except Exception as e:
+            print(f"Remote[{self.device_type.upper()}]: Channel change error: {e}")
+            return False
+            
+    def set_volume(self, level: int) -> bool:
+        """
+        Set volume to specific level (0-100).
+        
+        Args:
+            level: Volume level (0-100)
+        """
+        if not self.is_connected:
+            return False
+            
+        try:
+            print(f"Remote[{self.device_type.upper()}]: Setting volume to {level}")
+            
+            # First mute, then unmute to reset volume
+            self.press_key("MUTE")
+            time.sleep(0.5)
+            self.press_key("MUTE")
+            time.sleep(0.5)
+            
+            # Adjust volume (simplified approach)
+            if level > 50:
+                # Volume up
+                presses = (level - 50) // 5
+                for _ in range(presses):
+                    self.press_key("VOLUME_UP")
+                    time.sleep(0.2)
+            elif level < 50:
+                # Volume down
+                presses = (50 - level) // 5
+                for _ in range(presses):
+                    self.press_key("VOLUME_DOWN")
+                    time.sleep(0.2)
+            
+            print(f"Remote[{self.device_type.upper()}]: Volume set to approximately {level}")
             return True
             
         except Exception as e:
-            print(f"Remote[{self.device_type.upper()}]: Pairing error: {e}")
+            print(f"Remote[{self.device_type.upper()}]: Volume set error: {e}")
             return False
             
-    def _send_hid_report(self, keycode: int) -> bool:
+    def _transmit_ir_signal(self, keycode: int) -> bool:
         """
-        Send HID report with keycode.
+        Transmit IR signal with given keycode.
         
         Args:
-            keycode: HID keycode to send
+            keycode: IR keycode to transmit
             
         Returns:
-            bool: True if report sent successfully
+            bool: True if transmission successful
         """
         try:
             # In a real implementation, this would:
-            # 1. Create HID report packet
-            # 2. Send key press report
-            # 3. Send key release report
+            # 1. Generate the IR pulse pattern for the keycode
+            # 2. Modulate it at the carrier frequency
+            # 3. Send it through the IR transmitter hardware
             
-            print(f"Remote[{self.device_type.upper()}]: Sending HID report: keycode=0x{keycode:02X}")
+            print(f"Remote[{self.device_type.upper()}]: Transmitting IR signal 0x{keycode:04X} at {self.frequency}Hz")
             
-            # Simulate HID report transmission
-            time.sleep(0.02)  # 20ms for key press
-            time.sleep(0.02)  # 20ms for key release
+            # Simulate transmission time
+            time.sleep(0.05)  # 50ms transmission time
             
             return True
             
         except Exception as e:
-            print(f"Remote[{self.device_type.upper()}]: HID report error: {e}")
+            print(f"Remote[{self.device_type.upper()}]: IR transmission error: {e}")
             return False
             
     def get_status(self) -> Dict[str, Any]:
@@ -503,20 +579,21 @@ class BluetoothRemoteController(RemoteControllerInterface):
             'controller_type': self.controller_type,
             'device_type': self.device_type,
             'device_name': self.device_name,
-            'device_address': self.device_address,
-            'hid_profile': self.hid_profile,
-            'connection_timeout': self.connection_timeout,
+            'ir_device': self.ir_device,
+            'protocol': self.protocol,
+            'frequency': self.frequency,
+            'repeat_delay': self.repeat_delay,
             'connected': self.is_connected,
-            'paired': self.is_paired,
             'last_command_time': self.last_command_time,
-            'supported_keys': list(self.BT_KEYCODES.keys()),
+            'supported_keys': list(self.IR_KEYCODES.keys()),
             'capabilities': [
-                'navigation', 'text_input', 'media_control', 
-                'volume_control', 'alphanumeric_input',
-                'wireless_connection', 'device_pairing'
+                'navigation', 'numeric_input', 'media_control', 
+                'volume_control', 'channel_control', 'power_control',
+                'color_buttons', 'function_buttons', 'tv_controls',
+                'stb_controls'
             ]
         }
 
 
 # Backward compatibility alias
-BluetoothController = BluetoothRemoteController 
+IRController = IRRemoteController 
