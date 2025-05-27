@@ -15,6 +15,7 @@ import {
   MenuItem,
 } from '@mui/material';
 import { useAndroidMobileConnection } from '../hooks/useAndroidMobileConnection';
+import { AndroidMobileOverlay } from '../components/AndroidMobileOverlay';
 
 interface AndroidMobileModalProps {
   open: boolean;
@@ -159,381 +160,396 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
   }, [androidScreenshot]);
 
   return (
-    <Dialog open={open} onClose={handleCloseModal} maxWidth="lg" fullWidth>
-      <DialogTitle>Android Mobile Remote Control</DialogTitle>
-      <DialogContent>
-        <Grid container spacing={3}>
-          {/* Left Column: Connection & Screenshot */}
-          <Grid item xs={6}>
-            {!session.connected ? (
-              /* Connection Form */
-              <Box>
-                <Typography variant="h6" gutterBottom>
-                  SSH + ADB Connection
-                </Typography>
-                
-                {connectionError && (
-                  <Box sx={{ mb: 2, p: 2, bgcolor: 'error.light', borderRadius: 1 }}>
-                    <Typography color="error">{connectionError}</Typography>
-                  </Box>
-                )}
+    <>
+      <Dialog open={open} onClose={handleCloseModal} maxWidth="lg" fullWidth>
+        <DialogTitle>Android Mobile Remote Control</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={3}>
+            {/* Left Column: Connection & Screenshot */}
+            <Grid item xs={6}>
+              {!session.connected ? (
+                /* Connection Form */
+                <Box>
+                  <Typography variant="h6" gutterBottom>
+                    SSH + ADB Connection
+                  </Typography>
+                  
+                  {connectionError && (
+                    <Box sx={{ mb: 2, p: 2, bgcolor: 'error.light', borderRadius: 1 }}>
+                      <Typography color="error">{connectionError}</Typography>
+                    </Box>
+                  )}
 
-                <Grid container spacing={2}>
-                  <Grid item xs={6}>
-                    <TextField
-                      fullWidth
-                      label="Host IP"
-                      value={connectionForm.host_ip}
-                      onChange={(e) => setConnectionForm(prev => ({ ...prev, host_ip: e.target.value }))}
-                      size="small"
-                    />
+                  <Grid container spacing={2}>
+                    <Grid item xs={6}>
+                      <TextField
+                        fullWidth
+                        label="Host IP"
+                        value={connectionForm.host_ip}
+                        onChange={(e) => setConnectionForm(prev => ({ ...prev, host_ip: e.target.value }))}
+                        size="small"
+                      />
+                    </Grid>
+                    <Grid item xs={6}>
+                      <TextField
+                        fullWidth
+                        label="Host Port"
+                        value={connectionForm.host_port}
+                        onChange={(e) => setConnectionForm(prev => ({ ...prev, host_port: e.target.value }))}
+                        size="small"
+                      />
+                    </Grid>
+                    <Grid item xs={6}>
+                      <TextField
+                        fullWidth
+                        label="Username"
+                        value={connectionForm.host_username}
+                        onChange={(e) => setConnectionForm(prev => ({ ...prev, host_username: e.target.value }))}
+                        size="small"
+                      />
+                    </Grid>
+                    <Grid item xs={6}>
+                      <TextField
+                        fullWidth
+                        label="Password"
+                        type="password"
+                        value={connectionForm.host_password}
+                        onChange={(e) => setConnectionForm(prev => ({ ...prev, host_password: e.target.value }))}
+                        size="small"
+                      />
+                    </Grid>
+                    <Grid item xs={6}>
+                      <TextField
+                        fullWidth
+                        label="Device IP"
+                        value={connectionForm.device_ip}
+                        onChange={(e) => setConnectionForm(prev => ({ ...prev, device_ip: e.target.value }))}
+                        size="small"
+                      />
+                    </Grid>
+                    <Grid item xs={6}>
+                      <TextField
+                        fullWidth
+                        label="Device Port"
+                        value={connectionForm.device_port}
+                        onChange={(e) => setConnectionForm(prev => ({ ...prev, device_port: e.target.value }))}
+                        size="small"
+                      />
+                    </Grid>
                   </Grid>
-                  <Grid item xs={6}>
-                    <TextField
-                      fullWidth
-                      label="Host Port"
-                      value={connectionForm.host_port}
-                      onChange={(e) => setConnectionForm(prev => ({ ...prev, host_port: e.target.value }))}
-                      size="small"
-                    />
-                  </Grid>
-                  <Grid item xs={6}>
-                    <TextField
-                      fullWidth
-                      label="Username"
-                      value={connectionForm.host_username}
-                      onChange={(e) => setConnectionForm(prev => ({ ...prev, host_username: e.target.value }))}
-                      size="small"
-                    />
-                  </Grid>
-                  <Grid item xs={6}>
-                    <TextField
-                      fullWidth
-                      label="Password"
-                      type="password"
-                      value={connectionForm.host_password}
-                      onChange={(e) => setConnectionForm(prev => ({ ...prev, host_password: e.target.value }))}
-                      size="small"
-                    />
-                  </Grid>
-                  <Grid item xs={6}>
-                    <TextField
-                      fullWidth
-                      label="Device IP"
-                      value={connectionForm.device_ip}
-                      onChange={(e) => setConnectionForm(prev => ({ ...prev, device_ip: e.target.value }))}
-                      size="small"
-                    />
-                  </Grid>
-                  <Grid item xs={6}>
-                    <TextField
-                      fullWidth
-                      label="Device Port"
-                      value={connectionForm.device_port}
-                      onChange={(e) => setConnectionForm(prev => ({ ...prev, device_port: e.target.value }))}
-                      size="small"
-                    />
-                  </Grid>
-                </Grid>
+
+                  <Button
+                    variant="contained"
+                    onClick={handleConnect}
+                    disabled={connectionLoading || !connectionForm.host_ip || !connectionForm.host_username || !connectionForm.host_password || !connectionForm.device_ip}
+                    sx={{ mt: 2 }}
+                    fullWidth
+                  >
+                    {connectionLoading ? <CircularProgress size={20} /> : 'Connect'}
+                  </Button>
+                </Box>
+              ) : (
+                /* Screenshot Display */
+                <Box>
+                  
+                  {androidScreenshot ? (
+                    <Box sx={{ position: 'relative', display: 'inline-block' }}>
+                      <img
+                        ref={screenshotRef}
+                        src={`data:image/png;base64,${androidScreenshot}`}
+                        alt="Android Screenshot"
+                        style={{
+                          maxWidth: '100%',
+                          maxHeight: '500px',
+                          border: '1px solid #ccc',
+                          borderRadius: '8px',
+                        }}
+                      />
+                    </Box>
+                  ) : (
+                    <Box sx={{ 
+                      width: '100%', 
+                      height: 400, 
+                      border: '2px dashed #ccc', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      borderRadius: 1
+                    }}>
+                      <Typography color="textSecondary">
+                        No screenshot available. Click "Screenshot & Dump UI" to capture.
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              )}
+            </Grid>
+
+            {/* Right Column: Mobile Features */}
+            <Grid item xs={6}>
+              {/* App Launcher Section */}
+              <Box sx={{ mb: 1 }}>
+               
+                <Box sx={{ mb: 2, mt: 1}}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Select an app...</InputLabel>
+                    <Select
+                      value={selectedApp}
+                      label="Select an app..."
+                      disabled={androidApps.length === 0}
+                      onChange={(e) => {
+                        const appPackage = e.target.value;
+                        if (appPackage) {
+                          setSelectedApp(appPackage);
+                          handleCommand('LAUNCH_APP', { package: appPackage });
+                        }
+                      }}
+                    >
+                      {androidApps.map((app) => (
+                        <MenuItem key={app.packageName} value={app.packageName}>
+                          {app.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Box>
 
                 <Button
-                  variant="contained"
-                  onClick={handleConnect}
-                  disabled={connectionLoading || !connectionForm.host_ip || !connectionForm.host_username || !connectionForm.host_password || !connectionForm.device_ip}
-                  sx={{ mt: 2 }}
+                  variant="outlined"
+                  size="small"
+                  onClick={handleGetApps}
+                  disabled={!session.connected}
                   fullWidth
                 >
-                  {connectionLoading ? <CircularProgress size={20} /> : 'Connect'}
+                  Refresh Apps
                 </Button>
               </Box>
-            ) : (
-              /* Screenshot Display */
-              <Box>
-                
-                {androidScreenshot ? (
-                  <Box sx={{ position: 'relative', display: 'inline-block' }}>
-                    <img
-                      ref={screenshotRef}
-                      src={`data:image/png;base64,${androidScreenshot}`}
-                      alt="Android Screenshot"
-                      style={{
-                        maxWidth: '100%',
-                        maxHeight: '500px',
-                        border: '1px solid #ccc',
-                        borderRadius: '8px',
-                      }}
-                    />
-                  </Box>
-                ) : (
-                  <Box sx={{ 
-                    width: '100%', 
-                    height: 400, 
-                    border: '2px dashed #ccc', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    borderRadius: 1
-                  }}>
-                    <Typography color="textSecondary">
-                      No screenshot available. Click "Screenshot & Dump UI" to capture.
-                    </Typography>
+
+              {/* UI Elements Section */}
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  UI Elements ({androidElements.length})
+                </Typography>
+
+                <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={handleDumpUIWithLoading}
+                    disabled={isDumpingUI}
+                    sx={{ flex: 1 }}
+                  >
+                    {isDumpingUI ? (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <CircularProgress size={16} />
+                        <Typography variant="caption">Capturing...</Typography>
+                      </Box>
+                    ) : (
+                      'Screenshot & Dump UI'
+                    )}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={clearElements}
+                    disabled={androidElements.length === 0}
+                    sx={{ flex: 1 }}
+                  >
+                    Clear
+                  </Button>
+                </Box>
+
+                {/* Show overlay toggle */}
+                {androidElements.length > 0 && (
+                  <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                    <Button
+                      variant={showOverlay ? "contained" : "outlined"}
+                      size="small"
+                      onClick={() => setShowOverlay(!showOverlay)}
+                      sx={{ flex: 1 }}
+                    >
+                      {showOverlay ? 'Hide Overlay' : 'Show Overlay'}
+                    </Button>
+                    {isAutoDumpScheduled && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <CircularProgress size={16} />
+                        <Typography variant="caption">Auto-dump in 2s...</Typography>
+                      </Box>
+                    )}
                   </Box>
                 )}
-              </Box>
-            )}
-          </Grid>
 
-          {/* Right Column: Mobile Features */}
-          <Grid item xs={6}>
-            {/* App Launcher Section */}
-            <Box sx={{ mb: 1 }}>
-             
-              <Box sx={{ mb: 2, mt: 1}}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>Select an app...</InputLabel>
+                {dumpError && (
+                  <Box sx={{ mb: 1, p: 1, bgcolor: 'error.light', borderRadius: 1 }}>
+                    <Typography variant="caption" color="error">{dumpError}</Typography>
+                  </Box>
+                )}
+
+                {/* Always show element selection dropdown */}
+                <FormControl fullWidth size="small" >
+                  <InputLabel>Select element to click...</InputLabel>
                   <Select
-                    value={selectedApp}
-                    label="Select an app..."
-                    disabled={androidApps.length === 0}
+                    value={selectedElement}
+                    label="Select element to click..."
+                    disabled={androidElements.length === 0}
                     onChange={(e) => {
-                      const appPackage = e.target.value;
-                      if (appPackage) {
-                        setSelectedApp(appPackage);
-                        handleCommand('LAUNCH_APP', { package: appPackage });
+                      const elementId = parseInt(e.target.value as string);
+                      const element = androidElements.find(el => el.id === elementId);
+                      if (element) {
+                        setSelectedElement(element.id.toString());
+                        handleOverlayElementClick(element);
                       }
                     }}
                   >
-                    {androidApps.map((app) => (
-                      <MenuItem key={app.packageName} value={app.packageName}>
-                        {app.label}
-                      </MenuItem>
-                    ))}
+                    {androidElements.map((element) => {
+                      const getElementDisplayName = (el: any) => {
+                        if (el.contentDesc && el.contentDesc !== '<no content-desc>') {
+                          return `${el.contentDesc} (${el.className})`;
+                        }
+                        if (el.text && el.text !== '<no text>') {
+                          return `"${el.text}" (${el.className})`;
+                        }
+                        if (el.resourceId && el.resourceId !== '<no resource-id>') {
+                          return `${el.resourceId} (${el.className})`;
+                        }
+                        return `${el.className} #${el.id}`;
+                      };
+
+                      return (
+                        <MenuItem key={element.id} value={element.id}>
+                          {getElementDisplayName(element)}
+                        </MenuItem>
+                      );
+                    })}
                   </Select>
                 </FormControl>
               </Box>
 
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={handleGetApps}
-                disabled={!session.connected}
-                fullWidth
-              >
-                Refresh Apps
-              </Button>
-            </Box>
-
-            {/* UI Elements Section */}
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                UI Elements ({androidElements.length})
-              </Typography>
-
-              <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                <Button
-                  variant="contained"
-                  size="small"
-                  onClick={handleDumpUIWithLoading}
-                  disabled={isDumpingUI}
-                  sx={{ flex: 1 }}
-                >
-                  {isDumpingUI ? (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <CircularProgress size={16} />
-                      <Typography variant="caption">Capturing...</Typography>
-                    </Box>
-                  ) : (
-                    'Screenshot & Dump UI'
-                  )}
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={clearElements}
-                  disabled={androidElements.length === 0}
-                  sx={{ flex: 1 }}
-                >
-                  Clear
-                </Button>
-              </Box>
-
-              {/* Show overlay toggle */}
-              {androidElements.length > 0 && (
-                <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+              {/* Mobile Phone Controls */}
+              <Box>
+                {/* System buttons */}
+                <Box sx={{ display: 'flex', gap: 1, mb: 1   }}>
                   <Button
-                    variant={showOverlay ? "contained" : "outlined"}
+                    variant="outlined"
                     size="small"
-                    onClick={() => setShowOverlay(!showOverlay)}
+                    onClick={() => handleCommand('BACK')}
                     sx={{ flex: 1 }}
                   >
-                    {showOverlay ? 'Hide Overlay' : 'Show Overlay'}
+                    Back
                   </Button>
-                  {isAutoDumpScheduled && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <CircularProgress size={16} />
-                      <Typography variant="caption">Auto-dump in 2s...</Typography>
-                    </Box>
-                  )}
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => handleCommand('HOME')}
+                    sx={{ flex: 1 }}
+                  >
+                    Home
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => handleCommand('MENU')}
+                    sx={{ flex: 1 }}
+                  >
+                    Menu
+                  </Button>
                 </Box>
-              )}
 
-              {dumpError && (
-                <Box sx={{ mb: 1, p: 1, bgcolor: 'error.light', borderRadius: 1 }}>
-                  <Typography variant="caption" color="error">{dumpError}</Typography>
+                {/* Volume controls */}
+                <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => handleCommand('VOLUME_UP')}
+                    sx={{ flex: 1 }}
+                  >
+                    Vol+
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => handleCommand('VOLUME_DOWN')}
+                    sx={{ flex: 1 }}
+                  >
+                    Vol-
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => handleCommand('POWER')}
+                    sx={{ flex: 1 }}
+                  >
+                    Power
+                  </Button>
                 </Box>
-              )}
 
-              {/* Always show element selection dropdown */}
-              <FormControl fullWidth size="small" >
-                <InputLabel>Select element to click...</InputLabel>
-                <Select
-                  value={selectedElement}
-                  label="Select element to click..."
-                  disabled={androidElements.length === 0}
-                  onChange={(e) => {
-                    const elementId = parseInt(e.target.value as string);
-                    const element = androidElements.find(el => el.id === elementId);
-                    if (element) {
-                      setSelectedElement(element.id.toString());
-                      handleOverlayElementClick(element);
-                    }
-                  }}
-                >
-                  {androidElements.map((element) => {
-                    const getElementDisplayName = (el: any) => {
-                      if (el.contentDesc && el.contentDesc !== '<no content-desc>') {
-                        return `${el.contentDesc} (${el.className})`;
-                      }
-                      if (el.text && el.text !== '<no text>') {
-                        return `"${el.text}" (${el.className})`;
-                      }
-                      if (el.resourceId && el.resourceId !== '<no resource-id>') {
-                        return `${el.resourceId} (${el.className})`;
-                      }
-                      return `${el.className} #${el.id}`;
-                    };
-
-                    return (
-                      <MenuItem key={element.id} value={element.id}>
-                        {getElementDisplayName(element)}
-                      </MenuItem>
-                    );
-                  })}
-                </Select>
-              </FormControl>
-            </Box>
-
-            {/* Mobile Phone Controls */}
-            <Box>
-              {/* System buttons */}
-              <Box sx={{ display: 'flex', gap: 1, mb: 1   }}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => handleCommand('BACK')}
-                  sx={{ flex: 1 }}
-                >
-                  Back
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => handleCommand('HOME')}
-                  sx={{ flex: 1 }}
-                >
-                  Home
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => handleCommand('MENU')}
-                  sx={{ flex: 1 }}
-                >
-                  Menu
-                </Button>
+                {/* Phone specific buttons */}
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => handleCommand('CAMERA')}
+                    sx={{ flex: 1 }}
+                  >
+                    Camera
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => handleCommand('CALL')}
+                    sx={{ flex: 1 }}
+                  >
+                    Call
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => handleCommand('ENDCALL')}
+                    sx={{ flex: 1 }}
+                  >
+                    End Call
+                  </Button>
+                </Box>
               </Box>
 
-              {/* Volume controls */}
-              <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => handleCommand('VOLUME_UP')}
-                  sx={{ flex: 1 }}
-                >
-                  Vol+
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => handleCommand('VOLUME_DOWN')}
-                  sx={{ flex: 1 }}
-                >
-                  Vol-
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => handleCommand('POWER')}
-                  sx={{ flex: 1 }}
-                >
-                  Power
-                </Button>
+              {/* Modal Controls */}
+              <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #e0e0e0' }}>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button 
+                    variant="outlined"
+                    onClick={handleCloseModal}
+                    sx={{ flex: 1 }}
+                  >
+                    Close
+                  </Button>
+                  <Button 
+                    variant="contained" 
+                    color="error"
+                    onClick={handleDisconnect}
+                    disabled={connectionLoading}
+                    sx={{ flex: 1 }}
+                  >
+                    {connectionLoading ? <CircularProgress size={20} /> : 'Release Control'}
+                  </Button>
+                </Box>
               </Box>
-
-              {/* Phone specific buttons */}
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => handleCommand('CAMERA')}
-                  sx={{ flex: 1 }}
-                >
-                  Camera
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => handleCommand('CALL')}
-                  sx={{ flex: 1 }}
-                >
-                  Call
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => handleCommand('ENDCALL')}
-                  sx={{ flex: 1 }}
-                >
-                  End Call
-                </Button>
-              </Box>
-            </Box>
-
-            {/* Modal Controls */}
-            <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #e0e0e0' }}>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button 
-                  variant="outlined"
-                  onClick={handleCloseModal}
-                  sx={{ flex: 1 }}
-                >
-                  Close
-                </Button>
-                <Button 
-                  variant="contained" 
-                  color="error"
-                  onClick={handleDisconnect}
-                  disabled={connectionLoading}
-                  sx={{ flex: 1 }}
-                >
-                  {connectionLoading ? <CircularProgress size={20} /> : 'Release Control'}
-                </Button>
-              </Box>
-            </Box>
+            </Grid>
           </Grid>
-        </Grid>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      {/* AndroidMobileOverlay - positioned outside the dialog */}
+      {showOverlay && androidElements.length > 0 && screenshotRef.current && (
+        <AndroidMobileOverlay
+          elements={androidElements}
+          screenshotElement={screenshotRef.current}
+          deviceWidth={1080}
+          deviceHeight={2340}
+          isVisible={showOverlay}
+          selectedElementId={selectedElement ? parseInt(selectedElement) : undefined}
+          onElementClick={handleOverlayElementClick}
+        />
+      )}
+    </>
   );
 } 
