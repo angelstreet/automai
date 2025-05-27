@@ -76,122 +76,122 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
       name: 'Fire TV Remote',
       type: 'android_tv',
       image_url: '/android-tv-remote.png',
-      default_scale: 0.6,
+      default_scale: 0.43,
       min_scale: 0.3,
       max_scale: 1.0,
-      button_scale_factor: 1.5,
+      button_scale_factor: 6,
       global_offset: { x: 0, y: 0 }
     },
     button_layout: {
       power: {
         key: 'POWER',
-        position: { x: 70, y: 30 },
+        position: { x: 150, y: 150 },
         size: { width: 14, height: 14 },
         shape: 'circle',
         comment: 'Power button'
       },
       voice: {
         key: 'VOICE_ASSIST',
-        position: { x: 70, y: 55 },
-        size: { width: 16, height: 16 },
+        position: { x:320, y: 280 },
+        size: { width: 20, height: 20 },
         shape: 'circle',
         comment: 'Voice/microphone button'
       },
       nav_up: {
         key: 'DPAD_UP',
-        position: { x: 70, y: 95 },
+        position: { x: 320, y: 440 },
         size: { width: 18, height: 10 },
         shape: 'rectangle',
         comment: 'Navigation up'
       },
       nav_left: {
         key: 'DPAD_LEFT',
-        position: { x: 52, y: 110 },
+        position: { x: 130, y: 610 },
         size: { width: 10, height: 18 },
         shape: 'rectangle',
         comment: 'Navigation left'
       },
       nav_center: {
         key: 'DPAD_CENTER',
-        position: { x: 70, y: 110 },
-        size: { width: 14, height: 14 },
+        position: { x: 320, y: 610 },
+        size: { width: 40, height: 40 },
         shape: 'circle',
         comment: 'Navigation center/select'
       },
       nav_right: {
         key: 'DPAD_RIGHT',
-        position: { x: 88, y: 110 },
+        position: { x: 500, y: 610 },
         size: { width: 10, height: 18 },
         shape: 'rectangle',
         comment: 'Navigation right'
       },
       nav_down: {
         key: 'DPAD_DOWN',
-        position: { x: 70, y: 125 },
+        position: { x: 320, y: 780 },
         size: { width: 18, height: 10 },
         shape: 'rectangle',
         comment: 'Navigation down'
       },
       back: {
         key: 'BACK',
-        position: { x: 48, y: 150 },
-        size: { width: 12, height: 12 },
+        position: { x: 150, y: 940 },
+        size: { width: 20, height: 20 },
         shape: 'circle',
         comment: 'Back button'
       },
       home: {
         key: 'HOME',
-        position: { x: 70, y: 150 },
-        size: { width: 12, height: 12 },
+        position: { x: 490, y: 940 },
+        size: { width: 20, height: 20 },
         shape: 'circle',
         comment: 'Home button'
       },
       menu: {
         key: 'MENU',
-        position: { x: 92, y: 150 },
-        size: { width: 12, height: 12 },
+        position: { x: 320, y: 940 },
+        size: { width: 20, height: 20 },
         shape: 'circle',
         comment: 'Menu button'
       },
       rewind: {
         key: 'MEDIA_REWIND',
-        position: { x: 48, y: 175 },
-        size: { width: 12, height: 12 },
+        position: { x: 150, y: 1100 },
+        size: { width: 20, height: 20 },
         shape: 'circle',
         comment: 'Rewind button'
       },
       play_pause: {
         key: 'MEDIA_PLAY_PAUSE',
-        position: { x: 70, y: 175 },
-        size: { width: 12, height: 12 },
+        position: { x: 320, y: 1100 },
+        size: { width: 20, height: 20 },
         shape: 'circle',
         comment: 'Play/pause button'
       },
       fast_forward: {
         key: 'MEDIA_FAST_FORWARD',
-        position: { x: 92, y: 175 },
-        size: { width: 12, height: 12 },
+        position: { x: 490, y: 1100 },
+        size: { width: 20, height: 20 },
         shape: 'circle',
         comment: 'Fast forward button'
       },
       volume_up: {
         key: 'VOLUME_UP',
-        position: { x: 70, y: 200 },
-        size: { width: 16, height: 16 },
+        position: { x: 320, y: 1270 },
+        size: { width: 20, height: 20 },
         shape: 'circle',
         comment: 'Volume up button'
       },
       volume_down: {
         key: 'VOLUME_DOWN',
-        position: { x: 70, y: 225 },
-        size: { width: 16, height: 16 },
+        position: { x: 320, y: 1430 },
+        size: { width: 20, height: 20 },
         shape: 'circle',
         comment: 'Volume down button'
       },
       mute: {
         key: 'VOLUME_MUTE',
-        position: { x: 70, y: 250 },
-        size: { width: 16, height: 16 },
+        position: { x: 320, y: 1600 },
+        size: { width: 20, height: 20 },
         shape: 'circle',
         comment: 'Mute button'
       }
