@@ -1609,5 +1609,37 @@ def android_mobile_get_apps():
             'error': f'Get apps error: {str(e)}'
         }), 500
 
+@app.route('/api/virtualpytest/android-mobile/screenshot', methods=['POST'])
+def android_mobile_screenshot():
+    """Take a screenshot of the Android Mobile device."""
+    try:
+        global android_mobile_controller
+        
+        if 'android_mobile_controller' not in globals() or not android_mobile_controller:
+            return jsonify({
+                'success': False,
+                'error': 'No active Android Mobile connection'
+            }), 400
+            
+        success, screenshot_data, error = android_mobile_controller.take_screenshot()
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'screenshot': screenshot_data,  # Base64 encoded image
+                'format': 'png'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': error
+            }), 400
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Screenshot error: {str(e)}'
+        }), 500
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5009, debug=True)

@@ -426,13 +426,38 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
             return False
             
     def get_device_resolution(self) -> Optional[Dict[str, int]]:
+        """Get the device screen resolution."""
+        if self.device_resolution:
+            return self.device_resolution
+        return None
+        
+    def take_screenshot(self) -> tuple[bool, str, str]:
         """
-        Get device screen resolution.
+        Take a screenshot of the Android device.
         
         Returns:
-            Dictionary with width and height, or None if not available
+            tuple: (success, base64_screenshot_data, error_message)
         """
-        return self.device_resolution
+        if not self.is_connected or not self.adb_utils:
+            return False, "", "Not connected to device"
+            
+        try:
+            print(f"Remote[{self.device_type.upper()}]: Taking screenshot")
+            
+            # Use ADB to take screenshot and get base64 data
+            success, screenshot_data, error = self.adb_utils.take_screenshot(self.android_device_id)
+            
+            if success:
+                print(f"Remote[{self.device_type.upper()}]: Screenshot captured successfully")
+                return True, screenshot_data, ""
+            else:
+                print(f"Remote[{self.device_type.upper()}]: Screenshot failed: {error}")
+                return False, "", error
+                
+        except Exception as e:
+            error_msg = f"Screenshot error: {e}"
+            print(f"Remote[{self.device_type.upper()}]: {error_msg}")
+            return False, "", error_msg
         
     def get_status(self) -> Dict[str, Any]:
         """Get controller status information."""
