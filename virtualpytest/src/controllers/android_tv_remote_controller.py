@@ -1,8 +1,8 @@
 """
 Real Android TV Remote Controller Implementation
 
-This controller provides real Android TV remote control functionality using ADB.
-Based on the ADB actions pattern from the main application.
+This controller provides real Android TV remote control functionality using SSH+ADB.
+Connects to a host via SSH, then uses ADB to control the Android TV device.
 """
 
 from typing import Dict, Any, List, Optional
@@ -11,9 +11,17 @@ import time
 import json
 from base_controllers import RemoteControllerInterface
 
+# Import SSH utilities
+try:
+    from lib.sshUtils import SSHConnection
+    SSH_AVAILABLE = True
+except ImportError:
+    print("Warning: SSH utilities not available. SSH functionality will be limited.")
+    SSH_AVAILABLE = False
+
 
 class AndroidTVRemoteController(RemoteControllerInterface):
-    """Real Android TV remote controller using ADB commands."""
+    """Real Android TV remote controller using SSH+ADB commands."""
     
     # ADB key mappings based on the TypeScript implementation
     ADB_KEYS = {
@@ -55,53 +63,104 @@ class AndroidTVRemoteController(RemoteControllerInterface):
             device_name: Name of the Android TV device
             device_type: Type identifier for the device
             **kwargs: Additional parameters including:
-                - device_ip: IP address of the Android TV (required)
-                - adb_port: ADB port (default: 5555)
+                # SSH Connection Parameters (required)
+                - host_ip: IP address of the SSH host (required)
+                - host_username: SSH username (required)
+                - host_password: SSH password (optional if using key)
+                - host_key: SSH private key path (optional if using password)
+                - host_port: SSH port (default: 22)
+                
+                # ADB Device Parameters (required)
+                - device_ip: IP address of the Android TV device (required)
+                - device_port: ADB port on the device (default: 5555)
+                
+                # Connection Parameters
                 - connection_timeout: Connection timeout in seconds (default: 10)
         """
         super().__init__(device_name, device_type)
+        
+        # SSH connection parameters
+        self.host_ip = kwargs.get('host_ip')
+        self.host_username = kwargs.get('host_username')
+        self.host_password = kwargs.get('host_password')
+        self.host_key = kwargs.get('host_key')
+        self.host_port = kwargs.get('host_port', 22)
+        
+        # ADB device parameters
         self.device_ip = kwargs.get('device_ip')
-        self.adb_port = kwargs.get('adb_port', 5555)
+        self.device_port = kwargs.get('device_port', 5555)
+        
+        # Connection settings
         self.connection_timeout = kwargs.get('connection_timeout', 10)
         
+        # Validate required parameters
+        if not self.host_ip:
+            raise ValueError("host_ip is required for AndroidTVRemoteController")
+        if not self.host_username:
+            raise ValueError("host_username is required for AndroidTVRemoteController")
+        if not self.host_password and not self.host_key:
+            raise ValueError("Either host_password or host_key is required for AndroidTVRemoteController")
         if not self.device_ip:
             raise ValueError("device_ip is required for AndroidTVRemoteController")
             
-        self.adb_device = f"{self.device_ip}:{self.adb_port}"
+        self.adb_device = f"{self.device_ip}:{self.device_port}"
+        self.ssh_connection = None
         self.device_resolution = None
         
     def connect(self) -> bool:
-        """Connect to the Android TV device via ADB."""
+        """Connect to the Android TV device via SSH+ADB."""
         try:
-            print(f"Remote[{self.device_type.upper()}]: Connecting to {self.device_name} at {self.adb_device}")
+            print(f"Remote[{self.device_type.upper()}]: Connecting to {self.device_name}")
+            print(f"Remote[{self.device_type.upper()}]: SSH Host: {self.host_ip}:{self.host_port}")
+            print(f"Remote[{self.device_type.upper()}]: ADB Device: {self.adb_device}")
             
-            # First, try to connect to the device
-            connect_result = subprocess.run(
-                ["adb", "connect", self.adb_device],
-                capture_output=True,
-                text=True,
+            if not SSH_AVAILABLE:
+                print(f"Remote[{self.device_type.upper()}]: ERROR - SSH utilities not available")
+                return False
+            
+            # Step 1: Establish SSH connection
+            print(f"Remote[{self.device_type.upper()}]: Establishing SSH connection...")
+            self.ssh_connection = SSHConnection(
+                host=self.host_ip,
+                port=self.host_port,
+                username=self.host_username,
+                password=self.host_password,
+                private_key=self.host_key
+            )
+            
+            if not self.ssh_connection.connect():
+                print(f"Remote[{self.device_type.upper()}]: Failed to establish SSH connection")
+                return False
+                
+            print(f"Remote[{self.device_type.upper()}]: SSH connection established")
+            
+            # Step 2: Connect to Android device via ADB over SSH
+            print(f"Remote[{self.device_type.upper()}]: Connecting to Android device via ADB...")
+            connect_command = f"adb connect {self.adb_device}"
+            
+            success, output, error, exit_code = self.ssh_connection.execute_command(
+                connect_command, 
                 timeout=self.connection_timeout
             )
             
-            if connect_result.returncode != 0:
-                print(f"Remote[{self.device_type.upper()}]: ADB connect failed: {connect_result.stderr}")
+            if not success:
+                print(f"Remote[{self.device_type.upper()}]: ADB connect failed: {error}")
+                self.ssh_connection.disconnect()
                 return False
                 
-            print(f"Remote[{self.device_type.upper()}]: ADB connect output: {connect_result.stdout.strip()}")
+            print(f"Remote[{self.device_type.upper()}]: ADB connect output: {output.strip()}")
             
-            # Verify the device is actually connected by checking adb devices
-            devices_result = subprocess.run(
-                ["adb", "devices"],
-                capture_output=True,
-                text=True,
+            # Step 3: Verify the device is connected
+            success, devices_output, error, exit_code = self.ssh_connection.execute_command(
+                "adb devices", 
                 timeout=5
             )
             
-            if devices_result.returncode != 0:
-                print(f"Remote[{self.device_type.upper()}]: Failed to verify device connection")
+            if not success:
+                print(f"Remote[{self.device_type.upper()}]: Failed to verify device connection: {error}")
+                self.ssh_connection.disconnect()
                 return False
                 
-            devices_output = devices_result.stdout
             print(f"Remote[{self.device_type.upper()}]: ADB devices output: {devices_output}")
             
             # Check if our device appears in the devices list
@@ -116,15 +175,18 @@ class AndroidTVRemoteController(RemoteControllerInterface):
                     
             if not device_found:
                 print(f"Remote[{self.device_type.upper()}]: Device {self.adb_device} not found in adb devices list")
+                self.ssh_connection.disconnect()
                 return False
                 
             if 'offline' in device_found:
                 print(f"Remote[{self.device_type.upper()}]: Device {self.adb_device} is offline. Please check device connection and enable USB debugging.")
+                self.ssh_connection.disconnect()
                 return False
                 
             if 'device' not in device_found:
                 status = device_found.split('\t')[1] if '\t' in device_found else 'unknown'
                 print(f"Remote[{self.device_type.upper()}]: Device {self.adb_device} status: {status}")
+                self.ssh_connection.disconnect()
                 return False
                 
             self.is_connected = True
@@ -135,37 +197,41 @@ class AndroidTVRemoteController(RemoteControllerInterface):
             
             return True
             
-        except subprocess.TimeoutExpired:
-            print(f"Remote[{self.device_type.upper()}]: Connection timeout after {self.connection_timeout}s")
-            return False
         except Exception as e:
             print(f"Remote[{self.device_type.upper()}]: Connection error: {e}")
+            if self.ssh_connection:
+                self.ssh_connection.disconnect()
             return False
             
     def disconnect(self) -> bool:
         """Disconnect from the Android TV device."""
         try:
-            if self.is_connected:
+            if self.is_connected and self.ssh_connection:
                 print(f"Remote[{self.device_type.upper()}]: Disconnecting from {self.device_name}")
                 
-                disconnect_result = subprocess.run(
-                    ["adb", "disconnect", self.adb_device],
-                    capture_output=True,
-                    text=True,
+                # Disconnect ADB device
+                success, output, error, exit_code = self.ssh_connection.execute_command(
+                    f"adb disconnect {self.adb_device}",
                     timeout=5
                 )
                 
-                if disconnect_result.returncode == 0:
-                    print(f"Remote[{self.device_type.upper()}]: Disconnected successfully")
+                if success:
+                    print(f"Remote[{self.device_type.upper()}]: ADB disconnected successfully")
                 else:
-                    print(f"Remote[{self.device_type.upper()}]: Disconnect warning: {disconnect_result.stderr}")
+                    print(f"Remote[{self.device_type.upper()}]: ADB disconnect warning: {error}")
+                
+                # Disconnect SSH
+                self.ssh_connection.disconnect()
+                print(f"Remote[{self.device_type.upper()}]: SSH disconnected")
                     
             self.is_connected = False
+            self.ssh_connection = None
             return True
             
         except Exception as e:
             print(f"Remote[{self.device_type.upper()}]: Disconnect error: {e}")
             self.is_connected = False
+            self.ssh_connection = None
             return False
             
     def press_key(self, key: str) -> bool:
@@ -175,7 +241,7 @@ class AndroidTVRemoteController(RemoteControllerInterface):
         Args:
             key: Key name (e.g., "UP", "DOWN", "OK", "HOME")
         """
-        if not self.is_connected:
+        if not self.is_connected or not self.ssh_connection:
             print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
             return False
             
@@ -186,26 +252,21 @@ class AndroidTVRemoteController(RemoteControllerInterface):
             return False
             
         try:
-            key_command = ["adb", "-s", self.adb_device, "shell", "input", "keyevent", adb_keycode]
+            key_command = f"adb -s {self.adb_device} shell input keyevent {adb_keycode}"
             print(f"Remote[{self.device_type.upper()}]: Pressing key '{key}' (keycode: {adb_keycode})")
             
-            result = subprocess.run(
+            success, output, error, exit_code = self.ssh_connection.execute_command(
                 key_command,
-                capture_output=True,
-                text=True,
                 timeout=5
             )
             
-            if result.returncode == 0:
+            if success:
                 print(f"Remote[{self.device_type.upper()}]: Successfully pressed key '{key}'")
                 return True
             else:
-                print(f"Remote[{self.device_type.upper()}]: Key press failed: {result.stderr}")
+                print(f"Remote[{self.device_type.upper()}]: Key press failed: {error}")
                 return False
                 
-        except subprocess.TimeoutExpired:
-            print(f"Remote[{self.device_type.upper()}]: Key press timeout for key '{key}'")
-            return False
         except Exception as e:
             print(f"Remote[{self.device_type.upper()}]: Key press error: {e}")
             return False
@@ -217,7 +278,7 @@ class AndroidTVRemoteController(RemoteControllerInterface):
         Args:
             text: Text to input
         """
-        if not self.is_connected:
+        if not self.is_connected or not self.ssh_connection:
             print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
             return False
             
@@ -225,26 +286,21 @@ class AndroidTVRemoteController(RemoteControllerInterface):
             # Escape special characters for shell
             escaped_text = text.replace(" ", "%s").replace("'", "\\'").replace('"', '\\"')
             
-            text_command = ["adb", "-s", self.adb_device, "shell", "input", "text", escaped_text]
+            text_command = f"adb -s {self.adb_device} shell input text {escaped_text}"
             print(f"Remote[{self.device_type.upper()}]: Sending text: '{text}'")
             
-            result = subprocess.run(
+            success, output, error, exit_code = self.ssh_connection.execute_command(
                 text_command,
-                capture_output=True,
-                text=True,
                 timeout=10
             )
             
-            if result.returncode == 0:
+            if success:
                 print(f"Remote[{self.device_type.upper()}]: Successfully sent text: '{text}'")
                 return True
             else:
-                print(f"Remote[{self.device_type.upper()}]: Text input failed: {result.stderr}")
+                print(f"Remote[{self.device_type.upper()}]: Text input failed: {error}")
                 return False
                 
-        except subprocess.TimeoutExpired:
-            print(f"Remote[{self.device_type.upper()}]: Text input timeout")
-            return False
         except Exception as e:
             print(f"Remote[{self.device_type.upper()}]: Text input error: {e}")
             return False
@@ -256,7 +312,7 @@ class AndroidTVRemoteController(RemoteControllerInterface):
         Args:
             commands: List of command dictionaries with 'action', 'params', and optional 'delay'
         """
-        if not self.is_connected:
+        if not self.is_connected or not self.ssh_connection:
             print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
             return False
             
@@ -441,16 +497,22 @@ class AndroidTVRemoteController(RemoteControllerInterface):
             'controller_type': self.controller_type,
             'device_type': self.device_type,
             'device_name': self.device_name,
+            # SSH connection info
+            'host_ip': self.host_ip,
+            'host_port': self.host_port,
+            'host_username': self.host_username,
+            'ssh_connected': self.ssh_connection is not None and self.ssh_connection.connected if self.ssh_connection else False,
+            # ADB device info
             'device_ip': self.device_ip,
-            'adb_port': self.adb_port,
+            'device_port': self.device_port,
             'adb_device': self.adb_device,
             'connected': self.is_connected,
             'connection_timeout': self.connection_timeout,
             'device_resolution': self.device_resolution,
             'supported_keys': list(self.ADB_KEYS.keys()),
             'capabilities': [
-                'navigation', 'text_input', 'app_launch', 'coordinate_tap',
-                'media_control', 'volume_control', 'power_control'
+                'ssh_connection', 'adb_control', 'navigation', 'text_input', 
+                'app_launch', 'coordinate_tap', 'media_control', 'volume_control', 'power_control'
             ]
         }
 

@@ -33,15 +33,10 @@ from .bluetooth_remote_controller import BluetoothRemoteController
 CONTROLLER_REGISTRY = {
     'remote': {
         'mock': MockRemoteController,
-        'android_tv': MockRemoteController,  # Can be replaced with real implementation
-        'real_android_tv': AndroidTVRemoteController,  # Real ADB-based Android TV controller
+        'real_android_tv': AndroidTVRemoteController,  # Real SSH+ADB-based Android TV controller
         'real_android_mobile': AndroidMobileRemoteController,  # Real SSH+ADB-based Android mobile controller
         'ir_remote': IRRemoteController,     # IR remote with classic TV/STB buttons
         'bluetooth_remote': BluetoothRemoteController,  # Bluetooth HID remote
-        'apple_tv': MockRemoteController,    # Can be replaced with real implementation
-        'fire_tv': MockRemoteController,     # Can be replaced with real implementation
-        'stb_eos': MockRemoteController,     # Can be replaced with real implementation
-        'stb_apollo': MockRemoteController,  # Can be replaced with real implementation
     },
     'av': {
         'mock': MockAVController,
@@ -59,10 +54,7 @@ CONTROLLER_REGISTRY = {
     'power': {
         'mock': MockPowerController,
         'smart_plug': MockPowerController,   # Can be replaced with real smart plug implementation
-        'network': MockPowerController,      # Can be replaced with network power management
-        'adb': MockPowerController,          # Can be replaced with ADB power management
         'ipmi': MockPowerController,         # Can be replaced with IPMI implementation
-        'wake_on_lan': MockPowerController,  # Can be replaced with WoL implementation
     }
 }
 
@@ -307,16 +299,20 @@ def create_device_controllers(
     # Default controller mappings for different device types
     device_defaults = {
         'android_tv': {
-            'remote_type': 'android_tv',
+            'remote_type': 'real_android_tv',  # SSH+ADB Android TV controller
             'av_type': 'adb',
             'verification_type': 'ocr',
-            'power_type': 'adb'
+            'power_type': 'smart_plug',  # Changed from 'adb' to 'smart_plug'
+            # Required parameters for SSH+ADB connection:
+            # host_ip, host_username, host_password/host_key, device_ip, device_port
         },
         'android_mobile': {
-            'remote_type': 'real_android_mobile',
+            'remote_type': 'real_android_mobile',  # SSH+ADB Android mobile controller
             'av_type': 'adb',
             'verification_type': 'ocr',
-            'power_type': 'adb'
+            'power_type': 'smart_plug',  # Changed from 'adb' to 'smart_plug'
+            # Required parameters for SSH+ADB connection:
+            # host_ip, host_username, host_password/host_key, device_ip, device_port
         },
         'ir_tv': {
             'remote_type': 'ir_remote',
@@ -328,27 +324,9 @@ def create_device_controllers(
             'remote_type': 'bluetooth_remote',
             'av_type': 'hdmi',
             'verification_type': 'ocr',
-            'power_type': 'network'
+            'power_type': 'smart_plug'  # Changed from 'network' to 'smart_plug'
         },
-        'apple_tv': {
-            'remote_type': 'apple_tv',
-            'av_type': 'hdmi',
-            'verification_type': 'image',
-            'power_type': 'network'
-        },
-        'fire_tv': {
-            'remote_type': 'fire_tv',
-            'av_type': 'hdmi',
-            'verification_type': 'ocr',
-            'power_type': 'adb'
-        },
-        'stb': {
-            'remote_type': 'stb_eos',
-            'av_type': 'hdmi',
-            'verification_type': 'image',
-            'power_type': 'smart_plug'
-        },
-        'mock': {
+        'mock_device': {
             'remote_type': 'mock',
             'av_type': 'mock',
             'verification_type': 'mock',
@@ -356,7 +334,7 @@ def create_device_controllers(
         }
     }
     
-    defaults = device_defaults.get(device_type, device_defaults['mock'])
+    defaults = device_defaults.get(device_type, device_defaults['mock_device'])
     
     # Override with any provided kwargs
     config = {**defaults, **kwargs}
