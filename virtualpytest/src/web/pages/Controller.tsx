@@ -78,142 +78,51 @@ interface AndroidTVSession {
   device_ip: string;
 }
 
-// Centralized Android TV Remote Key Mappings - Edit these to change button functions
-const ANDROID_TV_KEY_MAPPINGS = {
-  POWER: 'POWER',
-  VOICE: 'MENU',  // Voice button mapped to MENU - change as needed
-  UP: 'UP',
-  DOWN: 'DOWN',
-  LEFT: 'LEFT',
-  RIGHT: 'RIGHT',
-  SELECT: 'OK',   // Center button
-  BACK: 'BACK',
-  HOME: 'HOME',
-  MENU: 'MENU',
-  REWIND: 'REWIND',
-  PLAY_PAUSE: 'PLAY_PAUSE',
-  FAST_FORWARD: 'FAST_FORWARD',
-  VOLUME_UP: 'VOLUME_UP',
-  VOLUME_DOWN: 'VOLUME_DOWN',
-  MUTE: 'VOLUME_MUTE'
-};
+// IR Remote Session interface
+interface IRRemoteSession {
+  connected: boolean;
+  device_path: string;
+  protocol: string;
+}
 
-// Comprehensive Android TV Remote Button Configuration
-// Edit positions, sizes, and key mappings here to match your remote image
-const REMOTE_BUTTON_CONFIG = {
-  POWER: {
-    key: 'POWER',
-    position: { top: 34, left: '50%', transform: 'translateX(-50%)' },
-    size: { width: 26, height: 26 },
-    shape: 'circle', // 'circle' or 'rectangle'
-    comment: 'Power button at top center'
-  },
-  VOICE: {
-    key: 'MENU',
-    position: { top: 71, left: '50%', transform: 'translateX(-50%)' },
-    size: { width: 30, height: 30 },
-    shape: 'circle',
-    comment: 'Voice/Microphone button'
-  },
-  UP: {
-    key: 'UP',
-    position: { top: 120, left: '50%', transform: 'translateX(-50%)' },
-    size: { width: 22, height: 19 },
-    shape: 'rectangle',
-    comment: 'Navigation up'
-  },
-  DOWN: {
-    key: 'DOWN',
-    position: { top: 169, left: '50%', transform: 'translateX(-50%)' },
-    size: { width: 22, height: 19 },
-    shape: 'rectangle',
-    comment: 'Navigation down'
-  },
-  LEFT: {
-    key: 'LEFT',
-    position: { top: 144, left: 34 },
-    size: { width: 19, height: 22 },
-    shape: 'rectangle',
-    comment: 'Navigation left'
-  },
-  RIGHT: {
-    key: 'RIGHT',
-    position: { top: 144, right: 34 },
-    size: { width: 19, height: 22 },
-    shape: 'rectangle',
-    comment: 'Navigation right'
-  },
-  SELECT: {
-    key: 'OK',
-    position: { top: 133, left: '50%', transform: 'translateX(-50%)' },
-    size: { width: 34, height: 34 },
-    shape: 'circle',
-    comment: 'Center select button'
-  },
-  BACK: {
-    key: 'BACK',
-    position: { top: 203, left: 26 },
-    size: { width: 22, height: 22 },
-    shape: 'circle',
-    comment: 'Back button'
-  },
-  HOME: {
-    key: 'HOME',
-    position: { top: 203, left: '50%', transform: 'translateX(-50%)' },
-    size: { width: 22, height: 22 },
-    shape: 'circle',
-    comment: 'Home button'
-  },
-  MENU: {
-    key: 'MENU',
-    position: { top: 203, right: 26 },
-    size: { width: 22, height: 22 },
-    shape: 'circle',
-    comment: 'Menu button'
-  },
-  REWIND: {
-    key: 'REWIND',
-    position: { top: 240, left: 26 },
-    size: { width: 22, height: 22 },
-    shape: 'circle',
-    comment: 'Rewind button'
-  },
-  PLAY_PAUSE: {
-    key: 'PLAY_PAUSE',
-    position: { top: 240, left: '50%', transform: 'translateX(-50%)' },
-    size: { width: 22, height: 22 },
-    shape: 'circle',
-    comment: 'Play/Pause button'
-  },
-  FAST_FORWARD: {
-    key: 'FAST_FORWARD',
-    position: { top: 240, right: 26 },
-    size: { width: 22, height: 22 },
-    shape: 'circle',
-    comment: 'Fast forward button'
-  },
-  VOLUME_UP: {
-    key: 'VOLUME_UP',
-    position: { top: 285, left: '50%', transform: 'translateX(-50%)' },
-    size: { width: 38, height: 15 },
-    shape: 'rectangle',
-    comment: 'Volume up button'
-  },
-  VOLUME_DOWN: {
-    key: 'VOLUME_DOWN',
-    position: { top: 308, left: '50%', transform: 'translateX(-50%)' },
-    size: { width: 38, height: 15 },
-    shape: 'rectangle',
-    comment: 'Volume down button'
-  },
-  MUTE: {
-    key: 'VOLUME_MUTE',
-    position: { top: 334, left: '50%', transform: 'translateX(-50%)' },
-    size: { width: 22, height: 22 },
-    shape: 'circle',
-    comment: 'Mute button'
-  }
-};
+// Bluetooth Remote Session interface  
+interface BluetoothRemoteSession {
+  connected: boolean;
+  device_address: string;
+  device_name: string;
+}
+
+// Remote configuration interfaces
+interface RemoteInfo {
+  name: string;
+  type: string;
+  image_url: string;
+  default_scale: number;
+  min_scale: number;
+  max_scale: number;
+  button_scale_factor?: number;
+  global_offset?: {
+    x: number;
+    y: number;
+  };
+}
+
+interface ButtonConfig {
+  key: string;
+  position: any;
+  size: any;
+  shape: string;
+  comment: string;
+  local_offset?: {
+    x: number;
+    y: number;
+  };
+}
+
+interface RemoteConfig {
+  remote_info: RemoteInfo;
+  button_layout: { [key: string]: ButtonConfig };
+}
 
 const Controller: React.FC = () => {
   const [controllerTypes, setControllerTypes] = useState<ControllerTypes | null>(null);
@@ -226,6 +135,11 @@ const Controller: React.FC = () => {
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [testing, setTesting] = useState(false);
   const [testResults, setTestResults] = useState<TestResult | null>(null);
+
+  // Remote configurations fetched from backend
+  const [androidTVConfig, setAndroidTVConfig] = useState<RemoteConfig | null>(null);
+  const [irRemoteConfig, setIrRemoteConfig] = useState<RemoteConfig | null>(null);
+  const [bluetoothConfig, setBluetoothConfig] = useState<RemoteConfig | null>(null);
 
   // Form state
   const [newController, setNewController] = useState({
@@ -262,6 +176,39 @@ const Controller: React.FC = () => {
   // Debug mode for button positioning
   const [debugMode, setDebugMode] = useState(false);
 
+  // Remote scaling parameter - 1.0 = original size, 1.5 = 50% larger, etc.
+  const [remoteScale, setRemoteScale] = useState(1.2); // Default to 20% larger than current
+
+  // IR Remote Modal State
+  const [irRemoteModalOpen, setIrRemoteModalOpen] = useState(false);
+  const [irRemoteSession, setIrRemoteSession] = useState<IRRemoteSession>({
+    connected: false,
+    device_path: '/dev/lirc0',
+    protocol: 'NEC'
+  });
+  const [irConnectionForm, setIrConnectionForm] = useState({
+    device_path: '/dev/lirc0',
+    protocol: 'NEC',
+    frequency: '38000'
+  });
+  const [irConnectionLoading, setIrConnectionLoading] = useState(false);
+  const [irConnectionError, setIrConnectionError] = useState<string | null>(null);
+
+  // Bluetooth Remote Modal State
+  const [bluetoothModalOpen, setBluetoothModalOpen] = useState(false);
+  const [bluetoothSession, setBluetoothSession] = useState<BluetoothRemoteSession>({
+    connected: false,
+    device_address: '00:00:00:00:00:00',
+    device_name: 'Unknown Device'
+  });
+  const [bluetoothConnectionForm, setBluetoothConnectionForm] = useState({
+    device_address: '00:00:00:00:00:00',
+    device_name: 'TV Remote',
+    pairing_pin: '0000'
+  });
+  const [bluetoothConnectionLoading, setBluetoothConnectionLoading] = useState(false);
+  const [bluetoothConnectionError, setBluetoothConnectionError] = useState<string | null>(null);
+
   // Load default values when modal opens
   useEffect(() => {
     if (androidTVModalOpen) {
@@ -282,6 +229,49 @@ const Controller: React.FC = () => {
       }
     } catch (error) {
       console.log('Could not load default values:', error);
+    }
+  };
+
+  // Fetch remote configurations
+  const fetchAndroidTVConfig = async () => {
+    try {
+      const response = await fetch('http://localhost:5009/api/virtualpytest/android-tv/config');
+      const result = await response.json();
+      
+      if (result.success && result.config) {
+        setAndroidTVConfig(result.config);
+        setRemoteScale(result.config.remote_info.default_scale);
+      }
+    } catch (error) {
+      console.log('Could not load Android TV config:', error);
+    }
+  };
+
+  const fetchIrRemoteConfig = async () => {
+    try {
+      const response = await fetch('http://localhost:5009/api/virtualpytest/ir-remote/config');
+      const result = await response.json();
+      
+      if (result.success && result.config) {
+        setIrRemoteConfig(result.config);
+        setRemoteScale(result.config.remote_info.default_scale);
+      }
+    } catch (error) {
+      console.log('Could not load IR remote config:', error);
+    }
+  };
+
+  const fetchBluetoothConfig = async () => {
+    try {
+      const response = await fetch('http://localhost:5009/api/virtualpytest/bluetooth-remote/config');
+      const result = await response.json();
+      
+      if (result.success && result.config) {
+        setBluetoothConfig(result.config);
+        setRemoteScale(result.config.remote_info.default_scale);
+      }
+    } catch (error) {
+      console.log('Could not load Bluetooth config:', error);
     }
   };
 
@@ -418,6 +408,13 @@ const Controller: React.FC = () => {
   const handleControllerClick = (category: string, controller: ControllerType) => {
     if (category === 'remote' && controller.id === 'real_android_tv') {
       setAndroidTVModalOpen(true);
+      fetchAndroidTVConfig();
+    } else if (category === 'remote' && controller.id === 'ir_remote') {
+      setIrRemoteModalOpen(true);
+      fetchIrRemoteConfig();
+    } else if (category === 'remote' && controller.id === 'bluetooth_remote') {
+      setBluetoothModalOpen(true);
+      fetchBluetoothConfig();
     }
   };
 
@@ -515,18 +512,227 @@ const Controller: React.FC = () => {
     });
   };
 
+  // IR Remote Handlers
+  const handleIrConnect = async () => {
+    setIrConnectionLoading(true);
+    setIrConnectionError(null);
+
+    try {
+      const response = await fetch('http://localhost:5009/api/virtualpytest/ir-remote/connect', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(irConnectionForm),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setIrRemoteSession({
+          connected: true,
+          device_path: irConnectionForm.device_path,
+          protocol: irConnectionForm.protocol
+        });
+      } else {
+        setIrConnectionError(result.error || 'Failed to connect to IR device');
+      }
+    } catch (err: any) {
+      setIrConnectionError(err.message || 'IR connection failed');
+    } finally {
+      setIrConnectionLoading(false);
+    }
+  };
+
+  const handleIrDisconnect = async () => {
+    setIrConnectionLoading(true);
+
+    try {
+      await fetch('http://localhost:5009/api/virtualpytest/ir-remote/disconnect', {
+        method: 'POST',
+      });
+      
+      setIrRemoteSession({
+        connected: false,
+        device_path: '/dev/lirc0',
+        protocol: 'NEC'
+      });
+      setIrConnectionError(null);
+    } catch (err: any) {
+      setIrRemoteSession({
+        connected: false,
+        device_path: '/dev/lirc0',
+        protocol: 'NEC'
+      });
+    } finally {
+      setIrConnectionLoading(false);
+    }
+  };
+
+  const handleIrCommand = async (command: string, params: any = {}) => {
+    try {
+      const response = await fetch('http://localhost:5009/api/virtualpytest/ir-remote/command', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ command, params }),
+      });
+
+      const result = await response.json();
+      if (!result.success) {
+        console.error('IR command failed:', result.error);
+      }
+    } catch (err: any) {
+      console.error('IR command error:', err);
+    }
+  };
+
+  const handleCloseIrModal = () => {
+    if (irRemoteSession.connected) {
+      handleIrDisconnect();
+    }
+    setIrRemoteModalOpen(false);
+    setIrConnectionForm({
+      device_path: '/dev/lirc0',
+      protocol: 'NEC',
+      frequency: '38000'
+    });
+  };
+
+  // Bluetooth Remote Handlers
+  const handleBluetoothConnect = async () => {
+    setBluetoothConnectionLoading(true);
+    setBluetoothConnectionError(null);
+
+    try {
+      const response = await fetch('http://localhost:5009/api/virtualpytest/bluetooth-remote/connect', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(bluetoothConnectionForm),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setBluetoothSession({
+          connected: true,
+          device_address: bluetoothConnectionForm.device_address,
+          device_name: bluetoothConnectionForm.device_name
+        });
+      } else {
+        setBluetoothConnectionError(result.error || 'Failed to connect to Bluetooth device');
+      }
+    } catch (err: any) {
+      setBluetoothConnectionError(err.message || 'Bluetooth connection failed');
+    } finally {
+      setBluetoothConnectionLoading(false);
+    }
+  };
+
+  const handleBluetoothDisconnect = async () => {
+    setBluetoothConnectionLoading(true);
+
+    try {
+      await fetch('http://localhost:5009/api/virtualpytest/bluetooth-remote/disconnect', {
+        method: 'POST',
+      });
+      
+      setBluetoothSession({
+        connected: false,
+        device_address: '00:00:00:00:00:00',
+        device_name: 'Unknown Device'
+      });
+      setBluetoothConnectionError(null);
+    } catch (err: any) {
+      setBluetoothSession({
+        connected: false,
+        device_address: '00:00:00:00:00:00',
+        device_name: 'Unknown Device'
+      });
+    } finally {
+      setBluetoothConnectionLoading(false);
+    }
+  };
+
+  const handleBluetoothCommand = async (command: string, params: any = {}) => {
+    try {
+      const response = await fetch('http://localhost:5009/api/virtualpytest/bluetooth-remote/command', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ command, params }),
+      });
+
+      const result = await response.json();
+      if (!result.success) {
+        console.error('Bluetooth command failed:', result.error);
+      }
+    } catch (err: any) {
+      console.error('Bluetooth command error:', err);
+    }
+  };
+
+  const handleCloseBluetoothModal = () => {
+    if (bluetoothSession.connected) {
+      handleBluetoothDisconnect();
+    }
+    setBluetoothModalOpen(false);
+    setBluetoothConnectionForm({
+      device_address: '00:00:00:00:00:00',
+      device_name: 'TV Remote',
+      pairing_pin: '0000'
+    });
+  };
+
   // Helper function to render a button from configuration
-  const renderRemoteButton = (buttonId: string, config: any) => {
+  const renderRemoteButton = (buttonId: string, config: any, commandHandler: (command: string, params: any) => void, remoteConfig: RemoteConfig | null, scale: number = 1) => {
+    if (!remoteConfig) return null;
+    
     const borderRadius = config.shape === 'circle' ? '50%' : config.shape === 'rectangle' ? 2 : '50%';
+    
+    // Get scaling and offset parameters from remote config
+    const buttonScaleFactor = remoteConfig.remote_info.button_scale_factor || 1.0;
+    const globalOffset = remoteConfig.remote_info.global_offset || { x: 0, y: 0 };
+    const localOffset = config.local_offset || { x: 0, y: 0 };
+    
+    // Apply scaling and offsets to position and size
+    const scaledPosition = { ...config.position };
+    const scaledSize = { ...config.size };
+    
+    // Scale numeric position values and apply offsets
+    if (typeof scaledPosition.top === 'number') {
+      scaledPosition.top = (scaledPosition.top * scale) + (globalOffset.y * scale) + (localOffset.y * scale);
+    }
+    if (typeof scaledPosition.left === 'number') {
+      scaledPosition.left = (scaledPosition.left * scale) + (globalOffset.x * scale) + (localOffset.x * scale);
+    }
+    if (typeof scaledPosition.right === 'number') {
+      scaledPosition.right = (scaledPosition.right * scale) + (globalOffset.x * scale) + (localOffset.x * scale);
+    }
+    if (typeof scaledPosition.bottom === 'number') {
+      scaledPosition.bottom = (scaledPosition.bottom * scale) + (globalOffset.y * scale) + (localOffset.y * scale);
+    }
+    
+    // Scale size values with button scale factor
+    if (typeof scaledSize.width === 'number') {
+      scaledSize.width = scaledSize.width * scale * buttonScaleFactor;
+    }
+    if (typeof scaledSize.height === 'number') {
+      scaledSize.height = scaledSize.height * scale * buttonScaleFactor;
+    }
     
     return (
       <Box
         key={buttonId}
-        onClick={() => handleRemoteCommand('press_key', { key: config.key })}
+        onClick={() => commandHandler('press_key', { key: config.key })}
         sx={{
           position: 'absolute',
-          ...config.position,
-          ...config.size,
+          ...scaledPosition,
+          ...scaledSize,
           borderRadius,
           cursor: 'pointer',
           // Show overlay in debug mode or on hover
@@ -540,7 +746,7 @@ const Controller: React.FC = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: debugMode ? '8px' : '0px',
+          fontSize: debugMode ? `${8 * scale}px` : '0px',
           color: debugMode ? 'white' : 'transparent',
           fontWeight: 'bold',
           textShadow: debugMode ? '1px 1px 2px black' : 'none'
@@ -842,30 +1048,64 @@ const Controller: React.FC = () => {
         fullWidth
       >
         <DialogTitle>
-          <Box display="flex" justifyContent="space-between" alignItems="center">
-            <Box display="flex" alignItems="center">
-              Android TV Remote Control
+          <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ minHeight: 40 }}>
+            {/* Left side: Title and status */}
+            <Box display="flex" alignItems="center" gap={1}>
+              <Typography variant="h6" component="span">
+                Android TV Remote
+              </Typography>
               {androidTVSession.connected && (
                 <Chip 
                   label="Connected" 
                   color="success" 
-                  size="small" 
-                  sx={{ ml: 2 }} 
+                  size="small"
                 />
               )}
             </Box>
+            
+            {/* Right side: Controls */}
             {androidTVSession.connected && (
-              <Button
-                variant={debugMode ? "contained" : "outlined"}
-                size="small"
-                onClick={() => setDebugMode(!debugMode)}
-              >
-                {debugMode ? 'Hide Overlays' : 'Show Overlays'}
-              </Button>
+              <Box display="flex" alignItems="center" gap={1}>
+                {/* Show Overlays button */}
+                <Button
+                  variant={debugMode ? "contained" : "outlined"}
+                  size="small"
+                  onClick={() => setDebugMode(!debugMode)}
+                  sx={{ minWidth: 'auto', px: 1 }}
+                >
+                  {debugMode ? 'Hide Overlays' : 'Show Overlays'}
+                </Button>
+                
+                {/* Scale controls */}
+                <Box display="flex" alignItems="center" gap={0.5}>
+                  <Typography variant="caption" sx={{ fontSize: '0.75rem' }}>
+                    Scale:
+                  </Typography>
+                  <Button
+                    size="small"
+                    onClick={() => setRemoteScale(prev => Math.max(androidTVConfig?.remote_info.min_scale || 0.5, prev - 0.1))}
+                    disabled={remoteScale <= (androidTVConfig?.remote_info.min_scale || 0.5)}
+                    sx={{ minWidth: 24, width: 24, height: 24, p: 0 }}
+                  >
+                    -
+                  </Button>
+                  <Typography variant="caption" sx={{ minWidth: 35, textAlign: 'center', fontSize: '0.75rem' }}>
+                    {Math.round(remoteScale * 100)}%
+                  </Typography>
+                  <Button
+                    size="small"
+                    onClick={() => setRemoteScale(prev => Math.min(androidTVConfig?.remote_info.max_scale || 2.0, prev + 0.1))}
+                    disabled={remoteScale >= (androidTVConfig?.remote_info.max_scale || 2.0)}
+                    sx={{ minWidth: 24, width: 24, height: 24, p: 0 }}
+                  >
+                    +
+                  </Button>
+                </Box>
+              </Box>
             )}
           </Box>
         </DialogTitle>
-        <DialogContent sx={{ pb: 2 }}>
+        <DialogContent sx={{ pb: 2, overflow: 'hidden', maxHeight: 'none' }}>
           {!androidTVSession.connected ? (
             <Box sx={{ pt: 2 }}>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
@@ -940,31 +1180,39 @@ const Controller: React.FC = () => {
               </Grid>
             </Box>
           ) : (
-            <Box sx={{ pt: 2 }}>
+            <Box sx={{ pt: 2, display: 'flex', justifyContent: 'center', overflow: 'hidden' }}>
               {/* Android TV Remote Interface */}
-              <Box sx={{ pt: 1, maxWidth: 140, mx: 'auto' }}>
-                {/* Remote Control with Real Image Background */}
-                <Box sx={{ 
-                  position: 'relative',
-                  width: 140,
-                  height: 360,
-                  mx: 'auto',
-                  backgroundImage: 'url("/android-tv-remote.png")', // You'll need to add this image to public folder
-                  backgroundSize: 'contain',
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'center',
-                  // Fallback dark background if image doesn't load
-                  bgcolor: '#2a2a2a',
-                  borderRadius: 6,
-                  boxShadow: '0 8px 16px rgba(0,0,0,0.3)'
-                }}>
-                  
-                  {/* Render all buttons from configuration */}
-                  {Object.entries(REMOTE_BUTTON_CONFIG).map(([buttonId, config]) => 
-                    renderRemoteButton(buttonId, config)
-                  )}
+              <Box sx={{ 
+                position: 'relative',
+                transform: `scale(${remoteScale})`,
+                transformOrigin: 'center top',
+                display: 'inline-block',
+                overflow: 'visible'
+              }}>
+                {/* Actual remote image */}
+                <img 
+                  src={androidTVConfig?.remote_info.image_url || "/android-tv-remote.png"}
+                  alt={androidTVConfig?.remote_info.name || "Android TV Remote"}
+                  style={{
+                    display: 'block',
+                    maxWidth: '100%',
+                    height: 'auto',
+                    borderRadius: '6px',
+                    boxShadow: '0 8px 16px rgba(0,0,0,0.3)'
+                  }}
+                  onError={(e) => {
+                    // Fallback if image doesn't load
+                    e.currentTarget.style.width = '140px';
+                    e.currentTarget.style.height = '360px';
+                    e.currentTarget.style.backgroundColor = '#2a2a2a';
+                  }}
+                />
+                
+                {/* Button overlays positioned absolutely over the image */}
+                {Object.entries(androidTVConfig?.button_layout || {}).map(([buttonId, config]) => 
+                  renderRemoteButton(buttonId, config, handleRemoteCommand, androidTVConfig, 1)
+                )}
 
-                </Box>
               </Box>
             </Box>
           )}
@@ -989,6 +1237,355 @@ const Controller: React.FC = () => {
               disabled={connectionLoading}
             >
               {connectionLoading ? <CircularProgress size={20} /> : 'Release Control'}
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
+
+      {/* IR Remote Modal */}
+      <Dialog 
+        open={irRemoteModalOpen} 
+        onClose={handleCloseIrModal}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ minHeight: 40 }}>
+            {/* Left side: Title and status */}
+            <Box display="flex" alignItems="center" gap={1}>
+              <Typography variant="h6" component="span">
+                IR Remote Control
+              </Typography>
+              {irRemoteSession.connected && (
+                <Chip 
+                  label="Connected" 
+                  color="success" 
+                  size="small"
+                />
+              )}
+            </Box>
+            
+            {/* Right side: Controls */}
+            {irRemoteSession.connected && (
+              <Box display="flex" alignItems="center" gap={1}>
+                {/* Show Overlays button */}
+                <Button
+                  variant={debugMode ? "contained" : "outlined"}
+                  size="small"
+                  onClick={() => setDebugMode(!debugMode)}
+                  sx={{ minWidth: 'auto', px: 1 }}
+                >
+                  {debugMode ? 'Hide Overlays' : 'Show Overlays'}
+                </Button>
+                
+                {/* Scale controls */}
+                <Box display="flex" alignItems="center" gap={0.5}>
+                  <Typography variant="caption" sx={{ fontSize: '0.75rem' }}>
+                    Scale:
+                  </Typography>
+                  <Button
+                    size="small"
+                    onClick={() => setRemoteScale(prev => Math.max(irRemoteConfig?.remote_info.min_scale || 0.5, prev - 0.1))}
+                    disabled={remoteScale <= (irRemoteConfig?.remote_info.min_scale || 0.5)}
+                    sx={{ minWidth: 24, width: 24, height: 24, p: 0 }}
+                  >
+                    -
+                  </Button>
+                  <Typography variant="caption" sx={{ minWidth: 35, textAlign: 'center', fontSize: '0.75rem' }}>
+                    {Math.round(remoteScale * 100)}%
+                  </Typography>
+                  <Button
+                    size="small"
+                    onClick={() => setRemoteScale(prev => Math.min(irRemoteConfig?.remote_info.max_scale || 2.0, prev + 0.1))}
+                    disabled={remoteScale >= (irRemoteConfig?.remote_info.max_scale || 2.0)}
+                    sx={{ minWidth: 24, width: 24, height: 24, p: 0 }}
+                  >
+                    +
+                  </Button>
+                </Box>
+              </Box>
+            )}
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ pb: 2, overflow: 'hidden', maxHeight: 'none' }}>
+          {!irRemoteSession.connected ? (
+            <Box sx={{ pt: 2 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Configure IR transmitter settings to control your TV or set-top box.
+              </Typography>
+              
+              {irConnectionError && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {irConnectionError}
+                </Alert>
+              )}
+
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="IR Device Path"
+                    value={irConnectionForm.device_path}
+                    onChange={(e) => setIrConnectionForm(prev => ({ ...prev, device_path: e.target.value }))}
+                    placeholder="/dev/lirc0"
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Protocol</InputLabel>
+                    <Select
+                      value={irConnectionForm.protocol}
+                      onChange={(e) => setIrConnectionForm(prev => ({ ...prev, protocol: e.target.value }))}
+                    >
+                      <MenuItem value="NEC">NEC</MenuItem>
+                      <MenuItem value="RC5">RC5</MenuItem>
+                      <MenuItem value="RC6">RC6</MenuItem>
+                      <MenuItem value="SONY">SONY</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Frequency (Hz)"
+                    value={irConnectionForm.frequency}
+                    onChange={(e) => setIrConnectionForm(prev => ({ ...prev, frequency: e.target.value }))}
+                    placeholder="38000"
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+          ) : (
+            <Box sx={{ pt: 2, display: 'flex', justifyContent: 'center', overflow: 'hidden' }}>
+              {/* IR Remote Interface */}
+              <Box sx={{ 
+                position: 'relative',
+                transform: `scale(${remoteScale})`,
+                transformOrigin: 'center top',
+                display: 'inline-block',
+                overflow: 'visible'
+              }}>
+                {/* Actual remote image */}
+                <img 
+                  src={irRemoteConfig?.remote_info.image_url || "/suncherry_remote.png"}
+                  alt={irRemoteConfig?.remote_info.name || "Sunrise Remote"}
+                  style={{
+                    display: 'block',
+                    maxWidth: '100%',
+                    height: 'auto',
+                    borderRadius: '6px',
+                    boxShadow: '0 8px 16px rgba(0,0,0,0.3)'
+                  }}
+                  onError={(e) => {
+                    // Fallback if image doesn't load
+                    e.currentTarget.style.width = '120px';
+                    e.currentTarget.style.height = '360px';
+                    e.currentTarget.style.backgroundColor = '#2a2a2a';
+                  }}
+                />
+                
+                {/* Button overlays positioned absolutely over the image */}
+                {Object.entries(irRemoteConfig?.button_layout || {}).map(([buttonId, config]) => 
+                  renderRemoteButton(buttonId, config, handleIrCommand, irRemoteConfig, 1)
+                )}
+
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseIrModal}>
+            Close
+          </Button>
+          {!irRemoteSession.connected ? (
+            <Button 
+              variant="contained" 
+              onClick={handleIrConnect}
+              disabled={irConnectionLoading || !irConnectionForm.device_path}
+            >
+              {irConnectionLoading ? <CircularProgress size={20} /> : 'Connect'}
+            </Button>
+          ) : (
+            <Button 
+              variant="contained" 
+              color="error"
+              onClick={handleIrDisconnect}
+              disabled={irConnectionLoading}
+            >
+              {irConnectionLoading ? <CircularProgress size={20} /> : 'Disconnect'}
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
+
+      {/* Bluetooth Remote Modal */}
+      <Dialog 
+        open={bluetoothModalOpen} 
+        onClose={handleCloseBluetoothModal}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ minHeight: 40 }}>
+            {/* Left side: Title and status */}
+            <Box display="flex" alignItems="center" gap={1}>
+              <Typography variant="h6" component="span">
+                Bluetooth Remote Control
+              </Typography>
+              {bluetoothSession.connected && (
+                <Chip 
+                  label="Connected" 
+                  color="success" 
+                  size="small"
+                />
+              )}
+            </Box>
+            
+            {/* Right side: Controls */}
+            {bluetoothSession.connected && (
+              <Box display="flex" alignItems="center" gap={1}>
+                {/* Show Overlays button */}
+                <Button
+                  variant={debugMode ? "contained" : "outlined"}
+                  size="small"
+                  onClick={() => setDebugMode(!debugMode)}
+                  sx={{ minWidth: 'auto', px: 1 }}
+                >
+                  {debugMode ? 'Hide Overlays' : 'Show Overlays'}
+                </Button>
+                
+                {/* Scale controls */}
+                <Box display="flex" alignItems="center" gap={0.5}>
+                  <Typography variant="caption" sx={{ fontSize: '0.75rem' }}>
+                    Scale:
+                  </Typography>
+                  <Button
+                    size="small"
+                    onClick={() => setRemoteScale(prev => Math.max(bluetoothConfig?.remote_info.min_scale || 0.5, prev - 0.1))}
+                    disabled={remoteScale <= (bluetoothConfig?.remote_info.min_scale || 0.5)}
+                    sx={{ minWidth: 24, width: 24, height: 24, p: 0 }}
+                  >
+                    -
+                  </Button>
+                  <Typography variant="caption" sx={{ minWidth: 35, textAlign: 'center', fontSize: '0.75rem' }}>
+                    {Math.round(remoteScale * 100)}%
+                  </Typography>
+                  <Button
+                    size="small"
+                    onClick={() => setRemoteScale(prev => Math.min(bluetoothConfig?.remote_info.max_scale || 2.0, prev + 0.1))}
+                    disabled={remoteScale >= (bluetoothConfig?.remote_info.max_scale || 2.0)}
+                    sx={{ minWidth: 24, width: 24, height: 24, p: 0 }}
+                  >
+                    +
+                  </Button>
+                </Box>
+              </Box>
+            )}
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ pb: 2, overflow: 'hidden', maxHeight: 'none' }}>
+          {!bluetoothSession.connected ? (
+            <Box sx={{ pt: 2 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Pair with a Bluetooth device to control it remotely using HID protocol.
+              </Typography>
+              
+              {bluetoothConnectionError && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {bluetoothConnectionError}
+                </Alert>
+              )}
+
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Device Address (MAC)"
+                    value={bluetoothConnectionForm.device_address}
+                    onChange={(e) => setBluetoothConnectionForm(prev => ({ ...prev, device_address: e.target.value }))}
+                    placeholder="AA:BB:CC:DD:EE:FF"
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Device Name"
+                    value={bluetoothConnectionForm.device_name}
+                    onChange={(e) => setBluetoothConnectionForm(prev => ({ ...prev, device_name: e.target.value }))}
+                    placeholder="Smart TV"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Pairing PIN"
+                    value={bluetoothConnectionForm.pairing_pin}
+                    onChange={(e) => setBluetoothConnectionForm(prev => ({ ...prev, pairing_pin: e.target.value }))}
+                    placeholder="0000"
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+          ) : (
+            <Box sx={{ pt: 2, display: 'flex', justifyContent: 'center', overflow: 'hidden' }}>
+              {/* Bluetooth Remote Interface */}
+              <Box sx={{ 
+                position: 'relative',
+                transform: `scale(${remoteScale})`,
+                transformOrigin: 'center top',
+                display: 'inline-block',
+                overflow: 'visible'
+              }}>
+                {/* Actual remote image */}
+                <img 
+                  src={bluetoothConfig?.remote_info.image_url || "/suncherry_remote.png"}
+                  alt={bluetoothConfig?.remote_info.name || "Sunrise Remote"}
+                  style={{
+                    display: 'block',
+                    maxWidth: '100%',
+                    height: 'auto',
+                    borderRadius: '6px',
+                    boxShadow: '0 8px 16px rgba(0,0,0,0.3)'
+                  }}
+                  onError={(e) => {
+                    // Fallback if image doesn't load
+                    e.currentTarget.style.width = '120px';
+                    e.currentTarget.style.height = '360px';
+                    e.currentTarget.style.backgroundColor = '#2a2a2a';
+                  }}
+                />
+                
+                {/* Button overlays positioned absolutely over the image */}
+                {Object.entries(bluetoothConfig?.button_layout || {}).map(([buttonId, config]) => 
+                  renderRemoteButton(buttonId, config, handleBluetoothCommand, bluetoothConfig, 1)
+                )}
+
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseBluetoothModal}>
+            Close
+          </Button>
+          {!bluetoothSession.connected ? (
+            <Button 
+              variant="contained" 
+              onClick={handleBluetoothConnect}
+              disabled={bluetoothConnectionLoading || !bluetoothConnectionForm.device_address}
+            >
+              {bluetoothConnectionLoading ? <CircularProgress size={20} /> : 'Pair & Connect'}
+            </Button>
+          ) : (
+            <Button 
+              variant="contained" 
+              color="error"
+              onClick={handleBluetoothDisconnect}
+              disabled={bluetoothConnectionLoading}
+            >
+              {bluetoothConnectionLoading ? <CircularProgress size={20} /> : 'Disconnect'}
             </Button>
           )}
         </DialogActions>

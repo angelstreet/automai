@@ -71,6 +71,220 @@ class BluetoothRemoteController(RemoteControllerInterface):
         'DELETE': 0x2A,
         'BACKSPACE': 0x2A,
     }
+
+    @staticmethod
+    def get_remote_config() -> Dict[str, Any]:
+        """Get the Bluetooth remote configuration including layout, buttons, and image."""
+        return {
+            'remote_info': {
+                'name': 'Sunrise Remote',
+                'type': 'bluetooth_remote',
+                'image_url': '/suncherry_remote.png',
+                'default_scale': 1.2,
+                'min_scale': 0.5,
+                'max_scale': 2.0,
+                # General scaling and offset parameters
+                'button_scale_factor': 1.0,  # General scaling factor for all button sizes
+                'global_offset': {
+                    'x': 0,  # Global X offset for all buttons
+                    'y': 0   # Global Y offset for all buttons
+                }
+            },
+            'button_layout': {
+                'power': {
+                    'key': 'POWER',
+                    'position': { 'top': 25, 'left': '50%', 'transform': 'translateX(-50%)' },
+                    'size': { 'width': 16, 'height': 16 },
+                    'shape': 'circle',
+                    'comment': 'Power button',
+                    'local_offset': { 'x': 0, 'y': 0 }
+                },
+                'mute': {
+                    'key': 'MUTE',
+                    'position': { 'top': 50, 'left': 20 },
+                    'size': { 'width': 14, 'height': 14 },
+                    'shape': 'circle',
+                    'comment': 'Mute button',
+                    'local_offset': { 'x': 0, 'y': 0 }
+                },
+                'source': {
+                    'key': 'SOURCE',
+                    'position': { 'top': 50, 'right': 20 },
+                    'size': { 'width': 14, 'height': 14 },
+                    'shape': 'circle',
+                    'comment': 'Source/Input button',
+                    'local_offset': { 'x': 0, 'y': 0 }
+                },
+                'num_1': {
+                    'key': '1',
+                    'position': { 'top': 80, 'left': 20 },
+                    'size': { 'width': 14, 'height': 14 },
+                    'shape': 'circle',
+                    'comment': 'Number 1',
+                    'local_offset': { 'x': 0, 'y': 0 }
+                },
+                'num_2': {
+                    'key': '2',
+                    'position': { 'top': 80, 'left': '50%', 'transform': 'translateX(-50%)' },
+                    'size': { 'width': 14, 'height': 14 },
+                    'shape': 'circle',
+                    'comment': 'Number 2',
+                    'local_offset': { 'x': 0, 'y': 0 }
+                },
+                'num_3': {
+                    'key': '3',
+                    'position': { 'top': 80, 'right': 20 },
+                    'size': { 'width': 14, 'height': 14 },
+                    'shape': 'circle',
+                    'comment': 'Number 3',
+                    'local_offset': { 'x': 0, 'y': 0 }
+                },
+                'num_4': {
+                    'key': '4',
+                    'position': { 'top': 105, 'left': 20 },
+                    'size': { 'width': 14, 'height': 14 },
+                    'shape': 'circle',
+                    'comment': 'Number 4',
+                    'local_offset': { 'x': 0, 'y': 0 }
+                },
+                'num_5': {
+                    'key': '5',
+                    'position': { 'top': 105, 'left': '50%', 'transform': 'translateX(-50%)' },
+                    'size': { 'width': 14, 'height': 14 },
+                    'shape': 'circle',
+                    'comment': 'Number 5',
+                    'local_offset': { 'x': 0, 'y': 0 }
+                },
+                'num_6': {
+                    'key': '6',
+                    'position': { 'top': 105, 'right': 20 },
+                    'size': { 'width': 14, 'height': 14 },
+                    'shape': 'circle',
+                    'comment': 'Number 6',
+                    'local_offset': { 'x': 0, 'y': 0 }
+                },
+                'num_7': {
+                    'key': '7',
+                    'position': { 'top': 130, 'left': 20 },
+                    'size': { 'width': 14, 'height': 14 },
+                    'shape': 'circle',
+                    'comment': 'Number 7',
+                    'local_offset': { 'x': 0, 'y': 0 }
+                },
+                'num_8': {
+                    'key': '8',
+                    'position': { 'top': 130, 'left': '50%', 'transform': 'translateX(-50%)' },
+                    'size': { 'width': 14, 'height': 14 },
+                    'shape': 'circle',
+                    'comment': 'Number 8',
+                    'local_offset': { 'x': 0, 'y': 0 }
+                },
+                'num_9': {
+                    'key': '9',
+                    'position': { 'top': 130, 'right': 20 },
+                    'size': { 'width': 14, 'height': 14 },
+                    'shape': 'circle',
+                    'comment': 'Number 9',
+                    'local_offset': { 'x': 0, 'y': 0 }
+                },
+                'num_0': {
+                    'key': '0',
+                    'position': { 'top': 155, 'left': '50%', 'transform': 'translateX(-50%)' },
+                    'size': { 'width': 14, 'height': 14 },
+                    'shape': 'circle',
+                    'comment': 'Number 0',
+                    'local_offset': { 'x': 0, 'y': 0 }
+                },
+                'volume_up': {
+                    'key': 'VOLUME_UP',
+                    'position': { 'top': 185, 'left': 20 },
+                    'size': { 'width': 14, 'height': 14 },
+                    'shape': 'circle',
+                    'comment': 'Volume up',
+                    'local_offset': { 'x': 0, 'y': 0 }
+                },
+                'channel_up': {
+                    'key': 'CHANNEL_UP',
+                    'position': { 'top': 185, 'right': 20 },
+                    'size': { 'width': 14, 'height': 14 },
+                    'shape': 'circle',
+                    'comment': 'Channel up',
+                    'local_offset': { 'x': 0, 'y': 0 }
+                },
+                'volume_down': {
+                    'key': 'VOLUME_DOWN',
+                    'position': { 'top': 210, 'left': 20 },
+                    'size': { 'width': 14, 'height': 14 },
+                    'shape': 'circle',
+                    'comment': 'Volume down',
+                    'local_offset': { 'x': 0, 'y': 0 }
+                },
+                'channel_down': {
+                    'key': 'CHANNEL_DOWN',
+                    'position': { 'top': 210, 'right': 20 },
+                    'size': { 'width': 14, 'height': 14 },
+                    'shape': 'circle',
+                    'comment': 'Channel down',
+                    'local_offset': { 'x': 0, 'y': 0 }
+                },
+                'nav_up': {
+                    'key': 'UP',
+                    'position': { 'top': 245, 'left': '50%', 'transform': 'translateX(-50%)' },
+                    'size': { 'width': 16, 'height': 12 },
+                    'shape': 'rectangle',
+                    'comment': 'Navigation up',
+                    'local_offset': { 'x': 0, 'y': 0 }
+                },
+                'nav_left': {
+                    'key': 'LEFT',
+                    'position': { 'top': 262, 'left': 25 },
+                    'size': { 'width': 12, 'height': 16 },
+                    'shape': 'rectangle',
+                    'comment': 'Navigation left',
+                    'local_offset': { 'x': 0, 'y': 0 }
+                },
+                'nav_center': {
+                    'key': 'OK',
+                    'position': { 'top': 265, 'left': '50%', 'transform': 'translateX(-50%)' },
+                    'size': { 'width': 14, 'height': 14 },
+                    'shape': 'circle',
+                    'comment': 'Navigation center/OK',
+                    'local_offset': { 'x': 0, 'y': 0 }
+                },
+                'nav_right': {
+                    'key': 'RIGHT',
+                    'position': { 'top': 262, 'right': 25 },
+                    'size': { 'width': 12, 'height': 16 },
+                    'shape': 'rectangle',
+                    'comment': 'Navigation right',
+                    'local_offset': { 'x': 0, 'y': 0 }
+                },
+                'nav_down': {
+                    'key': 'DOWN',
+                    'position': { 'top': 285, 'left': '50%', 'transform': 'translateX(-50%)' },
+                    'size': { 'width': 16, 'height': 12 },
+                    'shape': 'rectangle',
+                    'comment': 'Navigation down',
+                    'local_offset': { 'x': 0, 'y': 0 }
+                },
+                'menu': {
+                    'key': 'MENU',
+                    'position': { 'top': 315, 'left': 20 },
+                    'size': { 'width': 14, 'height': 14 },
+                    'shape': 'circle',
+                    'comment': 'Menu button',
+                    'local_offset': { 'x': 0, 'y': 0 }
+                },
+                'back': {
+                    'key': 'BACK',
+                    'position': { 'top': 315, 'right': 20 },
+                    'size': { 'width': 14, 'height': 14 },
+                    'shape': 'circle',
+                    'comment': 'Back/Exit button',
+                    'local_offset': { 'x': 0, 'y': 0 }
+                }
+            }
+        }
     
     def __init__(self, device_name: str = "Bluetooth Remote", device_type: str = "bluetooth_remote", **kwargs):
         """

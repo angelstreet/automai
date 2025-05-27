@@ -68,6 +68,20 @@ android_tv_session = {
     'connection_details': {}
 }
 
+# Global session storage for IR remote
+ir_remote_session = {
+    'controller': None,
+    'connected': False,
+    'connection_details': {}
+}
+
+# Global session storage for Bluetooth remote
+bluetooth_remote_session = {
+    'controller': None,
+    'connected': False,
+    'connection_details': {}
+}
+
 def check_supabase():
     """Helper function to check if Supabase is available"""
     if supabase_client is None:
@@ -919,6 +933,395 @@ def get_android_tv_defaults():
         return jsonify({
             'success': False,
             'error': f'Failed to get defaults: {str(e)}'
+        }), 500
+
+@app.route('/api/virtualpytest/android-tv/config', methods=['GET'])
+def get_android_tv_config():
+    """Get Android TV remote configuration including layout, buttons, and image."""
+    try:
+        # Import the controller and get its configuration
+        from controllers.android_tv_remote_controller import AndroidTVRemoteController
+        
+        config = AndroidTVRemoteController.get_remote_config()
+        
+        return jsonify({
+            'success': True,
+            'config': config
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Failed to get config: {str(e)}'
+        }), 500
+
+# ==================== IR Remote Control Endpoints ====================
+
+@app.route('/api/virtualpytest/ir-remote/connect', methods=['POST'])
+def connect_ir_remote():
+    """Connect to IR remote device"""
+    global ir_remote_session
+    
+    if not controllers_available:
+        return jsonify({'success': False, 'error': 'Controllers not available'}), 503
+    
+    try:
+        data = request.json
+        device_path = data.get('device_path', '/dev/lirc0')
+        protocol = data.get('protocol', 'NEC')
+        frequency = data.get('frequency', '38000')
+        
+        print(f"[@api:ir-remote:connect] Connecting to IR device: {device_path}")
+        
+        # Create IR remote controller
+        from controllers.ir_remote_controller import IRRemoteController
+        
+        ir_controller = IRRemoteController(
+            device_name="IR Remote",
+            device_type="ir_remote",
+            ir_device=device_path,
+            protocol=protocol,
+            frequency=int(frequency)
+        )
+        
+        # Connect to the IR device
+        if ir_controller.connect():
+            ir_remote_session['controller'] = ir_controller
+            ir_remote_session['connected'] = True
+            ir_remote_session['connection_details'] = {
+                'device_path': device_path,
+                'protocol': protocol,
+                'frequency': frequency
+            }
+            
+            print(f"[@api:ir-remote:connect] Successfully connected to IR device")
+            return jsonify({
+                'success': True,
+                'message': f'Connected to IR device {device_path}',
+                'device_path': device_path,
+                'protocol': protocol
+            })
+        else:
+            print(f"[@api:ir-remote:connect] Failed to connect to IR device")
+            return jsonify({
+                'success': False,
+                'error': 'Failed to connect to IR device'
+            })
+            
+    except Exception as e:
+        print(f"[@api:ir-remote:connect] ERROR: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Connection failed: {str(e)}'
+        }), 500
+
+@app.route('/api/virtualpytest/ir-remote/disconnect', methods=['POST'])
+def disconnect_ir_remote():
+    """Disconnect from IR remote device"""
+    global ir_remote_session
+    
+    try:
+        print(f"[@api:ir-remote:disconnect] Disconnecting from IR device")
+        
+        if ir_remote_session['controller']:
+            ir_remote_session['controller'].disconnect()
+            
+        # Reset session
+        ir_remote_session['controller'] = None
+        ir_remote_session['connected'] = False
+        ir_remote_session['connection_details'] = {}
+        
+        print(f"[@api:ir-remote:disconnect] Successfully disconnected")
+        return jsonify({
+            'success': True,
+            'message': 'Disconnected from IR device'
+        })
+        
+    except Exception as e:
+        print(f"[@api:ir-remote:disconnect] ERROR: {str(e)}")
+        # Reset session even on error
+        ir_remote_session['controller'] = None
+        ir_remote_session['connected'] = False
+        ir_remote_session['connection_details'] = {}
+        
+        return jsonify({
+            'success': True,  # Still return success since we reset the session
+            'message': 'Disconnected from IR device'
+        })
+
+@app.route('/api/virtualpytest/ir-remote/command', methods=['POST'])
+def send_ir_remote_command():
+    """Send command to IR remote device"""
+    global ir_remote_session
+    
+    if not ir_remote_session['connected'] or not ir_remote_session['controller']:
+        return jsonify({
+            'success': False,
+            'error': 'IR remote not connected'
+        }), 400
+    
+    try:
+        data = request.json
+        command = data.get('command')
+        params = data.get('params', {})
+        
+        print(f"[@api:ir-remote:command] Executing command: {command} with params: {params}")
+        
+        controller = ir_remote_session['controller']
+        
+        if command == 'press_key':
+            key = params.get('key')
+            if not key:
+                return jsonify({
+                    'success': False,
+                    'error': 'Key parameter required for press_key command'
+                }), 400
+                
+            success = controller.press_key(key)
+            return jsonify({
+                'success': success,
+                'message': f'Pressed key: {key}' if success else f'Failed to press key: {key}'
+            })
+            
+        elif command == 'input_text':
+            text = params.get('text')
+            if not text:
+                return jsonify({
+                    'success': False,
+                    'error': 'Text parameter required for input_text command'
+                }), 400
+                
+            success = controller.input_text(text)
+            return jsonify({
+                'success': success,
+                'message': f'Input text: {text}' if success else f'Failed to input text: {text}'
+            })
+            
+        else:
+            return jsonify({
+                'success': False,
+                'error': f'Unknown command: {command}'
+            }), 400
+            
+    except Exception as e:
+        print(f"[@api:ir-remote:command] ERROR: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Command failed: {str(e)}'
+        }), 500
+
+@app.route('/api/virtualpytest/ir-remote/status', methods=['GET'])
+def get_ir_remote_status():
+    """Get IR remote connection status"""
+    global ir_remote_session
+    
+    return jsonify({
+        'connected': ir_remote_session['connected'],
+        'connection_details': ir_remote_session['connection_details']
+    })
+
+@app.route('/api/virtualpytest/ir-remote/config', methods=['GET'])
+def get_ir_remote_config():
+    """Get IR remote configuration including layout, buttons, and image."""
+    try:
+        # Import the controller and get its configuration
+        from controllers.ir_remote_controller import IRRemoteController
+        
+        config = IRRemoteController.get_remote_config()
+        
+        return jsonify({
+            'success': True,
+            'config': config
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Failed to get config: {str(e)}'
+        }), 500
+
+# ==================== Bluetooth Remote Control Endpoints ====================
+
+@app.route('/api/virtualpytest/bluetooth-remote/connect', methods=['POST'])
+def connect_bluetooth_remote():
+    """Connect to Bluetooth remote device"""
+    global bluetooth_remote_session
+    
+    if not controllers_available:
+        return jsonify({'success': False, 'error': 'Controllers not available'}), 503
+    
+    try:
+        data = request.json
+        device_address = data.get('device_address', '00:00:00:00:00:00')
+        device_name = data.get('device_name', 'Unknown Device')
+        pairing_pin = data.get('pairing_pin', '0000')
+        
+        print(f"[@api:bluetooth-remote:connect] Connecting to Bluetooth device: {device_address}")
+        
+        # Create Bluetooth remote controller
+        from controllers.bluetooth_remote_controller import BluetoothRemoteController
+        
+        bluetooth_controller = BluetoothRemoteController(
+            device_name=device_name,
+            device_type="bluetooth_remote",
+            device_address=device_address,
+            pairing_pin=pairing_pin
+        )
+        
+        # Connect to the Bluetooth device
+        if bluetooth_controller.connect():
+            bluetooth_remote_session['controller'] = bluetooth_controller
+            bluetooth_remote_session['connected'] = True
+            bluetooth_remote_session['connection_details'] = {
+                'device_address': device_address,
+                'device_name': device_name,
+                'pairing_pin': pairing_pin
+            }
+            
+            print(f"[@api:bluetooth-remote:connect] Successfully connected to Bluetooth device")
+            return jsonify({
+                'success': True,
+                'message': f'Connected to Bluetooth device {device_name}',
+                'device_address': device_address,
+                'device_name': device_name
+            })
+        else:
+            print(f"[@api:bluetooth-remote:connect] Failed to connect to Bluetooth device")
+            return jsonify({
+                'success': False,
+                'error': 'Failed to connect to Bluetooth device'
+            })
+            
+    except Exception as e:
+        print(f"[@api:bluetooth-remote:connect] ERROR: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Connection failed: {str(e)}'
+        }), 500
+
+@app.route('/api/virtualpytest/bluetooth-remote/disconnect', methods=['POST'])
+def disconnect_bluetooth_remote():
+    """Disconnect from Bluetooth remote device"""
+    global bluetooth_remote_session
+    
+    try:
+        print(f"[@api:bluetooth-remote:disconnect] Disconnecting from Bluetooth device")
+        
+        if bluetooth_remote_session['controller']:
+            bluetooth_remote_session['controller'].disconnect()
+            
+        # Reset session
+        bluetooth_remote_session['controller'] = None
+        bluetooth_remote_session['connected'] = False
+        bluetooth_remote_session['connection_details'] = {}
+        
+        print(f"[@api:bluetooth-remote:disconnect] Successfully disconnected")
+        return jsonify({
+            'success': True,
+            'message': 'Disconnected from Bluetooth device'
+        })
+        
+    except Exception as e:
+        print(f"[@api:bluetooth-remote:disconnect] ERROR: {str(e)}")
+        # Reset session even on error
+        bluetooth_remote_session['controller'] = None
+        bluetooth_remote_session['connected'] = False
+        bluetooth_remote_session['connection_details'] = {}
+        
+        return jsonify({
+            'success': True,  # Still return success since we reset the session
+            'message': 'Disconnected from Bluetooth device'
+        })
+
+@app.route('/api/virtualpytest/bluetooth-remote/command', methods=['POST'])
+def send_bluetooth_remote_command():
+    """Send command to Bluetooth remote device"""
+    global bluetooth_remote_session
+    
+    if not bluetooth_remote_session['connected'] or not bluetooth_remote_session['controller']:
+        return jsonify({
+            'success': False,
+            'error': 'Bluetooth remote not connected'
+        }), 400
+    
+    try:
+        data = request.json
+        command = data.get('command')
+        params = data.get('params', {})
+        
+        print(f"[@api:bluetooth-remote:command] Executing command: {command} with params: {params}")
+        
+        controller = bluetooth_remote_session['controller']
+        
+        if command == 'press_key':
+            key = params.get('key')
+            if not key:
+                return jsonify({
+                    'success': False,
+                    'error': 'Key parameter required for press_key command'
+                }), 400
+                
+            success = controller.press_key(key)
+            return jsonify({
+                'success': success,
+                'message': f'Pressed key: {key}' if success else f'Failed to press key: {key}'
+            })
+            
+        elif command == 'input_text':
+            text = params.get('text')
+            if not text:
+                return jsonify({
+                    'success': False,
+                    'error': 'Text parameter required for input_text command'
+                }), 400
+                
+            success = controller.input_text(text)
+            return jsonify({
+                'success': success,
+                'message': f'Input text: {text}' if success else f'Failed to input text: {text}'
+            })
+            
+        else:
+            return jsonify({
+                'success': False,
+                'error': f'Unknown command: {command}'
+            }), 400
+            
+    except Exception as e:
+        print(f"[@api:bluetooth-remote:command] ERROR: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Command failed: {str(e)}'
+        }), 500
+
+@app.route('/api/virtualpytest/bluetooth-remote/status', methods=['GET'])
+def get_bluetooth_remote_status():
+    """Get Bluetooth remote connection status"""
+    global bluetooth_remote_session
+    
+    return jsonify({
+        'connected': bluetooth_remote_session['connected'],
+        'connection_details': bluetooth_remote_session['connection_details']
+    })
+
+@app.route('/api/virtualpytest/bluetooth-remote/config', methods=['GET'])
+def get_bluetooth_remote_config():
+    """Get Bluetooth remote configuration including layout, buttons, and image."""
+    try:
+        # Import the controller and get its configuration
+        from controllers.bluetooth_remote_controller import BluetoothRemoteController
+        
+        config = BluetoothRemoteController.get_remote_config()
+        
+        return jsonify({
+            'success': True,
+            'config': config
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Failed to get config: {str(e)}'
         }), 500
 
 if __name__ == '__main__':
