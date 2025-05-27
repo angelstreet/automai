@@ -1414,8 +1414,8 @@ const Controller: React.FC = () => {
           <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ minHeight: 40 }}>
             {/* Left side: Title and status */}
             <Box display="flex" alignItems="center" gap={1}>
-              <Typography variant="h6" component="span">
-                Bluetooth Remote Control
+              <Typography variant="h6" component="span" sx={{ fontSize: '1.1rem' }}>
+                Bluetooth Remote
               </Typography>
               {bluetoothSession.connected && (
                 <Chip 
@@ -1434,9 +1434,9 @@ const Controller: React.FC = () => {
                   variant={showOverlays ? "contained" : "outlined"}
                   size="small"
                   onClick={() => setShowOverlays(!showOverlays)}
-                  sx={{ minWidth: 'auto', px: 1 }}
+                  sx={{ minWidth: 'auto', px: 1, fontSize: '0.75rem' }}
                 >
-                  {showOverlays ? 'Hide Overlays' : 'Show Overlays'}
+                  {showOverlays ? 'Hide' : 'Show'} Overlays
                 </Button>
                 
                 {/* Scale controls */}
