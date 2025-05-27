@@ -1804,10 +1804,10 @@ const Controller: React.FC = () => {
                   size="small"
                 />
               )}
-            </Box>
+                  </Box>
           </Box>
         </DialogTitle>
-        <DialogContent sx={{ pb: 2, overflow: 'hidden', maxHeight: 'none' }}>
+        <DialogContent sx={{ pb: 1, overflow: 'hidden', maxHeight: 'none' }}>
           {!androidMobileSession.connected ? (
             <Box sx={{ pt: 2 }}>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
@@ -1882,175 +1882,94 @@ const Controller: React.FC = () => {
               </Grid>
             </Box>
           ) : (
-            <Box sx={{ pt: 2, display: 'flex', justifyContent: 'space-between', overflow: 'hidden' }}>
-              {/* Left side: Device Screen Canvas */}
-              <Box sx={{ 
-                flex: 1,
-                marginRight: 3,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center'
-              }}>
-                
-                {/* Device Screen Canvas */}
+            <Grid container spacing={3} sx={{ pt: 2, height: '80vh' }}>
+              {/* Left Column: Device Screen Canvas */}
+              <Grid item xs={6}>
                 <Box sx={{ 
-                  position: 'relative',
-                  width: 300,
-                  height: 500,
-                  border: '2px solid #333',
-                  borderRadius: '20px',
-                  backgroundColor: '#000',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  overflow: 'hidden'
+                  height: '100%'
                 }}>
-                  {/* Screenshot or placeholder */}
-                  {androidScreenshot ? (
-                    <img 
-                      src={`data:image/png;base64,${androidScreenshot}`}
-                      alt="Device Screenshot"
-                      style={{
+                  
+                  {/* Device Screen Canvas */}
+                  <Box sx={{ 
+                    position: 'relative',
+                    width: 300,
+                    height: 550,
+                    border: '2px solid #333',
+                    borderRadius: '20px',
+                    backgroundColor: '#000',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden'
+                  }}>
+                    {/* Screenshot or placeholder */}
+                    {androidScreenshot ? (
+                      <img 
+                        src={`data:image/png;base64,${androidScreenshot}`}
+                        alt="Device Screenshot"
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'contain'
+                        }}
+                      />
+                    ) : (
+                      <>
+                        <Typography variant="body2" color="white" sx={{ textAlign: 'center', mb: 2 }}>
+                          Device Screen
+                        </Typography>
+                        <Typography variant="caption" color="gray" sx={{ textAlign: 'center' }}>
+                          Use "Screenshot" to capture current screen
+                        </Typography>
+                      </>
+                    )}
+                    
+                    {/* UI Elements Overlay */}
+                    {showOverlays && androidElements.length > 0 && (
+                      <Box sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
                         width: '100%',
                         height: '100%',
-                        objectFit: 'contain'
-                      }}
-                    />
-                  ) : (
-                    <>
-                      <Typography variant="body2" color="white" sx={{ textAlign: 'center', mb: 2 }}>
-                        Device Screen
-                      </Typography>
-                      <Typography variant="caption" color="gray" sx={{ textAlign: 'center' }}>
-                        Use "Screenshot" to capture current screen
-                      </Typography>
-                    </>
-                  )}
-                  
-                  {/* UI Elements Overlay */}
-                  {showOverlays && androidElements.length > 0 && (
-                    <Box sx={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: '100%',
-                      pointerEvents: 'none'
-                    }}>
-                      {/* Render UI element overlays here */}
-                      {androidElements.slice(0, 10).map((element, index) => (
-                        <Box
-                          key={element.id}
+                        pointerEvents: 'none'
+                      }}>
+                        {/* Render UI element overlays here */}
+                        {androidElements.slice(0, 10).map((element, index) => (
+                          <Box
+                            key={element.id}
                     sx={{
-                            position: 'absolute',
-                            left: `${10 + (index % 3) * 30}%`,
-                            top: `${20 + Math.floor(index / 3) * 15}%`,
-                            width: '25%',
-                            height: '10%',
-                            border: '1px solid rgba(255, 255, 0, 0.8)',
-                            backgroundColor: 'rgba(255, 255, 0, 0.2)',
-                            fontSize: '8px',
-                            color: 'white',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
+                              position: 'absolute',
+                              left: `${10 + (index % 3) * 30}%`,
+                              top: `${20 + Math.floor(index / 3) * 15}%`,
+                              width: '25%',
+                              height: '10%',
+                              border: '1px solid rgba(255, 255, 0, 0.8)',
+                              backgroundColor: 'rgba(255, 255, 0, 0.2)',
+                              fontSize: '8px',
+                              color: 'white',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
                       textAlign: 'center',
-                            overflow: 'hidden'
-                    }}
-                  >
-                          #{element.id}
-                        </Box>
-                      ))}
-                    </Box>
-                  )}
-                </Box>
-
-                {/* Navigation Controls */}
-                <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-                  <Typography variant="h6" sx={{ mb: 1, fontSize: '1rem' }}>
-                    🎮 Navigation
-                    </Typography>
-                  
-                  {/* D-pad style navigation */}
-                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1, width: 120 }}>
-                    <Box></Box>
-                    <Button
-                      variant="contained"
-                      size="small"
-                      onClick={() => handleAndroidMobileCommand('UP')}
-                      sx={{ minWidth: 30, height: 30 }}
-                    >
-                      ↑
-                    </Button>
-                    <Box></Box>
-                    
-                    <Button
-                      variant="contained"
-                      size="small"
-                      onClick={() => handleAndroidMobileCommand('LEFT')}
-                      sx={{ minWidth: 30, height: 30 }}
-                    >
-                      ←
-                    </Button>
-                    <Button
-                      variant="contained"
-                      size="small"
-                      onClick={() => handleAndroidMobileCommand('SELECT')}
-                      sx={{ minWidth: 30, height: 30 }}
-                    >
-                      ●
-                    </Button>
-                    <Button
-                      variant="contained"
-                      size="small"
-                      onClick={() => handleAndroidMobileCommand('RIGHT')}
-                      sx={{ minWidth: 30, height: 30 }}
-                    >
-                      →
-                    </Button>
-                    
-                    <Box></Box>
-                    <Button
-                      variant="contained"
-                      size="small"
-                      onClick={() => handleAndroidMobileCommand('DOWN')}
-                      sx={{ minWidth: 30, height: 30 }}
-                    >
-                      ↓
-                    </Button>
-                    <Box></Box>
-                  </Box>
-
-                  {/* System buttons */}
-                  <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={() => handleAndroidMobileCommand('BACK')}
-                    >
-                      Back
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={() => handleAndroidMobileCommand('HOME')}
-                    >
-                      Home
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={() => handleAndroidMobileCommand('MENU')}
-                    >
-                      Menu
-                    </Button>
+                              overflow: 'hidden'
+                            }}
+                          >
+                            #{element.id}
+                          </Box>
+                        ))}
+                      </Box>
+                    )}
                   </Box>
                 </Box>
-              </Box>
+              </Grid>
 
-              {/* Right side: Mobile Features */}
-              <Box sx={{ flex: 1, minWidth: 300 }}>
+              {/* Right Column: Mobile Features */}
+              <Grid item xs={6}>
                 {/* Screenshot Section */}
                 <Box sx={{ mb: 3 }}>
                   <Button
@@ -2067,13 +1986,14 @@ const Controller: React.FC = () => {
                 <Box sx={{ mb: 3 }}>
                   <Typography variant="h6" sx={{ mb: 2, fontSize: '1rem' }}>
                     📱 App Launcher {androidApps.length > 0 && `(${androidApps.length})`}
-              </Typography>
+                    </Typography>
                   <Box sx={{ mb: 2 }}>
                     <FormControl fullWidth size="small">
                       <InputLabel>Select an app...</InputLabel>
                       <Select
                         value=""
                         label="Select an app..."
+                        disabled={androidApps.length === 0}
                         onChange={(e) => {
                           if (e.target.value) {
                             handleAndroidMobileCommand('LAUNCH_APP', { package: e.target.value });
@@ -2095,14 +2015,14 @@ const Controller: React.FC = () => {
                     fullWidth
                   >
                     Refresh Apps
-                </Button>
-                </Box>
+                    </Button>
+                  </Box>
 
                 {/* UI Elements Section */}
                 <Box sx={{ mb: 3 }}>
                   <Typography variant="h6" sx={{ mb: 2, fontSize: '1rem' }}>
                     🔍 UI Elements {androidElements.length > 0 && `(${androidElements.length})`}
-                  </Typography>
+              </Typography>
                   <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
                     <Button
                       variant="contained"
@@ -2162,36 +2082,97 @@ const Controller: React.FC = () => {
                           })}
                         </Select>
                       </FormControl>
-    </Box>
+                    </Box>
                   )}
-                </Box>
+                  
+                  {/* Mobile Phone Controls */}
+                  <Box sx={{ mt: 2 }}>
+                    {/* System buttons */}
+                    <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => handleAndroidMobileCommand('BACK')}
+                        sx={{ flex: 1 }}
+                      >
+                        Back
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => handleAndroidMobileCommand('HOME')}
+                        sx={{ flex: 1 }}
+                      >
+                        Home
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => handleAndroidMobileCommand('MENU')}
+                        sx={{ flex: 1 }}
+                      >
+                        Menu
+                </Button>
               </Box>
-            </Box>
+                    
+                    {/* Volume controls */}
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => handleAndroidMobileCommand('VOLUME_DOWN')}
+                        sx={{ flex: 1 }}
+                      >
+                        Vol -
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => handleAndroidMobileCommand('VOLUME_UP')}
+                        sx={{ flex: 1 }}
+                      >
+                        Vol +
+                      </Button>
+                    </Box>
+                  </Box>
+                  
+                  {/* Modal Controls */}
+                  <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid #e0e0e0' }}>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Button 
+                        variant="outlined"
+                        onClick={handleCloseAndroidMobileModal}
+                        sx={{ flex: 1 }}
+                      >
+                        Close
+                      </Button>
+                      {!androidMobileSession.connected ? (
+                        <Button 
+                          variant="contained" 
+                          onClick={handleAndroidMobileConnect}
+                          disabled={connectionLoading || !connectionForm.host_ip || !connectionForm.host_username || !connectionForm.host_password || !connectionForm.device_ip}
+                          sx={{ flex: 1 }}
+                        >
+                          {connectionLoading ? <CircularProgress size={20} /> : 'Take Control'}
+                        </Button>
+                      ) : (
+                        <Button 
+                          variant="contained" 
+                          color="error"
+                          onClick={handleAndroidMobileDisconnect}
+                          disabled={connectionLoading}
+                          sx={{ flex: 1 }}
+                        >
+                          {connectionLoading ? <CircularProgress size={20} /> : 'Release Control'}
+                        </Button>
+                      )}
+                    </Box>
+                  </Box>
+                </Box>
+              </Grid>
+            </Grid>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseAndroidMobileModal}>
-            Close
-          </Button>
-          {!androidMobileSession.connected ? (
-            <Button 
-              variant="contained" 
-              onClick={handleAndroidMobileConnect}
-              disabled={connectionLoading || !connectionForm.host_ip || !connectionForm.host_username || !connectionForm.host_password || !connectionForm.device_ip}
-            >
-              {connectionLoading ? <CircularProgress size={20} /> : 'Take Control'}
-            </Button>
-          ) : (
-            <Button 
-              variant="contained" 
-              color="error"
-              onClick={handleAndroidMobileDisconnect}
-              disabled={connectionLoading}
-            >
-              {connectionLoading ? <CircularProgress size={20} /> : 'Release Control'}
-            </Button>
-          )}
-        </DialogActions>
       </Dialog>
 
       {/* Snackbar for notifications */}
