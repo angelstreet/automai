@@ -329,35 +329,23 @@ const UINavigationEdgeComponent = ({
         d={edgePath}
         markerEnd="url(#arrowhead)"
       />
-      {data?.go && (
+      {data?.action && (
         <text
           x={labelX}
-          y={labelY - 8}
+          y={labelY}
           style={{
-            fontSize: '10px',
-            fill: '#666',
+            fontSize: '12px',
+            fill: '#333',
             textAnchor: 'middle',
             dominantBaseline: 'middle',
             pointerEvents: 'none',
             fontWeight: 'bold',
+            backgroundColor: 'white',
+            padding: '2px 4px',
+            borderRadius: '3px',
           }}
         >
-          {data.go}
-        </text>
-      )}
-      {data?.comeback && (
-        <text
-          x={labelX}
-          y={labelY + 12}
-          style={{
-            fontSize: '9px',
-            fill: '#999',
-            textAnchor: 'middle',
-            dominantBaseline: 'middle',
-            pointerEvents: 'none',
-          }}
-        >
-          ← {data.comeback}
+          {data.action}
         </text>
       )}
     </>
@@ -370,7 +358,8 @@ const nodeTypes = {
 };
 
 const edgeTypes = {
-  uiNavigation: UINavigationEdge,
+  uiNavigation: UINavigationEdgeComponent,
+  smoothstep: UINavigationEdgeComponent,
 };
 
 const NavigationEditorContent: React.FC = () => {
@@ -776,14 +765,8 @@ const NavigationEditorContent: React.FC = () => {
                       </IconButton>
                     </Box>
                     
-                    <Typography variant="body2" color="textSecondary" gutterBottom sx={{ mb: 0.5 }}>
-                      Type: {selectedNode.data.type}
-                    </Typography>
-                    {selectedNode.data.description && (
-                      <Typography variant="body2" gutterBottom sx={{ mb: 1 }}>
-                        {selectedNode.data.description}
-                      </Typography>
-                    )}
+                   
+                   
                     {selectedNode.data.hasChildren && (
                       <Typography variant="body2" color="success.main" gutterBottom sx={{ mb: 1 }}>
                         💡 Double-click to explore child tree

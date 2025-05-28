@@ -98,8 +98,7 @@ export const useNavigationEditor = () => {
     description: ''
   });
   const [edgeForm, setEdgeForm] = useState<EdgeForm>({
-    go: '',
-    comeback: '',
+    action: '',
     description: ''
   });
   const [isLoading, setIsLoading] = useState(false);
@@ -182,8 +181,8 @@ export const useNavigationEditor = () => {
       id: `edge-${Date.now()}`,
       source: params.source,
       target: params.target,
-      type: 'smoothstep',
-      data: { go: '', comeback: '' },
+      type: 'uiNavigation',
+      data: { action: 'ACTION' },  // Default action, user can edit
     };
     setEdges((eds) => {
       const updatedEdges = addEdge(newEdge, eds);
@@ -633,8 +632,7 @@ export const useNavigationEditor = () => {
               ...edge,
               data: {
                 ...edge.data,
-                go: edgeForm.go,
-                comeback: edgeForm.comeback,
+                action: edgeForm.action,
                 description: edgeForm.description,
               },
             }
@@ -678,19 +676,10 @@ export const useNavigationEditor = () => {
     markerEnd: { type: MarkerType.ArrowClosed, color: '#b1b1b7' },
   };
 
-  // Get current view filtered nodes (root + direct children only)
+  // Get current view filtered nodes (show all nodes)
   const getCurrentViewNodes = useCallback(() => {
-    if (!currentViewRootId || allNodes.length === 0) return [];
-    
-    const rootNode = allNodes.find(n => n.id === currentViewRootId);
-    if (!rootNode) return [];
-    
-    const directChildren = allNodes.filter(n => 
-      n.data.parentNodeId === currentViewRootId
-    );
-    
-    return [rootNode, ...directChildren];
-  }, [allNodes, currentViewRootId]);
+    return allNodes;
+  }, [allNodes]);
 
   // Get current view filtered edges (only between visible nodes)
   const getCurrentViewEdges = useCallback(() => {
@@ -738,7 +727,7 @@ export const useNavigationEditor = () => {
       id: `edge-${Date.now()}-to`,
       source: parentId,
       target: childId,
-      type: 'smoothstep',
+      type: 'uiNavigation',  // Use the type that has arrow support
       data: { 
         action: toAction,
         from: parentNode.data.label,
@@ -750,7 +739,7 @@ export const useNavigationEditor = () => {
       id: `edge-${Date.now()}-from`,
       source: childId,
       target: parentId,
-      type: 'smoothstep',
+      type: 'uiNavigation',  // Use the type that has arrow support
       data: { 
         action: fromAction,
         from: childData.label,
