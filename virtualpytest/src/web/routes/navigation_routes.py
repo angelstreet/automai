@@ -345,23 +345,7 @@ def get_complete_navigation_tree(tree_id):
         tree_info = get_navigation_tree(tree_id, team_id)
         
         if not tree_info:
-            # Before returning 404, try to diagnose if the tree exists but with a different team_id
-            try:
-                from utils.supabase_utils import get_supabase_client
-                supabase = get_supabase_client()
-                check_result = supabase.table('navigation_trees').select('id, team_id').eq('id', tree_id).execute()
-                if check_result.data and len(check_result.data) > 0:
-                    found_tree = check_result.data[0]
-                    found_team_id = found_tree.get('team_id')
-                    print(f"[@api:navigation:get_complete_tree] PERMISSION ERROR: Tree {tree_id} exists but belongs to team {found_team_id}, not the requested team {team_id}")
-                    return jsonify({
-                        'success': False,
-                        'error': 'Navigation tree not found or you do not have permission to access it',
-                        'code': 'PERMISSION_ERROR'
-                    }), 403
-            except Exception as diag_error:
-                print(f"[@api:navigation:get_complete_tree] Diagnosis failed: {str(diag_error)}")
-            
+            # Return simple 404 response like userinterface routes
             return jsonify({
                 'success': False,
                 'error': 'Navigation tree not found'
@@ -499,7 +483,7 @@ def get_userinterface_with_root(interface_id):
         # Get the user interface
         userinterface = get_userinterface(interface_id, team_id)
         if not userinterface:
-            return jsonify({'error': 'User interface not found or access denied'}), 404
+            return jsonify({'error': 'User interface not found'}), 404
             
         # Get the root navigation tree for this user interface using the proper utility
         root_tree = get_root_tree_for_interface(interface_id, team_id)
