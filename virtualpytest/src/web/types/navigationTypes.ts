@@ -12,12 +12,15 @@ export interface UINavigationNode extends Node {
     childTreeId?: string;
     childTreeName?: string;
     parentTree?: string;
+    parentNodeId?: string;  // For hierarchy support
   };
 }
 
 // Use ReactFlow's Edge type directly with our custom data
 export type UINavigationEdge = Edge<{
   action?: string;      // The navigation action (e.g., "RIGHT", "ENTER", "OK")
+  go?: string;          // Forward navigation action
+  comeback?: string;    // Return navigation action
   description?: string;
   from?: string;        // Source node label
   to?: string;          // Target node label
@@ -35,6 +38,8 @@ export interface NodeForm {
 }
 
 export interface EdgeForm {
-  action: string;       // Single action per edge
+  action?: string;      // Single action per edge
+  go?: string;          // Forward action
+  comeback?: string;    // Return action  
   description: string;
 } 

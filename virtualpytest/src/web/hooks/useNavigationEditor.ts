@@ -80,6 +80,12 @@ export const useNavigationEditor = () => {
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [initialState, setInitialState] = useState<{ nodes: UINavigationNode[], edges: UINavigationEdge[] } | null>(null);
 
+  // View state for single-level navigation
+  const [allNodes, setAllNodes] = useState<UINavigationNode[]>([]);
+  const [allEdges, setAllEdges] = useState<UINavigationEdge[]>([]);
+  const [currentViewRootId, setCurrentViewRootId] = useState<string | null>(null);
+  const [viewPath, setViewPath] = useState<{id: string, name: string}[]>([]);
+
   // UI state
   const [selectedNode, setSelectedNode] = useState<UINavigationNode | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<UINavigationEdge | null>(null);
@@ -263,21 +269,34 @@ export const useNavigationEditor = () => {
         // Validate that we have nodes and edges
         if (treeData.nodes && Array.isArray(treeData.nodes)) {
           setNodes(treeData.nodes);
+          setAllNodes(treeData.nodes);  // Store all nodes
           setInitialState({ nodes: treeData.nodes, edges: treeData.edges || [] });
           console.log(`[@component:NavigationEditor] Successfully loaded ${treeData.nodes.length} nodes from database for tree ID: ${currentTreeId}`);
+          
+          // Initialize view state - find root node (no parent) or use first node
+          const rootNode = treeData.nodes.find((n: UINavigationNode) => !n.data.parentNodeId) || treeData.nodes[0];
+          if (rootNode) {
+            setCurrentViewRootId(rootNode.id);
+            setViewPath([{ id: rootNode.id, name: rootNode.data.label }]);
+          }
         } else {
           // If no nodes, just set empty arrays
           setNodes([]);
+          setAllNodes([]);
           setInitialState({ nodes: [], edges: [] });
+          setCurrentViewRootId(null);
+          setViewPath([]);
           console.log(`[@component:NavigationEditor] No nodes found for tree ID: ${currentTreeId}`);
         }
         
         if (treeData.edges && Array.isArray(treeData.edges)) {
           setEdges(treeData.edges);
+          setAllEdges(treeData.edges);  // Store all edges
           console.log(`[@component:NavigationEditor] Successfully loaded ${treeData.edges.length} edges from database for tree ID: ${currentTreeId}`);
         } else {
           // If no edges, just set empty array
           setEdges([]);
+          setAllEdges([]);
           console.log(`[@component:NavigationEditor] No edges found for tree ID: ${currentTreeId}`);
         }
         
@@ -474,33 +493,26 @@ export const useNavigationEditor = () => {
     setSelectedNode(null);
   }, []);
 
-  // Handle double-click on node to navigate to child tree
-  const onNodeDoubleClick = useCallback((event: React.MouseEvent, node: UINavigationNode) => {
+  // Handle double-click on node to navigate to child view
+  const navigateToChildView = useCallback((nodeId: string) => {
+    const node = allNodes.find(n => n.id === nodeId);
+    if (!node || !node.data.hasChildren) return;
+    
+    setCurrentViewRootId(nodeId);
+    setViewPath(prev => [...prev, { id: nodeId, name: node.data.label }]);
+    console.log(`[@hook:useNavigationEditor] Navigated to child view: ${node.data.label}`);
+  }, [allNodes]);
+
+  // Handle double-click on node (updated for single-level navigation)
+  const onNodeDoubleClickUpdated = useCallback((event: React.MouseEvent, node: UINavigationNode) => {
     event.stopPropagation();
     const uiNode = node as UINavigationNode;
     
-    if (uiNode.data.hasChildren && uiNode.data.childTreeId) {
-      // Prevent navigating to the same tree level
-      if (currentTreeId === uiNode.data.childTreeId) {
-        console.log(`[@component:NavigationEditor] Already at tree level: ${uiNode.data.childTreeId}`);
-        return;
-      }
-      
-      // Navigate to child tree
-      const newPath = [...navigationPath, uiNode.data.childTreeId];
-      const newNamePath = [...navigationNamePath, uiNode.data.childTreeName || uiNode.data.label];
-      setNavigationPath(newPath);
-      setNavigationNamePath(newNamePath);
-      setCurrentTreeId(uiNode.data.childTreeId);
-      setCurrentTreeName(uiNode.data.childTreeName || uiNode.data.label);
-      navigate(`/navigation-editor/${encodeURIComponent(uiNode.data.childTreeName || uiNode.data.label)}/${uiNode.data.childTreeId}`);
-      
-      // Load child tree data from database
-      loadFromDatabase();
-      
-      console.log(`[@component:NavigationEditor] Navigating to child tree: ${uiNode.data.childTreeId}`);
+    // Use new single-level navigation
+    if (uiNode.data.hasChildren) {
+      navigateToChildView(uiNode.id);
     }
-  }, [navigationPath, navigationNamePath, currentTreeId, loadFromDatabase, navigate]);
+  }, [navigateToChildView]);
 
   // Navigate back in breadcrumb
   const navigateToTreeLevel = useCallback((index: number) => {
@@ -666,6 +678,108 @@ export const useNavigationEditor = () => {
     markerEnd: { type: MarkerType.ArrowClosed, color: '#b1b1b7' },
   };
 
+  // Get current view filtered nodes (root + direct children only)
+  const getCurrentViewNodes = useCallback(() => {
+    if (!currentViewRootId || allNodes.length === 0) return [];
+    
+    const rootNode = allNodes.find(n => n.id === currentViewRootId);
+    if (!rootNode) return [];
+    
+    const directChildren = allNodes.filter(n => 
+      n.data.parentNodeId === currentViewRootId
+    );
+    
+    return [rootNode, ...directChildren];
+  }, [allNodes, currentViewRootId]);
+
+  // Get current view filtered edges (only between visible nodes)
+  const getCurrentViewEdges = useCallback(() => {
+    const visibleNodes = getCurrentViewNodes();
+    const visibleNodeIds = visibleNodes.map(n => n.id);
+    
+    return allEdges.filter(e => 
+      visibleNodeIds.includes(e.source) && visibleNodeIds.includes(e.target)
+    );
+  }, [allEdges, getCurrentViewNodes]);
+
+  // Navigate to parent view (breadcrumb click)
+  const navigateToParentView = useCallback((targetIndex: number) => {
+    if (targetIndex < 0 || targetIndex >= viewPath.length) return;
+    
+    const targetView = viewPath[targetIndex];
+    setCurrentViewRootId(targetView.id);
+    setViewPath(prev => prev.slice(0, targetIndex + 1));
+    console.log(`[@hook:useNavigationEditor] Navigated to parent view: ${targetView.name}`);
+  }, [viewPath]);
+
+  // Add child node function
+  const addChildNode = useCallback((parentId: string, childData: { label: string, type: any, description: string }, toAction: string, fromAction: string) => {
+    const parentNode = allNodes.find(n => n.id === parentId);
+    if (!parentNode) return;
+    
+    // Create child node
+    const childId = `node-${Date.now()}`;
+    const childNode: UINavigationNode = {
+      id: childId,
+      type: 'uiScreen',
+      position: { 
+        x: parentNode.position.x + (allNodes.filter(n => n.data.parentNodeId === parentId).length * 250),
+        y: parentNode.position.y + 200 
+      },
+      data: {
+        ...childData,
+        parentNodeId: parentId,
+        hasChildren: false
+      }
+    };
+    
+    // Create edges
+    const toEdge: UINavigationEdge = {
+      id: `edge-${Date.now()}-to`,
+      source: parentId,
+      target: childId,
+      type: 'smoothstep',
+      data: { 
+        action: toAction,
+        from: parentNode.data.label,
+        to: childData.label
+      }
+    };
+    
+    const fromEdge: UINavigationEdge = {
+      id: `edge-${Date.now()}-from`,
+      source: childId,
+      target: parentId,
+      type: 'smoothstep',
+      data: { 
+        action: fromAction,
+        from: childData.label,
+        to: parentNode.data.label
+      }
+    };
+    
+    // Update state
+    setAllNodes(prev => {
+      const updated = prev.map(n => 
+        n.id === parentId ? { ...n, data: { ...n.data, hasChildren: true } } : n
+      );
+      return [...updated, childNode];
+    });
+    
+    setAllEdges(prev => [...prev, toEdge, fromEdge]);
+    setHasUnsavedChanges(true);
+    
+    console.log(`[@hook:useNavigationEditor] Added child node: ${childData.label} to parent: ${parentNode.data.label}`);
+  }, [allNodes]);
+
+  // Update the ReactFlow nodes and edges based on current view
+  useEffect(() => {
+    const viewNodes = getCurrentViewNodes();
+    const viewEdges = getCurrentViewEdges();
+    setNodes(viewNodes);
+    setEdges(viewEdges);
+  }, [allNodes, allEdges, currentViewRootId, getCurrentViewNodes, getCurrentViewEdges, setNodes, setEdges]);
+
   return {
     // State
     nodes,
@@ -701,6 +815,12 @@ export const useNavigationEditor = () => {
     history,
     historyIndex,
     
+    // View state for single-level navigation
+    allNodes,
+    allEdges,
+    currentViewRootId,
+    viewPath,
+    
     // Setters
     setNodes,
     setEdges,
@@ -725,7 +845,7 @@ export const useNavigationEditor = () => {
     onConnect: onConnectHistory,
     onNodeClick,
     onEdgeClick,
-    onNodeDoubleClick,
+    onNodeDoubleClick: onNodeDoubleClickUpdated,
     onPaneClick,
     
     // Actions
@@ -752,6 +872,11 @@ export const useNavigationEditor = () => {
     redo,
     fitView,
     deleteSelected,
+    
+    // New navigation functions
+    navigateToChildView,
+    navigateToParentView,
+    addChildNode,
     
     // Configuration
     defaultEdgeOptions

@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import ReactFlow, {
   Background,
   Controls, 
@@ -408,6 +408,11 @@ const NavigationEditorContent: React.FC = () => {
     history,
     historyIndex,
     
+    // View state for single-level navigation
+    viewPath,
+    navigateToParentView,
+    addChildNode,
+    
     // Setters
     setIsNodeDialogOpen,
     setIsEdgeDialogOpen,
@@ -448,6 +453,16 @@ const NavigationEditorContent: React.FC = () => {
     // Configuration
     defaultEdgeOptions
   } = useNavigationEditor();
+  
+  // Add Children dialog state
+  const [isAddChildDialogOpen, setIsAddChildDialogOpen] = useState(false);
+  const [childForm, setChildForm] = useState({
+    label: '',
+    type: 'screen' as const,
+    description: '',
+    toAction: '',
+    fromAction: ''
+  });
   
   // Show message if tree ID is missing
   useEffect(() => {
@@ -490,8 +505,9 @@ const NavigationEditorContent: React.FC = () => {
           
           {/* Breadcrumb navigation */}
           <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
+            {/* Tree level breadcrumb */}
             {navigationNamePath.map((treeName, index) => (
-              <Box key={index} sx={{ display: 'flex', alignItems: 'center' }}>
+              <Box key={`tree-${index}`} sx={{ display: 'flex', alignItems: 'center' }}>
                 {index > 0 && (
                   <Typography variant="h6" sx={{ mx: 0.5, color: 'text.secondary' }}>
                     &gt;
@@ -504,12 +520,34 @@ const NavigationEditorContent: React.FC = () => {
                   sx={{
                     textTransform: 'none',
                     minWidth: 'auto',
-                    fontWeight: index === navigationNamePath.length - 1 ? 'bold' : 'normal',
-                    color: index === navigationNamePath.length - 1 ? 'primary.main' : 'text.secondary',
+                    fontWeight: 'normal',
+                    color: 'text.secondary',
                   }}
                 >
                   {decodeURIComponent(treeName)}
-                  {index === navigationNamePath.length - 1 && hasUnsavedChanges && (
+                </Button>
+              </Box>
+            ))}
+            
+            {/* View level breadcrumb */}
+            {viewPath.length > 1 && viewPath.map((level, index) => (
+              <Box key={`view-${index}`} sx={{ display: 'flex', alignItems: 'center' }}>
+                <Typography variant="h6" sx={{ mx: 0.5, color: 'text.secondary' }}>
+                  &gt;
+                </Typography>
+                <Button
+                  variant="text"
+                  size="small"
+                  onClick={() => navigateToParentView(index)}
+                  sx={{
+                    textTransform: 'none',
+                    minWidth: 'auto',
+                    fontWeight: index === viewPath.length - 1 ? 'bold' : 'normal',
+                    color: index === viewPath.length - 1 ? 'primary.main' : 'text.secondary',
+                  }}
+                >
+                  {level.name}
+                  {index === viewPath.length - 1 && hasUnsavedChanges && (
                     <Typography component="span" sx={{ color: 'warning.main', ml: 0.5 }}>
                       *
                     </Typography>
@@ -751,7 +789,7 @@ const NavigationEditorContent: React.FC = () => {
                         💡 Double-click to explore child tree
                       </Typography>
                     )}
-                    <Box sx={{ mt: 1.5, display: 'flex', gap: 0.5 }}>
+                    <Box sx={{ mt: 1.5, display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
                       <Button
                         size="small"
                         variant="outlined"
@@ -766,6 +804,24 @@ const NavigationEditorContent: React.FC = () => {
                         }}
                       >
                         Edit
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="success"
+                        sx={{ fontSize: '0.75rem', px: 1 }}
+                        onClick={() => {
+                          setChildForm({
+                            label: '',
+                            type: 'screen',
+                            description: '',
+                            toAction: '',
+                            fromAction: ''
+                          });
+                          setIsAddChildDialogOpen(true);
+                        }}
+                      >
+                        Add Children
                       </Button>
                       <Button
                         size="small"
@@ -940,6 +996,107 @@ const NavigationEditorContent: React.FC = () => {
             disabled={!edgeForm.action}
           >
             Save
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Add Children Dialog */}
+      <Dialog open={isAddChildDialogOpen} onClose={() => setIsAddChildDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Add Child Screen</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <TextField
+              label="Child Screen Name"
+              value={childForm.label}
+              onChange={(e) => setChildForm({ ...childForm, label: e.target.value })}
+              fullWidth
+              required
+              error={!childForm.label.trim()}
+              helperText={!childForm.label.trim() ? "Screen name is required" : ""}
+            />
+            
+            <FormControl fullWidth>
+              <InputLabel>Type</InputLabel>
+              <Select
+                value={childForm.type}
+                label="Type"
+                onChange={(e) => setChildForm({ ...childForm, type: e.target.value as any })}
+              >
+                <MenuItem value="screen">Screen</MenuItem>
+                <MenuItem value="dialog">Dialog</MenuItem>
+                <MenuItem value="popup">Popup</MenuItem>
+                <MenuItem value="overlay">Overlay</MenuItem>
+              </Select>
+            </FormControl>
+            
+            <TextField
+              label="Description"
+              value={childForm.description}
+              onChange={(e) => setChildForm({ ...childForm, description: e.target.value })}
+              multiline
+              rows={2}
+              fullWidth
+            />
+            
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                label="Navigate To Action"
+                value={childForm.toAction}
+                onChange={(e) => setChildForm({ ...childForm, toAction: e.target.value })}
+                placeholder="RIGHT, ENTER, OK"
+                fullWidth
+                required
+                error={!childForm.toAction.trim()}
+                helperText="Action to navigate from parent to this child"
+              />
+              
+              <TextField
+                label="Navigate Back Action"
+                value={childForm.fromAction}
+                onChange={(e) => setChildForm({ ...childForm, fromAction: e.target.value })}
+                placeholder="LEFT, BACK, ESC"
+                fullWidth
+                required
+                error={!childForm.fromAction.trim()}
+                helperText="Action to navigate back to parent"
+              />
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsAddChildDialogOpen(false)}>Cancel</Button>
+          <Button 
+            onClick={() => {
+              if (!selectedNode || !childForm.label.trim() || !childForm.toAction.trim() || !childForm.fromAction.trim()) {
+                return;
+              }
+              
+              // Call the addChildNode function
+              addChildNode(
+                selectedNode.id,
+                {
+                  label: childForm.label,
+                  type: childForm.type,
+                  description: childForm.description
+                },
+                childForm.toAction,
+                childForm.fromAction
+              );
+              
+              // Close dialog and reset form
+              setIsAddChildDialogOpen(false);
+              setChildForm({
+                label: '',
+                type: 'screen',
+                description: '',
+                toAction: '',
+                fromAction: ''
+              });
+            }}
+            variant="contained"
+            disabled={!selectedNode || !childForm.label.trim() || !childForm.toAction.trim() || !childForm.fromAction.trim()}
+          >
+            Add Child
           </Button>
         </DialogActions>
       </Dialog>
