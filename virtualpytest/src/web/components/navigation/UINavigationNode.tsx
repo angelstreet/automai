@@ -62,7 +62,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
       <Handle 
         type="target" 
         position={Position.Left} 
-        id="left-go-target"
+        id="left-top-target"
         style={{ 
           background: '#1976d2', 
           width: '12px', 
@@ -78,7 +78,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
       <Handle 
         type="source" 
         position={Position.Left} 
-        id="left-back-source"
+        id="left-bottom-source"
         style={{ 
           background: '#1976d2', 
           width: '12px', 
@@ -95,7 +95,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
       <Handle 
         type="source" 
         position={Position.Right} 
-        id="right-go-source"
+        id="right-top-source"
         style={{ 
           background: '#1976d2', 
           width: '12px', 
@@ -111,7 +111,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
       <Handle 
         type="target" 
         position={Position.Right} 
-        id="right-back-target"
+        id="right-bottom-target"
         style={{ 
           background: '#1976d2', 
           width: '12px', 
@@ -256,7 +256,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
                 maxHeight: 'calc(85vh - 60px)', // Account for caption area
                 objectFit: 'contain',
                 borderRadius: '8px',
-                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
+                boxShadow: '0 4px 0px rgba(0, 0, 0, 0.5)',
                 display: 'block',
                 margin: 0,
                 padding: 0,
@@ -266,13 +266,13 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
             {/* Caption and Close Button */}
             <div
               style={{
-                marginTop: '15px',
+                marginTop: '0px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                gap: '20px',
+                gap: '0px',
                 height: '40px', // Fixed height for consistent layout
-                margin: '15px 0 0 0',
+                margin: '0px 0 0 0',
                 padding: 0,
               }}
             >
