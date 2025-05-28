@@ -16,6 +16,9 @@ import {
   Select,
   MenuItem,
   Paper,
+  Snackbar,
+  Alert,
+  CircularProgress,
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -26,6 +29,8 @@ import {
   Undo as UndoIcon,
   Redo as RedoIcon,
   Cancel as CancelIcon,
+  CloudUpload as CloudUploadIcon,
+  CloudDownload as CloudDownloadIcon,
 } from '@mui/icons-material';
 import { useParams } from 'react-router-dom';
 import ReactFlow, {
@@ -46,6 +51,9 @@ import ReactFlow, {
   ConnectionLineType,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
+
+// Import navigation service
+import { navigationService, NavigationNode, NavigationEdge, NavigationTreeData } from '../src/services/navigationService';
 
 // Types for our navigation tree
 interface UINavigationNode extends Node {
