@@ -824,7 +824,12 @@ const NavigationEditorContent: React.FC = () => {
   }, [initialState, setNodes, setEdges]);
 
   return (
-    <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ 
+      height: 'calc(100vh - 100px)', 
+      display: 'flex', 
+      flexDirection: 'column',
+      overflow: 'hidden'
+    }}>
       {/* Header */}
       <AppBar position="static" color="default" elevation={1}>
         <Toolbar variant="dense">
@@ -922,7 +927,12 @@ const NavigationEditorContent: React.FC = () => {
       </AppBar>
 
       {/* Main Editor Area */}
-      <Box sx={{ flex: 1, position: 'relative' }}>
+      <Box sx={{ 
+        flex: 1, 
+        position: 'relative', 
+        height: 'calc(100vh - 180px)',
+        overflow: 'hidden'
+      }}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -947,9 +957,10 @@ const NavigationEditorContent: React.FC = () => {
           snapGrid={[15, 15]}
           deleteKeyCode="Delete"
           multiSelectionKeyCode="Shift"
+          style={{ height: '100%', overflow: 'hidden' }}
         >
-          <Controls />
-          <MiniMap />
+          <Controls position="bottom-left" showZoom={true} showFitView={true} showInteractive={false}  />
+          <MiniMap style={{ bottom: 10 }} />
           <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
           
           {/* Custom arrow marker */}
