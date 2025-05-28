@@ -98,8 +98,7 @@ export const RemoteInterface: React.FC<RemoteInterfaceProps> = ({
           display: 'block',
           maxWidth: '100%',
           height: 'auto',
-          borderRadius: '6px',
-          boxShadow: '0 8px 16px rgba(0,0,0,0.3)'
+          borderRadius: '6px'
         }}
         onError={(e) => {
           // Fallback if image doesn't load
