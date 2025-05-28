@@ -76,24 +76,6 @@ export const UINavigationEdge: React.FC<EdgeProps<UINavigationEdgeType['data']>>
           )}
         </>
       )}
-      
-      {/* Single navigation action label */}
-      {data?.action && (
-        <text
-          x={labelX}
-          y={labelY + 8}
-          style={{
-            fontSize: '11px',
-            fill: '#2563eb',
-            textAnchor: 'middle',
-            dominantBaseline: 'middle',
-            pointerEvents: 'none',
-            fontWeight: 'bold',
-          }}
-        >
-          {data.action}
-        </text>
-      )}
     </>
   );
 }; 

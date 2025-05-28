@@ -1,12 +1,11 @@
 import React from 'react';
-import { Handle, Position } from 'reactflow';
+import { Handle, Position, NodeProps } from 'reactflow';
 import { UINavigationNode as UINavigationNodeType } from '../../types/navigationTypes';
 
-interface UINavigationNodeProps {
-  data: UINavigationNodeType['data'];
-}
-
-export const UINavigationNode: React.FC<UINavigationNodeProps> = ({ data }) => {
+export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({ 
+  data, 
+  selected 
+}) => {
   const getNodeColor = (type: string) => {
     switch (type) {
       case 'screen': return '#e3f2fd';
@@ -31,75 +30,34 @@ export const UINavigationNode: React.FC<UINavigationNodeProps> = ({ data }) => {
     <div
       style={{
         background: getNodeColor(data.type),
-        border: `2px solid ${getNodeBorderColor(data.type)}`,
+        border: selected ? `2px solid #1976d2` : `2px solid ${getNodeBorderColor(data.type)}`,
         borderRadius: '8px',
         padding: '12px',
-        minWidth: '150px',
+        minWidth: '200px',
         maxWidth: '200px',
+        minHeight: '120px',
         fontSize: '12px',
         color: '#333',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        boxShadow: selected ? '0 4px 12px rgba(0,0,0,0.2)' : '0 2px 4px rgba(0,0,0,0.1)',
         position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
       }}
     >
-      {/* Top Handles - target and source with unique IDs */}
-      <Handle 
-        type="target" 
-        position={Position.Top} 
-        id="top-target"
-        style={{ 
-          background: '#555', 
-          width: '10px', 
-          height: '10px',
-          border: '2px solid #fff'
-        }} 
-      />
-      <Handle 
-        type="source" 
-        position={Position.Top} 
-        id="top-source"
-        style={{ 
-          background: '#555', 
-          width: '10px', 
-          height: '10px',
-          border: '2px solid #fff'
-        }} 
-      />
-      
-      {/* Bottom Handles - target and source with unique IDs */}
-      <Handle 
-        type="target" 
-        position={Position.Bottom} 
-        id="bottom-target"
-        style={{ 
-          background: '#555', 
-          width: '10px', 
-          height: '10px',
-          border: '2px solid #fff'
-        }} 
-      />
-      <Handle 
-        type="source" 
-        position={Position.Bottom} 
-        id="bottom-source"
-        style={{ 
-          background: '#555', 
-          width: '10px', 
-          height: '10px',
-          border: '2px solid #fff'
-        }} 
-      />
-      
       {/* Left Handles - target and source with unique IDs */}
       <Handle 
         type="target" 
         position={Position.Left} 
         id="left-target"
         style={{ 
-          background: '#555', 
-          width: '10px', 
-          height: '10px',
-          border: '2px solid #fff'
+          background: '#1976d2', 
+          width: '12px', 
+          height: '12px',
+          border: '2px solid #fff',
+          borderRadius: '50%',
+          left: -6,
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
         }} 
       />
       <Handle 
@@ -107,10 +65,13 @@ export const UINavigationNode: React.FC<UINavigationNodeProps> = ({ data }) => {
         position={Position.Left} 
         id="left-source"
         style={{ 
-          background: '#555', 
-          width: '10px', 
-          height: '10px',
-          border: '2px solid #fff'
+          background: '#1976d2', 
+          width: '12px', 
+          height: '12px',
+          border: '2px solid #fff',
+          borderRadius: '50%',
+          left: -6,
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
         }} 
       />
       
@@ -120,10 +81,13 @@ export const UINavigationNode: React.FC<UINavigationNodeProps> = ({ data }) => {
         position={Position.Right} 
         id="right-target"
         style={{ 
-          background: '#555', 
-          width: '10px', 
-          height: '10px',
-          border: '2px solid #fff'
+          background: '#1976d2', 
+          width: '12px', 
+          height: '12px',
+          border: '2px solid #fff',
+          borderRadius: '50%',
+          right: -6,
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
         }} 
       />
       <Handle 
@@ -131,37 +95,102 @@ export const UINavigationNode: React.FC<UINavigationNodeProps> = ({ data }) => {
         position={Position.Right} 
         id="right-source"
         style={{ 
-          background: '#555', 
-          width: '10px', 
-          height: '10px',
-          border: '2px solid #fff'
+          background: '#1976d2', 
+          width: '12px', 
+          height: '12px',
+          border: '2px solid #fff',
+          borderRadius: '50%',
+          right: -6,
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
         }} 
       />
-      
-      <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
-        {data.label}
-      </div>
-      
-      <div style={{ 
-        fontSize: '10px', 
-        color: '#666',
-        textTransform: 'uppercase',
-        marginBottom: '4px'
-      }}>
-        {data.type}
-      </div>
-      
-     
-      
+
+      {/* Children indicator */}
       {data.hasChildren && (
-        <div style={{ 
-          fontSize: '10px', 
-          color: '#4caf50',
-          fontWeight: 'bold'
-        }}>
-          📁 Has Children
+        <div
+          style={{
+            position: 'absolute',
+            top: '4px',
+            right: '4px',
+            width: '16px',
+            height: '16px',
+            backgroundColor: '#4caf50',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '10px',
+            color: 'white',
+            fontWeight: 'bold',
+            zIndex: 10,
+          }}
+        >
+          +
         </div>
       )}
+
+      {/* Header with node name and type */}
+      <div
+        style={{
+          padding: '8px',
+          backgroundColor: 'white',
+          borderBottom: '1px solid #eee',
+          minHeight: '40px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+        }}
+      >
+        <div
+          style={{
+            fontWeight: 'bold',
+            textAlign: 'center',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            color: 'black',
+            marginBottom: '2px',
+          }}
+        >
+          {data.label}
+        </div>
+        <div
+          style={{
+            textAlign: 'center',
+            fontSize: '10px',
+            color: '#666',
+            textTransform: 'uppercase',
+          }}
+        >
+          {data.type}
+          {data.hasChildren && ' • Has Children'}
+        </div>
+      </div>
+
+      {/* Screenshot/Thumbnail area */}
+      <div
+        style={{
+          flex: 1,
+          backgroundColor: data.thumbnail ? 'transparent' : '#f5f5f5',
+          backgroundImage: data.thumbnail ? `url(${data.thumbnail})` : 'none',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+        }}
+      >
+        {!data.thumbnail && (
+          <div style={{ 
+            fontSize: '11px', 
+            color: '#666',
+            textAlign: 'center',
+          }}>
+            {data.hasChildren ? 'Double-click to explore' : 'No Screenshot'}
+          </div>
+        )}
+      </div>
     </div>
   );
 }; 
