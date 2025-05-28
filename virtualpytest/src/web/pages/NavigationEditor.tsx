@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import ReactFlow, {
   Background,
   Controls, 
@@ -6,7 +6,21 @@ import ReactFlow, {
   MiniMap,
   MarkerType,
   ConnectionLineType,
-  BackgroundVariant
+  BackgroundVariant,
+  Handle,
+  Position,
+  getBezierPath,
+  Node,
+  Edge,
+  addEdge,
+  Connection,
+  useNodesState,
+  useEdgesState,
+  useReactFlow,
+  NodeChange,
+  EdgeChange,
+  applyNodeChanges,
+  applyEdgeChanges,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import {
@@ -40,8 +54,11 @@ import {
   Cancel as CancelIcon,
   Close as CloseIcon,
   ArrowBack as ArrowBackIcon,
-  Error as ErrorIcon
+  Error as ErrorIcon,
+  CloudUpload as CloudUploadIcon,
+  CloudDownload as CloudDownloadIcon,
 } from '@mui/icons-material';
+import { useParams, useNavigate } from 'react-router-dom';
 
 // Import extracted components and hooks
 import { useNavigationEditor } from '../hooks/useNavigationEditor';
@@ -50,14 +67,310 @@ import { UINavigationEdge } from '../components/navigation/UINavigationEdge';
 import { NodeEditDialog } from '../components/navigation/NodeEditDialog';
 import { EdgeEditDialog } from '../components/navigation/EdgeEditDialog';
 
-// Define node types for ReactFlow
-const nodeTypes = {
-  uiScreen: UINavigationNode,
+// Custom Node Component for UI Screens - Updated to use the better implementation
+const UIScreenNode = ({ data, selected }: { data: any; selected: boolean }) => {
+  return (
+    <Box
+      sx={{
+        width: 200,
+        height: 120,
+        border: selected ? '2px solid #1976d2' : '1px solid #ccc',
+        borderRadius: 2,
+        backgroundColor: 'white',
+        boxShadow: selected ? 3 : 1,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        position: 'relative',
+      }}
+    >
+      {/* Use the comprehensive handle setup from UINavigationNode */}
+      {/* Top Handles - target and source with unique IDs */}
+      <Handle 
+        type="target" 
+        position={Position.Top} 
+        id="top-target"
+        style={{ 
+          background: '#1976d2', 
+          width: '12px', 
+          height: '12px',
+          border: '2px solid #fff',
+          borderRadius: '50%',
+          top: -6,
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+        }} 
+      />
+      <Handle 
+        type="source" 
+        position={Position.Top} 
+        id="top-source"
+        style={{ 
+          background: '#1976d2', 
+          width: '12px', 
+          height: '12px',
+          border: '2px solid #fff',
+          borderRadius: '50%',
+          top: -6,
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+        }} 
+      />
+      
+      {/* Bottom Handles - target and source with unique IDs */}
+      <Handle 
+        type="target" 
+        position={Position.Bottom} 
+        id="bottom-target"
+        style={{ 
+          background: '#1976d2', 
+          width: '12px', 
+          height: '12px',
+          border: '2px solid #fff',
+          borderRadius: '50%',
+          bottom: -6,
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+        }} 
+      />
+      <Handle 
+        type="source" 
+        position={Position.Bottom} 
+        id="bottom-source"
+        style={{ 
+          background: '#1976d2', 
+          width: '12px', 
+          height: '12px',
+          border: '2px solid #fff',
+          borderRadius: '50%',
+          bottom: -6,
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+        }} 
+      />
+      
+      {/* Left Handles - target and source with unique IDs */}
+      <Handle 
+        type="target" 
+        position={Position.Left} 
+        id="left-target"
+        style={{ 
+          background: '#1976d2', 
+          width: '12px', 
+          height: '12px',
+          border: '2px solid #fff',
+          borderRadius: '50%',
+          left: -6,
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+        }} 
+      />
+      <Handle 
+        type="source" 
+        position={Position.Left} 
+        id="left-source"
+        style={{ 
+          background: '#1976d2', 
+          width: '12px', 
+          height: '12px',
+          border: '2px solid #fff',
+          borderRadius: '50%',
+          left: -6,
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+        }} 
+      />
+      
+      {/* Right Handles - target and source with unique IDs */}
+      <Handle 
+        type="target" 
+        position={Position.Right} 
+        id="right-target"
+        style={{ 
+          background: '#1976d2', 
+          width: '12px', 
+          height: '12px',
+          border: '2px solid #fff',
+          borderRadius: '50%',
+          right: -6,
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+        }} 
+      />
+      <Handle 
+        type="source" 
+        position={Position.Right} 
+        id="right-source"
+        style={{ 
+          background: '#1976d2', 
+          width: '12px', 
+          height: '12px',
+          border: '2px solid #fff',
+          borderRadius: '50%',
+          right: -6,
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+        }} 
+      />
+
+      {/* Children indicator */}
+      {data.hasChildren && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 4,
+            right: 4,
+            width: 16,
+            height: 16,
+            backgroundColor: '#4caf50',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '10px',
+            color: 'white',
+            fontWeight: 'bold',
+            zIndex: 10,
+          }}
+        >
+          +
+        </Box>
+      )}
+
+      {/* Header with node name and type */}
+      <Box
+        sx={{
+          padding: 1,
+          backgroundColor: 'white',
+          borderBottom: '1px solid #eee',
+          minHeight: 40,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+        }}
+      >
+        <Typography
+          variant="caption"
+          sx={{
+            fontWeight: 'bold',
+            display: 'block',
+            textAlign: 'center',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            color: 'black', // Force black text for readability in dark mode
+          }}
+        >
+          {data.label}
+        </Typography>
+        <Typography
+          variant="caption"
+          sx={{
+            display: 'block',
+            textAlign: 'center',
+            fontSize: '0.6rem',
+            color: '#666', // Dark gray for secondary text, readable in dark mode
+          }}
+        >
+          {data.type}
+          {data.hasChildren && ' • Has Children'}
+        </Typography>
+      </Box>
+
+      {/* Screenshot/Thumbnail area */}
+      <Box
+        sx={{
+          flex: 1,
+          backgroundColor: data.thumbnail ? 'transparent' : '#f5f5f5',
+          backgroundImage: data.thumbnail ? `url(${data.thumbnail})` : 'none',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+        }}
+      >
+        {!data.thumbnail && (
+          <Typography variant="caption" sx={{ color: '#666' }}>
+            {data.hasChildren ? 'Double-click to explore' : 'No Screenshot'}
+          </Typography>
+        )}
+      </Box>
+    </Box>
+  );
 };
 
-// Define edge types for ReactFlow
+// Custom Edge Component with Navigation Labels - Updated to use getBezierPath
+const UINavigationEdgeComponent = ({ 
+  id, 
+  sourceX, 
+  sourceY, 
+  targetX, 
+  targetY, 
+  sourcePosition,
+  targetPosition,
+  data,
+  style = {},
+}: any) => {
+  // Use getBezierPath from ReactFlow for better curved edges
+  const [edgePath, labelX, labelY] = getBezierPath({
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition,
+  });
+  
+  return (
+    <>
+      <path
+        id={id}
+        style={{
+          stroke: '#b1b1b7',
+          strokeWidth: 2,
+          fill: 'none',
+          ...style,
+        }}
+        className="react-flow__edge-path"
+        d={edgePath}
+        markerEnd="url(#arrowhead)"
+      />
+      {data?.go && (
+        <text
+          x={labelX}
+          y={labelY - 8}
+          style={{
+            fontSize: '10px',
+            fill: '#666',
+            textAnchor: 'middle',
+            dominantBaseline: 'middle',
+            pointerEvents: 'none',
+            fontWeight: 'bold',
+          }}
+        >
+          {data.go}
+        </text>
+      )}
+      {data?.comeback && (
+        <text
+          x={labelX}
+          y={labelY + 12}
+          style={{
+            fontSize: '9px',
+            fill: '#999',
+            textAnchor: 'middle',
+            dominantBaseline: 'middle',
+            pointerEvents: 'none',
+          }}
+        >
+          ← {data.comeback}
+        </text>
+      )}
+    </>
+  );
+};
+
+// Node types for React Flow
+const nodeTypes = {
+  uiScreen: UIScreenNode,
+};
+
 const edgeTypes = {
-  smoothstep: UINavigationEdge,
+  uiNavigation: UINavigationEdge,
 };
 
 const NavigationEditorContent: React.FC = () => {
@@ -216,6 +529,18 @@ const NavigationEditorContent: React.FC = () => {
             Add Screen
           </Button>
           
+          <Typography 
+            variant="caption" 
+            sx={{ 
+              mr: 2, 
+              color: 'text.secondary',
+              fontSize: '0.7rem',
+              display: { xs: 'none', md: 'block' }
+            }}
+          >
+            💡 Create separate edges for each direction
+          </Typography>
+          
           <IconButton 
             onClick={fitView} 
             size="small" 
@@ -332,13 +657,9 @@ const NavigationEditorContent: React.FC = () => {
                 nodeTypes={nodeTypes}
                 edgeTypes={edgeTypes}
                 defaultEdgeOptions={{
-                  type: 'smoothstep',
+                  type: 'uiNavigation',
                   animated: false,
                   style: { strokeWidth: 2, stroke: '#b1b1b7' },
-                  markerEnd: {
-                    type: MarkerType.ArrowClosed,
-                    color: '#b1b1b7',
-                  },
                 }}
                 fitView
                 attributionPosition="bottom-left"
@@ -350,9 +671,9 @@ const NavigationEditorContent: React.FC = () => {
                 style={{ width: '100%', height: '100%' }}
               >
                 <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
-                <Controls position="bottom-right" showZoom={true} showFitView={true} showInteractive={false} />
+                <Controls position="top-left" showZoom={true} showFitView={true} showInteractive={false} />
                 <MiniMap 
-                  position="top-right"
+                  position="bottom-right"
                   style={{
                     backgroundColor: 'var(--card, #ffffff)',
                     border: '1px solid var(--border, #e5e7eb)',
@@ -370,6 +691,23 @@ const NavigationEditorContent: React.FC = () => {
                   }}
                   maskColor="rgba(0, 0, 0, 0.1)"
                 />
+                
+                {/* Custom arrow marker for edges */}
+                <defs>
+                  <marker
+                    id="arrowhead"
+                    markerWidth="10"
+                    markerHeight="7"
+                    refX="9"
+                    refY="3.5"
+                    orient="auto"
+                  >
+                    <polygon
+                      points="0 0, 10 3.5, 0 7"
+                      fill="#b1b1b7"
+                    />
+                  </marker>
+                </defs>
               </ReactFlow>
             </div>
 
@@ -457,16 +795,30 @@ const NavigationEditorContent: React.FC = () => {
                       </IconButton>
                     </Box>
                     
-                    {selectedEdge.data?.go && (
+                    {/* Show From/To information */}
+                    {selectedEdge.data?.from && (
                       <Typography variant="body2" gutterBottom sx={{ mb: 0.5 }}>
-                        Go: {selectedEdge.data.go}
+                        From: {selectedEdge.data.from}
                       </Typography>
                     )}
-                    {selectedEdge.data?.comeback && (
+                    {selectedEdge.data?.to && (
                       <Typography variant="body2" gutterBottom sx={{ mb: 0.5 }}>
-                        Return: {selectedEdge.data.comeback}
+                        To: {selectedEdge.data.to}
                       </Typography>
                     )}
+                    
+                    {selectedEdge.data?.action && (
+                      <Typography variant="body2" gutterBottom sx={{ mb: 0.5 }}>
+                        Action: {selectedEdge.data.action}
+                      </Typography>
+                    )}
+                    
+                    {selectedEdge.data?.description && (
+                      <Typography variant="body2" gutterBottom sx={{ mb: 0.5 }}>
+                        Description: {selectedEdge.data.description}
+                      </Typography>
+                    )}
+                    
                     <Box sx={{ mt: 1.5, display: 'flex', gap: 0.5 }}>
                       <Button
                         size="small"
@@ -474,8 +826,7 @@ const NavigationEditorContent: React.FC = () => {
                         sx={{ fontSize: '0.75rem', px: 1 }}
                         onClick={() => {
                           setEdgeForm({
-                            go: selectedEdge.data?.go || '',
-                            comeback: selectedEdge.data?.comeback || '',
+                            action: selectedEdge.data?.action || '',
                             description: selectedEdge.data?.description || '',
                           });
                           setIsEdgeDialogOpen(true);
@@ -558,21 +909,12 @@ const NavigationEditorContent: React.FC = () => {
         <DialogContent>
           <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <TextField
-              label="Navigation Key (Go)"
-              value={edgeForm.go}
-              onChange={(e) => setEdgeForm({ ...edgeForm, go: e.target.value })}
-              placeholder="e.g., RIGHT, ENTER, OK"
+              label="Navigation Action"
+              value={edgeForm.action}
+              onChange={(e) => setEdgeForm({ ...edgeForm, action: e.target.value })}
+              placeholder="e.g., RIGHT, ENTER, OK, BACK, ESC"
               fullWidth
-              helperText="Key or action to navigate from source to target"
-            />
-            
-            <TextField
-              label="Return Key (Comeback)"
-              value={edgeForm.comeback}
-              onChange={(e) => setEdgeForm({ ...edgeForm, comeback: e.target.value })}
-              placeholder="e.g., LEFT, BACK, ESC"
-              fullWidth
-              helperText="Key or action to return from target to source"
+              helperText="Action to navigate between screens"
             />
             
             <TextField
@@ -582,10 +924,11 @@ const NavigationEditorContent: React.FC = () => {
               multiline
               rows={2}
               fullWidth
+              helperText="Optional description for this navigation"
             />
             
             <Typography variant="caption" color="textSecondary">
-              Note: At least one navigation direction (Go or Comeback) must be specified.
+              💡 Tip: Create separate edges for each direction (e.g., one for "RIGHT" and another for "LEFT")
             </Typography>
           </Box>
         </DialogContent>
@@ -594,7 +937,7 @@ const NavigationEditorContent: React.FC = () => {
           <Button 
             onClick={handleEdgeFormSubmit} 
             variant="contained"
-            disabled={!edgeForm.go && !edgeForm.comeback}
+            disabled={!edgeForm.action}
           >
             Save
           </Button>

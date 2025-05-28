@@ -39,9 +39,104 @@ export const UINavigationNode: React.FC<UINavigationNodeProps> = ({ data }) => {
         fontSize: '12px',
         color: '#333',
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        position: 'relative',
       }}
     >
-      <Handle type="target" position={Position.Top} />
+      {/* Top Handles - target and source with unique IDs */}
+      <Handle 
+        type="target" 
+        position={Position.Top} 
+        id="top-target"
+        style={{ 
+          background: '#555', 
+          width: '10px', 
+          height: '10px',
+          border: '2px solid #fff'
+        }} 
+      />
+      <Handle 
+        type="source" 
+        position={Position.Top} 
+        id="top-source"
+        style={{ 
+          background: '#555', 
+          width: '10px', 
+          height: '10px',
+          border: '2px solid #fff'
+        }} 
+      />
+      
+      {/* Bottom Handles - target and source with unique IDs */}
+      <Handle 
+        type="target" 
+        position={Position.Bottom} 
+        id="bottom-target"
+        style={{ 
+          background: '#555', 
+          width: '10px', 
+          height: '10px',
+          border: '2px solid #fff'
+        }} 
+      />
+      <Handle 
+        type="source" 
+        position={Position.Bottom} 
+        id="bottom-source"
+        style={{ 
+          background: '#555', 
+          width: '10px', 
+          height: '10px',
+          border: '2px solid #fff'
+        }} 
+      />
+      
+      {/* Left Handles - target and source with unique IDs */}
+      <Handle 
+        type="target" 
+        position={Position.Left} 
+        id="left-target"
+        style={{ 
+          background: '#555', 
+          width: '10px', 
+          height: '10px',
+          border: '2px solid #fff'
+        }} 
+      />
+      <Handle 
+        type="source" 
+        position={Position.Left} 
+        id="left-source"
+        style={{ 
+          background: '#555', 
+          width: '10px', 
+          height: '10px',
+          border: '2px solid #fff'
+        }} 
+      />
+      
+      {/* Right Handles - target and source with unique IDs */}
+      <Handle 
+        type="target" 
+        position={Position.Right} 
+        id="right-target"
+        style={{ 
+          background: '#555', 
+          width: '10px', 
+          height: '10px',
+          border: '2px solid #fff'
+        }} 
+      />
+      <Handle 
+        type="source" 
+        position={Position.Right} 
+        id="right-source"
+        style={{ 
+          background: '#555', 
+          width: '10px', 
+          height: '10px',
+          border: '2px solid #fff'
+        }} 
+      />
       
       <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
         {data.label}
@@ -56,16 +151,7 @@ export const UINavigationNode: React.FC<UINavigationNodeProps> = ({ data }) => {
         {data.type}
       </div>
       
-      {data.description && (
-        <div style={{ 
-          fontSize: '10px', 
-          color: '#888',
-          fontStyle: 'italic',
-          marginBottom: '4px'
-        }}>
-          {data.description}
-        </div>
-      )}
+     
       
       {data.hasChildren && (
         <div style={{ 
@@ -76,8 +162,6 @@ export const UINavigationNode: React.FC<UINavigationNodeProps> = ({ data }) => {
           📁 Has Children
         </div>
       )}
-      
-      <Handle type="source" position={Position.Bottom} />
     </div>
   );
 }; 

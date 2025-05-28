@@ -17,9 +17,10 @@ export interface UINavigationNode extends Node {
 
 // Use ReactFlow's Edge type directly with our custom data
 export type UINavigationEdge = Edge<{
-  go?: string;
-  comeback?: string;
+  action?: string;      // The navigation action (e.g., "RIGHT", "ENTER", "OK")
   description?: string;
+  from?: string;        // Source node label
+  to?: string;          // Target node label
 }>;
 
 export interface NavigationTreeData {
@@ -34,7 +35,6 @@ export interface NodeForm {
 }
 
 export interface EdgeForm {
-  go: string;
-  comeback: string;
+  action: string;       // Single action per edge
   description: string;
 } 
