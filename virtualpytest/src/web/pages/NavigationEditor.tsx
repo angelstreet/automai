@@ -3,9 +3,43 @@ import ReactFlow, {
   Background,
   Controls, 
   ReactFlowProvider,
-  MiniMap
+  MiniMap,
+  MarkerType,
+  ConnectionLineType,
+  BackgroundVariant
 } from 'reactflow';
 import 'reactflow/dist/style.css';
+import {
+  Box,
+  AppBar,
+  Toolbar,
+  Typography,
+  Button,
+  IconButton,
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Paper,
+  Snackbar,
+  Alert
+} from '@mui/material';
+import {
+  Add as AddIcon,
+  FitScreen as FitScreenIcon,
+  Undo as UndoIcon,
+  Redo as RedoIcon,
+  Save as SaveIcon,
+  Cancel as CancelIcon,
+  Close as CloseIcon,
+  ArrowBack as ArrowBackIcon
+} from '@mui/icons-material';
 
 // Import extracted components and hooks
 import { useNavigationEditor } from '../hooks/useNavigationEditor';
@@ -115,324 +149,107 @@ const NavigationEditorContent: React.FC = () => {
   }, [currentTreeId, isLoadingInterface, loadFromDatabase]);
 
     return (
-    <div style={{ 
+    <Box sx={{ 
       width: '100%',
       height: '100%',
-      minHeight: '500px', // Add minimum height to ensure visibility
+      minHeight: '500px',
       display: 'flex', 
       flexDirection: 'column',
-      overflow: 'hidden' // Prevent scrollbars
+      overflow: 'hidden'
     }}>
-      {/* Header with breadcrumb and controls */}
-      <div style={{
-        height: '60px',
-        backgroundColor: 'var(--background, #ffffff)', // Dark theme support
-        borderBottom: '1px solid var(--border, #e5e7eb)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 16px',
-        flexShrink: 0,
-        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
-      }}>
-        {/* Left side - Breadcrumb navigation */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button
-            onClick={navigateToParent}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: 'var(--secondary, #6b7280)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '500',
-              transition: 'all 0.2s ease',
-              boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--secondary-hover, #4b5563)';
-              e.currentTarget.style.transform = 'translateY(-1px)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--secondary, #6b7280)';
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}
+      {/* Header with AppBar */}
+      <AppBar position="static" color="default" elevation={1}>
+        <Toolbar variant="dense" sx={{ minHeight: 48 }}>
+          <IconButton 
+            edge="start" 
+            onClick={navigateToParent} 
+            size="small" 
+            title="Back to Trees"
+            sx={{ mr: 1 }}
           >
-            ← Back to Trees
-          </button>
+            <ArrowBackIcon />
+          </IconButton>
           
-          {/* Breadcrumb */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {navigationNamePath.map((name, index) => (
-              <React.Fragment key={index}>
-                {index > 0 && <span style={{ color: 'var(--muted-foreground, #6b7280)', fontSize: '14px' }}>→</span>}
-                <button
+          {/* Breadcrumb navigation */}
+          <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
+            {navigationNamePath.map((treeName, index) => (
+              <Box key={index} sx={{ display: 'flex', alignItems: 'center' }}>
+                {index > 0 && (
+                  <Typography variant="h6" sx={{ mx: 0.5, color: 'text.secondary' }}>
+                    &gt;
+                  </Typography>
+                )}
+                <Button
+                  variant="text"
+                  size="small"
                   onClick={() => navigateToTreeLevel(index)}
-                  style={{
-                    padding: '6px 12px',
-                    backgroundColor: index === navigationNamePath.length - 1 ? 'var(--primary, #3b82f6)' : 'transparent',
-                    color: index === navigationNamePath.length - 1 ? 'white' : 'var(--primary, #3b82f6)',
-                    border: `1px solid var(--primary, #3b82f6)`,
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '13px',
-                    fontWeight: '500',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseOver={(e) => {
-                    if (index !== navigationNamePath.length - 1) {
-                      e.currentTarget.style.backgroundColor = 'var(--primary-light, #dbeafe)';
-                    }
-                  }}
-                  onMouseOut={(e) => {
-                    if (index !== navigationNamePath.length - 1) {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }
+                  sx={{
+                    textTransform: 'none',
+                    minWidth: 'auto',
+                    fontWeight: index === navigationNamePath.length - 1 ? 'bold' : 'normal',
+                    color: index === navigationNamePath.length - 1 ? 'primary.main' : 'text.secondary',
                   }}
                 >
-                  {name}
-                </button>
-              </React.Fragment>
+                  {decodeURIComponent(treeName)}
+                  {index === navigationNamePath.length - 1 && hasUnsavedChanges && (
+                    <Typography component="span" sx={{ color: 'warning.main', ml: 0.5 }}>
+                      *
+                    </Typography>
+                  )}
+                </Button>
+              </Box>
             ))}
-        </div>
+          </Box>
           
-          {hasUnsavedChanges && (
-            <span style={{ 
-              color: 'var(--destructive, #ef4444)', 
-              fontSize: '13px', 
-              fontWeight: '600',
-              marginLeft: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}>
-              <span style={{ 
-                width: '6px', 
-                height: '6px', 
-                borderRadius: '50%', 
-                backgroundColor: 'var(--destructive, #ef4444)' 
-              }}></span>
-              Unsaved changes
-            </span>
-          )}
-        </div>
-
-        {/* Right side - Action buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button
+          <Button
+            startIcon={<AddIcon />}
             onClick={addNewNode}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: 'var(--success, #10b981)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '500',
-              transition: 'all 0.2s ease',
-              boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--success-hover, #059669)';
-              e.currentTarget.style.transform = 'translateY(-1px)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--success, #10b981)';
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}
+            size="small"
+            sx={{ mr: 1 }}
           >
-            + Add Node
-          </button>
+            Add Screen
+          </Button>
           
-          <button
-            onClick={undo}
-            disabled={historyIndex <= 0}
-            style={{
-              padding: '8px 12px',
-              backgroundColor: historyIndex <= 0 ? 'var(--muted, #f3f4f6)' : 'var(--secondary, #6b7280)',
-              color: historyIndex <= 0 ? 'var(--muted-foreground, #9ca3af)' : 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: historyIndex <= 0 ? 'not-allowed' : 'pointer',
-              fontSize: '14px',
-              fontWeight: '500',
-              transition: 'all 0.2s ease',
-              boxShadow: historyIndex <= 0 ? 'none' : '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-            }}
-            onMouseOver={(e) => {
-              if (historyIndex > 0) {
-                e.currentTarget.style.backgroundColor = 'var(--secondary-hover, #4b5563)';
-                e.currentTarget.style.transform = 'translateY(-1px)';
-              }
-            }}
-            onMouseOut={(e) => {
-              if (historyIndex > 0) {
-                e.currentTarget.style.backgroundColor = 'var(--secondary, #6b7280)';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }
-            }}
-          >
-            ↶ Undo
-          </button>
+          <IconButton onClick={fitView} size="small" title="Fit View">
+            <FitScreenIcon />
+          </IconButton>
           
-          <button
-            onClick={redo}
-            disabled={historyIndex >= history.length - 1}
-            style={{
-              padding: '8px 12px',
-              backgroundColor: historyIndex >= history.length - 1 ? 'var(--muted, #f3f4f6)' : 'var(--secondary, #6b7280)',
-              color: historyIndex >= history.length - 1 ? 'var(--muted-foreground, #9ca3af)' : 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: historyIndex >= history.length - 1 ? 'not-allowed' : 'pointer',
-              fontSize: '14px',
-              fontWeight: '500',
-              transition: 'all 0.2s ease',
-              boxShadow: historyIndex >= history.length - 1 ? 'none' : '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-            }}
-            onMouseOver={(e) => {
-              if (historyIndex < history.length - 1) {
-                e.currentTarget.style.backgroundColor = 'var(--secondary-hover, #4b5563)';
-                e.currentTarget.style.transform = 'translateY(-1px)';
-              }
-            }}
-            onMouseOut={(e) => {
-              if (historyIndex < history.length - 1) {
-                e.currentTarget.style.backgroundColor = 'var(--secondary, #6b7280)';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }
-            }}
-          >
-            ↷ Redo
-          </button>
+          <IconButton onClick={undo} size="small" title="Undo" disabled={historyIndex <= 0}>
+            <UndoIcon />
+          </IconButton>
           
-          <button
-            onClick={fitView}
-            style={{
-              padding: '8px 12px',
-              backgroundColor: 'var(--info, #0ea5e9)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '500',
-              transition: 'all 0.2s ease',
-              boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--info-hover, #0284c7)';
-              e.currentTarget.style.transform = 'translateY(-1px)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--info, #0ea5e9)';
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}
-          >
-            🔍 Fit View
-          </button>
+          <IconButton onClick={redo} size="small" title="Redo" disabled={historyIndex >= history.length - 1}>
+            <RedoIcon />
+          </IconButton>
           
-          <button
-            onClick={discardChanges}
-            disabled={!hasUnsavedChanges}
-            style={{
-              padding: '8px 12px',
-              backgroundColor: !hasUnsavedChanges ? 'var(--muted, #f3f4f6)' : 'var(--destructive, #ef4444)',
-              color: !hasUnsavedChanges ? 'var(--muted-foreground, #9ca3af)' : 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: !hasUnsavedChanges ? 'not-allowed' : 'pointer',
-              fontSize: '14px',
-              fontWeight: '500',
-              transition: 'all 0.2s ease',
-              boxShadow: !hasUnsavedChanges ? 'none' : '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-            }}
-            onMouseOver={(e) => {
-              if (hasUnsavedChanges) {
-                e.currentTarget.style.backgroundColor = 'var(--destructive-hover, #dc2626)';
-                e.currentTarget.style.transform = 'translateY(-1px)';
-              }
-            }}
-            onMouseOut={(e) => {
-              if (hasUnsavedChanges) {
-                e.currentTarget.style.backgroundColor = 'var(--destructive, #ef4444)';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }
-            }}
+          <IconButton 
+            onClick={saveToDatabase} 
+            size="small" 
+            title={hasUnsavedChanges ? "Save Changes to Database" : "Save to Database"}
+            disabled={isLoading}
+            color={hasUnsavedChanges ? "primary" : "default"}
           >
-            🗑️ Discard
-          </button>
+            {isLoading ? <CircularProgress size={20} /> : <SaveIcon />}
+          </IconButton>
           
-          <button
-            onClick={saveToDatabase}
-            disabled={isLoading || !hasUnsavedChanges}
-            style={{
-              padding: '8px 20px',
-              backgroundColor: isLoading || !hasUnsavedChanges ? 'var(--muted, #f3f4f6)' : 'var(--primary, #3b82f6)',
-              color: isLoading || !hasUnsavedChanges ? 'var(--muted-foreground, #9ca3af)' : 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: isLoading || !hasUnsavedChanges ? 'not-allowed' : 'pointer',
-              fontSize: '14px',
-              fontWeight: '600',
-              transition: 'all 0.2s ease',
-              boxShadow: isLoading || !hasUnsavedChanges ? 'none' : '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-            }}
-            onMouseOver={(e) => {
-              if (!isLoading && hasUnsavedChanges) {
-                e.currentTarget.style.backgroundColor = 'var(--primary-hover, #2563eb)';
-                e.currentTarget.style.transform = 'translateY(-1px)';
-              }
-            }}
-            onMouseOut={(e) => {
-              if (!isLoading && hasUnsavedChanges) {
-                e.currentTarget.style.backgroundColor = 'var(--primary, #3b82f6)';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }
-            }}
+          <IconButton 
+            onClick={discardChanges} 
+            size="small" 
+            title={hasUnsavedChanges ? "Discard Unsaved Changes" : "Discard Changes"}
+            color={hasUnsavedChanges ? "warning" : "default"}
           >
-            {isLoading ? '💾 Saving...' : '💾 Save'}
-          </button>
-        </div>
-      </div>
+            <CancelIcon />
+          </IconButton>
+        </Toolbar>
+      </AppBar>
 
-      {/* Status Messages */}
-      {(error || success) && (
-        <div style={{
-          padding: '12px 16px',
-          backgroundColor: error ? 'var(--destructive-light, #fef2f2)' : 'var(--success-light, #f0fdf4)',
-          color: error ? 'var(--destructive-dark, #991b1b)' : 'var(--success-dark, #166534)',
-          borderBottom: '1px solid var(--border, #e5e7eb)',
-          fontSize: '14px',
-          fontWeight: '500',
-          flexShrink: 0,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
-        }}>
-          {error ? `❌ ${error}` : `✅ ${success}`}
-        </div>
-      )}
-
-      {/* Main content area */}
-      <div style={{ 
+      {/* Main Editor Area */}
+      <Box sx={{ 
         flex: 1, 
-        display: 'flex',
-        overflow: 'hidden',
-        minHeight: '500px' // Ensure minimum height for the main content area
+        position: 'relative', 
+        height: 'calc(100vh - 180px)',
+        overflow: 'hidden'
       }}>
-        {/* ReactFlow Canvas */}
-        <div 
-          ref={reactFlowWrapper} 
-          style={{ 
-            flex: 1,
-            position: 'relative',
-            minHeight: '500px' // Ensure minimum height for ReactFlow
-          }}
-        >
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -442,523 +259,301 @@ const NavigationEditorContent: React.FC = () => {
           onNodeClick={onNodeClick}
           onEdgeClick={onEdgeClick}
           onNodeDoubleClick={onNodeDoubleClick}
-          onPaneClick={onPaneClick}
-          onInit={setReactFlowInstance}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
-          defaultEdgeOptions={defaultEdgeOptions}
           fitView
           attributionPosition="bottom-left"
-          style={{ width: '100%', height: '100%' }}
+          onPaneClick={onPaneClick}
+          connectionLineType={ConnectionLineType.SmoothStep}
+          defaultEdgeOptions={{
+            type: 'smoothstep',
+            animated: false,
+            style: { strokeWidth: 2, stroke: '#b1b1b7' },
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              color: '#b1b1b7',
+            },
+          }}
+          snapToGrid={true}
+          snapGrid={[15, 15]}
+          deleteKeyCode="Delete"
+          multiSelectionKeyCode="Shift"
+          style={{ height: '100%', overflow: 'hidden' }}
         >
-          <Background />
-          <Controls position="bottom-right" />
-          <MiniMap 
-            position="top-right"
-            style={{
-              backgroundColor: 'var(--card, #ffffff)', // Dark theme support
-              border: '1px solid var(--border, #e5e7eb)',
-              borderRadius: '8px',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-            }}
-            nodeColor={(node) => {
-              switch (node.data?.type) {
-                case 'screen': return '#3b82f6';
-                case 'dialog': return '#8b5cf6';
-                case 'popup': return '#f59e0b';
-                case 'overlay': return '#10b981';
-                default: return '#6b7280';
-              }
-            }}
-            maskColor="rgba(0, 0, 0, 0.1)"
-          />
+          <Controls position="bottom-left" showZoom={true} showFitView={true} showInteractive={false} />
+          <MiniMap style={{ bottom: 10 }} />
+          <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
         </ReactFlow>
-        </div>
 
-        {/* Right sidebar for selection details */}
-        {(selectedNode || selectedEdge) && (
-          <div style={{
-            width: '320px',
-            backgroundColor: 'var(--card, #ffffff)', // Dark theme support
-            borderLeft: '1px solid var(--border, #e5e7eb)',
-            padding: '20px',
-            overflow: 'auto',
-            flexShrink: 0,
-            boxShadow: '-4px 0 6px -1px rgba(0, 0, 0, 0.1)'
-          }}>
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              marginBottom: '20px'
-            }}>
-              <h3 style={{ 
-                margin: 0, 
-                fontSize: '18px', 
-                fontWeight: '600',
-                color: 'var(--foreground, #111827)'
-              }}>
-                {selectedNode ? 'Node Properties' : 'Edge Properties'}
-              </h3>
-              <button
-                onClick={closeSelectionPanel}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '20px',
-                  cursor: 'pointer',
-                  color: 'var(--muted-foreground, #6b7280)',
-                  padding: '4px',
-                  borderRadius: '4px',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--muted, #f3f4f6)';
-                  e.currentTarget.style.color = 'var(--foreground, #111827)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.color = 'var(--muted-foreground, #6b7280)';
-                }}
-              >
-                ×
-              </button>
-            </div>
-
+        {/* Selection Info Panel */}
+        {(selectedNode || selectedEdge) ? (
+          <Paper
+            sx={{
+              position: 'absolute',
+              top: 16,
+              right: 16,
+              width: 200,
+              p: 1.5,
+              zIndex: 1000,
+            }}
+          >
             {selectedNode && (
-              <div>
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ 
-                    display: 'block', 
-                    marginBottom: '6px', 
-                    fontSize: '13px', 
-                    fontWeight: '600',
-                    color: 'var(--muted-foreground, #6b7280)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.025em'
-                  }}>
-                    Screen Name:
-                  </label>
-                  <div style={{
-                    padding: '12px',
-                    backgroundColor: 'var(--muted, #f9fafb)',
-                    border: '1px solid var(--border, #e5e7eb)',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    color: 'var(--foreground, #111827)',
-                    fontWeight: '500'
-                  }}>
-                    {selectedNode.data.label}
-                  </div>
-                </div>
-
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ 
-                    display: 'block', 
-                    marginBottom: '6px', 
-                    fontSize: '13px', 
-                    fontWeight: '600',
-                    color: 'var(--muted-foreground, #6b7280)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.025em'
-                  }}>
-                    Type:
-                  </label>
-                  <div style={{
-                    padding: '12px',
-                    backgroundColor: 'var(--muted, #f9fafb)',
-                    border: '1px solid var(--border, #e5e7eb)',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    color: 'var(--foreground, #111827)',
-                    fontWeight: '500',
-                    textTransform: 'capitalize'
-                  }}>
-                    {selectedNode.data.type}
-                  </div>
-                </div>
-
+              <Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                  <Typography variant="h6" sx={{ margin: 0, fontSize: '1rem' }}>
+                    Screen: {selectedNode.data.label}
+                  </Typography>
+                  <IconButton
+                    size="small"
+                    onClick={closeSelectionPanel}
+                    sx={{ p: 0.25 }}
+                  >
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+                
+                <Typography variant="body2" color="textSecondary" gutterBottom sx={{ mb: 0.5 }}>
+                  Type: {selectedNode.data.type}
+                </Typography>
                 {selectedNode.data.description && (
-                  <div style={{ marginBottom: '16px' }}>
-                    <label style={{ 
-                      display: 'block', 
-                      marginBottom: '6px', 
-                      fontSize: '13px', 
-                      fontWeight: '600',
-                      color: 'var(--muted-foreground, #6b7280)',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.025em'
-                    }}>
-                      Description:
-                    </label>
-                    <div style={{
-                      padding: '12px',
-                      backgroundColor: 'var(--muted, #f9fafb)',
-                      border: '1px solid var(--border, #e5e7eb)',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      color: 'var(--foreground, #111827)',
-                      lineHeight: '1.5'
-                    }}>
-                      {selectedNode.data.description}
-                    </div>
-                  </div>
+                  <Typography variant="body2" gutterBottom sx={{ mb: 1 }}>
+                    {selectedNode.data.description}
+                  </Typography>
                 )}
-
-                <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-                  <button
+                {selectedNode.data.hasChildren && (
+                  <Typography variant="body2" color="success.main" gutterBottom sx={{ mb: 1 }}>
+                    💡 Double-click to explore child tree
+                  </Typography>
+                )}
+                <Box sx={{ mt: 1.5, display: 'flex', gap: 0.5 }}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    sx={{ fontSize: '0.75rem', px: 1 }}
                     onClick={() => {
                       setNodeForm({
                         label: selectedNode.data.label,
                         type: selectedNode.data.type,
-                        description: selectedNode.data.description || ''
+                        description: selectedNode.data.description || '',
                       });
                       setIsNodeDialogOpen(true);
                     }}
-                    style={{
-                      flex: 1,
-                      padding: '10px 16px',
-                      backgroundColor: 'var(--primary, #3b82f6)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      transition: 'all 0.2s ease',
-                      boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.backgroundColor = 'var(--primary-hover, #2563eb)';
-                      e.currentTarget.style.transform = 'translateY(-1px)';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.backgroundColor = 'var(--primary, #3b82f6)';
-                      e.currentTarget.style.transform = 'translateY(0)';
-                    }}
                   >
                     Edit
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="error"
+                    sx={{ fontSize: '0.75rem', px: 1 }}
                     onClick={deleteSelected}
-                    style={{
-                      flex: 1,
-                      padding: '10px 16px',
-                      backgroundColor: 'var(--destructive, #ef4444)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      transition: 'all 0.2s ease',
-                      boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.backgroundColor = 'var(--destructive-hover, #dc2626)';
-                      e.currentTarget.style.transform = 'translateY(-1px)';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.backgroundColor = 'var(--destructive, #ef4444)';
-                      e.currentTarget.style.transform = 'translateY(0)';
-                    }}
                   >
                     Delete
-                  </button>
-                </div>
-              </div>
+                  </Button>
+                </Box>
+              </Box>
             )}
             
             {selectedEdge && (
-              <div>
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ 
-                    display: 'block', 
-                    marginBottom: '6px', 
-                    fontSize: '13px', 
-                    fontWeight: '600',
-                    color: 'var(--muted-foreground, #6b7280)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.025em'
-                  }}>
-                    Connection:
-                  </label>
-                  <div style={{
-                    padding: '12px',
-                    backgroundColor: 'var(--muted, #f9fafb)',
-                    border: '1px solid var(--border, #e5e7eb)',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    color: 'var(--foreground, #111827)',
-                    fontWeight: '500',
-                    fontFamily: 'monospace'
-                  }}>
-                    {selectedEdge.source} → {selectedEdge.target}
-                  </div>
-                </div>
+              <Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                  <Typography variant="h6" sx={{ margin: 0, fontSize: '1rem' }}>
+                    Navigation Edge
+                  </Typography>
+                  <IconButton
+                    size="small"
+                    onClick={closeSelectionPanel}
+                    sx={{ p: 0.25 }}
+                  >
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                </Box>
                 
                 {selectedEdge.data?.go && (
-                  <div style={{ marginBottom: '16px' }}>
-                    <label style={{ 
-                      display: 'block', 
-                      marginBottom: '6px', 
-                      fontSize: '13px', 
-                      fontWeight: '600',
-                      color: 'var(--muted-foreground, #6b7280)',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.025em'
-                    }}>
-                      Go Action:
-                    </label>
-                    <div style={{
-                      padding: '12px',
-                      backgroundColor: 'var(--muted, #f9fafb)',
-                      border: '1px solid var(--border, #e5e7eb)',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      color: 'var(--foreground, #111827)',
-                      lineHeight: '1.5'
-                    }}>
-                      {selectedEdge.data.go}
-                    </div>
-                  </div>
+                  <Typography variant="body2" gutterBottom sx={{ mb: 0.5 }}>
+                    Go: {selectedEdge.data.go}
+                  </Typography>
                 )}
-
                 {selectedEdge.data?.comeback && (
-                  <div style={{ marginBottom: '16px' }}>
-                    <label style={{ 
-                      display: 'block', 
-                      marginBottom: '6px', 
-                      fontSize: '13px', 
-                      fontWeight: '600',
-                      color: 'var(--muted-foreground, #6b7280)',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.025em'
-                    }}>
-                      Comeback Action:
-                    </label>
-                    <div style={{
-                      padding: '12px',
-                      backgroundColor: 'var(--muted, #f9fafb)',
-                      border: '1px solid var(--border, #e5e7eb)',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      color: 'var(--foreground, #111827)',
-                      lineHeight: '1.5'
-                    }}>
-                      {selectedEdge.data.comeback}
-                    </div>
-                  </div>
+                  <Typography variant="body2" gutterBottom sx={{ mb: 0.5 }}>
+                    Return: {selectedEdge.data.comeback}
+                  </Typography>
                 )}
-
-                {selectedEdge.data?.description && (
-                  <div style={{ marginBottom: '16px' }}>
-                    <label style={{ 
-                      display: 'block', 
-                      marginBottom: '6px', 
-                      fontSize: '13px', 
-                      fontWeight: '600',
-                      color: 'var(--muted-foreground, #6b7280)',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.025em'
-                    }}>
-                      Description:
-                    </label>
-                    <div style={{
-                      padding: '12px',
-                      backgroundColor: 'var(--muted, #f9fafb)',
-                      border: '1px solid var(--border, #e5e7eb)',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      color: 'var(--foreground, #111827)',
-                      lineHeight: '1.5'
-                    }}>
-                      {selectedEdge.data.description}
-                    </div>
-                  </div>
-                )}
-
-                <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-                  <button
+                <Box sx={{ mt: 1.5, display: 'flex', gap: 0.5 }}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    sx={{ fontSize: '0.75rem', px: 1 }}
                     onClick={() => {
                       setEdgeForm({
                         go: selectedEdge.data?.go || '',
                         comeback: selectedEdge.data?.comeback || '',
-                        description: selectedEdge.data?.description || ''
+                        description: selectedEdge.data?.description || '',
                       });
                       setIsEdgeDialogOpen(true);
                     }}
-                    style={{
-                      flex: 1,
-                      padding: '10px 16px',
-                      backgroundColor: 'var(--primary, #3b82f6)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      transition: 'all 0.2s ease',
-                      boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.backgroundColor = 'var(--primary-hover, #2563eb)';
-                      e.currentTarget.style.transform = 'translateY(-1px)';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.backgroundColor = 'var(--primary, #3b82f6)';
-                      e.currentTarget.style.transform = 'translateY(0)';
-                    }}
                   >
                     Edit
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="error"
+                    sx={{ fontSize: '0.75rem', px: 1 }}
                     onClick={deleteSelected}
-                    style={{
-                      flex: 1,
-                      padding: '10px 16px',
-                      backgroundColor: 'var(--destructive, #ef4444)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      transition: 'all 0.2s ease',
-                      boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.backgroundColor = 'var(--destructive-hover, #dc2626)';
-                      e.currentTarget.style.transform = 'translateY(-1px)';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.backgroundColor = 'var(--destructive, #ef4444)';
-                      e.currentTarget.style.transform = 'translateY(0)';
-                    }}
                   >
                     Delete
-                  </button>
-                </div>
-              </div>
+                  </Button>
+                </Box>
+              </Box>
             )}
-          </div>
-        )}
-      </div>
+          </Paper>
+        ) : null}
+      </Box>
 
       {/* Node Edit Dialog */}
-      <NodeEditDialog
-        isOpen={isNodeDialogOpen}
-        selectedNode={selectedNode}
-        nodeForm={nodeForm}
-        setNodeForm={setNodeForm}
-        onSubmit={handleNodeFormSubmit}
-        onDelete={handleDeleteNode}
-        onClose={() => {
-          setIsNodeDialogOpen(false);
-          cancelNodeChanges();
-        }}
-      />
+      <Dialog open={isNodeDialogOpen} onClose={cancelNodeChanges} maxWidth="sm" fullWidth>
+        <DialogTitle>Edit Screen</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <TextField
+              label="Screen Name"
+              value={nodeForm.label}
+              onChange={(e) => setNodeForm({ ...nodeForm, label: e.target.value })}
+              fullWidth
+              required
+              error={!nodeForm.label.trim()}
+              helperText={!nodeForm.label.trim() ? "Screen name is required" : ""}
+            />
+            
+            <FormControl fullWidth>
+              <InputLabel>Type</InputLabel>
+              <Select
+                value={nodeForm.type}
+                label="Type"
+                onChange={(e) => setNodeForm({ ...nodeForm, type: e.target.value as any })}
+              >
+                <MenuItem value="screen">Screen</MenuItem>
+                <MenuItem value="dialog">Dialog</MenuItem>
+                <MenuItem value="popup">Popup</MenuItem>
+                <MenuItem value="overlay">Overlay</MenuItem>
+              </Select>
+            </FormControl>
+            
+            <TextField
+              label="Description"
+              value={nodeForm.description}
+              onChange={(e) => setNodeForm({ ...nodeForm, description: e.target.value })}
+              multiline
+              rows={3}
+              fullWidth
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={cancelNodeChanges}>Cancel</Button>
+          <Button 
+            onClick={handleNodeFormSubmit} 
+            variant="contained"
+            disabled={!nodeForm.label.trim()}
+          >
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Edge Edit Dialog */}
-      <EdgeEditDialog
-        isOpen={isEdgeDialogOpen}
-        selectedEdge={selectedEdge}
-        edgeForm={edgeForm}
-        setEdgeForm={setEdgeForm}
-        onSubmit={handleEdgeFormSubmit}
-        onDelete={handleDeleteEdge}
-        onClose={() => setIsEdgeDialogOpen(false)}
-      />
+      <Dialog open={isEdgeDialogOpen} onClose={() => setIsEdgeDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Edit Navigation</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <TextField
+              label="Navigation Key (Go)"
+              value={edgeForm.go}
+              onChange={(e) => setEdgeForm({ ...edgeForm, go: e.target.value })}
+              placeholder="e.g., RIGHT, ENTER, OK"
+              fullWidth
+              helperText="Key or action to navigate from source to target"
+            />
+            
+            <TextField
+              label="Return Key (Comeback)"
+              value={edgeForm.comeback}
+              onChange={(e) => setEdgeForm({ ...edgeForm, comeback: e.target.value })}
+              placeholder="e.g., LEFT, BACK, ESC"
+              fullWidth
+              helperText="Key or action to return from target to source"
+            />
+            
+            <TextField
+              label="Description"
+              value={edgeForm.description}
+              onChange={(e) => setEdgeForm({ ...edgeForm, description: e.target.value })}
+              multiline
+              rows={2}
+              fullWidth
+            />
+            
+            <Typography variant="caption" color="textSecondary">
+              Note: At least one navigation direction (Go or Comeback) must be specified.
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsEdgeDialogOpen(false)}>Cancel</Button>
+          <Button 
+            onClick={handleEdgeFormSubmit} 
+            variant="contained"
+            disabled={!edgeForm.go && !edgeForm.comeback}
+          >
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Discard Changes Confirmation Dialog */}
-      {isDiscardDialogOpen && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-        }}>
-          <div style={{
-            backgroundColor: 'var(--card, #ffffff)',
-            padding: '32px',
-            borderRadius: '12px',
-            minWidth: '450px',
-            maxWidth: '500px',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-            border: '1px solid var(--border, #e5e7eb)'
-          }}>
-            <h3 style={{ 
-              margin: '0 0 16px 0', 
-              fontSize: '20px', 
-              fontWeight: '600',
-              color: 'var(--foreground, #111827)'
-            }}>
-              Discard Changes?
-            </h3>
-            <p style={{ 
-              margin: '0 0 32px 0', 
-              color: 'var(--muted-foreground, #6b7280)',
-              lineHeight: '1.6',
-              fontSize: '15px'
-            }}>
-              Are you sure you want to discard all unsaved changes? This action cannot be undone.
-            </p>
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => setIsDiscardDialogOpen(false)}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: 'var(--secondary, #6b7280)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--secondary-hover, #4b5563)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--secondary, #6b7280)';
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={performDiscardChanges}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: 'var(--destructive, #ef4444)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--destructive-hover, #dc2626)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--destructive, #ef4444)';
-                }}
-              >
-                Discard Changes
-              </button>
-            </div>
-          </div>
-        </div>
+      <Dialog open={isDiscardDialogOpen} onClose={() => setIsDiscardDialogOpen(false)}>
+        <DialogTitle>Discard Changes?</DialogTitle>
+        <DialogContent>
+          <Typography>
+            You have unsaved changes. Are you sure you want to discard them and revert to the last saved state?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsDiscardDialogOpen(false)}>Cancel</Button>
+          <Button onClick={performDiscardChanges} color="warning" variant="contained">
+            Discard Changes
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Success/Error Messages */}
+      {success && (
+        <Snackbar
+          open={!!success}
+          autoHideDuration={3000}
+          onClose={() => {}}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert severity="success" sx={{ width: '100%' }}>
+            {success}
+          </Alert>
+        </Snackbar>
       )}
-    </div>
+
+      {error && (
+        <Snackbar
+          open={!!error}
+          autoHideDuration={6000}
+          onClose={() => {}}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert severity="error" sx={{ width: '100%' }}>
+            {error}
+          </Alert>
+        </Snackbar>
+      )}
+    </Box>
   );
 };
 
