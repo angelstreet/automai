@@ -77,7 +77,7 @@ const App: React.FC = () => {
             <Route path="/configuration/environment" element={<Environment />} />
 
             {/* Navigation Editor Route */}
-            <Route path="/navigation-editor/:treeId" element={<NavigationEditor />} />
+            <Route path="/navigation-editor/:treeName/:treeId" element={<NavigationEditor />} />
 
           </Routes>
         </Container>

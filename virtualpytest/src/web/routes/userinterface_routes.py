@@ -93,6 +93,11 @@ def userinterface(interface_id):
         if request.method == 'GET':
             interface = get_userinterface(interface_id, team_id)
             if interface:
+                # Enrich with root tree information
+                from navigation_utils import get_root_tree_for_interface
+                root_tree = get_root_tree_for_interface(interface_id, team_id)
+                if root_tree:
+                    interface['root_tree'] = root_tree
                 return jsonify(interface)
             else:
                 return jsonify({'error': 'User interface not found'}), 404

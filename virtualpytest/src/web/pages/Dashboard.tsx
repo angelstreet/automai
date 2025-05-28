@@ -230,15 +230,6 @@ const Dashboard: React.FC = () => {
               >
                 Create New Campaign
               </Button>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                href="/navigation-editor/home"
-                fullWidth
-                color="info"
-              >
-                Create Navigation Tree
-              </Button>
               <Button variant="outlined" startIcon={<PlayIcon />} fullWidth disabled>
                 Run Test Campaign (Coming Soon)
               </Button>

@@ -555,14 +555,14 @@ def available_userinterfaces():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@navigation_bp.route('/api/userinterfaces/<interface_id>', methods=['GET'])
+@navigation_bp.route('/userinterfaces/<interface_id>', methods=['GET'])
 def get_userinterface_with_root(interface_id):
     """Get a specific user interface with its root navigation tree"""
     error = check_supabase()
     if error:
         return error
         
-    team_id = get_team_id(request)
+    team_id = get_team_id()
     
     try:
         # Get the user interface

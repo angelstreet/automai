@@ -12,6 +12,10 @@ export interface UserInterface {
   max_version: string;
   created_at: string;
   updated_at: string;
+  root_tree?: {
+    id: string;
+    name: string;
+  } | null;
 }
 
 export interface UserInterfaceCreatePayload {
