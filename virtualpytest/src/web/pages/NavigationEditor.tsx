@@ -353,204 +353,27 @@ const NavigationEditorContent: React.FC = () => {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   
-  // Function to generate tree data based on current tree level
-  const getTreeData = useCallback((treeLevel: string): { nodes: UINavigationNode[], edges: UINavigationEdge[] } => {
-    if (treeLevel === 'home' || treeLevel === 'horizon_stb') {
-      // Root level - main navigation
-      return {
-        nodes: [
-          {
-            id: 'home',
-            type: 'uiScreen',
-            position: { x: 100, y: 200 },
-            data: {
-              label: 'Home Screen',
-              type: 'screen',
-              description: 'Main home screen of the application',
-              hasChildren: true,
-              childTreeName: 'home_children',
-            },
-          },
-          {
-            id: 'menu',
-            type: 'uiScreen',
-            position: { x: 400, y: 200 },
-            data: {
-              label: 'Main Menu',
-              type: 'screen',
-              description: 'Application main menu',
-              hasChildren: true,
-              childTreeName: 'menu_children',
-            },
-          },
-          {
-            id: 'settings',
-            type: 'uiScreen',
-            position: { x: 700, y: 200 },
-            data: {
-              label: 'Settings',
-              type: 'dialog',
-              description: 'Settings dialog',
-              hasChildren: false,
-            },
-          },
-        ],
-        edges: [
-          {
-            id: 'home-to-menu',
-            source: 'home',
-            target: 'menu',
-            type: 'smoothstep',
-            data: { go: 'RIGHT', comeback: 'LEFT', description: 'Navigate between home and menu' },
-          },
-          {
-            id: 'menu-to-settings',
-            source: 'menu',
-            target: 'settings',
-            type: 'smoothstep',
-            data: { go: 'ENTER', comeback: 'BACK', description: 'Open settings from menu' },
-          },
-        ],
-      };
-    } else if (treeLevel === 'home_children') {
-      // Home children level
-      return {
-        nodes: [
-          {
-            id: 'home_child1',
-            type: 'uiScreen',
-            position: { x: 100, y: 200 },
-            data: {
-              label: 'Home Widget 1',
-              type: 'screen',
-              description: 'First home widget',
-              hasChildren: false,
-            },
-          },
-          {
-            id: 'home_child2',
-            type: 'uiScreen',
-            position: { x: 400, y: 200 },
-            data: {
-              label: 'Home Widget 2',
-              type: 'screen',
-              description: 'Second home widget',
-              hasChildren: true,
-              childTreeName: 'home_widget2_children',
-            },
-          },
-          {
-            id: 'home_child3',
-            type: 'uiScreen',
-            position: { x: 700, y: 200 },
-            data: {
-              label: 'Home Widget 3',
-              type: 'screen',
-              description: 'Third home widget',
-              hasChildren: false,
-            },
-          },
-        ],
-        edges: [
-          {
-            id: 'home_child1-to-child2',
-            source: 'home_child1',
-            target: 'home_child2',
-            type: 'smoothstep',
-            data: { go: 'RIGHT', comeback: 'LEFT', description: 'Navigate between widgets' },
-          },
-          {
-            id: 'home_child2-to-child3',
-            source: 'home_child2',
-            target: 'home_child3',
-            type: 'smoothstep',
-            data: { go: 'RIGHT', comeback: 'LEFT', description: 'Navigate between widgets' },
-          },
-        ],
-      };
-    } else if (treeLevel === 'menu_children') {
-      // Menu children level
-      return {
-        nodes: [
-          {
-            id: 'menu_child1',
-            type: 'uiScreen',
-            position: { x: 100, y: 200 },
-            data: {
-              label: 'Menu Option 1',
-              type: 'screen',
-              description: 'First menu option',
-              hasChildren: false,
-            },
-          },
-          {
-            id: 'menu_child2',
-            type: 'uiScreen',
-            position: { x: 400, y: 200 },
-            data: {
-              label: 'Menu Option 2',
-              type: 'screen',
-              description: 'Second menu option',
-              hasChildren: false,
-            },
-          },
-        ],
-        edges: [
-          {
-            id: 'menu_child1-to-child2',
-            source: 'menu_child1',
-            target: 'menu_child2',
-            type: 'smoothstep',
-            data: { go: 'RIGHT', comeback: 'LEFT', description: 'Navigate between options' },
-          },
-        ],
-      };
-    } else {
-      // Default empty tree for other levels
-      return {
-        nodes: [
-          {
-            id: 'placeholder',
-            type: 'uiScreen',
-            position: { x: 400, y: 200 },
-            data: {
-              label: 'Empty Tree',
-              type: 'screen',
-              description: 'This tree level is empty',
-              hasChildren: false,
-            },
-          },
-        ],
-        edges: [],
-      };
-    }
+  // Create an empty tree structure
+  const createEmptyTree = useCallback((): { nodes: UINavigationNode[], edges: UINavigationEdge[] } => {
+    return {
+      nodes: [],
+      edges: []
+    };
   }, []);
 
-  // Initialize tree data based on current level
-  const currentTreeData = getTreeData(currentTreeName);
-  
-  // Sample initial nodes for demonstration
-  const initialNodes: UINavigationNode[] = currentTreeData.nodes;
-  const initialEdges: UINavigationEdge[] = currentTreeData.edges;
-  
   // React Flow state
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   
   // State for history management
   const [history, setHistory] = useState<{ nodes: UINavigationNode[], edges: UINavigationEdge[] }[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [initialState, setInitialState] = useState<{ nodes: UINavigationNode[], edges: UINavigationEdge[] } | null>(null);
 
-  // Update tree data when currentTreeName changes and initialize history
+  // Initialize tree data when component mounts
   useEffect(() => {
-    const newTreeData = getTreeData(currentTreeName);
-    setNodes(newTreeData.nodes);
-    setEdges(newTreeData.edges);
-    setInitialState({ nodes: newTreeData.nodes, edges: newTreeData.edges });
-    setHistory([{ nodes: newTreeData.nodes, edges: newTreeData.edges }]);
-    setHistoryIndex(0);
-  }, [currentTreeName, getTreeData, setNodes, setEdges]);
+    loadFromDatabase(currentTreeName);
+  }, [currentTreeName]);
 
   // Function to save current state to history
   const saveStateToHistory = useCallback((newNodes: UINavigationNode[], newEdges: UINavigationEdge[]) => {
@@ -637,7 +460,6 @@ const NavigationEditorContent: React.FC = () => {
       const treeData = {
         name: currentTreeName,
         description: `Navigation tree for ${currentTreeName}`,
-        device_type: 'generic',
         tree_data: {
           nodes: nodes,
           edges: edges
@@ -677,8 +499,9 @@ const NavigationEditorContent: React.FC = () => {
       // Call the Python backend API to get tree by name
       const response = await apiCall(`/api/navigation/trees/by-name/${treeName}`);
       
-      if (response.success && response.data && response.data.tree_data) {
-        const treeData = response.data.tree_data;
+      if (response.success && response.data) {
+        // Get tree data from metadata field
+        const treeData = response.data.metadata || { nodes: [], edges: [] };
         
         // Validate that we have nodes and edges
         if (treeData.nodes && Array.isArray(treeData.nodes)) {
@@ -692,33 +515,35 @@ const NavigationEditorContent: React.FC = () => {
           console.log(`[@component:NavigationEditor] Successfully loaded ${treeData.edges.length} edges from database`);
         }
         
+        // Initialize history with loaded data
+        setHistory([{ nodes: treeData.nodes || [], edges: treeData.edges || [] }]);
+        setHistoryIndex(0);
         setHasUnsavedChanges(false);
         setSaveError(null);
         setSaveSuccess(false);
       } else {
         // Tree doesn't exist in database, start with empty tree
         console.log(`[@component:NavigationEditor] Tree ${treeName} not found in database, starting with empty tree`);
-        const emptyState = { nodes: [], edges: [] };
-        setNodes([]);
-        setEdges([]);
+        const emptyState = createEmptyTree();
+        setNodes(emptyState.nodes);
+        setEdges(emptyState.edges);
         setInitialState(emptyState);
+        setHistory([emptyState]);
+        setHistoryIndex(0);
         setHasUnsavedChanges(false);
       }
     } catch (error) {
       console.error(`[@component:NavigationEditor] Error loading tree from database:`, error);
       // On error, start with empty tree
-      const emptyState = { nodes: [], edges: [] };
-      setNodes([]);
-      setEdges([]);
+      const emptyState = createEmptyTree();
+      setNodes(emptyState.nodes);
+      setEdges(emptyState.edges);
       setInitialState(emptyState);
+      setHistory([emptyState]);
+      setHistoryIndex(0);
       setHasUnsavedChanges(false);
     }
-  }, [setNodes, setEdges]);
-
-  // Update tree data when currentTreeName changes and try to load from database first
-  useEffect(() => {
-    loadFromDatabase(currentTreeName);
-  }, [currentTreeName, loadFromDatabase]);
+  }, [setNodes, setEdges, createEmptyTree]);
 
   // Convert tree data for export/import (keeping existing format)
   const convertToNavigationTreeData = (nodes: UINavigationNode[], edges: UINavigationEdge[]): NavigationTreeData => {
@@ -816,7 +641,7 @@ const NavigationEditorContent: React.FC = () => {
     if (uiNode.data.hasChildren && uiNode.data.childTreeName) {
       // Prevent navigating to the same tree level
       if (currentTreeName === uiNode.data.childTreeName) {
-        console.log(`Already at tree level: ${uiNode.data.childTreeName}`);
+        console.log(`[@component:NavigationEditor] Already at tree level: ${uiNode.data.childTreeName}`);
         return;
       }
       
@@ -825,14 +650,12 @@ const NavigationEditorContent: React.FC = () => {
       setNavigationPath(newPath);
       setCurrentTreeName(uiNode.data.childTreeName);
       
-      // Load new tree data
-      const newTreeData = getTreeData(uiNode.data.childTreeName);
-      setNodes(newTreeData.nodes);
-      setEdges(newTreeData.edges);
+      // Load child tree data from database
+      loadFromDatabase(uiNode.data.childTreeName);
       
-      console.log(`Navigating to child tree: ${uiNode.data.childTreeName}`);
+      console.log(`[@component:NavigationEditor] Navigating to child tree: ${uiNode.data.childTreeName}`);
     }
-  }, [navigationPath, currentTreeName, getTreeData, setNodes, setEdges]);
+  }, [navigationPath, currentTreeName, loadFromDatabase]);
 
   // Navigate back in breadcrumb
   const navigateToTreeLevel = useCallback((index: number) => {
@@ -847,13 +670,11 @@ const NavigationEditorContent: React.FC = () => {
     setNavigationPath(newPath);
     setCurrentTreeName(targetTreeName);
     
-    // Load tree data for that level
-    const newTreeData = getTreeData(targetTreeName);
-    setNodes(newTreeData.nodes);
-    setEdges(newTreeData.edges);
+    // Load tree data for that level from database
+    loadFromDatabase(targetTreeName);
     
-    console.log(`Navigating back to: ${targetTreeName}`);
-  }, [navigationPath, currentTreeName, getTreeData, setNodes, setEdges]);
+    console.log(`[@component:NavigationEditor] Navigating back to: ${targetTreeName}`);
+  }, [navigationPath, currentTreeName, loadFromDatabase]);
 
   // Go back to parent tree
   const goBackToParent = useCallback(() => {
@@ -864,14 +685,12 @@ const NavigationEditorContent: React.FC = () => {
       setNavigationPath(newPath);
       setCurrentTreeName(targetTreeName);
       
-      // Load parent tree data
-      const newTreeData = getTreeData(targetTreeName);
-      setNodes(newTreeData.nodes);
-      setEdges(newTreeData.edges);
+      // Load parent tree data from database
+      loadFromDatabase(targetTreeName);
       
-      console.log(`Going back to parent: ${targetTreeName}`);
+      console.log(`[@component:NavigationEditor] Going back to parent: ${targetTreeName}`);
     }
-  }, [navigationPath, getTreeData, setNodes, setEdges]);
+  }, [navigationPath, loadFromDatabase]);
 
   // Add new node
   const addNewNode = useCallback(() => {

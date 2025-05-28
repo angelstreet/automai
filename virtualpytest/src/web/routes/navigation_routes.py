@@ -144,8 +144,7 @@ def create_navigation_tree():
             'id': str(uuid.uuid4()),
             'name': data['name'],
             'description': data.get('description', ''),
-            'device_type': data.get('device_type', 'generic'),
-            'tree_data': data['tree_data'],  # This should contain nodes and edges
+            'metadata': data['tree_data'],  # Store tree_data in metadata column
             'team_id': data.get('team_id', DEFAULT_TEAM_ID),
             'created_at': datetime.utcnow().isoformat(),
             'updated_at': datetime.utcnow().isoformat()
@@ -202,10 +201,14 @@ def update_navigation_tree(tree_id):
         }
         
         # Add fields that can be updated
-        updatable_fields = ['name', 'description', 'device_type', 'tree_data']
+        updatable_fields = ['name', 'description', 'metadata']
         for field in updatable_fields:
             if field in data:
                 update_data[field] = data[field]
+                
+        # Special handling for tree_data to store in metadata
+        if 'tree_data' in data:
+            update_data['metadata'] = data['tree_data']
         
         # Update in database
         result = supabase_client.table('navigation_trees').update(update_data).eq('id', tree_id).eq('team_id', team_id).execute()
@@ -299,34 +302,6 @@ def get_navigation_tree_by_name(tree_name):
         return jsonify({
             'success': False,
             'error': f'Failed to retrieve navigation tree: {str(e)}'
-        }), 500
-
-@navigation_bp.route('/trees/device-types', methods=['GET'])
-def get_device_types():
-    """Get all available device types for navigation trees"""
-    try:
-        # Return common device types used in navigation trees
-        device_types = [
-            'android_phone',
-            'firetv', 
-            'appletv',
-            'stb_eos',
-            'linux',
-            'windows',
-            'stb',
-            'generic'
-        ]
-        
-        return jsonify({
-            'success': True,
-            'data': device_types
-        })
-        
-    except Exception as e:
-        print(f"[@api:navigation:get_device_types] Error: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': f'Failed to retrieve device types: {str(e)}'
         }), 500
 
 # =====================================================
