@@ -12,7 +12,9 @@ import {
   TextField,
   Alert,
   CircularProgress,
+  IconButton,
 } from '@mui/material';
+import { Close as CloseIcon } from '@mui/icons-material';
 
 import { 
   AndroidTVSession, 
@@ -235,47 +237,61 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
       fullWidth
     >
       <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
-        Android TV Remote Control
+        <Typography variant="h6" component="div">
+          Android TV Remote Control
+        </Typography>
         
-        {session.connected && (
-          <Box display="flex" alignItems="center" gap={1}>
-            {/* Show Overlays button */}
-            <Button
-              variant={showOverlays ? "contained" : "outlined"}
-              size="small"
-              onClick={() => setShowOverlays(!showOverlays)}
-              sx={{ minWidth: 'auto', px: 1, fontSize: '0.7rem' }}
-            >
-              {showOverlays ? 'Hide Overlays' : 'Show Overlays'}
-            </Button>
-            
-            {/* Scale controls */}
-            <Box display="flex" alignItems="center" gap={0.5}>
-              <Typography variant="caption" sx={{ fontSize: '0.9rem' }}>
-                Scale:
-              </Typography>
+        <Box display="flex" alignItems="center" gap={1}>
+          {session.connected && (
+            <>
+              {/* Show Overlays button */}
               <Button
-                size="medium"
-                onClick={() => setRemoteScale(prev => Math.max(localRemoteConfig?.remote_info.min_scale || 0.5, prev - 0.1))}
-                disabled={remoteScale <= (localRemoteConfig?.remote_info.min_scale || 0.5)}
-                sx={{ minWidth: 20, width: 20, height: 20, p: 0, fontSize: '0.7rem' }}
-              >
-                -
-              </Button>
-              <Typography variant="caption" sx={{ minWidth: 30, textAlign: 'center', fontSize: '0.8rem' }}>
-                {Math.round(remoteScale * 100)}%
-              </Typography>
-              <Button
+                variant={showOverlays ? "contained" : "outlined"}
                 size="small"
-                onClick={() => setRemoteScale(prev => Math.min(localRemoteConfig?.remote_info.max_scale || 2.0, prev + 0.1))}
-                disabled={remoteScale >= (localRemoteConfig?.remote_info.max_scale || 2.0)}
-                sx={{ minWidth: 20, width: 20, height: 20, p: 0, fontSize: '0.7rem' }}
+                onClick={() => setShowOverlays(!showOverlays)}
+                sx={{ minWidth: 'auto', px: 1, fontSize: '0.7rem' }}
               >
-                +
+                {showOverlays ? 'Hide Overlays' : 'Show Overlays'}
               </Button>
-            </Box>
-          </Box>
-        )}
+              
+              {/* Scale controls */}
+              <Box display="flex" alignItems="center" gap={0.5}>
+                <Typography variant="caption" sx={{ fontSize: '0.9rem' }}>
+                  Scale:
+                </Typography>
+                <Button
+                  size="medium"
+                  onClick={() => setRemoteScale(prev => Math.max(localRemoteConfig?.remote_info.min_scale || 0.5, prev - 0.1))}
+                  disabled={remoteScale <= (localRemoteConfig?.remote_info.min_scale || 0.5)}
+                  sx={{ minWidth: 20, width: 20, height: 20, p: 0, fontSize: '0.7rem' }}
+                >
+                  -
+                </Button>
+                <Typography variant="caption" sx={{ minWidth: 30, textAlign: 'center', fontSize: '0.8rem' }}>
+                  {Math.round(remoteScale * 100)}%
+                </Typography>
+                <Button
+                  size="small"
+                  onClick={() => setRemoteScale(prev => Math.min(localRemoteConfig?.remote_info.max_scale || 2.0, prev + 0.1))}
+                  disabled={remoteScale >= (localRemoteConfig?.remote_info.max_scale || 2.0)}
+                  sx={{ minWidth: 20, width: 20, height: 20, p: 0, fontSize: '0.7rem' }}
+                >
+                  +
+                </Button>
+              </Box>
+            </>
+          )}
+          
+          {/* Close button - always visible */}
+          <IconButton
+            onClick={handleCloseModal}
+            size="small"
+            sx={{ ml: 1 }}
+            aria-label="close"
+          >
+            <CloseIcon />
+          </IconButton>
+        </Box>
       </DialogTitle>
       <DialogContent sx={{ maxHeight: '600px', overflow: 'auto' }}>
         {!session.connected ? (
@@ -445,30 +461,6 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
                     )}
                   </Button>
                 </Box>
-
-                {/* Modal Controls */}
-                <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #e0e0e0' }}>
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Button 
-                      variant="outlined"
-                      onClick={handleCloseModal}
-                      sx={{ flex: 1, fontSize: '0.9rem', py: 1 }}
-                      size="small"
-                    >
-                      Close
-                    </Button>
-                    <Button 
-                      variant="contained" 
-                      color="error"
-                      onClick={handleReleaseControl}
-                      disabled={connectionLoading}
-                      sx={{ flex: 1, fontSize: '0.9rem', py: 1 }}
-                      size="small"
-                    >
-                      {connectionLoading ? <CircularProgress size={16} /> : 'Release Control'}
-                    </Button>
-                  </Box>
-                </Box>
               </Box>
             </Grid>
 
@@ -498,6 +490,28 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
           </Grid>
         )}
       </DialogContent>
+      
+      {/* Dialog Actions - Always visible */}
+      <DialogActions sx={{ px: 3, pb: 2 }}>
+        <Button 
+          variant="outlined"
+          onClick={handleCloseModal}
+          sx={{ minWidth: 100 }}
+        >
+          Close
+        </Button>
+        {session.connected && (
+          <Button 
+            variant="contained" 
+            color="error"
+            onClick={handleReleaseControl}
+            disabled={connectionLoading}
+            sx={{ minWidth: 120 }}
+          >
+            {connectionLoading ? <CircularProgress size={16} /> : 'Release Control'}
+          </Button>
+        )}
+      </DialogActions>
     </Dialog>
   );
 }; 

@@ -13,7 +13,9 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  IconButton,
 } from '@mui/material';
+import { Close as CloseIcon } from '@mui/icons-material';
 import { useAndroidMobileConnection } from '../hooks/useAndroidMobileConnection';
 import { AndroidMobileOverlay } from '../components/AndroidMobileOverlay';
 
@@ -171,7 +173,20 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
   return (
     <>
       <Dialog open={open} onClose={handleCloseModal} maxWidth="lg" fullWidth>
-        <DialogTitle>Android Mobile Remote Control</DialogTitle>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+          <Typography variant="h6" component="div">
+            Android Mobile Remote Control
+          </Typography>
+          
+          {/* Close button - always visible */}
+          <IconButton
+            onClick={handleCloseModal}
+            size="small"
+            aria-label="close"
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
         <DialogContent>
           <Grid container spacing={3}>
             {/* Left Column: Connection & Screenshot */}

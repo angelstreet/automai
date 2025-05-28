@@ -16,7 +16,9 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  IconButton,
 } from '@mui/material';
+import { Close as CloseIcon } from '@mui/icons-material';
 
 import { useIRRemoteConnection } from '../hooks/useIRRemoteConnection';
 import { RemoteInterface } from '../components/RemoteInterface';
@@ -67,7 +69,7 @@ export const IRRemoteModal: React.FC<IRRemoteModalProps> = ({ open, onClose }) =
         <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ minHeight: 40 }}>
           {/* Left side: Title and status */}
           <Box display="flex" alignItems="center" gap={1}>
-            <Typography variant="h6" component="span">
+            <Typography variant="h6" component="span" sx={{ fontSize: '1.1rem' }}>
               IR Remote Control
             </Typography>
             {session.connected && (
@@ -80,45 +82,57 @@ export const IRRemoteModal: React.FC<IRRemoteModalProps> = ({ open, onClose }) =
           </Box>
           
           {/* Right side: Controls */}
-          {session.connected && (
-            <Box display="flex" alignItems="center" gap={1}>
-              {/* Show Overlays button */}
-              <Button
-                variant={showOverlays ? "contained" : "outlined"}
-                size="small"
-                onClick={() => setShowOverlays(!showOverlays)}
-                sx={{ minWidth: 'auto', px: 1 }}
-              >
-                {showOverlays ? 'Hide Overlays' : 'Show Overlays'}
-              </Button>
-              
-              {/* Scale controls */}
-              <Box display="flex" alignItems="center" gap={0.5}>
-                <Typography variant="caption" sx={{ fontSize: '0.75rem' }}>
-                  Scale:
-                </Typography>
+          <Box display="flex" alignItems="center" gap={1}>
+            {session.connected && (
+              <>
+                {/* Show Overlays button */}
                 <Button
+                  variant={showOverlays ? "contained" : "outlined"}
                   size="small"
-                  onClick={() => setRemoteScale(prev => Math.max(remoteConfig?.remote_info.min_scale || 0.5, prev - 0.1))}
-                  disabled={remoteScale <= (remoteConfig?.remote_info.min_scale || 0.5)}
-                  sx={{ minWidth: 24, width: 24, height: 24, p: 0 }}
+                  onClick={() => setShowOverlays(!showOverlays)}
+                  sx={{ minWidth: 'auto', px: 1 }}
                 >
-                  -
+                  {showOverlays ? 'Hide Overlays' : 'Show Overlays'}
                 </Button>
-                <Typography variant="caption" sx={{ minWidth: 35, textAlign: 'center', fontSize: '0.75rem' }}>
-                  {Math.round(remoteScale * 100)}%
-                </Typography>
-                <Button
-                  size="small"
-                  onClick={() => setRemoteScale(prev => Math.min(remoteConfig?.remote_info.max_scale || 2.0, prev + 0.1))}
-                  disabled={remoteScale >= (remoteConfig?.remote_info.max_scale || 2.0)}
-                  sx={{ minWidth: 24, width: 24, height: 24, p: 0 }}
-                >
-                  +
-                </Button>
-              </Box>
-            </Box>
-          )}
+                
+                {/* Scale controls */}
+                <Box display="flex" alignItems="center" gap={0.5}>
+                  <Typography variant="caption" sx={{ fontSize: '0.75rem' }}>
+                    Scale:
+                  </Typography>
+                  <Button
+                    size="small"
+                    onClick={() => setRemoteScale(prev => Math.max(remoteConfig?.remote_info.min_scale || 0.5, prev - 0.1))}
+                    disabled={remoteScale <= (remoteConfig?.remote_info.min_scale || 0.5)}
+                    sx={{ minWidth: 24, width: 24, height: 24, p: 0 }}
+                  >
+                    -
+                  </Button>
+                  <Typography variant="caption" sx={{ minWidth: 35, textAlign: 'center', fontSize: '0.75rem' }}>
+                    {Math.round(remoteScale * 100)}%
+                  </Typography>
+                  <Button
+                    size="small"
+                    onClick={() => setRemoteScale(prev => Math.min(remoteConfig?.remote_info.max_scale || 2.0, prev + 0.1))}
+                    disabled={remoteScale >= (remoteConfig?.remote_info.max_scale || 2.0)}
+                    sx={{ minWidth: 24, width: 24, height: 24, p: 0 }}
+                  >
+                    +
+                  </Button>
+                </Box>
+              </>
+            )}
+            
+            {/* Close button - always visible */}
+            <IconButton
+              onClick={handleCloseModal}
+              size="small"
+              sx={{ ml: 1 }}
+              aria-label="close"
+            >
+              <CloseIcon />
+            </IconButton>
+          </Box>
         </Box>
       </DialogTitle>
       <DialogContent sx={{ pb: 2, overflow: 'hidden', maxHeight: 'none' }}>

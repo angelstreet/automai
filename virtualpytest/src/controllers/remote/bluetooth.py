@@ -82,7 +82,7 @@ class BluetoothRemoteController(RemoteControllerInterface):
                 'name': 'Sunrise Remote',
                 'type': 'bluetooth_remote',
                 'image_url': '/suncherry_remote.png',
-                'default_scale': 1.2,
+                'default_scale': 1.1,
                 'min_scale': 0.5,
                 'max_scale': 2.0,
                 # General scaling and offset parameters

@@ -18,8 +18,9 @@ import {
   RadioGroup,
   FormControlLabel,
   Radio,
+  IconButton,
 } from '@mui/material';
-import { PlayArrow, Videocam, VolumeUp, Settings } from '@mui/icons-material';
+import { PlayArrow, Videocam, VolumeUp, Settings, Close as CloseIcon } from '@mui/icons-material';
 
 interface HDMIStreamModalProps {
   open: boolean;
@@ -511,7 +512,20 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
 
   return (
     <Dialog open={open} onClose={handleCloseModal} maxWidth="lg" fullWidth>
-      <DialogTitle>HDMI Stream Viewer</DialogTitle>
+      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+        <Typography variant="h6" component="div">
+          HDMI Stream Viewer
+        </Typography>
+        
+        {/* Close button - always visible */}
+        <IconButton
+          onClick={handleCloseModal}
+          size="small"
+          aria-label="close"
+        >
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
       <DialogContent>
         <Grid container spacing={3}>
           {/* Left Column: Stream Configuration & Controls */}
