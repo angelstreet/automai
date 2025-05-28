@@ -94,14 +94,15 @@ const UIScreenNode = ({ data, selected }: { data: any; selected: boolean }) => {
         isConnectable={true}
         style={{
           background: '#1976d2',
-          width: 14,
-          height: 14,
+          width: 16,
+          height: 16,
           border: '3px solid white',
-          left: -7,
+          left: -8,
           borderRadius: '50%',
           boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
           opacity: 1,
           visibility: 'visible',
+          zIndex: 100,
         }}
       />
       <Handle
@@ -110,14 +111,15 @@ const UIScreenNode = ({ data, selected }: { data: any; selected: boolean }) => {
         isConnectable={true}
         style={{
           background: '#1976d2',
-          width: 14,
-          height: 14,
+          width: 16,
+          height: 16,
           border: '3px solid white',
-          right: -7,
+          right: -8,
           borderRadius: '50%',
           boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
           opacity: 1,
           visibility: 'visible',
+          zIndex: 100,
         }}
       />
 
@@ -581,6 +583,7 @@ const NavigationEditorContent: React.FC = () => {
   const onConnect = useCallback(
     (params: Connection) => {
       if (!params.source || !params.target) return;
+      console.log('[@component:NavigationEditor] Attempting to connect nodes:', params.source, 'to', params.target);
       
       const newEdge: UINavigationEdge = {
         id: `edge-${Date.now()}`,
