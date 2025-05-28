@@ -237,9 +237,11 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
             style={{
               position: 'relative',
               maxWidth: '90vw',
-              maxHeight: '90vh',
+              maxHeight: '80vh',
               display: 'flex',
               flexDirection: 'column',
+              margin: 0,
+              padding: 0,
             }}
             onClick={(e) => e.stopPropagation()} // Prevent closing when clicking the image
           >
@@ -248,11 +250,16 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
               src={data.screenshot}
               alt={`Screenshot of ${data.label}`}
               style={{
+                width: 'auto',
+                height: 'auto',
                 maxWidth: '100%',
-                maxHeight: '100%',
+                maxHeight: 'calc(85vh - 60px)', // Account for caption area
                 objectFit: 'contain',
                 borderRadius: '8px',
                 boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
+                display: 'block',
+                margin: 0,
+                padding: 0,
               }}
             />
             
@@ -264,6 +271,9 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 gap: '20px',
+                height: '40px', // Fixed height for consistent layout
+                margin: '15px 0 0 0',
+                padding: 0,
               }}
             >
               {/* Image caption */}
@@ -285,7 +295,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
                   background: 'rgba(255, 255, 255, 0.9)',
                   border: 'none',
                   borderRadius: '6px',
-                  padding: '8px 16px',
+                  padding: '4px 8px',
                   fontSize: '14px',
                   fontWeight: '500',
                   cursor: 'pointer',
@@ -303,8 +313,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
                 }}
                 title="Close"
               >
-                
-                <span style={{ fontSize: '12px' }}>×</span>
+                <span style={{ fontSize: '14px' }}>×</span>
               </button>
             </div>
           </div>
