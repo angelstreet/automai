@@ -5,6 +5,7 @@ import {
   Save as SaveIcon,
   Cancel as CancelIcon,
   AccountTree as TreeIcon,
+  Launch as LaunchIcon,
 } from '@mui/icons-material';
 import {
   Box,
@@ -261,12 +262,13 @@ const UserInterface: React.FC = () => {
                     <TableCell><strong>Models</strong></TableCell>
                     <TableCell><strong>Min Version</strong></TableCell>
                     <TableCell><strong>Max Version</strong></TableCell>
+                    <TableCell align="center"><strong>Navigation</strong></TableCell>
                     <TableCell align="center"><strong>Actions</strong></TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {trees.map((tree) => (
-                    <TableRow key={tree.id} sx={{ '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.08)' } }}>
+                    <TableRow key={tree.id} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
                       <TableCell>
                         {editingId === tree.id ? (
                           <TextField
@@ -380,6 +382,22 @@ const UserInterface: React.FC = () => {
                         ) : (
                           tree.max_version || 'N/A'
                         )}
+                      </TableCell>
+                      <TableCell align="center">
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<LaunchIcon fontSize="small" />}
+                          onClick={() => window.open(`/navigation-editor/${encodeURIComponent(tree.name)}`, '_blank')}
+                          sx={{ 
+                            minWidth: 'auto',
+                            px: 1,
+                            py: 0.25,
+                            fontSize: '0.75rem'
+                          }}
+                        >
+                          Edit
+                        </Button>
                       </TableCell>
                       <TableCell align="center">
                         {editingId === tree.id ? (
