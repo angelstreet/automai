@@ -1,0 +1,129 @@
+'''
+User Interface API Routes
+
+This module contains the API endpoints for managing user interfaces.
+'''
+
+from flask import Blueprint, request, jsonify
+
+# Import utility functions
+import sys
+import os
+
+# Add parent directory to path for imports
+src_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, src_dir)  # Insert at beginning to prioritize over local utils
+
+# Import from web utils directory (go up one level from routes to web, then into utils)
+web_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+web_utils_path = os.path.join(web_dir, 'utils')
+sys.path.insert(0, web_utils_path)
+from userinterface_utils import (
+    get_all_userinterfaces, get_userinterface, create_userinterface, 
+    update_userinterface, delete_userinterface, check_userinterface_name_exists
+)
+
+from .utils import check_supabase, get_team_id
+
+# Create blueprint
+userinterface_bp = Blueprint('userinterface', __name__, url_prefix='/api')
+
+# =====================================================
+# USER INTERFACES ENDPOINTS
+# =====================================================
+
+@userinterface_bp.route('/userinterfaces', methods=['GET', 'POST'])
+def userinterfaces():
+    """User Interfaces management endpoint"""
+    error = check_supabase()
+    if error:
+        return error
+        
+    team_id = get_team_id()
+    
+    try:
+        if request.method == 'GET':
+            interfaces = get_all_userinterfaces(team_id)
+            # Enrich interfaces with root tree information
+            enriched_interfaces = []
+            for interface in interfaces:
+                interface_id = interface.get('id')
+                if interface_id:
+                    # Fetch root tree for this interface
+                    from navigation_utils import get_root_tree_for_interface
+                    root_tree = get_root_tree_for_interface(interface_id, team_id)
+                    if root_tree:
+                        interface['root_tree'] = root_tree
+                enriched_interfaces.append(interface)
+            return jsonify(enriched_interfaces)
+        elif request.method == 'POST':
+            interface_data = request.json
+            
+            # Validate required fields
+            if not interface_data.get('name'):
+                return jsonify({'error': 'Name is required'}), 400
+            
+            if not interface_data.get('models') or len(interface_data.get('models', [])) == 0:
+                return jsonify({'error': 'At least one model must be selected'}), 400
+            
+            # Check for duplicate names
+            if check_userinterface_name_exists(interface_data['name'], team_id):
+                return jsonify({'error': 'A user interface with this name already exists'}), 400
+            
+            # Create the user interface
+            created_interface = create_userinterface(interface_data, team_id)
+            if created_interface:
+                return jsonify({'status': 'success', 'userinterface': created_interface}), 201
+            else:
+                return jsonify({'error': 'Failed to create user interface'}), 500
+                
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@userinterface_bp.route('/userinterfaces/<interface_id>', methods=['GET', 'PUT', 'DELETE'])
+def userinterface(interface_id):
+    """Individual user interface management endpoint"""
+    error = check_supabase()
+    if error:
+        return error
+        
+    team_id = get_team_id()
+    
+    try:
+        if request.method == 'GET':
+            interface = get_userinterface(interface_id, team_id)
+            if interface:
+                return jsonify(interface)
+            else:
+                return jsonify({'error': 'User interface not found'}), 404
+                
+        elif request.method == 'PUT':
+            interface_data = request.json
+            
+            # Validate required fields
+            if not interface_data.get('name'):
+                return jsonify({'error': 'Name is required'}), 400
+            
+            if not interface_data.get('models') or len(interface_data.get('models', [])) == 0:
+                return jsonify({'error': 'At least one model must be selected'}), 400
+            
+            # Check for duplicate names (excluding current interface)
+            if check_userinterface_name_exists(interface_data['name'], team_id, interface_id):
+                return jsonify({'error': 'A user interface with this name already exists'}), 400
+            
+            # Update the user interface
+            updated_interface = update_userinterface(interface_id, interface_data, team_id)
+            if updated_interface:
+                return jsonify({'status': 'success', 'userinterface': updated_interface})
+            else:
+                return jsonify({'error': 'User interface not found or failed to update'}), 404
+                
+        elif request.method == 'DELETE':
+            success = delete_userinterface(interface_id, team_id)
+            if success:
+                return jsonify({'status': 'success'})
+            else:
+                return jsonify({'error': 'User interface not found or failed to delete'}), 404
+                
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500 

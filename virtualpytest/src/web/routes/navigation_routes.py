@@ -309,6 +309,37 @@ def get_navigation_tree_by_name(tree_name):
             'error': f'Failed to retrieve navigation tree: {str(e)}'
         }), 500
 
+@navigation_bp.route('/trees/by-id-and-team/<tree_id>/<team_id>', methods=['GET'])
+def get_navigation_tree_by_id_and_team(tree_id, team_id):
+    """Get a navigation tree by ID and team ID"""
+    # Check if Supabase is available
+    error_response = check_supabase()
+    if error_response:
+        return error_response
+    
+    try:
+        # Use utility function to get navigation tree by ID and team ID to respect RLS policy
+        tree = get_navigation_tree(tree_id, team_id)
+        
+        if tree:
+            print(f"[@api:navigation:get_tree_by_id_and_team] Found tree: {tree['id']} for team: {team_id}")
+            return jsonify({
+                'success': True,
+                'data': tree
+            })
+        else:
+            print(f"[@api:navigation:get_tree_by_id_and_team] Tree not found with ID: {tree_id} for team: {team_id}")
+            return jsonify({
+                'success': False,
+                'error': 'Tree not found'
+            }), 404
+    except Exception as e:
+        print(f"[@api:navigation:get_tree_by_id_and_team] ERROR: Failed to fetch tree: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 # =====================================================
 # NAVIGATION SCREENS ENDPOINTS
 # =====================================================
@@ -522,4 +553,37 @@ def available_userinterfaces():
         userinterfaces = get_all_userinterfaces(team_id)
         return jsonify(userinterfaces)
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@navigation_bp.route('/api/userinterfaces/<interface_id>', methods=['GET'])
+def get_userinterface_with_root(interface_id):
+    """Get a specific user interface with its root navigation tree"""
+    error = check_supabase()
+    if error:
+        return error
+        
+    team_id = get_team_id(request)
+    
+    try:
+        # Get the user interface
+        userinterface = get_userinterface(interface_id, team_id)
+        if not userinterface:
+            return jsonify({'error': 'User interface not found or access denied'}), 404
+            
+        # Get the root navigation tree for this user interface
+        from app import supabase_client
+        root_tree_result = supabase_client.table('navigation_trees').select('*').eq('userinterface_id', interface_id).eq('is_root', True).eq('team_id', team_id).limit(1).execute()
+        root_tree = None
+        if root_tree_result.data and len(root_tree_result.data) > 0:
+            root_tree = root_tree_result.data[0]
+            print(f"[@api:navigation_routes:get_userinterface_with_root] Found root tree for userinterface {interface_id}: {root_tree['id']}")
+        else:
+            print(f"[@api:navigation_routes:get_userinterface_with_root] No root tree found for userinterface {interface_id}")
+        
+        return jsonify({
+            **userinterface,
+            'root_tree': root_tree
+        }), 200
+    except Exception as e:
+        print(f"[@api:navigation_routes:get_userinterface_with_root] ERROR: Failed to fetch userinterface: {str(e)}")
         return jsonify({'error': str(e)}), 500 

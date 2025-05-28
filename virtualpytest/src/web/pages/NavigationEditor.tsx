@@ -32,7 +32,7 @@ import {
   CloudUpload as CloudUploadIcon,
   CloudDownload as CloudDownloadIcon,
 } from '@mui/icons-material';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import ReactFlow, {
   Node,
   Edge,
@@ -68,6 +68,7 @@ interface UINavigationNode extends Node {
     thumbnail?: string;
     description?: string;
     hasChildren?: boolean;
+    childTreeId?: string;
     childTreeName?: string;
     parentTree?: string;
   };
@@ -340,18 +341,66 @@ const edgeTypes = {
 };
 
 const NavigationEditorContent: React.FC = () => {
-  const { treeName } = useParams<{ treeName: string }>();
+  const { treeId, treeName, interfaceId } = useParams<{ treeId: string, treeName: string, interfaceId: string }>();
+  const navigate = useNavigate();
   const reactFlowInstance = useReactFlow();
   
   // Navigation state for breadcrumbs and nested trees
+  const [currentTreeId, setCurrentTreeId] = useState<string>(treeId || 'home');
   const [currentTreeName, setCurrentTreeName] = useState<string>(treeName || 'home');
-  const [navigationPath, setNavigationPath] = useState<string[]>([treeName || 'home']);
+  const [navigationPath, setNavigationPath] = useState<string[]>([treeId || 'home']);
+  const [navigationNamePath, setNavigationNamePath] = useState<string[]>([treeName || 'home']);
   
   // Add state for save operation
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false);
+  
+  // State for user interface and root tree
+  const [userInterface, setUserInterface] = useState<any>(null);
+  const [rootTree, setRootTree] = useState<any>(null);
+  const [isLoadingInterface, setIsLoadingInterface] = useState<boolean>(!!interfaceId);
+  
+  // Fetch user interface and root tree if interfaceId is provided
+  useEffect(() => {
+    const fetchUserInterface = async () => {
+      if (interfaceId) {
+        setIsLoadingInterface(true);
+        try {
+          console.log(`[@component:NavigationEditor] Fetching user interface: ${interfaceId}`);
+          const response = await apiCall(`/api/navigation/userinterfaces/${interfaceId}`);
+          if (response.userinterface) {
+            setUserInterface(response.userinterface);
+            if (response.root_navigation_tree) {
+              setRootTree(response.root_navigation_tree);
+              setCurrentTreeId(response.root_navigation_tree.id);
+              setCurrentTreeName(response.root_navigation_tree.name);
+              setNavigationPath([response.root_navigation_tree.id]);
+              setNavigationNamePath([response.root_navigation_tree.name]);
+              // Update URL to reflect both ID and name of the root tree
+              navigate(`/navigation-editor/${response.root_navigation_tree.name}/${response.root_navigation_tree.id}`);
+            }
+          } else {
+            console.error(`[@component:NavigationEditor] Failed to fetch user interface: ${interfaceId}`);
+          }
+        } catch (error) {
+          console.error(`[@component:NavigationEditor] Error fetching user interface:`, error);
+        } finally {
+          setIsLoadingInterface(false);
+        }
+      }
+    };
+    fetchUserInterface();
+  }, [interfaceId, navigate]);
+  
+  // Show message if tree ID is missing
+  useEffect(() => {
+    if (!treeId && !interfaceId) {
+      console.log('[@component:NavigationEditor] Missing tree ID in URL');
+    }
+  }, [treeId, interfaceId]);
   
   // Create an empty tree structure
   const createEmptyTree = useCallback((): { nodes: UINavigationNode[], edges: UINavigationEdge[] } => {
@@ -372,8 +421,8 @@ const NavigationEditorContent: React.FC = () => {
 
   // Initialize tree data when component mounts
   useEffect(() => {
-    loadFromDatabase(currentTreeName);
-  }, [currentTreeName]);
+    loadFromDatabase(currentTreeId);
+  }, [currentTreeId]);
 
   // Function to save current state to history
   const saveStateToHistory = useCallback((newNodes: UINavigationNode[], newEdges: UINavigationEdge[]) => {
@@ -445,6 +494,152 @@ const NavigationEditorContent: React.FC = () => {
     }
   }, [history, historyIndex, setNodes, setEdges]);
 
+  // Load from database function
+  const loadFromDatabase = useCallback(async (treeId: string) => {
+    try {
+      console.log(`[@component:NavigationEditor] Loading tree from database: ${treeId}`);
+      
+      // Call the Python backend API to get tree by ID
+      const response = await apiCall(`/api/navigation/trees/${treeId}`);
+      
+      if (response.success && response.data) {
+        const treeData = response.data.metadata || { nodes: [], edges: [] };
+        const actualTreeName = response.data.name || treeName || 'Unnamed Tree';
+        
+        // Update the URL if the name in the database is different
+        if (treeName !== actualTreeName) {
+          navigate(`/navigation-editor/${encodeURIComponent(actualTreeName)}/${treeId}`);
+          setCurrentTreeName(actualTreeName);
+          setNavigationNamePath(prev => {
+            const newPath = [...prev];
+            newPath[newPath.length - 1] = actualTreeName;
+            return newPath;
+          });
+        } else {
+          setCurrentTreeName(actualTreeName);
+        }
+        
+        // Validate that we have nodes and edges
+        if (treeData.nodes && Array.isArray(treeData.nodes)) {
+          setNodes(treeData.nodes);
+          setInitialState({ nodes: treeData.nodes, edges: treeData.edges || [] });
+          console.log(`[@component:NavigationEditor] Successfully loaded ${treeData.nodes.length} nodes from database for tree ID: ${treeId}`);
+        }
+        
+        if (treeData.edges && Array.isArray(treeData.edges)) {
+          setEdges(treeData.edges);
+          console.log(`[@component:NavigationEditor] Successfully loaded ${treeData.edges.length} edges from database for tree ID: ${treeId}`);
+        }
+        
+        // Initialize history with loaded data
+        setHistory([{ nodes: treeData.nodes || [], edges: treeData.edges || [] }]);
+        setHistoryIndex(0);
+        setHasUnsavedChanges(false);
+        setSaveError(null);
+        setSaveSuccess(false);
+      } else {
+        // Tree doesn't exist, create a new one
+        console.log(`[@component:NavigationEditor] Tree ${treeId} not found, creating a new one...`);
+        
+        // Prepare the tree data for creation
+        const newTreeData = {
+          name: treeName || treeId, // Use the name from URL if available
+          description: `Navigation tree for ${treeId}`,
+          tree_data: {
+            nodes: [],
+            edges: []
+          }
+        };
+        
+        // Create the new tree
+        try {
+          const createResponse = await apiCall('/api/navigation/trees', {
+            method: 'POST',
+            body: JSON.stringify(newTreeData),
+          });
+          
+          if (createResponse.success) {
+            console.log(`[@component:NavigationEditor] Successfully created new tree with ID: ${createResponse.data.id}`);
+            
+            // Update URL with the new ID if it's different
+            if (treeId !== createResponse.data.id) {
+              navigate(`/navigation-editor/${encodeURIComponent(treeName || createResponse.data.name || 'Unnamed Tree')}/${createResponse.data.id}`);
+              setCurrentTreeId(createResponse.data.id);
+              setNavigationPath([createResponse.data.id]);
+            }
+            
+            // Start with empty tree
+            const emptyState = createEmptyTree();
+            setNodes(emptyState.nodes);
+            setEdges(emptyState.edges);
+            setInitialState(emptyState);
+            setHistory([emptyState]);
+            setHistoryIndex(0);
+            setHasUnsavedChanges(false);
+          } else {
+            throw new Error(`Failed to create tree: ${createResponse.error}`);
+          }
+        } catch (createError) {
+          console.error(`[@component:NavigationEditor] Error creating tree:`, createError);
+          // Start with empty tree but mark as unsaved
+          const emptyState = createEmptyTree();
+          setNodes(emptyState.nodes);
+          setEdges(emptyState.edges);
+          setInitialState(emptyState);
+          setHistory([emptyState]);
+          setHistoryIndex(0);
+          setHasUnsavedChanges(true); // Mark as unsaved so user knows they need to save
+          setSaveError(`Failed to create tree: ${createError instanceof Error ? createError.message : 'Unknown error'}`);
+        }
+      }
+    } catch (error) {
+      console.error(`[@component:NavigationEditor] Error loading tree from database:`, error);
+      // On error, start with empty tree
+      const emptyState = createEmptyTree();
+      setNodes(emptyState.nodes);
+      setEdges(emptyState.edges);
+      setInitialState(emptyState);
+      setHistory([emptyState]);
+      setHistoryIndex(0);
+      setHasUnsavedChanges(false);
+    }
+  }, [setNodes, setEdges, createEmptyTree, treeId, treeName, navigate]);
+
+  // Convert tree data for export/import (keeping existing format)
+  const convertToNavigationTreeData = (nodes: UINavigationNode[], edges: UINavigationEdge[]): NavigationTreeData => {
+    return {
+      nodes: nodes.map(node => ({
+        id: node.id,
+        type: 'uiScreen',
+        position: node.position,
+        data: node.data,
+      })) as UINavigationNode[],
+      edges: edges.map(edge => ({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        type: edge.type,
+        data: edge.data,
+      })) as UINavigationEdge[],
+    };
+  };
+
+  const convertFromNavigationTreeData = (treeData: NavigationTreeData): { nodes: UINavigationNode[], edges: UINavigationEdge[] } => {
+    return {
+      nodes: treeData.nodes || [],
+      edges: treeData.edges || [],
+    };
+  };
+
+  // Discard changes function with confirmation
+  const discardChanges = useCallback(() => {
+    if (hasUnsavedChanges) {
+      setIsDiscardDialogOpen(true);
+    } else {
+      performDiscardChanges();
+    }
+  }, [hasUnsavedChanges]);
+
   // Save to database function
   const saveToDatabase = useCallback(async () => {
     if (isSaving) return;
@@ -454,10 +649,10 @@ const NavigationEditorContent: React.FC = () => {
     setSaveSuccess(false);
     
     try {
-      console.log(`[@component:NavigationEditor] Starting save to database for tree: ${currentTreeName}`);
+      console.log(`[@component:NavigationEditor] Starting save to database for tree: ${currentTreeId}`);
       
       // First, check if we already have this tree in the database
-      const checkResponse = await apiCall(`/api/navigation/trees/by-name/${currentTreeName}`);
+      const checkResponse = await apiCall(`/api/navigation/trees/${currentTreeId}`);
       
       if (checkResponse.success && checkResponse.data) {
         // Tree exists, update it
@@ -491,12 +686,12 @@ const NavigationEditorContent: React.FC = () => {
         }
       } else {
         // Tree doesn't exist, create a new one
-        console.log(`[@component:NavigationEditor] Creating new tree with name: ${currentTreeName}`);
+        console.log(`[@component:NavigationEditor] Creating new tree with ID: ${currentTreeId}`);
         
         // Prepare the tree data in the format expected by the backend
         const treeData = {
-          name: currentTreeName,
-          description: `Navigation tree for ${currentTreeName}`,
+          name: currentTreeName || currentTreeId, // Use the name from state
+          description: `Navigation tree for ${currentTreeId}`,
           tree_data: {
             nodes: nodes,
             edges: edges
@@ -514,6 +709,9 @@ const NavigationEditorContent: React.FC = () => {
           setInitialState({ nodes: [...nodes], edges: [...edges] });
           setHasUnsavedChanges(false);
           setSaveSuccess(true);
+          navigate(`/navigation-editor/${encodeURIComponent(currentTreeName || createResponse.data.name || 'Unnamed Tree')}/${createResponse.data.id}`);
+          setCurrentTreeId(createResponse.data.id);
+          setNavigationPath([createResponse.data.id]);
           
           // Clear success message after 3 seconds
           setTimeout(() => setSaveSuccess(false), 3000);
@@ -527,135 +725,7 @@ const NavigationEditorContent: React.FC = () => {
     } finally {
       setIsSaving(false);
     }
-  }, [currentTreeName, nodes, edges, isSaving]);
-
-  // Load from database function
-  const loadFromDatabase = useCallback(async (treeName: string) => {
-    try {
-      console.log(`[@component:NavigationEditor] Loading tree from database: ${treeName}`);
-      
-      // Call the Python backend API to get tree by name
-      const response = await apiCall(`/api/navigation/trees/by-name/${treeName}`);
-      
-      if (response.success && response.data) {
-        const treeId = response.data.id;
-        // Get tree data from metadata field
-        const treeData = response.data.metadata || { nodes: [], edges: [] };
-        
-        // Validate that we have nodes and edges
-        if (treeData.nodes && Array.isArray(treeData.nodes)) {
-          setNodes(treeData.nodes);
-          setInitialState({ nodes: treeData.nodes, edges: treeData.edges || [] });
-          console.log(`[@component:NavigationEditor] Successfully loaded ${treeData.nodes.length} nodes from database for tree ID: ${treeId}`);
-        }
-        
-        if (treeData.edges && Array.isArray(treeData.edges)) {
-          setEdges(treeData.edges);
-          console.log(`[@component:NavigationEditor] Successfully loaded ${treeData.edges.length} edges from database for tree ID: ${treeId}`);
-        }
-        
-        // Initialize history with loaded data
-        setHistory([{ nodes: treeData.nodes || [], edges: treeData.edges || [] }]);
-        setHistoryIndex(0);
-        setHasUnsavedChanges(false);
-        setSaveError(null);
-        setSaveSuccess(false);
-      } else if (response.code === 'NOT_FOUND') {
-        // Tree doesn't exist, create a new one
-        console.log(`[@component:NavigationEditor] Tree ${treeName} not found, creating a new one...`);
-        
-        // Prepare the tree data for creation
-        const newTreeData = {
-          name: treeName,
-          description: `Navigation tree for ${treeName}`,
-          tree_data: {
-            nodes: [],
-            edges: []
-          }
-        };
-        
-        // Create the new tree
-        try {
-          const createResponse = await apiCall('/api/navigation/trees', {
-            method: 'POST',
-            body: JSON.stringify(newTreeData),
-          });
-          
-          if (createResponse.success) {
-            console.log(`[@component:NavigationEditor] Successfully created new tree with ID: ${createResponse.data.id}`);
-            
-            // Start with empty tree
-            const emptyState = createEmptyTree();
-            setNodes(emptyState.nodes);
-            setEdges(emptyState.edges);
-            setInitialState(emptyState);
-            setHistory([emptyState]);
-            setHistoryIndex(0);
-            setHasUnsavedChanges(false);
-          } else {
-            throw new Error(`Failed to create tree: ${createResponse.error}`);
-          }
-        } catch (createError) {
-          console.error(`[@component:NavigationEditor] Error creating tree:`, createError);
-          // Start with empty tree but mark as unsaved
-          const emptyState = createEmptyTree();
-          setNodes(emptyState.nodes);
-          setEdges(emptyState.edges);
-          setInitialState(emptyState);
-          setHistory([emptyState]);
-          setHistoryIndex(0);
-          setHasUnsavedChanges(true); // Mark as unsaved so user knows they need to save
-          setSaveError(`Failed to create tree: ${createError instanceof Error ? createError.message : 'Unknown error'}`);
-        }
-      } else {
-        // Other error
-        console.error(`[@component:NavigationEditor] Error loading tree: ${response.error || 'Unknown error'}`);
-        const emptyState = createEmptyTree();
-        setNodes(emptyState.nodes);
-        setEdges(emptyState.edges);
-        setInitialState(emptyState);
-        setHistory([emptyState]);
-        setHistoryIndex(0);
-        setHasUnsavedChanges(false);
-      }
-    } catch (error) {
-      console.error(`[@component:NavigationEditor] Error loading tree from database:`, error);
-      // On error, start with empty tree
-      const emptyState = createEmptyTree();
-      setNodes(emptyState.nodes);
-      setEdges(emptyState.edges);
-      setInitialState(emptyState);
-      setHistory([emptyState]);
-      setHistoryIndex(0);
-      setHasUnsavedChanges(false);
-    }
-  }, [setNodes, setEdges, createEmptyTree]);
-
-  // Convert tree data for export/import (keeping existing format)
-  const convertToNavigationTreeData = (nodes: UINavigationNode[], edges: UINavigationEdge[]): NavigationTreeData => {
-    return {
-      nodes: nodes.map(node => ({
-        id: node.id,
-        type: 'uiScreen',
-        position: node.position,
-        data: node.data,
-      })) as UINavigationNode[],
-      edges: edges.map(edge => ({
-        id: edge.id,
-        source: edge.source,
-        target: edge.target,
-        type: edge.type,
-        data: edge.data,
-      })) as UINavigationEdge[],
-    };
-  };
-
-  const convertFromNavigationTreeData = (treeData: NavigationTreeData): { nodes: UINavigationNode[], edges: UINavigationEdge[] } => {
-    return {
-      nodes: treeData.nodes || [],
-      edges: treeData.edges || [],
-    };
-  };
+  }, [currentTreeId, currentTreeName, nodes, edges, isSaving, navigate]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -675,13 +745,27 @@ const NavigationEditorContent: React.FC = () => {
     };
   }, [saveToDatabase, isSaving]);
 
+  // Actually perform the discard operation
+  const performDiscardChanges = useCallback(() => {
+    if (initialState) {
+      setNodes([...initialState.nodes]);
+      setEdges([...initialState.edges]);
+      setHistory([{ nodes: initialState.nodes, edges: initialState.edges }]);
+      setHistoryIndex(0);
+      setHasUnsavedChanges(false);
+      setSaveError(null);
+      setSaveSuccess(false);
+      setIsDiscardDialogOpen(false);
+      console.log('[@component:NavigationEditor] Discarded changes, reverted to initial state.');
+    }
+  }, [initialState, setNodes, setEdges]);
+
   // UI state
   const [selectedNode, setSelectedNode] = useState<UINavigationNode | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<UINavigationEdge | null>(null);
   const [isNodeDialogOpen, setIsNodeDialogOpen] = useState(false);
   const [isEdgeDialogOpen, setIsEdgeDialogOpen] = useState(false);
   const [isNewNode, setIsNewNode] = useState(false); // Track if this is a newly created node
-  const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false);
   const [nodeForm, setNodeForm] = useState({
     label: '',
     type: 'screen' as 'screen' | 'dialog' | 'popup' | 'overlay',
@@ -724,59 +808,73 @@ const NavigationEditorContent: React.FC = () => {
     event.stopPropagation();
     const uiNode = node as UINavigationNode;
     
-    if (uiNode.data.hasChildren && uiNode.data.childTreeName) {
+    if (uiNode.data.hasChildren && uiNode.data.childTreeId) {
       // Prevent navigating to the same tree level
-      if (currentTreeName === uiNode.data.childTreeName) {
-        console.log(`[@component:NavigationEditor] Already at tree level: ${uiNode.data.childTreeName}`);
+      if (currentTreeId === uiNode.data.childTreeId) {
+        console.log(`[@component:NavigationEditor] Already at tree level: ${uiNode.data.childTreeId}`);
         return;
       }
       
       // Navigate to child tree
-      const newPath = [...navigationPath, uiNode.data.childTreeName];
+      const newPath = [...navigationPath, uiNode.data.childTreeId];
+      const newNamePath = [...navigationNamePath, uiNode.data.childTreeName || uiNode.data.label];
       setNavigationPath(newPath);
-      setCurrentTreeName(uiNode.data.childTreeName);
+      setNavigationNamePath(newNamePath);
+      setCurrentTreeId(uiNode.data.childTreeId);
+      setCurrentTreeName(uiNode.data.childTreeName || uiNode.data.label);
+      navigate(`/navigation-editor/${encodeURIComponent(uiNode.data.childTreeName || uiNode.data.label)}/${uiNode.data.childTreeId}`);
       
       // Load child tree data from database
-      loadFromDatabase(uiNode.data.childTreeName);
+      loadFromDatabase(uiNode.data.childTreeId);
       
-      console.log(`[@component:NavigationEditor] Navigating to child tree: ${uiNode.data.childTreeName}`);
+      console.log(`[@component:NavigationEditor] Navigating to child tree: ${uiNode.data.childTreeId}`);
     }
-  }, [navigationPath, currentTreeName, loadFromDatabase]);
+  }, [navigationPath, navigationNamePath, currentTreeId, loadFromDatabase, navigate]);
 
   // Navigate back in breadcrumb
   const navigateToTreeLevel = useCallback((index: number) => {
     const newPath = navigationPath.slice(0, index + 1);
-    const targetTreeName = newPath[newPath.length - 1];
+    const newNamePath = navigationNamePath.slice(0, index + 1);
+    const targetTreeId = newPath[newPath.length - 1];
+    const targetTreeName = newNamePath[newNamePath.length - 1];
     
     // Prevent navigating to the same tree level
-    if (currentTreeName === targetTreeName) {
+    if (currentTreeId === targetTreeId) {
       return;
     }
     
     setNavigationPath(newPath);
+    setNavigationNamePath(newNamePath);
+    setCurrentTreeId(targetTreeId);
     setCurrentTreeName(targetTreeName);
+    navigate(`/navigation-editor/${encodeURIComponent(targetTreeName)}/${targetTreeId}`);
     
     // Load tree data for that level from database
-    loadFromDatabase(targetTreeName);
+    loadFromDatabase(targetTreeId);
     
-    console.log(`[@component:NavigationEditor] Navigating back to: ${targetTreeName}`);
-  }, [navigationPath, currentTreeName, loadFromDatabase]);
+    console.log(`[@component:NavigationEditor] Navigating back to: ${targetTreeId}`);
+  }, [navigationPath, navigationNamePath, currentTreeId, loadFromDatabase, navigate]);
 
   // Go back to parent tree
   const goBackToParent = useCallback(() => {
     if (navigationPath.length > 1) {
       const newPath = navigationPath.slice(0, -1);
-      const targetTreeName = newPath[newPath.length - 1];
+      const newNamePath = navigationNamePath.slice(0, -1);
+      const targetTreeId = newPath[newPath.length - 1];
+      const targetTreeName = newNamePath[newNamePath.length - 1];
       
       setNavigationPath(newPath);
+      setNavigationNamePath(newNamePath);
+      setCurrentTreeId(targetTreeId);
       setCurrentTreeName(targetTreeName);
+      navigate(`/navigation-editor/${encodeURIComponent(targetTreeName)}/${targetTreeId}`);
       
       // Load parent tree data from database
-      loadFromDatabase(targetTreeName);
+      loadFromDatabase(targetTreeId);
       
-      console.log(`[@component:NavigationEditor] Going back to parent: ${targetTreeName}`);
+      console.log(`[@component:NavigationEditor] Going back to parent: ${targetTreeId}`);
     }
-  }, [navigationPath, loadFromDatabase]);
+  }, [navigationPath, navigationNamePath, loadFromDatabase, navigate]);
 
   // Add new node
   const addNewNode = useCallback(() => {
@@ -885,29 +983,33 @@ const NavigationEditorContent: React.FC = () => {
     reactFlowInstance.fitView();
   }, [reactFlowInstance]);
 
-  // Discard changes function with confirmation
-  const discardChanges = useCallback(() => {
-    if (hasUnsavedChanges) {
-      setIsDiscardDialogOpen(true);
-    } else {
-      performDiscardChanges();
-    }
-  }, [hasUnsavedChanges]);
-
-  // Actually perform the discard operation
-  const performDiscardChanges = useCallback(() => {
-    if (initialState) {
-      setNodes([...initialState.nodes]);
-      setEdges([...initialState.edges]);
-      setHistory([{ nodes: initialState.nodes, edges: initialState.edges }]);
-      setHistoryIndex(0);
-      setHasUnsavedChanges(false);
-      setSaveError(null);
-      setSaveSuccess(false);
-      setIsDiscardDialogOpen(false);
-      console.log('[@component:NavigationEditor] Discarded changes, reverted to initial state.');
-    }
-  }, [initialState, setNodes, setEdges]);
+  if (!treeId && !interfaceId) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center p-8 bg-white rounded-lg shadow-md max-w-md">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">No Navigation Tree Selected</h2>
+          <p className="text-gray-600 mb-6">Please select a navigation tree to edit from the dashboard.</p>
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          >
+            Go to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
+  if (isLoadingInterface) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center p-8 bg-white rounded-lg shadow-md max-w-md">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Loading Navigation Data...</h2>
+          <p className="text-gray-600">Please wait while we fetch the navigation tree for this user interface.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Box sx={{ 
@@ -933,7 +1035,7 @@ const NavigationEditorContent: React.FC = () => {
           
           {/* Breadcrumb navigation */}
           <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
-            {navigationPath.map((treeName, index) => (
+            {navigationNamePath.map((treeName, index) => (
               <Box key={index} sx={{ display: 'flex', alignItems: 'center' }}>
                 {index > 0 && (
                   <Typography variant="h6" sx={{ mx: 0.5, color: 'text.secondary' }}>

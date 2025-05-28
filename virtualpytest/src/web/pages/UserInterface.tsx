@@ -70,6 +70,7 @@ const UserInterface: React.FC = () => {
   });
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [rootTreesCache, setRootTreesCache] = useState<{ [key: string]: { id: string, name: string } | null }>({});
 
   // Load user interfaces on component mount
   useEffect(() => {
@@ -460,7 +461,38 @@ const UserInterface: React.FC = () => {
                           size="small"
                           variant="outlined"
                           startIcon={<LaunchIcon fontSize="small" />}
-                          onClick={() => window.open(`/navigation-editor/${encodeURIComponent(userInterface.name)}`, '_blank')}
+                          onClick={async () => {
+                            if (rootTreesCache[userInterface.id]) {
+                              const rootTree = rootTreesCache[userInterface.id];
+                              if (rootTree) {
+                                window.open(`/navigation-editor/${encodeURIComponent(rootTree.id)}/${encodeURIComponent(rootTree.name)}`, '_blank');
+                              } else {
+                                alert('No root navigation tree found for this user interface.');
+                                window.open(`/navigation-editor/${encodeURIComponent(userInterface.name)}`, '_blank');
+                              }
+                            } else {
+                              try {
+                                // Fetch user interface with associated root navigation tree
+                                const response = await fetch(`/api/userinterfaces/${userInterface.id}`);
+                                if (!response.ok) {
+                                  throw new Error(`HTTP error! status: ${response.status}`);
+                                }
+                                const data = await response.json();
+                                const rootTree = data.root_tree;
+                                setRootTreesCache(prev => ({ ...prev, [userInterface.id]: rootTree || null }));
+                                if (rootTree && rootTree.id && rootTree.name) {
+                                  window.open(`/navigation-editor/${encodeURIComponent(rootTree.id)}/${encodeURIComponent(rootTree.name)}`, '_blank');
+                                } else {
+                                  alert('No root navigation tree found for this user interface.');
+                                  window.open(`/navigation-editor/${encodeURIComponent(userInterface.name)}`, '_blank');
+                                }
+                              } catch (error) {
+                                console.error('[@component:UserInterface] Error fetching navigation tree:', error);
+                                alert('Failed to fetch navigation tree details.');
+                                window.open(`/navigation-editor/${encodeURIComponent(userInterface.name)}`, '_blank');
+                              }
+                            }
+                          }}
                           sx={{ 
                             minWidth: 'auto',
                             px: 1,
