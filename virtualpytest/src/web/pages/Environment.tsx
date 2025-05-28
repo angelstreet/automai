@@ -1,8 +1,9 @@
 import {
-  Settings as SettingsIcon,
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
   Save as SaveIcon,
-  Refresh as RefreshIcon,
-  Security as SecurityIcon,
+  Cancel as CancelIcon,
 } from '@mui/icons-material';
 import {
   Box,
@@ -10,174 +11,320 @@ import {
   Card,
   CardContent,
   Button,
-  Grid,
-  Alert,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
   TextField,
-  Switch,
-  FormControlLabel,
-  Divider,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Alert,
 } from '@mui/material';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+
+interface EnvironmentVariable {
+  id: string;
+  key: string;
+  value: string;
+  description: string;
+}
+
+const defaultEnvironmentVariables: EnvironmentVariable[] = [
+  {
+    id: '1',
+    key: 'prod',
+    value: 'production',
+    description: 'Production environment',
+  },
+  {
+    id: '2',
+    key: 'test',
+    value: 'testing',
+    description: 'Test environment',
+  },
+  {
+    id: '3',
+    key: 'dev',
+    value: 'development',
+    description: 'Development environment',
+  },
+  {
+    id: '4',
+    key: 'preprod',
+    value: 'preproduction',
+    description: 'Preproduction environment',
+  },
+];
 
 const Environment: React.FC = () => {
+  const [variables, setVariables] = useState<EnvironmentVariable[]>(defaultEnvironmentVariables);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ key: '', value: '', description: '' });
+  const [openDialog, setOpenDialog] = useState(false);
+  const [newVariable, setNewVariable] = useState({ key: '', value: '', description: '' });
+  const [error, setError] = useState<string | null>(null);
+
+  const handleEdit = (variable: EnvironmentVariable) => {
+    setEditingId(variable.id);
+    setEditForm({
+      key: variable.key,
+      value: variable.value,
+      description: variable.description,
+    });
+  };
+
+  const handleSaveEdit = () => {
+    if (!editForm.key.trim() || !editForm.value.trim()) {
+      setError('Key and Value are required');
+      return;
+    }
+
+    // Check for duplicate keys (excluding current item)
+    const isDuplicate = variables.some(
+      (v) => v.id !== editingId && v.key.toLowerCase() === editForm.key.toLowerCase().trim()
+    );
+    
+    if (isDuplicate) {
+      setError('A variable with this key already exists');
+      return;
+    }
+
+    setVariables(variables.map(v => 
+      v.id === editingId 
+        ? { ...v, key: editForm.key.trim(), value: editForm.value.trim(), description: editForm.description.trim() }
+        : v
+    ));
+    setEditingId(null);
+    setError(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditForm({ key: '', value: '', description: '' });
+    setError(null);
+  };
+
+  const handleDelete = (id: string) => {
+    setVariables(variables.filter(v => v.id !== id));
+  };
+
+  const handleAddNew = () => {
+    if (!newVariable.key.trim() || !newVariable.value.trim()) {
+      setError('Key and Value are required');
+      return;
+    }
+
+    // Check for duplicate keys
+    const isDuplicate = variables.some(
+      (v) => v.key.toLowerCase() === newVariable.key.toLowerCase().trim()
+    );
+    
+    if (isDuplicate) {
+      setError('A variable with this key already exists');
+      return;
+    }
+
+    const newId = (Math.max(...variables.map(v => parseInt(v.id))) + 1).toString();
+    setVariables([...variables, {
+      id: newId,
+      key: newVariable.key.trim(),
+      value: newVariable.value.trim(),
+      description: newVariable.description.trim(),
+    }]);
+    setNewVariable({ key: '', value: '', description: '' });
+    setOpenDialog(false);
+    setError(null);
+  };
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+    setNewVariable({ key: '', value: '', description: '' });
+    setError(null);
+  };
+
   return (
     <Box>
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" gutterBottom>
-          Environment Settings
-        </Typography>
-        <Typography variant="body1" color="textSecondary">
-          Configure test environment settings, API endpoints, and system preferences.
-        </Typography>
+      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box>
+          <Typography variant="h4" gutterBottom>
+            Environment Variables
+          </Typography>
+          <Typography variant="body1" color="textSecondary">
+            Manage environment configuration variables for your test automation.
+          </Typography>
+        </Box>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => setOpenDialog(true)}
+          size="small"
+        >
+          Add Variable
+        </Button>
       </Box>
 
-      <Alert severity="info" sx={{ mb: 3 }}>
-        Environment configuration feature is coming soon. This will allow you to manage test
-        environment settings.
-      </Alert>
+      {error && (
+        <Alert severity="error" sx={{ mb: 1 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
 
-      <Grid container spacing={3}>
-        {/* API Configuration */}
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" gap={1} mb={2}>
-                <SettingsIcon color="primary" />
-                <Typography variant="h6">API Configuration</Typography>
-              </Box>
+      <Card sx={{ boxShadow: 1 }}>
+        <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
+          <TableContainer component={Paper} variant="outlined" sx={{ boxShadow: 'none' }}>
+            <Table size="small" sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1 } }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell><strong>Key</strong></TableCell>
+                  <TableCell><strong>Value</strong></TableCell>
+                  <TableCell><strong>Description</strong></TableCell>
+                  <TableCell align="center"><strong>Actions</strong></TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {variables.map((variable) => (
+                  <TableRow key={variable.id} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
+                    <TableCell>
+                      {editingId === variable.id ? (
+                        <TextField
+                          size="small"
+                          value={editForm.key}
+                          onChange={(e) => setEditForm({ ...editForm, key: e.target.value })}
+                          fullWidth
+                          variant="outlined"
+                          sx={{ '& .MuiInputBase-root': { height: '32px' } }}
+                        />
+                      ) : (
+                        variable.key
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {editingId === variable.id ? (
+                        <TextField
+                          size="small"
+                          value={editForm.value}
+                          onChange={(e) => setEditForm({ ...editForm, value: e.target.value })}
+                          fullWidth
+                          variant="outlined"
+                          sx={{ '& .MuiInputBase-root': { height: '32px' } }}
+                        />
+                      ) : (
+                        variable.value
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {editingId === variable.id ? (
+                        <TextField
+                          size="small"
+                          value={editForm.description}
+                          onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                          fullWidth
+                          variant="outlined"
+                          sx={{ '& .MuiInputBase-root': { height: '32px' } }}
+                        />
+                      ) : (
+                        variable.description
+                      )}
+                    </TableCell>
+                    <TableCell align="center">
+                      {editingId === variable.id ? (
+                        <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={handleSaveEdit}
+                            sx={{ p: 0.5 }}
+                          >
+                            <SaveIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            color="secondary"
+                            onClick={handleCancelEdit}
+                            sx={{ p: 0.5 }}
+                          >
+                            <CancelIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      ) : (
+                        <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={() => handleEdit(variable)}
+                            sx={{ p: 0.5 }}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => handleDelete(variable.id)}
+                            sx={{ p: 0.5 }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </CardContent>
+      </Card>
 
-              <Box component="form" sx={{ '& .MuiTextField-root': { mb: 2 } }}>
-                <TextField
-                  fullWidth
-                  label="API Base URL"
-                  defaultValue="http://localhost:5009/api"
-                  disabled
-                />
-                <TextField
-                  fullWidth
-                  label="Timeout (seconds)"
-                  type="number"
-                  defaultValue="30"
-                  disabled
-                />
-                <TextField
-                  fullWidth
-                  label="Retry Attempts"
-                  type="number"
-                  defaultValue="3"
-                  disabled
-                />
-
-                <Box display="flex" gap={2} mt={2}>
-                  <Button variant="contained" startIcon={<SaveIcon />} disabled>
-                    Save
-                  </Button>
-                  <Button variant="outlined" startIcon={<RefreshIcon />} disabled>
-                    Test Connection
-                  </Button>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Test Environment */}
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" gap={1} mb={2}>
-                <SecurityIcon color="secondary" />
-                <Typography variant="h6">Test Environment</Typography>
-              </Box>
-
-              <Box>
-                <FormControlLabel control={<Switch disabled />} label="Enable Debug Mode" />
-                <FormControlLabel control={<Switch disabled />} label="Capture Screenshots" />
-                <FormControlLabel control={<Switch disabled />} label="Record Video" />
-                <FormControlLabel control={<Switch disabled />} label="Verbose Logging" />
-
-                <Divider sx={{ my: 2 }} />
-
-                <TextField
-                  fullWidth
-                  label="Test Data Directory"
-                  defaultValue="/data/test-files"
-                  disabled
-                  sx={{ mb: 2 }}
-                />
-                <TextField
-                  fullWidth
-                  label="Screenshot Directory"
-                  defaultValue="/data/screenshots"
-                  disabled
-                  sx={{ mb: 2 }}
-                />
-
-                <Button variant="contained" startIcon={<SaveIcon />} disabled fullWidth>
-                  Save Environment Settings
-                </Button>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* System Information */}
-        <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                System Information
-              </Typography>
-
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6} md={3}>
-                  <Box>
-                    <Typography variant="body2" color="textSecondary">
-                      Application Version
-                    </Typography>
-                    <Typography variant="body1" fontWeight="bold">
-                      v1.0.0
-                    </Typography>
-                  </Box>
-                </Grid>
-
-                <Grid item xs={12} sm={6} md={3}>
-                  <Box>
-                    <Typography variant="body2" color="textSecondary">
-                      Python Version
-                    </Typography>
-                    <Typography variant="body1" fontWeight="bold">
-                      3.9.0
-                    </Typography>
-                  </Box>
-                </Grid>
-
-                <Grid item xs={12} sm={6} md={3}>
-                  <Box>
-                    <Typography variant="body2" color="textSecondary">
-                      Database Status
-                    </Typography>
-                    <Typography variant="body1" fontWeight="bold" color="success.main">
-                      Connected
-                    </Typography>
-                  </Box>
-                </Grid>
-
-                <Grid item xs={12} sm={6} md={3}>
-                  <Box>
-                    <Typography variant="body2" color="textSecondary">
-                      Last Updated
-                    </Typography>
-                    <Typography variant="body1" fontWeight="bold">
-                      Just now
-                    </Typography>
-                  </Box>
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+      {/* Add New Variable Dialog */}
+      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ pb: 1 }}>Add New Environment Variable</DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          <Box sx={{ pt: 0.5 }}>
+            <TextField
+              autoFocus
+              margin="dense"
+              label="Key"
+              fullWidth
+              variant="outlined"
+              value={newVariable.key}
+              onChange={(e) => setNewVariable({ ...newVariable, key: e.target.value })}
+              sx={{ mb: 1.5 }}
+              size="small"
+            />
+            <TextField
+              margin="dense"
+              label="Value"
+              fullWidth
+              variant="outlined"
+              value={newVariable.value}
+              onChange={(e) => setNewVariable({ ...newVariable, value: e.target.value })}
+              sx={{ mb: 1.5 }}
+              size="small"
+            />
+            <TextField
+              margin="dense"
+              label="Description"
+              fullWidth
+              variant="outlined"
+              value={newVariable.description}
+              onChange={(e) => setNewVariable({ ...newVariable, description: e.target.value })}
+              size="small"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ pt: 1, pb: 2 }}>
+          <Button onClick={handleCloseDialog} size="small">Cancel</Button>
+          <Button onClick={handleAddNew} variant="contained" size="small">
+            Add Variable
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
