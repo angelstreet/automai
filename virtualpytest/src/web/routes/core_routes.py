@@ -4,7 +4,6 @@ Core API Routes
 This module contains the core API endpoints for:
 - Health check
 - Test cases management
-- Trees management
 - Campaigns management
 - User interfaces management
 """
@@ -21,7 +20,6 @@ sys.path.insert(0, src_dir)  # Insert at beginning to prioritize over local util
 
 from utils.supabase_utils import (
     get_all_test_cases, get_test_case, save_test_case, delete_test_case,
-    get_all_trees, get_tree, save_tree, delete_tree,
     get_all_campaigns, get_campaign, save_campaign, delete_campaign
 )
 
@@ -107,57 +105,6 @@ def testcase(test_id):
                 return jsonify({'status': 'success'})
             else:
                 return jsonify({'error': 'Test case not found'}), 404
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-# =====================================================
-# TREES ENDPOINTS
-# =====================================================
-
-@core_bp.route('/api/trees', methods=['GET', 'POST'])
-def trees():
-    error = check_supabase()
-    if error:
-        return error
-        
-    team_id = get_team_id()
-    user_id = get_user_id()
-    
-    try:
-        if request.method == 'GET':
-            trees = get_all_trees(team_id)
-            return jsonify(trees)
-        elif request.method == 'POST':
-            tree = request.json
-            save_tree(tree, team_id, user_id)
-            return jsonify({'status': 'success', 'tree_id': tree['tree_id']})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@core_bp.route('/api/trees/<tree_id>', methods=['GET', 'PUT', 'DELETE'])
-def tree(tree_id):
-    error = check_supabase()
-    if error:
-        return error
-        
-    team_id = get_team_id()
-    user_id = get_user_id()
-    
-    try:
-        if request.method == 'GET':
-            tree = get_tree(tree_id, team_id)
-            return jsonify(tree if tree else {})
-        elif request.method == 'PUT':
-            tree = request.json
-            tree['tree_id'] = tree_id
-            save_tree(tree, team_id, user_id)
-            return jsonify({'status': 'success'})
-        elif request.method == 'DELETE':
-            success = delete_tree(tree_id, team_id)
-            if success:
-                return jsonify({'status': 'success'})
-            else:
-                return jsonify({'error': 'Tree not found'}), 404
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

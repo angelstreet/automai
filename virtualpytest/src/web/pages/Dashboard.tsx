@@ -63,7 +63,7 @@ const Dashboard: React.FC = () => {
       const [testCasesRes, campaignsRes, treesRes] = await Promise.all([
         fetch(`${API_BASE_URL}/testcases`),
         fetch(`${API_BASE_URL}/campaigns`),
-        fetch(`${API_BASE_URL}/trees`),
+        fetch(`${API_BASE_URL}/navigation/trees`),
       ]);
 
       let testCases: TestCase[] = [];
@@ -79,7 +79,11 @@ const Dashboard: React.FC = () => {
       }
 
       if (treesRes.ok) {
-        trees = await treesRes.json();
+        const treesResponse = await treesRes.json();
+        // The navigation API returns { success: true, data: [...] }
+        if (treesResponse.success && treesResponse.data) {
+          trees = treesResponse.data;
+        }
       }
 
       // Generate mock recent activity
@@ -229,7 +233,7 @@ const Dashboard: React.FC = () => {
               <Button
                 variant="contained"
                 startIcon={<AddIcon />}
-                href="/trees"
+                href="/navigation-editor/home"
                 fullWidth
                 color="info"
               >

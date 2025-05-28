@@ -45,10 +45,9 @@ try:
     # as the table now exists in the database
     
     # Test the connection by checking if supabase client is available
-    supabase = get_supabase_client()
-    if supabase:
+    supabase_client = get_supabase_client()
+    if supabase_client:
         print("Supabase connected successfully!")
-        supabase_client = True
     else:
         raise Exception("Supabase client not initialized")
 except Exception as e:
