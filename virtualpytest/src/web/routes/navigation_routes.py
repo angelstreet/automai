@@ -3,8 +3,7 @@ Navigation API Routes
 
 This module contains the API endpoints for:
 - Navigation trees management
-- Navigation screens management  
-- Navigation links management
+- Navigation nodes and edges management
 """
 
 from flask import Blueprint, request, jsonify
@@ -25,9 +24,8 @@ sys.path.insert(0, web_utils_path)
 from navigation_utils import (
     get_all_navigation_trees, get_navigation_tree, create_navigation_tree, 
     update_navigation_tree, delete_navigation_tree, check_navigation_tree_name_exists,
-    get_navigation_screens, create_navigation_screen, update_navigation_screen, delete_navigation_screen,
-    get_navigation_links, create_navigation_link, update_navigation_link, delete_navigation_link,
-    get_tree_with_screens_and_links, convert_screens_and_links_to_reactflow, convert_reactflow_to_screens_and_links
+    get_navigation_nodes_and_edges, convert_nodes_and_edges_to_reactflow, convert_reactflow_to_nodes_and_edges,
+    save_navigation_nodes_and_edges
 )
 from userinterface_utils import get_all_userinterfaces, get_userinterface
 from .utils import check_supabase, get_team_id
@@ -77,7 +75,7 @@ def get_navigation_trees():
         }), 500
 
 @navigation_bp.route('/trees/<tree_id>', methods=['GET'])
-def get_navigation_tree(tree_id):
+def get_navigation_tree_by_id(tree_id):
     """Get a specific navigation tree by ID"""
     # Check if Supabase is available
     error_response = check_supabase()
@@ -112,7 +110,7 @@ def get_navigation_tree(tree_id):
         }), 500
 
 @navigation_bp.route('/trees', methods=['POST'])
-def create_navigation_tree():
+def create_navigation_tree_route():
     """Create a new navigation tree"""
     # Check if Supabase is available
     error_response = check_supabase()
@@ -174,7 +172,7 @@ def create_navigation_tree():
         }), 500
 
 @navigation_bp.route('/trees/<tree_id>', methods=['PUT'])
-def update_navigation_tree(tree_id):
+def update_navigation_tree_route(tree_id):
     """Update an existing navigation tree"""
     # Check if Supabase is available
     error_response = check_supabase()
@@ -234,7 +232,7 @@ def update_navigation_tree(tree_id):
         }), 500
 
 @navigation_bp.route('/trees/<tree_id>', methods=['DELETE'])
-def delete_navigation_tree(tree_id):
+def delete_navigation_tree_route(tree_id):
     """Delete a navigation tree"""
     # Check if Supabase is available
     error_response = check_supabase()
@@ -342,7 +340,7 @@ def get_navigation_tree_by_id_and_team(tree_id, team_id):
 
 @navigation_bp.route('/trees/<tree_id>/complete', methods=['GET'])
 def get_complete_navigation_tree(tree_id):
-    """Get a complete navigation tree with all its screens and links"""
+    """Get a complete navigation tree with nodes and edges from database"""
     error_response = check_supabase()
     if error_response:
         return error_response
@@ -350,57 +348,54 @@ def get_complete_navigation_tree(tree_id):
     team_id = get_team_id()
     
     try:
-        # Use the utility function to get complete tree data
-        complete_tree = get_tree_with_screens_and_links(tree_id, team_id)
+        # Get the tree info first
+        tree_info = get_navigation_tree(tree_id, team_id)
         
-        if complete_tree:
-            tree_info = complete_tree['tree']
-            screens = complete_tree['screens']
-            links = complete_tree['links']
-            
-            # Convert screens and links to ReactFlow format
-            reactflow_data = convert_screens_and_links_to_reactflow(screens, links)
-            
-            # Check if there's existing metadata (ReactFlow format) and merge if needed
-            existing_metadata = tree_info.get('metadata', {})
-            if existing_metadata and isinstance(existing_metadata, dict):
-                # If there's existing metadata with nodes/edges, prefer database data but merge positions
-                if 'nodes' in existing_metadata and existing_metadata['nodes']:
-                    # Create a position map from existing metadata
-                    position_map = {}
-                    for node in existing_metadata['nodes']:
-                        position_map[node['id']] = node.get('position', {'x': 0, 'y': 0})
-                    
-                    # Update positions in ReactFlow data if they exist in metadata
-                    for node in reactflow_data['nodes']:
-                        if node['id'] in position_map:
-                            node['position'] = position_map[node['id']]
-            
-            # Prepare the response with tree info and ReactFlow data
-            response_data = {
-                **tree_info,
-                'metadata': reactflow_data,
-                'screens': screens,  # Include raw screens data for reference
-                'links': links       # Include raw links data for reference
-            }
-            
-            print(f"[@api:navigation:get_complete_tree] Retrieved complete tree: {tree_id} with {len(screens)} screens and {len(links)} links")
-            return jsonify({
-                'success': True,
-                'data': response_data
-            })
-        else:
+        if not tree_info:
             return jsonify({
                 'success': False,
                 'error': 'Navigation tree not found'
             }), 404
-            
+        
+        # Get nodes and edges from database
+        nodes, edges = get_navigation_nodes_and_edges(tree_id, team_id)
+        
+        print(f"[@api:navigation:get_complete_tree] Retrieved {len(nodes)} nodes and {len(edges)} edges from database")
+        
+        # Convert to ReactFlow format
+        reactflow_data = convert_nodes_and_edges_to_reactflow(nodes, edges)
+        
+        # Get existing metadata (ReactFlow format) from tree
+        existing_metadata = tree_info.get('metadata', {})
+        
+        # If we have database nodes/edges, use them; otherwise use metadata
+        if nodes or edges:
+            print(f"[@api:navigation:get_complete_tree] Using database nodes and edges")
+            tree_data = reactflow_data
+        else:
+            print(f"[@api:navigation:get_complete_tree] Using metadata ReactFlow data")
+            tree_data = existing_metadata
+        
+        # Ensure we have the basic structure
+        if not isinstance(tree_data, dict):
+            tree_data = {'nodes': [], 'edges': []}
+        if 'nodes' not in tree_data:
+            tree_data['nodes'] = []
+        if 'edges' not in tree_data:
+            tree_data['edges'] = []
+        
+        response_data = {
+            'success': True,
+            'tree_info': tree_info,
+            'tree_data': tree_data
+        }
+        
+        print(f"[@api:navigation:get_complete_tree] Returning tree with {len(tree_data.get('nodes', []))} nodes and {len(tree_data.get('edges', []))} edges")
+        return jsonify(response_data)
+        
     except Exception as e:
         print(f"[@api:navigation:get_complete_tree] Error: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': f'Failed to retrieve complete navigation tree: {str(e)}'
-        }), 500
+        return jsonify({'error': str(e)}), 500
 
 @navigation_bp.route('/trees/<tree_id>/complete', methods=['PUT'])
 def save_complete_navigation_tree(tree_id):
@@ -420,280 +415,45 @@ def save_complete_navigation_tree(tree_id):
                 'error': 'No data provided'
             }), 400
         
-        # Get the tree data (ReactFlow format)
+        # Get the tree data (ReactFlow format with nodes and edges)
         tree_data = data.get('tree_data', {})
         nodes = tree_data.get('nodes', [])
         edges = tree_data.get('edges', [])
         
-        # First, verify the tree exists and get its userinterface_id
-        from navigation_utils import get_navigation_tree
-        tree_info = get_navigation_tree(tree_id, team_id)
-        if not tree_info:
+        print(f"[@api:navigation:save_complete_tree] Saving tree {tree_id} with {len(nodes)} nodes and {len(edges)} edges")
+        
+        # First, save to metadata field for fast loading
+        metadata_update_success = update_navigation_tree(tree_id, {'metadata': tree_data}, team_id)
+        
+        if not metadata_update_success:
             return jsonify({
                 'success': False,
-                'error': 'Navigation tree not found'
-            }), 404
-        
-        userinterface_id = tree_info.get('userinterface_id')
-        if not userinterface_id:
-            return jsonify({
-                'success': False,
-                'error': 'Tree has no associated user interface'
-            }), 400
-        
-        # Convert ReactFlow data to database format
-        from navigation_utils import convert_reactflow_to_screens_and_links
-        screens_data, links_data = convert_reactflow_to_screens_and_links(nodes, edges, tree_id, userinterface_id)
-        
-        from app import supabase_client
-        
-        # Update the tree metadata with ReactFlow data
-        update_data = {
-            'metadata': tree_data,
-            'updated_at': datetime.utcnow().isoformat()
-        }
-        
-        # Add other updatable fields if provided
-        if 'name' in data:
-            update_data['name'] = data['name']
-        if 'description' in data:
-            update_data['description'] = data['description']
-        
-        # Update the tree
-        tree_result = supabase_client.table('navigation_trees').update(update_data).eq('id', tree_id).eq('team_id', team_id).execute()
-        
-        if not tree_result.data:
-            return jsonify({
-                'success': False,
-                'error': 'Failed to update navigation tree'
+                'error': 'Failed to update tree metadata'
             }), 500
         
-        # Clear existing screens and links for this tree
-        supabase_client.table('navigation_screens').delete().eq('tree_id', tree_id).execute()
-        supabase_client.table('navigation_links').delete().eq('tree_id', tree_id).execute()
+        # Convert ReactFlow data to database format and save to tables
+        db_nodes, db_edges = convert_reactflow_to_nodes_and_edges(tree_data, tree_id)
         
-        # Insert new screens
-        if screens_data:
-            screens_result = supabase_client.table('navigation_screens').insert(screens_data).execute()
-            if not screens_result.data:
-                print(f"[@api:navigation:save_complete_tree] Warning: Failed to insert screens for tree {tree_id}")
+        # Save to database tables
+        db_save_success = save_navigation_nodes_and_edges(tree_id, db_nodes, db_edges)
         
-        # Insert new links
-        if links_data:
-            links_result = supabase_client.table('navigation_links').insert(links_data).execute()
-            if not links_result.data:
-                print(f"[@api:navigation:save_complete_tree] Warning: Failed to insert links for tree {tree_id}")
+        if not db_save_success:
+            print(f"[@api:navigation:save_complete_tree] Warning: Failed to save to database tables, but metadata was saved")
         
-        print(f"[@api:navigation:save_complete_tree] Successfully saved complete tree: {tree_id} with {len(screens_data)} screens and {len(links_data)} links")
-        
+        print(f"[@api:navigation:save_complete_tree] Successfully saved tree {tree_id}")
         return jsonify({
             'success': True,
-            'data': tree_result.data[0],
-            'message': 'Navigation tree saved successfully'
+            'message': 'Navigation tree saved successfully',
+            'metadata_saved': metadata_update_success,
+            'database_saved': db_save_success
         })
         
     except Exception as e:
         print(f"[@api:navigation:save_complete_tree] Error: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Failed to save complete navigation tree: {str(e)}'
+            'error': f'Failed to save navigation tree: {str(e)}'
         }), 500
-
-# =====================================================
-# NAVIGATION SCREENS ENDPOINTS
-# =====================================================
-
-@navigation_bp.route('/trees/<tree_id>/screens', methods=['GET', 'POST'])
-def navigation_screens(tree_id):
-    """Navigation screens management endpoint"""
-    error = check_supabase()
-    if error:
-        return error
-        
-    team_id = get_team_id()
-    
-    try:
-        # Verify tree exists and belongs to team
-        tree = get_navigation_tree(tree_id, team_id)
-        if not tree:
-            return jsonify({'error': 'Navigation tree not found or access denied'}), 404
-            
-        if request.method == 'GET':
-            level = request.args.get('level', type=int)
-            screens = get_navigation_screens(tree_id, level)
-            return jsonify(screens)
-            
-        elif request.method == 'POST':
-            screen_data = request.json
-            
-            # Validate required fields
-            if not screen_data.get('screen_name'):
-                return jsonify({'error': 'Screen name is required'}), 400
-            
-            # Create the navigation screen
-            created_screen = create_navigation_screen(screen_data, tree_id, tree['userinterface_id'])
-            if created_screen:
-                return jsonify({'status': 'success', 'screen': created_screen}), 201
-            else:
-                return jsonify({'error': 'Failed to create navigation screen'}), 500
-                
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@navigation_bp.route('/screens/<screen_id>', methods=['GET', 'PUT', 'DELETE'])
-def navigation_screen(screen_id):
-    """Individual navigation screen management endpoint"""
-    error = check_supabase()
-    if error:
-        return error
-        
-    team_id = get_team_id()
-    
-    try:
-        if request.method == 'GET':
-            # Get screen and verify access through tree ownership
-            screens = get_navigation_screens(None)  # This will need to be modified to get single screen
-            screen = next((s for s in screens if s['id'] == screen_id), None)
-            if screen:
-                # Verify tree belongs to team
-                tree = get_navigation_tree(screen['tree_id'], team_id)
-                if tree:
-                    return jsonify(screen)
-                else:
-                    return jsonify({'error': 'Access denied'}), 403
-            else:
-                return jsonify({'error': 'Navigation screen not found'}), 404
-                
-        elif request.method == 'PUT':
-            screen_data = request.json
-            
-            # Validate required fields
-            if not screen_data.get('screen_name'):
-                return jsonify({'error': 'Screen name is required'}), 400
-            
-            # Update the navigation screen
-            updated_screen = update_navigation_screen(screen_id, screen_data)
-            if updated_screen:
-                return jsonify({'status': 'success', 'screen': updated_screen})
-            else:
-                return jsonify({'error': 'Navigation screen not found or failed to update'}), 404
-                
-        elif request.method == 'DELETE':
-            success = delete_navigation_screen(screen_id)
-            if success:
-                return jsonify({'status': 'success'})
-            else:
-                return jsonify({'error': 'Navigation screen not found or failed to delete'}), 404
-                
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-# =====================================================
-# NAVIGATION LINKS ENDPOINTS
-# =====================================================
-
-@navigation_bp.route('/trees/<tree_id>/links', methods=['GET', 'POST'])
-def navigation_links(tree_id):
-    """Navigation links management endpoint"""
-    error = check_supabase()
-    if error:
-        return error
-        
-    team_id = get_team_id()
-    
-    try:
-        # Verify tree exists and belongs to team
-        tree = get_navigation_tree(tree_id, team_id)
-        if not tree:
-            return jsonify({'error': 'Navigation tree not found or access denied'}), 404
-            
-        if request.method == 'GET':
-            links = get_navigation_links(tree_id)
-            return jsonify(links)
-            
-        elif request.method == 'POST':
-            link_data = request.json
-            
-            # Validate required fields
-            if not link_data.get('source_screen_id'):
-                return jsonify({'error': 'Source screen ID is required'}), 400
-                
-            if not link_data.get('target_screen_id'):
-                return jsonify({'error': 'Target screen ID is required'}), 400
-                
-            if not link_data.get('link_type'):
-                return jsonify({'error': 'Link type is required'}), 400
-            
-            # Validate link type
-            if link_data['link_type'] not in ['sibling', 'parent_child']:
-                return jsonify({'error': 'Link type must be either "sibling" or "parent_child"'}), 400
-            
-            # Validate that at least one navigation key is provided
-            if not link_data.get('go_key') and not link_data.get('comeback_key'):
-                return jsonify({'error': 'At least one navigation key (go_key or comeback_key) must be provided'}), 400
-            
-            # Create the navigation link
-            created_link = create_navigation_link(link_data, tree_id, tree['userinterface_id'])
-            if created_link:
-                return jsonify({'status': 'success', 'link': created_link}), 201
-            else:
-                return jsonify({'error': 'Failed to create navigation link'}), 500
-                
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@navigation_bp.route('/links/<link_id>', methods=['GET', 'PUT', 'DELETE'])
-def navigation_link(link_id):
-    """Individual navigation link management endpoint"""
-    error = check_supabase()
-    if error:
-        return error
-        
-    team_id = get_team_id()
-    
-    try:
-        if request.method == 'GET':
-            # Get all links and find the specific one (this could be optimized)
-            # For now, we'll need to get the tree_id first
-            return jsonify({'error': 'Get single link not implemented yet'}), 501
-                
-        elif request.method == 'PUT':
-            link_data = request.json
-            
-            # Validate required fields
-            if not link_data.get('source_screen_id'):
-                return jsonify({'error': 'Source screen ID is required'}), 400
-                
-            if not link_data.get('target_screen_id'):
-                return jsonify({'error': 'Target screen ID is required'}), 400
-                
-            if not link_data.get('link_type'):
-                return jsonify({'error': 'Link type is required'}), 400
-            
-            # Validate link type
-            if link_data['link_type'] not in ['sibling', 'parent_child']:
-                return jsonify({'error': 'Link type must be either "sibling" or "parent_child"'}), 400
-            
-            # Validate that at least one navigation key is provided
-            if not link_data.get('go_key') and not link_data.get('comeback_key'):
-                return jsonify({'error': 'At least one navigation key (go_key or comeback_key) must be provided'}), 400
-            
-            # Update the navigation link
-            updated_link = update_navigation_link(link_id, link_data)
-            if updated_link:
-                return jsonify({'status': 'success', 'link': updated_link})
-            else:
-                return jsonify({'error': 'Navigation link not found or failed to update'}), 404
-                
-        elif request.method == 'DELETE':
-            success = delete_navigation_link(link_id)
-            if success:
-                return jsonify({'status': 'success'})
-            else:
-                return jsonify({'error': 'Navigation link not found or failed to delete'}), 404
-                
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
 # =====================================================
 # HELPER ENDPOINTS

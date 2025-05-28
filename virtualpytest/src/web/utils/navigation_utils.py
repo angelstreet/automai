@@ -1,7 +1,7 @@
 """
 Navigation Database Utilities
 
-This module provides functions for managing navigation trees, screens, and links in the database.
+This module provides functions for managing navigation trees, nodes, and edges in the database.
 Navigation trees define the UI flow and remote control navigation for different user interfaces.
 """
 
@@ -71,6 +71,7 @@ def get_navigation_tree(tree_id: str, team_id: str) -> Optional[Dict]:
                 'is_root': tree.get('is_root', False),
                 'userinterface_id': tree['userinterface_id'],
                 'team_id': tree['team_id'],
+                'metadata': tree.get('metadata', {}),
                 'created_at': tree['created_at'],
                 'updated_at': tree['updated_at']
             }
@@ -169,7 +170,7 @@ def update_navigation_tree(tree_id: str, tree_data: Dict, team_id: str) -> Optio
         return None
 
 def delete_navigation_tree(tree_id: str, team_id: str) -> bool:
-    """Delete a navigation tree and all its screens and links."""
+    """Delete a navigation tree and all its nodes and edges."""
     supabase = get_supabase_client()
     
     try:
@@ -177,282 +178,6 @@ def delete_navigation_tree(tree_id: str, team_id: str) -> bool:
         return True
     except Exception as e:
         print(f"❌ Error deleting navigation tree {tree_id}: {e}")
-        return False
-
-# =====================================================
-# NAVIGATION SCREENS MANAGEMENT
-# =====================================================
-
-def get_navigation_screens(tree_id: str, level: Optional[int] = None) -> List[Dict]:
-    """Retrieve all screens for a navigation tree, optionally filtered by level."""
-    supabase = get_supabase_client()
-    
-    try:
-        query = supabase.table('navigation_screens').select(
-            'id', 'tree_id', 'userinterface_id', 'screen_name', 'screen_type', 'level', 
-            'parent_screen_id', 'is_entry_point', 'position_x', 'position_y', 
-            'screenshot_url', 'description', 'created_at', 'updated_at'
-        ).eq('tree_id', tree_id)
-        
-        if level is not None:
-            query = query.eq('level', level)
-            
-        result = query.order('level').order('position_x').order('position_y').execute()
-        
-        screens = []
-        for screen in result.data:
-            screens.append({
-                'id': screen['id'],
-                'tree_id': screen['tree_id'],
-                'userinterface_id': screen['userinterface_id'],
-                'screen_name': screen['screen_name'],
-                'screen_type': screen['screen_type'],
-                'level': screen['level'],
-                'parent_screen_id': screen['parent_screen_id'],
-                'is_entry_point': screen['is_entry_point'],
-                'position_x': screen['position_x'],
-                'position_y': screen['position_y'],
-                'screenshot_url': screen['screenshot_url'],
-                'description': screen['description'] or '',
-                'created_at': screen['created_at'],
-                'updated_at': screen['updated_at']
-            })
-        
-        return screens
-    except Exception as e:
-        print(f"❌ Error retrieving navigation screens: {e}")
-        return []
-
-def create_navigation_screen(screen_data: Dict, tree_id: str, userinterface_id: str) -> Optional[Dict]:
-    """Create a new navigation screen."""
-    supabase = get_supabase_client()
-    
-    try:
-        # Prepare the data for insertion
-        insert_data = {
-            'tree_id': tree_id,
-            'userinterface_id': userinterface_id,
-            'screen_name': screen_data['screen_name'],
-            'screen_type': screen_data.get('screen_type', 'screen'),
-            'level': screen_data.get('level', 0),
-            'parent_screen_id': screen_data.get('parent_screen_id'),
-            'is_entry_point': screen_data.get('is_entry_point', False),
-            'position_x': screen_data.get('position_x', 0),
-            'position_y': screen_data.get('position_y', 0),
-            'screenshot_url': screen_data.get('screenshot_url'),
-            'description': screen_data.get('description', ''),
-            'created_at': datetime.now().isoformat(),
-            'updated_at': datetime.now().isoformat()
-        }
-        
-        result = supabase.table('navigation_screens').insert(insert_data).execute()
-        
-        if result.data and len(result.data) > 0:
-            screen = result.data[0]
-            return {
-                'id': screen['id'],
-                'tree_id': screen['tree_id'],
-                'userinterface_id': screen['userinterface_id'],
-                'screen_name': screen['screen_name'],
-                'screen_type': screen['screen_type'],
-                'level': screen['level'],
-                'parent_screen_id': screen['parent_screen_id'],
-                'is_entry_point': screen['is_entry_point'],
-                'position_x': screen['position_x'],
-                'position_y': screen['position_y'],
-                'screenshot_url': screen['screenshot_url'],
-                'description': screen['description'] or '',
-                'created_at': screen['created_at'],
-                'updated_at': screen['updated_at']
-            }
-        return None
-    except Exception as e:
-        print(f"❌ Error creating navigation screen: {e}")
-        return None
-
-def update_navigation_screen(screen_id: str, screen_data: Dict) -> Optional[Dict]:
-    """Update an existing navigation screen."""
-    supabase = get_supabase_client()
-    
-    try:
-        # Prepare the data for update
-        update_data = {
-            'screen_name': screen_data['screen_name'],
-            'screen_type': screen_data.get('screen_type', 'screen'),
-            'level': screen_data.get('level', 0),
-            'parent_screen_id': screen_data.get('parent_screen_id'),
-            'is_entry_point': screen_data.get('is_entry_point', False),
-            'position_x': screen_data.get('position_x', 0),
-            'position_y': screen_data.get('position_y', 0),
-            'screenshot_url': screen_data.get('screenshot_url'),
-            'description': screen_data.get('description', ''),
-            'updated_at': datetime.now().isoformat()
-        }
-        
-        result = supabase.table('navigation_screens').update(update_data).eq('id', screen_id).execute()
-        
-        if result.data and len(result.data) > 0:
-            screen = result.data[0]
-            return {
-                'id': screen['id'],
-                'tree_id': screen['tree_id'],
-                'userinterface_id': screen['userinterface_id'],
-                'screen_name': screen['screen_name'],
-                'screen_type': screen['screen_type'],
-                'level': screen['level'],
-                'parent_screen_id': screen['parent_screen_id'],
-                'is_entry_point': screen['is_entry_point'],
-                'position_x': screen['position_x'],
-                'position_y': screen['position_y'],
-                'screenshot_url': screen['screenshot_url'],
-                'description': screen['description'] or '',
-                'created_at': screen['created_at'],
-                'updated_at': screen['updated_at']
-            }
-        return None
-    except Exception as e:
-        print(f"❌ Error updating navigation screen {screen_id}: {e}")
-        return None
-
-def delete_navigation_screen(screen_id: str) -> bool:
-    """Delete a navigation screen and all its links."""
-    supabase = get_supabase_client()
-    
-    try:
-        result = supabase.table('navigation_screens').delete().eq('id', screen_id).execute()
-        return True
-    except Exception as e:
-        print(f"❌ Error deleting navigation screen {screen_id}: {e}")
-        return False
-
-# =====================================================
-# NAVIGATION LINKS MANAGEMENT
-# =====================================================
-
-def get_navigation_links(tree_id: str) -> List[Dict]:
-    """Retrieve all navigation links for a tree."""
-    supabase = get_supabase_client()
-    
-    try:
-        result = supabase.table('navigation_links').select(
-            'id', 'tree_id', 'userinterface_id', 'source_screen_id', 'target_screen_id',
-            'link_type', 'go_key', 'comeback_key', 'direction', 'description', 'created_at', 'updated_at'
-        ).eq('tree_id', tree_id).order('created_at').execute()
-        
-        links = []
-        for link in result.data:
-            links.append({
-                'id': link['id'],
-                'tree_id': link['tree_id'],
-                'userinterface_id': link['userinterface_id'],
-                'source_screen_id': link['source_screen_id'],
-                'target_screen_id': link['target_screen_id'],
-                'link_type': link['link_type'],
-                'go_key': link['go_key'],
-                'comeback_key': link['comeback_key'],
-                'direction': link['direction'],
-                'description': link['description'] or '',
-                'created_at': link['created_at'],
-                'updated_at': link['updated_at']
-            })
-        
-        return links
-    except Exception as e:
-        print(f"❌ Error retrieving navigation links: {e}")
-        return []
-
-def create_navigation_link(link_data: Dict, tree_id: str, userinterface_id: str) -> Optional[Dict]:
-    """Create a new navigation link."""
-    supabase = get_supabase_client()
-    
-    try:
-        # Prepare the data for insertion
-        insert_data = {
-            'tree_id': tree_id,
-            'userinterface_id': userinterface_id,
-            'source_screen_id': link_data['source_screen_id'],
-            'target_screen_id': link_data['target_screen_id'],
-            'link_type': link_data['link_type'],
-            'go_key': link_data.get('go_key'),
-            'comeback_key': link_data.get('comeback_key'),
-            'direction': link_data.get('direction'),
-            'description': link_data.get('description', ''),
-            'created_at': datetime.now().isoformat(),
-            'updated_at': datetime.now().isoformat()
-        }
-        
-        result = supabase.table('navigation_links').insert(insert_data).execute()
-        
-        if result.data and len(result.data) > 0:
-            link = result.data[0]
-            return {
-                'id': link['id'],
-                'tree_id': link['tree_id'],
-                'userinterface_id': link['userinterface_id'],
-                'source_screen_id': link['source_screen_id'],
-                'target_screen_id': link['target_screen_id'],
-                'link_type': link['link_type'],
-                'go_key': link['go_key'],
-                'comeback_key': link['comeback_key'],
-                'direction': link['direction'],
-                'description': link['description'] or '',
-                'created_at': link['created_at'],
-                'updated_at': link['updated_at']
-            }
-        return None
-    except Exception as e:
-        print(f"❌ Error creating navigation link: {e}")
-        return None
-
-def update_navigation_link(link_id: str, link_data: Dict) -> Optional[Dict]:
-    """Update an existing navigation link."""
-    supabase = get_supabase_client()
-    
-    try:
-        # Prepare the data for update
-        update_data = {
-            'source_screen_id': link_data['source_screen_id'],
-            'target_screen_id': link_data['target_screen_id'],
-            'link_type': link_data['link_type'],
-            'go_key': link_data.get('go_key'),
-            'comeback_key': link_data.get('comeback_key'),
-            'direction': link_data.get('direction'),
-            'description': link_data.get('description', ''),
-            'updated_at': datetime.now().isoformat()
-        }
-        
-        result = supabase.table('navigation_links').update(update_data).eq('id', link_id).execute()
-        
-        if result.data and len(result.data) > 0:
-            link = result.data[0]
-            return {
-                'id': link['id'],
-                'tree_id': link['tree_id'],
-                'userinterface_id': link['userinterface_id'],
-                'source_screen_id': link['source_screen_id'],
-                'target_screen_id': link['target_screen_id'],
-                'link_type': link['link_type'],
-                'go_key': link['go_key'],
-                'comeback_key': link['comeback_key'],
-                'direction': link['direction'],
-                'description': link['description'] or '',
-                'created_at': link['created_at'],
-                'updated_at': link['updated_at']
-            }
-        return None
-    except Exception as e:
-        print(f"❌ Error updating navigation link {link_id}: {e}")
-        return None
-
-def delete_navigation_link(link_id: str) -> bool:
-    """Delete a navigation link."""
-    supabase = get_supabase_client()
-    
-    try:
-        result = supabase.table('navigation_links').delete().eq('id', link_id).execute()
-        return True
-    except Exception as e:
-        print(f"❌ Error deleting navigation link {link_id}: {e}")
         return False
 
 # =====================================================
@@ -475,109 +200,187 @@ def check_navigation_tree_name_exists(name: str, userinterface_id: str, exclude_
         print(f"❌ Error checking navigation tree name: {e}")
         return False
 
-def get_tree_with_screens_and_links(tree_id: str, team_id: str, level: Optional[int] = None) -> Optional[Dict]:
-    """Get a complete navigation tree with all its screens and links."""
-    tree = get_navigation_tree(tree_id, team_id)
-    if not tree:
-        return None
-    
-    screens = get_navigation_screens(tree_id, level)
-    links = get_navigation_links(tree_id)
-    
-    return {
-        'tree': tree,
-        'screens': screens,
-        'links': links
-    }
-
-def convert_reactflow_to_screens_and_links(nodes: List[Dict], edges: List[Dict], tree_id: str, userinterface_id: str) -> Tuple[List[Dict], List[Dict]]:
-    """Convert ReactFlow nodes and edges back to database screens and links format."""
-    
-    # Convert nodes to database screens format
-    screens = []
-    for node in nodes:
-        screen = {
-            'id': node['id'],
-            'tree_id': tree_id,
-            'userinterface_id': userinterface_id,
-            'screen_name': node['data'].get('label', 'Unnamed Screen'),
-            'screen_type': node['data'].get('type', 'screen'),
-            'level': 0,  # Default level, could be calculated based on tree structure
-            'parent_screen_id': None,  # Could be enhanced to detect parent-child relationships
-            'is_entry_point': False,  # Could be enhanced to detect entry points
-            'position_x': node.get('position', {}).get('x', 0),
-            'position_y': node.get('position', {}).get('y', 0),
-            'screenshot_url': node['data'].get('screenshot') or node['data'].get('thumbnail'),
-            'description': node['data'].get('description', ''),
-        }
-        screens.append(screen)
-    
-    # Convert edges to database links format
-    links = []
-    for edge in edges:
-        link = {
-            'id': edge['id'],
-            'tree_id': tree_id,
-            'userinterface_id': userinterface_id,
-            'source_screen_id': edge['source'],
-            'target_screen_id': edge['target'],
-            'link_type': 'sibling',  # Default to sibling, could be enhanced to detect parent_child
-            'go_key': edge.get('data', {}).get('go', ''),
-            'comeback_key': edge.get('data', {}).get('comeback', ''),
-            'direction': 'bidirectional' if edge.get('data', {}).get('comeback') else 'unidirectional',
-            'description': edge.get('data', {}).get('description', ''),
-        }
-        links.append(link)
-    
-    return screens, links
-
-def convert_screens_and_links_to_reactflow(screens: List[Dict], links: List[Dict]) -> Dict:
-    """Convert database screens and links to ReactFlow format for NavigationEditor."""
-    
-    # Convert screens to ReactFlow nodes
-    nodes = []
-    for screen in screens:
-        node = {
-            'id': screen['id'],
-            'type': 'uiScreen',
-            'position': {
-                'x': screen.get('position_x', 0),
-                'y': screen.get('position_y', 0)
-            },
-            'data': {
-                'label': screen['screen_name'],
-                'type': screen.get('screen_type', 'screen'),
-                'description': screen.get('description', ''),
-                'screenshot': screen.get('screenshot_url'),
-                'thumbnail': screen.get('screenshot_url'),
-                'hasChildren': False,  # This could be enhanced to check for child trees
-                'childTreeId': None,
-                'childTreeName': None,
-                'parentTree': None
+def convert_nodes_and_edges_to_reactflow(nodes, edges):
+    """Convert database nodes and edges to ReactFlow format"""
+    try:
+        print(f"[@utils:navigation:convert_nodes_and_edges_to_reactflow] Converting {len(nodes)} nodes and {len(edges)} edges")
+        
+        # Convert nodes
+        reactflow_nodes = []
+        for node in nodes:
+            reactflow_node = {
+                'id': node['node_id'],  # Use node_id as the ReactFlow ID
+                'type': 'uiScreen',
+                'position': {
+                    'x': float(node['position_x']),
+                    'y': float(node['position_y'])
+                },
+                'data': {
+                    'label': node['label'],
+                    'description': node.get('description', ''),
+                    'type': node['node_type'],
+                    'isEntryPoint': node.get('is_entry_point', False),
+                    'isExitPoint': node.get('is_exit_point', False),
+                    'hasChildren': node.get('has_children', False),
+                    'childTreeId': node.get('child_tree_id'),
+                    'screenshot': node.get('screenshot_url'),
+                    'thumbnail': node.get('thumbnail_url'),
+                    'metadata': node.get('metadata', {})
+                },
+                'width': node.get('width', 200),
+                'height': node.get('height', 120)
             }
-        }
-        nodes.append(node)
-    
-    # Convert links to ReactFlow edges
-    edges = []
-    for link in links:
-        edge = {
-            'id': link['id'],
-            'source': link['source_screen_id'],
-            'target': link['target_screen_id'],
-            'type': 'smoothstep',
-            'data': {
-                'go': link.get('go_key', ''),
-                'comeback': link.get('comeback_key', ''),
-                'description': link.get('description', '')
+            reactflow_nodes.append(reactflow_node)
+        
+        # Convert edges
+        reactflow_edges = []
+        for edge in edges:
+            reactflow_edge = {
+                'id': edge['edge_id'],  # Use edge_id as the ReactFlow ID
+                'source': edge['source_node_id'],  # This should match a node's node_id
+                'target': edge['target_node_id'],  # This should match a node's node_id
+                'type': 'smoothstep',
+                'data': {
+                    'go': edge.get('go_action'),
+                    'comeback': edge.get('comeback_action'),
+                    'description': edge.get('description', ''),
+                    'edgeType': edge.get('edge_type', 'navigation'),
+                    'isBidirectional': edge.get('is_bidirectional', False),
+                    'conditions': edge.get('conditions', {}),
+                    'metadata': edge.get('metadata', {})
+                }
             }
+            reactflow_edges.append(reactflow_edge)
+        
+        print(f"[@utils:navigation:convert_nodes_and_edges_to_reactflow] Converted to {len(reactflow_nodes)} ReactFlow nodes and {len(reactflow_edges)} ReactFlow edges")
+        return {
+            'nodes': reactflow_nodes,
+            'edges': reactflow_edges
         }
-        edges.append(edge)
+        
+    except Exception as e:
+        print(f"[@utils:navigation:convert_nodes_and_edges_to_reactflow] Error: {str(e)}")
+        return {'nodes': [], 'edges': []}
+
+def convert_reactflow_to_nodes_and_edges(reactflow_data, tree_id):
+    """Convert ReactFlow format to database nodes and edges"""
+    try:
+        nodes_data = reactflow_data.get('nodes', [])
+        edges_data = reactflow_data.get('edges', [])
+        
+        print(f"[@utils:navigation:convert_reactflow_to_nodes_and_edges] Converting {len(nodes_data)} ReactFlow nodes and {len(edges_data)} ReactFlow edges")
+        
+        # Convert nodes
+        db_nodes = []
+        for node in nodes_data:
+            node_data = node.get('data', {})
+            db_node = {
+                'tree_id': tree_id,
+                'node_id': node['id'],
+                'label': node_data.get('label', ''),
+                'node_type': node_data.get('type', 'screen'),
+                'position_x': float(node['position']['x']),
+                'position_y': float(node['position']['y']),
+                'width': node.get('width', 200),
+                'height': node.get('height', 120),
+                'description': node_data.get('description'),
+                'screenshot_url': node_data.get('screenshot'),
+                'thumbnail_url': node_data.get('thumbnail'),
+                'has_children': node_data.get('hasChildren', False),
+                'child_tree_id': node_data.get('childTreeId'),
+                'is_entry_point': node_data.get('isEntryPoint', False),
+                'is_exit_point': node_data.get('isExitPoint', False),
+                'metadata': node_data.get('metadata', {})
+            }
+            db_nodes.append(db_node)
+        
+        # Convert edges
+        db_edges = []
+        for edge in edges_data:
+            edge_data = edge.get('data', {})
+            db_edge = {
+                'tree_id': tree_id,
+                'edge_id': edge['id'],
+                'source_node_id': edge['source'],
+                'target_node_id': edge['target'],
+                'edge_type': edge_data.get('edgeType', 'navigation'),
+                'go_action': edge_data.get('go'),
+                'comeback_action': edge_data.get('comeback'),
+                'description': edge_data.get('description'),
+                'is_bidirectional': edge_data.get('isBidirectional', False),
+                'conditions': edge_data.get('conditions', {}),
+                'metadata': edge_data.get('metadata', {})
+            }
+            db_edges.append(db_edge)
+        
+        print(f"[@utils:navigation:convert_reactflow_to_nodes_and_edges] Converted to {len(db_nodes)} database nodes and {len(db_edges)} database edges")
+        return db_nodes, db_edges
+        
+    except Exception as e:
+        print(f"[@utils:navigation:convert_reactflow_to_nodes_and_edges] Error: {str(e)}")
+        return [], []
+
+def get_navigation_nodes_and_edges(tree_id, team_id):
+    """Get navigation nodes and edges from database"""
+    supabase = get_supabase_client()
     
-    return {
-        'nodes': nodes,
-        'edges': edges
-    }
+    try:
+        print(f"[@utils:navigation:get_navigation_nodes_and_edges] Getting nodes and edges for tree: {tree_id}")
+        
+        # Get nodes
+        nodes_result = supabase.table('navigation_nodes').select('*').eq('tree_id', tree_id).order('created_at').execute()
+        nodes = nodes_result.data if nodes_result.data else []
+        
+        # Get edges
+        edges_result = supabase.table('navigation_edges').select('*').eq('tree_id', tree_id).order('created_at').execute()
+        edges = edges_result.data if edges_result.data else []
+        
+        print(f"[@utils:navigation:get_navigation_nodes_and_edges] Found {len(nodes)} nodes and {len(edges)} edges")
+        return nodes, edges
+        
+    except Exception as e:
+        print(f"[@utils:navigation:get_navigation_nodes_and_edges] Error: {str(e)}")
+        return [], []
+
+def save_navigation_nodes_and_edges(tree_id, nodes, edges):
+    """Save navigation nodes and edges to database"""
+    supabase = get_supabase_client()
+    
+    try:
+        print(f"[@utils:navigation:save_navigation_nodes_and_edges] Saving {len(nodes)} nodes and {len(edges)} edges for tree: {tree_id}")
+        
+        # Delete existing nodes and edges for this tree
+        supabase.table('navigation_nodes').delete().eq('tree_id', tree_id).execute()
+        supabase.table('navigation_edges').delete().eq('tree_id', tree_id).execute()
+        
+        # Insert new nodes
+        if nodes:
+            for node in nodes:
+                # Ensure JSON fields are properly serialized
+                node_to_insert = {**node}
+                if 'metadata' in node_to_insert and isinstance(node_to_insert['metadata'], dict):
+                    node_to_insert['metadata'] = json.dumps(node_to_insert['metadata'])
+                
+                supabase.table('navigation_nodes').insert(node_to_insert).execute()
+        
+        # Insert new edges
+        if edges:
+            for edge in edges:
+                # Ensure JSON fields are properly serialized
+                edge_to_insert = {**edge}
+                if 'conditions' in edge_to_insert and isinstance(edge_to_insert['conditions'], dict):
+                    edge_to_insert['conditions'] = json.dumps(edge_to_insert['conditions'])
+                if 'metadata' in edge_to_insert and isinstance(edge_to_insert['metadata'], dict):
+                    edge_to_insert['metadata'] = json.dumps(edge_to_insert['metadata'])
+                
+                supabase.table('navigation_edges').insert(edge_to_insert).execute()
+        
+        print(f"[@utils:navigation:save_navigation_nodes_and_edges] Successfully saved {len(nodes)} nodes and {len(edges)} edges")
+        return True
+        
+    except Exception as e:
+        print(f"[@utils:navigation:save_navigation_nodes_and_edges] Error: {str(e)}")
+        return False
 
 def get_root_tree_for_interface(interface_id: str, team_id: str) -> Optional[Dict]:
     """Retrieve the root navigation tree for a given user interface ID and team ID from Supabase."""

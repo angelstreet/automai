@@ -53,6 +53,7 @@ import ReactFlow, {
   EdgeChange,
   applyNodeChanges,
   applyEdgeChanges,
+  MarkerType,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
@@ -299,7 +300,6 @@ const UINavigationEdge = ({
           stroke: '#b1b1b7',
           strokeWidth: 2,
           fill: 'none',
-          markerEnd: 'url(#arrowhead)',
         }}
         d={edgePath}
       />
@@ -402,14 +402,6 @@ const NavigationEditorContent: React.FC = () => {
     }
   }, [treeId, interfaceId]);
   
-  // Create an empty tree structure
-  const createEmptyTree = useCallback((): { nodes: UINavigationNode[], edges: UINavigationEdge[] } => {
-    return {
-      nodes: [],
-      edges: []
-    };
-  }, []);
-
   // React Flow state
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -419,40 +411,36 @@ const NavigationEditorContent: React.FC = () => {
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [initialState, setInitialState] = useState<{ nodes: UINavigationNode[], edges: UINavigationEdge[] } | null>(null);
 
-  // Initialize tree data when component mounts
-  useEffect(() => {
-    loadFromDatabase(currentTreeId);
-  }, [currentTreeId]);
-
   // Function to save current state to history
-  const saveStateToHistory = useCallback((newNodes: UINavigationNode[], newEdges: UINavigationEdge[]) => {
+  const saveToHistory = useCallback(() => {
+    const newState = { nodes: [...nodes], edges: [...edges] };
     const newHistory = history.slice(0, historyIndex + 1);
-    newHistory.push({ nodes: [...newNodes], edges: [...newEdges] });
+    newHistory.push(newState);
     setHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
-  }, [history, historyIndex, setHistory, setHistoryIndex]);
+  }, [nodes, edges, history, historyIndex]);
 
   // Override onNodesChange to save to history and track changes
   const onNodesChangeWithHistory = useCallback((changes: any[]) => {
     onNodesChange(changes);
     setNodes((currentNodes) => {
       const newNodes = [...currentNodes];
-      saveStateToHistory(newNodes, edges);
+      saveToHistory();
       setHasUnsavedChanges(true);
       return newNodes;
     });
-  }, [onNodesChange, edges, saveStateToHistory]);
+  }, [onNodesChange, saveToHistory]);
 
   // Override onEdgesChange to save to history and track changes
   const onEdgesChangeWithHistory = useCallback((changes: any[]) => {
     onEdgesChange(changes);
     setEdges((currentEdges) => {
       const newEdges = [...currentEdges];
-      saveStateToHistory(nodes, newEdges);
+      saveToHistory();
       setHasUnsavedChanges(true);
       return newEdges;
     });
-  }, [onEdgesChange, nodes, saveStateToHistory]);
+  }, [onEdgesChange, saveToHistory]);
 
   // Override onConnect to save to history and track changes
   const onConnectHistory = useCallback((params: Connection) => {
@@ -468,47 +456,48 @@ const NavigationEditorContent: React.FC = () => {
     };
     setEdges((eds) => {
       const updatedEdges = addEdge(newEdge, eds);
-      saveStateToHistory(nodes, updatedEdges);
+      saveToHistory();
       setHasUnsavedChanges(true);
       return updatedEdges;
     });
-  }, [nodes, saveStateToHistory, setEdges]);
+  }, [saveToHistory, setEdges]);
 
   // Undo function
   const undo = useCallback(() => {
     if (historyIndex > 0) {
-      const newIndex = historyIndex - 1;
-      setHistoryIndex(newIndex);
-      setNodes([...history[newIndex].nodes]);
-      setEdges([...history[newIndex].edges]);
+      const previousState = history[historyIndex - 1];
+      setNodes([...previousState.nodes]);
+      setEdges([...previousState.edges]);
+      setHistoryIndex(historyIndex - 1);
+      setHasUnsavedChanges(true);
     }
   }, [history, historyIndex, setNodes, setEdges]);
 
   // Redo function
   const redo = useCallback(() => {
     if (historyIndex < history.length - 1) {
-      const newIndex = historyIndex + 1;
-      setHistoryIndex(newIndex);
-      setNodes([...history[newIndex].nodes]);
-      setEdges([...history[newIndex].edges]);
+      const nextState = history[historyIndex + 1];
+      setNodes([...nextState.nodes]);
+      setEdges([...nextState.edges]);
+      setHistoryIndex(historyIndex + 1);
+      setHasUnsavedChanges(true);
     }
   }, [history, historyIndex, setNodes, setEdges]);
 
-  // Load from database function
-  const loadFromDatabase = useCallback(async (treeId: string) => {
+  // Load tree from database
+  const loadFromDatabase = useCallback(async () => {
     try {
       console.log(`[@component:NavigationEditor] Loading complete tree from database: ${treeId}`);
       
-      // Call the Python backend API to get complete tree with screens and links
+      // Call the Python backend API to get complete tree with nodes and edges
       const response = await apiCall(`/api/navigation/trees/${treeId}/complete`);
       
-      if (response.success && response.data) {
-        const treeData = response.data.metadata || { nodes: [], edges: [] };
-        const actualTreeName = response.data.name || treeName || 'Unnamed Tree';
-        const screens = response.data.screens || [];
-        const links = response.data.links || [];
+      if (response.success && (response.tree_info || response.tree_data)) {
+        const treeInfo = response.tree_info || {};
+        const treeData = response.tree_data || { nodes: [], edges: [] };
+        const actualTreeName = treeInfo.name || treeName || 'Unnamed Tree';
         
-        console.log(`[@component:NavigationEditor] Loaded tree with ${screens.length} screens and ${links.length} links from database`);
+        console.log(`[@component:NavigationEditor] Loaded tree with ${treeData.nodes?.length || 0} nodes and ${treeData.edges?.length || 0} edges from database`);
         
         // Update the URL if the name in the database is different
         if (treeName !== actualTreeName) {
@@ -529,23 +518,19 @@ const NavigationEditorContent: React.FC = () => {
           setInitialState({ nodes: treeData.nodes, edges: treeData.edges || [] });
           console.log(`[@component:NavigationEditor] Successfully loaded ${treeData.nodes.length} nodes from database for tree ID: ${treeId}`);
         } else {
-          // If no nodes in metadata, start with empty but log that we have database screens
+          // If no nodes, start with empty
           setNodes([]);
           setInitialState({ nodes: [], edges: [] });
-          if (screens.length > 0) {
-            console.log(`[@component:NavigationEditor] No ReactFlow nodes in metadata, but found ${screens.length} database screens for tree ID: ${treeId}`);
-          }
+          console.log(`[@component:NavigationEditor] No nodes found for tree ID: ${treeId}`);
         }
         
         if (treeData.edges && Array.isArray(treeData.edges)) {
           setEdges(treeData.edges);
           console.log(`[@component:NavigationEditor] Successfully loaded ${treeData.edges.length} edges from database for tree ID: ${treeId}`);
         } else {
-          // If no edges in metadata, start with empty but log that we have database links
+          // If no edges, start with empty
           setEdges([]);
-          if (links.length > 0) {
-            console.log(`[@component:NavigationEditor] No ReactFlow edges in metadata, but found ${links.length} database links for tree ID: ${treeId}`);
-          }
+          console.log(`[@component:NavigationEditor] No edges found for tree ID: ${treeId}`);
         }
         
         // Initialize history with loaded data
@@ -671,10 +656,9 @@ const NavigationEditorContent: React.FC = () => {
       // First, check if we already have this tree in the database
       const checkResponse = await apiCall(`/api/navigation/trees/${currentTreeId}/complete`);
       
-      if (checkResponse.success && checkResponse.data) {
+      if (checkResponse.success && (checkResponse.tree_info || checkResponse.tree_data)) {
         // Tree exists, update it using the complete endpoint
-        const treeId = checkResponse.data.id;
-        console.log(`[@component:NavigationEditor] Updating existing tree with ID: ${treeId}`);
+        console.log(`[@component:NavigationEditor] Updating existing tree with ID: ${currentTreeId}`);
         
         // Prepare the update data
         const updateData = {
@@ -685,13 +669,13 @@ const NavigationEditorContent: React.FC = () => {
         };
         
         // Update the tree using the complete endpoint
-        const updateResponse = await apiCall(`/api/navigation/trees/${treeId}/complete`, {
+        const updateResponse = await apiCall(`/api/navigation/trees/${currentTreeId}/complete`, {
           method: 'PUT',
           body: JSON.stringify(updateData),
         });
         
         if (updateResponse.success) {
-          console.log(`[@component:NavigationEditor] Successfully updated complete tree ID: ${treeId}`);
+          console.log(`[@component:NavigationEditor] Successfully updated complete tree ID: ${currentTreeId}`);
           setInitialState({ nodes: [...nodes], edges: [...edges] });
           setHasUnsavedChanges(false);
           setSaveSuccess(true);
@@ -842,7 +826,7 @@ const NavigationEditorContent: React.FC = () => {
       navigate(`/navigation-editor/${encodeURIComponent(uiNode.data.childTreeName || uiNode.data.label)}/${uiNode.data.childTreeId}`);
       
       // Load child tree data from database
-      loadFromDatabase(uiNode.data.childTreeId);
+      loadFromDatabase();
       
       console.log(`[@component:NavigationEditor] Navigating to child tree: ${uiNode.data.childTreeId}`);
     }
@@ -867,7 +851,7 @@ const NavigationEditorContent: React.FC = () => {
     navigate(`/navigation-editor/${encodeURIComponent(targetTreeName)}/${targetTreeId}`);
     
     // Load tree data for that level from database
-    loadFromDatabase(targetTreeId);
+    loadFromDatabase();
     
     console.log(`[@component:NavigationEditor] Navigating back to: ${targetTreeId}`);
   }, [navigationPath, navigationNamePath, currentTreeId, loadFromDatabase, navigate]);
@@ -887,7 +871,7 @@ const NavigationEditorContent: React.FC = () => {
       navigate(`/navigation-editor/${encodeURIComponent(targetTreeName)}/${targetTreeId}`);
       
       // Load parent tree data from database
-      loadFromDatabase(targetTreeId);
+      loadFromDatabase();
       
       console.log(`[@component:NavigationEditor] Going back to parent: ${targetTreeId}`);
     }
@@ -999,6 +983,13 @@ const NavigationEditorContent: React.FC = () => {
   const fitView = useCallback(() => {
     reactFlowInstance.fitView();
   }, [reactFlowInstance]);
+
+  // Load tree data when component mounts or treeId changes
+  useEffect(() => {
+    if (treeId && !isLoadingInterface) {
+      loadFromDatabase();
+    }
+  }, [treeId, isLoadingInterface, loadFromDatabase]);
 
   if (!treeId && !interfaceId) {
     return (
@@ -1157,6 +1148,10 @@ const NavigationEditorContent: React.FC = () => {
             type: 'smoothstep',
             animated: false,
             style: { strokeWidth: 2, stroke: '#b1b1b7' },
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              color: '#b1b1b7',
+            },
           }}
           snapToGrid={true}
           snapGrid={[15, 15]}
@@ -1167,23 +1162,6 @@ const NavigationEditorContent: React.FC = () => {
           <Controls position="bottom-left" showZoom={true} showFitView={true} showInteractive={false}  />
           <MiniMap style={{ bottom: 10 }} />
           <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
-          
-          {/* Custom arrow marker */}
-          <defs>
-            <marker
-              id="arrowhead"
-              markerWidth="10"
-              markerHeight="7"
-              refX="9"
-              refY="3.5"
-              orient="auto"
-            >
-              <polygon
-                points="0 0, 10 3.5, 0 7"
-                fill="#b1b1b7"
-              />
-            </marker>
-          </defs>
         </ReactFlow>
 
         {/* Selection Info Panel or Help Panel */}
