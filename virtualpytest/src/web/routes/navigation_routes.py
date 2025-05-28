@@ -27,7 +27,7 @@ from navigation_utils import (
     update_navigation_tree, delete_navigation_tree, check_navigation_tree_name_exists,
     get_navigation_screens, create_navigation_screen, update_navigation_screen, delete_navigation_screen,
     get_navigation_links, create_navigation_link, update_navigation_link, delete_navigation_link,
-    get_tree_with_screens_and_links
+    get_tree_with_screens_and_links, convert_screens_and_links_to_reactflow, convert_reactflow_to_screens_and_links
 )
 from userinterface_utils import get_all_userinterfaces, get_userinterface
 from .utils import check_supabase, get_team_id
@@ -338,6 +338,165 @@ def get_navigation_tree_by_id_and_team(tree_id, team_id):
         return jsonify({
             'success': False,
             'error': str(e)
+        }), 500
+
+@navigation_bp.route('/trees/<tree_id>/complete', methods=['GET'])
+def get_complete_navigation_tree(tree_id):
+    """Get a complete navigation tree with all its screens and links"""
+    error_response = check_supabase()
+    if error_response:
+        return error_response
+    
+    team_id = get_team_id()
+    
+    try:
+        # Use the utility function to get complete tree data
+        complete_tree = get_tree_with_screens_and_links(tree_id, team_id)
+        
+        if complete_tree:
+            tree_info = complete_tree['tree']
+            screens = complete_tree['screens']
+            links = complete_tree['links']
+            
+            # Convert screens and links to ReactFlow format
+            reactflow_data = convert_screens_and_links_to_reactflow(screens, links)
+            
+            # Check if there's existing metadata (ReactFlow format) and merge if needed
+            existing_metadata = tree_info.get('metadata', {})
+            if existing_metadata and isinstance(existing_metadata, dict):
+                # If there's existing metadata with nodes/edges, prefer database data but merge positions
+                if 'nodes' in existing_metadata and existing_metadata['nodes']:
+                    # Create a position map from existing metadata
+                    position_map = {}
+                    for node in existing_metadata['nodes']:
+                        position_map[node['id']] = node.get('position', {'x': 0, 'y': 0})
+                    
+                    # Update positions in ReactFlow data if they exist in metadata
+                    for node in reactflow_data['nodes']:
+                        if node['id'] in position_map:
+                            node['position'] = position_map[node['id']]
+            
+            # Prepare the response with tree info and ReactFlow data
+            response_data = {
+                **tree_info,
+                'metadata': reactflow_data,
+                'screens': screens,  # Include raw screens data for reference
+                'links': links       # Include raw links data for reference
+            }
+            
+            print(f"[@api:navigation:get_complete_tree] Retrieved complete tree: {tree_id} with {len(screens)} screens and {len(links)} links")
+            return jsonify({
+                'success': True,
+                'data': response_data
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Navigation tree not found'
+            }), 404
+            
+    except Exception as e:
+        print(f"[@api:navigation:get_complete_tree] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Failed to retrieve complete navigation tree: {str(e)}'
+        }), 500
+
+@navigation_bp.route('/trees/<tree_id>/complete', methods=['PUT'])
+def save_complete_navigation_tree(tree_id):
+    """Save complete navigation tree data to both metadata and database tables"""
+    error_response = check_supabase()
+    if error_response:
+        return error_response
+    
+    team_id = get_team_id()
+    
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        # Get the tree data (ReactFlow format)
+        tree_data = data.get('tree_data', {})
+        nodes = tree_data.get('nodes', [])
+        edges = tree_data.get('edges', [])
+        
+        # First, verify the tree exists and get its userinterface_id
+        from navigation_utils import get_navigation_tree
+        tree_info = get_navigation_tree(tree_id, team_id)
+        if not tree_info:
+            return jsonify({
+                'success': False,
+                'error': 'Navigation tree not found'
+            }), 404
+        
+        userinterface_id = tree_info.get('userinterface_id')
+        if not userinterface_id:
+            return jsonify({
+                'success': False,
+                'error': 'Tree has no associated user interface'
+            }), 400
+        
+        # Convert ReactFlow data to database format
+        from navigation_utils import convert_reactflow_to_screens_and_links
+        screens_data, links_data = convert_reactflow_to_screens_and_links(nodes, edges, tree_id, userinterface_id)
+        
+        from app import supabase_client
+        
+        # Update the tree metadata with ReactFlow data
+        update_data = {
+            'metadata': tree_data,
+            'updated_at': datetime.utcnow().isoformat()
+        }
+        
+        # Add other updatable fields if provided
+        if 'name' in data:
+            update_data['name'] = data['name']
+        if 'description' in data:
+            update_data['description'] = data['description']
+        
+        # Update the tree
+        tree_result = supabase_client.table('navigation_trees').update(update_data).eq('id', tree_id).eq('team_id', team_id).execute()
+        
+        if not tree_result.data:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to update navigation tree'
+            }), 500
+        
+        # Clear existing screens and links for this tree
+        supabase_client.table('navigation_screens').delete().eq('tree_id', tree_id).execute()
+        supabase_client.table('navigation_links').delete().eq('tree_id', tree_id).execute()
+        
+        # Insert new screens
+        if screens_data:
+            screens_result = supabase_client.table('navigation_screens').insert(screens_data).execute()
+            if not screens_result.data:
+                print(f"[@api:navigation:save_complete_tree] Warning: Failed to insert screens for tree {tree_id}")
+        
+        # Insert new links
+        if links_data:
+            links_result = supabase_client.table('navigation_links').insert(links_data).execute()
+            if not links_result.data:
+                print(f"[@api:navigation:save_complete_tree] Warning: Failed to insert links for tree {tree_id}")
+        
+        print(f"[@api:navigation:save_complete_tree] Successfully saved complete tree: {tree_id} with {len(screens_data)} screens and {len(links_data)} links")
+        
+        return jsonify({
+            'success': True,
+            'data': tree_result.data[0],
+            'message': 'Navigation tree saved successfully'
+        })
+        
+    except Exception as e:
+        print(f"[@api:navigation:save_complete_tree] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Failed to save complete navigation tree: {str(e)}'
         }), 500
 
 # =====================================================

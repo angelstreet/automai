@@ -490,6 +490,95 @@ def get_tree_with_screens_and_links(tree_id: str, team_id: str, level: Optional[
         'links': links
     }
 
+def convert_reactflow_to_screens_and_links(nodes: List[Dict], edges: List[Dict], tree_id: str, userinterface_id: str) -> Tuple[List[Dict], List[Dict]]:
+    """Convert ReactFlow nodes and edges back to database screens and links format."""
+    
+    # Convert nodes to database screens format
+    screens = []
+    for node in nodes:
+        screen = {
+            'id': node['id'],
+            'tree_id': tree_id,
+            'userinterface_id': userinterface_id,
+            'screen_name': node['data'].get('label', 'Unnamed Screen'),
+            'screen_type': node['data'].get('type', 'screen'),
+            'level': 0,  # Default level, could be calculated based on tree structure
+            'parent_screen_id': None,  # Could be enhanced to detect parent-child relationships
+            'is_entry_point': False,  # Could be enhanced to detect entry points
+            'position_x': node.get('position', {}).get('x', 0),
+            'position_y': node.get('position', {}).get('y', 0),
+            'screenshot_url': node['data'].get('screenshot') or node['data'].get('thumbnail'),
+            'description': node['data'].get('description', ''),
+        }
+        screens.append(screen)
+    
+    # Convert edges to database links format
+    links = []
+    for edge in edges:
+        link = {
+            'id': edge['id'],
+            'tree_id': tree_id,
+            'userinterface_id': userinterface_id,
+            'source_screen_id': edge['source'],
+            'target_screen_id': edge['target'],
+            'link_type': 'sibling',  # Default to sibling, could be enhanced to detect parent_child
+            'go_key': edge.get('data', {}).get('go', ''),
+            'comeback_key': edge.get('data', {}).get('comeback', ''),
+            'direction': 'bidirectional' if edge.get('data', {}).get('comeback') else 'unidirectional',
+            'description': edge.get('data', {}).get('description', ''),
+        }
+        links.append(link)
+    
+    return screens, links
+
+def convert_screens_and_links_to_reactflow(screens: List[Dict], links: List[Dict]) -> Dict:
+    """Convert database screens and links to ReactFlow format for NavigationEditor."""
+    
+    # Convert screens to ReactFlow nodes
+    nodes = []
+    for screen in screens:
+        node = {
+            'id': screen['id'],
+            'type': 'uiScreen',
+            'position': {
+                'x': screen.get('position_x', 0),
+                'y': screen.get('position_y', 0)
+            },
+            'data': {
+                'label': screen['screen_name'],
+                'type': screen.get('screen_type', 'screen'),
+                'description': screen.get('description', ''),
+                'screenshot': screen.get('screenshot_url'),
+                'thumbnail': screen.get('screenshot_url'),
+                'hasChildren': False,  # This could be enhanced to check for child trees
+                'childTreeId': None,
+                'childTreeName': None,
+                'parentTree': None
+            }
+        }
+        nodes.append(node)
+    
+    # Convert links to ReactFlow edges
+    edges = []
+    for link in links:
+        edge = {
+            'id': link['id'],
+            'source': link['source_screen_id'],
+            'target': link['target_screen_id'],
+            'type': 'smoothstep',
+            'data': {
+                'go': link.get('go_key', ''),
+                'comeback': link.get('comeback_key', ''),
+                'description': link.get('description', '')
+            }
+        }
+        edges.append(edge)
+    
+    return {
+        'nodes': nodes,
+        'edges': edges
+    }
+
 def get_root_tree_for_interface(interface_id: str, team_id: str) -> Optional[Dict]:
     """Retrieve the root navigation tree for a given user interface ID and team ID from Supabase."""
     supabase = get_supabase_client()

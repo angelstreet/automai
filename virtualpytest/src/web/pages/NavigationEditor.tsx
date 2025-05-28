@@ -497,14 +497,18 @@ const NavigationEditorContent: React.FC = () => {
   // Load from database function
   const loadFromDatabase = useCallback(async (treeId: string) => {
     try {
-      console.log(`[@component:NavigationEditor] Loading tree from database: ${treeId}`);
+      console.log(`[@component:NavigationEditor] Loading complete tree from database: ${treeId}`);
       
-      // Call the Python backend API to get tree by ID
-      const response = await apiCall(`/api/navigation/trees/${treeId}`);
+      // Call the Python backend API to get complete tree with screens and links
+      const response = await apiCall(`/api/navigation/trees/${treeId}/complete`);
       
       if (response.success && response.data) {
         const treeData = response.data.metadata || { nodes: [], edges: [] };
         const actualTreeName = response.data.name || treeName || 'Unnamed Tree';
+        const screens = response.data.screens || [];
+        const links = response.data.links || [];
+        
+        console.log(`[@component:NavigationEditor] Loaded tree with ${screens.length} screens and ${links.length} links from database`);
         
         // Update the URL if the name in the database is different
         if (treeName !== actualTreeName) {
@@ -524,11 +528,24 @@ const NavigationEditorContent: React.FC = () => {
           setNodes(treeData.nodes);
           setInitialState({ nodes: treeData.nodes, edges: treeData.edges || [] });
           console.log(`[@component:NavigationEditor] Successfully loaded ${treeData.nodes.length} nodes from database for tree ID: ${treeId}`);
+        } else {
+          // If no nodes in metadata, start with empty but log that we have database screens
+          setNodes([]);
+          setInitialState({ nodes: [], edges: [] });
+          if (screens.length > 0) {
+            console.log(`[@component:NavigationEditor] No ReactFlow nodes in metadata, but found ${screens.length} database screens for tree ID: ${treeId}`);
+          }
         }
         
         if (treeData.edges && Array.isArray(treeData.edges)) {
           setEdges(treeData.edges);
           console.log(`[@component:NavigationEditor] Successfully loaded ${treeData.edges.length} edges from database for tree ID: ${treeId}`);
+        } else {
+          // If no edges in metadata, start with empty but log that we have database links
+          setEdges([]);
+          if (links.length > 0) {
+            console.log(`[@component:NavigationEditor] No ReactFlow edges in metadata, but found ${links.length} database links for tree ID: ${treeId}`);
+          }
         }
         
         // Initialize history with loaded data
@@ -652,10 +669,10 @@ const NavigationEditorContent: React.FC = () => {
       console.log(`[@component:NavigationEditor] Starting save to database for tree: ${currentTreeId}`);
       
       // First, check if we already have this tree in the database
-      const checkResponse = await apiCall(`/api/navigation/trees/${currentTreeId}`);
+      const checkResponse = await apiCall(`/api/navigation/trees/${currentTreeId}/complete`);
       
       if (checkResponse.success && checkResponse.data) {
-        // Tree exists, update it
+        // Tree exists, update it using the complete endpoint
         const treeId = checkResponse.data.id;
         console.log(`[@component:NavigationEditor] Updating existing tree with ID: ${treeId}`);
         
@@ -667,14 +684,14 @@ const NavigationEditorContent: React.FC = () => {
           }
         };
         
-        // Update the tree
-        const updateResponse = await apiCall(`/api/navigation/trees/${treeId}`, {
+        // Update the tree using the complete endpoint
+        const updateResponse = await apiCall(`/api/navigation/trees/${treeId}/complete`, {
           method: 'PUT',
           body: JSON.stringify(updateData),
         });
         
         if (updateResponse.success) {
-          console.log(`[@component:NavigationEditor] Successfully updated tree ID: ${treeId}`);
+          console.log(`[@component:NavigationEditor] Successfully updated complete tree ID: ${treeId}`);
           setInitialState({ nodes: [...nodes], edges: [...edges] });
           setHasUnsavedChanges(false);
           setSaveSuccess(true);
