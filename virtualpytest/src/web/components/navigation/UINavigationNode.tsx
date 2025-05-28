@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { UINavigationNode as UINavigationNodeType } from '../../types/navigationTypes';
 
@@ -6,6 +6,8 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
   data, 
   selected 
 }) => {
+  const [isScreenshotModalOpen, setIsScreenshotModalOpen] = useState(false);
+
   const getNodeColor = (type: string) => {
     switch (type) {
       case 'screen': return '#e3f2fd';
@@ -24,6 +26,17 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
       case 'overlay': return '#4caf50';
       default: return '#757575';
     }
+  };
+
+  const handleScreenshotDoubleClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent node double-click from triggering
+    if (data.screenshot) {
+      setIsScreenshotModalOpen(true);
+    }
+  };
+
+  const closeModal = () => {
+    setIsScreenshotModalOpen(false);
   };
 
   return (
@@ -185,7 +198,10 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           alignItems: 'center',
           justifyContent: 'center',
           position: 'relative',
+          cursor: data.screenshot ? 'pointer' : 'default',
         }}
+        onDoubleClick={handleScreenshotDoubleClick}
+        title={data.screenshot ? 'Double-click to view full size' : ''}
       >
         {!data.screenshot && (
           <div style={{ 
@@ -197,6 +213,103 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           </div>
         )}
       </div>
+
+      {/* Screenshot Modal */}
+      {isScreenshotModalOpen && data.screenshot && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.9)',
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'center',
+            zIndex: 10000,
+            cursor: 'pointer',
+            paddingTop: '5vh',
+          }}
+          onClick={closeModal}
+        >
+          <div
+            style={{
+              position: 'relative',
+              maxWidth: '90vw',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+            onClick={(e) => e.stopPropagation()} // Prevent closing when clicking the image
+          >
+            {/* Full-size screenshot */}
+            <img
+              src={data.screenshot}
+              alt={`Screenshot of ${data.label}`}
+              style={{
+                maxWidth: '100%',
+                maxHeight: '100%',
+                objectFit: 'contain',
+                borderRadius: '8px',
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
+              }}
+            />
+            
+            {/* Caption and Close Button */}
+            <div
+              style={{
+                marginTop: '15px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '20px',
+              }}
+            >
+              {/* Image caption */}
+              <div
+                style={{
+                  color: 'white',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  flex: 1,
+                }}
+              >
+                {data.label} - {data.type}
+              </div>
+              
+              {/* Close button */}
+              <button
+                onClick={closeModal}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '8px 16px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  color: '#333',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'background-color 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.9)';
+                }}
+                title="Close"
+              >
+                
+                <span style={{ fontSize: '12px' }}>×</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }; 
