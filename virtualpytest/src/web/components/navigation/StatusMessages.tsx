@@ -1,4 +1,8 @@
 import React from 'react';
+import {
+  Snackbar,
+  Alert,
+} from '@mui/material';
 
 interface StatusMessagesProps {
   error: string | null;
@@ -9,43 +13,35 @@ export const StatusMessages: React.FC<StatusMessagesProps> = ({
   error,
   success,
 }) => {
-  if (!error && !success) return null;
-
   return (
-    <div style={{
-      position: 'absolute',
-      top: '80px',
-      left: '10px',
-      right: '10px',
-      zIndex: 10,
-    }}>
-      {error && (
-        <div style={{
-          backgroundColor: '#ffebee',
-          color: '#c62828',
-          padding: '12px 16px',
-          borderRadius: '4px',
-          border: '1px solid #ffcdd2',
-          marginBottom: '8px',
-          fontSize: '14px',
-        }}>
-          ❌ {error}
-        </div>
+    <>
+      {/* Success Messages */}
+      {success && (
+        <Snackbar
+          open={!!success}
+          autoHideDuration={3000}
+          onClose={() => {}}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert severity="success" sx={{ width: '100%' }}>
+            {success}
+          </Alert>
+        </Snackbar>
       )}
       
-      {success && (
-        <div style={{
-          backgroundColor: '#e8f5e8',
-          color: '#2e7d32',
-          padding: '12px 16px',
-          borderRadius: '4px',
-          border: '1px solid #c8e6c9',
-          marginBottom: '8px',
-          fontSize: '14px',
-        }}>
-          ✅ {success}
-        </div>
+      {/* Error Messages */}
+      {error && (
+        <Snackbar
+          open={!!error}
+          autoHideDuration={6000}
+          onClose={() => {}}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert severity="error" sx={{ width: '100%' }}>
+            {error}
+          </Alert>
+        </Snackbar>
       )}
-    </div>
+    </>
   );
 }; 
