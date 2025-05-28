@@ -983,9 +983,7 @@ const NavigationEditorContent: React.FC = () => {
               helperText="Optional description for this navigation"
             />
             
-            <Typography variant="caption" color="textSecondary">
-              💡 Tip: Create separate edges for each direction (e.g., one for "RIGHT" and another for "LEFT")
-            </Typography>
+       
           </Box>
         </DialogContent>
         <DialogActions>
@@ -996,107 +994,6 @@ const NavigationEditorContent: React.FC = () => {
             disabled={!edgeForm.action}
           >
             Save
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Add Children Dialog */}
-      <Dialog open={isAddChildDialogOpen} onClose={() => setIsAddChildDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Add Child Screen</DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <TextField
-              label="Child Screen Name"
-              value={childForm.label}
-              onChange={(e) => setChildForm({ ...childForm, label: e.target.value })}
-              fullWidth
-              required
-              error={!childForm.label.trim()}
-              helperText={!childForm.label.trim() ? "Screen name is required" : ""}
-            />
-            
-            <FormControl fullWidth>
-              <InputLabel>Type</InputLabel>
-              <Select
-                value={childForm.type}
-                label="Type"
-                onChange={(e) => setChildForm({ ...childForm, type: e.target.value as any })}
-              >
-                <MenuItem value="screen">Screen</MenuItem>
-                <MenuItem value="dialog">Dialog</MenuItem>
-                <MenuItem value="popup">Popup</MenuItem>
-                <MenuItem value="overlay">Overlay</MenuItem>
-              </Select>
-            </FormControl>
-            
-            <TextField
-              label="Description"
-              value={childForm.description}
-              onChange={(e) => setChildForm({ ...childForm, description: e.target.value })}
-              multiline
-              rows={2}
-              fullWidth
-            />
-            
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <TextField
-                label="Navigate To Action"
-                value={childForm.toAction}
-                onChange={(e) => setChildForm({ ...childForm, toAction: e.target.value })}
-                placeholder="RIGHT, ENTER, OK"
-                fullWidth
-                required
-                error={!childForm.toAction.trim()}
-                helperText="Action to navigate from parent to this child"
-              />
-              
-              <TextField
-                label="Navigate Back Action"
-                value={childForm.fromAction}
-                onChange={(e) => setChildForm({ ...childForm, fromAction: e.target.value })}
-                placeholder="LEFT, BACK, ESC"
-                fullWidth
-                required
-                error={!childForm.fromAction.trim()}
-                helperText="Action to navigate back to parent"
-              />
-            </Box>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setIsAddChildDialogOpen(false)}>Cancel</Button>
-          <Button 
-            onClick={() => {
-              if (!selectedNode || !childForm.label.trim() || !childForm.toAction.trim() || !childForm.fromAction.trim()) {
-                return;
-              }
-              
-              // Call the addChildNode function
-              addChildNode(
-                selectedNode.id,
-                {
-                  label: childForm.label,
-                  type: childForm.type,
-                  description: childForm.description
-                },
-                childForm.toAction,
-                childForm.fromAction
-              );
-              
-              // Close dialog and reset form
-              setIsAddChildDialogOpen(false);
-              setChildForm({
-                label: '',
-                type: 'screen',
-                description: '',
-                toAction: '',
-                fromAction: ''
-              });
-            }}
-            variant="contained"
-            disabled={!selectedNode || !childForm.label.trim() || !childForm.toAction.trim() || !childForm.fromAction.trim()}
-          >
-            Add Child
           </Button>
         </DialogActions>
       </Dialog>
