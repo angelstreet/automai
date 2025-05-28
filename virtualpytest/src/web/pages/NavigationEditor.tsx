@@ -456,32 +456,70 @@ const NavigationEditorContent: React.FC = () => {
     try {
       console.log(`[@component:NavigationEditor] Starting save to database for tree: ${currentTreeName}`);
       
-      // Prepare the tree data in the format expected by the backend
-      const treeData = {
-        name: currentTreeName,
-        description: `Navigation tree for ${currentTreeName}`,
-        tree_data: {
-          nodes: nodes,
-          edges: edges
-        }
-      };
+      // First, check if we already have this tree in the database
+      const checkResponse = await apiCall(`/api/navigation/trees/by-name/${currentTreeName}`);
       
-      // Call the Python backend API
-      const response = await apiCall('/api/navigation/trees', {
-        method: 'POST',
-        body: JSON.stringify(treeData),
-      });
-      
-      if (response.success) {
-        console.log(`[@component:NavigationEditor] Successfully saved tree: ${currentTreeName}`);
-        setInitialState({ nodes: [...nodes], edges: [...edges] });
-        setHasUnsavedChanges(false);
-        setSaveSuccess(true);
+      if (checkResponse.success && checkResponse.data) {
+        // Tree exists, update it
+        const treeId = checkResponse.data.id;
+        console.log(`[@component:NavigationEditor] Updating existing tree with ID: ${treeId}`);
         
-        // Clear success message after 3 seconds
-        setTimeout(() => setSaveSuccess(false), 3000);
+        // Prepare the update data
+        const updateData = {
+          tree_data: {
+            nodes: nodes,
+            edges: edges
+          }
+        };
+        
+        // Update the tree
+        const updateResponse = await apiCall(`/api/navigation/trees/${treeId}`, {
+          method: 'PUT',
+          body: JSON.stringify(updateData),
+        });
+        
+        if (updateResponse.success) {
+          console.log(`[@component:NavigationEditor] Successfully updated tree ID: ${treeId}`);
+          setInitialState({ nodes: [...nodes], edges: [...edges] });
+          setHasUnsavedChanges(false);
+          setSaveSuccess(true);
+          
+          // Clear success message after 3 seconds
+          setTimeout(() => setSaveSuccess(false), 3000);
+        } else {
+          throw new Error(updateResponse.error || 'Failed to update navigation tree');
+        }
       } else {
-        throw new Error(response.error || 'Failed to save navigation tree');
+        // Tree doesn't exist, create a new one
+        console.log(`[@component:NavigationEditor] Creating new tree with name: ${currentTreeName}`);
+        
+        // Prepare the tree data in the format expected by the backend
+        const treeData = {
+          name: currentTreeName,
+          description: `Navigation tree for ${currentTreeName}`,
+          tree_data: {
+            nodes: nodes,
+            edges: edges
+          }
+        };
+        
+        // Call the Python backend API to create a new tree
+        const createResponse = await apiCall('/api/navigation/trees', {
+          method: 'POST',
+          body: JSON.stringify(treeData),
+        });
+        
+        if (createResponse.success) {
+          console.log(`[@component:NavigationEditor] Successfully created new tree with ID: ${createResponse.data.id}`);
+          setInitialState({ nodes: [...nodes], edges: [...edges] });
+          setHasUnsavedChanges(false);
+          setSaveSuccess(true);
+          
+          // Clear success message after 3 seconds
+          setTimeout(() => setSaveSuccess(false), 3000);
+        } else {
+          throw new Error(createResponse.error || 'Failed to create navigation tree');
+        }
       }
     } catch (error) {
       console.error(`[@component:NavigationEditor] Error saving tree:`, error);
@@ -500,6 +538,7 @@ const NavigationEditorContent: React.FC = () => {
       const response = await apiCall(`/api/navigation/trees/by-name/${treeName}`);
       
       if (response.success && response.data) {
+        const treeId = response.data.id;
         // Get tree data from metadata field
         const treeData = response.data.metadata || { nodes: [], edges: [] };
         
@@ -507,12 +546,12 @@ const NavigationEditorContent: React.FC = () => {
         if (treeData.nodes && Array.isArray(treeData.nodes)) {
           setNodes(treeData.nodes);
           setInitialState({ nodes: treeData.nodes, edges: treeData.edges || [] });
-          console.log(`[@component:NavigationEditor] Successfully loaded ${treeData.nodes.length} nodes from database`);
+          console.log(`[@component:NavigationEditor] Successfully loaded ${treeData.nodes.length} nodes from database for tree ID: ${treeId}`);
         }
         
         if (treeData.edges && Array.isArray(treeData.edges)) {
           setEdges(treeData.edges);
-          console.log(`[@component:NavigationEditor] Successfully loaded ${treeData.edges.length} edges from database`);
+          console.log(`[@component:NavigationEditor] Successfully loaded ${treeData.edges.length} edges from database for tree ID: ${treeId}`);
         }
         
         // Initialize history with loaded data
@@ -521,9 +560,56 @@ const NavigationEditorContent: React.FC = () => {
         setHasUnsavedChanges(false);
         setSaveError(null);
         setSaveSuccess(false);
+      } else if (response.code === 'NOT_FOUND') {
+        // Tree doesn't exist, create a new one
+        console.log(`[@component:NavigationEditor] Tree ${treeName} not found, creating a new one...`);
+        
+        // Prepare the tree data for creation
+        const newTreeData = {
+          name: treeName,
+          description: `Navigation tree for ${treeName}`,
+          tree_data: {
+            nodes: [],
+            edges: []
+          }
+        };
+        
+        // Create the new tree
+        try {
+          const createResponse = await apiCall('/api/navigation/trees', {
+            method: 'POST',
+            body: JSON.stringify(newTreeData),
+          });
+          
+          if (createResponse.success) {
+            console.log(`[@component:NavigationEditor] Successfully created new tree with ID: ${createResponse.data.id}`);
+            
+            // Start with empty tree
+            const emptyState = createEmptyTree();
+            setNodes(emptyState.nodes);
+            setEdges(emptyState.edges);
+            setInitialState(emptyState);
+            setHistory([emptyState]);
+            setHistoryIndex(0);
+            setHasUnsavedChanges(false);
+          } else {
+            throw new Error(`Failed to create tree: ${createResponse.error}`);
+          }
+        } catch (createError) {
+          console.error(`[@component:NavigationEditor] Error creating tree:`, createError);
+          // Start with empty tree but mark as unsaved
+          const emptyState = createEmptyTree();
+          setNodes(emptyState.nodes);
+          setEdges(emptyState.edges);
+          setInitialState(emptyState);
+          setHistory([emptyState]);
+          setHistoryIndex(0);
+          setHasUnsavedChanges(true); // Mark as unsaved so user knows they need to save
+          setSaveError(`Failed to create tree: ${createError instanceof Error ? createError.message : 'Unknown error'}`);
+        }
       } else {
-        // Tree doesn't exist in database, start with empty tree
-        console.log(`[@component:NavigationEditor] Tree ${treeName} not found in database, starting with empty tree`);
+        // Other error
+        console.error(`[@component:NavigationEditor] Error loading tree: ${response.error || 'Unknown error'}`);
         const emptyState = createEmptyTree();
         setNodes(emptyState.nodes);
         setEdges(emptyState.edges);

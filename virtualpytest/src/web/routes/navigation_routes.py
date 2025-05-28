@@ -283,18 +283,23 @@ def get_navigation_tree_by_name(tree_name):
         # Get team_id from query params or use default
         team_id = request.args.get('team_id', DEFAULT_TEAM_ID)
         
-        # Query navigation tree by name
-        result = supabase_client.table('navigation_trees').select('*').eq('name', tree_name).eq('team_id', team_id).single().execute()
+        # Query navigation tree by name, but don't use .single() to avoid the error
+        result = supabase_client.table('navigation_trees').select('*').eq('name', tree_name).eq('team_id', team_id).execute()
         
-        if result.data:
+        # Check if any data was returned
+        if result.data and len(result.data) > 0:
+            print(f"[@api:navigation:get_tree_by_name] Found tree: {result.data[0]['id']} with name: {tree_name}")
             return jsonify({
                 'success': True,
-                'data': result.data
+                'data': result.data[0]  # Return the first matching tree
             })
         else:
+            # Return a proper 404 with helpful message
+            print(f"[@api:navigation:get_tree_by_name] Tree not found with name: {tree_name}")
             return jsonify({
                 'success': False,
-                'error': 'Navigation tree not found'
+                'error': f'Navigation tree with name "{tree_name}" not found',
+                'code': 'NOT_FOUND'
             }), 404
             
     except Exception as e:
