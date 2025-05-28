@@ -495,7 +495,7 @@ def get_root_tree_for_interface(interface_id: str, team_id: str) -> Optional[Dic
     supabase = get_supabase_client()
     
     try:
-        result = supabase.table('navigation_trees').select('*').eq('user_interface_id', interface_id).eq('team_id', team_id).eq('is_root', True).single().execute()
+        result = supabase.table('navigation_trees').select('*').eq('userinterface_id', interface_id).eq('team_id', team_id).eq('is_root', True).single().execute()
         
         if result.data:
             tree = result.data
@@ -505,7 +505,7 @@ def get_root_tree_for_interface(interface_id: str, team_id: str) -> Optional[Dic
                 'name': tree['name'],
                 'description': tree.get('description', ''),
                 'is_root': tree.get('is_root', False),
-                'user_interface_id': tree.get('user_interface_id', ''),
+                'userinterface_id': tree.get('userinterface_id', ''),
                 'team_id': tree.get('team_id', ''),
                 'created_at': tree.get('created_at', ''),
                 'updated_at': tree.get('updated_at', '')
