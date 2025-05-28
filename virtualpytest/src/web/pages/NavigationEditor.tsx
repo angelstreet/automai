@@ -125,6 +125,40 @@ const UIScreenNode = ({ data, selected }: { data: any; selected: boolean }) => {
           zIndex: 100,
         }}
       />
+      <Handle
+        type="target"
+        position={Position.Top}
+        isConnectable={true}
+        style={{
+          background: '#1976d2',
+          width: 16,
+          height: 16,
+          border: '3px solid white',
+          top: -8,
+          borderRadius: '50%',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+          opacity: 1,
+          visibility: 'visible',
+          zIndex: 100,
+        }}
+      />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        isConnectable={true}
+        style={{
+          background: '#1976d2',
+          width: 16,
+          height: 16,
+          border: '3px solid white',
+          bottom: -8,
+          borderRadius: '50%',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+          opacity: 1,
+          visibility: 'visible',
+          zIndex: 100,
+        }}
+      />
 
       {/* Children indicator */}
       {data.hasChildren && (
@@ -798,9 +832,6 @@ const NavigationEditorContent: React.FC = () => {
           
           {/* Breadcrumb navigation */}
           <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
-            <Typography variant="h6" sx={{ mr: 1 }}>
-              Navigation Editor:
-            </Typography>
             {navigationPath.map((treeName, index) => (
               <Box key={index} sx={{ display: 'flex', alignItems: 'center' }}>
                 {index > 0 && (
