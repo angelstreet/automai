@@ -565,7 +565,7 @@ const NavigationEditorContent: React.FC = () => {
               display: { xs: 'none', md: 'block' }
             }}
           >
-            💡 Create separate edges for each direction
+           
           </Typography>
           
           <IconButton 
@@ -688,7 +688,7 @@ const NavigationEditorContent: React.FC = () => {
                   animated: false,
                   style: { strokeWidth: 2, stroke: '#b1b1b7' },
                 }}
-                fitView
+                defaultViewport={{ x: 0, y: 0, zoom: 1 }}
                 attributionPosition="bottom-left"
                 connectionLineType={ConnectionLineType.SmoothStep}
                 snapToGrid={true}
