@@ -20,8 +20,11 @@ sys.path.append(controllers_path)
 
 try:
     from utils.supabase_utils import get_supabase_client
-    # Import from local web utils directory
-    from utils.userinterface_utils import create_userinterfaces_table
+    # Import from local web utils directory - add the web utils path specifically
+    web_utils_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'utils')
+    sys.path.insert(0, web_utils_path)
+    # Note: userinterface_utils functions are available but table creation is not needed
+    # as the table now exists in the database
     
     # Test the connection by checking if supabase client is available
     supabase = get_supabase_client()
@@ -55,8 +58,8 @@ CORS(app)
 
 # For demo purposes, using a default team_id
 # In production, this should come from authentication/session
-DEFAULT_TEAM_ID = "550e8400-e29b-41d4-a716-446655440000"  # Demo team ID
-DEFAULT_USER_ID = "550e8400-e29b-41d4-a716-446655440001"  # Demo user ID
+DEFAULT_TEAM_ID = "7fdeb4bb-3639-4ec3-959f-b54769a219ce"  # Hardcoded team ID
+DEFAULT_USER_ID = "eb6cfd93-44ab-4783-bd0c-129b734640f3"   # Hardcoded user ID
 
 # Global session storage for Android TV remote
 android_tv_session = {

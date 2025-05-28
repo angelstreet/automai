@@ -13,51 +13,17 @@ import sys
 import os
 
 # Add src directory to path to import supabase_utils
-src_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Get the path to the main src directory 
+# Current file: /virtualpytest/src/web/utils/userinterface_utils.py
+# Target file:  /virtualpytest/src/utils/supabase_utils.py
+# So we need to go up 2 levels: utils -> web -> src, then into utils
+current_dir = os.path.dirname(os.path.abspath(__file__))  # /src/web/utils
+web_dir = os.path.dirname(current_dir)                    # /src/web  
+src_dir = os.path.dirname(web_dir)                        # /src
+
+# Add the main src directory to Python path
 sys.path.insert(0, src_dir)
 from utils.supabase_utils import get_supabase_client
-
-def create_userinterfaces_table():
-    """Create the userinterfaces table if it doesn't exist."""
-    supabase = get_supabase_client()
-    
-    create_table_sql = """
-    CREATE TABLE IF NOT EXISTS userinterfaces (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        name VARCHAR(255) NOT NULL,
-        models TEXT[] NOT NULL DEFAULT '{}',
-        min_version VARCHAR(100),
-        max_version VARCHAR(100),
-        team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        UNIQUE(name, team_id)
-    );
-    
-    -- Create index for better performance
-    CREATE INDEX IF NOT EXISTS idx_userinterfaces_team_id ON userinterfaces(team_id);
-    CREATE INDEX IF NOT EXISTS idx_userinterfaces_name ON userinterfaces(name);
-    
-    -- Enable Row Level Security
-    ALTER TABLE userinterfaces ENABLE ROW LEVEL SECURITY;
-    
-    -- Create RLS policy for team-based access
-    CREATE POLICY "Users can manage userinterfaces in their teams" ON userinterfaces FOR ALL USING (
-        team_id IN (SELECT team_id FROM team_members WHERE profile_id = auth.uid())
-    );
-    """
-    
-    try:
-        # Execute the SQL to create table and policies
-        statements = [stmt.strip() for stmt in create_table_sql.split(';') if stmt.strip()]
-        for statement in statements:
-            if statement:
-                supabase.rpc('exec_sql', {'sql': statement}).execute()
-        print("✅ User interfaces table created successfully")
-        return True
-    except Exception as e:
-        print(f"❌ Error creating userinterfaces table: {e}")
-        return False
 
 def get_all_userinterfaces(team_id: str) -> List[Dict]:
     """Retrieve all user interfaces for a team from Supabase."""
@@ -126,10 +92,11 @@ def create_userinterface(interface_data: Dict, team_id: str) -> Optional[Dict]:
             'updated_at': datetime.now().isoformat()
         }
         
-        result = supabase.table('userinterfaces').insert(insert_data).select().single().execute()
+        # Fix: Use insert().execute() first, then select separately if needed
+        result = supabase.table('userinterfaces').insert(insert_data).execute()
         
-        if result.data:
-            interface = result.data
+        if result.data and len(result.data) > 0:
+            interface = result.data[0]
             return {
                 'id': interface['id'],
                 'name': interface['name'],
@@ -158,10 +125,10 @@ def update_userinterface(interface_id: str, interface_data: Dict, team_id: str) 
             'updated_at': datetime.now().isoformat()
         }
         
-        result = supabase.table('userinterfaces').update(update_data).eq('id', interface_id).eq('team_id', team_id).select().single().execute()
+        result = supabase.table('userinterfaces').update(update_data).eq('id', interface_id).eq('team_id', team_id).execute()
         
-        if result.data:
-            interface = result.data
+        if result.data and len(result.data) > 0:
+            interface = result.data[0]
             return {
                 'id': interface['id'],
                 'name': interface['name'],
