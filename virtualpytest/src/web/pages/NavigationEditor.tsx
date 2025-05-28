@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -16,17 +16,11 @@ import {
   Select,
   MenuItem,
   Paper,
-  Divider,
-  Chip,
 } from '@mui/material';
 import {
   Save as SaveIcon,
   Add as AddIcon,
-  ZoomIn as ZoomInIcon,
-  ZoomOut as ZoomOutIcon,
   FitScreen as FitScreenIcon,
-  Undo as UndoIcon,
-  Redo as RedoIcon,
   Close as CloseIcon,
 } from '@mui/icons-material';
 import { useParams } from 'react-router-dom';
@@ -54,11 +48,13 @@ interface UINavigationNode extends Node {
     screenshot?: string;
     thumbnail?: string;
     description?: string;
-    isStartNode?: boolean;
   };
 }
 
 interface UINavigationEdge extends Edge {
+  id: string;
+  source: string;
+  target: string;
   data?: {
     go?: string;        // Navigation key to go from source to target
     comeback?: string;  // Navigation key to return from target to source
@@ -141,20 +137,6 @@ const UIScreenNode = ({ data, selected }: { data: any; selected: boolean }) => {
             No Screenshot
           </Typography>
         )}
-        {data.isStartNode && (
-          <Chip
-            label="START"
-            size="small"
-            color="primary"
-            sx={{
-              position: 'absolute',
-              top: 4,
-              right: 4,
-              fontSize: '0.6rem',
-              height: 16,
-            }}
-          />
-        )}
       </Box>
     </Box>
   );
@@ -235,7 +217,6 @@ const NavigationEditorContent: React.FC = () => {
         label: 'Home Screen',
         type: 'screen',
         description: 'Main home screen of the application',
-        isStartNode: true,
       },
     },
     {
@@ -246,7 +227,6 @@ const NavigationEditorContent: React.FC = () => {
         label: 'Main Menu',
         type: 'screen',
         description: 'Application main menu',
-        isStartNode: false,
       },
     },
     {
@@ -257,7 +237,6 @@ const NavigationEditorContent: React.FC = () => {
         label: 'Settings',
         type: 'dialog',
         description: 'Settings dialog',
-        isStartNode: false,
       },
     },
   ];
@@ -296,11 +275,11 @@ const NavigationEditorContent: React.FC = () => {
   const [selectedEdge, setSelectedEdge] = useState<UINavigationEdge | null>(null);
   const [isNodeDialogOpen, setIsNodeDialogOpen] = useState(false);
   const [isEdgeDialogOpen, setIsEdgeDialogOpen] = useState(false);
+  const [isNewNode, setIsNewNode] = useState(false); // Track if this is a newly created node
   const [nodeForm, setNodeForm] = useState({
     label: '',
     type: 'screen' as 'screen' | 'dialog' | 'popup' | 'overlay',
     description: '',
-    isStartNode: false,
   });
   const [edgeForm, setEdgeForm] = useState({
     go: '',
@@ -332,12 +311,6 @@ const NavigationEditorContent: React.FC = () => {
     event.stopPropagation(); // Prevent pane click from firing
     setSelectedEdge(edge as UINavigationEdge);
     setSelectedNode(null);
-    setEdgeForm({
-      go: edge.data?.go || '',
-      comeback: edge.data?.comeback || '',
-      description: edge.data?.description || '',
-    });
-    setIsEdgeDialogOpen(true);
   }, []);
 
   // Handle connection between nodes
@@ -350,9 +323,6 @@ const NavigationEditorContent: React.FC = () => {
         data: { go: '', comeback: '' },
       };
       setEdges((eds) => addEdge(newEdge, eds));
-      setSelectedEdge(newEdge);
-      setEdgeForm({ go: '', comeback: '', description: '' });
-      setIsEdgeDialogOpen(true);
     },
     [setEdges]
   );
@@ -367,7 +337,6 @@ const NavigationEditorContent: React.FC = () => {
         label: 'New Screen',
         type: 'screen',
         description: '',
-        isStartNode: false,
       },
     };
     setNodes((nds) => [...nds, newNode]);
@@ -376,14 +345,19 @@ const NavigationEditorContent: React.FC = () => {
       label: newNode.data.label,
       type: newNode.data.type,
       description: newNode.data.description || '',
-      isStartNode: newNode.data.isStartNode || false,
     });
     setIsNodeDialogOpen(true);
+    setIsNewNode(true);
   }, [setNodes]);
 
   // Save node changes
   const saveNodeChanges = useCallback(() => {
     if (!selectedNode) return;
+    
+    // Validate required fields
+    if (!nodeForm.label.trim()) {
+      return; // Don't save if screen name is empty
+    }
     
     setNodes((nds) =>
       nds.map((node) =>
@@ -395,14 +369,25 @@ const NavigationEditorContent: React.FC = () => {
                 label: nodeForm.label,
                 type: nodeForm.type,
                 description: nodeForm.description,
-                isStartNode: nodeForm.isStartNode,
               },
             }
           : node
       )
     );
     setIsNodeDialogOpen(false);
+    setIsNewNode(false);
   }, [selectedNode, nodeForm, setNodes]);
+
+  // Cancel node changes
+  const cancelNodeChanges = useCallback(() => {
+    if (isNewNode && selectedNode) {
+      // Delete the newly created node if canceling
+      setNodes((nds) => nds.filter((node) => node.id !== selectedNode.id));
+      setSelectedNode(null);
+    }
+    setIsNodeDialogOpen(false);
+    setIsNewNode(false);
+  }, [isNewNode, selectedNode, setNodes]);
 
   // Save edge changes
   const saveEdgeChanges = useCallback(() => {
@@ -531,22 +516,22 @@ const NavigationEditorContent: React.FC = () => {
               zIndex: 1000,
             }}
           >
-            {/* Close button */}
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-              <IconButton
-                size="small"
-                onClick={closeSelectionPanel}
-                sx={{ p: 0.5 }}
-              >
-                <CloseIcon fontSize="small" />
-              </IconButton>
-            </Box>
-
             {selectedNode && (
               <Box>
-                <Typography variant="h6" gutterBottom>
-                  Screen: {selectedNode.data.label}
-                </Typography>
+                {/* Header with title and close button on same level */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                  <Typography variant="h6" sx={{ margin: 0 }}>
+                    Screen: {selectedNode.data.label}
+                  </Typography>
+                  <IconButton
+                    size="small"
+                    onClick={closeSelectionPanel}
+                    sx={{ p: 0.5 }}
+                  >
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+                
                 <Typography variant="body2" color="textSecondary" gutterBottom>
                   Type: {selectedNode.data.type}
                 </Typography>
@@ -564,8 +549,8 @@ const NavigationEditorContent: React.FC = () => {
                         label: selectedNode.data.label,
                         type: selectedNode.data.type,
                         description: selectedNode.data.description || '',
-                        isStartNode: selectedNode.data.isStartNode || false,
                       });
+                      setIsNewNode(false); // This is editing an existing node
                       setIsNodeDialogOpen(true);
                     }}
                   >
@@ -585,9 +570,20 @@ const NavigationEditorContent: React.FC = () => {
             
             {selectedEdge && (
               <Box>
-                <Typography variant="h6" gutterBottom>
-                  Navigation Edge
-                </Typography>
+                {/* Header with title and close button on same level */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                  <Typography variant="h6" sx={{ margin: 0 }}>
+                    Navigation Edge
+                  </Typography>
+                  <IconButton
+                    size="small"
+                    onClick={closeSelectionPanel}
+                    sx={{ p: 0.5 }}
+                  >
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+                
                 {selectedEdge.data?.go && (
                   <Typography variant="body2" gutterBottom>
                     Go: {selectedEdge.data.go}
@@ -602,7 +598,14 @@ const NavigationEditorContent: React.FC = () => {
                   <Button
                     size="small"
                     variant="outlined"
-                    onClick={() => setIsEdgeDialogOpen(true)}
+                    onClick={() => {
+                      setEdgeForm({
+                        go: selectedEdge.data?.go || '',
+                        comeback: selectedEdge.data?.comeback || '',
+                        description: selectedEdge.data?.description || '',
+                      });
+                      setIsEdgeDialogOpen(true);
+                    }}
                   >
                     Edit
                   </Button>
@@ -622,7 +625,7 @@ const NavigationEditorContent: React.FC = () => {
       </Box>
 
       {/* Node Edit Dialog */}
-      <Dialog open={isNodeDialogOpen} onClose={() => setIsNodeDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog open={isNodeDialogOpen} onClose={cancelNodeChanges} maxWidth="sm" fullWidth>
         <DialogTitle>Edit Screen</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -631,6 +634,9 @@ const NavigationEditorContent: React.FC = () => {
               value={nodeForm.label}
               onChange={(e) => setNodeForm({ ...nodeForm, label: e.target.value })}
               fullWidth
+              required
+              error={!nodeForm.label.trim()}
+              helperText={!nodeForm.label.trim() ? "Screen name is required" : ""}
             />
             
             <FormControl fullWidth>
@@ -655,20 +661,17 @@ const NavigationEditorContent: React.FC = () => {
               rows={3}
               fullWidth
             />
-            
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <input
-                type="checkbox"
-                checked={nodeForm.isStartNode}
-                onChange={(e) => setNodeForm({ ...nodeForm, isStartNode: e.target.checked })}
-              />
-              <Typography variant="body2">Set as start screen</Typography>
-            </Box>
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setIsNodeDialogOpen(false)}>Cancel</Button>
-          <Button onClick={saveNodeChanges} variant="contained">Save</Button>
+          <Button onClick={cancelNodeChanges}>Cancel</Button>
+          <Button 
+            onClick={saveNodeChanges} 
+            variant="contained"
+            disabled={!nodeForm.label.trim()}
+          >
+            Save
+          </Button>
         </DialogActions>
       </Dialog>
 

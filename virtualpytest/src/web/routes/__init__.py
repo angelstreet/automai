@@ -10,6 +10,7 @@ from .controller_routes import controller_bp
 from .remote_routes import remote_bp
 from .audiovideo_routes import audiovideo_bp
 from .stats_routes import stats_bp
+from .navigation_routes import navigation_bp
 
 def register_routes(app):
     """Register all route blueprints with the Flask app"""
@@ -18,4 +19,5 @@ def register_routes(app):
     app.register_blueprint(controller_bp)
     app.register_blueprint(remote_bp)
     app.register_blueprint(audiovideo_bp)
-    app.register_blueprint(stats_bp) 
+    app.register_blueprint(stats_bp)
+    app.register_blueprint(navigation_bp) 
