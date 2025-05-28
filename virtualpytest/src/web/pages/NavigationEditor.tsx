@@ -28,7 +28,8 @@ import {
   MenuItem,
   Paper,
   Snackbar,
-  Alert
+  Alert,
+  Container
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -38,7 +39,8 @@ import {
   Save as SaveIcon,
   Cancel as CancelIcon,
   Close as CloseIcon,
-  ArrowBack as ArrowBackIcon
+  ArrowBack as ArrowBackIcon,
+  Error as ErrorIcon
 } from '@mui/icons-material';
 
 // Import extracted components and hooks
@@ -151,7 +153,7 @@ const NavigationEditorContent: React.FC = () => {
   return (
     <Box sx={{ 
       width: '100%',
-      height: 'calc(100vh - 100px)',
+      height: 'calc(100vh - 100px)', 
       minHeight: '500px',
       display: 'flex', 
       flexDirection: 'column',
@@ -209,19 +211,35 @@ const NavigationEditorContent: React.FC = () => {
             onClick={addNewNode}
             size="small"
             sx={{ mr: 1 }}
+            disabled={isLoading || !!error}
           >
             Add Screen
           </Button>
           
-          <IconButton onClick={fitView} size="small" title="Fit View">
+          <IconButton 
+            onClick={fitView} 
+            size="small" 
+            title="Fit View" 
+            disabled={isLoading || !!error}
+          >
             <FitScreenIcon />
           </IconButton>
           
-          <IconButton onClick={undo} size="small" title="Undo" disabled={historyIndex <= 0}>
+          <IconButton 
+            onClick={undo} 
+            size="small" 
+            title="Undo" 
+            disabled={historyIndex <= 0 || isLoading || !!error}
+          >
             <UndoIcon />
           </IconButton>
           
-          <IconButton onClick={redo} size="small" title="Redo" disabled={historyIndex >= history.length - 1}>
+          <IconButton 
+            onClick={redo} 
+            size="small" 
+            title="Redo" 
+            disabled={historyIndex >= history.length - 1 || isLoading || !!error}
+          >
             <RedoIcon />
           </IconButton>
           
@@ -229,7 +247,7 @@ const NavigationEditorContent: React.FC = () => {
             onClick={saveToDatabase} 
             size="small" 
             title={hasUnsavedChanges ? "Save Changes to Database" : "Save to Database"}
-            disabled={isLoading}
+            disabled={isLoading || !!error}
             color={hasUnsavedChanges ? "primary" : "default"}
           >
             {isLoading ? <CircularProgress size={20} /> : <SaveIcon />}
@@ -240,6 +258,7 @@ const NavigationEditorContent: React.FC = () => {
             size="small" 
             title={hasUnsavedChanges ? "Discard Unsaved Changes" : "Discard Changes"}
             color={hasUnsavedChanges ? "warning" : "default"}
+            disabled={isLoading || !!error}
           >
             <CancelIcon />
           </IconButton>
@@ -253,193 +272,233 @@ const NavigationEditorContent: React.FC = () => {
         minHeight: '500px',
         overflow: 'hidden'
       }}>
-        <div 
-          ref={reactFlowWrapper} 
-          style={{ 
-            width: '100%',
+        {isLoading ? (
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            height: '100%' 
+          }}>
+            <CircularProgress />
+            <Typography variant="h6" sx={{ ml: 2 }}>
+              Loading navigation tree...
+            </Typography>
+          </Box>
+        ) : error ? (
+          <Container maxWidth="md" sx={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
             height: '100%',
-            minHeight: '500px'
-          }}
-        >
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            onNodeClick={onNodeClick}
-            onEdgeClick={onEdgeClick}
-            onNodeDoubleClick={onNodeDoubleClick}
-            onPaneClick={onPaneClick}
-            onInit={setReactFlowInstance}
-            nodeTypes={nodeTypes}
-            edgeTypes={edgeTypes}
-            defaultEdgeOptions={{
-              type: 'smoothstep',
-              animated: false,
-              style: { strokeWidth: 2, stroke: '#b1b1b7' },
-              markerEnd: {
-                type: MarkerType.ArrowClosed,
-                color: '#b1b1b7',
-              },
-            }}
-            fitView
-            attributionPosition="bottom-left"
-            connectionLineType={ConnectionLineType.SmoothStep}
-            snapToGrid={true}
-            snapGrid={[15, 15]}
-            deleteKeyCode="Delete"
-            multiSelectionKeyCode="Shift"
-            style={{ width: '100%', height: '100%' }}
-          >
-            <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
-            <Controls position="bottom-right" showZoom={true} showFitView={true} showInteractive={false} />
-            <MiniMap 
-              position="top-right"
-              style={{
-                backgroundColor: 'var(--card, #ffffff)',
-                border: '1px solid var(--border, #e5e7eb)',
-                borderRadius: '8px',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+            textAlign: 'center'
+          }}>
+            <ErrorIcon color="error" sx={{ fontSize: 64, mb: 2 }} />
+            <Typography variant="h5" color="error" gutterBottom>
+              Error Loading Navigation Tree
+            </Typography>
+            <Typography variant="body1" paragraph>
+              {error}
+            </Typography>
+            <Button 
+              variant="contained" 
+              onClick={navigateToParent} 
+              startIcon={<ArrowBackIcon />}
+            >
+              Return to Navigation Trees
+            </Button>
+          </Container>
+        ) : (
+          <>
+            <div 
+              ref={reactFlowWrapper} 
+              style={{ 
+                width: '100%',
+                height: '100%',
+                minHeight: '500px'
               }}
-              nodeColor={(node) => {
-                switch (node.data?.type) {
-                  case 'screen': return '#3b82f6';
-                  case 'dialog': return '#8b5cf6';
-                  case 'popup': return '#f59e0b';
-                  case 'overlay': return '#10b981';
-                  default: return '#6b7280';
-                }
-              }}
-              maskColor="rgba(0, 0, 0, 0.1)"
-            />
-          </ReactFlow>
-        </div>
+            >
+              <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onConnect={onConnect}
+                onNodeClick={onNodeClick}
+                onEdgeClick={onEdgeClick}
+                onNodeDoubleClick={onNodeDoubleClick}
+                onPaneClick={onPaneClick}
+                onInit={setReactFlowInstance}
+                nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
+                defaultEdgeOptions={{
+                  type: 'smoothstep',
+                  animated: false,
+                  style: { strokeWidth: 2, stroke: '#b1b1b7' },
+                  markerEnd: {
+                    type: MarkerType.ArrowClosed,
+                    color: '#b1b1b7',
+                  },
+                }}
+                fitView
+                attributionPosition="bottom-left"
+                connectionLineType={ConnectionLineType.SmoothStep}
+                snapToGrid={true}
+                snapGrid={[15, 15]}
+                deleteKeyCode="Delete"
+                multiSelectionKeyCode="Shift"
+                style={{ width: '100%', height: '100%' }}
+              >
+                <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
+                <Controls position="bottom-right" showZoom={true} showFitView={true} showInteractive={false} />
+                <MiniMap 
+                  position="top-right"
+                  style={{
+                    backgroundColor: 'var(--card, #ffffff)',
+                    border: '1px solid var(--border, #e5e7eb)',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                  }}
+                  nodeColor={(node) => {
+                    switch (node.data?.type) {
+                      case 'screen': return '#3b82f6';
+                      case 'dialog': return '#8b5cf6';
+                      case 'popup': return '#f59e0b';
+                      case 'overlay': return '#10b981';
+                      default: return '#6b7280';
+                    }
+                  }}
+                  maskColor="rgba(0, 0, 0, 0.1)"
+                />
+              </ReactFlow>
+            </div>
 
-        {/* Selection Info Panel */}
-        {(selectedNode || selectedEdge) ? (
-          <Paper
-            sx={{
-              position: 'absolute',
-              top: 16,
-              right: 16,
-              width: 200,
-              p: 1.5,
-              zIndex: 1000,
-            }}
-          >
-            {selectedNode && (
-              <Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                  <Typography variant="h6" sx={{ margin: 0, fontSize: '1rem' }}>
-                    Screen: {selectedNode.data.label}
-                  </Typography>
-                  <IconButton
-                    size="small"
-                    onClick={closeSelectionPanel}
-                    sx={{ p: 0.25 }}
-                  >
-                    <CloseIcon fontSize="small" />
-                  </IconButton>
-                </Box>
+            {/* Selection Info Panel */}
+            {(selectedNode || selectedEdge) ? (
+              <Paper
+                sx={{
+                  position: 'absolute',
+                  top: 16,
+                  right: 16,
+                  width: 200,
+                  p: 1.5,
+                  zIndex: 1000,
+                }}
+              >
+                {selectedNode && (
+                  <Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                      <Typography variant="h6" sx={{ margin: 0, fontSize: '1rem' }}>
+                        Screen: {selectedNode.data.label}
+                      </Typography>
+                      <IconButton
+                        size="small"
+                        onClick={closeSelectionPanel}
+                        sx={{ p: 0.25 }}
+                      >
+                        <CloseIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                    
+                    <Typography variant="body2" color="textSecondary" gutterBottom sx={{ mb: 0.5 }}>
+                      Type: {selectedNode.data.type}
+                    </Typography>
+                    {selectedNode.data.description && (
+                      <Typography variant="body2" gutterBottom sx={{ mb: 1 }}>
+                        {selectedNode.data.description}
+                      </Typography>
+                    )}
+                    {selectedNode.data.hasChildren && (
+                      <Typography variant="body2" color="success.main" gutterBottom sx={{ mb: 1 }}>
+                        💡 Double-click to explore child tree
+                      </Typography>
+                    )}
+                    <Box sx={{ mt: 1.5, display: 'flex', gap: 0.5 }}>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        sx={{ fontSize: '0.75rem', px: 1 }}
+                        onClick={() => {
+                          setNodeForm({
+                            label: selectedNode.data.label,
+                            type: selectedNode.data.type,
+                            description: selectedNode.data.description || '',
+                          });
+                          setIsNodeDialogOpen(true);
+                        }}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="error"
+                        sx={{ fontSize: '0.75rem', px: 1 }}
+                        onClick={deleteSelected}
+                      >
+                        Delete
+                      </Button>
+                    </Box>
+                  </Box>
+                )}
                 
-                <Typography variant="body2" color="textSecondary" gutterBottom sx={{ mb: 0.5 }}>
-                  Type: {selectedNode.data.type}
-                </Typography>
-                {selectedNode.data.description && (
-                  <Typography variant="body2" gutterBottom sx={{ mb: 1 }}>
-                    {selectedNode.data.description}
-                  </Typography>
+                {selectedEdge && (
+                  <Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                      <Typography variant="h6" sx={{ margin: 0, fontSize: '1rem' }}>
+                        Navigation Edge
+                      </Typography>
+                      <IconButton
+                        size="small"
+                        onClick={closeSelectionPanel}
+                        sx={{ p: 0.25 }}
+                      >
+                        <CloseIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                    
+                    {selectedEdge.data?.go && (
+                      <Typography variant="body2" gutterBottom sx={{ mb: 0.5 }}>
+                        Go: {selectedEdge.data.go}
+                      </Typography>
+                    )}
+                    {selectedEdge.data?.comeback && (
+                      <Typography variant="body2" gutterBottom sx={{ mb: 0.5 }}>
+                        Return: {selectedEdge.data.comeback}
+                      </Typography>
+                    )}
+                    <Box sx={{ mt: 1.5, display: 'flex', gap: 0.5 }}>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        sx={{ fontSize: '0.75rem', px: 1 }}
+                        onClick={() => {
+                          setEdgeForm({
+                            go: selectedEdge.data?.go || '',
+                            comeback: selectedEdge.data?.comeback || '',
+                            description: selectedEdge.data?.description || '',
+                          });
+                          setIsEdgeDialogOpen(true);
+                        }}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="error"
+                        sx={{ fontSize: '0.75rem', px: 1 }}
+                        onClick={deleteSelected}
+                      >
+                        Delete
+                      </Button>
+                    </Box>
+                  </Box>
                 )}
-                {selectedNode.data.hasChildren && (
-                  <Typography variant="body2" color="success.main" gutterBottom sx={{ mb: 1 }}>
-                    💡 Double-click to explore child tree
-                  </Typography>
-                )}
-                <Box sx={{ mt: 1.5, display: 'flex', gap: 0.5 }}>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    sx={{ fontSize: '0.75rem', px: 1 }}
-                    onClick={() => {
-                      setNodeForm({
-                        label: selectedNode.data.label,
-                        type: selectedNode.data.type,
-                        description: selectedNode.data.description || '',
-                      });
-                      setIsNodeDialogOpen(true);
-                    }}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    color="error"
-                    sx={{ fontSize: '0.75rem', px: 1 }}
-                    onClick={deleteSelected}
-                  >
-                    Delete
-                  </Button>
-                </Box>
-              </Box>
-            )}
-            
-            {selectedEdge && (
-              <Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                  <Typography variant="h6" sx={{ margin: 0, fontSize: '1rem' }}>
-                    Navigation Edge
-                  </Typography>
-                  <IconButton
-                    size="small"
-                    onClick={closeSelectionPanel}
-                    sx={{ p: 0.25 }}
-                  >
-                    <CloseIcon fontSize="small" />
-                  </IconButton>
-                </Box>
-                
-                {selectedEdge.data?.go && (
-                  <Typography variant="body2" gutterBottom sx={{ mb: 0.5 }}>
-                    Go: {selectedEdge.data.go}
-                  </Typography>
-                )}
-                {selectedEdge.data?.comeback && (
-                  <Typography variant="body2" gutterBottom sx={{ mb: 0.5 }}>
-                    Return: {selectedEdge.data.comeback}
-                  </Typography>
-                )}
-                <Box sx={{ mt: 1.5, display: 'flex', gap: 0.5 }}>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    sx={{ fontSize: '0.75rem', px: 1 }}
-                    onClick={() => {
-                      setEdgeForm({
-                        go: selectedEdge.data?.go || '',
-                        comeback: selectedEdge.data?.comeback || '',
-                        description: selectedEdge.data?.description || '',
-                      });
-                      setIsEdgeDialogOpen(true);
-                    }}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    color="error"
-                    sx={{ fontSize: '0.75rem', px: 1 }}
-                    onClick={deleteSelected}
-                  >
-                    Delete
-                  </Button>
-                </Box>
-              </Box>
-            )}
-          </Paper>
-        ) : null}
+              </Paper>
+            ) : null}
+          </>
+        )}
       </Box>
 
       {/* Node Edit Dialog */}
@@ -568,19 +627,6 @@ const NavigationEditorContent: React.FC = () => {
       >
           <Alert severity="success" sx={{ width: '100%' }}>
             {success}
-        </Alert>
-      </Snackbar>
-      )}
-
-      {error && (
-      <Snackbar
-          open={!!error}
-        autoHideDuration={6000}
-          onClose={() => {}}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-          <Alert severity="error" sx={{ width: '100%' }}>
-            {error}
         </Alert>
       </Snackbar>
       )}

@@ -59,6 +59,9 @@ def get_navigation_tree(tree_id: str, team_id: str) -> Optional[Dict]:
     supabase = get_supabase_client()
     
     try:
+        print(f"[@db:navigation_utils:get_tree] Attempting to retrieve tree: {tree_id} for team: {team_id}")
+        
+        # Execute the query with proper RLS filtering
         result = supabase.table('navigation_trees').select('*').eq('id', tree_id).eq('team_id', team_id).single().execute()
         
         if result.data:
@@ -80,6 +83,18 @@ def get_navigation_tree(tree_id: str, team_id: str) -> Optional[Dict]:
             return None
     except Exception as e:
         print(f"[@db:navigation_utils:get_tree] ERROR: Failed to fetch tree: {str(e)}")
+        # Try to diagnose if the tree exists but with a different team_id
+        try:
+            check_result = supabase.table('navigation_trees').select('id, team_id').eq('id', tree_id).execute()
+            if check_result.data and len(check_result.data) > 0:
+                found_tree = check_result.data[0]
+                found_team_id = found_tree.get('team_id')
+                print(f"[@db:navigation_utils:get_tree] DIAGNOSIS: Tree {tree_id} exists but belongs to team {found_team_id}, not the requested team {team_id}")
+            else:
+                print(f"[@db:navigation_utils:get_tree] DIAGNOSIS: Tree {tree_id} does not exist in the database")
+        except Exception as diag_error:
+            print(f"[@db:navigation_utils:get_tree] DIAGNOSIS failed: {str(diag_error)}")
+        
         return None
 
 def create_navigation_tree(tree_data: Dict, team_id: str) -> Optional[Dict]:
@@ -325,61 +340,101 @@ def get_navigation_nodes_and_edges(tree_id, team_id):
     supabase = get_supabase_client()
     
     try:
-        print(f"[@utils:navigation:get_navigation_nodes_and_edges] Getting nodes and edges for tree: {tree_id}")
+        print(f"[@utils:navigation:get_navigation_nodes_and_edges] Getting nodes and edges for tree: {tree_id}, team: {team_id}")
         
         # Get nodes
-        nodes_result = supabase.table('navigation_nodes').select('*').eq('tree_id', tree_id).order('created_at').execute()
+        print(f"[@utils:navigation:get_navigation_nodes_and_edges] DEBUG: Executing query for tree_id={tree_id}, team_id={team_id}")
+        nodes_result = supabase.table('navigation_nodes').select('*').eq('tree_id', tree_id).eq('team_id', team_id).order('created_at').execute()
+        print(f"[@utils:navigation:get_navigation_nodes_and_edges] DEBUG: Query result: {nodes_result}")
         nodes = nodes_result.data if nodes_result.data else []
         
         # Get edges
-        edges_result = supabase.table('navigation_edges').select('*').eq('tree_id', tree_id).order('created_at').execute()
+        edges_result = supabase.table('navigation_edges').select('*').eq('tree_id', tree_id).eq('team_id', team_id).order('created_at').execute()
         edges = edges_result.data if edges_result.data else []
         
         print(f"[@utils:navigation:get_navigation_nodes_and_edges] Found {len(nodes)} nodes and {len(edges)} edges")
+        if len(nodes) == 0:
+            print(f"[@utils:navigation:get_navigation_nodes_and_edges] WARNING: No nodes found for tree_id={tree_id}, team_id={team_id}. This might be a schema or permissions issue.")
         return nodes, edges
         
     except Exception as e:
         print(f"[@utils:navigation:get_navigation_nodes_and_edges] Error: {str(e)}")
+        print(f"[@utils:navigation:get_navigation_nodes_and_edges] Error details: Type={type(e)}, Traceback follows:")
+        import traceback
+        traceback.print_exc()
         return [], []
 
-def save_navigation_nodes_and_edges(tree_id, nodes, edges):
+def save_navigation_nodes_and_edges(tree_id, nodes, edges, team_id=None):
     """Save navigation nodes and edges to database"""
     supabase = get_supabase_client()
     
     try:
         print(f"[@utils:navigation:save_navigation_nodes_and_edges] Saving {len(nodes)} nodes and {len(edges)} edges for tree: {tree_id}")
         
+        # Get the team_id from the tree if not provided
+        if team_id is None:
+            print(f"[@utils:navigation:save_navigation_nodes_and_edges] WARNING: No team_id provided, attempting to get it from the tree")
+            try:
+                tree_result = supabase.table('navigation_trees').select('team_id').eq('id', tree_id).single().execute()
+                if tree_result.data:
+                    team_id = tree_result.data['team_id']
+                    print(f"[@utils:navigation:save_navigation_nodes_and_edges] Retrieved team_id: {team_id} from tree: {tree_id}")
+                else:
+                    print(f"[@utils:navigation:save_navigation_nodes_and_edges] ERROR: Could not find tree with ID: {tree_id}")
+                    return False
+            except Exception as e:
+                print(f"[@utils:navigation:save_navigation_nodes_and_edges] ERROR: Failed to retrieve team_id: {str(e)}")
+                return False
+        
         # Delete existing nodes and edges for this tree
+        print(f"[@utils:navigation:save_navigation_nodes_and_edges] Deleting existing nodes and edges for tree: {tree_id}")
         supabase.table('navigation_nodes').delete().eq('tree_id', tree_id).execute()
         supabase.table('navigation_edges').delete().eq('tree_id', tree_id).execute()
         
         # Insert new nodes
         if nodes:
+            print(f"[@utils:navigation:save_navigation_nodes_and_edges] Inserting {len(nodes)} nodes")
             for node in nodes:
                 # Ensure JSON fields are properly serialized
                 node_to_insert = {**node}
+                # Ensure team_id is set
+                node_to_insert['team_id'] = team_id
                 if 'metadata' in node_to_insert and isinstance(node_to_insert['metadata'], dict):
                     node_to_insert['metadata'] = json.dumps(node_to_insert['metadata'])
                 
-                supabase.table('navigation_nodes').insert(node_to_insert).execute()
+                try:
+                    result = supabase.table('navigation_nodes').insert(node_to_insert).execute()
+                    print(f"[@utils:navigation:save_navigation_nodes_and_edges] Inserted node: {node_to_insert.get('node_id')} result: {result}")
+                except Exception as e:
+                    print(f"[@utils:navigation:save_navigation_nodes_and_edges] ERROR inserting node: {str(e)}")
         
         # Insert new edges
         if edges:
+            print(f"[@utils:navigation:save_navigation_nodes_and_edges] Inserting {len(edges)} edges")
             for edge in edges:
                 # Ensure JSON fields are properly serialized
                 edge_to_insert = {**edge}
+                # Ensure team_id is set
+                edge_to_insert['team_id'] = team_id
                 if 'conditions' in edge_to_insert and isinstance(edge_to_insert['conditions'], dict):
                     edge_to_insert['conditions'] = json.dumps(edge_to_insert['conditions'])
                 if 'metadata' in edge_to_insert and isinstance(edge_to_insert['metadata'], dict):
                     edge_to_insert['metadata'] = json.dumps(edge_to_insert['metadata'])
                 
-                supabase.table('navigation_edges').insert(edge_to_insert).execute()
+                try:
+                    result = supabase.table('navigation_edges').insert(edge_to_insert).execute()
+                    print(f"[@utils:navigation:save_navigation_nodes_and_edges] Inserted edge: {edge_to_insert.get('edge_id')} result: {result}")
+                except Exception as e:
+                    print(f"[@utils:navigation:save_navigation_nodes_and_edges] ERROR inserting edge: {str(e)}")
         
         print(f"[@utils:navigation:save_navigation_nodes_and_edges] Successfully saved {len(nodes)} nodes and {len(edges)} edges")
         return True
         
     except Exception as e:
         print(f"[@utils:navigation:save_navigation_nodes_and_edges] Error: {str(e)}")
+        print(f"[@utils:navigation:save_navigation_nodes_and_edges] Error details: Type={type(e)}, Traceback follows:")
+        import traceback
+        traceback.print_exc()
         return False
 
 def get_root_tree_for_interface(interface_id: str, team_id: str) -> Optional[Dict]:

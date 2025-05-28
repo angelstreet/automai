@@ -25,7 +25,7 @@ from navigation_utils import (
     get_all_navigation_trees, get_navigation_tree, create_navigation_tree, 
     update_navigation_tree, delete_navigation_tree, check_navigation_tree_name_exists,
     get_navigation_nodes_and_edges, convert_nodes_and_edges_to_reactflow, convert_reactflow_to_nodes_and_edges,
-    save_navigation_nodes_and_edges
+    save_navigation_nodes_and_edges, get_root_tree_for_interface
 )
 from userinterface_utils import get_all_userinterfaces, get_userinterface
 from .utils import check_supabase, get_team_id
@@ -45,20 +45,17 @@ def get_navigation_trees():
     if error_response:
         return error_response
     
-    from app import supabase_client, DEFAULT_TEAM_ID
+    team_id = get_team_id()
     
     try:
-        # Get team_id from query params or use default
-        team_id = request.args.get('team_id', DEFAULT_TEAM_ID)
+        # Use utility function instead of direct Supabase client access
+        trees = get_all_navigation_trees(team_id)
         
-        # Query navigation trees for the team
-        result = supabase_client.table('navigation_trees').select('*').eq('team_id', team_id).execute()
-        
-        if result.data:
+        if trees:
             return jsonify({
                 'success': True,
-                'data': result.data,
-                'count': len(result.data)
+                'data': trees,
+                'count': len(trees)
             })
         else:
             return jsonify({
@@ -82,19 +79,16 @@ def get_navigation_tree_by_id(tree_id):
     if error_response:
         return error_response
     
-    from app import supabase_client, DEFAULT_TEAM_ID
+    team_id = get_team_id()
     
     try:
-        # Get team_id from query params or use default
-        team_id = request.args.get('team_id', DEFAULT_TEAM_ID)
+        # Use utility function to get navigation tree by ID and team ID
+        tree = get_navigation_tree(tree_id, team_id)
         
-        # Query specific navigation tree
-        result = supabase_client.table('navigation_trees').select('*').eq('id', tree_id).eq('team_id', team_id).single().execute()
-        
-        if result.data:
+        if tree:
             return jsonify({
                 'success': True,
-                'data': result.data
+                'data': tree
             })
         else:
             return jsonify({
@@ -117,7 +111,7 @@ def create_navigation_tree_route():
     if error_response:
         return error_response
     
-    from app import supabase_client, DEFAULT_TEAM_ID, DEFAULT_USER_ID
+    team_id = get_team_id()
     
     try:
         data = request.get_json()
@@ -129,7 +123,7 @@ def create_navigation_tree_route():
             }), 400
         
         # Validate required fields
-        required_fields = ['name', 'tree_data']
+        required_fields = ['name']
         for field in required_fields:
             if field not in data:
                 return jsonify({
@@ -139,23 +133,20 @@ def create_navigation_tree_route():
         
         # Prepare navigation tree data
         tree_data = {
-            'id': str(uuid.uuid4()),
             'name': data['name'],
             'description': data.get('description', ''),
-            'metadata': data['tree_data'],  # Store tree_data in metadata column
-            'team_id': data.get('team_id', DEFAULT_TEAM_ID),
-            'created_at': datetime.utcnow().isoformat(),
-            'updated_at': datetime.utcnow().isoformat()
+            'metadata': data.get('tree_data', {}),  # Store tree_data in metadata column
+            'userinterface_id': data.get('userinterface_id')
         }
         
-        # Insert into database
-        result = supabase_client.table('navigation_trees').insert(tree_data).execute()
+        # Use utility function to create navigation tree
+        created_tree = create_navigation_tree(tree_data, team_id)
         
-        if result.data:
-            print(f"[@api:navigation:create_tree] Successfully created navigation tree: {tree_data['id']}")
+        if created_tree:
+            print(f"[@api:navigation:create_tree] Successfully created navigation tree: {created_tree['id']}")
             return jsonify({
                 'success': True,
-                'data': result.data[0],
+                'data': created_tree,
                 'message': 'Navigation tree created successfully'
             }), 201
         else:
@@ -179,7 +170,7 @@ def update_navigation_tree_route(tree_id):
     if error_response:
         return error_response
     
-    from app import supabase_client, DEFAULT_TEAM_ID
+    team_id = get_team_id()
     
     try:
         data = request.get_json()
@@ -190,16 +181,11 @@ def update_navigation_tree_route(tree_id):
                 'error': 'No data provided'
             }), 400
         
-        # Get team_id from data or use default
-        team_id = data.get('team_id', DEFAULT_TEAM_ID)
-        
         # Prepare update data
-        update_data = {
-            'updated_at': datetime.utcnow().isoformat()
-        }
+        update_data = {}
         
         # Add fields that can be updated
-        updatable_fields = ['name', 'description', 'metadata']
+        updatable_fields = ['name', 'description']
         for field in updatable_fields:
             if field in data:
                 update_data[field] = data[field]
@@ -208,14 +194,14 @@ def update_navigation_tree_route(tree_id):
         if 'tree_data' in data:
             update_data['metadata'] = data['tree_data']
         
-        # Update in database
-        result = supabase_client.table('navigation_trees').update(update_data).eq('id', tree_id).eq('team_id', team_id).execute()
+        # Use utility function to update navigation tree
+        updated_tree = update_navigation_tree(tree_id, update_data, team_id)
         
-        if result.data:
+        if updated_tree:
             print(f"[@api:navigation:update_tree] Successfully updated navigation tree: {tree_id}")
             return jsonify({
                 'success': True,
-                'data': result.data[0],
+                'data': updated_tree,
                 'message': 'Navigation tree updated successfully'
             })
         else:
@@ -239,16 +225,13 @@ def delete_navigation_tree_route(tree_id):
     if error_response:
         return error_response
     
-    from app import supabase_client, DEFAULT_TEAM_ID
+    team_id = get_team_id()
     
     try:
-        # Get team_id from query params or use default
-        team_id = request.args.get('team_id', DEFAULT_TEAM_ID)
+        # Use utility function to delete navigation tree
+        success = delete_navigation_tree(tree_id, team_id)
         
-        # Delete from database
-        result = supabase_client.table('navigation_trees').delete().eq('id', tree_id).eq('team_id', team_id).execute()
-        
-        if result.data:
+        if success:
             print(f"[@api:navigation:delete_tree] Successfully deleted navigation tree: {tree_id}")
             return jsonify({
                 'success': True,
@@ -275,24 +258,33 @@ def get_navigation_tree_by_name(tree_name):
     if error_response:
         return error_response
     
-    from app import supabase_client, DEFAULT_TEAM_ID
+    team_id = get_team_id()
     
     try:
-        # Get team_id from query params or use default
-        team_id = request.args.get('team_id', DEFAULT_TEAM_ID)
+        # First check if the name exists
+        name_exists = check_navigation_tree_name_exists(tree_name, team_id)
         
-        # Query navigation tree by name, but don't use .single() to avoid the error
-        result = supabase_client.table('navigation_trees').select('*').eq('name', tree_name).eq('team_id', team_id).execute()
+        if not name_exists:
+            # Return a proper 404 with helpful message
+            print(f"[@api:navigation:get_tree_by_name] Tree not found with name: {tree_name}")
+            return jsonify({
+                'success': False,
+                'error': f'Navigation tree with name "{tree_name}" not found',
+                'code': 'NOT_FOUND'
+            }), 404
         
-        # Check if any data was returned
-        if result.data and len(result.data) > 0:
-            print(f"[@api:navigation:get_tree_by_name] Found tree: {result.data[0]['id']} with name: {tree_name}")
+        # Get all trees and find the one with matching name
+        all_trees = get_all_navigation_trees(team_id)
+        tree = next((tree for tree in all_trees if tree['name'] == tree_name), None)
+        
+        if tree:
+            print(f"[@api:navigation:get_tree_by_name] Found tree: {tree['id']} with name: {tree_name}")
             return jsonify({
                 'success': True,
-                'data': result.data[0]  # Return the first matching tree
+                'data': tree
             })
         else:
-            # Return a proper 404 with helpful message
+            # This should not happen since we checked name_exists above
             print(f"[@api:navigation:get_tree_by_name] Tree not found with name: {tree_name}")
             return jsonify({
                 'success': False,
@@ -346,12 +338,30 @@ def get_complete_navigation_tree(tree_id):
         return error_response
     
     team_id = get_team_id()
+    print(f"[@api:navigation:get_complete_tree] Requested tree: {tree_id} with team_id: {team_id}")
     
     try:
         # Get the tree info first
         tree_info = get_navigation_tree(tree_id, team_id)
         
         if not tree_info:
+            # Before returning 404, try to diagnose if the tree exists but with a different team_id
+            try:
+                from utils.supabase_utils import get_supabase_client
+                supabase = get_supabase_client()
+                check_result = supabase.table('navigation_trees').select('id, team_id').eq('id', tree_id).execute()
+                if check_result.data and len(check_result.data) > 0:
+                    found_tree = check_result.data[0]
+                    found_team_id = found_tree.get('team_id')
+                    print(f"[@api:navigation:get_complete_tree] PERMISSION ERROR: Tree {tree_id} exists but belongs to team {found_team_id}, not the requested team {team_id}")
+                    return jsonify({
+                        'success': False,
+                        'error': 'Navigation tree not found or you do not have permission to access it',
+                        'code': 'PERMISSION_ERROR'
+                    }), 403
+            except Exception as diag_error:
+                print(f"[@api:navigation:get_complete_tree] Diagnosis failed: {str(diag_error)}")
+            
             return jsonify({
                 'success': False,
                 'error': 'Navigation tree not found'
@@ -395,6 +405,8 @@ def get_complete_navigation_tree(tree_id):
         
     except Exception as e:
         print(f"[@api:navigation:get_complete_tree] Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @navigation_bp.route('/trees/<tree_id>/complete', methods=['PUT'])
@@ -434,8 +446,8 @@ def save_complete_navigation_tree(tree_id):
         # Convert ReactFlow data to database format and save to tables
         db_nodes, db_edges = convert_reactflow_to_nodes_and_edges(tree_data, tree_id)
         
-        # Save to database tables
-        db_save_success = save_navigation_nodes_and_edges(tree_id, db_nodes, db_edges)
+        # Save to database tables - explicitly pass team_id
+        db_save_success = save_navigation_nodes_and_edges(tree_id, db_nodes, db_edges, team_id)
         
         if not db_save_success:
             print(f"[@api:navigation:save_complete_tree] Warning: Failed to save to database tables, but metadata was saved")
@@ -489,13 +501,21 @@ def get_userinterface_with_root(interface_id):
         if not userinterface:
             return jsonify({'error': 'User interface not found or access denied'}), 404
             
-        # Get the root navigation tree for this user interface
-        from app import supabase_client
-        root_tree_result = supabase_client.table('navigation_trees').select('*').eq('userinterface_id', interface_id).eq('is_root', True).eq('team_id', team_id).limit(1).execute()
-        root_tree = None
-        if root_tree_result.data and len(root_tree_result.data) > 0:
-            root_tree = root_tree_result.data[0]
+        # Get the root navigation tree for this user interface using the proper utility
+        root_tree = get_root_tree_for_interface(interface_id, team_id)
+        
+        if root_tree:
             print(f"[@api:navigation_routes:get_userinterface_with_root] Found root tree for userinterface {interface_id}: {root_tree['id']}")
+            
+            # Get the navigation nodes and edges for the root tree
+            tree_id = root_tree['id']
+            nodes, edges = get_navigation_nodes_and_edges(tree_id, team_id)
+            
+            # Add nodes and edges to the response
+            root_tree['nodes'] = nodes
+            root_tree['edges'] = edges
+            
+            print(f"[@api:navigation_routes:get_userinterface_with_root] Found {len(nodes)} nodes and {len(edges)} edges for root tree {tree_id}")
         else:
             print(f"[@api:navigation_routes:get_userinterface_with_root] No root tree found for userinterface {interface_id}")
         
