@@ -175,10 +175,27 @@ const UserInterface: React.FC = () => {
 
   const handleModelChange = (event: SelectChangeEvent<string[]>, isEdit = false) => {
     const value = event.target.value;
+    // Handle the case where value is a string (shouldn't happen with multiple select, but for safety)
+    const selectedModels = typeof value === 'string' ? [value] : value;
+    
     if (isEdit) {
-      setEditForm({ ...editForm, models: typeof value === 'string' ? value.split(',') : value });
+      setEditForm({ ...editForm, models: selectedModels });
     } else {
-      setNewTree({ ...newTree, models: typeof value === 'string' ? value.split(',') : value });
+      setNewTree({ ...newTree, models: selectedModels });
+    }
+  };
+
+  const handleRemoveModel = (modelToRemove: string, isEdit = false) => {
+    if (isEdit) {
+      setEditForm({ 
+        ...editForm, 
+        models: editForm.models.filter(model => model !== modelToRemove) 
+      });
+    } else {
+      setNewTree({ 
+        ...newTree, 
+        models: newTree.models.filter(model => model !== modelToRemove) 
+      });
     }
   };
 
@@ -273,16 +290,48 @@ const UserInterface: React.FC = () => {
                               onChange={(e) => handleModelChange(e, true)}
                               input={<OutlinedInput />}
                               renderValue={(selected) => (
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.25, p: 0.25 }}>
                                   {selected.map((value) => (
-                                    <Chip key={value} label={value} size="small" />
+                                    <Chip 
+                                      key={value} 
+                                      label={value} 
+                                      size="small"
+                                      onDelete={() => handleRemoveModel(value, true)}
+                                      sx={{ 
+                                        m: 0,
+                                        height: 20,
+                                        '& .MuiChip-label': { px: 0.5, fontSize: '0.75rem' },
+                                        '& .MuiChip-deleteIcon': { width: 14, height: 14 }
+                                      }}
+                                    />
                                   ))}
                                 </Box>
                               )}
                               sx={{ '& .MuiInputBase-root': { minHeight: '32px' } }}
+                              MenuProps={{
+                                PaperProps: {
+                                  style: {
+                                    maxHeight: 200,
+                                    width: 250,
+                                  },
+                                },
+                              }}
                             >
                               {availableModels.map((model) => (
-                                <MenuItem key={model} value={model}>
+                                <MenuItem 
+                                  key={model} 
+                                  value={model}
+                                  dense
+                                  sx={{
+                                    py: 0.5,
+                                    px: 1,
+                                    minHeight: 'auto',
+                                    backgroundColor: editForm.models.includes(model) ? 'action.selected' : 'inherit',
+                                    '&:hover': {
+                                      backgroundColor: editForm.models.includes(model) ? 'action.selected' : 'action.hover',
+                                    },
+                                  }}
+                                >
                                   {model}
                                 </MenuItem>
                               ))}
@@ -291,7 +340,13 @@ const UserInterface: React.FC = () => {
                         ) : (
                           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                             {tree.models.map((model) => (
-                              <Chip key={model} label={model} size="small" variant="outlined" />
+                              <Chip 
+                                key={model} 
+                                label={model} 
+                                size="small" 
+                                variant="outlined"
+                                onDelete={editingId === tree.id ? () => handleRemoveModel(model, true) : undefined}
+                              />
                             ))}
                           </Box>
                         )}
@@ -403,15 +458,47 @@ const UserInterface: React.FC = () => {
                 onChange={(e) => handleModelChange(e)}
                 input={<OutlinedInput label="Models" />}
                 renderValue={(selected) => (
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.25, p: 0.25 }}>
                     {selected.map((value) => (
-                      <Chip key={value} label={value} size="small" />
+                      <Chip 
+                        key={value} 
+                        label={value} 
+                        size="small"
+                        onDelete={() => handleRemoveModel(value, false)}
+                        sx={{ 
+                          m: 0,
+                          height: 20,
+                          '& .MuiChip-label': { px: 0.5, fontSize: '0.75rem' },
+                          '& .MuiChip-deleteIcon': { width: 14, height: 14 }
+                        }}
+                      />
                     ))}
                   </Box>
                 )}
+                MenuProps={{
+                  PaperProps: {
+                    style: {
+                      maxHeight: 200,
+                      width: 250,
+                    },
+                  },
+                }}
               >
                 {availableModels.map((model) => (
-                  <MenuItem key={model} value={model}>
+                  <MenuItem 
+                    key={model} 
+                    value={model}
+                    dense
+                    sx={{
+                      py: 0.5,
+                      px: 1,
+                      minHeight: 'auto',
+                      backgroundColor: newTree.models.includes(model) ? 'action.selected' : 'inherit',
+                      '&:hover': {
+                        backgroundColor: newTree.models.includes(model) ? 'action.selected' : 'action.hover',
+                      },
+                    }}
+                  >
                     {model}
                   </MenuItem>
                 ))}
@@ -442,10 +529,17 @@ const UserInterface: React.FC = () => {
             />
           </Box>
         </DialogContent>
-        <DialogActions sx={{ pt: 1, pb: 2 }}>
-          <Button onClick={handleCloseDialog} size="small">Cancel</Button>
-          <Button onClick={handleAddNew} variant="contained" size="small">
-            Add Tree
+        <DialogActions sx={{ pt: 1, pb: 2, px: 3, gap: 1 }}>
+          <Button onClick={handleCloseDialog} size="small" variant="outlined">
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleAddNew} 
+            variant="contained" 
+            size="small"
+            disabled={!newTree.name.trim() || newTree.models.length === 0}
+          >
+           Add
           </Button>
         </DialogActions>
       </Dialog>
