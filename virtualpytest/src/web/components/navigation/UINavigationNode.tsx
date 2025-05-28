@@ -45,7 +45,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         overflow: 'hidden',
       }}
     >
-      {/* Left Handles - target and source with unique IDs */}
+      {/* Left Handle - TARGET only (receives incoming connections) */}
       <Handle 
         type="target" 
         position={Position.Left} 
@@ -60,36 +60,8 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
         }} 
       />
-      <Handle 
-        type="source" 
-        position={Position.Left} 
-        id="left-source"
-        style={{ 
-          background: '#1976d2', 
-          width: '12px', 
-          height: '12px',
-          border: '2px solid #fff',
-          borderRadius: '50%',
-          left: -6,
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-        }} 
-      />
       
-      {/* Right Handles - target and source with unique IDs */}
-      <Handle 
-        type="target" 
-        position={Position.Right} 
-        id="right-target"
-        style={{ 
-          background: '#1976d2', 
-          width: '12px', 
-          height: '12px',
-          border: '2px solid #fff',
-          borderRadius: '50%',
-          right: -6,
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-        }} 
-      />
+      {/* Right Handle - SOURCE only (sends outgoing connections) */}
       <Handle 
         type="source" 
         position={Position.Right} 
@@ -162,7 +134,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
             textTransform: 'uppercase',
           }}
         >
-       
+          {data.type}
           {data.hasChildren && ' • Has Children'}
         </div>
       </div>

@@ -67,73 +67,14 @@ import { UINavigationEdge } from '../components/navigation/UINavigationEdge';
 import { NodeEditDialog } from '../components/navigation/NodeEditDialog';
 import { EdgeEditDialog } from '../components/navigation/EdgeEditDialog';
 
-// Custom Edge Component with Navigation Labels - Updated to use getBezierPath
-const UINavigationEdgeComponent = ({ 
-  id, 
-  sourceX, 
-  sourceY, 
-  targetX, 
-  targetY, 
-  sourcePosition,
-  targetPosition,
-  data,
-  style = {},
-}: any) => {
-  // Use getBezierPath from ReactFlow for better curved edges
-  const [edgePath, labelX, labelY] = getBezierPath({
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
-  });
-  
-  return (
-    <>
-      <path
-        id={id}
-        style={{
-          stroke: '#b1b1b7',
-          strokeWidth: 2,
-          fill: 'none',
-          ...style,
-        }}
-        className="react-flow__edge-path"
-        d={edgePath}
-        markerEnd="url(#arrowhead)"
-      />
-      {data?.action && (
-        <text
-          x={labelX}
-          y={labelY}
-          style={{
-            fontSize: '12px',
-            fill: '#333',
-            textAnchor: 'middle',
-            dominantBaseline: 'middle',
-            pointerEvents: 'none',
-            fontWeight: 'bold',
-            backgroundColor: 'white',
-            padding: '2px 4px',
-            borderRadius: '3px',
-          }}
-        >
-          {data.action}
-        </text>
-      )}
-    </>
-  );
-};
-
 // Node types for React Flow
 const nodeTypes = {
   uiScreen: UINavigationNode,
 };
 
 const edgeTypes = {
-  uiNavigation: UINavigationEdgeComponent,
-  smoothstep: UINavigationEdgeComponent,
+  uiNavigation: UINavigationEdge,
+  smoothstep: UINavigationEdge,
 };
 
 const NavigationEditorContent: React.FC = () => {
