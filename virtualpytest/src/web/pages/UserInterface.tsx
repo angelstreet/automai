@@ -196,10 +196,10 @@ const UserInterface: React.FC = () => {
     >
       <TreeIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
       <Typography variant="h6" color="text.secondary" gutterBottom>
-        No Interface Trees Created
+        No User Interface Created
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3, maxWidth: 400 }}>
-        Create your first interface tree to define navigation structures and device compatibility for your test automation.
+        Create your first user interface to define navigation structures and device compatibility for your test automation.
       </Typography>
     </Box>
   );
@@ -209,10 +209,10 @@ const UserInterface: React.FC = () => {
       <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Box>
           <Typography variant="h4" gutterBottom>
-            Interface Trees
+            Interface
           </Typography>
           <Typography variant="body1" color="textSecondary">
-            Manage navigation trees and device compatibility for your test automation.
+            Manage navigation and device compatibility for your test automation.
           </Typography>
         </Box>
         <Button
@@ -221,7 +221,7 @@ const UserInterface: React.FC = () => {
           onClick={() => setOpenDialog(true)}
           size="small"
         >
-          Add Tree
+          Add UI
         </Button>
       </Box>
 
@@ -378,7 +378,7 @@ const UserInterface: React.FC = () => {
 
       {/* Add New Tree Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ pb: 1 }}>Add New Interface Tree</DialogTitle>
+        <DialogTitle sx={{ pb: 1 }}>Add New User Interface</DialogTitle>
         <DialogContent sx={{ pt: 1 }}>
           <Box sx={{ pt: 0.5 }}>
             <TextField
