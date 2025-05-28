@@ -162,7 +162,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
             textTransform: 'uppercase',
           }}
         >
-          {data.type}
+       
           {data.hasChildren && ' • Has Children'}
         </div>
       </div>
