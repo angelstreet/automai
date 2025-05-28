@@ -229,8 +229,8 @@ def get_android_tv_defaults():
             'host_username': os.getenv('HOST_USERNAME', ''),
             'host_password': os.getenv('HOST_PASSWORD', ''),
             'host_port': os.getenv('HOST_PORT', '22'),
-            'device_ip': os.getenv('DEVICE_IP', ''),
-            'device_port': os.getenv('DEVICE_PORT', '5555')
+            'device_ip': os.getenv('ANDROID_TV_IP', ''),
+            'device_port': os.getenv('ANDROID_TV_PORT', '5555')
         }
         
         return jsonify({
@@ -325,8 +325,8 @@ def get_android_mobile_defaults():
             'host_username': os.getenv('HOST_USERNAME', ''),
             'host_password': os.getenv('HOST_PASSWORD', ''),
             'host_port': os.getenv('HOST_PORT', '22'),
-            'device_ip': os.getenv('DEVICE_IP', ''),
-            'device_port': os.getenv('DEVICE_PORT', '5555')
+            'device_ip': os.getenv('ANDROID_MOBILE_IP', ''),
+            'device_port': os.getenv('ANDROID_MOBILE_PORT', '5555')
         }
         
         return jsonify({

@@ -8,7 +8,25 @@ import time
 import subprocess
 
 # Load environment variables
-load_dotenv('.env.local')
+env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env.local')
+load_dotenv(env_path)
+
+# Debug: Log environment variable loading
+print(f"Loading environment variables from: {env_path}")
+print(f"File exists: {os.path.exists(env_path)}")
+print("Environment variables loaded:")
+print(f"  HOST_IP: {os.getenv('HOST_IP', 'NOT SET')}")
+print(f"  HOST_USERNAME: {os.getenv('HOST_USERNAME', 'NOT SET')}")
+print(f"  HOST_PASSWORD: {'***' if os.getenv('HOST_PASSWORD') else 'NOT SET'}")
+print(f"  HOST_PORT: {os.getenv('HOST_PORT', 'NOT SET')}")
+print(f"  ANDROID_TV_IP: {os.getenv('ANDROID_TV_IP', 'NOT SET')}")
+print(f"  ANDROID_TV_PORT: {os.getenv('ANDROID_TV_PORT', 'NOT SET')}")
+print(f"  ANDROID_MOBILE_IP: {os.getenv('ANDROID_MOBILE_IP', 'NOT SET')}")
+print(f"  ANDROID_MOBILE_PORT: {os.getenv('ANDROID_MOBILE_PORT', 'NOT SET')}")
+print(f"  STREAM_PATH: {os.getenv('STREAM_PATH', 'NOT SET')}")
+print(f"  SUPABASE_URL: {'SET' if os.getenv('NEXT_PUBLIC_SUPABASE_URL') else 'NOT SET'}")
+print(f"  SUPABASE_KEY: {'SET' if os.getenv('NEXT_PUBLIC_SUPABASE_ANON_KEY') else 'NOT SET'}")
+print("---")
 
 # Add the parent directory to the path to allow imports
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
