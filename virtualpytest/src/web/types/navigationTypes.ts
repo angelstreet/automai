@@ -6,7 +6,6 @@ export interface UINavigationNode extends Node {
     label: string;
     type: 'screen' | 'dialog' | 'popup' | 'overlay';
     screenshot?: string;
-    thumbnail?: string;
     description?: string;
     hasChildren?: boolean;
     childTreeId?: string;

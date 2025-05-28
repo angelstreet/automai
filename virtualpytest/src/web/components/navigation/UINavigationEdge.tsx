@@ -26,6 +26,23 @@ export const UINavigationEdge: React.FC<EdgeProps<UINavigationEdgeType['data']>>
 
   return (
     <>
+      {/* Define arrow marker */}
+      <defs>
+        <marker
+          id={`arrowhead-${id}`}
+          markerWidth="10"
+          markerHeight="7"
+          refX="9"
+          refY="3.5"
+          orient="auto"
+        >
+          <polygon
+            points="0 0, 10 3.5, 0 7"
+            fill="#b1b1b7"
+          />
+        </marker>
+      </defs>
+
       <path
         id={id}
         style={{
@@ -36,7 +53,7 @@ export const UINavigationEdge: React.FC<EdgeProps<UINavigationEdgeType['data']>>
         }}
         className="react-flow__edge-path"
         d={edgePath}
-        markerEnd="url(#arrowhead)"
+        markerEnd={`url(#arrowhead-${id})`}
       />
       
       {/* From/To labels */}

@@ -45,11 +45,11 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         overflow: 'hidden',
       }}
     >
-      {/* Left Handle - TARGET only (receives incoming connections) */}
+      {/* Left Handles - for bi-directional navigation */}
       <Handle 
         type="target" 
         position={Position.Left} 
-        id="left-target"
+        id="left-go-target"
         style={{ 
           background: '#1976d2', 
           width: '12px', 
@@ -57,15 +57,32 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           border: '2px solid #fff',
           borderRadius: '50%',
           left: -6,
+          top: '40%',
           boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
         }} 
       />
       
-      {/* Right Handle - SOURCE only (sends outgoing connections) */}
+      <Handle 
+        type="source" 
+        position={Position.Left} 
+        id="left-back-source"
+        style={{ 
+          background: '#1976d2', 
+          width: '12px', 
+          height: '12px',
+          border: '2px solid #fff',
+          borderRadius: '50%',
+          left: -6,
+          top: '60%',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+        }} 
+      />
+      
+      {/* Right Handles - for bi-directional navigation */}
       <Handle 
         type="source" 
         position={Position.Right} 
-        id="right-source"
+        id="right-go-source"
         style={{ 
           background: '#1976d2', 
           width: '12px', 
@@ -73,6 +90,23 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           border: '2px solid #fff',
           borderRadius: '50%',
           right: -6,
+          top: '40%',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+        }} 
+      />
+
+      <Handle 
+        type="target" 
+        position={Position.Right} 
+        id="right-back-target"
+        style={{ 
+          background: '#1976d2', 
+          width: '12px', 
+          height: '12px',
+          border: '2px solid #fff',
+          borderRadius: '50%',
+          right: -6,
+          top: '60%',
           boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
         }} 
       />
@@ -139,12 +173,12 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         </div>
       </div>
 
-      {/* Screenshot/Thumbnail area */}
+      {/* Screenshot area */}
       <div
         style={{
           flex: 1,
-          backgroundColor: data.thumbnail ? 'transparent' : '#f5f5f5',
-          backgroundImage: data.thumbnail ? `url(${data.thumbnail})` : 'none',
+          backgroundColor: data.screenshot ? 'transparent' : '#f5f5f5',
+          backgroundImage: data.screenshot ? `url(${data.screenshot})` : 'none',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           display: 'flex',
@@ -153,7 +187,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           position: 'relative',
         }}
       >
-        {!data.thumbnail && (
+        {!data.screenshot && (
           <div style={{ 
             fontSize: '11px', 
             color: '#666',

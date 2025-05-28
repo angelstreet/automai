@@ -25,6 +25,10 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import {
   Box,
+  AppBar,
+  Toolbar,
+  Typography,
+  Button,
   IconButton,
   CircularProgress,
   Dialog,
@@ -37,14 +41,22 @@ import {
   Select,
   MenuItem,
   Paper,
-  Button,
-  Typography,
+  Snackbar,
+  Alert,
   Container
 } from '@mui/material';
 import {
+  Add as AddIcon,
+  FitScreen as FitScreenIcon,
+  Undo as UndoIcon,
+  Redo as RedoIcon,
+  Save as SaveIcon,
+  Cancel as CancelIcon,
   Close as CloseIcon,
   ArrowBack as ArrowBackIcon,
   Error as ErrorIcon,
+  CloudUpload as CloudUploadIcon,
+  CloudDownload as CloudDownloadIcon,
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 
@@ -52,10 +64,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useNavigationEditor } from '../hooks/useNavigationEditor';
 import { UINavigationNode } from '../components/navigation/UINavigationNode';
 import { UINavigationEdge } from '../components/navigation/UINavigationEdge';
-import { NavigationToolbar } from '../components/navigation/NavigationToolbar';
 import { NodeEditDialog } from '../components/navigation/NodeEditDialog';
 import { EdgeEditDialog } from '../components/navigation/EdgeEditDialog';
-import { StatusMessages } from '../components/navigation/StatusMessages';
 
 // Node types for React Flow
 const nodeTypes = {
@@ -181,26 +191,146 @@ const NavigationEditorContent: React.FC = () => {
       flexDirection: 'column',
       overflow: 'hidden'
     }}>
-      {/* Header with NavigationToolbar */}
-      <NavigationToolbar
-        navigationPath={navigationPath}
-        navigationNamePath={navigationNamePath}
-        viewPath={viewPath}
-        hasUnsavedChanges={hasUnsavedChanges}
-        isLoading={isLoading}
-        error={error}
-        historyIndex={historyIndex}
-        historyLength={history.length}
-        navigateToParent={navigateToParent}
-        navigateToTreeLevel={navigateToTreeLevel}
-        navigateToParentView={navigateToParentView}
-        addNewNode={addNewNode}
-        fitView={fitView}
-        undo={undo}
-        redo={redo}
-        saveToDatabase={saveToDatabase}
-        discardChanges={discardChanges}
-      />
+      {/* Header with AppBar */}
+      <AppBar position="static" color="default" elevation={1}>
+        <Toolbar variant="dense" sx={{ minHeight: 48 }}>
+          {/* Only show back button if not at root level */}
+          {navigationPath.length > 1 && (
+            <IconButton 
+              edge="start" 
+              onClick={navigateToParent} 
+              size="small" 
+              title="Back to Trees"
+              sx={{ mr: 1 }}
+            >
+              <ArrowBackIcon />
+            </IconButton>
+          )}
+          
+          {/* Breadcrumb navigation */}
+          <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
+            {/* Tree level breadcrumb */}
+            {navigationNamePath.map((treeName, index) => (
+              <Box key={`tree-${index}`} sx={{ display: 'flex', alignItems: 'center' }}>
+                {index > 0 && (
+                  <Typography variant="h6" sx={{ mx: 0.5, color: 'text.secondary' }}>
+                    &gt;
+                  </Typography>
+                )}
+                <Button
+                  variant="text"
+                  size="small"
+                  onClick={() => navigateToTreeLevel(index)}
+                  sx={{
+                    textTransform: 'none',
+                    minWidth: 'auto',
+                    fontWeight: 'normal',
+                    color: 'text.secondary',
+                  }}
+                >
+                  {decodeURIComponent(treeName)}
+                </Button>
+              </Box>
+            ))}
+            
+            {/* View level breadcrumb */}
+            {viewPath.length > 1 && viewPath.map((level, index) => (
+              <Box key={`view-${index}`} sx={{ display: 'flex', alignItems: 'center' }}>
+                <Typography variant="h6" sx={{ mx: 0.5, color: 'text.secondary' }}>
+                  &gt;
+                </Typography>
+                <Button
+                  variant="text"
+                  size="small"
+                  onClick={() => navigateToParentView(index)}
+                  sx={{
+                    textTransform: 'none',
+                    minWidth: 'auto',
+                    fontWeight: index === viewPath.length - 1 ? 'bold' : 'normal',
+                    color: index === viewPath.length - 1 ? 'primary.main' : 'text.secondary',
+                  }}
+                >
+                  {level.name}
+                  {index === viewPath.length - 1 && hasUnsavedChanges && (
+                    <Typography component="span" sx={{ color: 'warning.main', ml: 0.5 }}>
+                      *
+                    </Typography>
+                  )}
+                </Button>
+              </Box>
+            ))}
+          </Box>
+          
+          <Button
+            startIcon={<AddIcon />}
+            onClick={addNewNode}
+            size="small"
+            sx={{ mr: 1 }}
+            disabled={isLoading || !!error}
+          >
+            Add Screen
+          </Button>
+          
+          <Typography 
+            variant="caption" 
+            sx={{ 
+              mr: 2, 
+              color: 'text.secondary',
+              fontSize: '0.7rem',
+              display: { xs: 'none', md: 'block' }
+            }}
+          >
+           
+          </Typography>
+          
+          <IconButton 
+            onClick={fitView} 
+            size="small" 
+            title="Fit View" 
+            disabled={isLoading || !!error}
+          >
+            <FitScreenIcon />
+          </IconButton>
+          
+          <IconButton 
+            onClick={undo} 
+            size="small" 
+            title="Undo" 
+            disabled={historyIndex <= 0 || isLoading || !!error}
+          >
+            <UndoIcon />
+          </IconButton>
+          
+          <IconButton 
+            onClick={redo} 
+            size="small" 
+            title="Redo" 
+            disabled={historyIndex >= history.length - 1 || isLoading || !!error}
+          >
+            <RedoIcon />
+          </IconButton>
+          
+          <IconButton 
+            onClick={saveToDatabase} 
+            size="small" 
+            title={hasUnsavedChanges ? "Save Changes to Database" : "Save to Database"}
+            disabled={isLoading || !!error}
+            color={hasUnsavedChanges ? "primary" : "default"}
+          >
+            {isLoading ? <CircularProgress size={20} /> : <SaveIcon />}
+          </IconButton>
+          
+          <IconButton 
+            onClick={discardChanges} 
+            size="small" 
+            title={hasUnsavedChanges ? "Discard Unsaved Changes" : "Discard Changes"}
+            color={hasUnsavedChanges ? "warning" : "default"}
+            disabled={isLoading || !!error}
+          >
+            <CancelIcon />
+          </IconButton>
+        </Toolbar>
+      </AppBar>
 
       {/* Main Editor Area */}
       <Box sx={{ 
@@ -303,23 +433,6 @@ const NavigationEditorContent: React.FC = () => {
                   }}
                   maskColor="rgba(0, 0, 0, 0.1)"
                 />
-                
-                {/* Custom arrow marker for edges */}
-                <defs>
-                  <marker
-                    id="arrowhead"
-                    markerWidth="10"
-                    markerHeight="7"
-                    refX="9"
-                    refY="3.5"
-                    orient="auto"
-                  >
-                    <polygon
-                      points="0 0, 10 3.5, 0 7"
-                      fill="#b1b1b7"
-                    />
-                  </marker>
-                </defs>
               </ReactFlow>
             </div>
 
@@ -482,22 +595,94 @@ const NavigationEditorContent: React.FC = () => {
       </Box>
 
       {/* Node Edit Dialog */}
-      <NodeEditDialog
-        isOpen={isNodeDialogOpen}
-        nodeForm={nodeForm}
-        setNodeForm={setNodeForm}
-        onSubmit={handleNodeFormSubmit}
-        onClose={cancelNodeChanges}
-      />
+      <Dialog open={isNodeDialogOpen} onClose={cancelNodeChanges} maxWidth="sm" fullWidth>
+        <DialogTitle>Edit Screen</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <TextField
+              label="Screen Name"
+              value={nodeForm.label}
+              onChange={(e) => setNodeForm({ ...nodeForm, label: e.target.value })}
+              fullWidth
+              required
+              error={!nodeForm.label.trim()}
+              helperText={!nodeForm.label.trim() ? "Screen name is required" : ""}
+            />
+            
+            <FormControl fullWidth>
+              <InputLabel>Type</InputLabel>
+              <Select
+                value={nodeForm.type}
+                label="Type"
+                onChange={(e) => setNodeForm({ ...nodeForm, type: e.target.value as any })}
+              >
+                <MenuItem value="screen">Screen</MenuItem>
+                <MenuItem value="dialog">Dialog</MenuItem>
+                <MenuItem value="popup">Popup</MenuItem>
+                <MenuItem value="overlay">Overlay</MenuItem>
+              </Select>
+            </FormControl>
+            
+            <TextField
+              label="Description"
+              value={nodeForm.description}
+              onChange={(e) => setNodeForm({ ...nodeForm, description: e.target.value })}
+              multiline
+              rows={3}
+              fullWidth
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={cancelNodeChanges}>Cancel</Button>
+          <Button 
+            onClick={handleNodeFormSubmit} 
+            variant="contained"
+            disabled={!nodeForm.label.trim()}
+          >
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Edge Edit Dialog */}
-      <EdgeEditDialog
-        isOpen={isEdgeDialogOpen}
-        edgeForm={edgeForm}
-        setEdgeForm={setEdgeForm}
-        onSubmit={handleEdgeFormSubmit}
-        onClose={() => setIsEdgeDialogOpen(false)}
-      />
+      <Dialog open={isEdgeDialogOpen} onClose={() => setIsEdgeDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Edit Navigation</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <TextField
+              label="Navigation Action"
+              value={edgeForm.action}
+              onChange={(e) => setEdgeForm({ ...edgeForm, action: e.target.value })}
+              placeholder="e.g., RIGHT, ENTER, OK, BACK, ESC"
+              fullWidth
+              helperText="Action to navigate between screens"
+            />
+            
+            <TextField
+              label="Description"
+              value={edgeForm.description}
+              onChange={(e) => setEdgeForm({ ...edgeForm, description: e.target.value })}
+              multiline
+              rows={2}
+              fullWidth
+              helperText="Optional description for this navigation"
+            />
+            
+       
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsEdgeDialogOpen(false)}>Cancel</Button>
+          <Button 
+            onClick={handleEdgeFormSubmit} 
+            variant="contained"
+            disabled={!edgeForm.action}
+          >
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Discard Changes Confirmation Dialog */}
       <Dialog open={isDiscardDialogOpen} onClose={() => setIsDiscardDialogOpen(false)}>
@@ -515,8 +700,19 @@ const NavigationEditorContent: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Status Messages */}
-      <StatusMessages error={error} success={success} />
+      {/* Success/Error Messages */}
+      {success && (
+      <Snackbar
+          open={!!success}
+        autoHideDuration={3000}
+          onClose={() => {}}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+          <Alert severity="success" sx={{ width: '100%' }}>
+            {success}
+        </Alert>
+      </Snackbar>
+      )}
     </Box>
   );
 };

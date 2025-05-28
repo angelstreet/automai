@@ -9,8 +9,7 @@ import {
   Box,
 } from '@mui/material';
 
-interface EdgeForm {
-  action?: string;      // Single action per edge (optional like original)
+interface EdgeForm {     
   go?: string;          // Forward action
   comeback?: string;    // Return action  
   description: string;

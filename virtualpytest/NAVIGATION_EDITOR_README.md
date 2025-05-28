@@ -7,7 +7,7 @@ The Navigation Editor is a visual tool for creating and editing user interface n
 ### Visual Node-Based Editor
 - **Drag & Drop Interface**: Built with React Flow for intuitive node manipulation
 - **Custom Screen Nodes**: Each node represents a screen/dialog in your application
-- **Thumbnail Support**: Ready for screenshot thumbnails (placeholder for now)
+- **Screenshot Support**: Ready for screenshot display (generates thumbnails on-the-fly)
 - **Node Types**: Screen, Dialog, Popup, Overlay
 
 ### Navigation Mapping
@@ -70,10 +70,10 @@ interface UINavigationNode {
   id: string;
   data: {
     label: string;
-    type: 'screen' | 'dialog' | 'popup' | 'overlay';
     description?: string;
-    isStartNode?: boolean;
-    screenshot?: string;  // Future: thumbnail support
+    type: 'screen' | 'dialog' | 'popup' | 'overlay';
+    screenshot?: string;  // Screenshots displayed as background images
+    hasChildren?: boolean;
   };
 }
 
@@ -89,8 +89,8 @@ interface UINavigationEdge {
 ## Future Enhancements
 
 ### Planned Features
-1. **Screenshot Integration**: Upload and display screen thumbnails
-2. **Fullscreen Image Viewer**: Click thumbnails to view full-size screenshots
+1. **Screenshot Integration**: Upload and display screen screenshots
+2. **Fullscreen Image Viewer**: Click screenshots to view full-size images
 3. **Auto-Layout**: Automatic node arrangement algorithms
 4. **Export/Import**: Save and load navigation trees
 5. **Validation Tools**: Check for unreachable nodes or missing paths

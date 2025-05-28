@@ -224,7 +224,7 @@ def convert_nodes_and_edges_to_reactflow(nodes, edges):
         reactflow_nodes = []
         for node in nodes:
             reactflow_node = {
-                'id': node['node_id'],  # Use node_id as the ReactFlow ID
+                'id': node['id'],  # Use database primary key as ReactFlow ID
                 'type': 'uiScreen',
                 'position': {
                     'x': float(node['position_x']),
@@ -239,7 +239,6 @@ def convert_nodes_and_edges_to_reactflow(nodes, edges):
                     'hasChildren': node.get('has_children', False),
                     'childTreeId': node.get('child_tree_id'),
                     'screenshot': node.get('screenshot_url'),
-                    'thumbnail': node.get('thumbnail_url'),
                     'metadata': node.get('metadata', {})
                 },
                 'width': node.get('width', 200),
@@ -251,9 +250,9 @@ def convert_nodes_and_edges_to_reactflow(nodes, edges):
         reactflow_edges = []
         for edge in edges:
             reactflow_edge = {
-                'id': edge['edge_id'],  # Use edge_id as the ReactFlow ID
-                'source': edge['source_node_id'],  # This should match a node's node_id
-                'target': edge['target_node_id'],  # This should match a node's node_id
+                'id': edge['id'],  # Use database primary key as ReactFlow ID
+                'source': edge['source_id'],  # This should match a node's id
+                'target': edge['target_id'],  # This should match a node's id
                 'type': 'smoothstep',
                 'data': {
                     'go': edge.get('go_action'),
@@ -291,7 +290,6 @@ def convert_reactflow_to_nodes_and_edges(reactflow_data, tree_id):
             node_data = node.get('data', {})
             db_node = {
                 'tree_id': tree_id,
-                'node_id': node['id'],
                 'label': node_data.get('label', ''),
                 'node_type': node_data.get('type', 'screen'),
                 'position_x': float(node['position']['x']),
@@ -300,7 +298,6 @@ def convert_reactflow_to_nodes_and_edges(reactflow_data, tree_id):
                 'height': node.get('height', 120),
                 'description': node_data.get('description'),
                 'screenshot_url': node_data.get('screenshot'),
-                'thumbnail_url': node_data.get('thumbnail'),
                 'has_children': node_data.get('hasChildren', False),
                 'child_tree_id': node_data.get('childTreeId'),
                 'is_entry_point': node_data.get('isEntryPoint', False),
@@ -315,9 +312,8 @@ def convert_reactflow_to_nodes_and_edges(reactflow_data, tree_id):
             edge_data = edge.get('data', {})
             db_edge = {
                 'tree_id': tree_id,
-                'edge_id': edge['id'],
-                'source_node_id': edge['source'],
-                'target_node_id': edge['target'],
+                'source_id': edge['source'],
+                'target_id': edge['target'],
                 'edge_type': edge_data.get('edgeType', 'navigation'),
                 'go_action': edge_data.get('go'),
                 'comeback_action': edge_data.get('comeback'),
@@ -404,7 +400,7 @@ def save_navigation_nodes_and_edges(tree_id, nodes, edges, team_id=None):
                 
                 try:
                     result = supabase.table('navigation_nodes').insert(node_to_insert).execute()
-                    print(f"[@utils:navigation:save_navigation_nodes_and_edges] Inserted node: {node_to_insert.get('node_id')} result: {result}")
+                    print(f"[@utils:navigation:save_navigation_nodes_and_edges] Inserted node: {node_to_insert.get('label')} result: {result}")
                 except Exception as e:
                     print(f"[@utils:navigation:save_navigation_nodes_and_edges] ERROR inserting node: {str(e)}")
         
@@ -423,7 +419,7 @@ def save_navigation_nodes_and_edges(tree_id, nodes, edges, team_id=None):
                 
                 try:
                     result = supabase.table('navigation_edges').insert(edge_to_insert).execute()
-                    print(f"[@utils:navigation:save_navigation_nodes_and_edges] Inserted edge: {edge_to_insert.get('edge_id')} result: {result}")
+                    print(f"[@utils:navigation:save_navigation_nodes_and_edges] Inserted edge: {edge_to_insert.get('source_id')} -> {edge_to_insert.get('target_id')} result: {result}")
                 except Exception as e:
                     print(f"[@utils:navigation:save_navigation_nodes_and_edges] ERROR inserting edge: {str(e)}")
         
