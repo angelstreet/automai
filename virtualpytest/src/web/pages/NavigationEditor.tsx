@@ -116,8 +116,9 @@ const NavigationEditorContent: React.FC = () => {
 
     return (
     <div style={{ 
-      width: '100vw', 
-      height: 'calc(100vh - 100px)', // Fixed height calculation
+      width: '100%',
+      height: '100%',
+      minHeight: '500px', // Add minimum height to ensure visibility
       display: 'flex', 
       flexDirection: 'column',
       overflow: 'hidden' // Prevent scrollbars
@@ -420,55 +421,57 @@ const NavigationEditorContent: React.FC = () => {
       <div style={{ 
         flex: 1, 
         display: 'flex',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        minHeight: '500px' // Ensure minimum height for the main content area
       }}>
         {/* ReactFlow Canvas */}
         <div 
           ref={reactFlowWrapper} 
           style={{ 
             flex: 1,
-            position: 'relative'
+            position: 'relative',
+            minHeight: '500px' // Ensure minimum height for ReactFlow
           }}
         >
         <ReactFlow
           nodes={nodes}
           edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
           onNodeClick={onNodeClick}
           onEdgeClick={onEdgeClick}
           onNodeDoubleClick={onNodeDoubleClick}
-            onPaneClick={onPaneClick}
-            onInit={setReactFlowInstance}
+          onPaneClick={onPaneClick}
+          onInit={setReactFlowInstance}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
-            defaultEdgeOptions={defaultEdgeOptions}
+          defaultEdgeOptions={defaultEdgeOptions}
           fitView
           attributionPosition="bottom-left"
-            style={{ width: '100%', height: '100%' }}
-          >
-            <Background />
-            <Controls position="bottom-right" />
-            <MiniMap 
-              position="top-right"
-              style={{
-                backgroundColor: 'var(--card, #ffffff)', // Dark theme support
-                border: '1px solid var(--border, #e5e7eb)',
-                borderRadius: '8px',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-              }}
-              nodeColor={(node) => {
-                switch (node.data?.type) {
-                  case 'screen': return '#3b82f6';
-                  case 'dialog': return '#8b5cf6';
-                  case 'popup': return '#f59e0b';
-                  case 'overlay': return '#10b981';
-                  default: return '#6b7280';
-                }
-              }}
-              maskColor="rgba(0, 0, 0, 0.1)"
-            />
+          style={{ width: '100%', height: '100%' }}
+        >
+          <Background />
+          <Controls position="bottom-right" />
+          <MiniMap 
+            position="top-right"
+            style={{
+              backgroundColor: 'var(--card, #ffffff)', // Dark theme support
+              border: '1px solid var(--border, #e5e7eb)',
+              borderRadius: '8px',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+            }}
+            nodeColor={(node) => {
+              switch (node.data?.type) {
+                case 'screen': return '#3b82f6';
+                case 'dialog': return '#8b5cf6';
+                case 'popup': return '#f59e0b';
+                case 'overlay': return '#10b981';
+                default: return '#6b7280';
+              }
+            }}
+            maskColor="rgba(0, 0, 0, 0.1)"
+          />
         </ReactFlow>
         </div>
 
