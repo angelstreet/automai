@@ -148,10 +148,10 @@ const NavigationEditorContent: React.FC = () => {
     }
   }, [currentTreeId, isLoadingInterface, loadFromDatabase]);
 
-    return (
+  return (
     <Box sx={{ 
       width: '100%',
-      height: '100%',
+      height: 'calc(100vh - 100px)',
       minHeight: '500px',
       display: 'flex', 
       flexDirection: 'column',
@@ -160,15 +160,18 @@ const NavigationEditorContent: React.FC = () => {
       {/* Header with AppBar */}
       <AppBar position="static" color="default" elevation={1}>
         <Toolbar variant="dense" sx={{ minHeight: 48 }}>
-          <IconButton 
-            edge="start" 
-            onClick={navigateToParent} 
-            size="small" 
-            title="Back to Trees"
-            sx={{ mr: 1 }}
-          >
-            <ArrowBackIcon />
-          </IconButton>
+          {/* Only show back button if not at root level */}
+          {navigationPath.length > 1 && (
+            <IconButton 
+              edge="start" 
+              onClick={navigateToParent} 
+              size="small" 
+              title="Back to Trees"
+              sx={{ mr: 1 }}
+            >
+              <ArrowBackIcon />
+            </IconButton>
+          )}
           
           {/* Breadcrumb navigation */}
           <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
@@ -247,43 +250,71 @@ const NavigationEditorContent: React.FC = () => {
       <Box sx={{ 
         flex: 1, 
         position: 'relative', 
-        height: 'calc(100vh - 180px)',
+        minHeight: '500px',
         overflow: 'hidden'
       }}>
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onNodeClick={onNodeClick}
-          onEdgeClick={onEdgeClick}
-          onNodeDoubleClick={onNodeDoubleClick}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          fitView
-          attributionPosition="bottom-left"
-          onPaneClick={onPaneClick}
-          connectionLineType={ConnectionLineType.SmoothStep}
-          defaultEdgeOptions={{
-            type: 'smoothstep',
-            animated: false,
-            style: { strokeWidth: 2, stroke: '#b1b1b7' },
-            markerEnd: {
-              type: MarkerType.ArrowClosed,
-              color: '#b1b1b7',
-            },
+        <div 
+          ref={reactFlowWrapper} 
+          style={{ 
+            width: '100%',
+            height: '100%',
+            minHeight: '500px'
           }}
-          snapToGrid={true}
-          snapGrid={[15, 15]}
-          deleteKeyCode="Delete"
-          multiSelectionKeyCode="Shift"
-          style={{ height: '100%', overflow: 'hidden' }}
         >
-          <Controls position="bottom-left" showZoom={true} showFitView={true} showInteractive={false} />
-          <MiniMap style={{ bottom: 10 }} />
-          <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
-        </ReactFlow>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onNodeClick={onNodeClick}
+            onEdgeClick={onEdgeClick}
+            onNodeDoubleClick={onNodeDoubleClick}
+            onPaneClick={onPaneClick}
+            onInit={setReactFlowInstance}
+            nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
+            defaultEdgeOptions={{
+              type: 'smoothstep',
+              animated: false,
+              style: { strokeWidth: 2, stroke: '#b1b1b7' },
+              markerEnd: {
+                type: MarkerType.ArrowClosed,
+                color: '#b1b1b7',
+              },
+            }}
+            fitView
+            attributionPosition="bottom-left"
+            connectionLineType={ConnectionLineType.SmoothStep}
+            snapToGrid={true}
+            snapGrid={[15, 15]}
+            deleteKeyCode="Delete"
+            multiSelectionKeyCode="Shift"
+            style={{ width: '100%', height: '100%' }}
+          >
+            <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
+            <Controls position="bottom-right" showZoom={true} showFitView={true} showInteractive={false} />
+            <MiniMap 
+              position="top-right"
+              style={{
+                backgroundColor: 'var(--card, #ffffff)',
+                border: '1px solid var(--border, #e5e7eb)',
+                borderRadius: '8px',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+              }}
+              nodeColor={(node) => {
+                switch (node.data?.type) {
+                  case 'screen': return '#3b82f6';
+                  case 'dialog': return '#8b5cf6';
+                  case 'popup': return '#f59e0b';
+                  case 'overlay': return '#10b981';
+                  default: return '#6b7280';
+                }
+              }}
+              maskColor="rgba(0, 0, 0, 0.1)"
+            />
+          </ReactFlow>
+        </div>
 
         {/* Selection Info Panel */}
         {(selectedNode || selectedEdge) ? (
@@ -529,29 +560,29 @@ const NavigationEditorContent: React.FC = () => {
 
       {/* Success/Error Messages */}
       {success && (
-        <Snackbar
+      <Snackbar
           open={!!success}
-          autoHideDuration={3000}
+        autoHideDuration={3000}
           onClose={() => {}}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        >
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
           <Alert severity="success" sx={{ width: '100%' }}>
             {success}
-          </Alert>
-        </Snackbar>
+        </Alert>
+      </Snackbar>
       )}
 
       {error && (
-        <Snackbar
+      <Snackbar
           open={!!error}
-          autoHideDuration={6000}
+        autoHideDuration={6000}
           onClose={() => {}}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        >
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
           <Alert severity="error" sx={{ width: '100%' }}>
             {error}
-          </Alert>
-        </Snackbar>
+        </Alert>
+      </Snackbar>
       )}
     </Box>
   );
