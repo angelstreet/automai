@@ -49,13 +49,17 @@ import ReactFlow, {
   Handle,
   Position,
   ConnectionLineType,
+  NodeChange,
+  EdgeChange,
+  applyNodeChanges,
+  applyEdgeChanges,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
-// Import navigation service
-import { navigationService, NavigationNode, NavigationEdge, NavigationTreeData } from '../src/services/navigationService';
+// Remove the navigationService import - we'll use direct API calls instead
+// import { navigationService, NavigationNode, NavigationEdge, NavigationTreeData } from '../src/services/navigationService';
 
-// Types for our navigation tree
+// Define types locally since we're not using the service
 interface UINavigationNode extends Node {
   data: {
     label: string;
@@ -63,23 +67,42 @@ interface UINavigationNode extends Node {
     screenshot?: string;
     thumbnail?: string;
     description?: string;
-    hasChildren?: boolean; // Indicates if this node has child trees
-    childTreeName?: string; // Name of the child tree to navigate to
-    parentTree?: string; // Name of the parent tree
+    hasChildren?: boolean;
+    childTreeName?: string;
+    parentTree?: string;
   };
 }
 
-interface UINavigationEdge {
-  id: string;
-  source: string;
-  target: string;
-  type?: string;
-  data?: {
-    go?: string;        // Navigation key to go from source to target
-    comeback?: string;  // Navigation key to return from target to source
-    description?: string;
-  };
+// Use ReactFlow's Edge type directly with our custom data
+type UINavigationEdge = Edge<{
+  go?: string;
+  comeback?: string;
+  description?: string;
+}>;
+
+interface NavigationTreeData {
+  nodes: UINavigationNode[];
+  edges: UINavigationEdge[];
 }
+
+// API helper functions to call the Python backend
+const API_BASE_URL = 'http://localhost:5009';
+
+const apiCall = async (endpoint: string, options: RequestInit = {}) => {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+    ...options,
+  });
+  
+  if (!response.ok) {
+    throw new Error(`API call failed: ${response.status}`);
+  }
+  
+  return response.json();
+};
 
 // Custom Node Component for UI Screens
 const UIScreenNode = ({ data, selected }: { data: any; selected: boolean }) => {
@@ -599,163 +622,129 @@ const NavigationEditorContent: React.FC = () => {
     }
   }, [history, historyIndex, setNodes, setEdges]);
 
-  // Convert UI nodes and edges to NavigationService format
-  const convertToNavigationFormat = useCallback((
-    uiNodes: UINavigationNode[], 
-    uiEdges: UINavigationEdge[]
-  ): { nodes: NavigationNode[], edges: NavigationEdge[] } => {
-    const navigationNodes: NavigationNode[] = uiNodes.map(node => ({
-      id: node.id,
-      type: 'uiScreen' as const,
-      position: node.position,
-      data: {
-        label: node.data.label,
-        type: node.data.type,
-        screenshot: node.data.screenshot,
-        thumbnail: node.data.thumbnail,
-        description: node.data.description,
-        hasChildren: node.data.hasChildren,
-        childTreeName: node.data.childTreeName,
-        parentTree: node.data.parentTree,
-      },
-    }));
-
-    const navigationEdges: NavigationEdge[] = uiEdges.map(edge => ({
-      id: edge.id,
-      source: edge.source,
-      target: edge.target,
-      type: edge.type,
-      data: edge.data,
-    }));
-
-    return { nodes: navigationNodes, edges: navigationEdges };
-  }, []);
-
-  // Save to database function with proper error handling
+  // Save to database function
   const saveToDatabase = useCallback(async () => {
-    if (!currentTreeName) {
-      setSaveError('No tree name specified');
-      return;
-    }
-
+    if (isSaving) return;
+    
     setIsSaving(true);
     setSaveError(null);
     setSaveSuccess(false);
-
+    
     try {
-      console.log('[@component:NavigationEditor] Starting save operation for tree:', currentTreeName);
-      console.log('[@component:NavigationEditor] Current nodes:', nodes);
-      console.log('[@component:NavigationEditor] Current edges:', edges);
-
-      // Convert UI format to NavigationService format
-      const { nodes: navigationNodes, edges: navigationEdges } = convertToNavigationFormat(nodes, edges);
-
-      // Validate tree data before saving
-      const treeData: NavigationTreeData = {
-        nodes: navigationNodes,
-        edges: navigationEdges,
-      };
-
-      const validation = navigationService.validateTreeData(treeData);
-      if (!validation.isValid) {
-        throw new Error(`Invalid tree data: ${validation.errors.join(', ')}`);
-      }
-
-      // Save to database using navigationService
-      const saveResponse = await navigationService.saveTree(
-        currentTreeName,
-        navigationNodes,
-        navigationEdges,
-        {
-          description: `Navigation tree for ${currentTreeName}`,
-          deviceType: 'generic', // You can make this configurable
-          teamId: undefined, // Add team ID if available in your context
+      console.log(`[@component:NavigationEditor] Starting save to database for tree: ${currentTreeName}`);
+      
+      // Prepare the tree data in the format expected by the backend
+      const treeData = {
+        name: currentTreeName,
+        description: `Navigation tree for ${currentTreeName}`,
+        device_type: 'generic',
+        tree_data: {
+          nodes: nodes,
+          edges: edges
         }
-      );
-
-      if (saveResponse.success) {
-        console.log('[@component:NavigationEditor] Successfully saved tree to database:', saveResponse.data);
-        setSaveSuccess(true);
-        setHasUnsavedChanges(false);
-        
-        // Update initial state to current state after successful save
+      };
+      
+      // Call the Python backend API
+      const response = await apiCall('/api/navigation/trees', {
+        method: 'POST',
+        body: JSON.stringify(treeData),
+      });
+      
+      if (response.success) {
+        console.log(`[@component:NavigationEditor] Successfully saved tree: ${currentTreeName}`);
         setInitialState({ nodes: [...nodes], edges: [...edges] });
+        setHasUnsavedChanges(false);
+        setSaveSuccess(true);
         
-        // Auto-hide success message after 3 seconds
+        // Clear success message after 3 seconds
         setTimeout(() => setSaveSuccess(false), 3000);
       } else {
-        throw new Error(saveResponse.error || 'Failed to save tree to database');
+        throw new Error(response.error || 'Failed to save navigation tree');
       }
     } catch (error) {
-      console.error('[@component:NavigationEditor] Error saving to database:', error);
-      setSaveError(error instanceof Error ? error.message : 'An unexpected error occurred while saving');
+      console.error(`[@component:NavigationEditor] Error saving tree:`, error);
+      setSaveError(error instanceof Error ? error.message : 'Failed to save navigation tree');
     } finally {
       setIsSaving(false);
     }
-  }, [currentTreeName, nodes, edges, convertToNavigationFormat]);
+  }, [currentTreeName, nodes, edges, isSaving]);
 
-  // Load tree from database
+  // Load from database function
   const loadFromDatabase = useCallback(async (treeName: string) => {
     try {
-      console.log('[@component:NavigationEditor] Loading tree from database:', treeName);
+      console.log(`[@component:NavigationEditor] Loading tree from database: ${treeName}`);
       
-      const loadResponse = await navigationService.loadTree(treeName);
+      // Call the Python backend API to get tree by name
+      const response = await apiCall(`/api/navigation/trees/by-name/${treeName}`);
       
-      if (loadResponse.success && loadResponse.data) {
-        const { nodes: loadedNodes, edges: loadedEdges } = loadResponse.data;
+      if (response.success && response.data && response.data.tree_data) {
+        const treeData = response.data.tree_data;
         
-        // Convert NavigationService format to UI format
-        const uiNodes: UINavigationNode[] = loadedNodes.map(node => ({
-          id: node.id,
-          type: 'uiScreen',
-          position: node.position,
-          data: node.data,
-        }));
-
-        const uiEdges: UINavigationEdge[] = loadedEdges.map(edge => ({
-          id: edge.id,
-          source: edge.source,
-          target: edge.target,
-          type: edge.type,
-          data: edge.data,
-        }));
-
-        setNodes(uiNodes);
-        setEdges(uiEdges);
-        setInitialState({ nodes: uiNodes, edges: uiEdges });
-        setHistory([{ nodes: uiNodes, edges: uiEdges }]);
-        setHistoryIndex(0);
+        // Validate that we have nodes and edges
+        if (treeData.nodes && Array.isArray(treeData.nodes)) {
+          setNodes(treeData.nodes);
+          setInitialState({ nodes: treeData.nodes, edges: treeData.edges || [] });
+          console.log(`[@component:NavigationEditor] Successfully loaded ${treeData.nodes.length} nodes from database`);
+        }
+        
+        if (treeData.edges && Array.isArray(treeData.edges)) {
+          setEdges(treeData.edges);
+          console.log(`[@component:NavigationEditor] Successfully loaded ${treeData.edges.length} edges from database`);
+        }
+        
         setHasUnsavedChanges(false);
-        
-        console.log('[@component:NavigationEditor] Successfully loaded tree from database');
+        setSaveError(null);
+        setSaveSuccess(false);
       } else {
-        console.log('[@component:NavigationEditor] Tree not found in database, using default data');
-        // Fall back to generated tree data if not found in database
-        const defaultTreeData = getTreeData(treeName);
-        setNodes(defaultTreeData.nodes);
-        setEdges(defaultTreeData.edges);
-        setInitialState({ nodes: defaultTreeData.nodes, edges: defaultTreeData.edges });
-        setHistory([{ nodes: defaultTreeData.nodes, edges: defaultTreeData.edges }]);
-        setHistoryIndex(0);
+        // Tree doesn't exist in database, start with empty tree
+        console.log(`[@component:NavigationEditor] Tree ${treeName} not found in database, starting with empty tree`);
+        const emptyState = { nodes: [], edges: [] };
+        setNodes([]);
+        setEdges([]);
+        setInitialState(emptyState);
         setHasUnsavedChanges(false);
       }
     } catch (error) {
-      console.error('[@component:NavigationEditor] Error loading from database:', error);
-      // Fall back to generated tree data on error
-      const defaultTreeData = getTreeData(treeName);
-      setNodes(defaultTreeData.nodes);
-      setEdges(defaultTreeData.edges);
-      setInitialState({ nodes: defaultTreeData.nodes, edges: defaultTreeData.edges });
-      setHistory([{ nodes: defaultTreeData.nodes, edges: defaultTreeData.edges }]);
-      setHistoryIndex(0);
+      console.error(`[@component:NavigationEditor] Error loading tree from database:`, error);
+      // On error, start with empty tree
+      const emptyState = { nodes: [], edges: [] };
+      setNodes([]);
+      setEdges([]);
+      setInitialState(emptyState);
       setHasUnsavedChanges(false);
     }
-  }, [getTreeData, setNodes, setEdges]);
+  }, [setNodes, setEdges]);
 
   // Update tree data when currentTreeName changes and try to load from database first
   useEffect(() => {
     loadFromDatabase(currentTreeName);
   }, [currentTreeName, loadFromDatabase]);
+
+  // Convert tree data for export/import (keeping existing format)
+  const convertToNavigationTreeData = (nodes: UINavigationNode[], edges: UINavigationEdge[]): NavigationTreeData => {
+    return {
+      nodes: nodes.map(node => ({
+        id: node.id,
+        type: 'uiScreen',
+        position: node.position,
+        data: node.data,
+      })) as UINavigationNode[],
+      edges: edges.map(edge => ({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        type: edge.type,
+        data: edge.data,
+      })) as UINavigationEdge[],
+    };
+  };
+
+  const convertFromNavigationTreeData = (treeData: NavigationTreeData): { nodes: UINavigationNode[], edges: UINavigationEdge[] } => {
+    return {
+      nodes: treeData.nodes || [],
+      edges: treeData.edges || [],
+    };
+  };
 
   // Keyboard shortcuts
   useEffect(() => {
