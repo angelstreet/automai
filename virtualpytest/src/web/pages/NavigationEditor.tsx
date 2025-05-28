@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -22,6 +22,7 @@ import {
   Add as AddIcon,
   FitScreen as FitScreenIcon,
   Close as CloseIcon,
+  ArrowBack as ArrowBackIcon,
 } from '@mui/icons-material';
 import { useParams } from 'react-router-dom';
 import ReactFlow, {
@@ -37,6 +38,9 @@ import ReactFlow, {
   BackgroundVariant,
   ReactFlowProvider,
   useReactFlow,
+  Handle,
+  Position,
+  ConnectionLineType,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
@@ -48,13 +52,17 @@ interface UINavigationNode extends Node {
     screenshot?: string;
     thumbnail?: string;
     description?: string;
+    hasChildren?: boolean; // Indicates if this node has child trees
+    childTreeName?: string; // Name of the child tree to navigate to
+    parentTree?: string; // Name of the parent tree
   };
 }
 
-interface UINavigationEdge extends Edge {
+interface UINavigationEdge {
   id: string;
   source: string;
   target: string;
+  type?: string;
   data?: {
     go?: string;        // Navigation key to go from source to target
     comeback?: string;  // Navigation key to return from target to source
@@ -79,6 +87,64 @@ const UIScreenNode = ({ data, selected }: { data: any; selected: boolean }) => {
         position: 'relative',
       }}
     >
+      {/* Connection Handles - More visible for sibling navigation */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        isConnectable={true}
+        style={{
+          background: '#1976d2',
+          width: 14,
+          height: 14,
+          border: '3px solid white',
+          left: -7,
+          borderRadius: '50%',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+          opacity: 1,
+          visibility: 'visible',
+        }}
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        isConnectable={true}
+        style={{
+          background: '#1976d2',
+          width: 14,
+          height: 14,
+          border: '3px solid white',
+          right: -7,
+          borderRadius: '50%',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+          opacity: 1,
+          visibility: 'visible',
+        }}
+      />
+
+      {/* Children indicator */}
+      {data.hasChildren && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 4,
+            right: 4,
+            width: 16,
+            height: 16,
+            backgroundColor: '#4caf50',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '10px',
+            color: 'white',
+            fontWeight: 'bold',
+            zIndex: 10,
+          }}
+        >
+          +
+        </Box>
+      )}
+
       {/* Header with node name and type */}
       <Box
         sx={{
@@ -115,6 +181,7 @@ const UIScreenNode = ({ data, selected }: { data: any; selected: boolean }) => {
           }}
         >
           {data.type}
+          {data.hasChildren && ' • Has Children'}
         </Typography>
       </Box>
 
@@ -134,7 +201,7 @@ const UIScreenNode = ({ data, selected }: { data: any; selected: boolean }) => {
       >
         {!data.thumbnail && (
           <Typography variant="caption" sx={{ color: '#666' }}>
-            No Screenshot
+            {data.hasChildren ? 'Double-click to explore' : 'No Screenshot'}
           </Typography>
         )}
       </Box>
@@ -207,68 +274,200 @@ const NavigationEditorContent: React.FC = () => {
   const { treeName } = useParams<{ treeName: string }>();
   const reactFlowInstance = useReactFlow();
   
-  // Sample initial nodes for demonstration
-  const initialNodes: UINavigationNode[] = [
-    {
-      id: 'home',
-      type: 'uiScreen',
-      position: { x: 100, y: 100 },
-      data: {
-        label: 'Home Screen',
-        type: 'screen',
-        description: 'Main home screen of the application',
-      },
-    },
-    {
-      id: 'menu',
-      type: 'uiScreen',
-      position: { x: 400, y: 100 },
-      data: {
-        label: 'Main Menu',
-        type: 'screen',
-        description: 'Application main menu',
-      },
-    },
-    {
-      id: 'settings',
-      type: 'uiScreen',
-      position: { x: 700, y: 100 },
-      data: {
-        label: 'Settings',
-        type: 'dialog',
-        description: 'Settings dialog',
-      },
-    },
-  ];
+  // Navigation state for breadcrumbs and nested trees
+  const [currentTreeName, setCurrentTreeName] = useState<string>(treeName || 'home');
+  const [navigationPath, setNavigationPath] = useState<string[]>([treeName || 'home']);
+  
+  // Function to generate tree data based on current tree level
+  const getTreeData = useCallback((treeLevel: string): { nodes: UINavigationNode[], edges: UINavigationEdge[] } => {
+    if (treeLevel === 'home' || treeLevel === 'horizon_stb') {
+      // Root level - main navigation
+      return {
+        nodes: [
+          {
+            id: 'home',
+            type: 'uiScreen',
+            position: { x: 100, y: 200 },
+            data: {
+              label: 'Home Screen',
+              type: 'screen',
+              description: 'Main home screen of the application',
+              hasChildren: true,
+              childTreeName: 'home_children',
+            },
+          },
+          {
+            id: 'menu',
+            type: 'uiScreen',
+            position: { x: 400, y: 200 },
+            data: {
+              label: 'Main Menu',
+              type: 'screen',
+              description: 'Application main menu',
+              hasChildren: true,
+              childTreeName: 'menu_children',
+            },
+          },
+          {
+            id: 'settings',
+            type: 'uiScreen',
+            position: { x: 700, y: 200 },
+            data: {
+              label: 'Settings',
+              type: 'dialog',
+              description: 'Settings dialog',
+              hasChildren: false,
+            },
+          },
+        ],
+        edges: [
+          {
+            id: 'home-to-menu',
+            source: 'home',
+            target: 'menu',
+            type: 'smoothstep',
+            data: { go: 'RIGHT', comeback: 'LEFT', description: 'Navigate between home and menu' },
+          },
+          {
+            id: 'menu-to-settings',
+            source: 'menu',
+            target: 'settings',
+            type: 'smoothstep',
+            data: { go: 'ENTER', comeback: 'BACK', description: 'Open settings from menu' },
+          },
+        ],
+      };
+    } else if (treeLevel === 'home_children') {
+      // Home children level
+      return {
+        nodes: [
+          {
+            id: 'home_child1',
+            type: 'uiScreen',
+            position: { x: 100, y: 200 },
+            data: {
+              label: 'Home Widget 1',
+              type: 'screen',
+              description: 'First home widget',
+              hasChildren: false,
+            },
+          },
+          {
+            id: 'home_child2',
+            type: 'uiScreen',
+            position: { x: 400, y: 200 },
+            data: {
+              label: 'Home Widget 2',
+              type: 'screen',
+              description: 'Second home widget',
+              hasChildren: true,
+              childTreeName: 'home_widget2_children',
+            },
+          },
+          {
+            id: 'home_child3',
+            type: 'uiScreen',
+            position: { x: 700, y: 200 },
+            data: {
+              label: 'Home Widget 3',
+              type: 'screen',
+              description: 'Third home widget',
+              hasChildren: false,
+            },
+          },
+        ],
+        edges: [
+          {
+            id: 'home_child1-to-child2',
+            source: 'home_child1',
+            target: 'home_child2',
+            type: 'smoothstep',
+            data: { go: 'RIGHT', comeback: 'LEFT', description: 'Navigate between widgets' },
+          },
+          {
+            id: 'home_child2-to-child3',
+            source: 'home_child2',
+            target: 'home_child3',
+            type: 'smoothstep',
+            data: { go: 'RIGHT', comeback: 'LEFT', description: 'Navigate between widgets' },
+          },
+        ],
+      };
+    } else if (treeLevel === 'menu_children') {
+      // Menu children level
+      return {
+        nodes: [
+          {
+            id: 'menu_child1',
+            type: 'uiScreen',
+            position: { x: 100, y: 200 },
+            data: {
+              label: 'Menu Option 1',
+              type: 'screen',
+              description: 'First menu option',
+              hasChildren: false,
+            },
+          },
+          {
+            id: 'menu_child2',
+            type: 'uiScreen',
+            position: { x: 400, y: 200 },
+            data: {
+              label: 'Menu Option 2',
+              type: 'screen',
+              description: 'Second menu option',
+              hasChildren: false,
+            },
+          },
+        ],
+        edges: [
+          {
+            id: 'menu_child1-to-child2',
+            source: 'menu_child1',
+            target: 'menu_child2',
+            type: 'smoothstep',
+            data: { go: 'RIGHT', comeback: 'LEFT', description: 'Navigate between options' },
+          },
+        ],
+      };
+    } else {
+      // Default empty tree for other levels
+      return {
+        nodes: [
+          {
+            id: 'placeholder',
+            type: 'uiScreen',
+            position: { x: 400, y: 200 },
+            data: {
+              label: 'Empty Tree',
+              type: 'screen',
+              description: 'This tree level is empty',
+              hasChildren: false,
+            },
+          },
+        ],
+        edges: [],
+      };
+    }
+  }, []);
 
-  const initialEdges: UINavigationEdge[] = [
-    {
-      id: 'home-to-menu',
-      source: 'home',
-      target: 'menu',
-      type: 'uiNavigation',
-      data: {
-        go: 'RIGHT',
-        comeback: 'LEFT',
-        description: 'Navigate between home and menu',
-      },
-    },
-    {
-      id: 'menu-to-settings',
-      source: 'menu',
-      target: 'settings',
-      type: 'uiNavigation',
-      data: {
-        go: 'ENTER',
-        comeback: 'BACK',
-        description: 'Open settings from menu',
-      },
-    },
-  ];
+  // Initialize tree data based on current level
+  const currentTreeData = getTreeData(currentTreeName);
+  
+  // Sample initial nodes for demonstration
+  const initialNodes: UINavigationNode[] = currentTreeData.nodes;
+  const initialEdges: UINavigationEdge[] = currentTreeData.edges;
   
   // React Flow state
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  
+  // Update tree data when currentTreeName changes
+  useEffect(() => {
+    const newTreeData = getTreeData(currentTreeName);
+    setNodes(newTreeData.nodes);
+    setEdges(newTreeData.edges);
+  }, [currentTreeName, getTreeData, setNodes, setEdges]);
   
   // UI state
   const [selectedNode, setSelectedNode] = useState<UINavigationNode | null>(null);
@@ -313,13 +512,81 @@ const NavigationEditorContent: React.FC = () => {
     setSelectedNode(null);
   }, []);
 
+  // Handle double-click on node to navigate to child tree
+  const onNodeDoubleClick = useCallback((event: React.MouseEvent, node: Node) => {
+    event.stopPropagation();
+    const uiNode = node as UINavigationNode;
+    
+    if (uiNode.data.hasChildren && uiNode.data.childTreeName) {
+      // Prevent navigating to the same tree level
+      if (currentTreeName === uiNode.data.childTreeName) {
+        console.log(`Already at tree level: ${uiNode.data.childTreeName}`);
+        return;
+      }
+      
+      // Navigate to child tree
+      const newPath = [...navigationPath, uiNode.data.childTreeName];
+      setNavigationPath(newPath);
+      setCurrentTreeName(uiNode.data.childTreeName);
+      
+      // Load new tree data
+      const newTreeData = getTreeData(uiNode.data.childTreeName);
+      setNodes(newTreeData.nodes);
+      setEdges(newTreeData.edges);
+      
+      console.log(`Navigating to child tree: ${uiNode.data.childTreeName}`);
+    }
+  }, [navigationPath, currentTreeName, getTreeData, setNodes, setEdges]);
+
+  // Navigate back in breadcrumb
+  const navigateToTreeLevel = useCallback((index: number) => {
+    const newPath = navigationPath.slice(0, index + 1);
+    const targetTreeName = newPath[newPath.length - 1];
+    
+    // Prevent navigating to the same tree level
+    if (currentTreeName === targetTreeName) {
+      return;
+    }
+    
+    setNavigationPath(newPath);
+    setCurrentTreeName(targetTreeName);
+    
+    // Load tree data for that level
+    const newTreeData = getTreeData(targetTreeName);
+    setNodes(newTreeData.nodes);
+    setEdges(newTreeData.edges);
+    
+    console.log(`Navigating back to: ${targetTreeName}`);
+  }, [navigationPath, currentTreeName, getTreeData, setNodes, setEdges]);
+
+  // Go back to parent tree
+  const goBackToParent = useCallback(() => {
+    if (navigationPath.length > 1) {
+      const newPath = navigationPath.slice(0, -1);
+      const targetTreeName = newPath[newPath.length - 1];
+      
+      setNavigationPath(newPath);
+      setCurrentTreeName(targetTreeName);
+      
+      // Load parent tree data
+      const newTreeData = getTreeData(targetTreeName);
+      setNodes(newTreeData.nodes);
+      setEdges(newTreeData.edges);
+      
+      console.log(`Going back to parent: ${targetTreeName}`);
+    }
+  }, [navigationPath, getTreeData, setNodes, setEdges]);
+
   // Handle connection between nodes
   const onConnect = useCallback(
     (params: Connection) => {
+      if (!params.source || !params.target) return;
+      
       const newEdge: UINavigationEdge = {
-        ...params,
         id: `edge-${Date.now()}`,
-        type: 'uiNavigation',
+        source: params.source,
+        target: params.target,
+        type: 'smoothstep',
         data: { go: '', comeback: '' },
       };
       setEdges((eds) => addEdge(newEdge, eds));
@@ -435,9 +702,46 @@ const NavigationEditorContent: React.FC = () => {
       {/* Header */}
       <AppBar position="static" color="default" elevation={1}>
         <Toolbar variant="dense">
-          <Typography variant="h6" sx={{ flexGrow: 1 }}>
-            Navigation Editor: {decodeURIComponent(treeName || '')}
-          </Typography>
+          {/* Back button */}
+          {navigationPath.length > 1 && (
+            <IconButton 
+              onClick={goBackToParent} 
+              size="small" 
+              title="Go Back"
+              sx={{ mr: 1 }}
+            >
+              <ArrowBackIcon />
+            </IconButton>
+          )}
+          
+          {/* Breadcrumb navigation */}
+          <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
+            <Typography variant="h6" sx={{ mr: 1 }}>
+              Navigation Editor:
+            </Typography>
+            {navigationPath.map((treeName, index) => (
+              <Box key={index} sx={{ display: 'flex', alignItems: 'center' }}>
+                {index > 0 && (
+                  <Typography variant="h6" sx={{ mx: 0.5, color: 'text.secondary' }}>
+                    &gt;
+                  </Typography>
+                )}
+                <Button
+                  variant="text"
+                  size="small"
+                  onClick={() => navigateToTreeLevel(index)}
+                  sx={{
+                    textTransform: 'none',
+                    minWidth: 'auto',
+                    fontWeight: index === navigationPath.length - 1 ? 'bold' : 'normal',
+                    color: index === navigationPath.length - 1 ? 'primary.main' : 'text.secondary',
+                  }}
+                >
+                  {decodeURIComponent(treeName)}
+                </Button>
+              </Box>
+            ))}
+          </Box>
           
           <Button
             startIcon={<AddIcon />}
@@ -476,11 +780,22 @@ const NavigationEditorContent: React.FC = () => {
           onConnect={onConnect}
           onNodeClick={onNodeClick}
           onEdgeClick={onEdgeClick}
+          onNodeDoubleClick={onNodeDoubleClick}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           fitView
           attributionPosition="bottom-left"
           onPaneClick={onPaneClick}
+          connectionLineType={ConnectionLineType.SmoothStep}
+          defaultEdgeOptions={{
+            type: 'smoothstep',
+            animated: false,
+            style: { strokeWidth: 2, stroke: '#b1b1b7' },
+          }}
+          snapToGrid={true}
+          snapGrid={[15, 15]}
+          deleteKeyCode="Delete"
+          multiSelectionKeyCode="Shift"
         >
           <Controls />
           <MiniMap />
@@ -504,8 +819,8 @@ const NavigationEditorContent: React.FC = () => {
           </defs>
         </ReactFlow>
 
-        {/* Selection Info Panel */}
-        {(selectedNode || selectedEdge) && (
+        {/* Selection Info Panel or Help Panel */}
+        {(selectedNode || selectedEdge) ? (
           <Paper
             sx={{
               position: 'absolute',
@@ -538,6 +853,11 @@ const NavigationEditorContent: React.FC = () => {
                 {selectedNode.data.description && (
                   <Typography variant="body2" gutterBottom sx={{ mb: 1 }}>
                     {selectedNode.data.description}
+                  </Typography>
+                )}
+                {selectedNode.data.hasChildren && (
+                  <Typography variant="body2" color="success.main" gutterBottom sx={{ mb: 1 }}>
+                    💡 Double-click to explore child tree
                   </Typography>
                 )}
                 <Box sx={{ mt: 1.5, display: 'flex', gap: 0.5 }}>
@@ -624,6 +944,37 @@ const NavigationEditorContent: React.FC = () => {
                 </Box>
               </Box>
             )}
+          </Paper>
+        ) : (
+          <Paper
+            sx={{
+              position: 'absolute',
+              top: 16,
+              right: 16,
+              width: 220,
+              p: 1.5,
+              zIndex: 1000,
+              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            }}
+          >
+            <Typography variant="h6" sx={{ mb: 1, fontSize: '1rem' }}>
+              Navigation Editor Help
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              🔗 <strong>Connect Nodes:</strong> Drag from blue dots on node sides
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              🖱️ <strong>Double-click:</strong> Explore child trees (green + icon)
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              🍞 <strong>Breadcrumbs:</strong> Navigate back using header trail
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              ↩️ <strong>Back Button:</strong> Return to parent tree
+            </Typography>
+            <Typography variant="body2">
+              📱 <strong>Sibling Navigation:</strong> Horizontal connections only
+            </Typography>
           </Paper>
         )}
       </Box>
