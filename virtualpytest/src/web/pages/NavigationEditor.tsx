@@ -23,6 +23,9 @@ import {
   FitScreen as FitScreenIcon,
   Close as CloseIcon,
   ArrowBack as ArrowBackIcon,
+  Undo as UndoIcon,
+  Redo as RedoIcon,
+  Cancel as CancelIcon,
 } from '@mui/icons-material';
 import { useParams } from 'react-router-dom';
 import ReactFlow, {
@@ -271,7 +274,6 @@ const edgeTypes = {
   uiNavigation: UINavigationEdge,
 };
 
-// Main Navigation Editor Component
 const NavigationEditorContent: React.FC = () => {
   const { treeName } = useParams<{ treeName: string }>();
   const reactFlowInstance = useReactFlow();
@@ -464,13 +466,108 @@ const NavigationEditorContent: React.FC = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   
-  // Update tree data when currentTreeName changes
+  // State for history management
+  const [history, setHistory] = useState<{ nodes: UINavigationNode[], edges: UINavigationEdge[] }[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [initialState, setInitialState] = useState<{ nodes: UINavigationNode[], edges: UINavigationEdge[] } | null>(null);
+
+  // Update tree data when currentTreeName changes and initialize history
   useEffect(() => {
     const newTreeData = getTreeData(currentTreeName);
     setNodes(newTreeData.nodes);
     setEdges(newTreeData.edges);
+    setInitialState({ nodes: newTreeData.nodes, edges: newTreeData.edges });
+    setHistory([{ nodes: newTreeData.nodes, edges: newTreeData.edges }]);
+    setHistoryIndex(0);
   }, [currentTreeName, getTreeData, setNodes, setEdges]);
-  
+
+  // Function to save current state to history
+  const saveStateToHistory = useCallback((newNodes: UINavigationNode[], newEdges: UINavigationEdge[]) => {
+    const newHistory = history.slice(0, historyIndex + 1);
+    newHistory.push({ nodes: [...newNodes], edges: [...newEdges] });
+    setHistory(newHistory);
+    setHistoryIndex(newHistory.length - 1);
+  }, [history, historyIndex, setHistory, setHistoryIndex]);
+
+  // Override onNodesChange to save to history
+  const onNodesChangeWithHistory = useCallback((changes: any[]) => {
+    onNodesChange(changes);
+    setNodes((currentNodes) => {
+      const newNodes = [...currentNodes];
+      saveStateToHistory(newNodes, edges);
+      return newNodes;
+    });
+  }, [onNodesChange, edges, saveStateToHistory]);
+
+  // Override onEdgesChange to save to history
+  const onEdgesChangeWithHistory = useCallback((changes: any[]) => {
+    onEdgesChange(changes);
+    setEdges((currentEdges) => {
+      const newEdges = [...currentEdges];
+      saveStateToHistory(nodes, newEdges);
+      return newEdges;
+    });
+  }, [onEdgesChange, nodes, saveStateToHistory]);
+
+  // Override onConnect to save to history
+  const onConnectHistory = useCallback((params: Connection) => {
+    if (!params.source || !params.target) return;
+    console.log('[@component:NavigationEditor] Attempting to connect nodes:', params.source, 'to', params.target);
+    
+    const newEdge: UINavigationEdge = {
+      id: `edge-${Date.now()}`,
+      source: params.source,
+      target: params.target,
+      type: 'smoothstep',
+      data: { go: '', comeback: '' },
+    };
+    setEdges((eds) => {
+      const updatedEdges = addEdge(newEdge, eds);
+      saveStateToHistory(nodes, updatedEdges);
+      return updatedEdges;
+    });
+  }, [nodes, saveStateToHistory, setEdges]);
+
+  // Undo function
+  const undo = useCallback(() => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      setNodes([...history[newIndex].nodes]);
+      setEdges([...history[newIndex].edges]);
+    }
+  }, [history, historyIndex, setNodes, setEdges]);
+
+  // Redo function
+  const redo = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      setNodes([...history[newIndex].nodes]);
+      setEdges([...history[newIndex].edges]);
+    }
+  }, [history, historyIndex, setNodes, setEdges]);
+
+  // Save to database function
+  const saveToDatabase = useCallback(() => {
+    console.log('[@component:NavigationEditor] Saving to database:', { nodes, edges });
+    // Placeholder for actual database save logic
+    // Replace with API call or database operation
+    alert('Saved to database (simulated). Check console for details.');
+  }, [nodes, edges]);
+
+  // Discard changes function
+  const discardChanges = useCallback(() => {
+    if (initialState) {
+      setNodes([...initialState.nodes]);
+      setEdges([...initialState.edges]);
+      setHistory([{ nodes: initialState.nodes, edges: initialState.edges }]);
+      setHistoryIndex(0);
+      console.log('[@component:NavigationEditor] Discarded changes, reverted to initial state.');
+      alert('Changes discarded. Reverted to initial state.');
+    }
+  }, [initialState, setNodes, setEdges]);
+
   // UI state
   const [selectedNode, setSelectedNode] = useState<UINavigationNode | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<UINavigationEdge | null>(null);
@@ -578,24 +675,6 @@ const NavigationEditorContent: React.FC = () => {
       console.log(`Going back to parent: ${targetTreeName}`);
     }
   }, [navigationPath, getTreeData, setNodes, setEdges]);
-
-  // Handle connection between nodes
-  const onConnect = useCallback(
-    (params: Connection) => {
-      if (!params.source || !params.target) return;
-      console.log('[@component:NavigationEditor] Attempting to connect nodes:', params.source, 'to', params.target);
-      
-      const newEdge: UINavigationEdge = {
-        id: `edge-${Date.now()}`,
-        source: params.source,
-        target: params.target,
-        type: 'smoothstep',
-        data: { go: '', comeback: '' },
-      };
-      setEdges((eds) => addEdge(newEdge, eds));
-    },
-    [setEdges]
-  );
 
   // Add new node
   const addNewNode = useCallback(() => {
@@ -759,8 +838,20 @@ const NavigationEditorContent: React.FC = () => {
             <FitScreenIcon />
           </IconButton>
           
-          <IconButton size="small" title="Save">
+          <IconButton onClick={undo} size="small" title="Undo" disabled={historyIndex <= 0}>
+            <UndoIcon />
+          </IconButton>
+          
+          <IconButton onClick={redo} size="small" title="Redo" disabled={historyIndex >= history.length - 1}>
+            <RedoIcon />
+          </IconButton>
+          
+          <IconButton onClick={saveToDatabase} size="small" title="Save to Database">
             <SaveIcon />
+          </IconButton>
+          
+          <IconButton onClick={discardChanges} size="small" title="Discard Changes">
+            <CancelIcon />
           </IconButton>
           
           <IconButton 
@@ -778,9 +869,9 @@ const NavigationEditorContent: React.FC = () => {
         <ReactFlow
           nodes={nodes}
           edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
+          onNodesChange={onNodesChangeWithHistory}
+          onEdgesChange={onEdgesChangeWithHistory}
+          onConnect={onConnectHistory}
           onNodeClick={onNodeClick}
           onEdgeClick={onEdgeClick}
           onNodeDoubleClick={onNodeDoubleClick}
@@ -948,38 +1039,7 @@ const NavigationEditorContent: React.FC = () => {
               </Box>
             )}
           </Paper>
-        ) : (
-          <Paper
-            sx={{
-              position: 'absolute',
-              top: 16,
-              right: 16,
-              width: 220,
-              p: 1.5,
-              zIndex: 1000,
-              backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            }}
-          >
-            <Typography variant="h6" sx={{ mb: 1, fontSize: '1rem' }}>
-              Navigation Editor Help
-            </Typography>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              🔗 <strong>Connect Nodes:</strong> Drag from blue dots on node sides
-            </Typography>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              🖱️ <strong>Double-click:</strong> Explore child trees (green + icon)
-            </Typography>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              🍞 <strong>Breadcrumbs:</strong> Navigate back using header trail
-            </Typography>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              ↩️ <strong>Back Button:</strong> Return to parent tree
-            </Typography>
-            <Typography variant="body2">
-              📱 <strong>Sibling Navigation:</strong> Horizontal connections only
-            </Typography>
-          </Paper>
-        )}
+        ) : null}
       </Box>
 
       {/* Node Edit Dialog */}
