@@ -324,6 +324,12 @@ const NavigationEditorContent: React.FC = () => {
   const [currentTreeName, setCurrentTreeName] = useState<string>(treeName || 'home');
   const [navigationPath, setNavigationPath] = useState<string[]>([treeName || 'home']);
   
+  // Add state for save operation
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  
   // Function to generate tree data based on current tree level
   const getTreeData = useCallback((treeLevel: string): { nodes: UINavigationNode[], edges: UINavigationEdge[] } => {
     if (treeLevel === 'home' || treeLevel === 'horizon_stb') {
@@ -531,27 +537,29 @@ const NavigationEditorContent: React.FC = () => {
     setHistoryIndex(newHistory.length - 1);
   }, [history, historyIndex, setHistory, setHistoryIndex]);
 
-  // Override onNodesChange to save to history
+  // Override onNodesChange to save to history and track changes
   const onNodesChangeWithHistory = useCallback((changes: any[]) => {
     onNodesChange(changes);
     setNodes((currentNodes) => {
       const newNodes = [...currentNodes];
       saveStateToHistory(newNodes, edges);
+      setHasUnsavedChanges(true);
       return newNodes;
     });
   }, [onNodesChange, edges, saveStateToHistory]);
 
-  // Override onEdgesChange to save to history
+  // Override onEdgesChange to save to history and track changes
   const onEdgesChangeWithHistory = useCallback((changes: any[]) => {
     onEdgesChange(changes);
     setEdges((currentEdges) => {
       const newEdges = [...currentEdges];
       saveStateToHistory(nodes, newEdges);
+      setHasUnsavedChanges(true);
       return newEdges;
     });
   }, [onEdgesChange, nodes, saveStateToHistory]);
 
-  // Override onConnect to save to history
+  // Override onConnect to save to history and track changes
   const onConnectHistory = useCallback((params: Connection) => {
     if (!params.source || !params.target) return;
     console.log('[@component:NavigationEditor] Attempting to connect nodes:', params.source, 'to', params.target);
@@ -566,6 +574,7 @@ const NavigationEditorContent: React.FC = () => {
     setEdges((eds) => {
       const updatedEdges = addEdge(newEdge, eds);
       saveStateToHistory(nodes, updatedEdges);
+      setHasUnsavedChanges(true);
       return updatedEdges;
     });
   }, [nodes, saveStateToHistory, setEdges]);
@@ -590,25 +599,181 @@ const NavigationEditorContent: React.FC = () => {
     }
   }, [history, historyIndex, setNodes, setEdges]);
 
-  // Save to database function
-  const saveToDatabase = useCallback(() => {
-    console.log('[@component:NavigationEditor] Saving to database:', { nodes, edges });
-    // Placeholder for actual database save logic
-    // Replace with API call or database operation
-    alert('Saved to database (simulated). Check console for details.');
-  }, [nodes, edges]);
+  // Convert UI nodes and edges to NavigationService format
+  const convertToNavigationFormat = useCallback((
+    uiNodes: UINavigationNode[], 
+    uiEdges: UINavigationEdge[]
+  ): { nodes: NavigationNode[], edges: NavigationEdge[] } => {
+    const navigationNodes: NavigationNode[] = uiNodes.map(node => ({
+      id: node.id,
+      type: 'uiScreen' as const,
+      position: node.position,
+      data: {
+        label: node.data.label,
+        type: node.data.type,
+        screenshot: node.data.screenshot,
+        thumbnail: node.data.thumbnail,
+        description: node.data.description,
+        hasChildren: node.data.hasChildren,
+        childTreeName: node.data.childTreeName,
+        parentTree: node.data.parentTree,
+      },
+    }));
 
-  // Discard changes function
-  const discardChanges = useCallback(() => {
-    if (initialState) {
-      setNodes([...initialState.nodes]);
-      setEdges([...initialState.edges]);
-      setHistory([{ nodes: initialState.nodes, edges: initialState.edges }]);
-      setHistoryIndex(0);
-      console.log('[@component:NavigationEditor] Discarded changes, reverted to initial state.');
-      alert('Changes discarded. Reverted to initial state.');
+    const navigationEdges: NavigationEdge[] = uiEdges.map(edge => ({
+      id: edge.id,
+      source: edge.source,
+      target: edge.target,
+      type: edge.type,
+      data: edge.data,
+    }));
+
+    return { nodes: navigationNodes, edges: navigationEdges };
+  }, []);
+
+  // Save to database function with proper error handling
+  const saveToDatabase = useCallback(async () => {
+    if (!currentTreeName) {
+      setSaveError('No tree name specified');
+      return;
     }
-  }, [initialState, setNodes, setEdges]);
+
+    setIsSaving(true);
+    setSaveError(null);
+    setSaveSuccess(false);
+
+    try {
+      console.log('[@component:NavigationEditor] Starting save operation for tree:', currentTreeName);
+      console.log('[@component:NavigationEditor] Current nodes:', nodes);
+      console.log('[@component:NavigationEditor] Current edges:', edges);
+
+      // Convert UI format to NavigationService format
+      const { nodes: navigationNodes, edges: navigationEdges } = convertToNavigationFormat(nodes, edges);
+
+      // Validate tree data before saving
+      const treeData: NavigationTreeData = {
+        nodes: navigationNodes,
+        edges: navigationEdges,
+      };
+
+      const validation = navigationService.validateTreeData(treeData);
+      if (!validation.isValid) {
+        throw new Error(`Invalid tree data: ${validation.errors.join(', ')}`);
+      }
+
+      // Save to database using navigationService
+      const saveResponse = await navigationService.saveTree(
+        currentTreeName,
+        navigationNodes,
+        navigationEdges,
+        {
+          description: `Navigation tree for ${currentTreeName}`,
+          deviceType: 'generic', // You can make this configurable
+          teamId: undefined, // Add team ID if available in your context
+        }
+      );
+
+      if (saveResponse.success) {
+        console.log('[@component:NavigationEditor] Successfully saved tree to database:', saveResponse.data);
+        setSaveSuccess(true);
+        setHasUnsavedChanges(false);
+        
+        // Update initial state to current state after successful save
+        setInitialState({ nodes: [...nodes], edges: [...edges] });
+        
+        // Auto-hide success message after 3 seconds
+        setTimeout(() => setSaveSuccess(false), 3000);
+      } else {
+        throw new Error(saveResponse.error || 'Failed to save tree to database');
+      }
+    } catch (error) {
+      console.error('[@component:NavigationEditor] Error saving to database:', error);
+      setSaveError(error instanceof Error ? error.message : 'An unexpected error occurred while saving');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [currentTreeName, nodes, edges, convertToNavigationFormat]);
+
+  // Load tree from database
+  const loadFromDatabase = useCallback(async (treeName: string) => {
+    try {
+      console.log('[@component:NavigationEditor] Loading tree from database:', treeName);
+      
+      const loadResponse = await navigationService.loadTree(treeName);
+      
+      if (loadResponse.success && loadResponse.data) {
+        const { nodes: loadedNodes, edges: loadedEdges } = loadResponse.data;
+        
+        // Convert NavigationService format to UI format
+        const uiNodes: UINavigationNode[] = loadedNodes.map(node => ({
+          id: node.id,
+          type: 'uiScreen',
+          position: node.position,
+          data: node.data,
+        }));
+
+        const uiEdges: UINavigationEdge[] = loadedEdges.map(edge => ({
+          id: edge.id,
+          source: edge.source,
+          target: edge.target,
+          type: edge.type,
+          data: edge.data,
+        }));
+
+        setNodes(uiNodes);
+        setEdges(uiEdges);
+        setInitialState({ nodes: uiNodes, edges: uiEdges });
+        setHistory([{ nodes: uiNodes, edges: uiEdges }]);
+        setHistoryIndex(0);
+        setHasUnsavedChanges(false);
+        
+        console.log('[@component:NavigationEditor] Successfully loaded tree from database');
+      } else {
+        console.log('[@component:NavigationEditor] Tree not found in database, using default data');
+        // Fall back to generated tree data if not found in database
+        const defaultTreeData = getTreeData(treeName);
+        setNodes(defaultTreeData.nodes);
+        setEdges(defaultTreeData.edges);
+        setInitialState({ nodes: defaultTreeData.nodes, edges: defaultTreeData.edges });
+        setHistory([{ nodes: defaultTreeData.nodes, edges: defaultTreeData.edges }]);
+        setHistoryIndex(0);
+        setHasUnsavedChanges(false);
+      }
+    } catch (error) {
+      console.error('[@component:NavigationEditor] Error loading from database:', error);
+      // Fall back to generated tree data on error
+      const defaultTreeData = getTreeData(treeName);
+      setNodes(defaultTreeData.nodes);
+      setEdges(defaultTreeData.edges);
+      setInitialState({ nodes: defaultTreeData.nodes, edges: defaultTreeData.edges });
+      setHistory([{ nodes: defaultTreeData.nodes, edges: defaultTreeData.edges }]);
+      setHistoryIndex(0);
+      setHasUnsavedChanges(false);
+    }
+  }, [getTreeData, setNodes, setEdges]);
+
+  // Update tree data when currentTreeName changes and try to load from database first
+  useEffect(() => {
+    loadFromDatabase(currentTreeName);
+  }, [currentTreeName, loadFromDatabase]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Ctrl+S or Cmd+S to save
+      if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+        event.preventDefault();
+        if (!isSaving) {
+          saveToDatabase();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [saveToDatabase, isSaving]);
 
   // UI state
   const [selectedNode, setSelectedNode] = useState<UINavigationNode | null>(null);
@@ -616,6 +781,7 @@ const NavigationEditorContent: React.FC = () => {
   const [isNodeDialogOpen, setIsNodeDialogOpen] = useState(false);
   const [isEdgeDialogOpen, setIsEdgeDialogOpen] = useState(false);
   const [isNewNode, setIsNewNode] = useState(false); // Track if this is a newly created node
+  const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false);
   const [nodeForm, setNodeForm] = useState({
     label: '',
     type: 'screen' as 'screen' | 'dialog' | 'popup' | 'overlay',
@@ -741,7 +907,7 @@ const NavigationEditorContent: React.FC = () => {
     setIsNewNode(true);
   }, [setNodes]);
 
-  // Save node changes
+  // Save node changes with change tracking
   const saveNodeChanges = useCallback(() => {
     if (!selectedNode) return;
     
@@ -765,6 +931,7 @@ const NavigationEditorContent: React.FC = () => {
           : node
       )
     );
+    setHasUnsavedChanges(true);
     setIsNodeDialogOpen(false);
     setIsNewNode(false);
   }, [selectedNode, nodeForm, setNodes]);
@@ -780,7 +947,7 @@ const NavigationEditorContent: React.FC = () => {
     setIsNewNode(false);
   }, [isNewNode, selectedNode, setNodes]);
 
-  // Save edge changes
+  // Save edge changes with change tracking
   const saveEdgeChanges = useCallback(() => {
     if (!selectedEdge) return;
     
@@ -799,10 +966,11 @@ const NavigationEditorContent: React.FC = () => {
           : edge
       )
     );
+    setHasUnsavedChanges(true);
     setIsEdgeDialogOpen(false);
   }, [selectedEdge, edgeForm, setEdges]);
 
-  // Delete selected node or edge
+  // Delete selected node or edge with change tracking
   const deleteSelected = useCallback(() => {
     if (selectedNode) {
       setNodes((nds) => nds.filter((node) => node.id !== selectedNode.id));
@@ -810,9 +978,11 @@ const NavigationEditorContent: React.FC = () => {
         edge.source !== selectedNode.id && edge.target !== selectedNode.id
       ));
       setSelectedNode(null);
+      setHasUnsavedChanges(true);
     } else if (selectedEdge) {
       setEdges((eds) => eds.filter((edge) => edge.id !== selectedEdge.id));
       setSelectedEdge(null);
+      setHasUnsavedChanges(true);
     }
   }, [selectedNode, selectedEdge, setNodes, setEdges]);
 
@@ -820,6 +990,30 @@ const NavigationEditorContent: React.FC = () => {
   const fitView = useCallback(() => {
     reactFlowInstance.fitView();
   }, [reactFlowInstance]);
+
+  // Discard changes function with confirmation
+  const discardChanges = useCallback(() => {
+    if (hasUnsavedChanges) {
+      setIsDiscardDialogOpen(true);
+    } else {
+      performDiscardChanges();
+    }
+  }, [hasUnsavedChanges]);
+
+  // Actually perform the discard operation
+  const performDiscardChanges = useCallback(() => {
+    if (initialState) {
+      setNodes([...initialState.nodes]);
+      setEdges([...initialState.edges]);
+      setHistory([{ nodes: initialState.nodes, edges: initialState.edges }]);
+      setHistoryIndex(0);
+      setHasUnsavedChanges(false);
+      setSaveError(null);
+      setSaveSuccess(false);
+      setIsDiscardDialogOpen(false);
+      console.log('[@component:NavigationEditor] Discarded changes, reverted to initial state.');
+    }
+  }, [initialState, setNodes, setEdges]);
 
   return (
     <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -859,6 +1053,11 @@ const NavigationEditorContent: React.FC = () => {
                   }}
                 >
                   {decodeURIComponent(treeName)}
+                  {index === navigationPath.length - 1 && hasUnsavedChanges && (
+                    <Typography component="span" sx={{ color: 'warning.main', ml: 0.5 }}>
+                      *
+                    </Typography>
+                  )}
                 </Button>
               </Box>
             ))}
@@ -885,11 +1084,22 @@ const NavigationEditorContent: React.FC = () => {
             <RedoIcon />
           </IconButton>
           
-          <IconButton onClick={saveToDatabase} size="small" title="Save to Database">
-            <SaveIcon />
+          <IconButton 
+            onClick={saveToDatabase} 
+            size="small" 
+            title={hasUnsavedChanges ? "Save Changes to Database" : "Save to Database"}
+            disabled={isSaving}
+            color={hasUnsavedChanges ? "primary" : "default"}
+          >
+            {isSaving ? <CircularProgress size={20} /> : <SaveIcon />}
           </IconButton>
           
-          <IconButton onClick={discardChanges} size="small" title="Discard Changes">
+          <IconButton 
+            onClick={discardChanges} 
+            size="small" 
+            title={hasUnsavedChanges ? "Discard Unsaved Changes" : "Discard Changes"}
+            color={hasUnsavedChanges ? "warning" : "default"}
+          >
             <CancelIcon />
           </IconButton>
           
@@ -1180,6 +1390,46 @@ const NavigationEditorContent: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Discard Changes Confirmation Dialog */}
+      <Dialog open={isDiscardDialogOpen} onClose={() => setIsDiscardDialogOpen(false)}>
+        <DialogTitle>Discard Changes?</DialogTitle>
+        <DialogContent>
+          <Typography>
+            You have unsaved changes. Are you sure you want to discard them and revert to the last saved state?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsDiscardDialogOpen(false)}>Cancel</Button>
+          <Button onClick={performDiscardChanges} color="warning" variant="contained">
+            Discard Changes
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar for save success */}
+      <Snackbar
+        open={saveSuccess}
+        autoHideDuration={3000}
+        onClose={() => setSaveSuccess(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setSaveSuccess(false)} severity="success" sx={{ width: '100%' }}>
+          Navigation tree saved successfully!
+        </Alert>
+      </Snackbar>
+
+      {/* Snackbar for save error */}
+      <Snackbar
+        open={!!saveError}
+        autoHideDuration={6000}
+        onClose={() => setSaveError(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setSaveError(null)} severity="error" sx={{ width: '100%' }}>
+          Error saving tree: {saveError}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
