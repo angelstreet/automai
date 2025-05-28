@@ -4,7 +4,6 @@ import {
   Delete as DeleteIcon,
   Save as SaveIcon,
   Cancel as CancelIcon,
-  AccountTree as TreeIcon,
   Launch as LaunchIcon,
 } from '@mui/icons-material';
 import {
@@ -34,16 +33,10 @@ import {
   Chip,
   OutlinedInput,
   SelectChangeEvent,
+  CircularProgress,
 } from '@mui/material';
-import React, { useState } from 'react';
-
-interface UITree {
-  id: string;
-  name: string;
-  models: string[];
-  min_version: string;
-  max_version: string;
-}
+import React, { useState, useEffect } from 'react';
+import { userInterfaceApi, UserInterface as UserInterfaceType, UserInterfaceCreatePayload } from '../src/services/userInterfaceApi';
 
 const availableModels = [
   'Android Phone',
@@ -58,10 +51,9 @@ const availableModels = [
   'Chromecast',
 ];
 
-const defaultTrees: UITree[] = [];
-
 const UserInterface: React.FC = () => {
-  const [trees, setTrees] = useState<UITree[]>(defaultTrees);
+  const [userInterfaces, setUserInterfaces] = useState<UserInterfaceType[]>([]);
+  const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ 
     name: '', 
@@ -70,25 +62,45 @@ const UserInterface: React.FC = () => {
     max_version: '' 
   });
   const [openDialog, setOpenDialog] = useState(false);
-  const [newTree, setNewTree] = useState({ 
+  const [newInterface, setNewInterface] = useState({ 
     name: '', 
     models: [] as string[], 
     min_version: '', 
     max_version: '' 
   });
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleEdit = (tree: UITree) => {
-    setEditingId(tree.id);
+  // Load user interfaces on component mount
+  useEffect(() => {
+    loadUserInterfaces();
+  }, []);
+
+  const loadUserInterfaces = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const interfaces = await userInterfaceApi.getAllUserInterfaces();
+      setUserInterfaces(interfaces);
+    } catch (err) {
+      console.error('[@component:UserInterface] Error loading user interfaces:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load user interfaces');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEdit = (userInterface: UserInterfaceType) => {
+    setEditingId(userInterface.id);
     setEditForm({
-      name: tree.name,
-      models: tree.models,
-      min_version: tree.min_version,
-      max_version: tree.max_version,
+      name: userInterface.name,
+      models: userInterface.models,
+      min_version: userInterface.min_version,
+      max_version: userInterface.max_version,
     });
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editForm.name.trim()) {
       setError('Name is required');
       return;
@@ -100,28 +112,41 @@ const UserInterface: React.FC = () => {
     }
 
     // Check for duplicate names (excluding current item)
-    const isDuplicate = trees.some(
-      (t) => t.id !== editingId && t.name.toLowerCase() === editForm.name.toLowerCase().trim()
+    const isDuplicate = userInterfaces.some(
+      (ui) => ui.id !== editingId && ui.name.toLowerCase() === editForm.name.toLowerCase().trim()
     );
     
     if (isDuplicate) {
-      setError('A tree with this name already exists');
+      setError('A user interface with this name already exists');
       return;
     }
 
-    setTrees(trees.map(t => 
-      t.id === editingId 
-        ? { 
-            ...t, 
-            name: editForm.name.trim(), 
-            models: editForm.models,
-            min_version: editForm.min_version.trim(), 
-            max_version: editForm.max_version.trim() 
-          }
-        : t
-    ));
-    setEditingId(null);
-    setError(null);
+    try {
+      setSubmitting(true);
+      setError(null);
+
+      const payload: UserInterfaceCreatePayload = {
+        name: editForm.name.trim(),
+        models: editForm.models,
+        min_version: editForm.min_version.trim(),
+        max_version: editForm.max_version.trim(),
+      };
+
+      const updatedInterface = await userInterfaceApi.updateUserInterface(editingId!, payload);
+      
+      // Update local state
+      setUserInterfaces(userInterfaces.map(ui => 
+        ui.id === editingId ? updatedInterface : ui
+      ));
+      
+      setEditingId(null);
+      console.log('[@component:UserInterface] Successfully updated user interface:', updatedInterface.name);
+    } catch (err) {
+      console.error('[@component:UserInterface] Error updating user interface:', err);
+      setError(err instanceof Error ? err.message : 'Failed to update user interface');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleCancelEdit = () => {
@@ -130,47 +155,74 @@ const UserInterface: React.FC = () => {
     setError(null);
   };
 
-  const handleDelete = (id: string) => {
-    setTrees(trees.filter(t => t.id !== id));
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this user interface?')) {
+      return;
+    }
+
+    try {
+      setError(null);
+      await userInterfaceApi.deleteUserInterface(id);
+      
+      // Update local state
+      setUserInterfaces(userInterfaces.filter(ui => ui.id !== id));
+      console.log('[@component:UserInterface] Successfully deleted user interface');
+    } catch (err) {
+      console.error('[@component:UserInterface] Error deleting user interface:', err);
+      setError(err instanceof Error ? err.message : 'Failed to delete user interface');
+    }
   };
 
-  const handleAddNew = () => {
-    if (!newTree.name.trim()) {
+  const handleAddNew = async () => {
+    if (!newInterface.name.trim()) {
       setError('Name is required');
       return;
     }
 
-    if (newTree.models.length === 0) {
+    if (newInterface.models.length === 0) {
       setError('At least one model must be selected');
       return;
     }
 
     // Check for duplicate names
-    const isDuplicate = trees.some(
-      (t) => t.name.toLowerCase() === newTree.name.toLowerCase().trim()
+    const isDuplicate = userInterfaces.some(
+      (ui) => ui.name.toLowerCase() === newInterface.name.toLowerCase().trim()
     );
     
     if (isDuplicate) {
-      setError('A tree with this name already exists');
+      setError('A user interface with this name already exists');
       return;
     }
 
-    const newId = (Math.max(...trees.map(t => parseInt(t.id)), 0) + 1).toString();
-    setTrees([...trees, {
-      id: newId,
-      name: newTree.name.trim(),
-      models: newTree.models,
-      min_version: newTree.min_version.trim(),
-      max_version: newTree.max_version.trim(),
-    }]);
-    setNewTree({ name: '', models: [], min_version: '', max_version: '' });
-    setOpenDialog(false);
-    setError(null);
+    try {
+      setSubmitting(true);
+      setError(null);
+
+      const payload: UserInterfaceCreatePayload = {
+        name: newInterface.name.trim(),
+        models: newInterface.models,
+        min_version: newInterface.min_version.trim(),
+        max_version: newInterface.max_version.trim(),
+      };
+
+      const createdInterface = await userInterfaceApi.createUserInterface(payload);
+      
+      // Update local state
+      setUserInterfaces([...userInterfaces, createdInterface]);
+      setNewInterface({ name: '', models: [], min_version: '', max_version: '' });
+      setOpenDialog(false);
+      console.log('[@component:UserInterface] Successfully created user interface:', createdInterface.name);
+    } catch (err) {
+      console.error('[@component:UserInterface] Error creating user interface:', err);
+      setError(err instanceof Error ? err.message : 'Failed to create user interface');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleCloseDialog = () => {
     setOpenDialog(false);
-    setNewTree({ name: '', models: [], min_version: '', max_version: '' });
+    setNewInterface({ name: '', models: [], min_version: '', max_version: '' });
     setError(null);
   };
 
@@ -182,7 +234,7 @@ const UserInterface: React.FC = () => {
     if (isEdit) {
       setEditForm({ ...editForm, models: selectedModels });
     } else {
-      setNewTree({ ...newTree, models: selectedModels });
+      setNewInterface({ ...newInterface, models: selectedModels });
     }
   };
 
@@ -193,12 +245,31 @@ const UserInterface: React.FC = () => {
         models: editForm.models.filter(model => model !== modelToRemove) 
       });
     } else {
-      setNewTree({ 
-        ...newTree, 
-        models: newTree.models.filter(model => model !== modelToRemove) 
+      setNewInterface({ 
+        ...newInterface, 
+        models: newInterface.models.filter(model => model !== modelToRemove) 
       });
     }
   };
+
+  // Loading state component
+  const LoadingState = () => (
+    <Box 
+      sx={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        py: 8,
+        textAlign: 'center'
+      }}
+    >
+      <CircularProgress size={40} sx={{ mb: 2 }} />
+      <Typography variant="h6" color="text.secondary">
+        Loading User Interfaces...
+      </Typography>
+    </Box>
+  );
 
   // Empty state component
   const EmptyState = () => (
@@ -212,7 +283,6 @@ const UserInterface: React.FC = () => {
         textAlign: 'center'
       }}
     >
-      <TreeIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
       <Typography variant="h6" color="text.secondary" gutterBottom>
         No User Interface Created
       </Typography>
@@ -238,6 +308,7 @@ const UserInterface: React.FC = () => {
           startIcon={<AddIcon />}
           onClick={() => setOpenDialog(true)}
           size="small"
+          disabled={loading}
         >
           Add UI
         </Button>
@@ -251,7 +322,9 @@ const UserInterface: React.FC = () => {
 
       <Card sx={{ boxShadow: 1 }}>
         <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
-          {trees.length === 0 ? (
+          {loading ? (
+            <LoadingState />
+          ) : userInterfaces.length === 0 ? (
             <EmptyState />
           ) : (
             <TableContainer component={Paper} variant="outlined" sx={{ boxShadow: 'none' }}>
@@ -267,10 +340,10 @@ const UserInterface: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {trees.map((tree) => (
-                    <TableRow key={tree.id} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
+                  {userInterfaces.map((userInterface) => (
+                    <TableRow key={userInterface.id} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
                       <TableCell>
-                        {editingId === tree.id ? (
+                        {editingId === userInterface.id ? (
                           <TextField
                             size="small"
                             value={editForm.name}
@@ -280,11 +353,11 @@ const UserInterface: React.FC = () => {
                             sx={{ '& .MuiInputBase-root': { height: '32px' } }}
                           />
                         ) : (
-                          tree.name
+                          userInterface.name
                         )}
                       </TableCell>
                       <TableCell>
-                        {editingId === tree.id ? (
+                        {editingId === userInterface.id ? (
                           <FormControl size="small" fullWidth>
                             <Select
                               multiple
@@ -341,20 +414,19 @@ const UserInterface: React.FC = () => {
                           </FormControl>
                         ) : (
                           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                            {tree.models.map((model) => (
+                            {userInterface.models.map((model) => (
                               <Chip 
                                 key={model} 
                                 label={model} 
                                 size="small" 
                                 variant="outlined"
-                                onDelete={editingId === tree.id ? () => handleRemoveModel(model, true) : undefined}
                               />
                             ))}
                           </Box>
                         )}
                       </TableCell>
                       <TableCell>
-                        {editingId === tree.id ? (
+                        {editingId === userInterface.id ? (
                           <TextField
                             size="small"
                             value={editForm.min_version}
@@ -365,11 +437,11 @@ const UserInterface: React.FC = () => {
                             sx={{ '& .MuiInputBase-root': { height: '32px' } }}
                           />
                         ) : (
-                          tree.min_version || 'N/A'
+                          userInterface.min_version || 'N/A'
                         )}
                       </TableCell>
                       <TableCell>
-                        {editingId === tree.id ? (
+                        {editingId === userInterface.id ? (
                           <TextField
                             size="small"
                             value={editForm.max_version}
@@ -380,7 +452,7 @@ const UserInterface: React.FC = () => {
                             sx={{ '& .MuiInputBase-root': { height: '32px' } }}
                           />
                         ) : (
-                          tree.max_version || 'N/A'
+                          userInterface.max_version || 'N/A'
                         )}
                       </TableCell>
                       <TableCell align="center">
@@ -388,7 +460,7 @@ const UserInterface: React.FC = () => {
                           size="small"
                           variant="outlined"
                           startIcon={<LaunchIcon fontSize="small" />}
-                          onClick={() => window.open(`/navigation-editor/${encodeURIComponent(tree.name)}`, '_blank')}
+                          onClick={() => window.open(`/navigation-editor/${encodeURIComponent(userInterface.name)}`, '_blank')}
                           sx={{ 
                             minWidth: 'auto',
                             px: 1,
@@ -396,24 +468,26 @@ const UserInterface: React.FC = () => {
                             fontSize: '0.75rem'
                           }}
                         >
-                          Edit
+                          Edit Navigation
                         </Button>
                       </TableCell>
                       <TableCell align="center">
-                        {editingId === tree.id ? (
+                        {editingId === userInterface.id ? (
                           <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
                             <IconButton
                               size="small"
                               color="primary"
                               onClick={handleSaveEdit}
+                              disabled={submitting}
                               sx={{ p: 0.5 }}
                             >
-                              <SaveIcon fontSize="small" />
+                              {submitting ? <CircularProgress size={16} /> : <SaveIcon fontSize="small" />}
                             </IconButton>
                             <IconButton
                               size="small"
                               color="secondary"
                               onClick={handleCancelEdit}
+                              disabled={submitting}
                               sx={{ p: 0.5 }}
                             >
                               <CancelIcon fontSize="small" />
@@ -424,7 +498,7 @@ const UserInterface: React.FC = () => {
                             <IconButton
                               size="small"
                               color="primary"
-                              onClick={() => handleEdit(tree)}
+                              onClick={() => handleEdit(userInterface)}
                               sx={{ p: 0.5 }}
                             >
                               <EditIcon fontSize="small" />
@@ -432,7 +506,7 @@ const UserInterface: React.FC = () => {
                             <IconButton
                               size="small"
                               color="error"
-                              onClick={() => handleDelete(tree.id)}
+                              onClick={() => handleDelete(userInterface.id)}
                               sx={{ p: 0.5 }}
                             >
                               <DeleteIcon fontSize="small" />
@@ -449,7 +523,7 @@ const UserInterface: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Add New Tree Dialog */}
+      {/* Add New User Interface Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ pb: 1 }}>Add New User Interface</DialogTitle>
         <DialogContent sx={{ pt: 1 }}>
@@ -460,8 +534,8 @@ const UserInterface: React.FC = () => {
               label="Name"
               fullWidth
               variant="outlined"
-              value={newTree.name}
-              onChange={(e) => setNewTree({ ...newTree, name: e.target.value })}
+              value={newInterface.name}
+              onChange={(e) => setNewInterface({ ...newInterface, name: e.target.value })}
               sx={{ mb: 1.5 }}
               size="small"
               placeholder="e.g., Main Navigation Tree"
@@ -472,7 +546,7 @@ const UserInterface: React.FC = () => {
               <Select
                 multiple
                 size="small"
-                value={newTree.models}
+                value={newInterface.models}
                 onChange={(e) => handleModelChange(e)}
                 input={<OutlinedInput label="Models" />}
                 renderValue={(selected) => (
@@ -511,9 +585,9 @@ const UserInterface: React.FC = () => {
                       py: 0.5,
                       px: 1,
                       minHeight: 'auto',
-                      backgroundColor: newTree.models.includes(model) ? 'action.selected' : 'inherit',
+                      backgroundColor: newInterface.models.includes(model) ? 'action.selected' : 'inherit',
                       '&:hover': {
-                        backgroundColor: newTree.models.includes(model) ? 'action.selected' : 'action.hover',
+                        backgroundColor: newInterface.models.includes(model) ? 'action.selected' : 'action.hover',
                       },
                     }}
                   >
@@ -528,8 +602,8 @@ const UserInterface: React.FC = () => {
               label="Min Version"
               fullWidth
               variant="outlined"
-              value={newTree.min_version}
-              onChange={(e) => setNewTree({ ...newTree, min_version: e.target.value })}
+              value={newInterface.min_version}
+              onChange={(e) => setNewInterface({ ...newInterface, min_version: e.target.value })}
               sx={{ mb: 1.5 }}
               size="small"
               placeholder="e.g., 1.0.0"
@@ -540,24 +614,25 @@ const UserInterface: React.FC = () => {
               label="Max Version"
               fullWidth
               variant="outlined"
-              value={newTree.max_version}
-              onChange={(e) => setNewTree({ ...newTree, max_version: e.target.value })}
+              value={newInterface.max_version}
+              onChange={(e) => setNewInterface({ ...newInterface, max_version: e.target.value })}
               size="small"
               placeholder="e.g., 2.0.0"
             />
           </Box>
         </DialogContent>
         <DialogActions sx={{ pt: 1, pb: 2, px: 3, gap: 1 }}>
-          <Button onClick={handleCloseDialog} size="small" variant="outlined">
+          <Button onClick={handleCloseDialog} size="small" variant="outlined" disabled={submitting}>
             Cancel
           </Button>
           <Button 
             onClick={handleAddNew} 
             variant="contained" 
             size="small"
-            disabled={!newTree.name.trim() || newTree.models.length === 0}
+            disabled={!newInterface.name.trim() || newInterface.models.length === 0 || submitting}
           >
-           Add
+            {submitting ? <CircularProgress size={16} sx={{ mr: 1 }} /> : null}
+            Add
           </Button>
         </DialogActions>
       </Dialog>

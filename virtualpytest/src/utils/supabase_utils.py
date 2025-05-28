@@ -10,6 +10,10 @@ url: str = os.environ.get("NEXT_PUBLIC_SUPABASE_URL")
 key: str = os.environ.get("NEXT_PUBLIC_SUPABASE_ANON_KEY")
 supabase: Client = create_client(url, key)
 
+def get_supabase_client() -> Client:
+    """Get the Supabase client instance."""
+    return supabase
+
 def save_test_case(test_case: Dict, team_id: str, creator_id: str = None) -> None:
     """Save test case to Supabase test_cases table."""
     test_case['test_id'] = test_case.get('test_id', str(uuid4()))

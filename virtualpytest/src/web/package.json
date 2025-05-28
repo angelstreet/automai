@@ -16,7 +16,8 @@
     "@mui/material": "^5.15.0",
     "@emotion/react": "^11.11.1",
     "@emotion/styled": "^11.11.0",
-    "@mui/icons-material": "^5.15.0"
+    "@mui/icons-material": "^5.15.0",
+    "reactflow": "^11.10.1"
   },
   "devDependencies": {
     "@types/react": "^18.2.43",

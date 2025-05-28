@@ -19,6 +19,7 @@ import RunTests from '../pages/RunTests';
 import TestReports from '../pages/TestReports';
 import UserInterface from '../pages/UserInterface';
 import TestCaseEditor from '../pages/testCaseEditor';
+import NavigationEditor from '../pages/NavigationEditor';
 
 // Import navigation components
 import NavigationBar from './components/Navigation/NavigationBar';
@@ -75,6 +76,8 @@ const App: React.FC = () => {
             <Route path="/configuration/library" element={<Library />} />
             <Route path="/configuration/environment" element={<Environment />} />
 
+            {/* Navigation Editor Route */}
+            <Route path="/navigation-editor/:treeName" element={<NavigationEditor />} />
 
           </Routes>
         </Container>
