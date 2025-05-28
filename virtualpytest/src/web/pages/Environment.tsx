@@ -189,7 +189,7 @@ const Environment: React.FC = () => {
               </TableHead>
               <TableBody>
                 {variables.map((variable) => (
-                  <TableRow key={variable.id} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
+                  <TableRow key={variable.id} sx={{ '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.08)' } }}>
                     <TableCell>
                       {editingId === variable.id ? (
                         <TextField

@@ -10,6 +10,7 @@ import {
   Storage as CollectionIcon,
   Gamepad as ControllerIcon,
   LibraryBooks as LibraryIcon,
+  Memory as ModelIcon,
 } from '@mui/icons-material';
 import { Box, Button } from '@mui/material';
 import React from 'react';
@@ -50,13 +51,18 @@ const NavigationBar: React.FC = () => {
 
   const configurationItems = [
     {
-      label: 'Device Management',
+      label: 'Device',
       path: '/configuration/devices',
       icon: <DevicesIcon fontSize="small" />,
     },
     {
+      label: 'Models',
+      path: '/configuration/models',
+      icon: <ModelIcon fontSize="small" />,
+    },
+    {
       label: 'User Interface',
-      path: '/configuration/ui-trees',
+      path: '/configuration/interface',
       icon: <TreeIcon fontSize="small" />,
     },
     {

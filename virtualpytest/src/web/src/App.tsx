@@ -13,10 +13,11 @@ import DeviceManagement from '../pages/DeviceManagement';
 // Import new pages
 import Environment from '../pages/Environment';
 import Library from '../pages/Library';
+import Models from '../pages/Models';
 import Monitoring from '../pages/Monitoring';
 import RunTests from '../pages/RunTests';
 import TestReports from '../pages/TestReports';
-import TreeEditor from '../pages/TreeEditor';
+import UserInterface from '../pages/UserInterface';
 import TestCaseEditor from '../pages/testCaseEditor';
 
 // Import navigation components
@@ -68,16 +69,13 @@ const App: React.FC = () => {
 
             {/* Configuration Routes */}
             <Route path="/configuration/devices" element={<DeviceManagement />} />
-            <Route path="/configuration/ui-trees" element={<TreeEditor />} />
+            <Route path="/configuration/models" element={<Models />} />
+            <Route path="/configuration/interface" element={<UserInterface />} />
             <Route path="/configuration/controller" element={<Controller />} />
             <Route path="/configuration/library" element={<Library />} />
             <Route path="/configuration/environment" element={<Environment />} />
 
-            {/* Legacy routes for backward compatibility */}
-            <Route path="/testcases" element={<TestCaseEditor />} />
-            <Route path="/campaigns" element={<CampaignEditor />} />
-            <Route path="/trees" element={<TreeEditor />} />
-            <Route path="/device-management" element={<DeviceManagement />} />
+
           </Routes>
         </Container>
       </Router>
