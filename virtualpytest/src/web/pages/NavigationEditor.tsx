@@ -633,7 +633,7 @@ const NavigationEditorContent: React.FC = () => {
           }}>
             <CircularProgress />
             <Typography variant="h6" sx={{ ml: 2 }}>
-              Loading navigation tree...
+              {isLoadingInterface ? 'Loading navigation tree...' : 'Saving navigation tree...'}
             </Typography>
           </Box>
         ) : error ? (
@@ -772,22 +772,36 @@ const NavigationEditorContent: React.FC = () => {
                         💡 Double-click to explore child tree
                       </Typography>
                     )}
-                    <Box sx={{ mt: 1.5, display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        sx={{ fontSize: '0.75rem', px: 1 }}
-                        onClick={() => {
-                          setNodeForm({
-                            label: selectedNode.data.label,
-                            type: selectedNode.data.type,
-                            description: selectedNode.data.description || '',
-                          });
-                          setIsNodeDialogOpen(true);
-                        }}
-                      >
-                        Edit
-                      </Button>
+                    <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                      {/* First row: Edit and Delete */}
+                      <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          sx={{ fontSize: '0.75rem', px: 1, flex: 1 }}
+                          onClick={() => {
+                            setNodeForm({
+                              label: selectedNode.data.label,
+                              type: selectedNode.data.type,
+                              description: selectedNode.data.description || '',
+                            });
+                            setIsNodeDialogOpen(true);
+                          }}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="error"
+                          sx={{ fontSize: '0.75rem', px: 1, flex: 1 }}
+                          onClick={deleteSelected}
+                        >
+                          Delete
+                        </Button>
+                      </Box>
+                      
+                      {/* Second row: Add Children */}
                       <Button
                         size="small"
                         variant="outlined"
@@ -805,15 +819,6 @@ const NavigationEditorContent: React.FC = () => {
                         }}
                       >
                         Add Children
-                      </Button>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        color="error"
-                        sx={{ fontSize: '0.75rem', px: 1 }}
-                        onClick={deleteSelected}
-                      >
-                        Delete
                       </Button>
                     </Box>
                   </Box>
