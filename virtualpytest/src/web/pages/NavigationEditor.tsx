@@ -83,7 +83,46 @@ const UIScreenNode = ({ data, selected }: { data: any; selected: boolean }) => {
         position: 'relative',
       }}
     >
-      {/* Thumbnail area */}
+      {/* Header with node name and type */}
+      <Box
+        sx={{
+          padding: 1,
+          backgroundColor: 'white',
+          borderBottom: '1px solid #eee',
+          minHeight: 40,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+        }}
+      >
+        <Typography
+          variant="caption"
+          sx={{
+            fontWeight: 'bold',
+            display: 'block',
+            textAlign: 'center',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            color: 'black', // Force black text for readability in dark mode
+          }}
+        >
+          {data.label}
+        </Typography>
+        <Typography
+          variant="caption"
+          sx={{
+            display: 'block',
+            textAlign: 'center',
+            fontSize: '0.6rem',
+            color: '#666', // Dark gray for secondary text, readable in dark mode
+          }}
+        >
+          {data.type}
+        </Typography>
+      </Box>
+
+      {/* Screenshot/Thumbnail area */}
       <Box
         sx={{
           flex: 1,
@@ -98,7 +137,7 @@ const UIScreenNode = ({ data, selected }: { data: any; selected: boolean }) => {
         }}
       >
         {!data.thumbnail && (
-          <Typography variant="caption" color="textSecondary">
+          <Typography variant="caption" sx={{ color: '#666' }}>
             No Screenshot
           </Typography>
         )}
@@ -116,40 +155,6 @@ const UIScreenNode = ({ data, selected }: { data: any; selected: boolean }) => {
             }}
           />
         )}
-      </Box>
-      
-      {/* Label area */}
-      <Box
-        sx={{
-          padding: 1,
-          backgroundColor: 'white',
-          borderTop: '1px solid #eee',
-        }}
-      >
-        <Typography
-          variant="caption"
-          sx={{
-            fontWeight: 'bold',
-            display: 'block',
-            textAlign: 'center',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {data.label}
-        </Typography>
-        <Typography
-          variant="caption"
-          color="textSecondary"
-          sx={{
-            display: 'block',
-            textAlign: 'center',
-            fontSize: '0.6rem',
-          }}
-        >
-          {data.type}
-        </Typography>
       </Box>
     </Box>
   );
@@ -303,6 +308,38 @@ const NavigationEditorContent: React.FC = () => {
     description: '',
   });
 
+  // Handle clicking on the background/pane to deselect
+  const onPaneClick = useCallback(() => {
+    setSelectedNode(null);
+    setSelectedEdge(null);
+  }, []);
+
+  // Close selection panel
+  const closeSelectionPanel = useCallback(() => {
+    setSelectedNode(null);
+    setSelectedEdge(null);
+  }, []);
+
+  // Handle node selection
+  const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
+    event.stopPropagation(); // Prevent pane click from firing
+    setSelectedNode(node as UINavigationNode);
+    setSelectedEdge(null);
+  }, []);
+
+  // Handle edge selection
+  const onEdgeClick = useCallback((event: React.MouseEvent, edge: Edge) => {
+    event.stopPropagation(); // Prevent pane click from firing
+    setSelectedEdge(edge as UINavigationEdge);
+    setSelectedNode(null);
+    setEdgeForm({
+      go: edge.data?.go || '',
+      comeback: edge.data?.comeback || '',
+      description: edge.data?.description || '',
+    });
+    setIsEdgeDialogOpen(true);
+  }, []);
+
   // Handle connection between nodes
   const onConnect = useCallback(
     (params: Connection) => {
@@ -319,24 +356,6 @@ const NavigationEditorContent: React.FC = () => {
     },
     [setEdges]
   );
-
-  // Handle node selection
-  const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
-    setSelectedNode(node as UINavigationNode);
-    setSelectedEdge(null);
-  }, []);
-
-  // Handle edge selection
-  const onEdgeClick = useCallback((event: React.MouseEvent, edge: Edge) => {
-    setSelectedEdge(edge as UINavigationEdge);
-    setSelectedNode(null);
-    setEdgeForm({
-      go: edge.data?.go || '',
-      comeback: edge.data?.comeback || '',
-      description: edge.data?.description || '',
-    });
-    setIsEdgeDialogOpen(true);
-  }, []);
 
   // Add new node
   const addNewNode = useCallback(() => {
@@ -476,6 +495,7 @@ const NavigationEditorContent: React.FC = () => {
           edgeTypes={edgeTypes}
           fitView
           attributionPosition="bottom-left"
+          onPaneClick={onPaneClick}
         >
           <Controls />
           <MiniMap />
@@ -511,6 +531,17 @@ const NavigationEditorContent: React.FC = () => {
               zIndex: 1000,
             }}
           >
+            {/* Close button */}
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+              <IconButton
+                size="small"
+                onClick={closeSelectionPanel}
+                sx={{ p: 0.5 }}
+              >
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </Box>
+
             {selectedNode && (
               <Box>
                 <Typography variant="h6" gutterBottom>
