@@ -511,8 +511,8 @@ const NavigationEditorContent: React.FC = () => {
               position: 'absolute',
               top: 16,
               right: 16,
-              width: 300,
-              p: 2,
+              width: 200,
+              p: 1.5,
               zIndex: 1000,
             }}
           >
@@ -520,30 +520,31 @@ const NavigationEditorContent: React.FC = () => {
               <Box>
                 {/* Header with title and close button on same level */}
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                  <Typography variant="h6" sx={{ margin: 0 }}>
+                  <Typography variant="h6" sx={{ margin: 0, fontSize: '1rem' }}>
                     Screen: {selectedNode.data.label}
                   </Typography>
                   <IconButton
                     size="small"
                     onClick={closeSelectionPanel}
-                    sx={{ p: 0.5 }}
+                    sx={{ p: 0.25 }}
                   >
                     <CloseIcon fontSize="small" />
                   </IconButton>
                 </Box>
                 
-                <Typography variant="body2" color="textSecondary" gutterBottom>
+                <Typography variant="body2" color="textSecondary" gutterBottom sx={{ mb: 0.5 }}>
                   Type: {selectedNode.data.type}
                 </Typography>
                 {selectedNode.data.description && (
-                  <Typography variant="body2" gutterBottom>
+                  <Typography variant="body2" gutterBottom sx={{ mb: 1 }}>
                     {selectedNode.data.description}
                   </Typography>
                 )}
-                <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
+                <Box sx={{ mt: 1.5, display: 'flex', gap: 0.5 }}>
                   <Button
                     size="small"
                     variant="outlined"
+                    sx={{ fontSize: '0.75rem', px: 1 }}
                     onClick={() => {
                       setNodeForm({
                         label: selectedNode.data.label,
@@ -560,6 +561,7 @@ const NavigationEditorContent: React.FC = () => {
                     size="small"
                     variant="outlined"
                     color="error"
+                    sx={{ fontSize: '0.75rem', px: 1 }}
                     onClick={deleteSelected}
                   >
                     Delete
@@ -572,32 +574,33 @@ const NavigationEditorContent: React.FC = () => {
               <Box>
                 {/* Header with title and close button on same level */}
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                  <Typography variant="h6" sx={{ margin: 0 }}>
+                  <Typography variant="h6" sx={{ margin: 0, fontSize: '1rem' }}>
                     Navigation Edge
                   </Typography>
                   <IconButton
                     size="small"
                     onClick={closeSelectionPanel}
-                    sx={{ p: 0.5 }}
+                    sx={{ p: 0.25 }}
                   >
                     <CloseIcon fontSize="small" />
                   </IconButton>
                 </Box>
                 
                 {selectedEdge.data?.go && (
-                  <Typography variant="body2" gutterBottom>
+                  <Typography variant="body2" gutterBottom sx={{ mb: 0.5 }}>
                     Go: {selectedEdge.data.go}
                   </Typography>
                 )}
                 {selectedEdge.data?.comeback && (
-                  <Typography variant="body2" gutterBottom>
+                  <Typography variant="body2" gutterBottom sx={{ mb: 0.5 }}>
                     Return: {selectedEdge.data.comeback}
                   </Typography>
                 )}
-                <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
+                <Box sx={{ mt: 1.5, display: 'flex', gap: 0.5 }}>
                   <Button
                     size="small"
                     variant="outlined"
+                    sx={{ fontSize: '0.75rem', px: 1 }}
                     onClick={() => {
                       setEdgeForm({
                         go: selectedEdge.data?.go || '',
@@ -613,6 +616,7 @@ const NavigationEditorContent: React.FC = () => {
                     size="small"
                     variant="outlined"
                     color="error"
+                    sx={{ fontSize: '0.75rem', px: 1 }}
                     onClick={deleteSelected}
                   >
                     Delete
