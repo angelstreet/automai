@@ -25,11 +25,6 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import {
   Box,
-  AppBar,
-  Toolbar,
-  Typography,
-  Button,
-  IconButton,
   CircularProgress,
   Dialog,
   DialogTitle,
@@ -38,7 +33,9 @@ import {
   Paper,
   Snackbar,
   Alert,
-  Container
+  Container,
+  Typography,
+  Button
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -64,6 +61,7 @@ import { NodeEditDialog } from '../components/navigation/NodeEditDialog';
 import { EdgeEditDialog } from '../components/navigation/EdgeEditDialog';
 import { EdgeSelectionPanel } from '../components/navigation/EdgeSelectionPanel';
 import { NodeSelectionPanel } from '../components/navigation/NodeSelectionPanel';
+import { NavigationEditorHeader } from '../components/navigation/NavigationEditorHeader';
 
 // Node types for React Flow
 const nodeTypes = {
@@ -114,6 +112,15 @@ const NavigationEditorContent: React.FC = () => {
     // View state for single-level navigation
     viewPath,
     navigateToParentView,
+    
+    // Tree filtering state
+    focusNodeId,
+    maxDisplayDepth,
+    availableFocusNodes,
+    allNodes,
+    setFocusNode,
+    setDisplayDepth,
+    resetFocus,
     
     // Setters
     setIsNodeDialogOpen,
@@ -179,146 +186,34 @@ const NavigationEditorContent: React.FC = () => {
       flexDirection: 'column',
       overflow: 'hidden'
     }}>
-      {/* Header with AppBar */}
-      <AppBar position="static" color="default" elevation={1}>
-        <Toolbar variant="dense" sx={{ minHeight: 48 }}>
-          {/* Only show back button if not at root level */}
-          {navigationPath.length > 1 && (
-            <IconButton 
-              edge="start" 
-              onClick={navigateToParent} 
-              size="small" 
-              title="Back to Trees"
-              sx={{ mr: 1 }}
-            >
-              <ArrowBackIcon />
-            </IconButton>
-          )}
-          
-          {/* Breadcrumb navigation */}
-          <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
-            {/* Tree level breadcrumb */}
-            {navigationNamePath.map((treeName, index) => (
-              <Box key={`tree-${index}`} sx={{ display: 'flex', alignItems: 'center' }}>
-                {index > 0 && (
-                  <Typography variant="h6" sx={{ mx: 0.5, color: 'text.secondary' }}>
-                    &gt;
-                  </Typography>
-                )}
-                <Button
-                  variant="text"
-                  size="small"
-                  onClick={() => navigateToTreeLevel(index)}
-                  sx={{
-                    textTransform: 'none',
-                    minWidth: 'auto',
-                    fontWeight: 'normal',
-                    color: 'text.secondary',
-                  }}
-                >
-                  {decodeURIComponent(treeName)}
-                </Button>
-              </Box>
-            ))}
-            
-            {/* View level breadcrumb */}
-            {viewPath.length > 1 && viewPath.map((level, index) => (
-              <Box key={`view-${index}`} sx={{ display: 'flex', alignItems: 'center' }}>
-                <Typography variant="h6" sx={{ mx: 0.5, color: 'text.secondary' }}>
-                  &gt;
-                </Typography>
-                <Button
-                  variant="text"
-                  size="small"
-                  onClick={() => navigateToParentView(index)}
-                  sx={{
-                    textTransform: 'none',
-                    minWidth: 'auto',
-                    fontWeight: index === viewPath.length - 1 ? 'bold' : 'normal',
-                    color: index === viewPath.length - 1 ? 'primary.main' : 'text.secondary',
-                  }}
-                >
-                  {level.name}
-                  {index === viewPath.length - 1 && hasUnsavedChanges && (
-                    <Typography component="span" sx={{ color: 'warning.main', ml: 0.5 }}>
-                      *
-                    </Typography>
-                  )}
-                </Button>
-              </Box>
-            ))}
-          </Box>
-          
-          <Button
-            startIcon={<AddIcon />}
-            onClick={addNewNode}
-            size="small"
-            sx={{ mr: 1 }}
-            disabled={isLoading || !!error}
-          >
-            Add Node
-          </Button>
-          
-          <Typography 
-            variant="caption" 
-            sx={{ 
-              mr: 2, 
-              color: 'text.secondary',
-              fontSize: '0.7rem',
-              display: { xs: 'none', md: 'block' }
-            }}
-          >
-           
-          </Typography>
-          
-          <IconButton 
-            onClick={fitView} 
-            size="small" 
-            title="Fit View" 
-            disabled={isLoading || !!error}
-          >
-            <FitScreenIcon />
-          </IconButton>
-          
-          <IconButton 
-            onClick={undo} 
-            size="small" 
-            title="Undo" 
-            disabled={historyIndex <= 0 || isLoading || !!error}
-          >
-            <UndoIcon />
-          </IconButton>
-          
-          <IconButton 
-            onClick={redo} 
-            size="small" 
-            title="Redo" 
-            disabled={historyIndex >= history.length - 1 || isLoading || !!error}
-          >
-            <RedoIcon />
-          </IconButton>
-          
-          <IconButton 
-            onClick={saveToDatabase} 
-            size="small" 
-            title={hasUnsavedChanges ? "Save Changes to Database" : "Save to Database"}
-            disabled={isLoading || !!error}
-            color={hasUnsavedChanges ? "primary" : "default"}
-          >
-            {isLoading ? <CircularProgress size={20} /> : <SaveIcon />}
-          </IconButton>
-          
-          <IconButton 
-            onClick={discardChanges} 
-            size="small" 
-            title={hasUnsavedChanges ? "Discard Unsaved Changes" : "Discard Changes"}
-            color={hasUnsavedChanges ? "warning" : "default"}
-            disabled={isLoading || !!error}
-          >
-            <CancelIcon />
-          </IconButton>
-        </Toolbar>
-      </AppBar>
+      {/* Header with NavigationEditorHeader component */}
+      <NavigationEditorHeader
+        navigationPath={navigationPath}
+        navigationNamePath={navigationNamePath}
+        viewPath={viewPath}
+        hasUnsavedChanges={hasUnsavedChanges}
+        focusNodeId={focusNodeId}
+        availableFocusNodes={availableFocusNodes}
+        maxDisplayDepth={maxDisplayDepth}
+        totalNodes={allNodes.length}
+        visibleNodes={nodes.length}
+        isLoading={isLoading}
+        error={error}
+        historyIndex={historyIndex}
+        historyLength={history.length}
+        onNavigateToParent={navigateToParent}
+        onNavigateToTreeLevel={navigateToTreeLevel}
+        onNavigateToParentView={navigateToParentView}
+        onAddNewNode={addNewNode}
+        onFitView={fitView}
+        onUndo={undo}
+        onRedo={redo}
+        onSaveToDatabase={saveToDatabase}
+        onDiscardChanges={discardChanges}
+        onFocusNodeChange={setFocusNode}
+        onDepthChange={setDisplayDepth}
+        onResetFocus={resetFocus}
+      />
 
       {/* Main Editor Area */}
       <Box sx={{ 

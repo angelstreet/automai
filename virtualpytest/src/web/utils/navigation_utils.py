@@ -338,25 +338,30 @@ def convert_reactflow_to_nodes_and_edges(reactflow_data, tree_id):
         return [], []
 
 def get_navigation_nodes_and_edges(tree_id, team_id):
-    """Get navigation nodes and edges from database"""
-    supabase = get_supabase_client()
-    
+    """Get navigation nodes and edges from tree metadata (single tree architecture)"""
     try:
         print(f"[@utils:navigation:get_navigation_nodes_and_edges] Getting nodes and edges for tree: {tree_id}, team: {team_id}")
         
-        # Get nodes
-        print(f"[@utils:navigation:get_navigation_nodes_and_edges] DEBUG: Executing query for tree_id={tree_id}, team_id={team_id}")
-        nodes_result = supabase.table('navigation_nodes').select('*').eq('tree_id', tree_id).eq('team_id', team_id).order('created_at').execute()
-        print(f"[@utils:navigation:get_navigation_nodes_and_edges] DEBUG: Query result: {nodes_result}")
-        nodes = nodes_result.data if nodes_result.data else []
+        # Get the tree with its metadata containing nodes and edges
+        tree_info = get_navigation_tree(tree_id, team_id)
         
-        # Get edges
-        edges_result = supabase.table('navigation_edges').select('*').eq('tree_id', tree_id).eq('team_id', team_id).order('created_at').execute()
-        edges = edges_result.data if edges_result.data else []
+        if not tree_info:
+            print(f"[@utils:navigation:get_navigation_nodes_and_edges] Tree not found: {tree_id}")
+            return [], []
         
-        print(f"[@utils:navigation:get_navigation_nodes_and_edges] Found {len(nodes)} nodes and {len(edges)} edges")
-        if len(nodes) == 0:
-            print(f"[@utils:navigation:get_navigation_nodes_and_edges] WARNING: No nodes found for tree_id={tree_id}, team_id={team_id}. This might be a schema or permissions issue.")
+        # Extract tree data from metadata field
+        tree_data = tree_info.get('metadata', {})
+        
+        # Handle both old format (metadata) and new format (tree_data)
+        if isinstance(tree_data, dict):
+            nodes = tree_data.get('nodes', [])
+            edges = tree_data.get('edges', [])
+        else:
+            print(f"[@utils:navigation:get_navigation_nodes_and_edges] Invalid tree_data format: {type(tree_data)}")
+            nodes = []
+            edges = []
+        
+        print(f"[@utils:navigation:get_navigation_nodes_and_edges] Found {len(nodes)} nodes and {len(edges)} edges in tree metadata")
         return nodes, edges
         
     except Exception as e:
@@ -367,70 +372,41 @@ def get_navigation_nodes_and_edges(tree_id, team_id):
         return [], []
 
 def save_navigation_nodes_and_edges(tree_id, nodes, edges, team_id=None):
-    """Save navigation nodes and edges to database"""
-    supabase = get_supabase_client()
-    
+    """Save navigation nodes and edges to tree metadata (single tree architecture)"""
     try:
         print(f"[@utils:navigation:save_navigation_nodes_and_edges] Saving {len(nodes)} nodes and {len(edges)} edges for tree: {tree_id}")
         
         # Get the team_id from the tree if not provided
         if team_id is None:
             print(f"[@utils:navigation:save_navigation_nodes_and_edges] WARNING: No team_id provided, attempting to get it from the tree")
-            try:
-                tree_result = supabase.table('navigation_trees').select('team_id').eq('id', tree_id).single().execute()
-                if tree_result.data:
-                    team_id = tree_result.data['team_id']
-                    print(f"[@utils:navigation:save_navigation_nodes_and_edges] Retrieved team_id: {team_id} from tree: {tree_id}")
-                else:
-                    print(f"[@utils:navigation:save_navigation_nodes_and_edges] ERROR: Could not find tree with ID: {tree_id}")
-                    return False
-            except Exception as e:
-                print(f"[@utils:navigation:save_navigation_nodes_and_edges] ERROR: Failed to retrieve team_id: {str(e)}")
+            tree_info = get_navigation_tree(tree_id, team_id='')  # This will fail if no team_id, but we need to get it
+            if tree_info:
+                team_id = tree_info.get('team_id')
+                print(f"[@utils:navigation:save_navigation_nodes_and_edges] Retrieved team_id: {team_id} from tree: {tree_id}")
+            else:
+                print(f"[@utils:navigation:save_navigation_nodes_and_edges] ERROR: Could not find tree with ID: {tree_id}")
                 return False
         
-        # Delete existing nodes and edges for this tree
-        print(f"[@utils:navigation:save_navigation_nodes_and_edges] Deleting existing nodes and edges for tree: {tree_id}")
-        supabase.table('navigation_nodes').delete().eq('tree_id', tree_id).execute()
-        supabase.table('navigation_edges').delete().eq('tree_id', tree_id).execute()
+        # Prepare tree data in ReactFlow format
+        tree_data = {
+            'nodes': nodes,
+            'edges': edges
+        }
         
-        # Insert new nodes
-        if nodes:
-            print(f"[@utils:navigation:save_navigation_nodes_and_edges] Inserting {len(nodes)} nodes")
-            for node in nodes:
-                # Ensure JSON fields are properly serialized
-                node_to_insert = {**node}
-                # Ensure team_id is set
-                node_to_insert['team_id'] = team_id
-                if 'metadata' in node_to_insert and isinstance(node_to_insert['metadata'], dict):
-                    node_to_insert['metadata'] = json.dumps(node_to_insert['metadata'])
-                
-                try:
-                    result = supabase.table('navigation_nodes').insert(node_to_insert).execute()
-                    print(f"[@utils:navigation:save_navigation_nodes_and_edges] Inserted node: {node_to_insert.get('label')} result: {result}")
-                except Exception as e:
-                    print(f"[@utils:navigation:save_navigation_nodes_and_edges] ERROR inserting node: {str(e)}")
+        # Update the tree's metadata with the new nodes and edges
+        update_data = {
+            'metadata': tree_data
+        }
         
-        # Insert new edges
-        if edges:
-            print(f"[@utils:navigation:save_navigation_nodes_and_edges] Inserting {len(edges)} edges")
-            for edge in edges:
-                # Ensure JSON fields are properly serialized
-                edge_to_insert = {**edge}
-                # Ensure team_id is set
-                edge_to_insert['team_id'] = team_id
-                if 'conditions' in edge_to_insert and isinstance(edge_to_insert['conditions'], dict):
-                    edge_to_insert['conditions'] = json.dumps(edge_to_insert['conditions'])
-                if 'metadata' in edge_to_insert and isinstance(edge_to_insert['metadata'], dict):
-                    edge_to_insert['metadata'] = json.dumps(edge_to_insert['metadata'])
-                
-                try:
-                    result = supabase.table('navigation_edges').insert(edge_to_insert).execute()
-                    print(f"[@utils:navigation:save_navigation_nodes_and_edges] Inserted edge: {edge_to_insert.get('source_id')} -> {edge_to_insert.get('target_id')} result: {result}")
-                except Exception as e:
-                    print(f"[@utils:navigation:save_navigation_nodes_and_edges] ERROR inserting edge: {str(e)}")
+        # Use utility function to update navigation tree
+        updated_tree = update_navigation_tree(tree_id, update_data, team_id)
         
-        print(f"[@utils:navigation:save_navigation_nodes_and_edges] Successfully saved {len(nodes)} nodes and {len(edges)} edges")
-        return True
+        if updated_tree:
+            print(f"[@utils:navigation:save_navigation_nodes_and_edges] Successfully saved {len(nodes)} nodes and {len(edges)} edges to tree metadata")
+            return True
+        else:
+            print(f"[@utils:navigation:save_navigation_nodes_and_edges] ERROR: Failed to update tree metadata")
+            return False
         
     except Exception as e:
         print(f"[@utils:navigation:save_navigation_nodes_and_edges] Error: {str(e)}")

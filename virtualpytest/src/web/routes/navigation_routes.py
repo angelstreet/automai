@@ -338,7 +338,7 @@ def get_navigation_tree_by_id_and_team(tree_id, team_id):
 
 @navigation_bp.route('/trees/<tree_id>/complete', methods=['GET'])
 def get_complete_navigation_tree(tree_id):
-    """Get a complete navigation tree with nodes and edges from database"""
+    """Get a complete navigation tree with nodes and edges from metadata (single tree architecture)"""
     error_response = check_supabase()
     if error_response:
         return error_response
@@ -357,24 +357,8 @@ def get_complete_navigation_tree(tree_id):
                 'error': 'Navigation tree not found'
             }), 404
         
-        # Get nodes and edges from database
-        nodes, edges = get_navigation_nodes_and_edges(tree_id, team_id)
-        
-        print(f"[@api:navigation:get_complete_tree] Retrieved {len(nodes)} nodes and {len(edges)} edges from database")
-        
-        # Convert to ReactFlow format
-        reactflow_data = convert_nodes_and_edges_to_reactflow(nodes, edges)
-        
-        # Get existing metadata (ReactFlow format) from tree
-        existing_metadata = tree_info.get('metadata', {})
-        
-        # If we have database nodes/edges, use them; otherwise use metadata
-        if nodes or edges:
-            print(f"[@api:navigation:get_complete_tree] Using database nodes and edges")
-            tree_data = reactflow_data
-        else:
-            print(f"[@api:navigation:get_complete_tree] Using metadata ReactFlow data")
-            tree_data = existing_metadata
+        # Get tree data directly from metadata (no conversion needed since it's already in ReactFlow format)
+        tree_data = tree_info.get('metadata', {})
         
         # Ensure we have the basic structure
         if not isinstance(tree_data, dict):
@@ -401,7 +385,7 @@ def get_complete_navigation_tree(tree_id):
 
 @navigation_bp.route('/trees/<tree_id>/complete', methods=['PUT'])
 def save_complete_navigation_tree(tree_id):
-    """Save complete navigation tree data to both metadata and database tables"""
+    """Save complete navigation tree data to metadata (single tree architecture)"""
     error_response = check_supabase()
     if error_response:
         return error_response
@@ -424,7 +408,7 @@ def save_complete_navigation_tree(tree_id):
         
         print(f"[@api:navigation:save_complete_tree] Saving tree {tree_id} with {len(nodes)} nodes and {len(edges)} edges")
         
-        # First, save to metadata field for fast loading
+        # Save to metadata field directly (ReactFlow format)
         metadata_update_success = update_navigation_tree(tree_id, {'metadata': tree_data}, team_id)
         
         if not metadata_update_success:
@@ -433,21 +417,10 @@ def save_complete_navigation_tree(tree_id):
                 'error': 'Failed to update tree metadata'
             }), 500
         
-        # Convert ReactFlow data to database format and save to tables
-        db_nodes, db_edges = convert_reactflow_to_nodes_and_edges(tree_data, tree_id)
-        
-        # Save to database tables - explicitly pass team_id
-        db_save_success = save_navigation_nodes_and_edges(tree_id, db_nodes, db_edges, team_id)
-        
-        if not db_save_success:
-            print(f"[@api:navigation:save_complete_tree] Warning: Failed to save to database tables, but metadata was saved")
-        
         print(f"[@api:navigation:save_complete_tree] Successfully saved tree {tree_id}")
         return jsonify({
             'success': True,
-            'message': 'Navigation tree saved successfully',
-            'metadata_saved': metadata_update_success,
-            'database_saved': db_save_success
+            'message': 'Navigation tree saved successfully'
         })
         
     except Exception as e:

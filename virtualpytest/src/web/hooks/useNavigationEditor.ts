@@ -109,7 +109,12 @@ export const useNavigationEditor = () => {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
 
-  // Add new state for progressive loading
+  // Tree filtering state - replaces breadcrumb navigation
+  const [focusNodeId, setFocusNodeId] = useState<string | null>(null); // Which node to focus on
+  const [maxDisplayDepth, setMaxDisplayDepth] = useState<number>(2); // How many depth levels to show
+  const [availableFocusNodes, setAvailableFocusNodes] = useState<{id: string, label: string, depth: number}[]>([]);
+
+  // Progressive loading state (keep existing)
   const [loadedDepth, setLoadedDepth] = useState(2); // Start with depth 2 loaded
   const [maxDepth, setMaxDepth] = useState(0); // Track maximum depth available
   const [isProgressiveLoading, setIsProgressiveLoading] = useState(false);
@@ -699,84 +704,19 @@ export const useNavigationEditor = () => {
       return; // Don't save if screen name is empty
     }
     
+    // Simple node data update - no tree creation needed
     let updatedNodeData = {
       ...selectedNode.data,
       label: nodeForm.label,
       type: nodeForm.type,
       description: nodeForm.description,
+      // For TV menus, we can set depth and parent_id here if needed
+      depth: nodeForm.depth || 0,
+      parent_id: nodeForm.parent_id || null,
+      menu_type: nodeForm.menu_type || (nodeForm.type === 'menu' ? 'main' : undefined),
     };
     
-    // If this is a menu node and it doesn't have a tree_id, create a new tree for it
-    if (nodeForm.type === 'menu' && !selectedNode.data.tree_id) {
-      try {
-        console.log(`[@hook:useNavigationEditor] Creating new tree for menu node: ${nodeForm.label}`);
-        
-        // Check if this is the first tree/node being created (only first gets is_root: true)
-        const isFirstTree = allNodes.length === 0 || !allNodes.some(node => node.data.is_root);
-        
-        // Create a new tree with the same name as the menu node
-        const treeData = {
-          name: nodeForm.label,
-          description: `Navigation tree for menu: ${nodeForm.label}`,
-          is_root: isFirstTree, // Set is_root flag at top level
-          tree_data: {
-            nodes: [{
-              id: 'root-node',
-              type: 'uiScreen',
-              position: { x: 250, y: 100 },
-              data: {
-                label: nodeForm.label, // Root node has same name as menu node
-                type: 'screen',
-                description: `Root node for ${nodeForm.label} navigation tree`,
-                is_root: true // The root node of each tree always has is_root: true
-              }
-            }],
-            edges: [],
-            is_root: isFirstTree // Set is_root flag within tree_data/metadata as well
-          }
-        };
-        
-        console.log(`[@hook:useNavigationEditor] Sending tree creation request with data:`, {
-          name: treeData.name,
-          nodeCount: treeData.tree_data.nodes.length,
-          rootNodeName: treeData.tree_data.nodes[0].data.label
-        });
-        
-        const createResponse = await apiCall('/api/navigation/trees', {
-          method: 'POST',
-          body: JSON.stringify(treeData),
-        });
-        
-        console.log(`[@hook:useNavigationEditor] Tree creation response:`, {
-          success: createResponse.success,
-          hasData: !!createResponse.data,
-          error: createResponse.error
-        });
-        
-        if (createResponse.success && createResponse.data) {
-          console.log(`[@hook:useNavigationEditor] Successfully created tree with ID: ${createResponse.data.id} for menu node: ${nodeForm.label}`);
-          
-          // Update the node data with tree reference
-          updatedNodeData = {
-            ...updatedNodeData,
-            tree_id: createResponse.data.id,
-            tree_name: createResponse.data.name,
-            is_root: isFirstTree // Menu node gets is_root: true only if it's the first one
-          };
-          
-          console.log(`[@hook:useNavigationEditor] Menu node ${nodeForm.label} now linked to tree ${createResponse.data.id}`);
-        } else {
-          console.error(`[@hook:useNavigationEditor] Failed to create tree for menu node: ${createResponse.error || 'Unknown error'}`);
-          // Still save the menu node even if tree creation failed
-          console.log(`[@hook:useNavigationEditor] Proceeding to save menu node without tree association`);
-        }
-      } catch (error) {
-        console.error(`[@hook:useNavigationEditor] Error creating tree for menu node:`, error);
-        // Still save the menu node even if tree creation failed
-        console.log(`[@hook:useNavigationEditor] Proceeding to save menu node without tree association due to error`);
-      }
-    }
-    
+    // Update the node in the single tree
     setNodes((nds) =>
       nds.map((node) =>
         node.id === selectedNode.id
@@ -791,7 +731,7 @@ export const useNavigationEditor = () => {
     setHasUnsavedChanges(true);
     setIsNodeDialogOpen(false);
     setIsNewNode(false);
-  }, [selectedNode, nodeForm, setNodes, allNodes]);
+  }, [selectedNode, nodeForm, setNodes]);
 
   // Cancel node changes
   const cancelNodeChanges = useCallback(() => {
@@ -882,6 +822,95 @@ export const useNavigationEditor = () => {
     );
   }, [allEdges, getCurrentViewNodes]);
 
+  // Helper function to check if a node is descendant of another
+  const isNodeDescendantOf = useCallback((node: UINavigationNode, ancestorId: string, nodes: UINavigationNode[]): boolean => {
+    let currentNode = node;
+    const visited = new Set<string>(); // Prevent infinite loops
+    
+    while (currentNode.data.parent_id && !visited.has(currentNode.id)) {
+      visited.add(currentNode.id);
+      
+      if (currentNode.data.parent_id === ancestorId) {
+        return true;
+      }
+      
+      const parentNode = nodes.find(n => n.id === currentNode.data.parent_id);
+      if (!parentNode) break;
+      currentNode = parentNode;
+    }
+    
+    return false;
+  }, []);
+
+  // Get filtered nodes based on focus node and depth
+  const getFilteredNodes = useCallback(() => {
+    console.log(`[@hook:useNavigationEditor] Filtering nodes - focusNodeId: ${focusNodeId}, maxDisplayDepth: ${maxDisplayDepth}, total nodes: ${allNodes.length}`);
+    
+    if (!focusNodeId) {
+      // No focus node selected - show root nodes and their children up to maxDisplayDepth
+      const filtered = allNodes.filter(node => {
+        const nodeDepth = node.data.depth || 0;
+        const isRoot = node.data.is_root || nodeDepth === 0;
+        return nodeDepth <= maxDisplayDepth;
+      });
+      console.log(`[@hook:useNavigationEditor] No focus node - showing ${filtered.length} nodes up to depth ${maxDisplayDepth}`);
+      return filtered;
+    }
+
+    // Find the focus node
+    const focusNode = allNodes.find(n => n.id === focusNodeId);
+    if (!focusNode) {
+      console.log(`[@hook:useNavigationEditor] Focus node ${focusNodeId} not found, showing all nodes`);
+      return allNodes;
+    }
+
+    const focusDepth = focusNode.data.depth || 0;
+    console.log(`[@hook:useNavigationEditor] Focus node found: ${focusNode.data.label} at depth ${focusDepth}`);
+    
+    // Show focus node and its descendants up to maxDisplayDepth levels deep
+    const filtered = allNodes.filter(node => {
+      const nodeDepth = node.data.depth || 0;
+      
+      // Include the focus node itself
+      if (node.id === focusNodeId) {
+        console.log(`[@hook:useNavigationEditor] Including focus node: ${node.data.label}`);
+        return true;
+      }
+      
+      // Check if this node is a direct child of the focus node
+      if (node.data.parent_id === focusNodeId) {
+        const relativeDepth = nodeDepth - focusDepth;
+        const shouldInclude = relativeDepth <= maxDisplayDepth && relativeDepth > 0;
+        console.log(`[@hook:useNavigationEditor] Direct child ${node.data.label} - depth: ${nodeDepth}, relative: ${relativeDepth}, include: ${shouldInclude}`);
+        return shouldInclude;
+      }
+      
+      // Check if this node is a deeper descendant
+      const isDescendant = isNodeDescendantOf(node, focusNodeId, allNodes);
+      if (isDescendant) {
+        const relativeDepth = nodeDepth - focusDepth;
+        const shouldInclude = relativeDepth <= maxDisplayDepth && relativeDepth > 0;
+        console.log(`[@hook:useNavigationEditor] Descendant ${node.data.label} - depth: ${nodeDepth}, relative: ${relativeDepth}, include: ${shouldInclude}`);
+        return shouldInclude;
+      }
+      
+      return false;
+    });
+    
+    console.log(`[@hook:useNavigationEditor] Focus filtering complete - showing ${filtered.length} nodes`);
+    return filtered;
+  }, [allNodes, focusNodeId, maxDisplayDepth, isNodeDescendantOf]);
+
+  // Get filtered edges (only between visible nodes)
+  const getFilteredEdges = useCallback(() => {
+    const visibleNodes = getFilteredNodes();
+    const visibleNodeIds = new Set(visibleNodes.map(n => n.id));
+    
+    return allEdges.filter(edge => 
+      visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)
+    );
+  }, [allEdges, getFilteredNodes]);
+
   // Navigate to parent view (breadcrumb click)
   const navigateToParentView = useCallback((targetIndex: number) => {
     if (targetIndex < 0 || targetIndex >= viewPath.length) return;
@@ -892,13 +921,16 @@ export const useNavigationEditor = () => {
     console.log(`[@hook:useNavigationEditor] Navigated to parent view: ${targetView.name}`);
   }, [viewPath]);
 
-  // Update the ReactFlow nodes and edges based on current view
+  // Update the ReactFlow nodes and edges based on filtering (replaces old view logic)
   useEffect(() => {
-    const viewNodes = getCurrentViewNodes();
-    const viewEdges = getCurrentViewEdges();
-    setNodes(viewNodes);
-    setEdges(viewEdges);
-  }, [allNodes, allEdges, currentViewRootId, getCurrentViewNodes, getCurrentViewEdges, setNodes, setEdges]);
+    const filteredNodes = getFilteredNodes();
+    const filteredEdges = getFilteredEdges();
+    
+    setNodes(filteredNodes);
+    setEdges(filteredEdges);
+    
+    console.log(`[@hook:useNavigationEditor] Applied filter - showing ${filteredNodes.length} nodes, ${filteredEdges.length} edges`);
+  }, [allNodes, allEdges, focusNodeId, maxDisplayDepth, getFilteredNodes, getFilteredEdges, setNodes, setEdges]);
 
   // Progressive loading function for TV menus
   const loadChildrenAtDepth = useCallback(async (nodeId: string, targetDepth: number) => {
@@ -971,6 +1003,64 @@ export const useNavigationEditor = () => {
     setNodes(relevantNodes);
   }, [loadedDepth, loadChildrenAtDepth, allNodes]);
 
+  // Update available focus nodes when all nodes change
+  useEffect(() => {
+    console.log(`[@hook:useNavigationEditor] All nodes updated - ${allNodes.length} total nodes:`);
+    allNodes.forEach(node => {
+      console.log(`[@hook:useNavigationEditor] Node: ${node.data.label} (id: ${node.id}, depth: ${node.data.depth || 0}, parent: ${node.data.parent_id || 'none'}, type: ${node.data.type})`);
+    });
+    
+    const focusableNodes = allNodes
+      .filter(node => node.data.type === 'menu' || node.data.is_root)
+      .map(node => ({
+        id: node.id,
+        label: node.data.label,
+        depth: node.data.depth || 0
+      }))
+      .sort((a, b) => a.depth - b.depth || a.label.localeCompare(b.label));
+    
+    setAvailableFocusNodes(focusableNodes);
+    
+    // Auto-select first root node if no focus node selected
+    if (!focusNodeId && focusableNodes.length > 0) {
+      const rootNode = focusableNodes.find(n => n.depth === 0) || focusableNodes[0];
+      setFocusNodeId(rootNode.id);
+    }
+  }, [allNodes, focusNodeId]);
+
+  // Focus on specific node (dropdown selection)
+  const setFocusNode = useCallback((nodeId: string | null) => {
+    console.log(`[@hook:useNavigationEditor] Setting focus node: ${nodeId}`);
+    setFocusNodeId(nodeId);
+    
+    // Auto-fit view to show the filtered content
+    setTimeout(() => {
+      reactFlowInstance?.fitView({ padding: 0.1 });
+    }, 100);
+  }, [reactFlowInstance]);
+
+  // Set max display depth (dropdown selection)
+  const setDisplayDepth = useCallback((depth: number) => {
+    console.log(`[@hook:useNavigationEditor] Setting display depth: ${depth}`);
+    setMaxDisplayDepth(depth);
+    
+    // Auto-fit view after depth change
+    setTimeout(() => {
+      reactFlowInstance?.fitView({ padding: 0.1 });
+    }, 100);
+  }, [reactFlowInstance]);
+
+  // Reset focus to show all root level nodes
+  const resetFocus = useCallback(() => {
+    console.log(`[@hook:useNavigationEditor] Resetting focus to root level`);
+    setFocusNodeId(null);
+    setMaxDisplayDepth(2);
+    
+    setTimeout(() => {
+      reactFlowInstance?.fitView({ padding: 0.1 });
+    }, 100);
+  }, [reactFlowInstance]);
+
   return {
     // State
     nodes,
@@ -992,7 +1082,7 @@ export const useNavigationEditor = () => {
     treeId: currentTreeId,
     interfaceId,
     
-    // Navigation state
+    // Tree state (simplified)
     currentTreeId,
     currentTreeName,
     navigationPath,
@@ -1006,11 +1096,30 @@ export const useNavigationEditor = () => {
     history,
     historyIndex,
     
-    // View state for single-level navigation
+    // All nodes and edges (for filtering)
     allNodes,
     allEdges,
-    currentViewRootId,
+    
+    // View state for single-level navigation
     viewPath,
+    
+    // Tree filtering state and functions
+    focusNodeId,
+    maxDisplayDepth,
+    availableFocusNodes,
+    getFilteredNodes,
+    isNodeDescendantOf,
+    getFilteredEdges,
+    setFocusNode,
+    setDisplayDepth,
+    resetFocus,
+    
+    // Progressive loading state and functions
+    loadedDepth,
+    maxDepth,
+    isProgressiveLoading,
+    loadChildrenAtDepth,
+    handleMenuEntry,
     
     // Setters
     setNodes,
@@ -1046,7 +1155,6 @@ export const useNavigationEditor = () => {
     handleEdgeFormSubmit: saveEdgeChanges,
     handleDeleteNode: deleteSelected,
     handleDeleteEdge: deleteSelected,
-    navigateToChildTree: () => {}, // Will be implemented if needed
     navigateToParent,
     createEmptyTree,
     convertTreeData: convertToNavigationTreeData,
@@ -1056,26 +1164,18 @@ export const useNavigationEditor = () => {
     cancelNodeChanges,
     discardChanges,
     performDiscardChanges,
-    navigateToTreeLevel,
-    goBackToParent,
     closeSelectionPanel,
     undo,
     redo,
     fitView,
     deleteSelected,
     
-    // New navigation functions
-    navigateToChildView,
+    // Navigation actions
+    navigateToTreeLevel,
+    goBackToParent,
     navigateToParentView,
     
     // Configuration
     defaultEdgeOptions,
-    
-    // Progressive loading state and functions
-    loadedDepth,
-    maxDepth,
-    isProgressiveLoading,
-    loadChildrenAtDepth,
-    handleMenuEntry
   };
 }; 

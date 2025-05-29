@@ -28,9 +28,6 @@ export type UINavigationEdge = Edge<{
   from?: string;        // Source node label
   to?: string;          // Target node label
   edgeType?: 'top' | 'bottom' | 'default' | 'menu';  // For edge coloring based on handle type
-  
-  // Simple navigation type for logical grouping
-  navigation_type?: 'enter' | 'exit' | 'sibling' | 'parent_child';
 }>;
 
 export interface NavigationTreeData {
@@ -62,9 +59,6 @@ export interface NodeForm {
 export interface EdgeForm {
   action?: string;      // Single abstract action per edge
   description: string;
-  
-  // Simple navigation type for logical grouping
-  navigation_type?: 'enter' | 'exit' | 'sibling' | 'parent_child';
 }
 
 // New interfaces for progressive loading
