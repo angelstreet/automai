@@ -132,7 +132,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({
           background: '#9c27b0', // Purple
           width: '14px', 
           height: '14px',
-          border: '2px dashed #fff', // Dotted border
+          border: '2px',
           borderRadius: '50%',
           left: '30%',
           top: -5,
@@ -152,7 +152,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({
           background: '#4caf50', // Green
           width: '14px', 
           height: '14px',
-          border: '2px dashed #fff', // Dotted border
+          border: '2px',
           borderRadius: '50%',
           left: '70%',
           top: -5,
@@ -173,7 +173,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({
           background: '#9c27b0', // Purple
           width: '14px', 
           height: '14px',
-          border: '2px dashed #fff', // Dotted border
+          border: '2px',
           borderRadius: '50%',
           left: '30%',
           bottom: -5,
@@ -193,7 +193,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({
           background: '#4caf50', // Green
           width: '14px', 
           height: '14px',
-          border: '2px dashed #fff', // Dotted border
+          border: '2px',
           borderRadius: '50%',
           left: '70%',
           bottom: -5,

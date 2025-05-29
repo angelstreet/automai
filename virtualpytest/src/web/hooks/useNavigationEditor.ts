@@ -202,18 +202,22 @@ export const useNavigationEditor = () => {
     const isMenuConnection = params.sourceHandle?.includes('menu') || params.targetHandle?.includes('menu');
     
     // Connection validation rules
-    if (isMenuConnection || isTopBottomConnection) {
-      // Top/Bottom handles (menu navigation): At least one node must be a menu
-      if (sourceNode.data.type !== 'menu' && targetNode.data.type !== 'menu') {
-        console.error('[@component:NavigationEditor] Menu navigation handles can only connect to/from menu nodes');
-        return;
-      }
+    const hasMenuNode = sourceNode.data.type === 'menu' || targetNode.data.type === 'menu';
+    
+    if (hasMenuNode) {
+      // Menu nodes can connect to anything using any handle (top, bottom, left, right)
+      console.log('[@component:NavigationEditor] Menu node connection allowed');
     } else if (isLeftRightConnection) {
-      // Left/Right handles (screen navigation): Both nodes must be screens (not menus)
+      // Left/Right handles: Allow screen-to-screen connections (both nodes are NOT menu)
       if (sourceNode.data.type === 'menu' || targetNode.data.type === 'menu') {
-        console.error('[@component:NavigationEditor] Screen navigation handles cannot connect to menu nodes');
+        console.error('[@component:NavigationEditor] Left/right handles cannot connect menu nodes to non-menu nodes');
         return;
       }
+      console.log('[@component:NavigationEditor] Screen-to-screen connection via left/right handles allowed');
+    } else if (isTopBottomConnection) {
+      // Top/Bottom handles: Should be used for menu navigation, but since no menu node, reject
+      console.error('[@component:NavigationEditor] Top/bottom handles are intended for menu navigation');
+      return;
     }
     
     // Determine edge type based on handles and connection type
