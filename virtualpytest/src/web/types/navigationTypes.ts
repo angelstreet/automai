@@ -4,14 +4,12 @@ import { Node, Edge } from 'reactflow';
 export interface UINavigationNode extends Node {
   data: {
     label: string;
-    type: 'screen' | 'dialog' | 'popup' | 'overlay';
+    type: 'screen' | 'dialog' | 'popup' | 'overlay' | 'menu';
     screenshot?: string;
     description?: string;
-    hasChildren?: boolean;
-    childTreeId?: string;
-    childTreeName?: string;
-    parentTree?: string;
-    parentNodeId?: string;  // For hierarchy support
+    is_root?: boolean; // True only for the first entry node
+    tree_id?: string; // For menu nodes, references the associated tree
+    tree_name?: string; // For menu nodes, the name of the associated tree
   };
 }
 
@@ -33,7 +31,7 @@ export interface NavigationTreeData {
 
 export interface NodeForm {
   label: string;
-  type: 'screen' | 'dialog' | 'popup' | 'overlay';
+  type: 'screen' | 'dialog' | 'popup' | 'overlay' | 'menu';
   description: string;
 }
 

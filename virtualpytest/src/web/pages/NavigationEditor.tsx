@@ -63,16 +63,17 @@ import { useParams, useNavigate } from 'react-router-dom';
 // Import extracted components and hooks
 import { useNavigationEditor } from '../hooks/useNavigationEditor';
 import { UINavigationNode } from '../components/navigation/UINavigationNode';
+import { UIMenuNode } from '../components/navigation/UIMenuNode';
 import { UINavigationEdge } from '../components/navigation/UINavigationEdge';
 import { NodeEditDialog } from '../components/navigation/NodeEditDialog';
 import { EdgeEditDialog } from '../components/navigation/EdgeEditDialog';
 import { EdgeSelectionPanel } from '../components/navigation/EdgeSelectionPanel';
 import { NodeSelectionPanel } from '../components/navigation/NodeSelectionPanel';
-import { AddChildrenDialog } from '../components/navigation/AddChildrenDialog';
 
 // Node types for React Flow
 const nodeTypes = {
   uiScreen: UINavigationNode,
+  uiMenu: UIMenuNode,
 };
 
 const edgeTypes = {
@@ -118,7 +119,6 @@ const NavigationEditorContent: React.FC = () => {
     // View state for single-level navigation
     viewPath,
     navigateToParentView,
-    addChildNode,
     
     // Setters
     setIsNodeDialogOpen,
@@ -161,22 +161,6 @@ const NavigationEditorContent: React.FC = () => {
     defaultEdgeOptions
   } = useNavigationEditor();
   
-  // Add Children dialog state
-  const [isAddChildDialogOpen, setIsAddChildDialogOpen] = useState(false);
-  const [childForm, setChildForm] = useState<{
-    label: string;
-    type: 'screen' | 'dialog' | 'popup' | 'overlay';
-    description: string;
-    toAction: string;
-    fromAction: string;
-  }>({
-    label: '',
-    type: 'screen',
-    description: '',
-    toAction: '',
-    fromAction: ''
-  });
-  
   // Show message if tree ID is missing
   useEffect(() => {
     if (!treeId && !interfaceId) {
@@ -190,35 +174,6 @@ const NavigationEditorContent: React.FC = () => {
       loadFromDatabase();
     }
   }, [currentTreeId, isLoadingInterface, loadFromDatabase]);
-
-  // Handle Add Children submission
-  const handleAddChildrenSubmit = useCallback(() => {
-    if (!selectedNode || !childForm.label.trim()) return;
-    
-    // Use the addChildNode function from the hook
-    addChildNode(
-      selectedNode.id,
-      {
-        label: childForm.label,
-        type: childForm.type,
-        description: childForm.description
-      },
-      childForm.toAction || 'ENTER',
-      childForm.fromAction || 'BACK'
-    );
-    
-    // Close dialog and reset form
-    setIsAddChildDialogOpen(false);
-    setChildForm({
-      label: '',
-      type: 'screen',
-      description: '',
-      toAction: '',
-      fromAction: ''
-    });
-    
-    console.log('[@component:NavigationEditor] Added child node to:', selectedNode.data.label);
-  }, [selectedNode, childForm, addChildNode]);
 
   return (
     <Box sx={{ 
@@ -466,6 +421,7 @@ const NavigationEditorContent: React.FC = () => {
                       case 'dialog': return '#8b5cf6';
                       case 'popup': return '#f59e0b';
                       case 'overlay': return '#10b981';
+                      case 'menu': return '#ffc107';
                       default: return '#6b7280';
                     }
                   }}
@@ -483,16 +439,7 @@ const NavigationEditorContent: React.FC = () => {
                     onClose={closeSelectionPanel}
                     onEdit={() => {}}
                     onDelete={deleteSelected}
-                    onAddChildren={() => {
-                      setChildForm({
-                        label: '',
-                        type: 'screen',
-                        description: '',
-                        toAction: '',
-                        fromAction: ''
-                      });
-                      setIsAddChildDialogOpen(true);
-                    }}
+                    onAddChildren={() => {}}
                     setNodeForm={setNodeForm}
                     setIsNodeDialogOpen={setIsNodeDialogOpen}
                   />
@@ -540,6 +487,7 @@ const NavigationEditorContent: React.FC = () => {
                 <MenuItem value="dialog">Dialog</MenuItem>
                 <MenuItem value="popup">Popup</MenuItem>
                 <MenuItem value="overlay">Overlay</MenuItem>
+                <MenuItem value="menu">Menu</MenuItem>
               </Select>
             </FormControl>
             
@@ -572,15 +520,6 @@ const NavigationEditorContent: React.FC = () => {
         setEdgeForm={setEdgeForm}
         onSubmit={handleEdgeFormSubmit}
         onClose={() => setIsEdgeDialogOpen(false)}
-      />
-
-      {/* Add Children Dialog */}
-      <AddChildrenDialog
-        isOpen={isAddChildDialogOpen}
-        childForm={childForm}
-        setChildForm={setChildForm}
-        onSubmit={handleAddChildrenSubmit}
-        onClose={() => setIsAddChildDialogOpen(false)}
       />
 
       {/* Discard Changes Confirmation Dialog */}

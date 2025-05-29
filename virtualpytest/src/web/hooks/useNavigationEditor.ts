@@ -260,7 +260,8 @@ export const useNavigationEditor = () => {
       data: {
         label: 'Entry Point',
         type: 'screen',
-        description: 'Starting point of the navigation flow'
+        description: 'Starting point of the navigation flow',
+        is_root: true // Mark as root node for the first tree
       }
     };
 
@@ -307,8 +308,8 @@ export const useNavigationEditor = () => {
           setInitialState({ nodes: treeData.nodes, edges: treeData.edges || [] });
           console.log(`[@component:NavigationEditor] Successfully loaded ${treeData.nodes.length} nodes from database for tree ID: ${currentTreeId}`);
           
-          // Initialize view state - find root node (no parent) or use first node
-          const rootNode = treeData.nodes.find((n: UINavigationNode) => !n.data.parentNodeId) || treeData.nodes[0];
+          // Initialize view state - use first node as root
+          const rootNode = treeData.nodes[0];
           if (rootNode) {
             setCurrentViewRootId(rootNode.id);
             setViewPath([{ id: rootNode.id, name: rootNode.data.label }]);
@@ -530,21 +531,24 @@ export const useNavigationEditor = () => {
   // Handle double-click on node to navigate to child view
   const navigateToChildView = useCallback((nodeId: string) => {
     const node = allNodes.find(n => n.id === nodeId);
-    if (!node || !node.data.hasChildren) return;
+    if (!node) return;
     
     setCurrentViewRootId(nodeId);
     setViewPath(prev => [...prev, { id: nodeId, name: node.data.label }]);
     console.log(`[@hook:useNavigationEditor] Navigated to child view: ${node.data.label}`);
   }, [allNodes]);
 
-  // Handle double-click on node (updated for single-level navigation)
+  // Handle double-click on node (updated for nested tree navigation)
   const onNodeDoubleClickUpdated = useCallback((event: React.MouseEvent, node: UINavigationNode) => {
     event.stopPropagation();
     const uiNode = node as UINavigationNode;
     
-    // Use new single-level navigation
-    if (uiNode.data.hasChildren) {
+    // Only allow navigation for menu type nodes
+    if (uiNode.data.type === 'menu') {
+      console.log(`[@hook:useNavigationEditor] Double-click on menu node: ${uiNode.data.label}, attempting to navigate to nested tree`);
       navigateToChildView(uiNode.id);
+    } else {
+      console.log(`[@hook:useNavigationEditor] Double-click on ${uiNode.data.type} node: ${uiNode.data.label}, navigation not allowed (only menu nodes can navigate)`);
     }
   }, [navigateToChildView]);
 
@@ -597,12 +601,13 @@ export const useNavigationEditor = () => {
   const addNewNode = useCallback(() => {
     const newNode: UINavigationNode = {
       id: `node-${Date.now()}`,
-      type: 'uiScreen',
+      type: 'uiScreen', // Default to uiScreen, will be changed to uiMenu if type is set to menu
       position: { x: Math.random() * 400, y: Math.random() * 400 },
       data: {
         label: 'New Screen',
         type: 'screen',
         description: '',
+        is_root: false, // Default to false, will be set appropriately when saved
       },
     };
     setNodes((nds) => [...nds, newNode]);
@@ -617,7 +622,7 @@ export const useNavigationEditor = () => {
   }, [setNodes]);
 
   // Save node changes with change tracking
-  const saveNodeChanges = useCallback(() => {
+  const saveNodeChanges = useCallback(async () => {
     if (!selectedNode) return;
     
     // Validate required fields
@@ -625,17 +630,68 @@ export const useNavigationEditor = () => {
       return; // Don't save if screen name is empty
     }
     
+    let updatedNodeData = {
+      ...selectedNode.data,
+      label: nodeForm.label,
+      type: nodeForm.type,
+      description: nodeForm.description,
+    };
+    
+    // If this is a menu node and it doesn't have a tree_id, create a new tree for it
+    if (nodeForm.type === 'menu' && !selectedNode.data.tree_id) {
+      try {
+        console.log(`[@hook:useNavigationEditor] Creating new tree for menu node: ${nodeForm.label}`);
+        
+        // Create a new tree with the same name as the menu node
+        const treeData = {
+          name: nodeForm.label,
+          description: `Navigation tree for menu: ${nodeForm.label}`,
+          is_root: false, // Menu node trees are not root trees
+          tree_data: {
+            nodes: [{
+              id: 'entry-node',
+              type: 'uiScreen',
+              position: { x: 250, y: 100 },
+              data: {
+                label: 'Entry Point',
+                type: 'screen',
+                description: 'Starting point of the navigation flow',
+                is_root: false // Entry nodes in menu trees are not root nodes
+              }
+            }],
+            edges: []
+          }
+        };
+        
+        const createResponse = await apiCall('/api/navigation/trees', {
+          method: 'POST',
+          body: JSON.stringify(treeData),
+        });
+        
+        if (createResponse.success) {
+          console.log(`[@hook:useNavigationEditor] Created tree with ID: ${createResponse.data.id} for menu node: ${nodeForm.label}`);
+          
+          // Update the node data with tree reference
+          updatedNodeData = {
+            ...updatedNodeData,
+            tree_id: createResponse.data.id,
+            tree_name: createResponse.data.name
+          };
+        } else {
+          console.error(`[@hook:useNavigationEditor] Failed to create tree for menu node: ${createResponse.error}`);
+        }
+      } catch (error) {
+        console.error(`[@hook:useNavigationEditor] Error creating tree for menu node:`, error);
+      }
+    }
+    
     setNodes((nds) =>
       nds.map((node) =>
         node.id === selectedNode.id
           ? {
               ...node,
-              data: {
-                ...node.data,
-                label: nodeForm.label,
-                type: nodeForm.type,
-                description: nodeForm.description,
-              },
+              type: nodeForm.type === 'menu' ? 'uiMenu' : 'uiScreen', // Use uiMenu type for menu nodes
+              data: updatedNodeData,
             }
           : node
       )
@@ -744,66 +800,6 @@ export const useNavigationEditor = () => {
     console.log(`[@hook:useNavigationEditor] Navigated to parent view: ${targetView.name}`);
   }, [viewPath]);
 
-  // Add child node function
-  const addChildNode = useCallback((parentId: string, childData: { label: string, type: any, description: string }, toAction: string, fromAction: string) => {
-    const parentNode = allNodes.find(n => n.id === parentId);
-    if (!parentNode) return;
-    
-    // Create child node
-    const childId = `node-${Date.now()}`;
-    const childNode: UINavigationNode = {
-      id: childId,
-      type: 'uiScreen',
-      position: { 
-        x: parentNode.position.x + (allNodes.filter(n => n.data.parentNodeId === parentId).length * 250),
-        y: parentNode.position.y + 200 
-      },
-      data: {
-        ...childData,
-        parentNodeId: parentId,
-        hasChildren: false
-      }
-    };
-    
-    // Create edges
-    const toEdge: UINavigationEdge = {
-      id: `edge-${Date.now()}-to`,
-      source: parentId,
-      target: childId,
-      type: 'uiNavigation',  // Use the type that has arrow support
-      data: { 
-        action: toAction,
-        from: parentNode.data.label,
-        to: childData.label
-      }
-    };
-    
-    const fromEdge: UINavigationEdge = {
-      id: `edge-${Date.now()}-from`,
-      source: childId,
-      target: parentId,
-      type: 'uiNavigation',  // Use the type that has arrow support
-      data: { 
-        action: fromAction,
-        from: childData.label,
-        to: parentNode.data.label
-      }
-    };
-    
-    // Update state
-    setAllNodes(prev => {
-      const updated = prev.map(n => 
-        n.id === parentId ? { ...n, data: { ...n.data, hasChildren: true } } : n
-      );
-      return [...updated, childNode];
-    });
-    
-    setAllEdges(prev => [...prev, toEdge, fromEdge]);
-    setHasUnsavedChanges(true);
-    
-    console.log(`[@hook:useNavigationEditor] Added child node: ${childData.label} to parent: ${parentNode.data.label}`);
-  }, [allNodes]);
-
   // Update the ReactFlow nodes and edges based on current view
   useEffect(() => {
     const viewNodes = getCurrentViewNodes();
@@ -908,7 +904,6 @@ export const useNavigationEditor = () => {
     // New navigation functions
     navigateToChildView,
     navigateToParentView,
-    addChildNode,
     
     // Configuration
     defaultEdgeOptions

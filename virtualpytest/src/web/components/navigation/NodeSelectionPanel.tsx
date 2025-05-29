@@ -64,15 +64,10 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
           </IconButton>
         </Box>
         
-        {/* Children indicator */}
-        {selectedNode.data.hasChildren && (
-          <Typography variant="body2" color="success.main" gutterBottom sx={{ mb: 1 }}>
-            💡 Double-click to explore child tree
-          </Typography>
-        )}
+    
         
         <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-          {/* First row: Edit and Delete */}
+          {/* Edit and Delete buttons */}
           <Box sx={{ display: 'flex', gap: 0.5 }}>
             <Button
               size="small"
@@ -92,17 +87,6 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
               Delete
             </Button>
           </Box>
-          
-          {/* Second row: Add Children */}
-          <Button
-            size="small"
-            variant="outlined"
-            color="success"
-            sx={{ fontSize: '0.75rem', px: 1 }}
-            onClick={onAddChildren}
-          >
-            Add Children
-          </Button>
         </Box>
       </Box>
     </Paper>

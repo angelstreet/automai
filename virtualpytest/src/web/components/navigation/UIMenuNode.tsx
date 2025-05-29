@@ -2,33 +2,11 @@ import React, { useState } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { UINavigationNode as UINavigationNodeType } from '../../types/navigationTypes';
 
-export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({ 
+export const UIMenuNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({ 
   data, 
   selected 
 }) => {
   const [isScreenshotModalOpen, setIsScreenshotModalOpen] = useState(false);
-
-  const getNodeColor = (type: string) => {
-    switch (type) {
-      case 'screen': return '#e3f2fd';
-      case 'dialog': return '#f3e5f5';
-      case 'popup': return '#fff3e0';
-      case 'overlay': return '#e8f5e8';
-      case 'menu': return '#fff8e1';
-      default: return '#f5f5f5';
-    }
-  };
-
-  const getNodeBorderColor = (type: string) => {
-    switch (type) {
-      case 'screen': return '#2196f3';
-      case 'dialog': return '#9c27b0';
-      case 'popup': return '#ff9800';
-      case 'overlay': return '#4caf50';
-      case 'menu': return '#ffc107';
-      default: return '#757575';
-    }
-  };
 
   const handleScreenshotDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent node double-click from triggering
@@ -44,8 +22,8 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
   return (
     <div
       style={{
-        background: getNodeColor(data.type),
-        border: selected ? `2px solid #1976d2` : `2px solid ${getNodeBorderColor(data.type)}`,
+        background: 'linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%)',
+        border: selected ? `3px solid #ff6f00` : `2px solid #ffc107`,
         borderRadius: '8px',
         padding: '12px',
         minWidth: '200px',
@@ -53,7 +31,9 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         minHeight: '180px',
         fontSize: '12px',
         color: '#333',
-        boxShadow: selected ? '0 4px 12px rgba(0,0,0,0.2)' : '0 2px 4px rgba(0,0,0,0.1)',
+        boxShadow: selected 
+          ? '0 4px 12px rgba(255, 193, 7, 0.4)' 
+          : '0 2px 4px rgba(255, 193, 7, 0.2)',
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
@@ -61,7 +41,6 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
       }}
     >
       {/* Left Handles */}
-      {/* Top-left: TARGET for receiving connections from right-side nodes */}
       <Handle 
         type="target" 
         position={Position.Left} 
@@ -70,7 +49,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         isConnectableStart={false}
         isConnectableEnd={true}
         style={{ 
-          background: '#1976d2', 
+          background: '#ff6f00', 
           width: '14px', 
           height: '14px',
           border: '2px solid #fff',
@@ -81,7 +60,6 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         }} 
       />
       
-      {/* Bottom-left: SOURCE for sending connections to left-side nodes */}
       <Handle 
         type="source" 
         position={Position.Left} 
@@ -102,7 +80,6 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
       />
       
       {/* Right Handles */}
-      {/* Top-right: SOURCE for sending connections to right-side nodes */}
       <Handle 
         type="source" 
         position={Position.Right} 
@@ -111,7 +88,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         isConnectableStart={true}
         isConnectableEnd={false}
         style={{ 
-          background: '#1976d2', 
+          background: '#ff6f00', 
           width: '14px', 
           height: '14px',
           border: '2px solid #fff',
@@ -122,7 +99,6 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         }} 
       />
 
-      {/* Bottom-right: TARGET for receiving connections from left-side nodes */}
       <Handle 
         type="target" 
         position={Position.Right} 
@@ -142,16 +118,39 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         }} 
       />
 
-      {/* Header with node name and type */}
+      {/* Tree status indicator */}
+      {data.tree_id && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '4px',
+            right: '4px',
+            width: '16px',
+            height: '16px',
+            backgroundColor: '#4caf50',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '10px',
+            color: 'white',
+            fontWeight: 'bold',
+            zIndex: 10,
+          }}
+        >
+          ✓
+        </div>
+      )}
+
+      {/* Header with menu name */}
       <div
         style={{
           padding: '4px',
-          borderBottom: '1px solid #eee',
+          borderBottom: '1px solid #ffc107',
           minHeight: '10px',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
-         
         }}
       >
         <div
@@ -161,7 +160,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
-            color: 'black',
+            color: '#e65100',
             marginBottom: '0px',
             fontSize: '18px',
           }}
@@ -172,11 +171,12 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           style={{
             textAlign: 'center',
             fontSize: '10px',
-            color: '#666',
+            color: '#ff8f00',
             textTransform: 'uppercase',
+            fontWeight: 'bold',
           }}
         >
-          {data.type}
+          MENU
         </div>
       </div>
 
@@ -192,18 +192,18 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           alignItems: 'center',
           justifyContent: 'center',
           position: 'relative',
-          cursor: data.screenshot ? 'pointer' : (data.type === 'menu' ? 'pointer' : 'default'),
+          cursor: 'pointer',
         }}
         onDoubleClick={handleScreenshotDoubleClick}
-        title={data.screenshot ? 'Double-click to view full size' : (data.type === 'menu' ? 'Double-click to navigate to nested tree' : '')}
       >
         {!data.screenshot && (
           <div style={{ 
             fontSize: '11px', 
-            color: '#666',
+            color: '#ff8f00',
             textAlign: 'center',
+            fontWeight: '500',
           }}>
-            {data.type === 'menu' ? 'Menu - Double-click to explore' : 'No Screenshot'}
+            No Screenshot
           </div>
         )}
       </div>
@@ -237,9 +237,8 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
               margin: 0,
               padding: 0,
             }}
-            onClick={(e) => e.stopPropagation()} // Prevent closing when clicking the image
+            onClick={(e) => e.stopPropagation()}
           >
-            {/* Full-size screenshot */}
             <img
               src={data.screenshot}
               alt={`Screenshot of ${data.label}`}
@@ -247,7 +246,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
                 width: 'auto',
                 height: 'auto',
                 maxWidth: '100%',
-                maxHeight: 'calc(85vh - 60px)', // Account for caption area
+                maxHeight: 'calc(85vh - 60px)',
                 objectFit: 'contain',
                 borderRadius: '8px',
                 boxShadow: '0 4px 0px rgba(0, 0, 0, 0.5)',
@@ -257,7 +256,6 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
               }}
             />
             
-            {/* Caption and Close Button */}
             <div
               style={{
                 marginTop: '0px',
@@ -265,12 +263,11 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 gap: '0px',
-                height: '40px', // Fixed height for consistent layout
+                height: '40px',
                 margin: '0px 0 0 0',
                 padding: 0,
               }}
             >
-              {/* Image caption */}
               <div
                 style={{
                   color: 'white',
@@ -279,10 +276,9 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
                   flex: 1,
                 }}
               >
-                {data.label} - {data.type}
+                {data.label} - MENU
               </div>
               
-              {/* Close button */}
               <button
                 onClick={closeModal}
                 style={{
@@ -305,7 +301,6 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = 'rgba(255, 255, 255, 0.9)';
                 }}
-                title="Close"
               >
                 <span style={{ fontSize: '14px' }}>×</span>
               </button>
