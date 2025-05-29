@@ -48,6 +48,24 @@ export const TreeFilterControls: React.FC<TreeFilterControlsProps> = ({
     return `D${maxDisplayDepth}`;
   };
 
+  // Get the focus node's depth for calculating dynamic labels
+  const focusNodeDepth = focusNodeId 
+    ? availableFocusNodes.find(n => n.id === focusNodeId)?.depth || 0 
+    : 0;
+
+  // Generate dynamic depth menu items
+  const generateDepthMenuItems = () => {
+    const items = [];
+    for (let i = 1; i <= 5; i++) {
+      items.push(
+        <MenuItem key={i} value={i} sx={{ fontSize: '0.75rem' }}>
+          D{i}
+        </MenuItem>
+      );
+    }
+    return items;
+  };
+
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
       {/* Node Selection */}
@@ -72,7 +90,7 @@ export const TreeFilterControls: React.FC<TreeFilterControlsProps> = ({
       </FormControl>
 
       {/* Depth Selection */}
-      <FormControl size="small" sx={{ minWidth: 60 }}>
+      <FormControl size="small" sx={{ minWidth: 80 }}>
         <Select
           value={maxDisplayDepth}
           onChange={(e) => onDepthChange(Number(e.target.value))}
@@ -82,11 +100,7 @@ export const TreeFilterControls: React.FC<TreeFilterControlsProps> = ({
             '& .MuiSelect-select': { py: 0.5 }
           }}
         >
-          <MenuItem value={1} sx={{ fontSize: '0.75rem' }}>D1</MenuItem>
-          <MenuItem value={2} sx={{ fontSize: '0.75rem' }}>D2</MenuItem>
-          <MenuItem value={3} sx={{ fontSize: '0.75rem' }}>D3</MenuItem>
-          <MenuItem value={4} sx={{ fontSize: '0.75rem' }}>D4</MenuItem>
-          <MenuItem value={5} sx={{ fontSize: '0.75rem' }}>D5</MenuItem>
+          {generateDepthMenuItems()}
         </Select>
       </FormControl>
 

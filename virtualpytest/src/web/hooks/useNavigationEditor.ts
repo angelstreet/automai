@@ -481,25 +481,26 @@ export const useNavigationEditor = () => {
     }
 
     const focusDepth = focusNode.data.depth || 0;
-    console.log(`[@hook:useNavigationEditor] Focus node found: ${focusNode.data.label} at depth ${focusDepth}`);
+    // Calculate the maximum absolute depth to show (focus depth + relative depth levels)
+    const maxAbsoluteDepth = focusDepth + navigationState.maxDisplayDepth;
+    console.log(`[@hook:useNavigationEditor] Focus node found: ${focusNode.data.label} at depth ${focusDepth}, max absolute depth: ${maxAbsoluteDepth} (focus + ${navigationState.maxDisplayDepth} levels)`);
     
-    // Show focus node, its siblings, and its descendants up to maxDisplayDepth levels deep
+    // Show focus node, its siblings, and its descendants up to maxDisplayDepth levels deep from the focus node
     const filtered = navigationState.allNodes.filter(node => {
       const nodeDepth = node.data.depth || 0;
       
       // Include the focus node itself
       if (node.id === navigationState.focusNodeId) {
-        console.log(`[@hook:useNavigationEditor] Including focus node: ${node.data.label}`);
+        console.log(`[@hook:useNavigationEditor] Including focus node: ${node.data.label} at depth ${nodeDepth}`);
         return true;
       }
       
       // Check if this node is a descendant of the focus node first
       const isDescendant = isNodeDescendantOf(node, navigationState.focusNodeId!, navigationState.allNodes);
       if (isDescendant) {
-        const relativeDepth = nodeDepth - focusDepth;
-        // Include descendants up to maxDisplayDepth levels deep (including same-level children)
-        const shouldInclude = relativeDepth <= navigationState.maxDisplayDepth && relativeDepth >= 0;
-        console.log(`[@hook:useNavigationEditor] Descendant ${node.data.label} - depth: ${nodeDepth}, relative: ${relativeDepth}, include: ${shouldInclude}`);
+        // For descendants, check against the maximum absolute depth
+        const shouldInclude = nodeDepth <= maxAbsoluteDepth;
+        console.log(`[@hook:useNavigationEditor] Descendant ${node.data.label} - depth: ${nodeDepth}, max absolute: ${maxAbsoluteDepth}, include: ${shouldInclude}`);
         return shouldInclude;
       }
       
@@ -519,7 +520,7 @@ export const useNavigationEditor = () => {
       return false;
     });
     
-    console.log(`[@hook:useNavigationEditor] Focus filtering complete - showing ${filtered.length} nodes`);
+    console.log(`[@hook:useNavigationEditor] Focus filtering complete - showing ${filtered.length} nodes (depths ${focusDepth} to ${maxAbsoluteDepth})`);
     return filtered;
   }, [navigationState.allNodes, navigationState.focusNodeId, navigationState.maxDisplayDepth, isNodeDescendantOf]);
 
@@ -683,9 +684,9 @@ export const useNavigationEditor = () => {
 
   // Reset focus to show all root level nodes
   const resetFocus = useCallback(() => {
-    console.log(`[@hook:useNavigationEditor] Resetting focus to root level`);
+    console.log(`[@hook:useNavigationEditor] Resetting focus to All and D1`);
     navigationState.setFocusNodeId(null);
-    navigationState.setMaxDisplayDepth(2);
+    navigationState.setMaxDisplayDepth(5);
     
     // Removed auto-fit view - let user manually fit view if needed
   }, [navigationState]);
