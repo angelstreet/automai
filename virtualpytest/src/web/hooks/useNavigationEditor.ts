@@ -750,9 +750,8 @@ export const useNavigationEditor = () => {
       label: nodeForm.label,
       type: nodeForm.type,
       description: nodeForm.description,
-      // For TV menus, we can set depth and parent_id here if needed
+      // For TV menus, we can set depth here if needed
       depth: nodeForm.depth || 0,
-      parent_id: nodeForm.parent_id || null,
       menu_type: nodeForm.menu_type || (nodeForm.type === 'menu' ? 'main' : undefined),
     };
     
@@ -875,13 +874,9 @@ export const useNavigationEditor = () => {
     console.log(`[@hook:useNavigationEditor] Filtering nodes - focusNodeId: ${focusNodeId}, maxDisplayDepth: ${maxDisplayDepth}, total nodes: ${allNodes.length}`);
     
     if (!focusNodeId) {
-      // No focus node selected - show root nodes and their children up to maxDisplayDepth
-      const filtered = allNodes.filter(node => {
-        const nodeDepth = node.data.depth || 0;
-        return nodeDepth <= maxDisplayDepth;
-      });
-      console.log(`[@hook:useNavigationEditor] No focus node - showing ${filtered.length} nodes up to depth ${maxDisplayDepth}`);
-      return filtered;
+      // No focus node selected (All option) - show ALL nodes without any filtering
+      console.log(`[@hook:useNavigationEditor] No focus node - showing ALL ${allNodes.length} nodes`);
+      return allNodes;
     }
 
     // Find the focus node
@@ -1041,12 +1036,12 @@ export const useNavigationEditor = () => {
     
     setAvailableFocusNodes(focusableNodes);
     
-    // Auto-select first root node if no focus node selected
-    if (!focusNodeId && focusableNodes.length > 0) {
-      const rootNode = focusableNodes.find(n => n.depth === 0) || focusableNodes[0];
-      setFocusNodeId(rootNode.id);
-    }
-  }, [allNodes, focusNodeId]);
+    // REMOVED: Don't auto-select a focus node - let user choose "All" option
+    // if (!focusNodeId && focusableNodes.length > 0) {
+    //   const rootNode = focusableNodes.find(n => n.depth === 0) || focusableNodes[0];
+    //   setFocusNodeId(rootNode.id);
+    // }
+  }, [allNodes]); // Removed focusNodeId dependency to prevent auto-selection
 
   // Focus on specific node (dropdown selection)
   const setFocusNode = useCallback((nodeId: string | null) => {
