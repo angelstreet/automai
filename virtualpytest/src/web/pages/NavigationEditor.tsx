@@ -408,9 +408,9 @@ const NavigationEditorContent: React.FC = () => {
           <Box sx={{
             position: 'fixed',
             right: 0,
-            top: '100px', // Adjust based on your header height
+            top: '130px', // Adjust based on your header height
             width: '300px',
-            height: 'calc(100vh - 100px)',
+            height: 'calc(100vh - 130px)',
             bgcolor: 'background.paper',
             borderLeft: '1px solid',
             borderColor: 'divider',
@@ -420,24 +420,6 @@ const NavigationEditorContent: React.FC = () => {
             boxShadow: '-2px 0 8px rgba(0, 0, 0, 0.1)'
           }}>
             {/* Remote panel content - empty for now */}
-            <Box sx={{ 
-              p: 2, 
-              borderBottom: '1px solid', 
-              borderColor: 'divider',
-              bgcolor: 'grey.50'
-            }}>
-              <Typography variant="h6">Remote Control</Typography>
-              {selectedDevice && (
-                <Typography variant="body2" color="text.secondary">
-                  Device: {selectedDevice}
-                </Typography>
-              )}
-              {isControlActive && (
-                <Typography variant="body2" color="success.main">
-                  Control Active
-                </Typography>
-              )}
-            </Box>
             <Box sx={{ 
               flex: 1, 
               p: 2,
