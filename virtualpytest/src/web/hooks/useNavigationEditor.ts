@@ -234,24 +234,21 @@ export const useNavigationEditor = () => {
       return;
     }
     
-    // Determine edge type based on connection direction
+    // Determine edge type based on handles and connection type
     let edgeType: 'default' | 'top' | 'bottom' | 'menu' | undefined = 'default';
     
-    // Detect actual connection direction based on handle positions
-    const isLeftToRight = (params.sourceHandle?.includes('right') && params.targetHandle?.includes('left'));
-    const isTopToBottom = (params.sourceHandle?.includes('bottom') && params.targetHandle?.includes('top'));
-    const isRightToLeft = (params.sourceHandle?.includes('left') && params.targetHandle?.includes('right'));
-    const isBottomToTop = (params.sourceHandle?.includes('top') && params.targetHandle?.includes('bottom'));
+    // First check for top/bottom connections regardless of menu status
+    const isTopConnection = params.sourceHandle?.includes('top') || params.targetHandle?.includes('top');
+    const isBottomConnection = params.sourceHandle?.includes('bottom') || params.targetHandle?.includes('bottom');
     
-    if (isLeftToRight || isTopToBottom) {
-      edgeType = 'top'; // Blue edges for left-to-right and top-to-bottom
-      console.log(`[@component:NavigationEditor] Connection direction: ${isLeftToRight ? 'left-to-right' : 'top-to-bottom'} -> BLUE`);
-    } else if (isRightToLeft || isBottomToTop || isMenuConnection) {
-      edgeType = 'bottom'; // Red edges for right-to-left, bottom-to-top, and menu
-      console.log(`[@component:NavigationEditor] Connection direction: ${isRightToLeft ? 'right-to-left' : isBottomToTop ? 'bottom-to-top' : 'menu'} -> RED`);
+    if (isTopConnection) {
+      edgeType = 'top'; // Red edges for top handle connections
+    } else if (isBottomConnection) {
+      edgeType = 'bottom'; // Blue edges for bottom handle connections
+    } else if (isMenuConnection) {
+      edgeType = 'menu'; // For other menu navigation connections
     } else {
-      edgeType = 'bottom'; // Default to red for other connections
-      console.log(`[@component:NavigationEditor] Connection direction: other -> RED`);
+      edgeType = 'default'; // Gray for left/right connections
     }
     
     console.log('[@component:NavigationEditor] Handle analysis:', {
@@ -265,76 +262,67 @@ export const useNavigationEditor = () => {
       targetNodeType: targetNode.data.type
     });
 
-    // NEW: Update parent chain and depth when connecting nodes
-    // Rules:
-    // 1. Only MENU nodes can be parents
-    // 2. Screen-to-screen connections: share the same parent level
-    // 3. Menu-to-any: menu becomes parent
-    // 4. Any-to-menu: menu becomes parent 
-    // 5. Root nodes (is_root: true) never inherit parents
-    
-    console.log(`[@component:NavigationEditor] Connection: ${sourceNode.data.label} (${sourceNode.data.type}) -> ${targetNode.data.label} (${targetNode.data.type})`);
-    console.log(`[@component:NavigationEditor] Source parent chain:`, sourceNode.data.parent || []);
-    console.log(`[@component:NavigationEditor] Target parent chain:`, targetNode.data.parent || []);
-    console.log(`[@component:NavigationEditor] Source is_root:`, sourceNode.data.is_root);
-    console.log(`[@component:NavigationEditor] Target is_root:`, targetNode.data.is_root);
-    console.log(`[@component:NavigationEditor] Source is menu:`, sourceNode.data.type === 'menu');
-    console.log(`[@component:NavigationEditor] Target is menu:`, targetNode.data.type === 'menu');
-    
-    const sourceHasParent = sourceNode.data.parent && sourceNode.data.parent.length > 0;
-    const targetHasParent = targetNode.data.parent && targetNode.data.parent.length > 0;
-    const sourceIsRoot = sourceNode.data.is_root;
-    const targetIsRoot = targetNode.data.is_root;
-    const sourceIsMenu = sourceNode.data.type === 'menu';
-    const targetIsMenu = targetNode.data.type === 'menu';
-    
-    console.log(`[@component:NavigationEditor] Connection analysis:`, {
-      sourceHasParent,
-      targetHasParent,
-      sourceIsRoot,
-      targetIsRoot,
-      sourceIsMenu,
-      targetIsMenu,
-      willExecuteCase: sourceIsMenu && !targetIsRoot ? 'Menu->Any' : 
-                      targetIsMenu && !sourceIsRoot ? 'Any->Menu' :
-                      !sourceIsMenu && !targetIsMenu ? 'Screen->Screen' : 'None'
-    });
-
-    if (sourceIsMenu && !targetIsRoot) {
-      // Case 1: Menu -> Any node (menu becomes parent of target)
-      const newParent = [
-        ...(sourceNode.data.parent || []),  // Inherit menu's ancestry
-        sourceNode.id                       // Menu becomes direct parent
-      ];
-      
-      setNodes((nds) => nds.map((node) => {
-        if (node.id === targetNode.id) {
-          console.log(`[@component:NavigationEditor] Menu ${sourceNode.data.label} becomes parent of ${targetNode.data.label}: [${newParent.join(' > ')}], depth: ${newParent.length}`);
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              parent: newParent,
-              depth: newParent.length
+    // NEW: Update parent chain and depth when connecting with menu nodes
+    if (sourceNode.data.type === 'menu') {
+      // Case 1: Menu node -> Any node
+      // Check if menu is orphan first
+      if (!sourceNode.data.parent || sourceNode.data.parent.length === 0) {
+        // Menu is orphan - check target state
+        if (targetNode.data.parent && targetNode.data.parent.length > 0) {
+          // Target has parent - menu should inherit target's parent (become sibling)
+          const inheritedParent = [...(targetNode.data.parent || [])];
+          
+          setNodes((nds) => nds.map((node) => {
+            if (node.id === sourceNode.id) {
+              console.log(`[@component:NavigationEditor] Menu ${sourceNode.data.label} inherits ${targetNode.data.label}'s parent: [${inheritedParent.join(' > ')}], depth: ${inheritedParent.length}`);
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  parent: inheritedParent,
+                  depth: inheritedParent.length
+                }
+              };
             }
-          };
+            return node;
+          }));
+        } else {
+          // Target is orphan - menu becomes parent of target
+          const newParent = [
+            ...(sourceNode.data.parent || []),
+            sourceNode.id
+          ];
+          
+          setNodes((nds) => nds.map((node) => {
+            if (node.id === targetNode.id) {
+              console.log(`[@component:NavigationEditor] Menu ${sourceNode.data.label} becomes parent of orphan ${targetNode.data.label}: [${newParent.join(' > ')}], depth: ${newParent.length}`);
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  parent: newParent,
+                  depth: newParent.length
+                }
+              };
+            }
+            return node;
+          }));
         }
-        return node;
-      }));
-    } else if (targetIsMenu && !sourceIsRoot) {
-      // Case 2: Any node -> Menu (menu becomes parent of source)
-      // CRITICAL: Never change parent of root nodes
-      if (sourceIsRoot) {
-        console.log(`[@component:NavigationEditor] Source ${sourceNode.data.label} is ROOT - cannot change its parent!`);
       } else {
+        console.log(`[@component:NavigationEditor] Menu ${sourceNode.data.label} already has parent - no changes`);
+      }
+    } else if (targetNode.data.type === 'menu') {
+      // Case 2: Any node -> Menu node (menu becomes parent of source)
+      // PROTECTION: Only update orphan nodes (no existing parent)
+      if (!sourceNode.data.parent || sourceNode.data.parent.length === 0) {
         const newParent = [
-          ...(targetNode.data.parent || []),  // Inherit menu's ancestry
-          targetNode.id                       // Menu becomes direct parent
+          ...(targetNode.data.parent || []),
+          targetNode.id
         ];
         
         setNodes((nds) => nds.map((node) => {
           if (node.id === sourceNode.id) {
-            console.log(`[@component:NavigationEditor] Menu ${targetNode.data.label} becomes parent of ${sourceNode.data.label}: [${newParent.join(' > ')}], depth: ${newParent.length}`);
+            console.log(`[@component:NavigationEditor] Menu ${targetNode.data.label} becomes parent of orphan ${sourceNode.data.label}: [${newParent.join(' > ')}], depth: ${newParent.length}`);
             return {
               ...node,
               data: {
@@ -346,21 +334,23 @@ export const useNavigationEditor = () => {
           }
           return node;
         }));
+        
+        console.log(`[@component:NavigationEditor] Updated source node ${sourceNode.data.label} parent chain:`, newParent);
+      } else {
+        console.log(`[@component:NavigationEditor] PROTECTION: ${sourceNode.data.label} already has parent [${sourceNode.data.parent.join(' > ')}] - not changing`);
       }
-    } else if (!sourceIsMenu && !targetIsMenu) {
-      // Case 3: Screen -> Screen (both should share the same parent level)
-      console.log(`[@component:NavigationEditor] Screen-to-screen connection - sharing parent level`);
+    } else {
+      // Case 3: Screen -> Screen (share parent level for orphans only)
+      const sourceHasParent = sourceNode.data.parent && sourceNode.data.parent.length > 0;
+      const targetHasParent = targetNode.data.parent && targetNode.data.parent.length > 0;
       
-      // Determine which parent to use (prefer the one that has a parent)
-      let sharedParent: string[] = [];
-      
-      if (sourceHasParent && !targetHasParent && !targetIsRoot) {
+      if (sourceHasParent && !targetHasParent) {
         // Source has parent, target is orphan -> target adopts source's parent
-        sharedParent = [...(sourceNode.data.parent || [])];
+        const sharedParent = [...(sourceNode.data.parent || [])];
         
         setNodes((nds) => nds.map((node) => {
           if (node.id === targetNode.id) {
-            console.log(`[@component:NavigationEditor] Target ${targetNode.data.label} adopts source's parent level: [${sharedParent.join(' > ')}], depth: ${sharedParent.length}`);
+            console.log(`[@component:NavigationEditor] Orphan ${targetNode.data.label} adopts ${sourceNode.data.label}'s parent: [${sharedParent.join(' > ')}], depth: ${sharedParent.length}`);
             return {
               ...node,
               data: {
@@ -372,31 +362,26 @@ export const useNavigationEditor = () => {
           }
           return node;
         }));
-      } else if (targetHasParent && !sourceHasParent && !sourceIsRoot) {
+      } else if (targetHasParent && !sourceHasParent) {
         // Target has parent, source is orphan -> source adopts target's parent
-        // CRITICAL: Never change parent of root nodes
-        if (sourceIsRoot) {
-          console.log(`[@component:NavigationEditor] Source ${sourceNode.data.label} is ROOT - cannot adopt parent!`);
-        } else {
-          sharedParent = [...(targetNode.data.parent || [])];
-          
-          setNodes((nds) => nds.map((node) => {
-            if (node.id === sourceNode.id) {
-              console.log(`[@component:NavigationEditor] Source ${sourceNode.data.label} adopts target's parent level: [${sharedParent.join(' > ')}], depth: ${sharedParent.length}`);
-              return {
-                ...node,
-                data: {
-                  ...node.data,
-                  parent: sharedParent,
-                  depth: sharedParent.length
-                }
-              };
-            }
-            return node;
-          }));
-        }
+        const sharedParent = [...(targetNode.data.parent || [])];
+        
+        setNodes((nds) => nds.map((node) => {
+          if (node.id === sourceNode.id) {
+            console.log(`[@component:NavigationEditor] Orphan ${sourceNode.data.label} adopts ${targetNode.data.label}'s parent: [${sharedParent.join(' > ')}], depth: ${sharedParent.length}`);
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                parent: sharedParent,
+                depth: sharedParent.length
+              }
+            };
+          }
+          return node;
+        }));
       } else {
-        console.log(`[@component:NavigationEditor] Both nodes already have parents or are roots - no parent changes needed`);
+        console.log(`[@component:NavigationEditor] Screen-to-screen: both have parents or both are orphans - no parent changes needed`);
       }
     }
 
@@ -1015,21 +1000,8 @@ export const useNavigationEditor = () => {
   const isNodeDescendantOf = useCallback((node: UINavigationNode, ancestorId: string, nodes: UINavigationNode[]): boolean => {
     if (!node.data.parent || node.data.parent.length === 0) return false;
     
-    // Check if ancestorId is in the parent chain (anywhere in the ancestry)
-    const isInParentChain = node.data.parent.includes(ancestorId);
-    
-    // Also check if this node is a direct child (last element in parent chain)
-    const isDirectChild = node.data.parent[node.data.parent.length - 1] === ancestorId;
-    
-    console.log(`[@hook:useNavigationEditor:isNodeDescendantOf] Node ${node.data.label}:`, {
-      parentChain: node.data.parent,
-      ancestorId,
-      isInParentChain,
-      isDirectChild,
-      result: isInParentChain
-    });
-    
-    return isInParentChain;
+    // Check if ancestorId is in the parent chain
+    return node.data.parent.includes(ancestorId);
   }, []);
 
   // Get filtered nodes based on focus node and depth
@@ -1050,7 +1022,7 @@ export const useNavigationEditor = () => {
     }
 
     const focusDepth = focusNode.data.depth || 0;
-    console.log(`[@hook:useNavigationEditor] Focus node found: ${focusNode.data.label} (id: ${focusNode.id}) at depth ${focusDepth}`);
+    console.log(`[@hook:useNavigationEditor] Focus node found: ${focusNode.data.label} at depth ${focusDepth}`);
     
     // Show focus node and its descendants up to maxDisplayDepth levels deep
     const filtered = allNodes.filter(node => {
@@ -1058,7 +1030,7 @@ export const useNavigationEditor = () => {
       
       // Include the focus node itself
       if (node.id === focusNodeId) {
-        console.log(`[@hook:useNavigationEditor] ✓ Including focus node: ${node.data.label}`);
+        console.log(`[@hook:useNavigationEditor] Including focus node: ${node.data.label}`);
         return true;
       }
       
@@ -1067,20 +1039,14 @@ export const useNavigationEditor = () => {
       if (isDescendant) {
         const relativeDepth = nodeDepth - focusDepth;
         const shouldInclude = relativeDepth <= maxDisplayDepth && relativeDepth > 0;
-        console.log(`[@hook:useNavigationEditor] ${shouldInclude ? '✓' : '✗'} Descendant ${node.data.label} - depth: ${nodeDepth}, relative: ${relativeDepth}, maxDisplayDepth: ${maxDisplayDepth}, include: ${shouldInclude}`);
+        console.log(`[@hook:useNavigationEditor] Descendant ${node.data.label} - depth: ${nodeDepth}, relative: ${relativeDepth}, include: ${shouldInclude}`);
         return shouldInclude;
-      } else {
-        console.log(`[@hook:useNavigationEditor] ✗ Not a descendant: ${node.data.label} (parent: ${node.data.parent ? node.data.parent.join(' > ') : 'none'})`);
       }
       
       return false;
     });
     
-    console.log(`[@hook:useNavigationEditor] Focus filtering complete - showing ${filtered.length}/${allNodes.length} nodes:`);
-    filtered.forEach(node => {
-      console.log(`[@hook:useNavigationEditor] - ${node.data.label} (depth: ${node.data.depth}, parent: ${node.data.parent ? node.data.parent.join(' > ') : 'none'})`);
-    });
-    
+    console.log(`[@hook:useNavigationEditor] Focus filtering complete - showing ${filtered.length} nodes`);
     return filtered;
   }, [allNodes, focusNodeId, maxDisplayDepth, isNodeDescendantOf]);
 
@@ -1245,84 +1211,6 @@ export const useNavigationEditor = () => {
     }, 100);
   }, [reactFlowInstance]);
 
-  // Helper function to enforce root node protection
-  const enforceRootNodeProtection = useCallback(() => {
-    setNodes((nds) => nds.map((node) => {
-      if (node.data.is_root && (node.data.parent && node.data.parent.length > 0)) {
-        console.log(`[@component:NavigationEditor] FIXING ROOT NODE: ${node.data.label} had parent [${node.data.parent.join(' > ')}] - resetting to root status`);
-        return {
-          ...node,
-          data: {
-            ...node.data,
-            parent: [],
-            depth: 0
-          }
-        };
-      }
-      return node;
-    }));
-  }, [setNodes]);
-
-  // Call root protection after any node changes
-  useEffect(() => {
-    enforceRootNodeProtection();
-  }, [nodes, enforceRootNodeProtection]);
-
-  // Reset node - remove all edges and reset parent/depth
-  const resetNode = useCallback((nodeId: string) => {
-    console.log(`[@hook:useNavigationEditor] Resetting node: ${nodeId}`);
-    
-    // Find the node
-    const node = nodes.find(n => n.id === nodeId);
-    if (!node) {
-      console.error(`[@hook:useNavigationEditor] Node ${nodeId} not found for reset`);
-      return;
-    }
-    
-    console.log(`[@hook:useNavigationEditor] Resetting node ${node.data.label} - removing all edges and parent relationships`);
-    
-    // Remove all edges connected to this node
-    setEdges((eds) => {
-      const removedEdges = eds.filter(edge => edge.source === nodeId || edge.target === nodeId);
-      const remainingEdges = eds.filter(edge => edge.source !== nodeId && edge.target !== nodeId);
-      
-      console.log(`[@hook:useNavigationEditor] Removing ${removedEdges.length} edges connected to ${node.data.label}`);
-      removedEdges.forEach(edge => {
-        console.log(`[@hook:useNavigationEditor] - Removing edge: ${edge.source} -> ${edge.target}`);
-      });
-      
-      return remainingEdges;
-    });
-    
-    // Reset the node's parent and depth
-    setNodes((nds) => nds.map((n) => {
-      if (n.id === nodeId) {
-        console.log(`[@hook:useNavigationEditor] Resetting ${n.data.label} parent and depth`);
-        return {
-          ...n,
-          data: {
-            ...n.data,
-            parent: [],
-            depth: 0
-          }
-        };
-      }
-      return n;
-    }));
-    
-    // Mark as having unsaved changes
-    setHasUnsavedChanges(true);
-    
-    console.log(`[@hook:useNavigationEditor] Node ${node.data.label} has been reset to orphan status`);
-  }, [nodes, setNodes, setEdges]);
-
-  // Reset selected node wrapper
-  const resetSelectedNode = useCallback(() => {
-    if (selectedNode) {
-      resetNode(selectedNode.id);
-    }
-  }, [selectedNode, resetNode]);
-
   return {
     // State
     nodes,
@@ -1438,9 +1326,5 @@ export const useNavigationEditor = () => {
     
     // Configuration
     defaultEdgeOptions,
-    
-    // Reset node
-    resetNode,
-    resetSelectedNode,
   };
 }; 
