@@ -103,15 +103,8 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
               label="Depth"
               value={nodeForm.depth || 0}
               fullWidth
-              disabled
               InputProps={{
                 readOnly: true,
-              }}
-              sx={{
-                '& .MuiInputBase-input': {
-                  backgroundColor: '#f5f5f5',
-                  color: 'text.secondary'
-                }
               }}
               variant="outlined"
               size="small"
@@ -120,15 +113,8 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
               label="Parent Chain"
               value={getParentNames(nodeForm.parent || [])}
               fullWidth
-              disabled
               InputProps={{
                 readOnly: true,
-              }}
-              sx={{
-                '& .MuiInputBase-input': {
-                  backgroundColor: '#f5f5f5',
-                  color: 'text.secondary'
-                }
               }}
               variant="outlined"
               size="small"

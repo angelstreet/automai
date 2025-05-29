@@ -265,16 +265,51 @@ export const useNavigationEditor = () => {
       targetNodeType: targetNode.data.type
     });
 
-    // NEW: Update parent chain and depth when connecting with menu nodes
-    if (sourceNode.data.type === 'menu') {
-      // Case 1: Menu node -> Any node (menu becomes parent of target)
+    // NEW: Update parent chain and depth when connecting nodes
+    // Rules:
+    // 1. Only MENU nodes can be parents
+    // 2. Screen-to-screen connections: share the same parent level
+    // 3. Menu-to-any: menu becomes parent
+    // 4. Any-to-menu: menu becomes parent 
+    // 5. Root nodes (is_root: true) never inherit parents
+    
+    console.log(`[@component:NavigationEditor] Connection: ${sourceNode.data.label} (${sourceNode.data.type}) -> ${targetNode.data.label} (${targetNode.data.type})`);
+    console.log(`[@component:NavigationEditor] Source parent chain:`, sourceNode.data.parent || []);
+    console.log(`[@component:NavigationEditor] Target parent chain:`, targetNode.data.parent || []);
+    console.log(`[@component:NavigationEditor] Source is_root:`, sourceNode.data.is_root);
+    console.log(`[@component:NavigationEditor] Target is_root:`, targetNode.data.is_root);
+    console.log(`[@component:NavigationEditor] Source is menu:`, sourceNode.data.type === 'menu');
+    console.log(`[@component:NavigationEditor] Target is menu:`, targetNode.data.type === 'menu');
+    
+    const sourceHasParent = sourceNode.data.parent && sourceNode.data.parent.length > 0;
+    const targetHasParent = targetNode.data.parent && targetNode.data.parent.length > 0;
+    const sourceIsRoot = sourceNode.data.is_root;
+    const targetIsRoot = targetNode.data.is_root;
+    const sourceIsMenu = sourceNode.data.type === 'menu';
+    const targetIsMenu = targetNode.data.type === 'menu';
+    
+    console.log(`[@component:NavigationEditor] Connection analysis:`, {
+      sourceHasParent,
+      targetHasParent,
+      sourceIsRoot,
+      targetIsRoot,
+      sourceIsMenu,
+      targetIsMenu,
+      willExecuteCase: sourceIsMenu && !targetIsRoot ? 'Menu->Any' : 
+                      targetIsMenu && !sourceIsRoot ? 'Any->Menu' :
+                      !sourceIsMenu && !targetIsMenu ? 'Screen->Screen' : 'None'
+    });
+
+    if (sourceIsMenu && !targetIsRoot) {
+      // Case 1: Menu -> Any node (menu becomes parent of target)
       const newParent = [
-        ...(sourceNode.data.parent || []),
-        sourceNode.id
+        ...(sourceNode.data.parent || []),  // Inherit menu's ancestry
+        sourceNode.id                       // Menu becomes direct parent
       ];
       
       setNodes((nds) => nds.map((node) => {
         if (node.id === targetNode.id) {
+          console.log(`[@component:NavigationEditor] Menu ${sourceNode.data.label} becomes parent of ${targetNode.data.label}: [${newParent.join(' > ')}], depth: ${newParent.length}`);
           return {
             ...node,
             data: {
@@ -286,58 +321,83 @@ export const useNavigationEditor = () => {
         }
         return node;
       }));
+    } else if (targetIsMenu && !sourceIsRoot) {
+      // Case 2: Any node -> Menu (menu becomes parent of source)
+      // CRITICAL: Never change parent of root nodes
+      if (sourceIsRoot) {
+        console.log(`[@component:NavigationEditor] Source ${sourceNode.data.label} is ROOT - cannot change its parent!`);
+      } else {
+        const newParent = [
+          ...(targetNode.data.parent || []),  // Inherit menu's ancestry
+          targetNode.id                       // Menu becomes direct parent
+        ];
+        
+        setNodes((nds) => nds.map((node) => {
+          if (node.id === sourceNode.id) {
+            console.log(`[@component:NavigationEditor] Menu ${targetNode.data.label} becomes parent of ${sourceNode.data.label}: [${newParent.join(' > ')}], depth: ${newParent.length}`);
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                parent: newParent,
+                depth: newParent.length
+              }
+            };
+          }
+          return node;
+        }));
+      }
+    } else if (!sourceIsMenu && !targetIsMenu) {
+      // Case 3: Screen -> Screen (both should share the same parent level)
+      console.log(`[@component:NavigationEditor] Screen-to-screen connection - sharing parent level`);
       
-      console.log(`[@component:NavigationEditor] Updated target node ${targetNode.data.label} parent chain:`, newParent);
-    } else if (targetNode.data.type === 'menu') {
-      // Case 2: Any node -> Menu node (menu becomes parent of source)
-      const newParent = [
-        ...(targetNode.data.parent || []),
-        targetNode.id
-      ];
+      // Determine which parent to use (prefer the one that has a parent)
+      let sharedParent: string[] = [];
       
-      setNodes((nds) => nds.map((node) => {
-        if (node.id === sourceNode.id) {
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              parent: newParent,
-              depth: newParent.length
+      if (sourceHasParent && !targetHasParent && !targetIsRoot) {
+        // Source has parent, target is orphan -> target adopts source's parent
+        sharedParent = [...(sourceNode.data.parent || [])];
+        
+        setNodes((nds) => nds.map((node) => {
+          if (node.id === targetNode.id) {
+            console.log(`[@component:NavigationEditor] Target ${targetNode.data.label} adopts source's parent level: [${sharedParent.join(' > ')}], depth: ${sharedParent.length}`);
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                parent: sharedParent,
+                depth: sharedParent.length
+              }
+            };
+          }
+          return node;
+        }));
+      } else if (targetHasParent && !sourceHasParent && !sourceIsRoot) {
+        // Target has parent, source is orphan -> source adopts target's parent
+        // CRITICAL: Never change parent of root nodes
+        if (sourceIsRoot) {
+          console.log(`[@component:NavigationEditor] Source ${sourceNode.data.label} is ROOT - cannot adopt parent!`);
+        } else {
+          sharedParent = [...(targetNode.data.parent || [])];
+          
+          setNodes((nds) => nds.map((node) => {
+            if (node.id === sourceNode.id) {
+              console.log(`[@component:NavigationEditor] Source ${sourceNode.data.label} adopts target's parent level: [${sharedParent.join(' > ')}], depth: ${sharedParent.length}`);
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  parent: sharedParent,
+                  depth: sharedParent.length
+                }
+              };
             }
-          };
+            return node;
+          }));
         }
-        return node;
-      }));
-      
-      console.log(`[@component:NavigationEditor] Updated source node ${sourceNode.data.label} parent chain:`, newParent);
-    } else {
-      // Case 3: Any node -> Any node - Target inherits source's parent chain + source
-      console.log(`[@component:NavigationEditor] Node-to-node connection: ${sourceNode.data.label} (${sourceNode.data.type}) -> ${targetNode.data.label} (${targetNode.data.type})`);
-      console.log(`[@component:NavigationEditor] Source parent chain:`, sourceNode.data.parent || []);
-      console.log(`[@component:NavigationEditor] Target current parent chain:`, targetNode.data.parent || []);
-      
-      // Target inherits source's parent chain + source itself becomes the new parent
-      const newParent = [
-        ...(sourceNode.data.parent || []),  // Inherit source's ancestry
-        sourceNode.id                       // Source becomes direct parent
-      ];
-      
-      setNodes((nds) => nds.map((node) => {
-        if (node.id === targetNode.id) {
-          console.log(`[@component:NavigationEditor] Setting inherited parent for ${targetNode.data.label}: [${newParent.join(' > ')}], depth: ${newParent.length}`);
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              parent: newParent,
-              depth: newParent.length
-            }
-          };
-        }
-        return node;
-      }));
-      
-      console.log(`[@component:NavigationEditor] Target node ${targetNode.data.label} inherited parent chain:`, newParent);
+      } else {
+        console.log(`[@component:NavigationEditor] Both nodes already have parents or are roots - no parent changes needed`);
+      }
     }
 
     const edgeId = `${params.source}-${params.target}`;
@@ -1184,6 +1244,29 @@ export const useNavigationEditor = () => {
       reactFlowInstance?.fitView({ padding: 0.1 });
     }, 100);
   }, [reactFlowInstance]);
+
+  // Helper function to enforce root node protection
+  const enforceRootNodeProtection = useCallback(() => {
+    setNodes((nds) => nds.map((node) => {
+      if (node.data.is_root && (node.data.parent && node.data.parent.length > 0)) {
+        console.log(`[@component:NavigationEditor] FIXING ROOT NODE: ${node.data.label} had parent [${node.data.parent.join(' > ')}] - resetting to root status`);
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            parent: [],
+            depth: 0
+          }
+        };
+      }
+      return node;
+    }));
+  }, [setNodes]);
+
+  // Call root protection after any node changes
+  useEffect(() => {
+    enforceRootNodeProtection();
+  }, [nodes, enforceRootNodeProtection]);
 
   return {
     // State
