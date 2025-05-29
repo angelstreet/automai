@@ -433,8 +433,25 @@ export const useNavigationEditor = () => {
 
   // Fit view
   const fitView = useCallback(() => {
-    navigationState.reactFlowInstance?.fitView();
-  }, [navigationState.reactFlowInstance]);
+    if (navigationState.reactFlowInstance) {
+      // Get the current visible nodes from navigationState (which are already filtered)
+      const visibleNodes = navigationState.nodes;
+      
+      if (visibleNodes.length > 0) {
+        console.log(`[@hook:useNavigationEditor] Fitting view to ${visibleNodes.length} visible nodes`);
+        // Fit view to only the visible/filtered nodes
+        navigationState.reactFlowInstance.fitView({
+          nodes: visibleNodes.map(node => ({ id: node.id })),
+          padding: 0.1, // 10% padding around the visible nodes
+          duration: 300, // Smooth animation
+        });
+      } else {
+        console.log(`[@hook:useNavigationEditor] No visible nodes to fit view to, using default fitView`);
+        // Fallback to default fitView if no visible nodes
+        navigationState.reactFlowInstance.fitView();
+      }
+    }
+  }, [navigationState.reactFlowInstance, navigationState.nodes]);
 
   // Navigate back to parent
   const navigateToParent = useCallback(() => {
