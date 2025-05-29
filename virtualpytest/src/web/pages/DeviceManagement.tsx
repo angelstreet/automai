@@ -204,20 +204,40 @@ const DeviceManagement: React.FC = () => {
   };
 
   const LoadingState = () => (
-    <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
-      <CircularProgress />
-      <Typography sx={{ ml: 2 }}>Loading devices...</Typography>
+    <Box 
+      sx={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        py: 8,
+        textAlign: 'center'
+      }}
+    >
+      <CircularProgress size={40} sx={{ mb: 2 }} />
+      <Typography variant="h6" color="text.secondary">
+        Loading Devices...
+      </Typography>
     </Box>
   );
 
   const EmptyState = () => (
-    <Box textAlign="center" py={4}>
+    <Box 
+      sx={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        py: 8,
+        textAlign: 'center'
+      }}
+    >
       <DeviceIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
       <Typography variant="h6" color="text.secondary" gutterBottom>
-        {searchTerm ? 'No devices found' : 'No devices created yet'}
+        {searchTerm ? 'No devices found' : 'No Devices Created'}
       </Typography>
-      <Typography variant="body2" color="text.secondary" paragraph>
-        {searchTerm ? 'Try adjusting your search criteria' : 'Create your first device to get started'}
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 3, maxWidth: 400 }}>
+        {searchTerm ? 'Try adjusting your search criteria' : 'Create your first device to get started with device management and configuration.'}
       </Typography>
       {!searchTerm && (
         <Button
@@ -233,21 +253,21 @@ const DeviceManagement: React.FC = () => {
 
   if (loading) {
     return (
-      <Box sx={{ p: 3 }}>
+      <Box>
         <LoadingState />
       </Box>
     );
   }
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box>
       {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Box>
-          <Typography variant="h4" component="h1" gutterBottom>
+          <Typography variant="h4" gutterBottom>
             Devices
           </Typography>
-          <Typography variant="body1" color="text.secondary">
+          <Typography variant="body1" color="textSecondary">
             Manage your test devices and their configurations
           </Typography>
         </Box>
@@ -255,13 +275,15 @@ const DeviceManagement: React.FC = () => {
           variant="contained"
           startIcon={<AddIcon />}
           onClick={() => setOpenDialog(true)}
+          size="small"
+          disabled={loading}
         >
           Add Device
         </Button>
       </Box>
 
       {/* Search */}
-      <Box mb={3}>
+      <Box mb={2}>
         <TextField
           fullWidth
           variant="outlined"
@@ -272,36 +294,37 @@ const DeviceManagement: React.FC = () => {
             startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />,
           }}
           sx={{ maxWidth: 400 }}
+          size="small"
         />
       </Box>
 
       {/* Error Alert */}
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
+        <Alert severity="error" sx={{ mb: 1 }} onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
 
       {/* Content */}
-      <Card>
-        <CardContent sx={{ p: 0 }}>
+      <Card sx={{ boxShadow: 1 }}>
+        <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
           {filteredDevices.length === 0 ? (
             <EmptyState />
           ) : (
-            <TableContainer>
-              <Table>
+            <TableContainer component={Paper} variant="outlined" sx={{ boxShadow: 'none' }}>
+              <Table size="small" sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1 } }}>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Name</TableCell>
-                    <TableCell>Description</TableCell>
-                    <TableCell>Model</TableCell>
-                    <TableCell>Created</TableCell>
-                    <TableCell align="right">Actions</TableCell>
+                    <TableCell><strong>Name</strong></TableCell>
+                    <TableCell><strong>Description</strong></TableCell>
+                    <TableCell><strong>Model</strong></TableCell>
+                    <TableCell><strong>Created</strong></TableCell>
+                    <TableCell align="center"><strong>Actions</strong></TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {filteredDevices.map((device) => (
-                    <TableRow key={device.id} hover>
+                    <TableRow key={device.id} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
                       <TableCell>
                         {editingId === device.id ? (
                           <TextField
@@ -355,7 +378,7 @@ const DeviceManagement: React.FC = () => {
                           })}
                         </Typography>
                       </TableCell>
-                      <TableCell align="right">
+                      <TableCell align="center">
                         {editingId === device.id ? (
                           <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
                             <IconButton

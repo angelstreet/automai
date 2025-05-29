@@ -37,26 +37,13 @@ import {
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 import { userInterfaceApi, UserInterface as UserInterfaceType, UserInterfaceCreatePayload } from '../src/services/userInterfaceApi';
+import { deviceApi, Device } from '../services/deviceService';
 
-
-export const availableModels = [
-  'Android Phone',
-  'Android TV',
-  'Android Tablet',
-  'iOs Phone',
-  'iOs Tablet',
-  'Fire TV',
-  'Nvidia Shield',
-  'Apple TV',
-  'STB',
-  'Linux',
-  'Windows',
-  'Tizen TV',
-  'LG TV',
-] as const;
 
 const UserInterface: React.FC = () => {
   const [userInterfaces, setUserInterfaces] = useState<UserInterfaceType[]>([]);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [devicesLoading, setDevicesLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ 
@@ -75,10 +62,32 @@ const UserInterface: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Load user interfaces on component mount
+  // Extract unique models from devices
+  const availableModels = Array.from(new Set(
+    devices
+      .map(device => device.model)
+      .filter(model => model && model.trim() !== '')
+  )).sort();
+
+  // Load data on component mount
   useEffect(() => {
     loadUserInterfaces();
+    loadDevices();
   }, []);
+
+  const loadDevices = async () => {
+    try {
+      setDevicesLoading(true);
+      const fetchedDevices = await deviceApi.getAllDevices();
+      setDevices(fetchedDevices);
+      console.log(`[@component:UserInterface] Successfully loaded ${fetchedDevices.length} devices`);
+    } catch (err) {
+      console.error('[@component:UserInterface] Error loading devices:', err);
+      setDevices([]);
+    } finally {
+      setDevicesLoading(false);
+    }
+  };
 
   const loadUserInterfaces = async () => {
     try {
@@ -112,6 +121,11 @@ const UserInterface: React.FC = () => {
 
     if (editForm.models.length === 0) {
       setError('At least one model must be selected');
+      return;
+    }
+
+    if (devicesLoading) {
+      setError('Please wait for models to load');
       return;
     }
 
@@ -185,6 +199,11 @@ const UserInterface: React.FC = () => {
 
     if (newInterface.models.length === 0) {
       setError('At least one model must be selected');
+      return;
+    }
+
+    if (devicesLoading) {
+      setError('Please wait for models to load');
       return;
     }
 
@@ -312,7 +331,7 @@ const UserInterface: React.FC = () => {
           startIcon={<AddIcon />}
           onClick={() => setOpenDialog(true)}
           size="small"
-          disabled={loading}
+          disabled={loading || devicesLoading}
         >
           Add UI
         </Button>
@@ -368,6 +387,7 @@ const UserInterface: React.FC = () => {
                               value={editForm.models}
                               onChange={(e) => handleModelChange(e, true)}
                               input={<OutlinedInput />}
+                              disabled={devicesLoading}
                               renderValue={(selected) => (
                                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.25, p: 0.25 }}>
                                   {selected.map((value) => (
@@ -396,24 +416,35 @@ const UserInterface: React.FC = () => {
                                 },
                               }}
                             >
-                              {availableModels.map((model) => (
-                                <MenuItem 
-                                  key={model} 
-                                  value={model}
-                                  dense
-                                  sx={{
-                                    py: 0.5,
-                                    px: 1,
-                                    minHeight: 'auto',
-                                    backgroundColor: editForm.models.includes(model) ? 'action.selected' : 'inherit',
-                                    '&:hover': {
-                                      backgroundColor: editForm.models.includes(model) ? 'action.selected' : 'action.hover',
-                                    },
-                                  }}
-                                >
-                                  {model}
+                              {devicesLoading ? (
+                                <MenuItem disabled>
+                                  <CircularProgress size={16} sx={{ mr: 1 }} />
+                                  Loading models...
                                 </MenuItem>
-                              ))}
+                              ) : availableModels.length === 0 ? (
+                                <MenuItem disabled>
+                                  No models available
+                                </MenuItem>
+                              ) : (
+                                availableModels.map((model) => (
+                                  <MenuItem 
+                                    key={model} 
+                                    value={model}
+                                    dense
+                                    sx={{
+                                      py: 0.5,
+                                      px: 1,
+                                      minHeight: 'auto',
+                                      backgroundColor: editForm.models.includes(model) ? 'action.selected' : 'inherit',
+                                      '&:hover': {
+                                        backgroundColor: editForm.models.includes(model) ? 'action.selected' : 'action.hover',
+                                      },
+                                    }}
+                                  >
+                                    {model}
+                                  </MenuItem>
+                                ))
+                              )}
                             </Select>
                           </FormControl>
                         ) : (
@@ -561,6 +592,7 @@ const UserInterface: React.FC = () => {
                 value={newInterface.models}
                 onChange={(e) => handleModelChange(e)}
                 input={<OutlinedInput label="Models" />}
+                disabled={devicesLoading}
                 renderValue={(selected) => (
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.25, p: 0.25 }}>
                     {selected.map((value) => (
@@ -588,24 +620,35 @@ const UserInterface: React.FC = () => {
                   },
                 }}
               >
-                {availableModels.map((model) => (
-                  <MenuItem 
-                    key={model} 
-                    value={model}
-                    dense
-                    sx={{
-                      py: 0.5,
-                      px: 1,
-                      minHeight: 'auto',
-                      backgroundColor: newInterface.models.includes(model) ? 'action.selected' : 'inherit',
-                      '&:hover': {
-                        backgroundColor: newInterface.models.includes(model) ? 'action.selected' : 'action.hover',
-                      },
-                    }}
-                  >
-                    {model}
+                {devicesLoading ? (
+                  <MenuItem disabled>
+                    <CircularProgress size={16} sx={{ mr: 1 }} />
+                    Loading models...
                   </MenuItem>
-                ))}
+                ) : availableModels.length === 0 ? (
+                  <MenuItem disabled>
+                    No models available
+                  </MenuItem>
+                ) : (
+                  availableModels.map((model) => (
+                    <MenuItem 
+                      key={model} 
+                      value={model}
+                      dense
+                      sx={{
+                        py: 0.5,
+                        px: 1,
+                        minHeight: 'auto',
+                        backgroundColor: newInterface.models.includes(model) ? 'action.selected' : 'inherit',
+                        '&:hover': {
+                          backgroundColor: newInterface.models.includes(model) ? 'action.selected' : 'action.hover',
+                        },
+                      }}
+                    >
+                      {model}
+                    </MenuItem>
+                  ))
+                )}
               </Select>
             </FormControl>
 
@@ -641,7 +684,7 @@ const UserInterface: React.FC = () => {
             onClick={handleAddNew} 
             variant="contained" 
             size="small"
-            disabled={!newInterface.name.trim() || newInterface.models.length === 0 || submitting}
+            disabled={!newInterface.name.trim() || newInterface.models.length === 0 || submitting || devicesLoading}
           >
             {submitting ? <CircularProgress size={16} sx={{ mr: 1 }} /> : null}
             Add

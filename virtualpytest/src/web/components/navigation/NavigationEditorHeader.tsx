@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   AppBar,
   Toolbar,
@@ -24,6 +24,7 @@ import {
   Tv as TvIcon,
 } from '@mui/icons-material';
 import { TreeFilterControls } from './TreeFilterControls';
+import { deviceApi, Device } from '../../services/deviceService';
 
 interface NavigationEditorHeaderProps {
   // Navigation state
@@ -105,8 +106,33 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
   onDeviceSelect,
   onTakeControl,
 }) => {
-  // Empty device list for now
-  const availableDevices: string[] = [];
+  // Device state management
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [devicesLoading, setDevicesLoading] = useState(true);
+
+  // Fetch devices on component mount
+  useEffect(() => {
+    fetchDevices();
+  }, []);
+
+  const fetchDevices = async () => {
+    console.log('[@component:NavigationEditorHeader] Fetching devices');
+    try {
+      setDevicesLoading(true);
+      const fetchedDevices = await deviceApi.getAllDevices();
+      setDevices(fetchedDevices);
+      console.log(`[@component:NavigationEditorHeader] Successfully loaded ${fetchedDevices.length} devices`);
+    } catch (error: any) {
+      console.error('[@component:NavigationEditorHeader] Error fetching devices:', error);
+      // Set empty array on error to prevent dropdown issues
+      setDevices([]);
+    } finally {
+      setDevicesLoading(false);
+    }
+  };
+
+  // Extract device names for the dropdown
+  const availableDevices = devices.map(device => device.name);
 
   return (
     <AppBar position="static" color="default" elevation={1}>
@@ -259,11 +285,11 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
                 value={selectedDevice || ''}
                 onChange={(e) => onDeviceSelect(e.target.value || null)}
                 label="Device"
-                disabled={isLoading || !!error}
+                disabled={isLoading || !!error || devicesLoading}
                 sx={{ height: 32, fontSize: '0.75rem' }}
               >
                 <MenuItem value="">
-                  <em>None</em>
+                  <em>{devicesLoading ? 'Loading...' : 'None'}</em>
                 </MenuItem>
                 {availableDevices.map((device) => (
                   <MenuItem key={device} value={device}>
@@ -278,7 +304,7 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
               variant={isControlActive ? "contained" : "outlined"}
               size="small"
               onClick={onTakeControl}
-              disabled={!selectedDevice || isLoading || !!error}
+              disabled={!selectedDevice || isLoading || !!error || devicesLoading}
               startIcon={<ControlCameraIcon />}
               color={isControlActive ? "success" : "primary"}
               sx={{ 
