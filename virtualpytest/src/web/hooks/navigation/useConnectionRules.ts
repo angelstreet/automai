@@ -46,12 +46,40 @@ const establishConnectionRules = (
   });
 
   // Determine connection type by handle direction
-  const isHorizontal = (
-    (params.sourceHandle?.includes('left') || params.sourceHandle?.includes('right')) ||
-    (params.targetHandle?.includes('left') || params.targetHandle?.includes('right'))
+  // Check for VERTICAL connections first (top/bottom handles)
+  const isVertical = (
+    (params.sourceHandle?.startsWith('top') || params.sourceHandle?.startsWith('bottom')) ||
+    (params.targetHandle?.startsWith('top') || params.targetHandle?.startsWith('bottom'))
   );
 
-  if (isHorizontal) {
+  // Check for HORIZONTAL connections (left/right handles)
+  const isHorizontal = (
+    (params.sourceHandle?.startsWith('left') || params.sourceHandle?.startsWith('right')) ||
+    (params.targetHandle?.startsWith('left') || params.targetHandle?.startsWith('right'))
+  );
+
+  if (isVertical) {
+    // VERTICAL = PARENT-CHILD (hierarchical)
+    console.log('[@hook:establishConnectionRules] Vertical connection - creating parent-child relationship');
+    console.log('[@hook:establishConnectionRules] Source (orphan) becomes child of target');
+    
+    // Source becomes child of target (orphan becomes child of existing node)
+    const newParentChain = [
+      ...(targetNode.data.parent || []),
+      targetNode.id
+    ];
+    
+    console.log('[@hook:establishConnectionRules] New parent chain for source:', newParentChain);
+    
+    return {
+      isAllowed: true,
+      edgeType: 'vertical',
+      sourceNodeUpdates: {
+        parent: newParentChain,
+        depth: newParentChain.length
+      }
+    };
+  } else if (isHorizontal) {
     // HORIZONTAL = SIBLINGS (same parent level)
     console.log('[@hook:establishConnectionRules] Horizontal connection - creating siblings');
     
@@ -77,19 +105,19 @@ const establishConnectionRules = (
       }
     };
   } else {
-    // VERTICAL = PARENT-CHILD (hierarchical)
-    console.log('[@hook:establishConnectionRules] Vertical connection - creating parent-child relationship');
+    // Default to vertical if direction is unclear
+    console.log('[@hook:establishConnectionRules] Direction unclear, defaulting to vertical connection - source becomes child of target');
     
-    // Target becomes child of source
+    // Source becomes child of target
     const newParentChain = [
-      ...(sourceNode.data.parent || []),
-      sourceNode.id
+      ...(targetNode.data.parent || []),
+      targetNode.id
     ];
     
     return {
       isAllowed: true,
       edgeType: 'vertical',
-      targetNodeUpdates: {
+      sourceNodeUpdates: {
         parent: newParentChain,
         depth: newParentChain.length
       }
