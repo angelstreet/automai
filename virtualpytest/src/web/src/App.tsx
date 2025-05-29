@@ -1,7 +1,7 @@
 import { Science } from '@mui/icons-material';
 import { Container, AppBar, Toolbar, Typography, Box } from '@mui/material';
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 // Import existing pages
 import CampaignEditor from '../pages/CampaignEditor';
@@ -69,6 +69,8 @@ const App: React.FC = () => {
             <Route path="/test-results/reports" element={<TestReports />} />
 
             {/* Configuration Routes */}
+            <Route path="/configuration" element={<Navigate to="/configuration/models" replace />} />
+            <Route path="/configuration/" element={<Navigate to="/configuration/models" replace />} />
             <Route path="/configuration/devices" element={<DeviceManagement />} />
             <Route path="/configuration/models" element={<Models />} />
             <Route path="/configuration/interface" element={<UserInterface />} />
