@@ -41,6 +41,195 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   return response.json();
 };
 
+interface ConnectionResult {
+  isAllowed: boolean;
+  reason?: string;
+  edgeType: 'default' | 'top' | 'bottom' | 'menu';
+  sourceNodeUpdates?: Partial<UINavigationNode['data']>;
+  targetNodeUpdates?: Partial<UINavigationNode['data']>;
+}
+
+/**
+ * Returns a summary of all connection rules for reference
+ */
+const getConnectionRulesSummary = () => {
+  return {
+    rules: [
+      {
+        name: "RULE 1: Menu Node Connections",
+        description: "Menu nodes can connect using any handle type and establish parent-child relationships",
+        cases: [
+          "Menu → Any Node: Target inherits menu's parent chain + menu ID",
+          "Any Node → Menu: Source inherits menu's parent chain + menu ID"
+        ]
+      },
+      {
+        name: "RULE 2: Screen-to-Screen Connections",
+        description: "Left/Right handles for lateral navigation between screens",
+        cases: [
+          "Both nodes must be screens (not menus)",
+          "No parent inheritance occurs",
+          "Creates 'default' edge type"
+        ]
+      },
+      {
+        name: "RULE 3: Top/Bottom Handle Validation",
+        description: "Top/Bottom handles require at least one menu node",
+        cases: [
+          "Must involve at least one menu node",
+          "Creates 'top' or 'bottom' edge types"
+        ]
+      },
+      {
+        name: "RULE 4: Default Fallback",
+        description: "Allow connection without parent inheritance",
+        cases: [
+          "Used when no other rules apply",
+          "No parent chain modifications"
+        ]
+      }
+    ],
+    parentInheritance: {
+      "Empty parent": "New nodes start with parent: [], depth: 0",
+      "Menu inheritance": "Non-menu nodes inherit complete parent chain from connected menu + menu ID",
+      "Screen connections": "Screen-to-screen connections don't modify parent chains",
+      "Edge deletion": "Removing last incoming edge resets node to parent: [], depth: 0"
+    }
+  };
+};
+
+/**
+ * Establishes connection rules and parent inheritance logic
+ * @param sourceNode - The source node attempting to connect
+ * @param targetNode - The target node being connected to
+ * @param params - Connection parameters including handle information
+ * @returns ConnectionResult with validation and update information
+ */
+const establishConnectionRules = (
+  sourceNode: UINavigationNode,
+  targetNode: UINavigationNode,
+  params: Connection
+): ConnectionResult => {
+  console.log('[@hook:establishConnectionRules] Evaluating connection:', {
+    source: sourceNode.data.label,
+    target: targetNode.data.label,
+    sourceHandle: params.sourceHandle,
+    targetHandle: params.targetHandle,
+    sourceType: sourceNode.data.type,
+    targetType: targetNode.data.type,
+    sourceParent: sourceNode.data.parent,
+    targetParent: targetNode.data.parent,
+  });
+
+  // Analyze handle types
+  const isLeftRightConnection = (
+    (params.sourceHandle?.includes('left') || params.sourceHandle?.includes('right')) &&
+    (params.targetHandle?.includes('left') || params.targetHandle?.includes('right'))
+  );
+  
+  const isTopBottomConnection = (
+    (params.sourceHandle?.includes('top') || params.sourceHandle?.includes('bottom')) &&
+    (params.targetHandle?.includes('top') || params.targetHandle?.includes('bottom'))
+  );
+
+  const isTopConnection = params.sourceHandle?.includes('top') || params.targetHandle?.includes('top');
+  const isBottomConnection = params.sourceHandle?.includes('bottom') || params.targetHandle?.includes('bottom');
+
+  const hasMenuNode = sourceNode.data.type === 'menu' || targetNode.data.type === 'menu';
+
+  // RULE 1: Menu nodes can connect using any handle type
+  if (hasMenuNode) {
+    console.log('[@hook:establishConnectionRules] Menu node connection - evaluating parent inheritance');
+    
+    // Determine edge type based on handles
+    let edgeType: 'default' | 'top' | 'bottom' | 'menu' = 'menu';
+    if (isTopConnection) edgeType = 'top';
+    else if (isBottomConnection) edgeType = 'bottom';
+
+    // PARENT INHERITANCE LOGIC
+    if (sourceNode.data.type === 'menu') {
+      // Case 1: Menu → Any Node (menu becomes parent of target)
+      const newParentChain = [
+        ...(sourceNode.data.parent || []),
+        sourceNode.id
+      ];
+      
+      console.log('[@hook:establishConnectionRules] Menu → Node: Target inherits parent chain:', newParentChain);
+      
+      return {
+        isAllowed: true,
+        edgeType,
+        targetNodeUpdates: {
+          parent: newParentChain,
+          depth: newParentChain.length
+        }
+      };
+    } else {
+      // Case 2: Any Node → Menu (menu becomes parent of source)
+      const newParentChain = [
+        ...(targetNode.data.parent || []),
+        targetNode.id
+      ];
+      
+      console.log('[@hook:establishConnectionRules] Node → Menu: Source inherits parent chain:', newParentChain);
+      
+      return {
+        isAllowed: true,
+        edgeType,
+        sourceNodeUpdates: {
+          parent: newParentChain,
+          depth: newParentChain.length
+        }
+      };
+    }
+  }
+
+  // RULE 2: Left/Right handles for screen-to-screen connections
+  if (isLeftRightConnection) {
+    // Both nodes must be screens (not menus)
+    if (sourceNode.data.type === 'menu' || targetNode.data.type === 'menu') {
+      return {
+        isAllowed: false,
+        reason: 'Left/right handles cannot connect menu nodes to non-menu nodes',
+        edgeType: 'default'
+      };
+    }
+    
+    console.log('[@hook:establishConnectionRules] Screen-to-screen connection via left/right handles - no parent inheritance');
+    
+    return {
+      isAllowed: true,
+      edgeType: 'default'
+      // No parent updates for screen-to-screen connections
+    };
+  }
+
+  // RULE 3: Top/Bottom handles should involve menu nodes
+  if (isTopBottomConnection) {
+    if (!hasMenuNode) {
+      return {
+        isAllowed: false,
+        reason: 'Top/bottom handles are intended for menu navigation and require at least one menu node',
+        edgeType: isTopConnection ? 'top' : 'bottom'
+      };
+    }
+    
+    // This case should be handled by RULE 1 above, but adding for completeness
+    console.log('[@hook:establishConnectionRules] Top/bottom connection with menu node');
+    return {
+      isAllowed: true,
+      edgeType: isTopConnection ? 'top' : 'bottom'
+    };
+  }
+
+  // RULE 4: Default case - allow connection without parent inheritance
+  console.log('[@hook:establishConnectionRules] Default connection - no parent inheritance');
+  return {
+    isAllowed: true,
+    edgeType: 'default'
+  };
+};
+
 export const useNavigationEditor = () => {
   const navigate = useNavigate();
   const { treeId, treeName, interfaceId } = useParams<{ treeId: string, treeName: string, interfaceId: string }>();
@@ -194,197 +383,49 @@ export const useNavigationEditor = () => {
       return;
     }
     
-    // Log handle information for debugging
-    console.log('[@component:NavigationEditor] Connection attempt:', {
-      source: sourceNode.data.label,
-      target: targetNode.data.label,
-      sourceHandle: params.sourceHandle,
-      targetHandle: params.targetHandle,
-      sourceType: sourceNode.data.type,
-      targetType: targetNode.data.type
-    });
+    // Use the new connection rules function
+    const connectionResult = establishConnectionRules(sourceNode, targetNode, params);
     
-    // Analyze handle types
-    const isLeftRightConnection = (
-      (params.sourceHandle?.includes('left') || params.sourceHandle?.includes('right')) &&
-      (params.targetHandle?.includes('left') || params.targetHandle?.includes('right'))
-    );
-    
-    const isTopBottomConnection = (
-      (params.sourceHandle?.includes('top') || params.sourceHandle?.includes('bottom')) &&
-      (params.targetHandle?.includes('top') || params.targetHandle?.includes('bottom'))
-    );
-    
-    const isMenuConnection = sourceNode.data.type === 'menu' || targetNode.data.type === 'menu';
-    const hasMenuNode = sourceNode.data.type === 'menu' || targetNode.data.type === 'menu';
-    
-    if (hasMenuNode) {
-      // Menu nodes can connect to anything using any handle (top, bottom, left, right)
-      console.log('[@component:NavigationEditor] Menu node connection allowed');
-    } else if (isLeftRightConnection) {
-      // Left/Right handles: Allow screen-to-screen connections (both nodes are NOT menu)
-      if (sourceNode.data.type === 'menu' || targetNode.data.type === 'menu') {
-        console.error('[@component:NavigationEditor] Left/right handles cannot connect menu nodes to non-menu nodes');
-        return;
-      }
-      console.log('[@component:NavigationEditor] Screen-to-screen connection via left/right handles allowed');
-    } else if (isTopBottomConnection) {
-      // Top/Bottom handles: Should be used for menu navigation, but since no menu node, reject
-      console.error('[@component:NavigationEditor] Top/bottom handles are intended for menu navigation');
+    // Check if connection is allowed
+    if (!connectionResult.isAllowed) {
+      console.error('[@component:NavigationEditor] Connection rejected:', connectionResult.reason);
       return;
     }
     
-    // Determine edge type based on handles and connection type
-    let edgeType: 'default' | 'top' | 'bottom' | 'menu' | undefined = 'default';
-    
-    // First check for top/bottom connections regardless of menu status
-    const isTopConnection = params.sourceHandle?.includes('top') || params.targetHandle?.includes('top');
-    const isBottomConnection = params.sourceHandle?.includes('bottom') || params.targetHandle?.includes('bottom');
-    
-    if (isTopConnection) {
-      edgeType = 'top'; // Red edges for top handle connections
-    } else if (isBottomConnection) {
-      edgeType = 'bottom'; // Blue edges for bottom handle connections
-    } else if (isMenuConnection) {
-      edgeType = 'menu'; // For other menu navigation connections
-    } else {
-      edgeType = 'default'; // Gray for left/right connections
-    }
-    
-    console.log('[@component:NavigationEditor] Handle analysis:', {
-      sourceHandle: params.sourceHandle,
-      targetHandle: params.targetHandle,
-      isLeftRightConnection,
-      isTopBottomConnection,
-      isMenuConnection,
-      finalEdgeType: edgeType,
-      sourceNodeType: sourceNode.data.type,
-      targetNodeType: targetNode.data.type
+    console.log('[@component:NavigationEditor] Connection approved:', {
+      edgeType: connectionResult.edgeType,
+      sourceUpdates: connectionResult.sourceNodeUpdates,
+      targetUpdates: connectionResult.targetNodeUpdates
     });
 
-    // NEW: Update parent chain and depth when connecting with menu nodes
-    if (sourceNode.data.type === 'menu') {
-      // Case 1: Menu node -> Any node
-      // Check if menu is orphan first
-      if (!sourceNode.data.parent || sourceNode.data.parent.length === 0) {
-        // Menu is orphan - check target state
-        if (targetNode.data.parent && targetNode.data.parent.length > 0) {
-          // Target has parent - menu should inherit target's parent (become sibling)
-          const inheritedParent = [...(targetNode.data.parent || [])];
-          
-          setNodes((nds) => nds.map((node) => {
-            if (node.id === sourceNode.id) {
-              console.log(`[@component:NavigationEditor] Menu ${sourceNode.data.label} inherits ${targetNode.data.label}'s parent: [${inheritedParent.join(' > ')}], depth: ${inheritedParent.length}`);
-              return {
-                ...node,
-                data: {
-                  ...node.data,
-                  parent: inheritedParent,
-                  depth: inheritedParent.length
-                }
-              };
+    // Apply node updates if any
+    if (connectionResult.sourceNodeUpdates || connectionResult.targetNodeUpdates) {
+      setNodes((nds) => nds.map((node) => {
+        if (node.id === sourceNode.id && connectionResult.sourceNodeUpdates) {
+          console.log(`[@component:NavigationEditor] Updating source node ${sourceNode.data.label}:`, connectionResult.sourceNodeUpdates);
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              ...connectionResult.sourceNodeUpdates
             }
-            return node;
-          }));
-        } else {
-          // Target is orphan - menu becomes parent of target
-          const newParent = [
-            ...(sourceNode.data.parent || []),
-            sourceNode.id
-          ];
-          
-          setNodes((nds) => nds.map((node) => {
-            if (node.id === targetNode.id) {
-              console.log(`[@component:NavigationEditor] Menu ${sourceNode.data.label} becomes parent of orphan ${targetNode.data.label}: [${newParent.join(' > ')}], depth: ${newParent.length}`);
-              return {
-                ...node,
-                data: {
-                  ...node.data,
-                  parent: newParent,
-                  depth: newParent.length
-                }
-              };
-            }
-            return node;
-          }));
+          };
         }
-      } else {
-        console.log(`[@component:NavigationEditor] Menu ${sourceNode.data.label} already has parent - no changes`);
-      }
-    } else if (targetNode.data.type === 'menu') {
-      // Case 2: Any node -> Menu node (menu becomes parent of source)
-      // PROTECTION: Only update orphan nodes (no existing parent)
-      if (!sourceNode.data.parent || sourceNode.data.parent.length === 0) {
-        const newParent = [
-          ...(targetNode.data.parent || []),
-          targetNode.id
-        ];
-        
-        setNodes((nds) => nds.map((node) => {
-          if (node.id === sourceNode.id) {
-            console.log(`[@component:NavigationEditor] Menu ${targetNode.data.label} becomes parent of orphan ${sourceNode.data.label}: [${newParent.join(' > ')}], depth: ${newParent.length}`);
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                parent: newParent,
-                depth: newParent.length
-              }
-            };
-          }
-          return node;
-        }));
-        
-        console.log(`[@component:NavigationEditor] Updated source node ${sourceNode.data.label} parent chain:`, newParent);
-      } else {
-        console.log(`[@component:NavigationEditor] PROTECTION: ${sourceNode.data.label} already has parent [${sourceNode.data.parent.join(' > ')}] - not changing`);
-      }
-    } else {
-      // Case 3: Screen -> Screen (share parent level for orphans only)
-      const sourceHasParent = sourceNode.data.parent && sourceNode.data.parent.length > 0;
-      const targetHasParent = targetNode.data.parent && targetNode.data.parent.length > 0;
-      
-      if (sourceHasParent && !targetHasParent) {
-        // Source has parent, target is orphan -> target adopts source's parent
-        const sharedParent = [...(sourceNode.data.parent || [])];
-        
-        setNodes((nds) => nds.map((node) => {
-          if (node.id === targetNode.id) {
-            console.log(`[@component:NavigationEditor] Orphan ${targetNode.data.label} adopts ${sourceNode.data.label}'s parent: [${sharedParent.join(' > ')}], depth: ${sharedParent.length}`);
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                parent: sharedParent,
-                depth: sharedParent.length
-              }
-            };
-          }
-          return node;
-        }));
-      } else if (targetHasParent && !sourceHasParent) {
-        // Target has parent, source is orphan -> source adopts target's parent
-        const sharedParent = [...(targetNode.data.parent || [])];
-        
-        setNodes((nds) => nds.map((node) => {
-          if (node.id === sourceNode.id) {
-            console.log(`[@component:NavigationEditor] Orphan ${sourceNode.data.label} adopts ${targetNode.data.label}'s parent: [${sharedParent.join(' > ')}], depth: ${sharedParent.length}`);
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                parent: sharedParent,
-                depth: sharedParent.length
-              }
-            };
-          }
-          return node;
-        }));
-      } else {
-        console.log(`[@component:NavigationEditor] Screen-to-screen: both have parents or both are orphans - no parent changes needed`);
-      }
+        if (node.id === targetNode.id && connectionResult.targetNodeUpdates) {
+          console.log(`[@component:NavigationEditor] Updating target node ${targetNode.data.label}:`, connectionResult.targetNodeUpdates);
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              ...connectionResult.targetNodeUpdates
+            }
+          };
+        }
+        return node;
+      }));
     }
 
+    // Create the edge
     const edgeId = `${params.source}-${params.target}`;
     const newEdge: UINavigationEdge = {
       id: edgeId,
@@ -394,7 +435,7 @@ export const useNavigationEditor = () => {
       targetHandle: params.targetHandle,
       type: 'uiNavigation',
       data: {
-        edgeType: edgeType,
+        edgeType: connectionResult.edgeType,
         description: `Connection from ${sourceNode.data.label} to ${targetNode.data.label}`,
         from: sourceNode.data.label,
         to: targetNode.data.label,
@@ -409,7 +450,7 @@ export const useNavigationEditor = () => {
     
     console.log('[@component:NavigationEditor] Connection created successfully:', {
       edgeId,
-      edgeType,
+      edgeType: connectionResult.edgeType,
       sourceLabel: sourceNode.data.label,
       targetLabel: targetNode.data.label
     });
@@ -1286,6 +1327,7 @@ export const useNavigationEditor = () => {
     setError: setSaveError,
     setSuccess: setSaveSuccess,
     setPendingConnection,
+    setReactFlowInstance,
     setIsDiscardDialogOpen,
     
     // Event handlers
@@ -1326,5 +1368,8 @@ export const useNavigationEditor = () => {
     
     // Configuration
     defaultEdgeOptions,
+    
+    // Connection rules and debugging
+    getConnectionRulesSummary,
   };
 }; 
