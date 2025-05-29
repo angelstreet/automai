@@ -5,17 +5,31 @@ import {
   DialogContent,
   DialogActions,
   Button,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Box,
   Typography,
   CircularProgress,
   Alert,
+  Stepper,
+  Step,
+  StepLabel,
+  StepContent,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
-import { deviceModelApi } from '../services/deviceModelService';
+import { 
+  ArrowBack as BackIcon,
+  ArrowForward as NextIcon,
+  Check as CheckIcon,
+} from '@mui/icons-material';
+import { Model } from '../services/deviceModelService';
+import { DeviceFormData } from '../types/controllerConfig.types';
+import { ControllerConfigService } from '../services/controllerConfigService';
+
+// Import wizard step components
+import { BasicInfoStep } from './device-wizard/BasicInfoStep';
+import { ModelSelectionStep } from './device-wizard/ModelSelectionStep';
+import { ControllerConfigurationStep } from './device-wizard/ControllerConfigurationStep';
+import { ReviewStep } from './device-wizard/ReviewStep';
 
 interface Device {
   id: string;
@@ -39,141 +53,268 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
   onSubmit,
   error,
 }) => {
-  const [formData, setFormData] = useState({
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
+  // Wizard state
+  const [activeStep, setActiveStep] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<Model | null>(null);
+  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
+
+  // Form data
+  const [formData, setFormData] = useState<DeviceFormData>({
     name: '',
     description: '',
     model: '',
+    controllerConfigs: {}
   });
-  
-  const [deviceModels, setDeviceModels] = useState<any[]>([]);
-  const [loadingModels, setLoadingModels] = useState(false);
-  const [modelsError, setModelsError] = useState<string | null>(null);
 
-  // Fetch device models when dialog opens
+  const steps = [
+    {
+      label: 'Basic Information',
+      description: 'Device name and description',
+    },
+    {
+      label: 'Select Model',
+      description: 'Choose device model',
+    },
+    {
+      label: 'Configure Controllers',
+      description: 'Set up controller connections',
+    },
+    {
+      label: 'Review & Create',
+      description: 'Review configuration',
+    },
+  ];
+
+  // Reset form when dialog opens/closes
   useEffect(() => {
-    const fetchModels = async () => {
-      if (!open) return;
-      
-      setLoadingModels(true);
-      setModelsError(null);
-      try {
-        console.log('[@component:CreateDeviceDialog] Fetching device models');
-        const models = await deviceModelApi.getAllDeviceModels();
-        setDeviceModels(models);
-        console.log(`[@component:CreateDeviceDialog] Loaded ${models.length} device models`);
-      } catch (error) {
-        console.error('[@component:CreateDeviceDialog] Error fetching device models:', error);
-        setModelsError('Failed to load device models');
-        setDeviceModels([]);
-      } finally {
-        setLoadingModels(false);
-      }
-    };
-
-    fetchModels();
+    if (open) {
+      setActiveStep(0);
+      setFormData({
+        name: '',
+        description: '',
+        model: '',
+        controllerConfigs: {}
+      });
+      setSelectedModel(null);
+      setFormErrors({});
+      setIsSubmitting(false);
+    }
   }, [open]);
 
   const handleClose = () => {
-    setFormData({
-      name: '',
-      description: '',
-      model: '',
-    });
-    onClose();
+    if (!isSubmitting) {
+      onClose();
+    }
   };
 
-  const handleSubmit = () => {
-    onSubmit(formData);
+  const handleFormDataUpdate = (updates: Partial<DeviceFormData>) => {
+    setFormData(prev => ({ ...prev, ...updates }));
+    
+    // Clear related errors when data is updated
+    const updatedErrors = { ...formErrors };
+    Object.keys(updates).forEach(key => {
+      delete updatedErrors[key];
+    });
+    setFormErrors(updatedErrors);
   };
 
-  const handleInputChange = (field: string) => (event: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [field]: event.target.value,
-    });
+  const validateStep = (step: number): boolean => {
+    const errors: { [key: string]: string } = {};
+
+    switch (step) {
+      case 0: // Basic Information
+        if (!formData.name.trim()) {
+          errors.name = 'Device name is required';
+        }
+        break;
+
+      case 1: // Model Selection
+        if (!formData.model) {
+          errors.model = 'Please select a device model';
+        }
+        break;
+
+      case 2: // Controller Configuration
+        // Validate each controller configuration
+        Object.entries(formData.controllerConfigs).forEach(([controllerType, config]) => {
+          if (config.implementation) {
+            const validation = ControllerConfigService.validateParameters(
+              controllerType as any,
+              config.implementation,
+              config.parameters
+            );
+            
+            if (!validation.isValid) {
+              validation.errors.forEach((errorMsg, index) => {
+                errors[`${controllerType}_param_${index}`] = errorMsg;
+              });
+            }
+          }
+        });
+        break;
+
+      case 3: // Review
+        // Final validation - all previous steps
+        if (!formData.name.trim()) errors.name = 'Device name is required';
+        if (!formData.model) errors.model = 'Device model is required';
+        break;
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
-  const handleModelChange = (event: any) => {
-    setFormData({
-      ...formData,
-      model: event.target.value,
-    });
+  const handleNext = () => {
+    if (validateStep(activeStep)) {
+      if (activeStep < steps.length - 1) {
+        setActiveStep(activeStep + 1);
+      }
+    }
   };
+
+  const handleBack = () => {
+    if (activeStep > 0) {
+      setActiveStep(activeStep - 1);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!validateStep(activeStep)) {
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      
+      // Convert our form data to the expected format with controller configurations
+      const deviceData = {
+        name: formData.name.trim(),
+        description: formData.description.trim(),
+        model: formData.model,
+        controllerConfigs: formData.controllerConfigs, // Include controller configurations
+      };
+
+      console.log('[@component:CreateDeviceDialog] Creating device with data:', deviceData);
+      await onSubmit(deviceData as any);
+      
+    } catch (err) {
+      console.error('[@component:CreateDeviceDialog] Error creating device:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const renderStepContent = (step: number) => {
+    switch (step) {
+      case 0:
+        return (
+          <BasicInfoStep
+            formData={formData}
+            onUpdate={handleFormDataUpdate}
+            errors={formErrors}
+          />
+        );
+      case 1:
+        return (
+          <ModelSelectionStep
+            formData={formData}
+            onUpdate={handleFormDataUpdate}
+            onModelSelected={setSelectedModel}
+            errors={formErrors}
+          />
+        );
+      case 2:
+        return (
+          <ControllerConfigurationStep
+            formData={formData}
+            selectedModel={selectedModel}
+            onUpdate={handleFormDataUpdate}
+            errors={formErrors}
+          />
+        );
+      case 3:
+        return (
+          <ReviewStep
+            formData={formData}
+            selectedModel={selectedModel}
+            errors={formErrors}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
+  const isStepComplete = (step: number): boolean => {
+    switch (step) {
+      case 0:
+        return !!formData.name.trim();
+      case 1:
+        return !!formData.model;
+      case 2:
+        return Object.keys(formData.controllerConfigs).length > 0 || 
+               Boolean(selectedModel && Object.values(selectedModel.controllers).every(c => !c || c === ''));
+      case 3:
+        return Object.keys(formErrors).length === 0;
+      default:
+        return false;
+    }
+  };
+
+  const canProceed = isStepComplete(activeStep) && Object.keys(formErrors).length === 0;
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-      <DialogTitle sx={{ pb: 1 }}>Add New Device</DialogTitle>
+    <Dialog 
+      open={open} 
+      onClose={handleClose} 
+      maxWidth="lg" 
+      fullWidth
+      fullScreen={isMobile}
+    >
+      <DialogTitle sx={{ pb: 1 }}>
+        <Typography variant="h5">Add New Device</Typography>
+        <Typography variant="body2" color="text.secondary">
+          Follow the steps to configure your device and its controllers
+        </Typography>
+      </DialogTitle>
+
       <DialogContent sx={{ pt: 1 }}>
-        <Box sx={{ pt: 0.5 }}>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Name"
-            fullWidth
-            variant="outlined"
-            value={formData.name}
-            onChange={handleInputChange('name')}
-            sx={{ mb: 1.5 }}
-            size="small"
-            placeholder="e.g., Test Device 1"
-            required
-          />
+        <Box sx={{ width: '100%' }}>
+          {/* Stepper */}
+          <Stepper 
+            activeStep={activeStep} 
+            orientation={isMobile ? 'vertical' : 'horizontal'}
+            sx={{ mb: 3 }}
+          >
+            {steps.map((step, index) => (
+              <Step key={step.label} completed={isStepComplete(index)}>
+                <StepLabel>
+                  <Typography variant="subtitle2">{step.label}</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {step.description}
+                  </Typography>
+                </StepLabel>
+                {isMobile && (
+                  <StepContent>
+                    {index === activeStep && renderStepContent(activeStep)}
+                  </StepContent>
+                )}
+              </Step>
+            ))}
+          </Stepper>
 
-          <TextField
-            margin="dense"
-            label="Description"
-            fullWidth
-            variant="outlined"
-            value={formData.description}
-            onChange={handleInputChange('description')}
-            sx={{ mb: 1.5 }}
-            size="small"
-            placeholder="Optional device description"
-            multiline
-            rows={2}
-          />
-
-          {/* Device Model Selection */}
-          <Typography variant="subtitle2" sx={{ mb: 1, mt: 2, fontWeight: 'bold' }}>
-            Device Model (Optional)
-          </Typography>
-          
-          {modelsError && (
-            <Alert severity="warning" sx={{ mb: 2 }}>
-              {modelsError}
-            </Alert>
-          )}
-
-          {loadingModels ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
-              <CircularProgress size={24} />
+          {/* Step Content for non-mobile */}
+          {!isMobile && (
+            <Box sx={{ mt: 2, mb: 2, minHeight: 400 }}>
+              {renderStepContent(activeStep)}
             </Box>
-          ) : (
-            <FormControl fullWidth margin="dense" sx={{ mb: 1.5 }}>
-              <InputLabel size="small">Model</InputLabel>
-              <Select
-                size="small"
-                value={formData.model}
-                onChange={handleModelChange}
-                label="Model"
-              >
-                <MenuItem value="">
-                  <em>No model selected</em>
-                </MenuItem>
-                {deviceModels.map((model) => (
-                  <MenuItem key={model.id} value={model.name}>
-                    {model.name}
-                    {model.description && (
-                      <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
-                        - {model.description}
-                      </Typography>
-                    )}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
           )}
 
+          {/* Error Display */}
           {error && (
             <Alert severity="error" sx={{ mt: 2 }}>
               {error}
@@ -181,17 +322,41 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
           )}
         </Box>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={handleClose} color="inherit">
+
+      <DialogActions sx={{ px: 3, pb: 2, pt: 1 }}>
+        <Button onClick={handleClose} disabled={isSubmitting}>
           Cancel
         </Button>
-        <Button 
-          onClick={handleSubmit} 
-          variant="contained" 
-          disabled={!formData.name.trim()}
-        >
-          Add Device
-        </Button>
+        
+        {activeStep > 0 && (
+          <Button
+            onClick={handleBack}
+            disabled={isSubmitting}
+            startIcon={<BackIcon />}
+          >
+            Back
+          </Button>
+        )}
+
+        {activeStep < steps.length - 1 ? (
+          <Button
+            onClick={handleNext}
+            variant="contained"
+            disabled={!canProceed}
+            endIcon={<NextIcon />}
+          >
+            Next
+          </Button>
+        ) : (
+          <Button
+            onClick={handleSubmit}
+            variant="contained"
+            disabled={!canProceed || isSubmitting}
+            startIcon={isSubmitting ? <CircularProgress size={16} /> : <CheckIcon />}
+          >
+            {isSubmitting ? 'Creating...' : 'Create Device'}
+          </Button>
+        )}
       </DialogActions>
     </Dialog>
   );

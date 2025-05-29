@@ -9,6 +9,7 @@ export interface Device {
   name: string;
   description: string;
   model: string;
+  controller_configs?: any; // JSONB data for controller configurations
   created_at: string;
   updated_at: string;
 }
@@ -17,6 +18,7 @@ export interface DeviceCreatePayload {
   name: string;
   description?: string;
   model?: string;
+  controllerConfigs?: { [key: string]: any }; // Controller configurations from wizard
 }
 
 export interface ApiResponse<T> {

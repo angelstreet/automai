@@ -1,0 +1,191 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Typography,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  CircularProgress,
+  Alert,
+  Chip,
+  FormHelperText,
+} from '@mui/material';
+import { deviceModelApi, Model } from '../../services/deviceModelService';
+import { DeviceFormData } from '../../types/controllerConfig.types';
+
+interface ModelSelectionStepProps {
+  formData: DeviceFormData;
+  onUpdate: (updates: Partial<DeviceFormData>) => void;
+  onModelSelected: (model: Model | null) => void;
+  errors?: { [key: string]: string };
+}
+
+export const ModelSelectionStep: React.FC<ModelSelectionStepProps> = ({
+  formData,
+  onUpdate,
+  onModelSelected,
+  errors = {}
+}) => {
+  const [deviceModels, setDeviceModels] = useState<Model[]>([]);
+  const [loadingModels, setLoadingModels] = useState(false);
+  const [modelsError, setModelsError] = useState<string | null>(null);
+  const [selectedModelDetails, setSelectedModelDetails] = useState<Model | null>(null);
+
+  // Fetch device models when component mounts
+  useEffect(() => {
+    const fetchModels = async () => {
+      setLoadingModels(true);
+      setModelsError(null);
+      try {
+        console.log('[@component:ModelSelectionStep] Fetching device models');
+        const models = await deviceModelApi.getAllDeviceModels();
+        setDeviceModels(models);
+        console.log(`[@component:ModelSelectionStep] Loaded ${models.length} device models`);
+      } catch (error) {
+        console.error('[@component:ModelSelectionStep] Error fetching device models:', error);
+        setModelsError('Failed to load device models');
+        setDeviceModels([]);
+      } finally {
+        setLoadingModels(false);
+      }
+    };
+
+    fetchModels();
+  }, []);
+
+  // Update selected model details when model changes
+  useEffect(() => {
+    if (formData.model && deviceModels.length > 0) {
+      const selectedModel = deviceModels.find(model => model.name === formData.model);
+      setSelectedModelDetails(selectedModel || null);
+      onModelSelected(selectedModel || null);
+    } else {
+      setSelectedModelDetails(null);
+      onModelSelected(null);
+    }
+  }, [formData.model, deviceModels, onModelSelected]);
+
+  const handleModelChange = (event: any) => {
+    const modelName = event.target.value;
+    onUpdate({ model: modelName });
+    
+    // Reset controller configurations when model changes
+    onUpdate({ controllerConfigs: {} });
+  };
+
+  const getControllerDisplayValue = (controllers: Model['controllers']) => {
+    const activeControllers = Object.entries(controllers)
+      .filter(([_, value]) => value && value !== '')
+      .map(([type, value]) => ({ type, value }));
+    
+    return activeControllers;
+  };
+
+  return (
+    <Box sx={{ pt: 1 }}>
+      <Typography variant="h6" gutterBottom>
+        Select Device Model
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+        Choose the device model that matches your hardware. The model determines which controllers are available for configuration.
+      </Typography>
+
+      {modelsError && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          {modelsError}
+        </Alert>
+      )}
+
+      {loadingModels ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}>
+          <CircularProgress size={24} />
+          <Typography variant="body2" sx={{ ml: 2 }}>
+            Loading device models...
+          </Typography>
+        </Box>
+      ) : (
+        <FormControl fullWidth margin="dense" sx={{ mb: 2 }}>
+          <InputLabel size="small">Device Model</InputLabel>
+          <Select
+            size="small"
+            value={formData.model}
+            onChange={handleModelChange}
+            label="Device Model"
+            error={!!errors.model}
+          >
+            <MenuItem value="">
+              <em>Select a device model</em>
+            </MenuItem>
+            {deviceModels.map((model) => (
+              <MenuItem key={model.id} value={model.name}>
+                <Box>
+                  <Typography variant="body2" component="span">
+                    {model.name}
+                  </Typography>
+                  {model.description && (
+                    <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
+                      - {model.description}
+                    </Typography>
+                  )}
+                </Box>
+              </MenuItem>
+            ))}
+          </Select>
+          {errors.model && (
+            <FormHelperText error>{errors.model}</FormHelperText>
+          )}
+        </FormControl>
+      )}
+
+      {/* Display selected model details */}
+      {selectedModelDetails && (
+        <Box sx={{ mt: 2, p: 2, border: 1, borderColor: 'divider', borderRadius: 1 }}>
+          <Typography variant="subtitle2" gutterBottom>
+            Selected Model: {selectedModelDetails.name}
+          </Typography>
+          
+          {selectedModelDetails.description && (
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              {selectedModelDetails.description}
+            </Typography>
+          )}
+
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+            Supported Types:
+          </Typography>
+          <Box sx={{ mb: 2 }}>
+            {selectedModelDetails.types.map((type) => (
+              <Chip key={type} label={type} size="small" sx={{ mr: 0.5, mb: 0.5 }} />
+            ))}
+          </Box>
+
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+            Available Controllers:
+          </Typography>
+          <Box>
+            {getControllerDisplayValue(selectedModelDetails.controllers).map(({ type, value }) => (
+              <Chip
+                key={type}
+                label={`${type.toUpperCase()}: ${value}`}
+                size="small"
+                variant="outlined"
+                sx={{ mr: 0.5, mb: 0.5 }}
+              />
+            ))}
+          </Box>
+
+          {selectedModelDetails.version && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+              Version: {selectedModelDetails.version}
+            </Typography>
+          )}
+        </Box>
+      )}
+
+      <FormHelperText sx={{ mt: 2, fontSize: '0.875rem' }}>
+        <strong>Next:</strong> Configure the controllers associated with your selected model.
+      </FormHelperText>
+    </Box>
+  );
+}; 

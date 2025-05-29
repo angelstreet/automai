@@ -29,7 +29,7 @@ def get_all_devices(team_id: str) -> List[Dict]:
     
     try:
         result = supabase.table('device').select(
-            'id', 'name', 'description', 'model', 'created_at', 'updated_at'
+            'id', 'name', 'description', 'model', 'controller_configs', 'created_at', 'updated_at'
         ).eq('team_id', team_id).order('created_at', desc=False).execute()
         
         devices = []
@@ -39,6 +39,7 @@ def get_all_devices(team_id: str) -> List[Dict]:
                 'name': device['name'],
                 'description': device['description'] or '',
                 'model': device['model'] or '',
+                'controller_configs': device['controller_configs'] or {},
                 'created_at': device['created_at'],
                 'updated_at': device['updated_at']
             })
@@ -54,7 +55,7 @@ def get_device(device_id: str, team_id: str) -> Optional[Dict]:
     
     try:
         result = supabase.table('device').select(
-            'id', 'name', 'description', 'model', 'created_at', 'updated_at'
+            'id', 'name', 'description', 'model', 'controller_configs', 'created_at', 'updated_at'
         ).eq('id', device_id).eq('team_id', team_id).single().execute()
         
         if result.data:
@@ -64,6 +65,7 @@ def get_device(device_id: str, team_id: str) -> Optional[Dict]:
                 'name': device['name'],
                 'description': device['description'] or '',
                 'model': device['model'] or '',
+                'controller_configs': device['controller_configs'] or {},
                 'created_at': device['created_at'],
                 'updated_at': device['updated_at']
             }
@@ -82,6 +84,7 @@ def create_device(device_data: Dict, team_id: str) -> Optional[Dict]:
             'name': device_data['name'],
             'description': device_data.get('description', ''),
             'model': device_data.get('model', ''),
+            'controller_configs': device_data.get('controllerConfigs', {}),  # Handle controller configurations
             'team_id': team_id
         }
         
@@ -101,6 +104,7 @@ def create_device(device_data: Dict, team_id: str) -> Optional[Dict]:
                 'name': device['name'],
                 'description': device['description'] or '',
                 'model': device['model'] or '',
+                'controller_configs': device['controller_configs'] or {},
                 'created_at': device['created_at'],
                 'updated_at': device['updated_at']
             }
@@ -123,7 +127,8 @@ def update_device(device_id: str, device_data: Dict, team_id: str) -> Optional[D
         update_data = {
             'name': device_data['name'],
             'description': device_data.get('description', ''),
-            'model': device_data.get('model', '')
+            'model': device_data.get('model', ''),
+            'controller_configs': device_data.get('controllerConfigs', {})  # Include controller configurations
         }
         
         result = supabase.table('device').update(update_data).eq('id', device_id).eq('team_id', team_id).execute()
@@ -135,6 +140,7 @@ def update_device(device_id: str, device_data: Dict, team_id: str) -> Optional[D
                 'name': device['name'],
                 'description': device['description'] or '',
                 'model': device['model'] or '',
+                'controller_configs': device['controller_configs'] or {},
                 'created_at': device['created_at'],
                 'updated_at': device['updated_at']
             }
