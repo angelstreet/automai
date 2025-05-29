@@ -88,6 +88,7 @@ export const useNavigationEditor = () => {
     setIsSaving: navigationState.setIsSaving,
     setCurrentViewRootId: navigationState.setCurrentViewRootId,
     setViewPath: navigationState.setViewPath,
+    setUserInterface: navigationState.setUserInterface,
     nodes: navigationState.nodes,
     edges: navigationState.edges,
     allNodes: navigationState.allNodes,

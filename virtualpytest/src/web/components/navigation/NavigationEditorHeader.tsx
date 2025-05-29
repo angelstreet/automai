@@ -51,6 +51,9 @@ interface NavigationEditorHeaderProps {
   selectedDevice: string | null;
   isControlActive: boolean;
   
+  // User interface props
+  userInterface: any;
+  
   // Action handlers
   onNavigateToParent: () => void;
   onNavigateToTreeLevel: (index: number) => void;
@@ -90,6 +93,7 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
   isRemotePanelOpen,
   selectedDevice,
   isControlActive,
+  userInterface,
   onNavigateToParent,
   onNavigateToTreeLevel,
   onNavigateToParentView,
@@ -131,8 +135,24 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
     }
   };
 
+  // Filter devices based on current tree's user interface models
+  const getFilteredDevices = () => {
+    if (!userInterface || !userInterface.models || !Array.isArray(userInterface.models)) {
+      console.log('[@component:NavigationEditorHeader] No user interface models found, showing all devices');
+      return devices;
+    }
+
+    const interfaceModels = userInterface.models;
+    const filteredDevices = devices.filter(device => 
+      interfaceModels.includes(device.model)
+    );
+
+    console.log(`[@component:NavigationEditorHeader] Filtered devices: ${filteredDevices.length}/${devices.length} devices match models: ${interfaceModels.join(', ')}`);
+    return filteredDevices;
+  };
+
   // Extract device names for the dropdown
-  const availableDevices = devices.map(device => device.name);
+  const availableDevices = getFilteredDevices().map(device => device.name);
 
   return (
     <AppBar position="static" color="default" elevation={1}>

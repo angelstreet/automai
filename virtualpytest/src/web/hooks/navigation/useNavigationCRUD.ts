@@ -56,6 +56,7 @@ interface CRUDState {
   allNodes: UINavigationNode[];
   allEdges: UINavigationEdge[];
   isSaving: boolean;
+  setUserInterface: (userInterface: any | null) => void;
 }
 
 export const useNavigationCRUD = (state: CRUDState) => {
@@ -95,9 +96,19 @@ export const useNavigationCRUD = (state: CRUDState) => {
       if (response.success && (response.tree_info || response.tree_data)) {
         const treeInfo = response.tree_info || {};
         const treeData = response.tree_data || { nodes: [], edges: [] };
+        const userInterface = response.userinterface || null;
         const actualTreeName = treeInfo.name || state.currentTreeName || 'Unnamed Tree';
         
         console.log(`[@hook:useNavigationCRUD] Loaded tree with ${treeData.nodes?.length || 0} nodes and ${treeData.edges?.length || 0} edges from database`);
+        
+        // Set userInterface if available
+        if (userInterface) {
+          console.log(`[@hook:useNavigationCRUD] Setting userInterface: ${userInterface.name} with models: ${userInterface.models || []}`);
+          state.setUserInterface(userInterface);
+        } else {
+          console.log(`[@hook:useNavigationCRUD] No userInterface found for tree: ${state.currentTreeId}`);
+          state.setUserInterface(null);
+        }
         
         // Update the URL if the name in the database is different
         if (state.currentTreeName !== actualTreeName) {

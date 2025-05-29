@@ -368,10 +368,24 @@ def get_complete_navigation_tree(tree_id):
         if 'edges' not in tree_data:
             tree_data['edges'] = []
         
+        # Fetch userInterface information if the tree has a userinterface_id
+        userinterface = None
+        userinterface_id = tree_info.get('userinterface_id')
+        if userinterface_id:
+            print(f"[@api:navigation:get_complete_tree] Fetching userInterface: {userinterface_id}")
+            userinterface = get_userinterface(userinterface_id, team_id)
+            if userinterface:
+                print(f"[@api:navigation:get_complete_tree] Found userInterface: {userinterface['name']} with models: {userinterface.get('models', [])}")
+            else:
+                print(f"[@api:navigation:get_complete_tree] UserInterface not found: {userinterface_id}")
+        else:
+            print(f"[@api:navigation:get_complete_tree] No userinterface_id found for tree: {tree_id}")
+        
         response_data = {
             'success': True,
             'tree_info': tree_info,
-            'tree_data': tree_data
+            'tree_data': tree_data,
+            'userinterface': userinterface
         }
         
         print(f"[@api:navigation:get_complete_tree] Returning tree with {len(tree_data.get('nodes', []))} nodes and {len(tree_data.get('edges', []))} edges")

@@ -230,6 +230,7 @@ const NavigationEditorContent: React.FC = () => {
         error={error}
         historyIndex={historyIndex}
         historyLength={history.length}
+        userInterface={userInterface}
         onNavigateToParent={navigateToParent}
         onNavigateToTreeLevel={navigateToTreeLevel}
         onNavigateToParentView={navigateToParentView}
