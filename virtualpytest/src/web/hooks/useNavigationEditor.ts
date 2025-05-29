@@ -234,21 +234,24 @@ export const useNavigationEditor = () => {
       return;
     }
     
-    // Determine edge type based on handles and connection type
+    // Determine edge type based on connection direction
     let edgeType: 'default' | 'top' | 'bottom' | 'menu' | undefined = 'default';
     
-    // First check for top/bottom connections regardless of menu status
-    const isTopConnection = params.sourceHandle?.includes('top') || params.targetHandle?.includes('top');
-    const isBottomConnection = params.sourceHandle?.includes('bottom') || params.targetHandle?.includes('bottom');
+    // Detect actual connection direction based on handle positions
+    const isLeftToRight = (params.sourceHandle?.includes('right') && params.targetHandle?.includes('left'));
+    const isTopToBottom = (params.sourceHandle?.includes('bottom') && params.targetHandle?.includes('top'));
+    const isRightToLeft = (params.sourceHandle?.includes('left') && params.targetHandle?.includes('right'));
+    const isBottomToTop = (params.sourceHandle?.includes('top') && params.targetHandle?.includes('bottom'));
     
-    if (isTopConnection) {
-      edgeType = 'top'; // Red edges for top handle connections
-    } else if (isBottomConnection) {
-      edgeType = 'bottom'; // Blue edges for bottom handle connections
-    } else if (isMenuConnection) {
-      edgeType = 'menu'; // For other menu navigation connections
+    if (isLeftToRight || isTopToBottom) {
+      edgeType = 'top'; // Blue edges for left-to-right and top-to-bottom
+      console.log(`[@component:NavigationEditor] Connection direction: ${isLeftToRight ? 'left-to-right' : 'top-to-bottom'} -> BLUE`);
+    } else if (isRightToLeft || isBottomToTop || isMenuConnection) {
+      edgeType = 'bottom'; // Red edges for right-to-left, bottom-to-top, and menu
+      console.log(`[@component:NavigationEditor] Connection direction: ${isRightToLeft ? 'right-to-left' : isBottomToTop ? 'bottom-to-top' : 'menu'} -> RED`);
     } else {
-      edgeType = 'default'; // Gray for left/right connections
+      edgeType = 'bottom'; // Default to red for other connections
+      console.log(`[@component:NavigationEditor] Connection direction: other -> RED`);
     }
     
     console.log('[@component:NavigationEditor] Handle analysis:', {
@@ -1210,7 +1213,6 @@ export const useNavigationEditor = () => {
     setError: setSaveError,
     setSuccess: setSaveSuccess,
     setPendingConnection,
-    setReactFlowInstance,
     setIsDiscardDialogOpen,
     
     // Event handlers
