@@ -24,6 +24,17 @@ export const UINavigationEdge: React.FC<EdgeProps<UINavigationEdgeType['data']>>
     targetPosition,
   });
 
+  // Determine edge color based on edge type
+  const getEdgeColor = (edgeType?: string) => {
+    switch (edgeType) {
+      case 'top': return '#1976d2';     // Blue for top connections
+      case 'bottom': return '#f44336';  // Red for bottom connections
+      default: return '#1976d2';        // Default blue
+    }
+  };
+
+  const edgeColor = getEdgeColor(data?.edgeType);
+
   return (
     <>
       {/* Define arrow marker */}
@@ -39,8 +50,8 @@ export const UINavigationEdge: React.FC<EdgeProps<UINavigationEdgeType['data']>>
         >
           <polygon
             points="0 0, 8 3, 0 6"
-            fill="#1976d2"
-            stroke="#1976d2"
+            fill={edgeColor}
+            stroke={edgeColor}
           />
         </marker>
       </defs>
@@ -48,7 +59,7 @@ export const UINavigationEdge: React.FC<EdgeProps<UINavigationEdgeType['data']>>
       <path
         id={id}
         style={{
-          stroke: '#1976d2',
+          stroke: edgeColor,
           strokeWidth: 2,
           fill: 'none',
           ...style,

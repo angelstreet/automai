@@ -183,6 +183,11 @@ export const useNavigationEditor = () => {
       targetHandle: params.targetHandle
     });
     
+    // Determine edge type based on handles (top = blue, bottom = red)
+    const isTopConnection = params.sourceHandle?.includes('top') || params.targetHandle?.includes('top');
+    const isBottomConnection = params.sourceHandle?.includes('bottom') || params.targetHandle?.includes('bottom');
+    const edgeType = isTopConnection ? 'top' : isBottomConnection ? 'bottom' : 'default';
+    
     const newEdge: UINavigationEdge = {
       id: `edge-${Date.now()}`,
       source: params.source,
@@ -190,7 +195,10 @@ export const useNavigationEditor = () => {
       sourceHandle: params.sourceHandle,
       targetHandle: params.targetHandle,
       type: 'uiNavigation',
-      data: { action: 'ACTION' },  // Default action, user can edit
+      data: { 
+        action: 'ACTION',  // Default action, user can edit
+        edgeType: edgeType  // Add edge type for coloring
+      },
     };
     
     console.log('[@component:NavigationEditor] Created edge:', newEdge);
