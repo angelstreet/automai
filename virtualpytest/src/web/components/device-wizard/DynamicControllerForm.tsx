@@ -147,9 +147,11 @@ export const DynamicControllerForm: React.FC<DynamicControllerFormProps> = ({
     fields.forEach(field => {
       if (field.name.includes('host_') || field.name.includes('ssh_')) {
         groups.connection.push(field);
-      } else if (field.name.includes('device_') || field.name.includes('target_')) {
+      } else if (field.name.includes('device_') || field.name.includes('target_') || field.name === 'video_device') {
         groups.device.push(field);
-      } else if (field.name.includes('config') || field.name.includes('setting')) {
+      } else if (field.name.includes('config') || field.name.includes('setting') || 
+                 field.name === 'stream_path' || field.name === 'resolution' || 
+                 field.name === 'fps' || field.name === 'connection_timeout') {
         groups.configuration.push(field);
       } else {
         groups.other.push(field);
