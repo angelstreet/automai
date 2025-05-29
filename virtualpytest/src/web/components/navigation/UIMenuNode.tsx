@@ -8,6 +8,13 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({
 }) => {
   const [isScreenshotModalOpen, setIsScreenshotModalOpen] = useState(false);
 
+  // Check if this node is an orphan (no parent)
+  const isOrphan = !data.parent || data.parent.length === 0;
+  
+  // Determine border color based on orphan status
+  const borderColor = isOrphan ? '#f44336' : '#ffc107'; // Red for orphans, yellow for connected
+  const borderWidth = isOrphan ? '2px' : '1px';
+
   const handleScreenshotDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent node double-click from triggering
     if (data.screenshot) {
@@ -23,7 +30,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({
     <div
       style={{
         background: 'linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%)',
-        border: selected ? `3px solid #ff6f00` : `2px solid #ffc107`,
+        border: `${borderWidth} solid ${borderColor}`,
         borderRadius: '8px',
         padding: '12px',
         minWidth: '200px',

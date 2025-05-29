@@ -236,12 +236,19 @@ export const useNavigationEditor = () => {
     
     // Determine edge type based on handles and connection type
     let edgeType: 'default' | 'top' | 'bottom' | 'menu' | undefined = 'default';
-    if (isMenuConnection || isTopBottomConnection) {
-      edgeType = 'menu'; // For menu navigation connections
-    } else if (isLeftRightConnection) {
-      const isTopConnection = params.sourceHandle?.includes('top') || params.targetHandle?.includes('top');
-      const isBottomConnection = params.sourceHandle?.includes('bottom') || params.targetHandle?.includes('bottom');
-      edgeType = isTopConnection ? 'top' : isBottomConnection ? 'bottom' : 'default';
+    
+    // First check for top/bottom connections regardless of menu status
+    const isTopConnection = params.sourceHandle?.includes('top') || params.targetHandle?.includes('top');
+    const isBottomConnection = params.sourceHandle?.includes('bottom') || params.targetHandle?.includes('bottom');
+    
+    if (isTopConnection) {
+      edgeType = 'top'; // Red edges for top handle connections
+    } else if (isBottomConnection) {
+      edgeType = 'bottom'; // Blue edges for bottom handle connections
+    } else if (isMenuConnection) {
+      edgeType = 'menu'; // For other menu navigation connections
+    } else {
+      edgeType = 'default'; // Gray for left/right connections
     }
     
     console.log('[@component:NavigationEditor] Handle analysis:', {
@@ -255,9 +262,9 @@ export const useNavigationEditor = () => {
       targetNodeType: targetNode.data.type
     });
 
-    // NEW: Update parent chain and depth when connecting to a menu node
+    // NEW: Update parent chain and depth when connecting with menu nodes
     if (sourceNode.data.type === 'menu') {
-      // Update target node's parent chain
+      // Case 1: Menu node -> Any node (menu becomes parent of target)
       const newParent = [
         ...(sourceNode.data.parent || []),
         sourceNode.id
@@ -278,6 +285,28 @@ export const useNavigationEditor = () => {
       }));
       
       console.log(`[@component:NavigationEditor] Updated target node ${targetNode.data.label} parent chain:`, newParent);
+    } else if (targetNode.data.type === 'menu') {
+      // Case 2: Any node -> Menu node (menu becomes parent of source)
+      const newParent = [
+        ...(targetNode.data.parent || []),
+        targetNode.id
+      ];
+      
+      setNodes((nds) => nds.map((node) => {
+        if (node.id === sourceNode.id) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              parent: newParent,
+              depth: newParent.length
+            }
+          };
+        }
+        return node;
+      }));
+      
+      console.log(`[@component:NavigationEditor] Updated source node ${sourceNode.data.label} parent chain:`, newParent);
     }
 
     const edgeId = `${params.source}-${params.target}`;
@@ -823,7 +852,37 @@ export const useNavigationEditor = () => {
       setSelectedNode(null);
       setHasUnsavedChanges(true);
     } else if (selectedEdge) {
-      setEdges((eds) => eds.filter((edge) => edge.id !== selectedEdge.id));
+      // Before deleting the edge, check if we need to clean up parent relationships
+      setEdges((eds) => {
+        const newEdges = eds.filter((edge) => edge.id !== selectedEdge.id);
+        
+        // Check if the target node of the deleted edge has any remaining incoming edges
+        const targetNodeId = selectedEdge.target;
+        const hasRemainingIncomingEdges = newEdges.some(edge => edge.target === targetNodeId);
+        
+        if (!hasRemainingIncomingEdges) {
+          // No more incoming edges, clear parent chain and reset depth
+          setNodes((nds) => nds.map((node) => {
+            if (node.id === targetNodeId) {
+              console.log(`[@hook:useNavigationEditor] Clearing parent/depth for node ${node.data.label} - no remaining incoming edges`);
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  parent: [],
+                  depth: 0
+                }
+              };
+            }
+            return node;
+          }));
+        } else {
+          console.log(`[@hook:useNavigationEditor] Node ${targetNodeId} still has incoming edges, keeping parent/depth`);
+        }
+        
+        return newEdges;
+      });
+      
       setSelectedEdge(null);
       setHasUnsavedChanges(true);
     }

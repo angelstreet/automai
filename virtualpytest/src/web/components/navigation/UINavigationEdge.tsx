@@ -32,11 +32,11 @@ export const UINavigationEdge: React.FC<EdgeProps<UINavigationEdgeType['data']>>
   let edgeColor = '#666666'; // Default gray
   
   if (data?.edgeType === 'top') {
-    edgeColor = '#1976d2'; // Blue for top connections
-    console.log(`[@component:UINavigationEdge] Edge ${id} set to BLUE (top connection)`);
+    edgeColor = '#1976d2'; // Red for top connections
+    console.log(`[@component:UINavigationEdge] Edge ${id} set to RED (top connection)`);
   } else if (data?.edgeType === 'bottom') {
-    edgeColor = '#f44336'; // Red for bottom connections  
-    console.log(`[@component:UINavigationEdge] Edge ${id} set to RED (bottom connection)`);
+    edgeColor = '#f44336'; // Blue for bottom connections  
+    console.log(`[@component:UINavigationEdge] Edge ${id} set to BLUE (bottom connection)`);
   } else {
     console.log(`[@component:UINavigationEdge] Edge ${id} set to GRAY (default) - edgeType was:`, data?.edgeType);
   }

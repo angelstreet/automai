@@ -8,6 +8,13 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
 }) => {
   const [isScreenshotModalOpen, setIsScreenshotModalOpen] = useState(false);
 
+  // Check if this node is an orphan (no parent)
+  const isOrphan = !data.parent || data.parent.length === 0;
+  
+  // Determine border color based on orphan status
+  const borderColor = isOrphan ? '#f44336' : '#ddd'; // Red for orphans, gray for connected
+  const borderWidth = isOrphan ? '2px' : '1px';
+
   const getNodeColor = (type: string) => {
     switch (type) {
       case 'screen': return '#e3f2fd';
@@ -45,7 +52,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
     <div
       style={{
         background: getNodeColor(data.type),
-        border: selected ? `2px solid #1976d2` : `2px solid ${getNodeBorderColor(data.type)}`,
+        border: `${borderWidth} solid ${borderColor}`,
         borderRadius: '8px',
         padding: '12px',
         minWidth: '200px',
