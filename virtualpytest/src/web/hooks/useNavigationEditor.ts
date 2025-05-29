@@ -310,6 +310,34 @@ export const useNavigationEditor = () => {
       }));
       
       console.log(`[@component:NavigationEditor] Updated source node ${sourceNode.data.label} parent chain:`, newParent);
+    } else {
+      // Case 3: Any node -> Any node - Target inherits source's parent chain + source
+      console.log(`[@component:NavigationEditor] Node-to-node connection: ${sourceNode.data.label} (${sourceNode.data.type}) -> ${targetNode.data.label} (${targetNode.data.type})`);
+      console.log(`[@component:NavigationEditor] Source parent chain:`, sourceNode.data.parent || []);
+      console.log(`[@component:NavigationEditor] Target current parent chain:`, targetNode.data.parent || []);
+      
+      // Target inherits source's parent chain + source itself becomes the new parent
+      const newParent = [
+        ...(sourceNode.data.parent || []),  // Inherit source's ancestry
+        sourceNode.id                       // Source becomes direct parent
+      ];
+      
+      setNodes((nds) => nds.map((node) => {
+        if (node.id === targetNode.id) {
+          console.log(`[@component:NavigationEditor] Setting inherited parent for ${targetNode.data.label}: [${newParent.join(' > ')}], depth: ${newParent.length}`);
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              parent: newParent,
+              depth: newParent.length
+            }
+          };
+        }
+        return node;
+      }));
+      
+      console.log(`[@component:NavigationEditor] Target node ${targetNode.data.label} inherited parent chain:`, newParent);
     }
 
     const edgeId = `${params.source}-${params.target}`;
@@ -927,8 +955,21 @@ export const useNavigationEditor = () => {
   const isNodeDescendantOf = useCallback((node: UINavigationNode, ancestorId: string, nodes: UINavigationNode[]): boolean => {
     if (!node.data.parent || node.data.parent.length === 0) return false;
     
-    // Check if ancestorId is in the parent chain
-    return node.data.parent.includes(ancestorId);
+    // Check if ancestorId is in the parent chain (anywhere in the ancestry)
+    const isInParentChain = node.data.parent.includes(ancestorId);
+    
+    // Also check if this node is a direct child (last element in parent chain)
+    const isDirectChild = node.data.parent[node.data.parent.length - 1] === ancestorId;
+    
+    console.log(`[@hook:useNavigationEditor:isNodeDescendantOf] Node ${node.data.label}:`, {
+      parentChain: node.data.parent,
+      ancestorId,
+      isInParentChain,
+      isDirectChild,
+      result: isInParentChain
+    });
+    
+    return isInParentChain;
   }, []);
 
   // Get filtered nodes based on focus node and depth
@@ -949,7 +990,7 @@ export const useNavigationEditor = () => {
     }
 
     const focusDepth = focusNode.data.depth || 0;
-    console.log(`[@hook:useNavigationEditor] Focus node found: ${focusNode.data.label} at depth ${focusDepth}`);
+    console.log(`[@hook:useNavigationEditor] Focus node found: ${focusNode.data.label} (id: ${focusNode.id}) at depth ${focusDepth}`);
     
     // Show focus node and its descendants up to maxDisplayDepth levels deep
     const filtered = allNodes.filter(node => {
@@ -957,7 +998,7 @@ export const useNavigationEditor = () => {
       
       // Include the focus node itself
       if (node.id === focusNodeId) {
-        console.log(`[@hook:useNavigationEditor] Including focus node: ${node.data.label}`);
+        console.log(`[@hook:useNavigationEditor] ✓ Including focus node: ${node.data.label}`);
         return true;
       }
       
@@ -966,14 +1007,20 @@ export const useNavigationEditor = () => {
       if (isDescendant) {
         const relativeDepth = nodeDepth - focusDepth;
         const shouldInclude = relativeDepth <= maxDisplayDepth && relativeDepth > 0;
-        console.log(`[@hook:useNavigationEditor] Descendant ${node.data.label} - depth: ${nodeDepth}, relative: ${relativeDepth}, include: ${shouldInclude}`);
+        console.log(`[@hook:useNavigationEditor] ${shouldInclude ? '✓' : '✗'} Descendant ${node.data.label} - depth: ${nodeDepth}, relative: ${relativeDepth}, maxDisplayDepth: ${maxDisplayDepth}, include: ${shouldInclude}`);
         return shouldInclude;
+      } else {
+        console.log(`[@hook:useNavigationEditor] ✗ Not a descendant: ${node.data.label} (parent: ${node.data.parent ? node.data.parent.join(' > ') : 'none'})`);
       }
       
       return false;
     });
     
-    console.log(`[@hook:useNavigationEditor] Focus filtering complete - showing ${filtered.length} nodes`);
+    console.log(`[@hook:useNavigationEditor] Focus filtering complete - showing ${filtered.length}/${allNodes.length} nodes:`);
+    filtered.forEach(node => {
+      console.log(`[@hook:useNavigationEditor] - ${node.data.label} (depth: ${node.data.depth}, parent: ${node.data.parent ? node.data.parent.join(' > ') : 'none'})`);
+    });
+    
     return filtered;
   }, [allNodes, focusNodeId, maxDisplayDepth, isNodeDescendantOf]);
 
