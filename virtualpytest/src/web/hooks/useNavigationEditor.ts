@@ -461,9 +461,16 @@ export const useNavigationEditor = () => {
     console.log(`[@hook:useNavigationEditor] Filtering nodes - focusNodeId: ${navigationState.focusNodeId}, maxDisplayDepth: ${navigationState.maxDisplayDepth}, total nodes: ${navigationState.allNodes.length}`);
     
     if (!navigationState.focusNodeId) {
-      // No focus node selected (All option) - show ALL nodes without any filtering
-      console.log(`[@hook:useNavigationEditor] No focus node - showing ALL ${navigationState.allNodes.length} nodes`);
-      return navigationState.allNodes;
+      // No focus node selected (All option) - apply depth filtering to all nodes
+      console.log(`[@hook:useNavigationEditor] No focus node - applying depth filter (max depth: ${navigationState.maxDisplayDepth}) to all ${navigationState.allNodes.length} nodes`);
+      const depthFiltered = navigationState.allNodes.filter(node => {
+        const nodeDepth = node.data.depth || 0;
+        const shouldInclude = nodeDepth <= navigationState.maxDisplayDepth;
+        console.log(`[@hook:useNavigationEditor] Node ${node.data.label} - depth: ${nodeDepth}, max: ${navigationState.maxDisplayDepth}, include: ${shouldInclude}`);
+        return shouldInclude;
+      });
+      console.log(`[@hook:useNavigationEditor] Depth filtering complete - showing ${depthFiltered.length} of ${navigationState.allNodes.length} nodes`);
+      return depthFiltered;
     }
 
     // Find the focus node
@@ -476,7 +483,7 @@ export const useNavigationEditor = () => {
     const focusDepth = focusNode.data.depth || 0;
     console.log(`[@hook:useNavigationEditor] Focus node found: ${focusNode.data.label} at depth ${focusDepth}`);
     
-    // Show focus node and its descendants up to maxDisplayDepth levels deep
+    // Show focus node, its siblings, and its descendants up to maxDisplayDepth levels deep
     const filtered = navigationState.allNodes.filter(node => {
       const nodeDepth = node.data.depth || 0;
       
@@ -486,13 +493,27 @@ export const useNavigationEditor = () => {
         return true;
       }
       
-      // Check if this node is a descendant of the focus node
+      // Check if this node is a descendant of the focus node first
       const isDescendant = isNodeDescendantOf(node, navigationState.focusNodeId!, navigationState.allNodes);
       if (isDescendant) {
         const relativeDepth = nodeDepth - focusDepth;
-        const shouldInclude = relativeDepth <= navigationState.maxDisplayDepth && relativeDepth > 0;
+        // Include descendants up to maxDisplayDepth levels deep (including same-level children)
+        const shouldInclude = relativeDepth <= navigationState.maxDisplayDepth && relativeDepth >= 0;
         console.log(`[@hook:useNavigationEditor] Descendant ${node.data.label} - depth: ${nodeDepth}, relative: ${relativeDepth}, include: ${shouldInclude}`);
         return shouldInclude;
+      }
+      
+      // Include true siblings (nodes at the same depth with the same parent, but not descendants)
+      if (nodeDepth === focusDepth) {
+        const focusParent = focusNode.data.parent || [];
+        const nodeParent = node.data.parent || [];
+        
+        // Check if they have the same parent chain (true siblings)
+        const areSiblings = JSON.stringify(focusParent) === JSON.stringify(nodeParent);
+        if (areSiblings) {
+          console.log(`[@hook:useNavigationEditor] Including true sibling: ${node.data.label} (same depth: ${nodeDepth}, same parent)`);
+          return true;
+        }
       }
       
       return false;
