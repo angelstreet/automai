@@ -176,14 +176,25 @@ export const useNavigationEditor = () => {
   const onConnectHistory = useCallback((params: Connection) => {
     if (!params.source || !params.target) return;
     console.log('[@component:NavigationEditor] Attempting to connect nodes:', params.source, 'to', params.target);
+    console.log('[@component:NavigationEditor] Connection details:', {
+      source: params.source,
+      target: params.target,
+      sourceHandle: params.sourceHandle,
+      targetHandle: params.targetHandle
+    });
     
     const newEdge: UINavigationEdge = {
       id: `edge-${Date.now()}`,
       source: params.source,
       target: params.target,
+      sourceHandle: params.sourceHandle,
+      targetHandle: params.targetHandle,
       type: 'uiNavigation',
       data: { action: 'ACTION' },  // Default action, user can edit
     };
+    
+    console.log('[@component:NavigationEditor] Created edge:', newEdge);
+    
     setEdges((eds) => {
       const updatedEdges = addEdge(newEdge, eds);
       saveToHistory();

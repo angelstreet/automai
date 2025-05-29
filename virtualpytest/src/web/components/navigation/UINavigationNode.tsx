@@ -58,68 +58,84 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         overflow: 'hidden',
       }}
     >
-      {/* Left Handles - for bi-directional navigation */}
+      {/* Left Handles */}
+      {/* Top-left: TARGET for receiving connections from right-side nodes */}
       <Handle 
         type="target" 
         position={Position.Left} 
         id="left-top-target"
+        isConnectable={true}
+        isConnectableStart={false}
+        isConnectableEnd={true}
         style={{ 
           background: '#1976d2', 
-          width: '12px', 
-          height: '12px',
+          width: '14px', 
+          height: '14px',
           border: '2px solid #fff',
           borderRadius: '50%',
-          left: -6,
-          top: '40%',
+          left: -5,
+          top: '30%',
           boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
         }} 
       />
       
+      {/* Bottom-left: SOURCE for sending connections to left-side nodes */}
       <Handle 
         type="source" 
         position={Position.Left} 
         id="left-bottom-source"
+        isConnectable={true}
+        isConnectableStart={true}
+        isConnectableEnd={false}
         style={{ 
-          background: '#1976d2', 
-          width: '12px', 
-          height: '12px',
+          background: '#f44336', 
+          width: '14px', 
+          height: '14px',
           border: '2px solid #fff',
           borderRadius: '50%',
-          left: -6,
-          top: '60%',
+          left: -5,
+          top: '70%',
           boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
         }} 
       />
       
-      {/* Right Handles - for bi-directional navigation */}
+      {/* Right Handles */}
+      {/* Top-right: SOURCE for sending connections to right-side nodes */}
       <Handle 
         type="source" 
         position={Position.Right} 
         id="right-top-source"
+        isConnectable={true}
+        isConnectableStart={true}
+        isConnectableEnd={false}
         style={{ 
           background: '#1976d2', 
-          width: '12px', 
-          height: '12px',
+          width: '14px', 
+          height: '14px',
           border: '2px solid #fff',
           borderRadius: '50%',
-          right: -6,
-          top: '40%',
+          right: -5,
+          top: '30%',
           boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
         }} 
       />
 
+      {/* Bottom-right: TARGET for receiving connections from left-side nodes */}
       <Handle 
         type="target" 
         position={Position.Right} 
         id="right-bottom-target"
+        isConnectable={true}
+        isConnectableStart={false}
+        isConnectableEnd={true}
         style={{ 
-          background: '#1976d2', 
-          width: '12px', 
-          height: '12px',
+          background: '#f44336', 
+          width: '14px', 
+          height: '14px',
           border: '2px solid #fff',
           borderRadius: '50%',
-          right: -6,
-          top: '60%',
+          right: -5,
+          top: '70%',
           boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
         }} 
       />

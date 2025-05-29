@@ -30,15 +30,17 @@ export const UINavigationEdge: React.FC<EdgeProps<UINavigationEdgeType['data']>>
       <defs>
         <marker
           id={`arrowhead-${id}`}
-          markerWidth="10"
-          markerHeight="7"
-          refX="9"
-          refY="3.5"
+          markerWidth="8"
+          markerHeight="6"
+          refX="7"
+          refY="3"
           orient="auto"
+          markerUnits="strokeWidth"
         >
           <polygon
-            points="0 0, 10 3.5, 0 7"
-            fill="#b1b1b7"
+            points="0 0, 8 3, 0 6"
+            fill="#1976d2"
+            stroke="#1976d2"
           />
         </marker>
       </defs>
@@ -46,7 +48,7 @@ export const UINavigationEdge: React.FC<EdgeProps<UINavigationEdgeType['data']>>
       <path
         id={id}
         style={{
-          stroke: '#b1b1b7',
+          stroke: '#1976d2',
           strokeWidth: 2,
           fill: 'none',
           ...style,
