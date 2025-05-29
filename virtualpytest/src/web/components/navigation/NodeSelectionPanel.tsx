@@ -39,6 +39,8 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
       label: selectedNode.data.label,
       type: selectedNode.data.type,
       description: selectedNode.data.description || '',
+      depth: selectedNode.data.depth || 0,
+      parent: selectedNode.data.parent || [],
     });
     setIsNodeDialogOpen(true);
   };

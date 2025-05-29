@@ -19,8 +19,8 @@ interface NodeEdgeState {
   setIsEdgeDialogOpen: (open: boolean) => void;
   setIsNewNode: (isNew: boolean) => void;
   setHasUnsavedChanges: (hasChanges: boolean) => void;
-  setAllNodes?: (fn: (nds: UINavigationNode[]) => UINavigationNode[]) => void;
-  setAllEdges?: (fn: (eds: UINavigationEdge[]) => UINavigationEdge[]) => void;
+  setAllNodes: (fn: (nds: UINavigationNode[]) => UINavigationNode[]) => void;
+  setAllEdges: (fn: (eds: UINavigationEdge[]) => UINavigationEdge[]) => void;
 }
 
 export const useNodeEdgeManagement = (state: NodeEdgeState) => {
@@ -43,10 +43,8 @@ export const useNodeEdgeManagement = (state: NodeEdgeState) => {
     // Add to filtered nodes
     state.setNodes((nds) => [...nds, newNode]);
     
-    // Also add to allNodes if available
-    if ('setAllNodes' in state && typeof state.setAllNodes === 'function') {
-      (state.setAllNodes as (fn: (nds: UINavigationNode[]) => UINavigationNode[]) => void)((nds) => [...nds, newNode]);
-    }
+    // Also add to allNodes
+    state.setAllNodes((nds) => [...nds, newNode]);
     
     state.setSelectedNode(newNode);
     state.setNodeForm({
@@ -94,10 +92,8 @@ export const useNodeEdgeManagement = (state: NodeEdgeState) => {
     // Update the filtered nodes
     state.setNodes(updateNodeFunction);
     
-    // Also update allNodes if available
-    if ('setAllNodes' in state && typeof state.setAllNodes === 'function') {
-      (state.setAllNodes as (fn: (nds: UINavigationNode[]) => UINavigationNode[]) => void)(updateNodeFunction);
-    }
+    // Also update allNodes
+    state.setAllNodes(updateNodeFunction);
     
     state.setHasUnsavedChanges(true);
     state.setIsNodeDialogOpen(false);
@@ -114,10 +110,8 @@ export const useNodeEdgeManagement = (state: NodeEdgeState) => {
       
       state.setNodes(deleteNodeFunction);
       
-      // Also remove from allNodes if available
-      if ('setAllNodes' in state && typeof state.setAllNodes === 'function') {
-        (state.setAllNodes as (fn: (nds: UINavigationNode[]) => UINavigationNode[]) => void)(deleteNodeFunction);
-      }
+      // Also remove from allNodes
+      state.setAllNodes(deleteNodeFunction);
       
       state.setSelectedNode(null);
       console.log('[@hook:useNodeEdgeManagement] Canceled new node creation');
@@ -155,10 +149,8 @@ export const useNodeEdgeManagement = (state: NodeEdgeState) => {
     
     state.setEdges(updateEdgeFunction);
     
-    // Also update allEdges if available
-    if ('setAllEdges' in state && typeof state.setAllEdges === 'function') {
-      (state.setAllEdges as (fn: (eds: UINavigationEdge[]) => UINavigationEdge[]) => void)(updateEdgeFunction);
-    }
+    // Also update allEdges
+    state.setAllEdges(updateEdgeFunction);
     
     state.setHasUnsavedChanges(true);
     state.setIsEdgeDialogOpen(false);
@@ -180,13 +172,9 @@ export const useNodeEdgeManagement = (state: NodeEdgeState) => {
       state.setNodes(deleteNodeFunction);
       state.setEdges(deleteEdgeFunction);
       
-      // Update complete arrays if available
-      if ('setAllNodes' in state && typeof state.setAllNodes === 'function') {
-        (state.setAllNodes as (fn: (nds: UINavigationNode[]) => UINavigationNode[]) => void)(deleteNodeFunction);
-      }
-      if ('setAllEdges' in state && typeof state.setAllEdges === 'function') {
-        (state.setAllEdges as (fn: (eds: UINavigationEdge[]) => UINavigationEdge[]) => void)(deleteEdgeFunction);
-      }
+      // Update complete arrays
+      state.setAllNodes(deleteNodeFunction);
+      state.setAllEdges(deleteEdgeFunction);
       
       state.setSelectedNode(null);
       state.setHasUnsavedChanges(true);
@@ -230,13 +218,9 @@ export const useNodeEdgeManagement = (state: NodeEdgeState) => {
       state.setEdges(() => filteredResult.newEdges);
       state.setNodes(() => filteredResult.updatedNodes);
       
-      // Update complete arrays if available
-      if ('setAllEdges' in state && typeof state.setAllEdges === 'function' && 
-          'setAllNodes' in state && typeof state.setAllNodes === 'function') {
-        // We need access to allNodes and allEdges for this operation
-        // This is a limitation of the current design - we need the actual arrays
-        console.log('[@hook:useNodeEdgeManagement] Note: Edge deletion with parent cleanup may not update allNodes/allEdges completely');
-      }
+      // Update complete arrays
+      state.setAllEdges(filteredResult.newEdges);
+      state.setAllNodes(filteredResult.updatedNodes);
       
       state.setSelectedEdge(null);
       state.setHasUnsavedChanges(true);
@@ -246,7 +230,10 @@ export const useNodeEdgeManagement = (state: NodeEdgeState) => {
   // Reset node - clear parent chain and depth, disconnect from hierarchy
   const resetNode = useCallback((nodeId?: string) => {
     const targetNodeId = nodeId || state.selectedNode?.id;
-    if (!targetNodeId) return;
+    if (!targetNodeId) {
+      console.log(`[@hook:useNodeEdgeManagement] resetNode called but no target node ID available`);
+      return;
+    }
     
     console.log(`[@hook:useNodeEdgeManagement] Resetting node: ${targetNodeId}`);
     
@@ -266,30 +253,37 @@ export const useNodeEdgeManagement = (state: NodeEdgeState) => {
       return node;
     });
     
-    // Apply to both filtered nodes and allNodes
-    state.setNodes(updateNodeFunction);
-    
-    // Also update allNodes if it exists in the state
-    if ('setAllNodes' in state && typeof state.setAllNodes === 'function') {
-      (state.setAllNodes as (fn: (nds: UINavigationNode[]) => UINavigationNode[]) => void)(updateNodeFunction);
-    }
-    
     // Remove ALL edges connected to this node (both incoming and outgoing)
     const removeEdgesFunction = (eds: UINavigationEdge[]) => {
+      const beforeCount = eds.length;
       const newEdges = eds.filter((edge) => edge.target !== targetNodeId && edge.source !== targetNodeId);
-      const removedCount = eds.length - newEdges.length;
+      const removedCount = beforeCount - newEdges.length;
       console.log(`[@hook:useNodeEdgeManagement] Removed ${removedCount} total edges (incoming and outgoing) for node ${targetNodeId}`);
       return newEdges;
     };
     
+    // Apply to filtered arrays first
+    console.log(`[@hook:useNodeEdgeManagement] Updating filtered nodes and edges for reset`);
+    state.setNodes(updateNodeFunction);
     state.setEdges(removeEdgesFunction);
     
-    // Also update allEdges if it exists in the state
-    if ('setAllEdges' in state && typeof state.setAllEdges === 'function') {
-      (state.setAllEdges as (fn: (eds: UINavigationEdge[]) => UINavigationEdge[]) => void)(removeEdgesFunction);
+    // Apply to complete arrays (allNodes and allEdges) - these should always exist
+    console.log(`[@hook:useNodeEdgeManagement] Updating allNodes and allEdges for reset`);
+    state.setAllNodes(updateNodeFunction);
+    state.setAllEdges(removeEdgesFunction);
+    
+    // IMPORTANT: Also update the form state if this is the currently selected node
+    if (state.selectedNode && state.selectedNode.id === targetNodeId) {
+      console.log(`[@hook:useNodeEdgeManagement] Updating form state for reset node`);
+      state.setNodeForm({
+        ...state.nodeForm,
+        depth: 0,
+        parent: [],
+      });
     }
     
     state.setHasUnsavedChanges(true);
+    console.log(`[@hook:useNodeEdgeManagement] Reset complete for node ${targetNodeId}`);
   }, [state]);
 
   // Close selection panel

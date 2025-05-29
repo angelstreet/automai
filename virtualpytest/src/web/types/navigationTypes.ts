@@ -53,6 +53,7 @@ export interface NodeForm {
   
   // New form fields for TV menus
   depth?: number;
+  parent?: string[];
   menu_type?: 'main' | 'submenu' | 'leaf';
 }
 

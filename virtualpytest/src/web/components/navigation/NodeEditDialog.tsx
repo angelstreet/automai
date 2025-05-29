@@ -112,7 +112,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
               size="small"
             />
             <TextField
-              label="Parent Chain"
+              label="Parent"
               value={getParentNames(nodeForm.parent || [])}
               fullWidth
               InputProps={{
