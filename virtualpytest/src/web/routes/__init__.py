@@ -14,6 +14,7 @@ from .navigation_routes import navigation_bp
 from .campaign_routes import campaign_bp
 from .testcase_routes import testcase_bp
 from .userinterface_routes import userinterface_bp
+from .devicemodel_routes import devicemodel_bp
 
 def register_routes(app):
     """Register all route blueprints with the Flask app"""
@@ -26,4 +27,5 @@ def register_routes(app):
     app.register_blueprint(navigation_bp)
     app.register_blueprint(campaign_bp)
     app.register_blueprint(testcase_bp)
-    app.register_blueprint(userinterface_bp) 
+    app.register_blueprint(userinterface_bp)
+    app.register_blueprint(devicemodel_bp) 

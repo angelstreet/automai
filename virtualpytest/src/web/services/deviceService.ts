@@ -1,53 +1,39 @@
 /**
- * Device Model API Service
+ * Device API Service
  * 
- * This service handles all API calls related to device model management.
+ * This service handles all API calls related to device management.
  */
 
-export interface Model {
+export interface Device {
   id: string;
   name: string;
-  types: string[];
-  controllers: {
-    remote: string;
-    av: string;
-    network: string;
-    power: string;
-  };
-  version: string;
   description: string;
+  model: string;
   created_at: string;
   updated_at: string;
 }
 
-export interface ModelCreatePayload {
+export interface DeviceCreatePayload {
   name: string;
-  types: string[];
-  controllers: {
-    remote: string;
-    av: string;
-    network: string;
-    power: string;
-  };
-  version?: string;
   description?: string;
+  model?: string;
 }
 
 export interface ApiResponse<T> {
   status: string;
-  model?: T;
+  device?: T;
   error?: string;
 }
 
 const API_BASE_URL = 'http://localhost:5009/api';
 
-class DeviceModelApiService {
+class DeviceApiService {
   /**
-   * Get all device models
+   * Get all devices
    */
-  async getAllDeviceModels(): Promise<Model[]> {
+  async getAllDevices(): Promise<Device[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/devicemodels`, {
+      const response = await fetch(`${API_BASE_URL}/devices`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -61,17 +47,17 @@ class DeviceModelApiService {
       const data = await response.json();
       return data;
     } catch (error) {
-      console.error('Error fetching device models:', error);
+      console.error('Error fetching devices:', error);
       throw error;
     }
   }
 
   /**
-   * Get a specific device model by ID
+   * Get a specific device by ID
    */
-  async getDeviceModel(id: string): Promise<Model> {
+  async getDevice(id: string): Promise<Device> {
     try {
-      const response = await fetch(`${API_BASE_URL}/devicemodels/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/devices/${id}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -85,17 +71,17 @@ class DeviceModelApiService {
       const data = await response.json();
       return data;
     } catch (error) {
-      console.error(`Error fetching device model ${id}:`, error);
+      console.error(`Error fetching device ${id}:`, error);
       throw error;
     }
   }
 
   /**
-   * Create a new device model
+   * Create a new device
    */
-  async createDeviceModel(payload: ModelCreatePayload): Promise<Model> {
+  async createDevice(payload: DeviceCreatePayload): Promise<Device> {
     try {
-      const response = await fetch(`${API_BASE_URL}/devicemodels`, {
+      const response = await fetch(`${API_BASE_URL}/devices`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -108,24 +94,24 @@ class DeviceModelApiService {
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
-      const data: ApiResponse<Model> = await response.json();
-      if (data.status === 'success' && data.model) {
-        return data.model;
+      const data: ApiResponse<Device> = await response.json();
+      if (data.status === 'success' && data.device) {
+        return data.device;
       } else {
-        throw new Error(data.error || 'Failed to create device model');
+        throw new Error(data.error || 'Failed to create device');
       }
     } catch (error) {
-      console.error('Error creating device model:', error);
+      console.error('Error creating device:', error);
       throw error;
     }
   }
 
   /**
-   * Update an existing device model
+   * Update an existing device
    */
-  async updateDeviceModel(id: string, payload: ModelCreatePayload): Promise<Model> {
+  async updateDevice(id: string, payload: DeviceCreatePayload): Promise<Device> {
     try {
-      const response = await fetch(`${API_BASE_URL}/devicemodels/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/devices/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -138,24 +124,24 @@ class DeviceModelApiService {
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
-      const data: ApiResponse<Model> = await response.json();
-      if (data.status === 'success' && data.model) {
-        return data.model;
+      const data: ApiResponse<Device> = await response.json();
+      if (data.status === 'success' && data.device) {
+        return data.device;
       } else {
-        throw new Error(data.error || 'Failed to update device model');
+        throw new Error(data.error || 'Failed to update device');
       }
     } catch (error) {
-      console.error(`Error updating device model ${id}:`, error);
+      console.error(`Error updating device ${id}:`, error);
       throw error;
     }
   }
 
   /**
-   * Delete a device model
+   * Delete a device
    */
-  async deleteDeviceModel(id: string): Promise<void> {
+  async deleteDevice(id: string): Promise<void> {
     try {
-      const response = await fetch(`${API_BASE_URL}/devicemodels/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/devices/${id}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -169,14 +155,14 @@ class DeviceModelApiService {
 
       const data = await response.json();
       if (data.status !== 'success') {
-        throw new Error(data.error || 'Failed to delete device model');
+        throw new Error(data.error || 'Failed to delete device');
       }
     } catch (error) {
-      console.error(`Error deleting device model ${id}:`, error);
+      console.error(`Error deleting device ${id}:`, error);
       throw error;
     }
   }
 }
 
 // Export a singleton instance
-export const deviceModelApi = new DeviceModelApiService(); 
+export const deviceApi = new DeviceApiService(); 

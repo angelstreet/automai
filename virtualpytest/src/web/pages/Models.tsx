@@ -37,8 +37,7 @@ import {
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 import { CreateModelDialog } from '../components/model';
-import { deviceModelService } from '../services/deviceModelService';
-import { Model } from '../types/model.types';
+import { deviceModelApi, Model } from '../services/deviceModelService';
 
 const modelTypes = [
   'Android Phone',
@@ -97,12 +96,8 @@ const Models: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await deviceModelService.getAll();
-      if (response.success && response.data) {
-        setModels(response.data);
-      } else {
-        setError(response.error || 'Failed to load device models');
-      }
+      const models = await deviceModelApi.getAllDeviceModels();
+      setModels(models);
     } catch (err) {
       console.error('[@component:Models] Error loading device models:', err);
       setError(err instanceof Error ? err.message : 'Failed to load device models');
@@ -149,7 +144,7 @@ const Models: React.FC = () => {
       setSubmitting(true);
       setError(null);
 
-      const response = await deviceModelService.update(editingId, {
+      const updatedModel = await deviceModelApi.updateDeviceModel(editingId, {
         name: editForm.name.trim(),
         types: editForm.types,
         controllers: editForm.controllers,
@@ -157,15 +152,11 @@ const Models: React.FC = () => {
         description: editForm.description.trim(),
       });
 
-      if (response.success && response.data) {
-        // Update local state
-        setModels(models.map(m => m.id === editingId ? response.data! : m));
-        setEditingId(null);
-        setSuccessMessage('Device model updated successfully');
-        console.log('[@component:Models] Successfully updated device model:', response.data.name);
-      } else {
-        setError(response.error || 'Failed to update device model');
-      }
+      // Update local state
+      setModels(models.map(m => m.id === editingId ? updatedModel : m));
+      setEditingId(null);
+      setSuccessMessage('Device model updated successfully');
+      console.log('[@component:Models] Successfully updated device model:', updatedModel.name);
     } catch (err) {
       console.error('[@component:Models] Error updating device model:', err);
       setError(err instanceof Error ? err.message : 'Failed to update device model');
@@ -198,16 +189,12 @@ const Models: React.FC = () => {
 
     try {
       setError(null);
-      const response = await deviceModelService.delete(id);
+      await deviceModelApi.deleteDeviceModel(id);
 
-      if (response.success) {
-        // Update local state
-        setModels(models.filter(m => m.id !== id));
-        setSuccessMessage('Device model deleted successfully');
-        console.log('[@component:Models] Successfully deleted device model');
-      } else {
-        setError(response.error || 'Failed to delete device model');
-      }
+      // Update local state
+      setModels(models.filter(m => m.id !== id));
+      setSuccessMessage('Device model deleted successfully');
+      console.log('[@component:Models] Successfully deleted device model');
     } catch (err) {
       console.error('[@component:Models] Error deleting device model:', err);
       setError(err instanceof Error ? err.message : 'Failed to delete device model');
@@ -234,7 +221,7 @@ const Models: React.FC = () => {
       setSubmitting(true);
       setError(null);
 
-      const response = await deviceModelService.create({
+      const createdModel = await deviceModelApi.createDeviceModel({
         name: newModelData.name.trim(),
         types: newModelData.types,
         controllers: newModelData.controllers,
@@ -242,15 +229,11 @@ const Models: React.FC = () => {
         description: newModelData.description.trim(),
       });
 
-      if (response.success && response.data) {
-        // Update local state
-        setModels([...models, response.data]);
-        setOpenDialog(false);
-        setSuccessMessage('Device model created successfully');
-        console.log('[@component:Models] Successfully created device model:', response.data.name);
-      } else {
-        setError(response.error || 'Failed to create device model');
-      }
+      // Update local state
+      setModels([...models, createdModel]);
+      setOpenDialog(false);
+      setSuccessMessage('Device model created successfully');
+      console.log('[@component:Models] Successfully created device model:', createdModel.name);
     } catch (err) {
       console.error('[@component:Models] Error creating device model:', err);
       setError(err instanceof Error ? err.message : 'Failed to create device model');

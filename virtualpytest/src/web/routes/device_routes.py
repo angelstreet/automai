@@ -8,33 +8,32 @@ This module contains the device management API endpoints for:
 """
 
 from flask import Blueprint, request, jsonify
-
-# Import utility functions
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from utils.supabase_utils import (
-    get_all_devices, get_device, save_device, delete_device,
-    get_all_controllers, get_controller, save_controller, delete_controller,
-    get_all_environment_profiles, get_environment_profile, save_environment_profile, delete_environment_profile
+# Add parent directory to path for imports
+src_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, src_dir)  # Insert at beginning to prioritize over local utils
+
+# Import from web utils directory (go up one level from routes to web, then into utils)
+web_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+web_utils_path = os.path.join(web_dir, 'utils')
+sys.path.insert(0, web_utils_path)
+from device_utils import (
+    get_all_devices, get_device, create_device, 
+    update_device, delete_device, check_device_name_exists
 )
+
 from .utils import check_supabase, get_team_id
 
 # Create blueprint
-device_bp = Blueprint('device', __name__)
-
-# Helper functions
-def get_user_id():
-    """Get user_id from request headers or use default for demo"""
-    from app import DEFAULT_USER_ID
-    return request.headers.get('X-User-ID', DEFAULT_USER_ID)
+device_bp = Blueprint('device', __name__, url_prefix='/api')
 
 # =====================================================
-# DEVICE MANAGEMENT ENDPOINTS
+# DEVICE ENDPOINTS
 # =====================================================
 
-@device_bp.route('/api/devices', methods=['GET', 'POST'])
+@device_bp.route('/devices', methods=['GET', 'POST'])
 def devices():
     """Device management endpoint"""
     error = check_supabase()
@@ -42,20 +41,33 @@ def devices():
         return error
         
     team_id = get_team_id()
-    user_id = get_user_id()
     
     try:
         if request.method == 'GET':
             devices = get_all_devices(team_id)
             return jsonify(devices)
         elif request.method == 'POST':
-            device = request.json
-            save_device(device, team_id, user_id)
-            return jsonify({'status': 'success', 'device_id': device.get('id')})
+            device_data = request.json
+            
+            # Validate required fields
+            if not device_data.get('name'):
+                return jsonify({'error': 'Name is required'}), 400
+            
+            # Check for duplicate names
+            if check_device_name_exists(device_data['name'], team_id):
+                return jsonify({'error': 'A device with this name already exists'}), 400
+            
+            # Create the device
+            created_device = create_device(device_data, team_id)
+            if created_device:
+                return jsonify({'status': 'success', 'device': created_device}), 201
+            else:
+                return jsonify({'error': 'Failed to create device'}), 500
+                
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@device_bp.route('/api/devices/<device_id>', methods=['GET', 'PUT', 'DELETE'])
+@device_bp.route('/devices/<device_id>', methods=['GET', 'PUT', 'DELETE'])
 def device(device_id):
     """Individual device management endpoint"""
     error = check_supabase()
@@ -63,128 +75,39 @@ def device(device_id):
         return error
         
     team_id = get_team_id()
-    user_id = get_user_id()
     
     try:
         if request.method == 'GET':
             device = get_device(device_id, team_id)
-            return jsonify(device if device else {})
+            if device:
+                return jsonify(device)
+            else:
+                return jsonify({'error': 'Device not found'}), 404
+                
         elif request.method == 'PUT':
-            device = request.json
-            device['id'] = device_id
-            save_device(device, team_id, user_id)
-            return jsonify({'status': 'success'})
+            device_data = request.json
+            
+            # Validate required fields
+            if not device_data.get('name'):
+                return jsonify({'error': 'Name is required'}), 400
+            
+            # Check for duplicate names (excluding current device)
+            if check_device_name_exists(device_data['name'], team_id, device_id):
+                return jsonify({'error': 'A device with this name already exists'}), 400
+            
+            # Update the device
+            updated_device = update_device(device_id, device_data, team_id)
+            if updated_device:
+                return jsonify({'status': 'success', 'device': updated_device})
+            else:
+                return jsonify({'error': 'Device not found or failed to update'}), 404
+                
         elif request.method == 'DELETE':
             success = delete_device(device_id, team_id)
             if success:
                 return jsonify({'status': 'success'})
             else:
-                return jsonify({'error': 'Device not found'}), 404
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-# =====================================================
-# CONTROLLER MANAGEMENT ENDPOINTS
-# =====================================================
-
-@device_bp.route('/api/controllers', methods=['GET', 'POST'])
-def controllers():
-    """Controller management endpoint"""
-    error = check_supabase()
-    if error:
-        return error
-        
-    team_id = get_team_id()
-    user_id = get_user_id()
-    
-    try:
-        if request.method == 'GET':
-            controllers = get_all_controllers(team_id)
-            return jsonify(controllers)
-        elif request.method == 'POST':
-            controller = request.json
-            save_controller(controller, team_id, user_id)
-            return jsonify({'status': 'success', 'controller_id': controller.get('id')})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@device_bp.route('/api/controllers/<controller_id>', methods=['GET', 'PUT', 'DELETE'])
-def controller(controller_id):
-    """Individual controller management endpoint"""
-    error = check_supabase()
-    if error:
-        return error
-        
-    team_id = get_team_id()
-    user_id = get_user_id()
-    
-    try:
-        if request.method == 'GET':
-            controller = get_controller(controller_id, team_id)
-            return jsonify(controller if controller else {})
-        elif request.method == 'PUT':
-            controller = request.json
-            controller['id'] = controller_id
-            save_controller(controller, team_id, user_id)
-            return jsonify({'status': 'success'})
-        elif request.method == 'DELETE':
-            success = delete_controller(controller_id, team_id)
-            if success:
-                return jsonify({'status': 'success'})
-            else:
-                return jsonify({'error': 'Controller not found'}), 404
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-# =====================================================
-# ENVIRONMENT PROFILES ENDPOINTS
-# =====================================================
-
-@device_bp.route('/api/environment-profiles', methods=['GET', 'POST'])
-def environment_profiles():
-    """Environment profile management endpoint"""
-    error = check_supabase()
-    if error:
-        return error
-        
-    team_id = get_team_id()
-    user_id = get_user_id()
-    
-    try:
-        if request.method == 'GET':
-            profiles = get_all_environment_profiles(team_id)
-            return jsonify(profiles)
-        elif request.method == 'POST':
-            profile = request.json
-            save_environment_profile(profile, team_id, user_id)
-            return jsonify({'status': 'success', 'profile_id': profile.get('id')})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@device_bp.route('/api/environment-profiles/<profile_id>', methods=['GET', 'PUT', 'DELETE'])
-def environment_profile(profile_id):
-    """Individual environment profile management endpoint"""
-    error = check_supabase()
-    if error:
-        return error
-        
-    team_id = get_team_id()
-    user_id = get_user_id()
-    
-    try:
-        if request.method == 'GET':
-            profile = get_environment_profile(profile_id, team_id)
-            return jsonify(profile if profile else {})
-        elif request.method == 'PUT':
-            profile = request.json
-            profile['id'] = profile_id
-            save_environment_profile(profile, team_id, user_id)
-            return jsonify({'status': 'success'})
-        elif request.method == 'DELETE':
-            success = delete_environment_profile(profile_id, team_id)
-            if success:
-                return jsonify({'status': 'success'})
-            else:
-                return jsonify({'error': 'Environment profile not found'}), 404
+                return jsonify({'error': 'Device not found or failed to delete'}), 404
+                
     except Exception as e:
         return jsonify({'error': str(e)}), 500 
