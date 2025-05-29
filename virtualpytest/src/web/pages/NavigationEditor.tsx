@@ -454,7 +454,7 @@ const NavigationEditorContent: React.FC = () => {
                     <Box>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                         <Typography variant="h6" sx={{ margin: 0, fontSize: '1rem' }}>
-                          Screen: {selectedNode.data.label}
+                          {selectedNode.data.label}
                         </Typography>
                         <IconButton
                           size="small"

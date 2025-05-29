@@ -24,19 +24,37 @@ export const UINavigationEdge: React.FC<EdgeProps<UINavigationEdgeType['data']>>
     targetPosition,
   });
 
-  // Determine edge color based on edge type
-  const getEdgeColor = (edgeType?: string) => {
-    switch (edgeType) {
-      case 'top': return '#1976d2';     // Blue for top connections
-      case 'bottom': return '#f44336';  // Red for bottom connections
-      default: return '#1976d2';        // Default blue
-    }
-  };
+  // Debug logging
+  console.log(`[@component:UINavigationEdge] Edge ${id} data:`, data);
+  console.log(`[@component:UINavigationEdge] Edge ${id} edgeType:`, data?.edgeType);
 
-  const edgeColor = getEdgeColor(data?.edgeType);
+  // Determine edge color based on edge type - simplified logic
+  let edgeColor = '#666666'; // Default gray
+  
+  if (data?.edgeType === 'top') {
+    edgeColor = '#1976d2'; // Blue for top connections
+    console.log(`[@component:UINavigationEdge] Edge ${id} set to BLUE (top connection)`);
+  } else if (data?.edgeType === 'bottom') {
+    edgeColor = '#f44336'; // Red for bottom connections  
+    console.log(`[@component:UINavigationEdge] Edge ${id} set to RED (bottom connection)`);
+  } else {
+    console.log(`[@component:UINavigationEdge] Edge ${id} set to GRAY (default) - edgeType was:`, data?.edgeType);
+  }
+
+  console.log(`[@component:UINavigationEdge] Edge ${id} final color:`, edgeColor);
 
   return (
     <>
+      {/* Force stroke color with higher specificity */}
+      <style>
+        {`
+          .custom-edge-${id} {
+            stroke: ${edgeColor} !important;
+            stroke-width: 2px !important;
+          }
+        `}
+      </style>
+      
       {/* Define arrow marker */}
       <defs>
         <marker
@@ -59,14 +77,23 @@ export const UINavigationEdge: React.FC<EdgeProps<UINavigationEdgeType['data']>>
       <path
         id={id}
         style={{
-          stroke: edgeColor,
-          strokeWidth: 2,
           fill: 'none',
           ...style,
         }}
-        className="react-flow__edge-path"
+        className={`react-flow__edge-path custom-edge-${id}`}
         d={edgePath}
         markerEnd={`url(#arrowhead-${id})`}
+      />
+      
+      {/* Invisible wider stroke for easier selection */}
+      <path
+        style={{
+          stroke: 'transparent',
+          strokeWidth: 20,
+          fill: 'none',
+          cursor: 'pointer',
+        }}
+        d={edgePath}
       />
     </>
   );

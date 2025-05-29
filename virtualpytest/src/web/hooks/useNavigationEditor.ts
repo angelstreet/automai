@@ -194,6 +194,14 @@ export const useNavigationEditor = () => {
     const isBottomConnection = params.sourceHandle?.includes('bottom') || params.targetHandle?.includes('bottom');
     const edgeType = isTopConnection ? 'top' : isBottomConnection ? 'bottom' : 'default';
     
+    console.log('[@component:NavigationEditor] Handle analysis:', {
+      sourceHandle: params.sourceHandle,
+      targetHandle: params.targetHandle,
+      isTopConnection,
+      isBottomConnection,
+      finalEdgeType: edgeType
+    });
+    
     const newEdge: UINavigationEdge = {
       id: `edge-${Date.now()}`,
       source: params.source,
