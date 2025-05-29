@@ -11,9 +11,10 @@ export interface UINavigationNode extends Node {
     tree_id?: string; // For menu nodes, references the associated tree
     tree_name?: string; // For menu nodes, the name of the associated tree
     
-    // New properties for TV menu hierarchical navigation
-    depth?: number; // 0 = root level, 1 = first submenu, etc.
-    parent_id?: string; // Parent node ID for hierarchical structure
+    // NEW: Simple parent chain approach
+    parent?: string[];    // ["home", "tvguide"] - array of parent node IDs
+    depth?: number;       // parent?.length || 0
+    
     is_loaded?: boolean; // Whether this node's children have been loaded
     has_children?: boolean; // Whether this node has child nodes
     child_count?: number; // Number of direct children
@@ -52,7 +53,6 @@ export interface NodeForm {
   
   // New form fields for TV menus
   depth?: number;
-  parent_id?: string;
   menu_type?: 'main' | 'submenu' | 'leaf';
 }
 

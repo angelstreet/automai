@@ -265,6 +265,29 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({
         >
           MENU
         </div>
+        {/* NEW: Display parent chain and depth */}
+        {(data.parent && data.parent.length > 0) && (
+          <div
+            style={{
+              textAlign: 'center',
+              fontSize: '8px',
+              color: '#ff8f00',
+              marginTop: '2px',
+            }}
+          >
+            Parent: {data.parent.join(' → ')}
+          </div>
+        )}
+        <div
+          style={{
+            textAlign: 'center',
+            fontSize: '8px',
+            color: '#ff8f00',
+            marginTop: '1px',
+          }}
+        >
+          Depth: {data.depth || 0}
+        </div>
       </div>
 
       {/* Screenshot area */}

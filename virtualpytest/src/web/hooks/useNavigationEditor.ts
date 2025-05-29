@@ -185,33 +185,37 @@ export const useNavigationEditor = () => {
   // Override onConnect to save to history and track changes
   const onConnectHistory = useCallback((params: Connection) => {
     if (!params.source || !params.target) return;
-    console.log('[@component:NavigationEditor] Attempting to connect nodes:', params.source, 'to', params.target);
-    console.log('[@component:NavigationEditor] Connection details:', {
-      source: params.source,
-      target: params.target,
-      sourceHandle: params.sourceHandle,
-      targetHandle: params.targetHandle
-    });
-    
-    // Get source and target node data
-    const sourceNode = nodes.find(node => node.id === params.source);
-    const targetNode = nodes.find(node => node.id === params.target);
-    const fromNodeName = sourceNode?.data?.label || params.source;
-    const toNodeName = targetNode?.data?.label || params.target;
+
+    const sourceNode = nodes.find((n) => n.id === params.source);
+    const targetNode = nodes.find((n) => n.id === params.target);
     
     if (!sourceNode || !targetNode) {
-      console.error('[@component:NavigationEditor] Could not find source or target node');
+      console.error('[@component:NavigationEditor] Source or target node not found for connection');
       return;
     }
     
-    // Validate connection based on handle types and node types
-    const isLeftRightConnection = params.sourceHandle?.includes('left') || params.sourceHandle?.includes('right') || 
-                                  params.targetHandle?.includes('left') || params.targetHandle?.includes('right');
-    const isTopBottomConnection = params.sourceHandle?.includes('top') || params.sourceHandle?.includes('bottom') || 
-                                  params.targetHandle?.includes('top') || params.targetHandle?.includes('bottom');
-    const isMenuConnection = params.sourceHandle?.includes('menu') || params.targetHandle?.includes('menu');
+    // Log handle information for debugging
+    console.log('[@component:NavigationEditor] Connection attempt:', {
+      source: sourceNode.data.label,
+      target: targetNode.data.label,
+      sourceHandle: params.sourceHandle,
+      targetHandle: params.targetHandle,
+      sourceType: sourceNode.data.type,
+      targetType: targetNode.data.type
+    });
     
-    // Connection validation rules
+    // Analyze handle types
+    const isLeftRightConnection = (
+      (params.sourceHandle?.includes('left') || params.sourceHandle?.includes('right')) &&
+      (params.targetHandle?.includes('left') || params.targetHandle?.includes('right'))
+    );
+    
+    const isTopBottomConnection = (
+      (params.sourceHandle?.includes('top') || params.sourceHandle?.includes('bottom')) &&
+      (params.targetHandle?.includes('top') || params.targetHandle?.includes('bottom'))
+    );
+    
+    const isMenuConnection = sourceNode.data.type === 'menu' || targetNode.data.type === 'menu';
     const hasMenuNode = sourceNode.data.type === 'menu' || targetNode.data.type === 'menu';
     
     if (hasMenuNode) {
@@ -250,31 +254,61 @@ export const useNavigationEditor = () => {
       sourceNodeType: sourceNode.data.type,
       targetNodeType: targetNode.data.type
     });
-    
+
+    // NEW: Update parent chain and depth when connecting to a menu node
+    if (sourceNode.data.type === 'menu') {
+      // Update target node's parent chain
+      const newParent = [
+        ...(sourceNode.data.parent || []),
+        sourceNode.id
+      ];
+      
+      setNodes((nds) => nds.map((node) => {
+        if (node.id === targetNode.id) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              parent: newParent,
+              depth: newParent.length
+            }
+          };
+        }
+        return node;
+      }));
+      
+      console.log(`[@component:NavigationEditor] Updated target node ${targetNode.data.label} parent chain:`, newParent);
+    }
+
+    const edgeId = `${params.source}-${params.target}`;
     const newEdge: UINavigationEdge = {
-      id: `edge-${Date.now()}`,
+      id: edgeId,
       source: params.source,
       target: params.target,
       sourceHandle: params.sourceHandle,
       targetHandle: params.targetHandle,
       type: 'uiNavigation',
-      data: { 
-        action: isMenuConnection || isTopBottomConnection ? 'ENTER_MENU' : 'NAVIGATE',  // Different default actions
-        edgeType: edgeType,  // Add edge type for coloring
-        from: fromNodeName,  // Source node name
-        to: toNodeName       // Target node name
+      data: {
+        edgeType: edgeType,
+        description: `Connection from ${sourceNode.data.label} to ${targetNode.data.label}`,
+        from: sourceNode.data.label,
+        to: targetNode.data.label,
       },
     };
+
+    // Add edge using history-aware setter
+    setEdges((eds) => addEdge(newEdge, eds));
     
-    console.log('[@component:NavigationEditor] Created edge:', newEdge);
+    // Mark as having unsaved changes
+    setHasUnsavedChanges(true);
     
-    setEdges((eds) => {
-      const updatedEdges = addEdge(newEdge, eds);
-      saveToHistory();
-      setHasUnsavedChanges(true);
-      return updatedEdges;
+    console.log('[@component:NavigationEditor] Connection created successfully:', {
+      edgeId,
+      edgeType,
+      sourceLabel: sourceNode.data.label,
+      targetLabel: targetNode.data.label
     });
-  }, [saveToHistory, setEdges, nodes]);
+  }, [nodes, setNodes, setEdges]);
 
   // Undo function
   const undo = useCallback(() => {
@@ -673,17 +707,21 @@ export const useNavigationEditor = () => {
 
   // Add new node
   const addNewNode = useCallback(() => {
+    const nodeId = `node-${Date.now()}`;
     const newNode: UINavigationNode = {
-      id: `node-${Date.now()}`,
-      type: 'uiScreen', // Default to uiScreen, will be changed to uiMenu if type is set to menu
-      position: { x: Math.random() * 400, y: Math.random() * 400 },
+      id: nodeId,
+      type: 'uiScreen',
+      position: { x: Math.random() * 300 + 100, y: Math.random() * 300 + 100 },
       data: {
         label: 'New Node',
         type: 'screen',
         description: '',
-        is_root: false, // Default to false, will be set appropriately when saved
+        // Initialize with empty parent array and depth 0
+        parent: [],
+        depth: 0,
       },
     };
+
     setNodes((nds) => [...nds, newNode]);
     setSelectedNode(newNode);
     setNodeForm({
@@ -693,6 +731,8 @@ export const useNavigationEditor = () => {
     });
     setIsNodeDialogOpen(true);
     setIsNewNode(true);
+    setHasUnsavedChanges(true);
+    console.log('[@component:NavigationEditor] Added new node:', newNode.data.label);
   }, [setNodes]);
 
   // Save node changes with change tracking
@@ -824,22 +864,10 @@ export const useNavigationEditor = () => {
 
   // Helper function to check if a node is descendant of another
   const isNodeDescendantOf = useCallback((node: UINavigationNode, ancestorId: string, nodes: UINavigationNode[]): boolean => {
-    let currentNode = node;
-    const visited = new Set<string>(); // Prevent infinite loops
+    if (!node.data.parent || node.data.parent.length === 0) return false;
     
-    while (currentNode.data.parent_id && !visited.has(currentNode.id)) {
-      visited.add(currentNode.id);
-      
-      if (currentNode.data.parent_id === ancestorId) {
-        return true;
-      }
-      
-      const parentNode = nodes.find(n => n.id === currentNode.data.parent_id);
-      if (!parentNode) break;
-      currentNode = parentNode;
-    }
-    
-    return false;
+    // Check if ancestorId is in the parent chain
+    return node.data.parent.includes(ancestorId);
   }, []);
 
   // Get filtered nodes based on focus node and depth
@@ -850,7 +878,6 @@ export const useNavigationEditor = () => {
       // No focus node selected - show root nodes and their children up to maxDisplayDepth
       const filtered = allNodes.filter(node => {
         const nodeDepth = node.data.depth || 0;
-        const isRoot = node.data.is_root || nodeDepth === 0;
         return nodeDepth <= maxDisplayDepth;
       });
       console.log(`[@hook:useNavigationEditor] No focus node - showing ${filtered.length} nodes up to depth ${maxDisplayDepth}`);
@@ -877,15 +904,7 @@ export const useNavigationEditor = () => {
         return true;
       }
       
-      // Check if this node is a direct child of the focus node
-      if (node.data.parent_id === focusNodeId) {
-        const relativeDepth = nodeDepth - focusDepth;
-        const shouldInclude = relativeDepth <= maxDisplayDepth && relativeDepth > 0;
-        console.log(`[@hook:useNavigationEditor] Direct child ${node.data.label} - depth: ${nodeDepth}, relative: ${relativeDepth}, include: ${shouldInclude}`);
-        return shouldInclude;
-      }
-      
-      // Check if this node is a deeper descendant
+      // Check if this node is a descendant of the focus node
       const isDescendant = isNodeDescendantOf(node, focusNodeId, allNodes);
       if (isDescendant) {
         const relativeDepth = nodeDepth - focusDepth;
@@ -997,7 +1016,7 @@ export const useNavigationEditor = () => {
       const nodeDepth = node.data.depth || 0;
       // Show current menu and its immediate children
       return nodeDepth <= nextDepth && 
-             (nodeDepth <= currentDepth || node.data.parent_id === menuNode.id);
+             (nodeDepth <= currentDepth || (node.data.parent && node.data.parent.includes(menuNode.id)));
     });
     
     setNodes(relevantNodes);
@@ -1007,7 +1026,8 @@ export const useNavigationEditor = () => {
   useEffect(() => {
     console.log(`[@hook:useNavigationEditor] All nodes updated - ${allNodes.length} total nodes:`);
     allNodes.forEach(node => {
-      console.log(`[@hook:useNavigationEditor] Node: ${node.data.label} (id: ${node.id}, depth: ${node.data.depth || 0}, parent: ${node.data.parent_id || 'none'}, type: ${node.data.type})`);
+      const parentChain = node.data.parent ? node.data.parent.join(' > ') : 'none';
+      console.log(`[@hook:useNavigationEditor] Node: ${node.data.label} (id: ${node.id}, depth: ${node.data.depth || 0}, parent: ${parentChain}, type: ${node.data.type})`);
     });
     
     const focusableNodes = allNodes

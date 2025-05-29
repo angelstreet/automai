@@ -265,6 +265,29 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         >
           {data.type}
         </div>
+        {/* NEW: Display parent chain and depth */}
+        {(data.parent && data.parent.length > 0) && (
+          <div
+            style={{
+              textAlign: 'center',
+              fontSize: '8px',
+              color: '#999',
+              marginTop: '2px',
+            }}
+          >
+            Parent: {data.parent.join(' → ')}
+          </div>
+        )}
+        <div
+          style={{
+            textAlign: 'center',
+            fontSize: '8px',
+            color: '#999',
+            marginTop: '1px',
+          }}
+        >
+          Depth: {data.depth || 0}
+        </div>
       </div>
 
       {/* Screenshot area */}
