@@ -63,6 +63,15 @@ const establishConnectionRules = (
     console.log('[@hook:establishConnectionRules] Vertical connection - creating parent-child relationship');
     console.log('[@hook:establishConnectionRules] Source (orphan) becomes child of target');
     
+    // Only modify source if it doesn't already have a parent
+    if (sourceNode.data.parent && sourceNode.data.parent.length > 0) {
+      console.log('[@hook:establishConnectionRules] Source node already has parent, skipping modification');
+      return {
+        isAllowed: true,
+        edgeType: 'vertical'
+      };
+    }
+    
     // Source becomes child of target (orphan becomes child of existing node)
     const newParentChain = [
       ...(targetNode.data.parent || []),
