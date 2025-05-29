@@ -150,7 +150,28 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
           </Box>
           
           {/* Section 2: Node Controls (TreeFilterControls) */}
-          <Box sx={{ display: 'flex', justifyContent: 'center', minWidth: 0 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            minWidth: 0,
+            width: '100%',
+            '& > *': {
+              gap: 1,
+              '& .MuiFormControl-root': {
+                minWidth: '70px !important',
+                marginRight: '8px',
+              },
+              '& .MuiButton-root': {
+                fontSize: '0.75rem',
+                minWidth: 'auto',
+                padding: '4px 8px',
+              },
+              '& .MuiTypography-root': {
+                fontSize: '0.75rem',
+                whiteSpace: 'nowrap',
+              }
+            }
+          }}>
             <TreeFilterControls
               focusNodeId={focusNodeId}
               availableFocusNodes={availableFocusNodes}
