@@ -75,6 +75,11 @@ const edgeTypes = {
 };
 
 const NavigationEditorContent: React.FC = () => {
+  // Add new state for remote control functionality
+  const [isRemotePanelOpen, setIsRemotePanelOpen] = useState(false);
+  const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
+  const [isControlActive, setIsControlActive] = useState(false);
+
   const {
     // State
     nodes,
@@ -188,6 +193,19 @@ const NavigationEditorContent: React.FC = () => {
     }
   }, [currentTreeId, isLoadingInterface]);
 
+  // Handle remote control actions
+  const handleToggleRemotePanel = () => {
+    setIsRemotePanelOpen(!isRemotePanelOpen);
+  };
+
+  const handleDeviceSelect = (device: string | null) => {
+    setSelectedDevice(device);
+  };
+
+  const handleTakeControl = () => {
+    setIsControlActive(!isControlActive);
+  };
+
   return (
     <Box sx={{ 
       width: '100%',
@@ -224,148 +242,215 @@ const NavigationEditorContent: React.FC = () => {
         onFocusNodeChange={setFocusNode}
         onDepthChange={setDisplayDepth}
         onResetFocus={resetFocus}
+        // Remote control props
+        isRemotePanelOpen={isRemotePanelOpen}
+        selectedDevice={selectedDevice}
+        isControlActive={isControlActive}
+        onToggleRemotePanel={handleToggleRemotePanel}
+        onDeviceSelect={handleDeviceSelect}
+        onTakeControl={handleTakeControl}
       />
 
-      {/* Main Editor Area */}
+      {/* Main Container with side-by-side layout */}
       <Box sx={{ 
         flex: 1, 
-        position: 'relative', 
+        display: 'flex',
         minHeight: '500px',
         overflow: 'hidden'
       }}>
-        {isLoading ? (
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
-            height: '100%' 
-          }}>
-            <CircularProgress />
-            <Typography variant="h6" sx={{ ml: 2 }}>
-              {isLoadingInterface ? 'Loading navigation tree...' : 'Saving navigation tree...'}
-            </Typography>
-          </Box>
-        ) : error ? (
-          <Container maxWidth="md" sx={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
-            height: '100%',
-            textAlign: 'center'
-          }}>
-            <ErrorIcon color="error" sx={{ fontSize: 64, mb: 2 }} />
-            <Typography variant="h5" color="error" gutterBottom>
-              Error Loading Navigation Tree
-            </Typography>
-            <Typography variant="body1" paragraph>
-              {error}
-            </Typography>
-            <Button 
-              variant="contained" 
-              onClick={navigateToParent} 
-              startIcon={<ArrowBackIcon />}
-            >
-              Return to Navigation Trees
-            </Button>
-          </Container>
-        ) : (
-          <>
-            <div 
-              ref={reactFlowWrapper} 
-              style={{ 
-                width: '100%',
-                height: '100%',
-                minHeight: '500px'
-              }}
-            >
-              <ReactFlow
-                nodes={nodes}
-                edges={edges}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                onConnect={onConnect}
-                onNodeClick={onNodeClick}
-                onEdgeClick={onEdgeClick}
-                onNodeDoubleClick={onNodeDoubleClick}
-                onPaneClick={onPaneClick}
-                onInit={(instance) => {
-                  if (instance && !reactFlowInstance) {
-                    console.log('[@component:NavigationEditor] ReactFlow instance initialized');
-                    setReactFlowInstance(instance);
-                  }
-                }}
-                nodeTypes={nodeTypes}
-                edgeTypes={edgeTypes}
-                defaultEdgeOptions={{
-                  type: 'uiNavigation',
-                  animated: false,
-                  style: { strokeWidth: 2, stroke: '#b1b1b7' },
-                }}
-                defaultViewport={{ x: 0, y: 0, zoom: 1 }}
-                attributionPosition="bottom-left"
-                connectionLineType={ConnectionLineType.SmoothStep}
-                snapToGrid={true}
-                snapGrid={[15, 15]}
-                deleteKeyCode="Delete"
-                multiSelectionKeyCode="Shift"
-                style={{ width: '100%', height: '100%' }}
+        {/* Main Editor Area */}
+        <Box sx={{ 
+          flex: 1, 
+          position: 'relative', 
+          minHeight: '500px',
+          overflow: 'hidden',
+          transition: 'margin-right 0.3s ease-in-out',
+          marginRight: isRemotePanelOpen ? '300px' : '0px'
+        }}>
+          {isLoading ? (
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              alignItems: 'center', 
+              height: '100%' 
+            }}>
+              <CircularProgress />
+              <Typography variant="h6" sx={{ ml: 2 }}>
+                {isLoadingInterface ? 'Loading navigation tree...' : 'Saving navigation tree...'}
+              </Typography>
+            </Box>
+          ) : error ? (
+            <Container maxWidth="md" sx={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              justifyContent: 'center', 
+              alignItems: 'center', 
+              height: '100%',
+              textAlign: 'center'
+            }}>
+              <ErrorIcon color="error" sx={{ fontSize: 64, mb: 2 }} />
+              <Typography variant="h5" color="error" gutterBottom>
+                Error Loading Navigation Tree
+              </Typography>
+              <Typography variant="body1" paragraph>
+                {error}
+              </Typography>
+              <Button 
+                variant="contained" 
+                onClick={navigateToParent} 
+                startIcon={<ArrowBackIcon />}
               >
-                <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
-                <Controls position="top-left" showZoom={true} showFitView={true} showInteractive={false} />
-                <MiniMap 
-                  position="bottom-right"
-                  style={{
-                    backgroundColor: 'var(--card, #ffffff)',
-                    border: '1px solid var(--border, #e5e7eb)',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-                  }}
-                  nodeColor={(node) => {
-                    switch (node.data?.type) {
-                      case 'screen': return '#3b82f6';
-                      case 'dialog': return '#8b5cf6';
-                      case 'popup': return '#f59e0b';
-                      case 'overlay': return '#10b981';
-                      case 'menu': return '#ffc107';
-                      default: return '#6b7280';
+                Return to Navigation Trees
+              </Button>
+            </Container>
+          ) : (
+            <>
+              <div 
+                ref={reactFlowWrapper} 
+                style={{ 
+                  width: '100%',
+                  height: '100%',
+                  minHeight: '500px'
+                }}
+              >
+                <ReactFlow
+                  nodes={nodes}
+                  edges={edges}
+                  onNodesChange={onNodesChange}
+                  onEdgesChange={onEdgesChange}
+                  onConnect={onConnect}
+                  onNodeClick={onNodeClick}
+                  onEdgeClick={onEdgeClick}
+                  onNodeDoubleClick={onNodeDoubleClick}
+                  onPaneClick={onPaneClick}
+                  onInit={(instance) => {
+                    if (instance && !reactFlowInstance) {
+                      console.log('[@component:NavigationEditor] ReactFlow instance initialized');
+                      setReactFlowInstance(instance);
                     }
                   }}
-                  maskColor="rgba(0, 0, 0, 0.1)"
-                />
-              </ReactFlow>
-            </div>
+                  nodeTypes={nodeTypes}
+                  edgeTypes={edgeTypes}
+                  defaultEdgeOptions={{
+                    type: 'uiNavigation',
+                    animated: false,
+                    style: { strokeWidth: 2, stroke: '#b1b1b7' },
+                  }}
+                  defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+                  attributionPosition="bottom-left"
+                  connectionLineType={ConnectionLineType.SmoothStep}
+                  snapToGrid={true}
+                  snapGrid={[15, 15]}
+                  deleteKeyCode="Delete"
+                  multiSelectionKeyCode="Shift"
+                  style={{ width: '100%', height: '100%' }}
+                >
+                  <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
+                  <Controls position="top-left" showZoom={true} showFitView={true} showInteractive={false} />
+                  <MiniMap 
+                    position="bottom-right"
+                    style={{
+                      backgroundColor: 'var(--card, #ffffff)',
+                      border: '1px solid var(--border, #e5e7eb)',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                    }}
+                    nodeColor={(node) => {
+                      switch (node.data?.type) {
+                        case 'screen': return '#3b82f6';
+                        case 'dialog': return '#8b5cf6';
+                        case 'popup': return '#f59e0b';
+                        case 'overlay': return '#10b981';
+                        case 'menu': return '#ffc107';
+                        default: return '#6b7280';
+                      }
+                    }}
+                    maskColor="rgba(0, 0, 0, 0.1)"
+                  />
+                </ReactFlow>
+              </div>
 
-            {/* Selection Info Panel */}
-            {(selectedNode || selectedEdge) ? (
-              <>
-                {selectedNode && (
-                  <NodeSelectionPanel
-                    selectedNode={selectedNode}
-                    nodes={nodes}
-                    onClose={closeSelectionPanel}
-                    onEdit={() => {}}
-                    onDelete={deleteSelected}
-                    onAddChildren={() => {}}
-                    setNodeForm={setNodeForm}
-                    setIsNodeDialogOpen={setIsNodeDialogOpen}
-                    onReset={resetNode}
-                  />
-                )}
-                
-                {selectedEdge && (
-                  <EdgeSelectionPanel
-                    selectedEdge={selectedEdge}
-                    onClose={closeSelectionPanel}
-                    onEdit={() => {}}
-                    onDelete={deleteSelected}
-                    setEdgeForm={setEdgeForm}
-                    setIsEdgeDialogOpen={setIsEdgeDialogOpen}
-                  />
-                )}
-              </>
-            ) : null}
-          </>
+              {/* Selection Info Panel */}
+              {(selectedNode || selectedEdge) ? (
+                <>
+                  {selectedNode && (
+                    <NodeSelectionPanel
+                      selectedNode={selectedNode}
+                      nodes={nodes}
+                      onClose={closeSelectionPanel}
+                      onEdit={() => {}}
+                      onDelete={deleteSelected}
+                      onAddChildren={() => {}}
+                      setNodeForm={setNodeForm}
+                      setIsNodeDialogOpen={setIsNodeDialogOpen}
+                      onReset={resetNode}
+                    />
+                  )}
+                  
+                  {selectedEdge && (
+                    <EdgeSelectionPanel
+                      selectedEdge={selectedEdge}
+                      onClose={closeSelectionPanel}
+                      onEdit={() => {}}
+                      onDelete={deleteSelected}
+                      setEdgeForm={setEdgeForm}
+                      setIsEdgeDialogOpen={setIsEdgeDialogOpen}
+                    />
+                  )}
+                </>
+              ) : null}
+            </>
+          )}
+        </Box>
+
+        {/* Remote Control Panel */}
+        {isRemotePanelOpen && (
+          <Box sx={{
+            position: 'fixed',
+            right: 0,
+            top: '100px', // Adjust based on your header height
+            width: '300px',
+            height: 'calc(100vh - 100px)',
+            bgcolor: 'background.paper',
+            borderLeft: '1px solid',
+            borderColor: 'divider',
+            zIndex: 1000,
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '-2px 0 8px rgba(0, 0, 0, 0.1)'
+          }}>
+            {/* Remote panel content - empty for now */}
+            <Box sx={{ 
+              p: 2, 
+              borderBottom: '1px solid', 
+              borderColor: 'divider',
+              bgcolor: 'grey.50'
+            }}>
+              <Typography variant="h6">Remote Control</Typography>
+              {selectedDevice && (
+                <Typography variant="body2" color="text.secondary">
+                  Device: {selectedDevice}
+                </Typography>
+              )}
+              {isControlActive && (
+                <Typography variant="body2" color="success.main">
+                  Control Active
+                </Typography>
+              )}
+            </Box>
+            <Box sx={{ 
+              flex: 1, 
+              p: 2,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'text.secondary'
+            }}>
+              <Typography variant="body2">
+                Remote view will be displayed here
+              </Typography>
+            </Box>
+          </Box>
         )}
       </Box>
 

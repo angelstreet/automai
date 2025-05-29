@@ -80,7 +80,7 @@ export const TreeFilterControls: React.FC<TreeFilterControlsProps> = ({
     }}>
       {/* Node Selection */}
       <Tooltip title="Focus on specific node or show all nodes">
-        <FormControl size="small" sx={{ minWidth: 80 }}>
+        <FormControl size="small" sx={{ minWidth: 100 }}>
           <InputLabel sx={{ fontSize: '0.75rem' }}>Node</InputLabel>
           <Select
             value={focusNodeId || 'all'}
@@ -149,8 +149,21 @@ export const TreeFilterControls: React.FC<TreeFilterControlsProps> = ({
         </Button>
       </Tooltip>
 
-      {/* Filter Status Indicator - Fixed width container */}
-      <Box sx={{ minWidth: 80, display: 'flex', justifyContent: 'center' }}>
+      {/* Node Statistics - Fixed width container */}
+      <Box sx={{ minWidth: 20 }}>
+        <Typography 
+          variant="caption" 
+          sx={{ 
+            fontSize: '0.7rem',
+            color: isFilterActive ? 'primary.main' : 'text.secondary',
+            fontWeight: isFilterActive ? 'bold' : 'normal',
+          }}
+        >
+          {visibleNodes}/{totalNodes} nodes
+        </Typography>
+      </Box>
+           {/* Filter Status Indicator - Fixed width container */}
+      <Box sx={{ minWidth: 20 }}>
         {isFilterActive && (
           <Chip
             label="Filtered"
@@ -163,33 +176,6 @@ export const TreeFilterControls: React.FC<TreeFilterControlsProps> = ({
             }}
           />
         )}
-      </Box>
-
-      {/* Node Statistics - Fixed width container */}
-      <Box sx={{ minWidth: 120 }}>
-        <Typography 
-          variant="caption" 
-          sx={{ 
-            fontSize: '0.7rem',
-            color: isFilterActive ? 'primary.main' : 'text.secondary',
-            fontWeight: isFilterActive ? 'bold' : 'normal',
-          }}
-        >
-          {visibleNodes}/{totalNodes} nodes
-        </Typography>
-      </Box>
-      
-      {/* Double-click hint - Fixed width container */}
-      <Box sx={{ minWidth: 150 }}>
-        <Typography 
-          variant="caption" 
-          sx={{ 
-            fontSize: '0.65rem',
-            color: 'text.disabled',
-            fontStyle: 'italic',
-          }}
-        >
-        </Typography>
       </Box>
     </Box>
   );

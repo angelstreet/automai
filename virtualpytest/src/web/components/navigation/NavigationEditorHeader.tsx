@@ -7,6 +7,10 @@ import {
   IconButton,
   Box,
   CircularProgress,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -16,6 +20,8 @@ import {
   Save as SaveIcon,
   Cancel as CancelIcon,
   ArrowBack as ArrowBackIcon,
+  ControlCamera as ControlCameraIcon,
+  Tv as TvIcon,
 } from '@mui/icons-material';
 import { TreeFilterControls } from './TreeFilterControls';
 
@@ -39,6 +45,11 @@ interface NavigationEditorHeaderProps {
   historyIndex: number;
   historyLength: number;
   
+  // Remote control props
+  isRemotePanelOpen: boolean;
+  selectedDevice: string | null;
+  isControlActive: boolean;
+  
   // Action handlers
   onNavigateToParent: () => void;
   onNavigateToTreeLevel: (index: number) => void;
@@ -54,6 +65,11 @@ interface NavigationEditorHeaderProps {
   onFocusNodeChange: (nodeId: string | null) => void;
   onDepthChange: (depth: number) => void;
   onResetFocus: () => void;
+  
+  // Remote control handlers
+  onToggleRemotePanel: () => void;
+  onDeviceSelect: (device: string | null) => void;
+  onTakeControl: () => void;
 }
 
 export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
@@ -70,6 +86,9 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
   error,
   historyIndex,
   historyLength,
+  isRemotePanelOpen,
+  selectedDevice,
+  isControlActive,
   onNavigateToParent,
   onNavigateToTreeLevel,
   onNavigateToParentView,
@@ -82,148 +101,185 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
   onFocusNodeChange,
   onDepthChange,
   onResetFocus,
+  onToggleRemotePanel,
+  onDeviceSelect,
+  onTakeControl,
 }) => {
+  // Empty device list for now
+  const availableDevices: string[] = [];
+
   return (
     <AppBar position="static" color="default" elevation={1}>
-      <Toolbar variant="dense" sx={{ minHeight: 48 }}>
-        {/* Only show back button if not at root level */}
-        {navigationPath.length > 1 && (
-          <IconButton 
-            edge="start" 
-            onClick={onNavigateToParent} 
-            size="small" 
-            title="Back to Trees"
-            sx={{ mr: 1 }}
-          >
-            <ArrowBackIcon />
-          </IconButton>
-        )}
-        
-        {/* Breadcrumb navigation */}
-        <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
-          {/* Tree level breadcrumb */}
-          {navigationNamePath.map((treeName, index) => (
-            <Box key={`tree-${index}`} sx={{ display: 'flex', alignItems: 'center' }}>
-              {index > 0 && (
-                <Typography variant="h6" sx={{ mx: 0.5, color: 'text.secondary' }}>
-                  &gt;
+      <Toolbar variant="dense" sx={{ minHeight: 48, px: 2 }}>
+        {/* Grid Layout with 4 sections */}
+        <Box sx={{ 
+          display: 'grid', 
+          gridTemplateColumns: '2fr 1fr 1fr 1fr',
+          gap: 2,
+          alignItems: 'center',
+          width: '100%'
+        }}>
+          
+          {/* Section 1: Tree Name */}
+          <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+            {/* Simple Tree Name Display */}
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 'medium',
+                color: 'text.primary',
+                fontSize: '1rem',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {navigationNamePath.length > 0 
+                ? decodeURIComponent(navigationNamePath[navigationNamePath.length - 1])
+                : 'Navigation Tree'
+              }
+              {hasUnsavedChanges && (
+                <Typography component="span" sx={{ color: 'warning.main', ml: 0.5 }}>
+                  *
                 </Typography>
               )}
-              <Button
-                variant="text"
-                size="small"
-                onClick={() => onNavigateToTreeLevel(index)}
-                sx={{
-                  textTransform: 'none',
-                  minWidth: 'auto',
-                  fontWeight: 'normal',
-                  color: 'text.secondary',
-                }}
-              >
-                {decodeURIComponent(treeName)}
-              </Button>
-            </Box>
-          ))}
+            </Typography>
+          </Box>
           
-          {/* View level breadcrumb */}
-          {viewPath.length > 1 && viewPath.map((level, index) => (
-            <Box key={`view-${index}`} sx={{ display: 'flex', alignItems: 'center' }}>
-              <Typography variant="h6" sx={{ mx: 0.5, color: 'text.secondary' }}>
-                &gt;
-              </Typography>
-              <Button
-                variant="text"
-                size="small"
-                onClick={() => onNavigateToParentView(index)}
-                sx={{
-                  textTransform: 'none',
-                  minWidth: 'auto',
-                  fontWeight: index === viewPath.length - 1 ? 'bold' : 'normal',
-                  color: index === viewPath.length - 1 ? 'primary.main' : 'text.secondary',
-                }}
+          {/* Section 2: Node Controls (TreeFilterControls) */}
+          <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+            <TreeFilterControls
+              focusNodeId={focusNodeId}
+              availableFocusNodes={availableFocusNodes}
+              onFocusNodeChange={onFocusNodeChange}
+              maxDisplayDepth={maxDisplayDepth}
+              onDepthChange={onDepthChange}
+              onResetFocus={onResetFocus}
+              totalNodes={totalNodes}
+              visibleNodes={visibleNodes}
+            />
+          </Box>
+          
+          {/* Section 3: Action Buttons */}
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+            <Button
+              startIcon={<AddIcon />}
+              onClick={onAddNewNode}
+              size="small"
+              disabled={isLoading || !!error}
+              variant="outlined"
+              sx={{ 
+                minWidth: 'auto',
+                whiteSpace: 'nowrap',
+                fontSize: '0.75rem'
+              }}
+            >
+              Add&nbsp;Node
+            </Button>
+            
+            <IconButton 
+              onClick={onFitView} 
+              size="small" 
+              title="Fit View" 
+              disabled={isLoading || !!error}
+            >
+              <FitScreenIcon />
+            </IconButton>
+            
+            <IconButton 
+              onClick={onUndo} 
+              size="small" 
+              title="Undo" 
+              disabled={historyIndex <= 0 || isLoading || !!error}
+            >
+              <UndoIcon />
+            </IconButton>
+            
+            <IconButton 
+              onClick={onRedo} 
+              size="small" 
+              title="Redo" 
+              disabled={historyIndex >= historyLength - 1 || isLoading || !!error}
+            >
+              <RedoIcon />
+            </IconButton>
+            
+            <IconButton 
+              onClick={onSaveToDatabase} 
+              size="small" 
+              title={hasUnsavedChanges ? "Save Changes to Database" : "Save to Database"}
+              disabled={isLoading || !!error}
+              color={hasUnsavedChanges ? "primary" : "default"}
+            >
+              {isLoading ? <CircularProgress size={20} /> : <SaveIcon />}
+            </IconButton>
+            
+            <IconButton 
+              onClick={onDiscardChanges} 
+              size="small" 
+              title={hasUnsavedChanges ? "Discard Unsaved Changes" : "Discard Changes"}
+              color={hasUnsavedChanges ? "warning" : "default"}
+              disabled={isLoading || !!error}
+            >
+              <CancelIcon />
+            </IconButton>
+          </Box>
+
+          {/* Section 4: Device Controls */}
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1 }}>
+            {/* Device Selection Dropdown */}
+            <FormControl size="small" sx={{ minWidth: 100 }}>
+              <InputLabel id="device-select-label">Device</InputLabel>
+              <Select
+                labelId="device-select-label"
+                value={selectedDevice || ''}
+                onChange={(e) => onDeviceSelect(e.target.value || null)}
+                label="Device"
+                disabled={isLoading || !!error}
+                sx={{ height: 32, fontSize: '0.875rem' }}
               >
-                {level.name}
-                {index === viewPath.length - 1 && hasUnsavedChanges && (
-                  <Typography component="span" sx={{ color: 'warning.main', ml: 0.5 }}>
-                    *
-                  </Typography>
-                )}
-              </Button>
-            </Box>
-          ))}
+                <MenuItem value="">
+                  <em>No device</em>
+                </MenuItem>
+                {availableDevices.map((device) => (
+                  <MenuItem key={device} value={device}>
+                    {device}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            {/* Take Control Button */}
+            <Button
+              variant={isControlActive ? "contained" : "outlined"}
+              size="small"
+              onClick={onTakeControl}
+              disabled={!selectedDevice || isLoading || !!error}
+              startIcon={<ControlCameraIcon />}
+              color={isControlActive ? "success" : "primary"}
+              sx={{ 
+                height: 32, 
+                fontSize: '0.65rem', 
+                minWidth: 'auto',
+                whiteSpace: 'nowrap',
+                px: 1
+              }}
+            >
+              {isControlActive ? 'Release' : 'Take&nbsp;Control'}
+            </Button>
+
+            {/* Toggle Remote Panel Button */}
+            <IconButton 
+              onClick={onToggleRemotePanel} 
+              size="small" 
+              title={isRemotePanelOpen ? "Hide Remote Panel" : "Show Remote Panel"}
+              color={isRemotePanelOpen ? "primary" : "default"}
+              disabled={isLoading || !!error}
+            >
+              <TvIcon />
+            </IconButton>
+          </Box>
         </Box>
-        
-        {/* Tree Filter Controls */}
-        <Box sx={{ mr: 2 }}>
-          <TreeFilterControls
-            focusNodeId={focusNodeId}
-            availableFocusNodes={availableFocusNodes}
-            onFocusNodeChange={onFocusNodeChange}
-            maxDisplayDepth={maxDisplayDepth}
-            onDepthChange={onDepthChange}
-            onResetFocus={onResetFocus}
-            totalNodes={totalNodes}
-            visibleNodes={visibleNodes}
-          />
-        </Box>
-        
-        {/* Action Buttons */}
-        <Button
-          startIcon={<AddIcon />}
-          onClick={onAddNewNode}
-          size="small"
-          sx={{ mr: 1 }}
-          disabled={isLoading || !!error}
-        >
-          Add Node
-        </Button>
-        
-        <IconButton 
-          onClick={onFitView} 
-          size="small" 
-          title="Fit View" 
-          disabled={isLoading || !!error}
-        >
-          <FitScreenIcon />
-        </IconButton>
-        
-        <IconButton 
-          onClick={onUndo} 
-          size="small" 
-          title="Undo" 
-          disabled={historyIndex <= 0 || isLoading || !!error}
-        >
-          <UndoIcon />
-        </IconButton>
-        
-        <IconButton 
-          onClick={onRedo} 
-          size="small" 
-          title="Redo" 
-          disabled={historyIndex >= historyLength - 1 || isLoading || !!error}
-        >
-          <RedoIcon />
-        </IconButton>
-        
-        <IconButton 
-          onClick={onSaveToDatabase} 
-          size="small" 
-          title={hasUnsavedChanges ? "Save Changes to Database" : "Save to Database"}
-          disabled={isLoading || !!error}
-          color={hasUnsavedChanges ? "primary" : "default"}
-        >
-          {isLoading ? <CircularProgress size={20} /> : <SaveIcon />}
-        </IconButton>
-        
-        <IconButton 
-          onClick={onDiscardChanges} 
-          size="small" 
-          title={hasUnsavedChanges ? "Discard Unsaved Changes" : "Discard Changes"}
-          color={hasUnsavedChanges ? "warning" : "default"}
-          disabled={isLoading || !!error}
-        >
-          <CancelIcon />
-        </IconButton>
       </Toolbar>
     </AppBar>
   );
