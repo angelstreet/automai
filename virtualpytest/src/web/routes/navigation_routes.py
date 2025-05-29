@@ -395,7 +395,7 @@ def get_complete_navigation_tree(tree_id):
 
 @navigation_bp.route('/trees/<tree_id>/complete', methods=['PUT'])
 def save_complete_navigation_tree(tree_id):
-    """Save complete navigation tree data to both metadata and database tables"""
+    """Save complete navigation tree data to metadata field (database tables don't exist)"""
     error_response = check_supabase()
     if error_response:
         return error_response
@@ -416,9 +416,9 @@ def save_complete_navigation_tree(tree_id):
         nodes = tree_data.get('nodes', [])
         edges = tree_data.get('edges', [])
         
-        print(f"[@api:navigation:save_complete_tree] Saving tree {tree_id} with {len(nodes)} nodes and {len(edges)} edges")
+        print(f"[@api:navigation:save_complete_tree] Saving tree {tree_id} with {len(nodes)} nodes and {len(edges)} edges to metadata field")
         
-        # First, save to metadata field for fast loading
+        # Save to metadata field in navigation_trees table
         metadata_update_success = update_navigation_tree(tree_id, {'metadata': tree_data}, team_id)
         
         if not metadata_update_success:
@@ -427,21 +427,15 @@ def save_complete_navigation_tree(tree_id):
                 'error': 'Failed to update tree metadata'
             }), 500
         
-        # Convert ReactFlow data to database format and save to tables
-        db_nodes, db_edges = convert_reactflow_to_nodes_and_edges(tree_data, tree_id)
+        # Note: We don't save to separate database tables because they don't exist in the schema
+        # All data is stored in the metadata JSONB field of navigation_trees table
+        print(f"[@api:navigation:save_complete_tree] Successfully saved tree {tree_id} to metadata field")
         
-        # Save to database tables - explicitly pass team_id
-        db_save_success = save_navigation_nodes_and_edges(tree_id, db_nodes, db_edges, team_id)
-        
-        if not db_save_success:
-            print(f"[@api:navigation:save_complete_tree] Warning: Failed to save to database tables, but metadata was saved")
-        
-        print(f"[@api:navigation:save_complete_tree] Successfully saved tree {tree_id}")
         return jsonify({
             'success': True,
-            'message': 'Navigation tree saved successfully',
-            'metadata_saved': metadata_update_success,
-            'database_saved': db_save_success
+            'message': 'Navigation tree saved successfully to metadata field',
+            'nodes_count': len(nodes),
+            'edges_count': len(edges)
         })
         
     except Exception as e:

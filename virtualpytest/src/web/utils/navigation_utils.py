@@ -224,19 +224,16 @@ def convert_nodes_and_edges_to_reactflow(nodes, edges):
         reactflow_nodes = []
         for node in nodes:
             reactflow_node = {
-                'id': node['id'],  # Use database primary key as ReactFlow ID
+                'id': node['id'],  # Use the node ID (either from ReactFlow or database)
                 'type': 'uiScreen',
-                'position': {
-                    'x': float(node['position_x']),
-                    'y': float(node['position_y'])
-                },
+                'position': {'x': node['position_x'], 'y': node['position_y']},
                 'data': {
                     'label': node['label'],
+                    'type': node.get('node_type', 'screen'),
                     'description': node.get('description', ''),
-                    'type': node['node_type'],
+                    'hasChildren': node.get('has_children', False),
                     'isEntryPoint': node.get('is_entry_point', False),
                     'isExitPoint': node.get('is_exit_point', False),
-                    'hasChildren': node.get('has_children', False),
                     'childTreeId': node.get('child_tree_id'),
                     'screenshot': node.get('screenshot_url'),
                     'metadata': node.get('metadata', {})
@@ -255,7 +252,8 @@ def convert_nodes_and_edges_to_reactflow(nodes, edges):
                 'target': edge['target_id'],  # This should match a node's id
                 'type': 'smoothstep',
                 'data': {
-                    'go': edge.get('go_action'),
+                    'action': edge.get('go_action'),  # Fixed: Map go_action back to action for frontend
+                    'go': edge.get('go_action'),  # Keep both for compatibility
                     'comeback': edge.get('comeback_action'),
                     'description': edge.get('description', ''),
                     'edgeType': edge.get('edge_type', 'navigation'),
@@ -289,6 +287,7 @@ def convert_reactflow_to_nodes_and_edges(reactflow_data, tree_id):
         for node in nodes_data:
             node_data = node.get('data', {})
             db_node = {
+                'id': node.get('id'),  # Include ReactFlow node ID
                 'tree_id': tree_id,
                 'label': node_data.get('label', ''),
                 'node_type': node_data.get('type', 'screen'),
@@ -310,12 +309,17 @@ def convert_reactflow_to_nodes_and_edges(reactflow_data, tree_id):
         db_edges = []
         for edge in edges_data:
             edge_data = edge.get('data', {})
+            
+            # Map the action field correctly - frontend sends 'action', but DB expects 'go_action'
+            action_value = edge_data.get('action') or edge_data.get('go')
+            
             db_edge = {
+                'id': edge.get('id'),  # Include ReactFlow edge ID
                 'tree_id': tree_id,
                 'source_id': edge['source'],
                 'target_id': edge['target'],
                 'edge_type': edge_data.get('edgeType', 'navigation'),
-                'go_action': edge_data.get('go'),
+                'go_action': action_value,  # Fixed: Use action from frontend
                 'comeback_action': edge_data.get('comeback'),
                 'description': edge_data.get('description'),
                 'is_bidirectional': edge_data.get('isBidirectional', False),
@@ -332,106 +336,30 @@ def convert_reactflow_to_nodes_and_edges(reactflow_data, tree_id):
         return [], []
 
 def get_navigation_nodes_and_edges(tree_id, team_id):
-    """Get navigation nodes and edges from database"""
-    supabase = get_supabase_client()
+    """Get navigation nodes and edges from database
+    Note: Since the database only has navigation_trees table with metadata field,
+    we return empty arrays. The actual data loading happens via the metadata field.
+    """
+    print(f"[@utils:navigation:get_navigation_nodes_and_edges] Note: Database schema only supports metadata storage, not separate node/edge tables")
+    print(f"[@utils:navigation:get_navigation_nodes_and_edges] Returning empty arrays - data is loaded via metadata field in navigation_trees")
     
-    try:
-        print(f"[@utils:navigation:get_navigation_nodes_and_edges] Getting nodes and edges for tree: {tree_id}, team: {team_id}")
-        
-        # Get nodes
-        print(f"[@utils:navigation:get_navigation_nodes_and_edges] DEBUG: Executing query for tree_id={tree_id}, team_id={team_id}")
-        nodes_result = supabase.table('navigation_nodes').select('*').eq('tree_id', tree_id).eq('team_id', team_id).order('created_at').execute()
-        print(f"[@utils:navigation:get_navigation_nodes_and_edges] DEBUG: Query result: {nodes_result}")
-        nodes = nodes_result.data if nodes_result.data else []
-        
-        # Get edges
-        edges_result = supabase.table('navigation_edges').select('*').eq('tree_id', tree_id).eq('team_id', team_id).order('created_at').execute()
-        edges = edges_result.data if edges_result.data else []
-        
-        print(f"[@utils:navigation:get_navigation_nodes_and_edges] Found {len(nodes)} nodes and {len(edges)} edges")
-        if len(nodes) == 0:
-            print(f"[@utils:navigation:get_navigation_nodes_and_edges] WARNING: No nodes found for tree_id={tree_id}, team_id={team_id}. This might be a schema or permissions issue.")
-        return nodes, edges
-        
-    except Exception as e:
-        print(f"[@utils:navigation:get_navigation_nodes_and_edges] Error: {str(e)}")
-        print(f"[@utils:navigation:get_navigation_nodes_and_edges] Error details: Type={type(e)}, Traceback follows:")
-        import traceback
-        traceback.print_exc()
-        return [], []
+    # Since the separate navigation_nodes/navigation_edges tables don't exist in the schema,
+    # and the data is stored in the metadata field of navigation_trees,
+    # we return empty arrays here. The data loading happens via the metadata field.
+    return [], []
 
 def save_navigation_nodes_and_edges(tree_id, nodes, edges, team_id=None):
-    """Save navigation nodes and edges to database"""
-    supabase = get_supabase_client()
+    """Save navigation nodes and edges to database
+    Note: Since the database only has navigation_trees table with metadata field,
+    we only save to the metadata. The separate nodes/edges tables don't exist.
+    """
+    print(f"[@utils:navigation:save_navigation_nodes_and_edges] Note: Database schema only supports metadata storage, not separate node/edge tables")
+    print(f"[@utils:navigation:save_navigation_nodes_and_edges] Nodes and edges are already saved via the metadata field in navigation_trees")
     
-    try:
-        print(f"[@utils:navigation:save_navigation_nodes_and_edges] Saving {len(nodes)} nodes and {len(edges)} edges for tree: {tree_id}")
-        
-        # Get the team_id from the tree if not provided
-        if team_id is None:
-            print(f"[@utils:navigation:save_navigation_nodes_and_edges] WARNING: No team_id provided, attempting to get it from the tree")
-            try:
-                tree_result = supabase.table('navigation_trees').select('team_id').eq('id', tree_id).single().execute()
-                if tree_result.data:
-                    team_id = tree_result.data['team_id']
-                    print(f"[@utils:navigation:save_navigation_nodes_and_edges] Retrieved team_id: {team_id} from tree: {tree_id}")
-                else:
-                    print(f"[@utils:navigation:save_navigation_nodes_and_edges] ERROR: Could not find tree with ID: {tree_id}")
-                    return False
-            except Exception as e:
-                print(f"[@utils:navigation:save_navigation_nodes_and_edges] ERROR: Failed to retrieve team_id: {str(e)}")
-                return False
-        
-        # Delete existing nodes and edges for this tree
-        print(f"[@utils:navigation:save_navigation_nodes_and_edges] Deleting existing nodes and edges for tree: {tree_id}")
-        supabase.table('navigation_nodes').delete().eq('tree_id', tree_id).execute()
-        supabase.table('navigation_edges').delete().eq('tree_id', tree_id).execute()
-        
-        # Insert new nodes
-        if nodes:
-            print(f"[@utils:navigation:save_navigation_nodes_and_edges] Inserting {len(nodes)} nodes")
-            for node in nodes:
-                # Ensure JSON fields are properly serialized
-                node_to_insert = {**node}
-                # Ensure team_id is set
-                node_to_insert['team_id'] = team_id
-                if 'metadata' in node_to_insert and isinstance(node_to_insert['metadata'], dict):
-                    node_to_insert['metadata'] = json.dumps(node_to_insert['metadata'])
-                
-                try:
-                    result = supabase.table('navigation_nodes').insert(node_to_insert).execute()
-                    print(f"[@utils:navigation:save_navigation_nodes_and_edges] Inserted node: {node_to_insert.get('label')} result: {result}")
-                except Exception as e:
-                    print(f"[@utils:navigation:save_navigation_nodes_and_edges] ERROR inserting node: {str(e)}")
-        
-        # Insert new edges
-        if edges:
-            print(f"[@utils:navigation:save_navigation_nodes_and_edges] Inserting {len(edges)} edges")
-            for edge in edges:
-                # Ensure JSON fields are properly serialized
-                edge_to_insert = {**edge}
-                # Ensure team_id is set
-                edge_to_insert['team_id'] = team_id
-                if 'conditions' in edge_to_insert and isinstance(edge_to_insert['conditions'], dict):
-                    edge_to_insert['conditions'] = json.dumps(edge_to_insert['conditions'])
-                if 'metadata' in edge_to_insert and isinstance(edge_to_insert['metadata'], dict):
-                    edge_to_insert['metadata'] = json.dumps(edge_to_insert['metadata'])
-                
-                try:
-                    result = supabase.table('navigation_edges').insert(edge_to_insert).execute()
-                    print(f"[@utils:navigation:save_navigation_nodes_and_edges] Inserted edge: {edge_to_insert.get('source_id')} -> {edge_to_insert.get('target_id')} result: {result}")
-                except Exception as e:
-                    print(f"[@utils:navigation:save_navigation_nodes_and_edges] ERROR inserting edge: {str(e)}")
-        
-        print(f"[@utils:navigation:save_navigation_nodes_and_edges] Successfully saved {len(nodes)} nodes and {len(edges)} edges")
-        return True
-        
-    except Exception as e:
-        print(f"[@utils:navigation:save_navigation_nodes_and_edges] Error: {str(e)}")
-        print(f"[@utils:navigation:save_navigation_nodes_and_edges] Error details: Type={type(e)}, Traceback follows:")
-        import traceback
-        traceback.print_exc()
-        return False
+    # Since the actual saving happens via metadata field in update_navigation_tree,
+    # and the separate navigation_nodes/navigation_edges tables don't exist in the schema,
+    # we just return True here. The data is already saved via the metadata field.
+    return True
 
 def get_root_tree_for_interface(interface_id: str, team_id: str) -> Optional[Dict]:
     """Retrieve the root navigation tree for a given user interface ID and team ID from Supabase."""

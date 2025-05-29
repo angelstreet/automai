@@ -68,6 +68,7 @@ import { NodeEditDialog } from '../components/navigation/NodeEditDialog';
 import { EdgeEditDialog } from '../components/navigation/EdgeEditDialog';
 import { EdgeSelectionPanel } from '../components/navigation/EdgeSelectionPanel';
 import { NodeSelectionPanel } from '../components/navigation/NodeSelectionPanel';
+import { AddChildrenDialog } from '../components/navigation/AddChildrenDialog';
 
 // Node types for React Flow
 const nodeTypes = {
@@ -162,9 +163,15 @@ const NavigationEditorContent: React.FC = () => {
   
   // Add Children dialog state
   const [isAddChildDialogOpen, setIsAddChildDialogOpen] = useState(false);
-  const [childForm, setChildForm] = useState({
+  const [childForm, setChildForm] = useState<{
+    label: string;
+    type: 'screen' | 'dialog' | 'popup' | 'overlay';
+    description: string;
+    toAction: string;
+    fromAction: string;
+  }>({
     label: '',
-    type: 'screen' as const,
+    type: 'screen',
     description: '',
     toAction: '',
     fromAction: ''
@@ -183,6 +190,35 @@ const NavigationEditorContent: React.FC = () => {
       loadFromDatabase();
     }
   }, [currentTreeId, isLoadingInterface, loadFromDatabase]);
+
+  // Handle Add Children submission
+  const handleAddChildrenSubmit = useCallback(() => {
+    if (!selectedNode || !childForm.label.trim()) return;
+    
+    // Use the addChildNode function from the hook
+    addChildNode(
+      selectedNode.id,
+      {
+        label: childForm.label,
+        type: childForm.type,
+        description: childForm.description
+      },
+      childForm.toAction || 'ENTER',
+      childForm.fromAction || 'BACK'
+    );
+    
+    // Close dialog and reset form
+    setIsAddChildDialogOpen(false);
+    setChildForm({
+      label: '',
+      type: 'screen',
+      description: '',
+      toAction: '',
+      fromAction: ''
+    });
+    
+    console.log('[@component:NavigationEditor] Added child node to:', selectedNode.data.label);
+  }, [selectedNode, childForm, addChildNode]);
 
   return (
     <Box sx={{ 
@@ -536,6 +572,15 @@ const NavigationEditorContent: React.FC = () => {
         setEdgeForm={setEdgeForm}
         onSubmit={handleEdgeFormSubmit}
         onClose={() => setIsEdgeDialogOpen(false)}
+      />
+
+      {/* Add Children Dialog */}
+      <AddChildrenDialog
+        isOpen={isAddChildDialogOpen}
+        childForm={childForm}
+        setChildForm={setChildForm}
+        onSubmit={handleAddChildrenSubmit}
+        onClose={() => setIsAddChildDialogOpen(false)}
       />
 
       {/* Discard Changes Confirmation Dialog */}
