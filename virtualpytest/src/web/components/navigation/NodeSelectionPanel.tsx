@@ -20,7 +20,7 @@ interface NodeSelectionPanelProps {
   onAddChildren: () => void;
   setNodeForm: React.Dispatch<React.SetStateAction<NodeForm>>;
   setIsNodeDialogOpen: (open: boolean) => void;
-  onReset?: () => void;
+  onReset?: (id: string) => void;
 }
 
 export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
@@ -121,7 +121,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
               variant="outlined"
               color="warning"
               sx={{ fontSize: '0.75rem', px: 1 }}
-              onClick={onReset}
+              onClick={() => onReset(selectedNode.id)}
             >
               Reset Node
             </Button>
