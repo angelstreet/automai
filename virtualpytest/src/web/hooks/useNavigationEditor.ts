@@ -649,10 +649,7 @@ export const useNavigationEditor = () => {
     console.log(`[@hook:useNavigationEditor] Setting focus node: ${nodeId}`);
     navigationState.setFocusNodeId(nodeId);
     
-    // Auto-fit view to show the filtered content
-    setTimeout(() => {
-      navigationState.reactFlowInstance?.fitView({ padding: 0.1 });
-    }, 100);
+    // Removed auto-fit view - let user manually fit view if needed
   }, [navigationState]);
 
   // Set max display depth (dropdown selection)
@@ -660,10 +657,7 @@ export const useNavigationEditor = () => {
     console.log(`[@hook:useNavigationEditor] Setting display depth: ${depth}`);
     navigationState.setMaxDisplayDepth(depth);
     
-    // Auto-fit view after depth change
-    setTimeout(() => {
-      navigationState.reactFlowInstance?.fitView({ padding: 0.1 });
-    }, 100);
+    // Removed auto-fit view - let user manually fit view if needed
   }, [navigationState]);
 
   // Reset focus to show all root level nodes
@@ -672,9 +666,7 @@ export const useNavigationEditor = () => {
     navigationState.setFocusNodeId(null);
     navigationState.setMaxDisplayDepth(2);
     
-    setTimeout(() => {
-      navigationState.reactFlowInstance?.fitView({ padding: 0.1 });
-    }, 100);
+    // Removed auto-fit view - let user manually fit view if needed
   }, [navigationState]);
 
   return {

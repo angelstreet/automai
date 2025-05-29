@@ -59,35 +59,41 @@ const establishConnectionRules = (
   );
 
   if (isVertical) {
-    // VERTICAL = PARENT-CHILD (hierarchical)
-    console.log('[@hook:establishConnectionRules] Vertical connection - creating parent-child relationship');
-    console.log('[@hook:establishConnectionRules] Source (orphan) becomes child of target');
+    // Orphan inherits from other node
+    const targetIsOrphan = !targetNode.data.parent || targetNode.data.parent.length === 0;
+    const sourceIsOrphan = !sourceNode.data.parent || sourceNode.data.parent.length === 0;
     
-    // Only modify source if it doesn't already have a parent
-    if (sourceNode.data.parent && sourceNode.data.parent.length > 0) {
-      console.log('[@hook:establishConnectionRules] Source node already has parent, skipping modification');
+    if (sourceIsOrphan) {
+      // Source is orphan - make it child of target
+      const newParentChain = [
+        ...(targetNode.data.parent || []),
+        targetNode.id
+      ];
+      
       return {
         isAllowed: true,
-        edgeType: 'vertical'
+        edgeType: 'vertical',
+        sourceNodeUpdates: {
+          parent: newParentChain,
+          depth: newParentChain.length
+        }
+      };
+    } else {
+      // Target becomes child of source (default)
+      const newParentChain = [
+        ...(sourceNode.data.parent || []),
+        sourceNode.id
+      ];
+      
+      return {
+        isAllowed: true,
+        edgeType: 'vertical',
+        targetNodeUpdates: {
+          parent: newParentChain,
+          depth: newParentChain.length
+        }
       };
     }
-    
-    // Source becomes child of target (orphan becomes child of existing node)
-    const newParentChain = [
-      ...(targetNode.data.parent || []),
-      targetNode.id
-    ];
-    
-    console.log('[@hook:establishConnectionRules] New parent chain for source:', newParentChain);
-    
-    return {
-      isAllowed: true,
-      edgeType: 'vertical',
-      sourceNodeUpdates: {
-        parent: newParentChain,
-        depth: newParentChain.length
-      }
-    };
   } else if (isHorizontal) {
     // HORIZONTAL = SIBLINGS (same parent level)
     console.log('[@hook:establishConnectionRules] Horizontal connection - creating siblings');
@@ -115,22 +121,43 @@ const establishConnectionRules = (
     };
   } else {
     // Default to vertical if direction is unclear
-    console.log('[@hook:establishConnectionRules] Direction unclear, defaulting to vertical connection - source becomes child of target');
+    console.log('[@hook:establishConnectionRules] Direction unclear, defaulting to vertical connection - creating parent-child relationship');
     
-    // Source becomes child of target
-    const newParentChain = [
-      ...(targetNode.data.parent || []),
-      targetNode.id
-    ];
+    // Orphan inherits from other node
+    const targetIsOrphan = !targetNode.data.parent || targetNode.data.parent.length === 0;
+    const sourceIsOrphan = !sourceNode.data.parent || sourceNode.data.parent.length === 0;
     
-    return {
-      isAllowed: true,
-      edgeType: 'vertical',
-      sourceNodeUpdates: {
-        parent: newParentChain,
-        depth: newParentChain.length
-      }
-    };
+    if (sourceIsOrphan) {
+      // Source is orphan - make it child of target
+      const newParentChain = [
+        ...(targetNode.data.parent || []),
+        targetNode.id
+      ];
+      
+      return {
+        isAllowed: true,
+        edgeType: 'vertical',
+        sourceNodeUpdates: {
+          parent: newParentChain,
+          depth: newParentChain.length
+        }
+      };
+    } else {
+      // Target becomes child of source (default)
+      const newParentChain = [
+        ...(sourceNode.data.parent || []),
+        sourceNode.id
+      ];
+      
+      return {
+        isAllowed: true,
+        edgeType: 'vertical',
+        targetNodeUpdates: {
+          parent: newParentChain,
+          depth: newParentChain.length
+        }
+      };
+    }
   }
 };
 
