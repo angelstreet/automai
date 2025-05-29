@@ -17,11 +17,21 @@ interface NodeForm {
   label: string;
   type: 'screen' | 'dialog' | 'popup' | 'overlay' | 'menu';
   description: string;
+  depth?: number;
+  parent?: string[];
+}
+
+interface UINavigationNode {
+  id: string;
+  data: {
+    label: string;
+  };
 }
 
 interface NodeEditDialogProps {
   isOpen: boolean;
   nodeForm: NodeForm;
+  nodes: UINavigationNode[];
   setNodeForm: React.Dispatch<React.SetStateAction<NodeForm>>;
   onSubmit: () => void;
   onClose: () => void;
@@ -30,10 +40,24 @@ interface NodeEditDialogProps {
 export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   isOpen,
   nodeForm,
+  nodes,
   setNodeForm,
   onSubmit,
   onClose,
 }) => {
+  // Helper function to get parent names from IDs
+  const getParentNames = (parentIds: string[]): string => {
+    if (!parentIds || parentIds.length === 0) return 'None';
+    if (!nodes || !Array.isArray(nodes)) return 'None'; // Safety check for undefined nodes
+    
+    const parentNames = parentIds.map(id => {
+      const parentNode = nodes.find(node => node.id === id);
+      return parentNode ? parentNode.data.label : id; // Fallback to ID if node not found
+    });
+    
+    return parentNames.join(' > ');
+  };
+
   return (
     <Dialog open={isOpen} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>Edit Node</DialogTitle>
@@ -72,6 +96,44 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             rows={3}
             fullWidth
           />
+          
+          {/* Parent and Depth Info (Read-only) */}
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <TextField
+              label="Depth"
+              value={nodeForm.depth || 0}
+              fullWidth
+              disabled
+              InputProps={{
+                readOnly: true,
+              }}
+              sx={{
+                '& .MuiInputBase-input': {
+                  backgroundColor: '#f5f5f5',
+                  color: 'text.secondary'
+                }
+              }}
+              variant="outlined"
+              size="small"
+            />
+            <TextField
+              label="Parent Chain"
+              value={getParentNames(nodeForm.parent || [])}
+              fullWidth
+              disabled
+              InputProps={{
+                readOnly: true,
+              }}
+              sx={{
+                '& .MuiInputBase-input': {
+                  backgroundColor: '#f5f5f5',
+                  color: 'text.secondary'
+                }
+              }}
+              variant="outlined"
+              size="small"
+            />
+          </Box>
         </Box>
       </DialogContent>
       <DialogActions>

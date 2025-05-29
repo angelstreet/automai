@@ -93,11 +93,6 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
           </Typography>
         )}
         
-        {selectedEdge.data?.description && (
-          <Typography variant="body2" gutterBottom sx={{ mb: 0.5 }}>
-            Description: {selectedEdge.data.description}
-          </Typography>
-        )}
         
         <Box sx={{ mt: 1.5, display: 'flex', gap: 0.5 }}>
           <Button

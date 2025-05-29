@@ -326,6 +326,7 @@ const NavigationEditorContent: React.FC = () => {
                 {selectedNode && (
                   <NodeSelectionPanel
                     selectedNode={selectedNode}
+                    nodes={nodes}
                     onClose={closeSelectionPanel}
                     onEdit={() => {}}
                     onDelete={deleteSelected}
@@ -355,6 +356,7 @@ const NavigationEditorContent: React.FC = () => {
       <NodeEditDialog
         isOpen={isNodeDialogOpen}
         nodeForm={nodeForm}
+        nodes={nodes}
         setNodeForm={setNodeForm}
         onSubmit={handleNodeFormSubmit}
         onClose={cancelNodeChanges}

@@ -13,6 +13,7 @@ import { UINavigationNode, NodeForm } from '../../types/navigationTypes';
 
 interface NodeSelectionPanelProps {
   selectedNode: UINavigationNode;
+  nodes: UINavigationNode[];
   onClose: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -23,6 +24,7 @@ interface NodeSelectionPanelProps {
 
 export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
   selectedNode,
+  nodes,
   onClose,
   onEdit,
   onDelete,
@@ -37,6 +39,18 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
       description: selectedNode.data.description || '',
     });
     setIsNodeDialogOpen(true);
+  };
+
+  const getParentNames = (parentIds: string[]): string => {
+    if (!parentIds || parentIds.length === 0) return 'None';
+    if (!nodes || !Array.isArray(nodes)) return 'None';
+    
+    const parentNames = parentIds.map(id => {
+      const parentNode = nodes.find(node => node.id === id);
+      return parentNode ? parentNode.data.label : id;
+    });
+    
+    return parentNames.join(' > ');
   };
 
   return (
@@ -64,7 +78,15 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
           </IconButton>
         </Box>
         
-    
+        {/* Parent and Depth Info */}
+        <Box sx={{ mb: 1.5, fontSize: '0.75rem', color: 'text.secondary' }}>
+          <Typography variant="caption" display="block">
+            <strong>Depth:</strong> {selectedNode.data.depth || 0}
+          </Typography>
+          <Typography variant="caption" display="block">
+            <strong>Parent:</strong> {getParentNames(selectedNode.data.parent || [])}
+          </Typography>
+        </Box>
         
         <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
           {/* Edit and Delete buttons */}
