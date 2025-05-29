@@ -42,13 +42,7 @@ const DeviceManagement: React.FC = () => {
   const [filteredDevices, setFilteredDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
-  const [editingDevice, setEditingDevice] = useState<Device | null>(null);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [deviceToDelete, setDeviceToDelete] = useState<Device | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [openDialog, setOpenDialog] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ 
@@ -56,7 +50,8 @@ const DeviceManagement: React.FC = () => {
     description: '', 
     model: '' 
   });
-  const [openDialog, setOpenDialog] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
     fetchDevices();
@@ -134,7 +129,7 @@ const DeviceManagement: React.FC = () => {
       setDevices(prev => prev.map(device => 
         device.id === deviceId ? updatedDevice : device
       ));
-      setEditingDevice(null);
+      setEditingId(null);
       setSuccessMessage('Device updated successfully');
       console.log('[@component:DeviceManagement] Successfully updated device:', deviceId);
     } catch (error: any) {
@@ -143,47 +138,28 @@ const DeviceManagement: React.FC = () => {
     }
   };
 
-  const handleDeleteClick = (device: Device) => {
-    setDeviceToDelete(device);
-    setDeleteConfirmOpen(true);
-  };
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this device?')) {
+      return;
+    }
 
-  const handleDeleteConfirm = async () => {
-    if (!deviceToDelete) return;
-    
-    console.log('[@component:DeviceManagement] Deleting device:', deviceToDelete.id);
     try {
       setError(null);
-      await deviceApi.deleteDevice(deviceToDelete.id);
-      setDevices(prev => prev.filter(d => d.id !== deviceToDelete.id));
+      await deviceApi.deleteDevice(id);
+
+      // Update local state
+      setDevices(devices.filter(d => d.id !== id));
       setSuccessMessage('Device deleted successfully');
-      console.log('[@component:DeviceManagement] Successfully deleted device:', deviceToDelete.id);
-    } catch (error: any) {
-      console.error('[@component:DeviceManagement] Error deleting device:', error);
-      setError(error instanceof Error ? error.message : 'Failed to delete device');
-    } finally {
-      setDeleteConfirmOpen(false);
-      setDeviceToDelete(null);
+      console.log('[@component:DeviceManagement] Successfully deleted device');
+    } catch (err) {
+      console.error('[@component:DeviceManagement] Error deleting device:', err);
+      setError(err instanceof Error ? err.message : 'Failed to delete device');
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const handleEdit = (device: Device) => {
-    setEditingId(device.id);
-    setEditForm({
-      name: device.name,
-      description: device.description,
-      model: device.model,
-    });
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+    setError(null);
   };
 
   const handleSaveEdit = async () => {
@@ -227,40 +203,6 @@ const DeviceManagement: React.FC = () => {
     }
   };
 
-  const handleCancelEdit = () => {
-    setEditingId(null);
-    setEditForm({ 
-      name: '', 
-      description: '', 
-      model: '' 
-    });
-    setError(null);
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this device?')) {
-      return;
-    }
-
-    try {
-      setError(null);
-      await deviceApi.deleteDevice(id);
-
-      // Update local state
-      setDevices(devices.filter(d => d.id !== id));
-      setSuccessMessage('Device deleted successfully');
-      console.log('[@component:DeviceManagement] Successfully deleted device');
-    } catch (err) {
-      console.error('[@component:DeviceManagement] Error deleting device:', err);
-      setError(err instanceof Error ? err.message : 'Failed to delete device');
-    }
-  };
-
-  const handleCloseDialog = () => {
-    setOpenDialog(false);
-    setError(null);
-  };
-
   const LoadingState = () => (
     <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
       <CircularProgress />
@@ -269,7 +211,7 @@ const DeviceManagement: React.FC = () => {
   );
 
   const EmptyState = () => (
-    <Box textAlign="center" py={8}>
+    <Box textAlign="center" py={4}>
       <DeviceIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
       <Typography variant="h6" color="text.secondary" gutterBottom>
         {searchTerm ? 'No devices found' : 'No devices created yet'}
@@ -281,7 +223,7 @@ const DeviceManagement: React.FC = () => {
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => setShowCreateDialog(true)}
+          onClick={() => setOpenDialog(true)}
         >
           Add Device
         </Button>
@@ -312,7 +254,7 @@ const DeviceManagement: React.FC = () => {
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => setShowCreateDialog(true)}
+          onClick={() => setOpenDialog(true)}
         >
           Add Device
         </Button>
@@ -404,7 +346,13 @@ const DeviceManagement: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2" color="text.secondary">
-                          {formatDate(device.created_at)}
+                          {new Date(device.created_at).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
                         </Typography>
                       </TableCell>
                       <TableCell align="right">
@@ -422,7 +370,11 @@ const DeviceManagement: React.FC = () => {
                             <IconButton
                               size="small"
                               color="secondary"
-                              onClick={handleCancelEdit}
+                              onClick={() => {
+                                setEditingId(null);
+                                setEditForm({ name: '', description: '', model: '' });
+                                setError(null);
+                              }}
                               sx={{ p: 0.5 }}
                               disabled={submitting}
                             >
@@ -434,7 +386,14 @@ const DeviceManagement: React.FC = () => {
                             <IconButton
                               size="small"
                               color="primary"
-                              onClick={() => handleEdit(device)}
+                              onClick={() => {
+                                setEditForm({
+                                  name: device.name,
+                                  description: device.description,
+                                  model: device.model,
+                                });
+                                setEditingId(device.id);
+                              }}
                               sx={{ p: 0.5 }}
                               disabled={submitting}
                             >
@@ -470,37 +429,11 @@ const DeviceManagement: React.FC = () => {
 
       {/* Create Device Dialog */}
       <CreateDeviceDialog
-        open={showCreateDialog}
-        onOpenChange={setShowCreateDialog}
+        open={openDialog}
+        onClose={handleCloseDialog}
         onSubmit={handleAddNew}
-        isLoading={isCreating}
+        error={error}
       />
-
-      {/* Edit Device Dialog - Reuse CreateDeviceDialog but with edit mode */}
-      {editingDevice && (
-        <CreateDeviceDialog
-          open={!!editingDevice}
-          onOpenChange={(open) => !open && setEditingDevice(null)}
-          onSubmit={(data) => handleUpdate(editingDevice.id, data)}
-          isLoading={false}
-        />
-      )}
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)}>
-        <DialogTitle>Delete Device</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Are you sure you want to delete "{deviceToDelete?.name}"? This action cannot be undone.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
-          <Button onClick={handleDeleteConfirm} color="error" variant="contained">
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
 
       {/* Success Message Snackbar */}
       <Snackbar
@@ -508,14 +441,6 @@ const DeviceManagement: React.FC = () => {
         autoHideDuration={6000}
         onClose={() => setSuccessMessage(null)}
         message={successMessage}
-      />
-
-      {/* Create Device Dialog */}
-      <CreateDeviceDialog
-        open={openDialog}
-        onClose={handleCloseDialog}
-        onSubmit={handleAddNew}
-        error={error}
       />
     </Box>
   );
