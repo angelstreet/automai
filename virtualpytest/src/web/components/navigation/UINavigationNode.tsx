@@ -48,7 +48,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         padding: '12px',
         minWidth: '200px',
         maxWidth: '200px',
-        minHeight: '120px',
+        minHeight: '180px',
         fontSize: '12px',
         color: '#333',
         boxShadow: selected ? '0 4px 12px rgba(0,0,0,0.2)' : '0 2px 4px rgba(0,0,0,0.1)',
@@ -167,13 +167,13 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
       {/* Header with node name and type */}
       <div
         style={{
-          padding: '8px',
-          backgroundColor: 'white',
+          padding: '4px',
           borderBottom: '1px solid #eee',
-          minHeight: '40px',
+          minHeight: '10px',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
+         
         }}
       >
         <div
@@ -184,7 +184,8 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
             color: 'black',
-            marginBottom: '2px',
+            marginBottom: '0px',
+            fontSize: '18px',
           }}
         >
           {data.label}
@@ -197,7 +198,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
             textTransform: 'uppercase',
           }}
         >
-          {data.type}
+         
           {data.hasChildren && ' • Has Children'}
         </div>
       </div>

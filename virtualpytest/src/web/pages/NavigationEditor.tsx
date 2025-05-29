@@ -67,6 +67,7 @@ import { UINavigationEdge } from '../components/navigation/UINavigationEdge';
 import { NodeEditDialog } from '../components/navigation/NodeEditDialog';
 import { EdgeEditDialog } from '../components/navigation/EdgeEditDialog';
 import { EdgeSelectionPanel } from '../components/navigation/EdgeSelectionPanel';
+import { NodeSelectionPanel } from '../components/navigation/NodeSelectionPanel';
 
 // Node types for React Flow
 const nodeTypes = {
@@ -441,88 +442,24 @@ const NavigationEditorContent: React.FC = () => {
             {(selectedNode || selectedEdge) ? (
               <>
                 {selectedNode && (
-                  <Paper
-                    sx={{
-                      position: 'absolute',
-                      top: 16,
-                      right: 16,
-                      width: 200,
-                      p: 1.5,
-                      zIndex: 1000,
+                  <NodeSelectionPanel
+                    selectedNode={selectedNode}
+                    onClose={closeSelectionPanel}
+                    onEdit={() => {}}
+                    onDelete={deleteSelected}
+                    onAddChildren={() => {
+                      setChildForm({
+                        label: '',
+                        type: 'screen',
+                        description: '',
+                        toAction: '',
+                        fromAction: ''
+                      });
+                      setIsAddChildDialogOpen(true);
                     }}
-                  >
-                    <Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                        <Typography variant="h6" sx={{ margin: 0, fontSize: '1rem' }}>
-                          {selectedNode.data.label}
-                        </Typography>
-                        <IconButton
-                          size="small"
-                          onClick={closeSelectionPanel}
-                          sx={{ p: 0.25 }}
-                        >
-                          <CloseIcon fontSize="small" />
-                        </IconButton>
-                      </Box>
-                      
-                     
-                     
-                      {selectedNode.data.hasChildren && (
-                        <Typography variant="body2" color="success.main" gutterBottom sx={{ mb: 1 }}>
-                          💡 Double-click to explore child tree
-                        </Typography>
-                      )}
-                      <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                        {/* First row: Edit and Delete */}
-                        <Box sx={{ display: 'flex', gap: 0.5 }}>
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            sx={{ fontSize: '0.75rem', px: 1, flex: 1 }}
-                            onClick={() => {
-                              setNodeForm({
-                                label: selectedNode.data.label,
-                                type: selectedNode.data.type,
-                                description: selectedNode.data.description || '',
-                              });
-                              setIsNodeDialogOpen(true);
-                            }}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            color="error"
-                            sx={{ fontSize: '0.75rem', px: 1, flex: 1 }}
-                            onClick={deleteSelected}
-                          >
-                            Delete
-                          </Button>
-                        </Box>
-                        
-                        {/* Second row: Add Children */}
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          color="success"
-                          sx={{ fontSize: '0.75rem', px: 1 }}
-                          onClick={() => {
-                            setChildForm({
-                              label: '',
-                              type: 'screen',
-                              description: '',
-                              toAction: '',
-                              fromAction: ''
-                            });
-                            setIsAddChildDialogOpen(true);
-                          }}
-                        >
-                          Add Children
-                        </Button>
-                      </Box>
-                    </Box>
-                  </Paper>
+                    setNodeForm={setNodeForm}
+                    setIsNodeDialogOpen={setIsNodeDialogOpen}
+                  />
                 )}
                 
                 {selectedEdge && (
