@@ -1268,6 +1268,61 @@ export const useNavigationEditor = () => {
     enforceRootNodeProtection();
   }, [nodes, enforceRootNodeProtection]);
 
+  // Reset node - remove all edges and reset parent/depth
+  const resetNode = useCallback((nodeId: string) => {
+    console.log(`[@hook:useNavigationEditor] Resetting node: ${nodeId}`);
+    
+    // Find the node
+    const node = nodes.find(n => n.id === nodeId);
+    if (!node) {
+      console.error(`[@hook:useNavigationEditor] Node ${nodeId} not found for reset`);
+      return;
+    }
+    
+    console.log(`[@hook:useNavigationEditor] Resetting node ${node.data.label} - removing all edges and parent relationships`);
+    
+    // Remove all edges connected to this node
+    setEdges((eds) => {
+      const removedEdges = eds.filter(edge => edge.source === nodeId || edge.target === nodeId);
+      const remainingEdges = eds.filter(edge => edge.source !== nodeId && edge.target !== nodeId);
+      
+      console.log(`[@hook:useNavigationEditor] Removing ${removedEdges.length} edges connected to ${node.data.label}`);
+      removedEdges.forEach(edge => {
+        console.log(`[@hook:useNavigationEditor] - Removing edge: ${edge.source} -> ${edge.target}`);
+      });
+      
+      return remainingEdges;
+    });
+    
+    // Reset the node's parent and depth
+    setNodes((nds) => nds.map((n) => {
+      if (n.id === nodeId) {
+        console.log(`[@hook:useNavigationEditor] Resetting ${n.data.label} parent and depth`);
+        return {
+          ...n,
+          data: {
+            ...n.data,
+            parent: [],
+            depth: 0
+          }
+        };
+      }
+      return n;
+    }));
+    
+    // Mark as having unsaved changes
+    setHasUnsavedChanges(true);
+    
+    console.log(`[@hook:useNavigationEditor] Node ${node.data.label} has been reset to orphan status`);
+  }, [nodes, setNodes, setEdges]);
+
+  // Reset selected node wrapper
+  const resetSelectedNode = useCallback(() => {
+    if (selectedNode) {
+      resetNode(selectedNode.id);
+    }
+  }, [selectedNode, resetNode]);
+
   return {
     // State
     nodes,
@@ -1383,5 +1438,9 @@ export const useNavigationEditor = () => {
     
     // Configuration
     defaultEdgeOptions,
+    
+    // Reset node
+    resetNode,
+    resetSelectedNode,
   };
 }; 

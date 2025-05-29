@@ -127,7 +127,6 @@ const NavigationEditorContent: React.FC = () => {
     setIsEdgeDialogOpen,
     setNodeForm,
     setEdgeForm,
-    setReactFlowInstance,
     setIsDiscardDialogOpen,
     
     // Event handlers
@@ -160,7 +159,10 @@ const NavigationEditorContent: React.FC = () => {
     deleteSelected,
     
     // Configuration
-    defaultEdgeOptions
+    defaultEdgeOptions,
+    
+    // Reset node
+    resetSelectedNode,
   } = useNavigationEditor();
   
   // Show message if tree ID is missing
@@ -278,7 +280,12 @@ const NavigationEditorContent: React.FC = () => {
                 onEdgeClick={onEdgeClick}
                 onNodeDoubleClick={onNodeDoubleClick}
                 onPaneClick={onPaneClick}
-                onInit={setReactFlowInstance}
+                onInit={(instance) => {
+                  if (instance && !reactFlowInstance) {
+                    // Note: setReactFlowInstance would be called here if available from the hook
+                    console.log('[@component:NavigationEditor] ReactFlow instance initialized');
+                  }
+                }}
                 nodeTypes={nodeTypes}
                 edgeTypes={edgeTypes}
                 defaultEdgeOptions={{
@@ -333,6 +340,7 @@ const NavigationEditorContent: React.FC = () => {
                     onAddChildren={() => {}}
                     setNodeForm={setNodeForm}
                     setIsNodeDialogOpen={setIsNodeDialogOpen}
+                    onReset={resetSelectedNode}
                   />
                 )}
                 
@@ -360,6 +368,7 @@ const NavigationEditorContent: React.FC = () => {
         setNodeForm={setNodeForm}
         onSubmit={handleNodeFormSubmit}
         onClose={cancelNodeChanges}
+        onResetNode={resetSelectedNode}
       />
 
       {/* Edge Edit Dialog */}

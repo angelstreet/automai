@@ -20,6 +20,7 @@ interface NodeSelectionPanelProps {
   onAddChildren: () => void;
   setNodeForm: React.Dispatch<React.SetStateAction<NodeForm>>;
   setIsNodeDialogOpen: (open: boolean) => void;
+  onReset?: () => void;
 }
 
 export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
@@ -31,6 +32,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
   onAddChildren,
   setNodeForm,
   setIsNodeDialogOpen,
+  onReset,
 }) => {
   const handleEdit = () => {
     setNodeForm({
@@ -109,6 +111,19 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
               Delete
             </Button>
           </Box>
+          
+          {/* Reset button */}
+          {onReset && (
+            <Button
+              size="small"
+              variant="outlined"
+              color="warning"
+              sx={{ fontSize: '0.75rem', px: 1 }}
+              onClick={onReset}
+            >
+              Reset Node
+            </Button>
+          )}
         </Box>
       </Box>
     </Paper>

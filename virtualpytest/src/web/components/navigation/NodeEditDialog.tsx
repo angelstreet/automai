@@ -35,6 +35,7 @@ interface NodeEditDialogProps {
   setNodeForm: React.Dispatch<React.SetStateAction<NodeForm>>;
   onSubmit: () => void;
   onClose: () => void;
+  onResetNode?: () => void;
 }
 
 export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
@@ -44,6 +45,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   setNodeForm,
   onSubmit,
   onClose,
+  onResetNode,
 }) => {
   // Helper function to get parent names from IDs
   const getParentNames = (parentIds: string[]): string => {
@@ -124,6 +126,16 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
+        {onResetNode && (
+          <Button 
+            onClick={onResetNode}
+            variant="outlined"
+            color="warning"
+            sx={{ mr: 'auto' }}
+          >
+            Reset Node
+          </Button>
+        )}
         <Button 
           onClick={onSubmit} 
           variant="contained"
