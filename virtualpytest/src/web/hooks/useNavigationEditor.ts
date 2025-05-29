@@ -183,23 +183,58 @@ export const useNavigationEditor = () => {
       targetHandle: params.targetHandle
     });
     
-    // Get source and target node names
+    // Get source and target node data
     const sourceNode = nodes.find(node => node.id === params.source);
     const targetNode = nodes.find(node => node.id === params.target);
     const fromNodeName = sourceNode?.data?.label || params.source;
     const toNodeName = targetNode?.data?.label || params.target;
     
-    // Determine edge type based on handles (top = blue, bottom = red)
-    const isTopConnection = params.sourceHandle?.includes('top') || params.targetHandle?.includes('top');
-    const isBottomConnection = params.sourceHandle?.includes('bottom') || params.targetHandle?.includes('bottom');
-    const edgeType = isTopConnection ? 'top' : isBottomConnection ? 'bottom' : 'default';
+    if (!sourceNode || !targetNode) {
+      console.error('[@component:NavigationEditor] Could not find source or target node');
+      return;
+    }
+    
+    // Validate connection based on handle types and node types
+    const isLeftRightConnection = params.sourceHandle?.includes('left') || params.sourceHandle?.includes('right') || 
+                                  params.targetHandle?.includes('left') || params.targetHandle?.includes('right');
+    const isTopBottomConnection = params.sourceHandle?.includes('top') || params.sourceHandle?.includes('bottom') || 
+                                  params.targetHandle?.includes('top') || params.targetHandle?.includes('bottom');
+    const isMenuConnection = params.sourceHandle?.includes('menu') || params.targetHandle?.includes('menu');
+    
+    // Connection validation rules
+    if (isMenuConnection || isTopBottomConnection) {
+      // Top/Bottom handles (menu navigation): At least one node must be a menu
+      if (sourceNode.data.type !== 'menu' && targetNode.data.type !== 'menu') {
+        console.error('[@component:NavigationEditor] Menu navigation handles can only connect to/from menu nodes');
+        return;
+      }
+    } else if (isLeftRightConnection) {
+      // Left/Right handles (screen navigation): Both nodes must be screens (not menus)
+      if (sourceNode.data.type === 'menu' || targetNode.data.type === 'menu') {
+        console.error('[@component:NavigationEditor] Screen navigation handles cannot connect to menu nodes');
+        return;
+      }
+    }
+    
+    // Determine edge type based on handles and connection type
+    let edgeType: 'default' | 'top' | 'bottom' | 'menu' | undefined = 'default';
+    if (isMenuConnection || isTopBottomConnection) {
+      edgeType = 'menu'; // For menu navigation connections
+    } else if (isLeftRightConnection) {
+      const isTopConnection = params.sourceHandle?.includes('top') || params.targetHandle?.includes('top');
+      const isBottomConnection = params.sourceHandle?.includes('bottom') || params.targetHandle?.includes('bottom');
+      edgeType = isTopConnection ? 'top' : isBottomConnection ? 'bottom' : 'default';
+    }
     
     console.log('[@component:NavigationEditor] Handle analysis:', {
       sourceHandle: params.sourceHandle,
       targetHandle: params.targetHandle,
-      isTopConnection,
-      isBottomConnection,
-      finalEdgeType: edgeType
+      isLeftRightConnection,
+      isTopBottomConnection,
+      isMenuConnection,
+      finalEdgeType: edgeType,
+      sourceNodeType: sourceNode.data.type,
+      targetNodeType: targetNode.data.type
     });
     
     const newEdge: UINavigationEdge = {
@@ -210,7 +245,7 @@ export const useNavigationEditor = () => {
       targetHandle: params.targetHandle,
       type: 'uiNavigation',
       data: { 
-        action: 'ACTION',  // Default action, user can edit
+        action: isMenuConnection || isTopBottomConnection ? 'ENTER_MENU' : 'NAVIGATE',  // Different default actions
         edgeType: edgeType,  // Add edge type for coloring
         from: fromNodeName,  // Source node name
         to: toNodeName       // Target node name
@@ -467,6 +502,7 @@ export const useNavigationEditor = () => {
         const treeData = {
           name: currentTreeName || currentTreeId, // Use the name from state
           description: `Navigation tree for ${currentTreeId}`,
+          is_root: allNodes.length === 0 || !allNodes.some(node => node.data.is_root), // Only first tree is root
           tree_data: {
             nodes: nodes,
             edges: edges
@@ -500,7 +536,7 @@ export const useNavigationEditor = () => {
     } finally {
       setIsSaving(false);
     }
-  }, [currentTreeId, currentTreeName, nodes, edges, isSaving, navigate]);
+  }, [currentTreeId, currentTreeName, nodes, edges, isSaving, navigate, allNodes]);
 
   // Handle clicking on the background/pane to deselect
   const onPaneClick = useCallback(() => {
@@ -642,24 +678,28 @@ export const useNavigationEditor = () => {
       try {
         console.log(`[@hook:useNavigationEditor] Creating new tree for menu node: ${nodeForm.label}`);
         
+        // Check if this is the first tree/node being created (only first gets is_root: true)
+        const isFirstTree = allNodes.length === 0 || !allNodes.some(node => node.data.is_root);
+        
         // Create a new tree with the same name as the menu node
         const treeData = {
           name: nodeForm.label,
           description: `Navigation tree for menu: ${nodeForm.label}`,
-          is_root: false, // Menu node trees are not root trees
+          is_root: isFirstTree, // Set is_root flag at top level
           tree_data: {
             nodes: [{
-              id: 'entry-node',
+              id: 'root-node',
               type: 'uiScreen',
               position: { x: 250, y: 100 },
               data: {
-                label: 'Entry Point',
+                label: nodeForm.label, // Root node has same name as tree
                 type: 'screen',
-                description: 'Starting point of the navigation flow',
-                is_root: false // Entry nodes in menu trees are not root nodes
+                description: `Root node for ${nodeForm.label} navigation tree`,
+                is_root: true // The root node of each tree always has is_root: true
               }
             }],
-            edges: []
+            edges: [],
+            is_root: isFirstTree // Set is_root flag within tree_data/metadata as well
           }
         };
         
@@ -675,7 +715,8 @@ export const useNavigationEditor = () => {
           updatedNodeData = {
             ...updatedNodeData,
             tree_id: createResponse.data.id,
-            tree_name: createResponse.data.name
+            tree_name: createResponse.data.name,
+            is_root: isFirstTree // Menu node gets is_root: true only if it's the first one
           };
         } else {
           console.error(`[@hook:useNavigationEditor] Failed to create tree for menu node: ${createResponse.error}`);
@@ -699,7 +740,7 @@ export const useNavigationEditor = () => {
     setHasUnsavedChanges(true);
     setIsNodeDialogOpen(false);
     setIsNewNode(false);
-  }, [selectedNode, nodeForm, setNodes]);
+  }, [selectedNode, nodeForm, setNodes, allNodes]);
 
   // Cancel node changes
   const cancelNodeChanges = useCallback(() => {

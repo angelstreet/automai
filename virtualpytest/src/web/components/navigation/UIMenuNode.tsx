@@ -118,6 +118,89 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({
         }} 
       />
 
+      {/* NEW MENU NAVIGATION HANDLES */}
+      {/* Top Handles for Menu Navigation */}
+      {/* Top-left: Purple - for menu connections */}
+      <Handle 
+        type="source" 
+        position={Position.Top} 
+        id="top-left-menu-source"
+        isConnectable={true}
+        isConnectableStart={true}
+        isConnectableEnd={false}
+        style={{ 
+          background: '#9c27b0', // Purple
+          width: '14px', 
+          height: '14px',
+          border: '2px dashed #fff', // Dotted border
+          borderRadius: '50%',
+          left: '30%',
+          top: -5,
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+        }} 
+      />
+      
+      {/* Top-right: Green - for menu connections */}
+      <Handle 
+        type="target" 
+        position={Position.Top} 
+        id="top-right-menu-target"
+        isConnectable={true}
+        isConnectableStart={false}
+        isConnectableEnd={true}
+        style={{ 
+          background: '#4caf50', // Green
+          width: '14px', 
+          height: '14px',
+          border: '2px dashed #fff', // Dotted border
+          borderRadius: '50%',
+          left: '70%',
+          top: -5,
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+        }} 
+      />
+
+      {/* Bottom Handles for Menu Navigation */}
+      {/* Bottom-left: Purple - for menu connections */}
+      <Handle 
+        type="target" 
+        position={Position.Bottom} 
+        id="bottom-left-menu-target"
+        isConnectable={true}
+        isConnectableStart={false}
+        isConnectableEnd={true}
+        style={{ 
+          background: '#9c27b0', // Purple
+          width: '14px', 
+          height: '14px',
+          border: '2px dashed #fff', // Dotted border
+          borderRadius: '50%',
+          left: '30%',
+          bottom: -5,
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+        }} 
+      />
+      
+      {/* Bottom-right: Green - for menu connections */}
+      <Handle 
+        type="source" 
+        position={Position.Bottom} 
+        id="bottom-right-menu-source"
+        isConnectable={true}
+        isConnectableStart={true}
+        isConnectableEnd={false}
+        style={{ 
+          background: '#4caf50', // Green
+          width: '14px', 
+          height: '14px',
+          border: '2px dashed #fff', // Dotted border
+          borderRadius: '50%',
+          left: '70%',
+          bottom: -5,
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+        }} 
+      />
+
       {/* Tree status indicator */}
       {data.tree_id && (
         <div
@@ -223,7 +306,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({
             justifyContent: 'center',
             zIndex: 10000,
             cursor: 'pointer',
-            paddingTop: '5vh',
+            paddingTop: '0px',
           }}
           onClick={closeModal}
         >

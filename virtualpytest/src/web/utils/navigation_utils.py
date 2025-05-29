@@ -118,6 +118,12 @@ def create_navigation_tree(tree_data: Dict, team_id: str) -> Optional[Dict]:
         elif 'tree_data' in tree_data:
             insert_data['metadata'] = tree_data['tree_data']
         
+        # Set is_root flag if provided in tree_data or inside tree_data.tree_data
+        if 'is_root' in tree_data:
+            insert_data['is_root'] = tree_data['is_root']
+        elif tree_data.get('tree_data', {}).get('is_root') is not None:
+            insert_data['is_root'] = tree_data.get('tree_data', {}).get('is_root')
+        
         result = supabase.table('navigation_trees').insert(insert_data).execute()
         
         if result.data and len(result.data) > 0:
@@ -215,21 +221,223 @@ def check_navigation_tree_name_exists(name: str, userinterface_id: str, exclude_
         print(f"❌ Error checking navigation tree name: {e}")
         return False
 
-# =====================================================
-# NOTE: REMOVED OBSOLETE DATABASE TABLE FUNCTIONS
-# =====================================================
-# The following functions have been removed because they tried to access
-# non-existent navigation_nodes and navigation_edges tables:
-# - convert_nodes_and_edges_to_reactflow 
-# - convert_reactflow_to_nodes_and_edges
-# - get_navigation_nodes_and_edges  
-# - save_navigation_nodes_and_edges
-#
-# These functions are obsolete because:
-# 1. The database schema only has navigation_trees table with metadata JSONB field
-# 2. No separate navigation_nodes or navigation_edges tables exist
-# 3. All data is stored in and loaded from the metadata field
-# =====================================================
+def convert_nodes_and_edges_to_reactflow(nodes, edges):
+    """Convert database nodes and edges to ReactFlow format"""
+    try:
+        print(f"[@utils:navigation:convert_nodes_and_edges_to_reactflow] Converting {len(nodes)} nodes and {len(edges)} edges")
+        
+        # Convert nodes
+        reactflow_nodes = []
+        for node in nodes:
+            reactflow_node = {
+                'id': node['id'],  # Use database primary key as ReactFlow ID
+                'type': 'uiScreen',
+                'position': {
+                    'x': float(node['position_x']),
+                    'y': float(node['position_y'])
+                },
+                'data': {
+                    'label': node['label'],
+                    'description': node.get('description', ''),
+                    'type': node['node_type'],
+                    'isEntryPoint': node.get('is_entry_point', False),
+                    'isExitPoint': node.get('is_exit_point', False),
+                    'hasChildren': node.get('has_children', False),
+                    'childTreeId': node.get('child_tree_id'),
+                    'screenshot': node.get('screenshot_url'),
+                    'metadata': node.get('metadata', {})
+                },
+                'width': node.get('width', 200),
+                'height': node.get('height', 120)
+            }
+            reactflow_nodes.append(reactflow_node)
+        
+        # Convert edges
+        reactflow_edges = []
+        for edge in edges:
+            reactflow_edge = {
+                'id': edge['id'],  # Use database primary key as ReactFlow ID
+                'source': edge['source_id'],  # This should match a node's id
+                'target': edge['target_id'],  # This should match a node's id
+                'type': 'smoothstep',
+                'data': {
+                    'go': edge.get('go_action'),
+                    'comeback': edge.get('comeback_action'),
+                    'description': edge.get('description', ''),
+                    'edgeType': edge.get('edge_type', 'navigation'),
+                    'isBidirectional': edge.get('is_bidirectional', False),
+                    'conditions': edge.get('conditions', {}),
+                    'metadata': edge.get('metadata', {})
+                }
+            }
+            reactflow_edges.append(reactflow_edge)
+        
+        print(f"[@utils:navigation:convert_nodes_and_edges_to_reactflow] Converted to {len(reactflow_nodes)} ReactFlow nodes and {len(reactflow_edges)} ReactFlow edges")
+        return {
+            'nodes': reactflow_nodes,
+            'edges': reactflow_edges
+        }
+        
+    except Exception as e:
+        print(f"[@utils:navigation:convert_nodes_and_edges_to_reactflow] Error: {str(e)}")
+        return {'nodes': [], 'edges': []}
+
+def convert_reactflow_to_nodes_and_edges(reactflow_data, tree_id):
+    """Convert ReactFlow format to database nodes and edges"""
+    try:
+        nodes_data = reactflow_data.get('nodes', [])
+        edges_data = reactflow_data.get('edges', [])
+        
+        print(f"[@utils:navigation:convert_reactflow_to_nodes_and_edges] Converting {len(nodes_data)} ReactFlow nodes and {len(edges_data)} ReactFlow edges")
+        
+        # Convert nodes
+        db_nodes = []
+        for node in nodes_data:
+            node_data = node.get('data', {})
+            db_node = {
+                'tree_id': tree_id,
+                'label': node_data.get('label', ''),
+                'node_type': node_data.get('type', 'screen'),
+                'position_x': float(node['position']['x']),
+                'position_y': float(node['position']['y']),
+                'width': node.get('width', 200),
+                'height': node.get('height', 120),
+                'description': node_data.get('description'),
+                'screenshot_url': node_data.get('screenshot'),
+                'has_children': node_data.get('hasChildren', False),
+                'child_tree_id': node_data.get('childTreeId'),
+                'is_entry_point': node_data.get('isEntryPoint', False),
+                'is_exit_point': node_data.get('isExitPoint', False),
+                'metadata': node_data.get('metadata', {})
+            }
+            db_nodes.append(db_node)
+        
+        # Convert edges
+        db_edges = []
+        for edge in edges_data:
+            edge_data = edge.get('data', {})
+            db_edge = {
+                'tree_id': tree_id,
+                'source_id': edge['source'],
+                'target_id': edge['target'],
+                'edge_type': edge_data.get('edgeType', 'navigation'),
+                'go_action': edge_data.get('go'),
+                'comeback_action': edge_data.get('comeback'),
+                'description': edge_data.get('description'),
+                'is_bidirectional': edge_data.get('isBidirectional', False),
+                'conditions': edge_data.get('conditions', {}),
+                'metadata': edge_data.get('metadata', {})
+            }
+            db_edges.append(db_edge)
+        
+        print(f"[@utils:navigation:convert_reactflow_to_nodes_and_edges] Converted to {len(db_nodes)} database nodes and {len(db_edges)} database edges")
+        return db_nodes, db_edges
+        
+    except Exception as e:
+        print(f"[@utils:navigation:convert_reactflow_to_nodes_and_edges] Error: {str(e)}")
+        return [], []
+
+def get_navigation_nodes_and_edges(tree_id, team_id):
+    """Get navigation nodes and edges from database"""
+    supabase = get_supabase_client()
+    
+    try:
+        print(f"[@utils:navigation:get_navigation_nodes_and_edges] Getting nodes and edges for tree: {tree_id}, team: {team_id}")
+        
+        # Get nodes
+        print(f"[@utils:navigation:get_navigation_nodes_and_edges] DEBUG: Executing query for tree_id={tree_id}, team_id={team_id}")
+        nodes_result = supabase.table('navigation_nodes').select('*').eq('tree_id', tree_id).eq('team_id', team_id).order('created_at').execute()
+        print(f"[@utils:navigation:get_navigation_nodes_and_edges] DEBUG: Query result: {nodes_result}")
+        nodes = nodes_result.data if nodes_result.data else []
+        
+        # Get edges
+        edges_result = supabase.table('navigation_edges').select('*').eq('tree_id', tree_id).eq('team_id', team_id).order('created_at').execute()
+        edges = edges_result.data if edges_result.data else []
+        
+        print(f"[@utils:navigation:get_navigation_nodes_and_edges] Found {len(nodes)} nodes and {len(edges)} edges")
+        if len(nodes) == 0:
+            print(f"[@utils:navigation:get_navigation_nodes_and_edges] WARNING: No nodes found for tree_id={tree_id}, team_id={team_id}. This might be a schema or permissions issue.")
+        return nodes, edges
+        
+    except Exception as e:
+        print(f"[@utils:navigation:get_navigation_nodes_and_edges] Error: {str(e)}")
+        print(f"[@utils:navigation:get_navigation_nodes_and_edges] Error details: Type={type(e)}, Traceback follows:")
+        import traceback
+        traceback.print_exc()
+        return [], []
+
+def save_navigation_nodes_and_edges(tree_id, nodes, edges, team_id=None):
+    """Save navigation nodes and edges to database"""
+    supabase = get_supabase_client()
+    
+    try:
+        print(f"[@utils:navigation:save_navigation_nodes_and_edges] Saving {len(nodes)} nodes and {len(edges)} edges for tree: {tree_id}")
+        
+        # Get the team_id from the tree if not provided
+        if team_id is None:
+            print(f"[@utils:navigation:save_navigation_nodes_and_edges] WARNING: No team_id provided, attempting to get it from the tree")
+            try:
+                tree_result = supabase.table('navigation_trees').select('team_id').eq('id', tree_id).single().execute()
+                if tree_result.data:
+                    team_id = tree_result.data['team_id']
+                    print(f"[@utils:navigation:save_navigation_nodes_and_edges] Retrieved team_id: {team_id} from tree: {tree_id}")
+                else:
+                    print(f"[@utils:navigation:save_navigation_nodes_and_edges] ERROR: Could not find tree with ID: {tree_id}")
+                    return False
+            except Exception as e:
+                print(f"[@utils:navigation:save_navigation_nodes_and_edges] ERROR: Failed to retrieve team_id: {str(e)}")
+                return False
+        
+        # Delete existing nodes and edges for this tree
+        print(f"[@utils:navigation:save_navigation_nodes_and_edges] Deleting existing nodes and edges for tree: {tree_id}")
+        supabase.table('navigation_nodes').delete().eq('tree_id', tree_id).execute()
+        supabase.table('navigation_edges').delete().eq('tree_id', tree_id).execute()
+        
+        # Insert new nodes
+        if nodes:
+            print(f"[@utils:navigation:save_navigation_nodes_and_edges] Inserting {len(nodes)} nodes")
+            for node in nodes:
+                # Ensure JSON fields are properly serialized
+                node_to_insert = {**node}
+                # Ensure team_id is set
+                node_to_insert['team_id'] = team_id
+                if 'metadata' in node_to_insert and isinstance(node_to_insert['metadata'], dict):
+                    node_to_insert['metadata'] = json.dumps(node_to_insert['metadata'])
+                
+                try:
+                    result = supabase.table('navigation_nodes').insert(node_to_insert).execute()
+                    print(f"[@utils:navigation:save_navigation_nodes_and_edges] Inserted node: {node_to_insert.get('label')} result: {result}")
+                except Exception as e:
+                    print(f"[@utils:navigation:save_navigation_nodes_and_edges] ERROR inserting node: {str(e)}")
+        
+        # Insert new edges
+        if edges:
+            print(f"[@utils:navigation:save_navigation_nodes_and_edges] Inserting {len(edges)} edges")
+            for edge in edges:
+                # Ensure JSON fields are properly serialized
+                edge_to_insert = {**edge}
+                # Ensure team_id is set
+                edge_to_insert['team_id'] = team_id
+                if 'conditions' in edge_to_insert and isinstance(edge_to_insert['conditions'], dict):
+                    edge_to_insert['conditions'] = json.dumps(edge_to_insert['conditions'])
+                if 'metadata' in edge_to_insert and isinstance(edge_to_insert['metadata'], dict):
+                    edge_to_insert['metadata'] = json.dumps(edge_to_insert['metadata'])
+                
+                try:
+                    result = supabase.table('navigation_edges').insert(edge_to_insert).execute()
+                    print(f"[@utils:navigation:save_navigation_nodes_and_edges] Inserted edge: {edge_to_insert.get('source_id')} -> {edge_to_insert.get('target_id')} result: {result}")
+                except Exception as e:
+                    print(f"[@utils:navigation:save_navigation_nodes_and_edges] ERROR inserting edge: {str(e)}")
+        
+        print(f"[@utils:navigation:save_navigation_nodes_and_edges] Successfully saved {len(nodes)} nodes and {len(edges)} edges")
+        return True
+        
+    except Exception as e:
+        print(f"[@utils:navigation:save_navigation_nodes_and_edges] Error: {str(e)}")
+        print(f"[@utils:navigation:save_navigation_nodes_and_edges] Error details: Type={type(e)}, Traceback follows:")
+        import traceback
+        traceback.print_exc()
+        return False
 
 def get_root_tree_for_interface(interface_id: str, team_id: str) -> Optional[Dict]:
     """Retrieve the root navigation tree for a given user interface ID and team ID from Supabase."""
