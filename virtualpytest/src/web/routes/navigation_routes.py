@@ -24,8 +24,7 @@ sys.path.insert(0, web_utils_path)
 from navigation_utils import (
     get_all_navigation_trees, get_navigation_tree, create_navigation_tree, 
     update_navigation_tree, delete_navigation_tree, check_navigation_tree_name_exists,
-    get_navigation_nodes_and_edges, convert_nodes_and_edges_to_reactflow, convert_reactflow_to_nodes_and_edges,
-    save_navigation_nodes_and_edges, get_root_tree_for_interface
+    get_root_tree_for_interface
 )
 from userinterface_utils import get_all_userinterfaces, get_userinterface
 from .utils import check_supabase, get_team_id
@@ -332,7 +331,7 @@ def get_navigation_tree_by_id_and_team(tree_id, team_id):
 
 @navigation_bp.route('/trees/<tree_id>/complete', methods=['GET'])
 def get_complete_navigation_tree(tree_id):
-    """Get a complete navigation tree with nodes and edges from database"""
+    """Get a complete navigation tree with nodes and edges from metadata field"""
     error_response = check_supabase()
     if error_response:
         return error_response
@@ -345,30 +344,13 @@ def get_complete_navigation_tree(tree_id):
         tree_info = get_navigation_tree(tree_id, team_id)
         
         if not tree_info:
-            # Return simple 404 response like userinterface routes
             return jsonify({
                 'success': False,
                 'error': 'Navigation tree not found'
             }), 404
         
-        # Get nodes and edges from database
-        nodes, edges = get_navigation_nodes_and_edges(tree_id, team_id)
-        
-        print(f"[@api:navigation:get_complete_tree] Retrieved {len(nodes)} nodes and {len(edges)} edges from database")
-        
-        # Convert to ReactFlow format
-        reactflow_data = convert_nodes_and_edges_to_reactflow(nodes, edges)
-        
-        # Get existing metadata (ReactFlow format) from tree
-        existing_metadata = tree_info.get('metadata', {})
-        
-        # If we have database nodes/edges, use them; otherwise use metadata
-        if nodes or edges:
-            print(f"[@api:navigation:get_complete_tree] Using database nodes and edges")
-            tree_data = reactflow_data
-        else:
-            print(f"[@api:navigation:get_complete_tree] Using metadata ReactFlow data")
-            tree_data = existing_metadata
+        # Get tree data from metadata field (ReactFlow format)
+        tree_data = tree_info.get('metadata', {})
         
         # Ensure we have the basic structure
         if not isinstance(tree_data, dict):
@@ -384,7 +366,7 @@ def get_complete_navigation_tree(tree_id):
             'tree_data': tree_data
         }
         
-        print(f"[@api:navigation:get_complete_tree] Returning tree with {len(tree_data.get('nodes', []))} nodes and {len(tree_data.get('edges', []))} edges")
+        print(f"[@api:navigation:get_complete_tree] Returning tree with {len(tree_data.get('nodes', []))} nodes and {len(tree_data.get('edges', []))} edges from metadata")
         return jsonify(response_data)
         
     except Exception as e:
@@ -485,15 +467,12 @@ def get_userinterface_with_root(interface_id):
         if root_tree:
             print(f"[@api:navigation_routes:get_userinterface_with_root] Found root tree for userinterface {interface_id}: {root_tree['id']}")
             
-            # Get the navigation nodes and edges for the root tree
-            tree_id = root_tree['id']
-            nodes, edges = get_navigation_nodes_and_edges(tree_id, team_id)
+            # Note: Separate node/edge tables don't exist, data is in metadata field
+            # Set empty arrays for backward compatibility
+            root_tree['nodes'] = []
+            root_tree['edges'] = []
             
-            # Add nodes and edges to the response
-            root_tree['nodes'] = nodes
-            root_tree['edges'] = edges
-            
-            print(f"[@api:navigation_routes:get_userinterface_with_root] Found {len(nodes)} nodes and {len(edges)} edges for root tree {tree_id}")
+            print(f"[@api:navigation_routes:get_userinterface_with_root] Root tree metadata contains the node/edge data")
         else:
             print(f"[@api:navigation_routes:get_userinterface_with_root] No root tree found for userinterface {interface_id}")
         

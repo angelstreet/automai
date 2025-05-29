@@ -709,8 +709,8 @@ export const useNavigationEditor = () => {
 
   // Navigate back to parent
   const navigateToParent = useCallback(() => {
-    console.log('[@hook:useNavigationEditor] Navigating back to navigation trees list');
-    navigate('/navigation-trees');
+    console.log('[@hook:useNavigationEditor] Navigating back to interface configuration');
+    navigate('/configuration/interface');
   }, [navigate]);
 
   // Default edge options

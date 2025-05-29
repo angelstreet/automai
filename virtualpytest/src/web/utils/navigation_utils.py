@@ -215,151 +215,21 @@ def check_navigation_tree_name_exists(name: str, userinterface_id: str, exclude_
         print(f"❌ Error checking navigation tree name: {e}")
         return False
 
-def convert_nodes_and_edges_to_reactflow(nodes, edges):
-    """Convert database nodes and edges to ReactFlow format"""
-    try:
-        print(f"[@utils:navigation:convert_nodes_and_edges_to_reactflow] Converting {len(nodes)} nodes and {len(edges)} edges")
-        
-        # Convert nodes
-        reactflow_nodes = []
-        for node in nodes:
-            reactflow_node = {
-                'id': node['id'],  # Use the node ID (either from ReactFlow or database)
-                'type': 'uiScreen',
-                'position': {'x': node['position_x'], 'y': node['position_y']},
-                'data': {
-                    'label': node['label'],
-                    'type': node.get('node_type', 'screen'),
-                    'description': node.get('description', ''),
-                    'hasChildren': node.get('has_children', False),
-                    'isEntryPoint': node.get('is_entry_point', False),
-                    'isExitPoint': node.get('is_exit_point', False),
-                    'childTreeId': node.get('child_tree_id'),
-                    'screenshot': node.get('screenshot_url'),
-                    'metadata': node.get('metadata', {})
-                },
-                'width': node.get('width', 200),
-                'height': node.get('height', 120)
-            }
-            reactflow_nodes.append(reactflow_node)
-        
-        # Convert edges
-        reactflow_edges = []
-        for edge in edges:
-            reactflow_edge = {
-                'id': edge['id'],  # Use database primary key as ReactFlow ID
-                'source': edge['source_id'],  # This should match a node's id
-                'target': edge['target_id'],  # This should match a node's id
-                'type': 'smoothstep',
-                'data': {
-                    'action': edge.get('go_action'),  # Fixed: Map go_action back to action for frontend
-                    'go': edge.get('go_action'),  # Keep both for compatibility
-                    'comeback': edge.get('comeback_action'),
-                    'description': edge.get('description', ''),
-                    'edgeType': edge.get('edge_type', 'navigation'),
-                    'isBidirectional': edge.get('is_bidirectional', False),
-                    'conditions': edge.get('conditions', {}),
-                    'metadata': edge.get('metadata', {})
-                }
-            }
-            reactflow_edges.append(reactflow_edge)
-        
-        print(f"[@utils:navigation:convert_nodes_and_edges_to_reactflow] Converted to {len(reactflow_nodes)} ReactFlow nodes and {len(reactflow_edges)} ReactFlow edges")
-        return {
-            'nodes': reactflow_nodes,
-            'edges': reactflow_edges
-        }
-        
-    except Exception as e:
-        print(f"[@utils:navigation:convert_nodes_and_edges_to_reactflow] Error: {str(e)}")
-        return {'nodes': [], 'edges': []}
-
-def convert_reactflow_to_nodes_and_edges(reactflow_data, tree_id):
-    """Convert ReactFlow format to database nodes and edges"""
-    try:
-        nodes_data = reactflow_data.get('nodes', [])
-        edges_data = reactflow_data.get('edges', [])
-        
-        print(f"[@utils:navigation:convert_reactflow_to_nodes_and_edges] Converting {len(nodes_data)} ReactFlow nodes and {len(edges_data)} ReactFlow edges")
-        
-        # Convert nodes
-        db_nodes = []
-        for node in nodes_data:
-            node_data = node.get('data', {})
-            db_node = {
-                'id': node.get('id'),  # Include ReactFlow node ID
-                'tree_id': tree_id,
-                'label': node_data.get('label', ''),
-                'node_type': node_data.get('type', 'screen'),
-                'position_x': float(node['position']['x']),
-                'position_y': float(node['position']['y']),
-                'width': node.get('width', 200),
-                'height': node.get('height', 120),
-                'description': node_data.get('description'),
-                'screenshot_url': node_data.get('screenshot'),
-                'has_children': node_data.get('hasChildren', False),
-                'child_tree_id': node_data.get('childTreeId'),
-                'is_entry_point': node_data.get('isEntryPoint', False),
-                'is_exit_point': node_data.get('isExitPoint', False),
-                'metadata': node_data.get('metadata', {})
-            }
-            db_nodes.append(db_node)
-        
-        # Convert edges
-        db_edges = []
-        for edge in edges_data:
-            edge_data = edge.get('data', {})
-            
-            # Map the action field correctly - frontend sends 'action', but DB expects 'go_action'
-            action_value = edge_data.get('action') or edge_data.get('go')
-            
-            db_edge = {
-                'id': edge.get('id'),  # Include ReactFlow edge ID
-                'tree_id': tree_id,
-                'source_id': edge['source'],
-                'target_id': edge['target'],
-                'edge_type': edge_data.get('edgeType', 'navigation'),
-                'go_action': action_value,  # Fixed: Use action from frontend
-                'comeback_action': edge_data.get('comeback'),
-                'description': edge_data.get('description'),
-                'is_bidirectional': edge_data.get('isBidirectional', False),
-                'conditions': edge_data.get('conditions', {}),
-                'metadata': edge_data.get('metadata', {})
-            }
-            db_edges.append(db_edge)
-        
-        print(f"[@utils:navigation:convert_reactflow_to_nodes_and_edges] Converted to {len(db_nodes)} database nodes and {len(db_edges)} database edges")
-        return db_nodes, db_edges
-        
-    except Exception as e:
-        print(f"[@utils:navigation:convert_reactflow_to_nodes_and_edges] Error: {str(e)}")
-        return [], []
-
-def get_navigation_nodes_and_edges(tree_id, team_id):
-    """Get navigation nodes and edges from database
-    Note: Since the database only has navigation_trees table with metadata field,
-    we return empty arrays. The actual data loading happens via the metadata field.
-    """
-    print(f"[@utils:navigation:get_navigation_nodes_and_edges] Note: Database schema only supports metadata storage, not separate node/edge tables")
-    print(f"[@utils:navigation:get_navigation_nodes_and_edges] Returning empty arrays - data is loaded via metadata field in navigation_trees")
-    
-    # Since the separate navigation_nodes/navigation_edges tables don't exist in the schema,
-    # and the data is stored in the metadata field of navigation_trees,
-    # we return empty arrays here. The data loading happens via the metadata field.
-    return [], []
-
-def save_navigation_nodes_and_edges(tree_id, nodes, edges, team_id=None):
-    """Save navigation nodes and edges to database
-    Note: Since the database only has navigation_trees table with metadata field,
-    we only save to the metadata. The separate nodes/edges tables don't exist.
-    """
-    print(f"[@utils:navigation:save_navigation_nodes_and_edges] Note: Database schema only supports metadata storage, not separate node/edge tables")
-    print(f"[@utils:navigation:save_navigation_nodes_and_edges] Nodes and edges are already saved via the metadata field in navigation_trees")
-    
-    # Since the actual saving happens via metadata field in update_navigation_tree,
-    # and the separate navigation_nodes/navigation_edges tables don't exist in the schema,
-    # we just return True here. The data is already saved via the metadata field.
-    return True
+# =====================================================
+# NOTE: REMOVED OBSOLETE DATABASE TABLE FUNCTIONS
+# =====================================================
+# The following functions have been removed because they tried to access
+# non-existent navigation_nodes and navigation_edges tables:
+# - convert_nodes_and_edges_to_reactflow 
+# - convert_reactflow_to_nodes_and_edges
+# - get_navigation_nodes_and_edges  
+# - save_navigation_nodes_and_edges
+#
+# These functions are obsolete because:
+# 1. The database schema only has navigation_trees table with metadata JSONB field
+# 2. No separate navigation_nodes or navigation_edges tables exist
+# 3. All data is stored in and loaded from the metadata field
+# =====================================================
 
 def get_root_tree_for_interface(interface_id: str, team_id: str) -> Optional[Dict]:
     """Retrieve the root navigation tree for a given user interface ID and team ID from Supabase."""
