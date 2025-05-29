@@ -347,7 +347,10 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({
                 display: 'block',
                 margin: 0,
                 padding: 0,
+                cursor: 'pointer',
               }}
+              onDoubleClick={closeModal}
+              title="Double-click to close"
             />
             
             <div

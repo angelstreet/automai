@@ -348,7 +348,10 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
                 display: 'block',
                 margin: 0,
                 padding: 0,
+                cursor: 'pointer',
               }}
+              onDoubleClick={closeModal}
+              title="Double-click to close"
             />
             
             {/* Caption and Close Button */}
