@@ -49,14 +49,15 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({
         isConnectableStart={false}
         isConnectableEnd={true}
         style={{ 
-          background: '#ff6f00', 
+          background: 'linear-gradient(135deg, #ffcc80, #ffb74d)', // Muted orange gradient
           width: '14px', 
           height: '14px',
           border: '2px solid #fff',
           borderRadius: '50%',
           left: -5,
           top: '30%',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
+          opacity: 0.8,
         }} 
       />
       
@@ -68,14 +69,14 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({
         isConnectableStart={true}
         isConnectableEnd={false}
         style={{ 
-          background: '#f44336', 
+          background: 'linear-gradient(135deg, #ff5722, #ff8a65)', // Bright red gradient
           width: '14px', 
           height: '14px',
           border: '2px solid #fff',
           borderRadius: '50%',
           left: -5,
           top: '70%',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+          boxShadow: '0 3px 8px rgba(255, 87, 34, 0.4), 0 0 12px rgba(255, 87, 34, 0.3)',
         }} 
       />
       
@@ -88,14 +89,14 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({
         isConnectableStart={true}
         isConnectableEnd={false}
         style={{ 
-          background: '#ff6f00', 
+          background: 'linear-gradient(135deg, #ff6f00, #ffa726)', // Bright orange gradient
           width: '14px', 
           height: '14px',
           border: '2px solid #fff',
           borderRadius: '50%',
           right: -5,
           top: '30%',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+          boxShadow: '0 3px 8px rgba(255, 111, 0, 0.4), 0 0 12px rgba(255, 111, 0, 0.3)',
         }} 
       />
 
@@ -107,20 +108,21 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({
         isConnectableStart={false}
         isConnectableEnd={true}
         style={{ 
-          background: '#f44336', 
+          background: 'linear-gradient(135deg, #ef9a9a, #e57373)', // Muted red gradient
           width: '14px', 
           height: '14px',
           border: '2px solid #fff',
           borderRadius: '50%',
           right: -5,
           top: '70%',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
+          opacity: 0.8,
         }} 
       />
 
       {/* NEW MENU NAVIGATION HANDLES */}
       {/* Top Handles for Menu Navigation */}
-      {/* Top-left: Purple - for menu connections */}
+      {/* Top-left: Purple - SOURCE for menu connections */}
       <Handle 
         type="source" 
         position={Position.Top} 
@@ -129,18 +131,18 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({
         isConnectableStart={true}
         isConnectableEnd={false}
         style={{ 
-          background: '#9c27b0', // Purple
+          background: 'linear-gradient(135deg, #9c27b0, #ba68c8)', // Bright purple gradient
           width: '14px', 
           height: '14px',
-          border: '2px',
+          border: '2px solid #fff',
           borderRadius: '50%',
           left: '30%',
           top: -5,
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+          boxShadow: '0 3px 8px rgba(156, 39, 176, 0.4), 0 0 12px rgba(156, 39, 176, 0.3)',
         }} 
       />
       
-      {/* Top-right: Green - for menu connections */}
+      {/* Top-right: Green - TARGET for menu connections */}
       <Handle 
         type="target" 
         position={Position.Top} 
@@ -149,19 +151,20 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({
         isConnectableStart={false}
         isConnectableEnd={true}
         style={{ 
-          background: '#4caf50', // Green
+          background: 'linear-gradient(135deg, #a5d6a7, #81c784)', // Muted green gradient
           width: '14px', 
           height: '14px',
-          border: '2px',
+          border: '2px solid #fff',
           borderRadius: '50%',
           left: '70%',
           top: -5,
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
+          opacity: 0.8,
         }} 
       />
 
       {/* Bottom Handles for Menu Navigation */}
-      {/* Bottom-left: Purple - for menu connections */}
+      {/* Bottom-left: Purple - TARGET for menu connections */}
       <Handle 
         type="target" 
         position={Position.Bottom} 
@@ -170,18 +173,19 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({
         isConnectableStart={false}
         isConnectableEnd={true}
         style={{ 
-          background: '#9c27b0', // Purple
+          background: 'linear-gradient(135deg, #ce93d8, #ba68c8)', // Muted purple gradient
           width: '14px', 
           height: '14px',
-          border: '2px',
+          border: '2px solid #fff',
           borderRadius: '50%',
           left: '30%',
           bottom: -5,
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
+          opacity: 0.8,
         }} 
       />
       
-      {/* Bottom-right: Green - for menu connections */}
+      {/* Bottom-right: Green - SOURCE for menu connections */}
       <Handle 
         type="source" 
         position={Position.Bottom} 
@@ -190,14 +194,14 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({
         isConnectableStart={true}
         isConnectableEnd={false}
         style={{ 
-          background: '#4caf50', // Green
+          background: 'linear-gradient(135deg, #4caf50, #66bb6a)', // Bright green gradient
           width: '14px', 
           height: '14px',
-          border: '2px',
+          border: '2px solid #fff',
           borderRadius: '50%',
           left: '70%',
           bottom: -5,
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+          boxShadow: '0 3px 8px rgba(76, 175, 80, 0.4), 0 0 12px rgba(76, 175, 80, 0.3)',
         }} 
       />
 

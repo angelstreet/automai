@@ -585,12 +585,36 @@ export const useNavigationEditor = () => {
     
     // Only allow navigation for menu type nodes
     if (uiNode.data.type === 'menu') {
-      console.log(`[@hook:useNavigationEditor] Double-click on menu node: ${uiNode.data.label}, attempting to navigate to nested tree`);
-      navigateToChildView(uiNode.id);
+      console.log(`[@hook:useNavigationEditor] Double-click on menu node: ${uiNode.data.label}`);
+      
+      // Check if this menu node has an associated tree
+      if (uiNode.data.tree_id && uiNode.data.tree_name) {
+        console.log(`[@hook:useNavigationEditor] Navigating to menu tree: ${uiNode.data.tree_name} (ID: ${uiNode.data.tree_id})`);
+        
+        // Add to navigation path
+        const newPath = [...navigationPath, uiNode.data.tree_id];
+        const newNamePath = [...navigationNamePath, uiNode.data.tree_name];
+        
+        setNavigationPath(newPath);
+        setNavigationNamePath(newNamePath);
+        setCurrentTreeId(uiNode.data.tree_id);
+        setCurrentTreeName(uiNode.data.tree_name);
+        
+        // Update URL to reflect the new tree
+        navigate(`/navigation-editor/${encodeURIComponent(uiNode.data.tree_name)}/${uiNode.data.tree_id}`);
+        
+        // Load the tree data from database
+        loadFromDatabase();
+        
+        console.log(`[@hook:useNavigationEditor] Navigation completed to tree: ${uiNode.data.tree_name}`);
+      } else {
+        console.log(`[@hook:useNavigationEditor] Menu node ${uiNode.data.label} does not have an associated tree yet`);
+        // You could optionally create the tree here if it doesn't exist
+      }
     } else {
       console.log(`[@hook:useNavigationEditor] Double-click on ${uiNode.data.type} node: ${uiNode.data.label}, navigation not allowed (only menu nodes can navigate)`);
     }
-  }, [navigateToChildView]);
+  }, [navigationPath, navigationNamePath, navigate, loadFromDatabase]);
 
   // Navigate back in breadcrumb
   const navigateToTreeLevel = useCallback((index: number) => {
