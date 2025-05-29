@@ -54,6 +54,7 @@ interface CRUDState {
   nodes: UINavigationNode[];
   edges: UINavigationEdge[];
   allNodes: UINavigationNode[];
+  allEdges: UINavigationEdge[];
   isSaving: boolean;
 }
 
@@ -179,6 +180,12 @@ export const useNavigationCRUD = (state: CRUDState) => {
     
     try {
       console.log(`[@hook:useNavigationCRUD] Starting save to database for tree: ${state.currentTreeId}`);
+      
+      // DEBUG: Log the exact state being saved
+      console.log(`[@hook:useNavigationCRUD] DEBUG - allNodes:`, state.allNodes);
+      console.log(`[@hook:useNavigationCRUD] DEBUG - allEdges:`, state.allEdges);
+      console.log(`[@hook:useNavigationCRUD] DEBUG - filtered nodes:`, state.nodes);
+      console.log(`[@hook:useNavigationCRUD] DEBUG - filtered edges:`, state.edges);
       
       // Ensure allNodes and allEdges are defined
       const nodesToSave = state.allNodes || [];

@@ -91,6 +91,7 @@ export const useNavigationEditor = () => {
     nodes: navigationState.nodes,
     edges: navigationState.edges,
     allNodes: navigationState.allNodes,
+    allEdges: navigationState.allEdges,
     isSaving: navigationState.isSaving,
   });
   
@@ -161,6 +162,8 @@ export const useNavigationEditor = () => {
 
   // Override onConnect to save to history and track changes
   const onConnectHistory = useCallback((params: Connection) => {
+    console.log('[@component:NavigationEditor] onConnectHistory called with params:', params);
+    
     if (!params.source || !params.target) return;
 
     const sourceNode = navigationState.nodes.find((n) => n.id === params.source);
@@ -237,8 +240,27 @@ export const useNavigationEditor = () => {
     // Add edge using history-aware setter
     navigationState.setEdges((eds) => addEdge(newEdge, eds));
     
-    // Also add edge to allEdges (complete dataset)
-    navigationState.setAllEdges((allEds) => addEdge(newEdge, allEds));
+    // Also add edge to allEdges (complete dataset) - with debugging
+    console.log('[@component:NavigationEditor] Before adding edge to allEdges, current allEdges count:', navigationState.allEdges.length);
+    navigationState.setAllEdges((allEds) => {
+      const updatedEdges = addEdge(newEdge, allEds);
+      console.log('[@component:NavigationEditor] After adding edge to allEdges, new count:', updatedEdges.length);
+      return updatedEdges;
+    });
+    
+    // Ensure allEdges update persists after any potential filter resets
+    setTimeout(() => {
+      navigationState.setAllEdges((allEds) => {
+        // Check if the edge is already there, if not add it
+        const edgeExists = allEds.some(edge => edge.id === newEdge.id);
+        if (!edgeExists) {
+          console.log('[@component:NavigationEditor] Edge missing from allEdges after timeout, re-adding:', newEdge.id);
+          return addEdge(newEdge, allEds);
+        }
+        console.log('[@component:NavigationEditor] Edge confirmed in allEdges after timeout:', newEdge.id);
+        return allEds;
+      });
+    }, 100);
     
     // Mark as having unsaved changes
     navigationState.setHasUnsavedChanges(true);
@@ -606,6 +628,21 @@ export const useNavigationEditor = () => {
     
     navigationState.setAvailableFocusNodes(focusableNodes);
   }, [navigationState.allNodes]);
+
+  // Debug: Track changes to edges arrays
+  useEffect(() => {
+    console.log(`[@hook:useNavigationEditor] Filtered edges changed - count: ${navigationState.edges.length}`);
+    navigationState.edges.forEach((edge, index) => {
+      console.log(`[@hook:useNavigationEditor] Filtered edge ${index}: ${edge.id} (${edge.source} → ${edge.target})`);
+    });
+  }, [navigationState.edges]);
+
+  useEffect(() => {
+    console.log(`[@hook:useNavigationEditor] All edges changed - count: ${navigationState.allEdges.length}`);
+    navigationState.allEdges.forEach((edge, index) => {
+      console.log(`[@hook:useNavigationEditor] All edge ${index}: ${edge.id} (${edge.source} → ${edge.target})`);
+    });
+  }, [navigationState.allEdges]);
 
   // Focus on specific node (dropdown selection)
   const setFocusNode = useCallback((nodeId: string | null) => {
