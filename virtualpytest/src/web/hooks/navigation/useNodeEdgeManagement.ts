@@ -189,12 +189,17 @@ export const useNodeEdgeManagement = (state: NodeEdgeState) => {
         const targetNodeId = state.selectedEdge!.target;
         const hasRemainingIncomingEdges = newEdges.some(edge => edge.target === targetNodeId);
         
+        // Issue 2 Fix: Check if the source node (menu) loses its last outgoing edge
+        const sourceNodeId = state.selectedEdge!.source;
+        const hasRemainingOutgoingEdges = newEdges.some(edge => edge.source === sourceNodeId);
+        
         let updatedNodes = nds;
+        
+        // Handle target node parent cleanup
         if (!hasRemainingIncomingEdges) {
-          // No more incoming edges, clear parent chain and reset depth
-          updatedNodes = nds.map((node) => {
+          updatedNodes = updatedNodes.map((node) => {
             if (node.id === targetNodeId) {
-              console.log(`[@hook:useNodeEdgeManagement] Clearing parent/depth for node ${node.data.label} - no remaining incoming edges`);
+              console.log(`[@hook:useNodeEdgeManagement] Clearing parent/depth for target node ${node.data.label} - no remaining incoming edges`);
               return {
                 ...node,
                 data: {
@@ -207,7 +212,28 @@ export const useNodeEdgeManagement = (state: NodeEdgeState) => {
             return node;
           });
         } else {
-          console.log(`[@hook:useNodeEdgeManagement] Node ${targetNodeId} still has incoming edges, keeping parent/depth`);
+          console.log(`[@hook:useNodeEdgeManagement] Target node ${targetNodeId} still has incoming edges, keeping parent/depth`);
+        }
+        
+        // Issue 2 Fix: Handle source node (menu) parent cleanup when it loses its last edge
+        if (!hasRemainingOutgoingEdges) {
+          const sourceNode = nds.find(node => node.id === sourceNodeId);
+          if (sourceNode && sourceNode.data.type === 'menu') {
+            updatedNodes = updatedNodes.map((node) => {
+              if (node.id === sourceNodeId) {
+                console.log(`[@hook:useNodeEdgeManagement] Menu node ${node.data.label} lost its last edge - resetting parent/depth`);
+                return {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    parent: [],
+                    depth: 0
+                  }
+                };
+              }
+              return node;
+            });
+          }
         }
         
         return { newEdges, updatedNodes };
@@ -219,8 +245,8 @@ export const useNodeEdgeManagement = (state: NodeEdgeState) => {
       state.setNodes(() => filteredResult.updatedNodes);
       
       // Update complete arrays
-      state.setAllEdges(filteredResult.newEdges);
-      state.setAllNodes(filteredResult.updatedNodes);
+      state.setAllEdges(() => filteredResult.newEdges);
+      state.setAllNodes(() => filteredResult.updatedNodes);
       
       state.setSelectedEdge(null);
       state.setHasUnsavedChanges(true);

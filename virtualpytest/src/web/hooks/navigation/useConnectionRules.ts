@@ -63,6 +63,36 @@ const establishConnectionRules = (
     const targetIsOrphan = !targetNode.data.parent || targetNode.data.parent.length === 0;
     const sourceIsOrphan = !sourceNode.data.parent || sourceNode.data.parent.length === 0;
     
+    // Issue 1 Fix: For vertical connections, also prioritize menu nodes when both are orphans
+    if (sourceIsOrphan && targetIsOrphan) {
+      const sourceIsMenu = sourceNode.data.type === 'menu';
+      const targetIsMenu = targetNode.data.type === 'menu';
+      
+      if (sourceIsMenu && !targetIsMenu) {
+        // Source (menu) becomes parent of target
+        console.log('[@hook:establishConnectionRules] Both orphans vertical - menu source becomes parent of target');
+        return {
+          isAllowed: true,
+          edgeType: 'vertical',
+          targetNodeUpdates: {
+            parent: [sourceNode.id],
+            depth: 1
+          }
+        };
+      } else if (targetIsMenu && !sourceIsMenu) {
+        // Target (menu) becomes parent of source
+        console.log('[@hook:establishConnectionRules] Both orphans vertical - menu target becomes parent of source');
+        return {
+          isAllowed: true,
+          edgeType: 'vertical',
+          sourceNodeUpdates: {
+            parent: [targetNode.id],
+            depth: 1
+          }
+        };
+      }
+    }
+    
     if (sourceIsOrphan) {
       // Source is orphan - make it child of target
       const newParentChain = [
@@ -97,6 +127,40 @@ const establishConnectionRules = (
   } else if (isHorizontal) {
     // HORIZONTAL = SIBLINGS (same parent level)
     console.log('[@hook:establishConnectionRules] Horizontal connection - creating siblings');
+    
+    // Check if both nodes are orphans (no parent)
+    const sourceIsOrphan = !sourceNode.data.parent || sourceNode.data.parent.length === 0;
+    const targetIsOrphan = !targetNode.data.parent || targetNode.data.parent.length === 0;
+    
+    // Issue 1 Fix: When both are orphans, menu node gets priority as parent
+    if (sourceIsOrphan && targetIsOrphan) {
+      const sourceIsMenu = sourceNode.data.type === 'menu';
+      const targetIsMenu = targetNode.data.type === 'menu';
+      
+      if (sourceIsMenu && !targetIsMenu) {
+        // Source (menu) becomes parent of target
+        console.log('[@hook:establishConnectionRules] Both orphans - menu source becomes parent of target');
+        return {
+          isAllowed: true,
+          edgeType: 'horizontal',
+          targetNodeUpdates: {
+            parent: [sourceNode.id],
+            depth: 1
+          }
+        };
+      } else if (targetIsMenu && !sourceIsMenu) {
+        // Target (menu) becomes parent of source
+        console.log('[@hook:establishConnectionRules] Both orphans - menu target becomes parent of source');
+        return {
+          isAllowed: true,
+          edgeType: 'horizontal',
+          sourceNodeUpdates: {
+            parent: [targetNode.id],
+            depth: 1
+          }
+        };
+      }
+    }
     
     // Both nodes should have the same parent
     // Use the deeper node's parent chain (more specific hierarchy)
