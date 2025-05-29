@@ -274,10 +274,11 @@ export const useNodeEdgeManagement = (state: NodeEdgeState) => {
       (state.setAllNodes as (fn: (nds: UINavigationNode[]) => UINavigationNode[]) => void)(updateNodeFunction);
     }
     
-    // Remove all incoming edges to this node
+    // Remove ALL edges connected to this node (both incoming and outgoing)
     const removeEdgesFunction = (eds: UINavigationEdge[]) => {
-      const newEdges = eds.filter((edge) => edge.target !== targetNodeId);
-      console.log(`[@hook:useNodeEdgeManagement] Removed ${eds.length - newEdges.length} incoming edges for node ${targetNodeId}`);
+      const newEdges = eds.filter((edge) => edge.target !== targetNodeId && edge.source !== targetNodeId);
+      const removedCount = eds.length - newEdges.length;
+      console.log(`[@hook:useNodeEdgeManagement] Removed ${removedCount} total edges (incoming and outgoing) for node ${targetNodeId}`);
       return newEdges;
     };
     
