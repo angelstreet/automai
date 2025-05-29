@@ -28,7 +28,7 @@ export type UINavigationEdge = Edge<{
   description?: string;
   from?: string;        // Source node label
   to?: string;          // Target node label
-  edgeType?: 'top' | 'bottom' | 'default' | 'menu';  // For edge coloring based on handle type
+  edgeType?: 'horizontal' | 'vertical';  // For edge coloring: horizontal=siblings, vertical=parent-child
 }>;
 
 export interface NavigationTreeData {

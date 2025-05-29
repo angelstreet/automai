@@ -130,6 +130,8 @@ export const useNavigationEditor = () => {
     setIsEdgeDialogOpen: navigationState.setIsEdgeDialogOpen,
     setIsNewNode: navigationState.setIsNewNode,
     setHasUnsavedChanges: navigationState.setHasUnsavedChanges,
+    setAllNodes: navigationState.setAllNodes,
+    setAllEdges: navigationState.setAllEdges,
   });
 
   // Additional state that might need local management
@@ -186,7 +188,8 @@ export const useNavigationEditor = () => {
 
     // Apply node updates if any
     if (connectionResult.sourceNodeUpdates || connectionResult.targetNodeUpdates) {
-      navigationState.setNodes((nds) => nds.map((node) => {
+      // Update both filtered nodes and allNodes
+      const updateNodeFunction = (nds: UINavigationNode[]) => nds.map((node) => {
         if (node.id === sourceNode.id && connectionResult.sourceNodeUpdates) {
           console.log(`[@component:NavigationEditor] Updating source node ${sourceNode.data.label}:`, connectionResult.sourceNodeUpdates);
           return {
@@ -208,7 +211,10 @@ export const useNavigationEditor = () => {
           };
         }
         return node;
-      }));
+      });
+      
+      navigationState.setNodes(updateNodeFunction);
+      navigationState.setAllNodes(updateNodeFunction);
     }
 
     // Create the edge
@@ -231,6 +237,9 @@ export const useNavigationEditor = () => {
     // Add edge using history-aware setter
     navigationState.setEdges((eds) => addEdge(newEdge, eds));
     
+    // Also add edge to allEdges (complete dataset)
+    navigationState.setAllEdges((allEds) => addEdge(newEdge, allEds));
+    
     // Mark as having unsaved changes
     navigationState.setHasUnsavedChanges(true);
     
@@ -240,7 +249,7 @@ export const useNavigationEditor = () => {
       sourceLabel: sourceNode.data.label,
       targetLabel: targetNode.data.label
     });
-  }, [navigationState.nodes, navigationState.setNodes, navigationState.setEdges, navigationState.setHasUnsavedChanges, validateConnection]);
+  }, [navigationState.nodes, navigationState.setNodes, navigationState.setAllNodes, navigationState.setEdges, navigationState.setAllEdges, navigationState.setHasUnsavedChanges, validateConnection]);
 
   // Fetch user interface and root tree if interfaceId is provided
   useEffect(() => {
@@ -733,6 +742,7 @@ export const useNavigationEditor = () => {
     cancelNodeChanges: nodeEdgeHook.cancelNodeChanges,
     closeSelectionPanel: nodeEdgeHook.closeSelectionPanel,
     deleteSelected: nodeEdgeHook.deleteSelected,
+    resetNode: nodeEdgeHook.resetNode,
     
     // Actions from History hook
     undo: historyHook.undo,

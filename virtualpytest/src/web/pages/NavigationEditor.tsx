@@ -157,6 +157,7 @@ const NavigationEditorContent: React.FC = () => {
     redo,
     fitView,
     deleteSelected,
+    resetNode,
     
     // Configuration
     defaultEdgeOptions,
@@ -345,6 +346,7 @@ const NavigationEditorContent: React.FC = () => {
                     onAddChildren={() => {}}
                     setNodeForm={setNodeForm}
                     setIsNodeDialogOpen={setIsNodeDialogOpen}
+                    onReset={resetNode}
                   />
                 )}
                 
@@ -372,6 +374,7 @@ const NavigationEditorContent: React.FC = () => {
         setNodeForm={setNodeForm}
         onSubmit={handleNodeFormSubmit}
         onClose={cancelNodeChanges}
+        onResetNode={resetNode}
       />
 
       {/* Edge Edit Dialog */}

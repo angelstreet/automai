@@ -5,190 +5,96 @@ import { UINavigationNode } from '../../types/navigationTypes';
 interface ConnectionResult {
   isAllowed: boolean;
   reason?: string;
-  edgeType: 'default' | 'top' | 'bottom' | 'menu';
+  edgeType: 'horizontal' | 'vertical';
   sourceNodeUpdates?: Partial<UINavigationNode['data']>;
   targetNodeUpdates?: Partial<UINavigationNode['data']>;
 }
 
 /**
- * Returns a summary of all connection rules for reference
+ * Returns a summary of connection rules for reference
  */
 const getConnectionRulesSummary = () => {
   return {
     rules: [
       {
-        name: "RULE 1: Menu Node Connections",
-        description: "Menu nodes can connect using any handle type and establish parent-child relationships",
-        cases: [
-          "Menu → Any Node: Target inherits menu's parent chain + menu ID",
-          "Any Node → Menu: Source inherits menu's parent chain + menu ID"
-        ]
+        name: "Horizontal Connections (Siblings)",
+        description: "Left/Right handles create sibling relationships - nodes share the same parent",
+        example: "home_tvguide ↔ home_apps (both have parent: [home])"
       },
       {
-        name: "RULE 2: Screen-to-Screen Connections",
-        description: "Left/Right handles for lateral navigation between screens",
-        cases: [
-          "Both nodes must be screens (not menus)",
-          "No parent inheritance occurs",
-          "Creates 'default' edge type"
-        ]
-      },
-      {
-        name: "RULE 3: Top/Bottom Handle Validation",
-        description: "Top/Bottom handles require at least one menu node",
-        cases: [
-          "Must involve at least one menu node",
-          "Creates 'top' or 'bottom' edge types"
-        ]
-      },
-      {
-        name: "RULE 4: Default Fallback",
-        description: "Allow connection without parent inheritance",
-        cases: [
-          "Used when no other rules apply",
-          "No parent chain modifications"
-        ]
+        name: "Vertical Connections (Parent-Child)",
+        description: "Top/Bottom handles create hierarchical relationships - target becomes child of source",
+        example: "home_tvguide ↕ tvguide (tvguide gets parent: [home, home_tvguide])"
       }
-    ],
-    parentInheritance: {
-      "Empty parent": "New nodes start with parent: [], depth: 0",
-      "Menu inheritance": "Non-menu nodes inherit complete parent chain from connected menu + menu ID",
-      "Screen connections": "Screen-to-screen connections don't modify parent chains",
-      "Edge deletion": "Removing last incoming edge resets node to parent: [], depth: 0"
-    }
+    ]
   };
 };
 
 /**
- * Establishes connection rules and parent inheritance logic
- * @param sourceNode - The source node attempting to connect
- * @param targetNode - The target node being connected to
- * @param params - Connection parameters including handle information
- * @returns ConnectionResult with validation and update information
+ * Simple connection rules based on handle direction
  */
 const establishConnectionRules = (
   sourceNode: UINavigationNode,
   targetNode: UINavigationNode,
   params: Connection
 ): ConnectionResult => {
-  console.log('[@hook:establishConnectionRules] Evaluating connection:', {
+  console.log('[@hook:establishConnectionRules] Simple connection:', {
     source: sourceNode.data.label,
     target: targetNode.data.label,
     sourceHandle: params.sourceHandle,
     targetHandle: params.targetHandle,
-    sourceType: sourceNode.data.type,
-    targetType: targetNode.data.type,
-    sourceParent: sourceNode.data.parent,
-    targetParent: targetNode.data.parent,
   });
 
-  // Analyze handle types
-  const isLeftRightConnection = (
-    (params.sourceHandle?.includes('left') || params.sourceHandle?.includes('right')) &&
+  // Determine connection type by handle direction
+  const isHorizontal = (
+    (params.sourceHandle?.includes('left') || params.sourceHandle?.includes('right')) ||
     (params.targetHandle?.includes('left') || params.targetHandle?.includes('right'))
   );
-  
-  const isTopBottomConnection = (
-    (params.sourceHandle?.includes('top') || params.sourceHandle?.includes('bottom')) &&
-    (params.targetHandle?.includes('top') || params.targetHandle?.includes('bottom'))
-  );
 
-  const isTopConnection = params.sourceHandle?.includes('top') || params.targetHandle?.includes('top');
-  const isBottomConnection = params.sourceHandle?.includes('bottom') || params.targetHandle?.includes('bottom');
-
-  const hasMenuNode = sourceNode.data.type === 'menu' || targetNode.data.type === 'menu';
-
-  // RULE 1: Menu nodes can connect using any handle type
-  if (hasMenuNode) {
-    console.log('[@hook:establishConnectionRules] Menu node connection - evaluating parent inheritance');
+  if (isHorizontal) {
+    // HORIZONTAL = SIBLINGS (same parent level)
+    console.log('[@hook:establishConnectionRules] Horizontal connection - creating siblings');
     
-    // Determine edge type based on handles
-    let edgeType: 'default' | 'top' | 'bottom' | 'menu' = 'menu';
-    if (isTopConnection) edgeType = 'top';
-    else if (isBottomConnection) edgeType = 'bottom';
-
-    // PARENT INHERITANCE LOGIC
-    if (sourceNode.data.type === 'menu') {
-      // Case 1: Menu → Any Node (menu becomes parent of target)
-      const newParentChain = [
-        ...(sourceNode.data.parent || []),
-        sourceNode.id
-      ];
-      
-      console.log('[@hook:establishConnectionRules] Menu → Node: Target inherits parent chain:', newParentChain);
-      
-      return {
-        isAllowed: true,
-        edgeType,
-        targetNodeUpdates: {
-          parent: newParentChain,
-          depth: newParentChain.length
-        }
-      };
-    } else {
-      // Case 2: Any Node → Menu (menu becomes parent of source)
-      const newParentChain = [
-        ...(targetNode.data.parent || []),
-        targetNode.id
-      ];
-      
-      console.log('[@hook:establishConnectionRules] Node → Menu: Source inherits parent chain:', newParentChain);
-      
-      return {
-        isAllowed: true,
-        edgeType,
-        sourceNodeUpdates: {
-          parent: newParentChain,
-          depth: newParentChain.length
-        }
-      };
-    }
-  }
-
-  // RULE 2: Left/Right handles for screen-to-screen connections
-  if (isLeftRightConnection) {
-    // Both nodes must be screens (not menus)
-    if (sourceNode.data.type === 'menu' || targetNode.data.type === 'menu') {
-      return {
-        isAllowed: false,
-        reason: 'Left/right handles cannot connect menu nodes to non-menu nodes',
-        edgeType: 'default'
-      };
-    }
+    // Both nodes should have the same parent
+    // Use the deeper node's parent chain (more specific hierarchy)
+    const sourceDepth = sourceNode.data.depth || 0;
+    const targetDepth = targetNode.data.depth || 0;
     
-    console.log('[@hook:establishConnectionRules] Screen-to-screen connection via left/right handles - no parent inheritance');
+    const parentChain = sourceDepth >= targetDepth 
+      ? sourceNode.data.parent || []
+      : targetNode.data.parent || [];
     
     return {
       isAllowed: true,
-      edgeType: 'default'
-      // No parent updates for screen-to-screen connections
+      edgeType: 'horizontal',
+      sourceNodeUpdates: {
+        parent: parentChain,
+        depth: parentChain.length
+      },
+      targetNodeUpdates: {
+        parent: parentChain,
+        depth: parentChain.length
+      }
     };
-  }
-
-  // RULE 3: Top/Bottom handles should involve menu nodes
-  if (isTopBottomConnection) {
-    if (!hasMenuNode) {
-      return {
-        isAllowed: false,
-        reason: 'Top/bottom handles are intended for menu navigation and require at least one menu node',
-        edgeType: isTopConnection ? 'top' : 'bottom'
-      };
-    }
+  } else {
+    // VERTICAL = PARENT-CHILD (hierarchical)
+    console.log('[@hook:establishConnectionRules] Vertical connection - creating parent-child relationship');
     
-    // This case should be handled by RULE 1 above, but adding for completeness
-    console.log('[@hook:establishConnectionRules] Top/bottom connection with menu node');
+    // Target becomes child of source
+    const newParentChain = [
+      ...(sourceNode.data.parent || []),
+      sourceNode.id
+    ];
+    
     return {
       isAllowed: true,
-      edgeType: isTopConnection ? 'top' : 'bottom'
+      edgeType: 'vertical',
+      targetNodeUpdates: {
+        parent: newParentChain,
+        depth: newParentChain.length
+      }
     };
   }
-
-  // RULE 4: Default case - allow connection without parent inheritance
-  console.log('[@hook:establishConnectionRules] Default connection - no parent inheritance');
-  return {
-    isAllowed: true,
-    edgeType: 'default'
-  };
 };
 
 export const useConnectionRules = () => {

@@ -1,0 +1,64 @@
+/* Navigation Node Depth-Based Styling */
+
+/* Root level nodes (depth 0) */
+.node-depth-0 {
+  border: 3px solid #ffd700 !important; /* Gold border for root */
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.3);
+}
+
+/* First level menu items (depth 1) */
+.node-depth-1 {
+  border: 2px solid #2563eb !important; /* Blue border for main menu */
+  box-shadow: 0 0 6px rgba(37, 99, 235, 0.2);
+}
+
+/* Second level submenu items (depth 2) */
+.node-depth-2 {
+  border: 2px solid #059669 !important; /* Green border for submenu */
+  box-shadow: 0 0 4px rgba(5, 150, 105, 0.2);
+}
+
+/* Third level items (depth 3) */
+.node-depth-3 {
+  border: 1px solid #7c3aed !important; /* Purple border for deep items */
+  box-shadow: 0 0 3px rgba(124, 58, 237, 0.15);
+}
+
+/* Fourth level and deeper (depth 4+) */
+.node-depth-4,
+.node-depth-5,
+.node-depth-6 {
+  border: 1px dashed #6b7280 !important; /* Gray dashed border for very deep items */
+  opacity: 0.8;
+}
+
+/* Menu type nodes get slightly larger borders */
+.react-flow__node[data-node-type="menu"] {
+  border-width: 3px !important;
+}
+
+/* Screen type nodes keep standard borders */
+.react-flow__node[data-node-type="screen"] {
+  border-width: 2px !important;
+}
+
+/* Horizontal connection edges */
+.react-flow__edge[data-edge-type="horizontal"] .react-flow__edge-path {
+  stroke: #f59e0b; /* Orange for sibling connections */
+  stroke-width: 2px;
+}
+
+/* Vertical connection edges */
+.react-flow__edge[data-edge-type="vertical"] .react-flow__edge-path {
+  stroke: #10b981; /* Green for parent-child connections */
+  stroke-width: 2px;
+}
+
+/* Edge markers */
+.react-flow__edge[data-edge-type="horizontal"] .react-flow__arrowhead {
+  fill: #f59e0b;
+}
+
+.react-flow__edge[data-edge-type="vertical"] .react-flow__arrowhead {
+  fill: #10b981;
+} 

@@ -180,6 +180,12 @@ export const useNavigationCRUD = (state: CRUDState) => {
     try {
       console.log(`[@hook:useNavigationCRUD] Starting save to database for tree: ${state.currentTreeId}`);
       
+      // Ensure allNodes and allEdges are defined
+      const nodesToSave = state.allNodes || [];
+      const edgesToSave = state.allEdges || [];
+      
+      console.log(`[@hook:useNavigationCRUD] Saving ${nodesToSave.length} total nodes and ${edgesToSave.length} total edges`);
+      
       // Check if tree exists
       const checkResponse = await apiCall(`/api/navigation/trees/${state.currentTreeId}/complete`);
       
@@ -189,8 +195,8 @@ export const useNavigationCRUD = (state: CRUDState) => {
         
         const updateData = {
           tree_data: {
-            nodes: state.nodes,
-            edges: state.edges
+            nodes: nodesToSave,  // Use safe nodes array
+            edges: edgesToSave   // Use safe edges array
           }
         };
         
@@ -201,7 +207,7 @@ export const useNavigationCRUD = (state: CRUDState) => {
         
         if (updateResponse.success) {
           console.log(`[@hook:useNavigationCRUD] Successfully updated complete tree ID: ${state.currentTreeId}`);
-          state.setInitialState({ nodes: [...state.nodes], edges: [...state.edges] });
+          state.setInitialState({ nodes: [...nodesToSave], edges: [...edgesToSave] });
           state.setHasUnsavedChanges(false);
           state.setSaveSuccess(true);
           
@@ -216,10 +222,10 @@ export const useNavigationCRUD = (state: CRUDState) => {
         const treeData = {
           name: state.currentTreeName || state.currentTreeId,
           description: `Navigation tree for ${state.currentTreeId}`,
-          is_root: state.allNodes.length === 0 || !state.allNodes.some(node => node.data.is_root),
+          is_root: nodesToSave.length === 0 || !nodesToSave.some(node => node.data.is_root),
           tree_data: {
-            nodes: state.nodes,
-            edges: state.edges
+            nodes: nodesToSave,  // Use safe nodes array
+            edges: edgesToSave   // Use safe edges array
           }
         };
         
@@ -230,7 +236,7 @@ export const useNavigationCRUD = (state: CRUDState) => {
         
         if (createResponse.success) {
           console.log(`[@hook:useNavigationCRUD] Successfully created new tree with ID: ${createResponse.data.id}`);
-          state.setInitialState({ nodes: [...state.nodes], edges: [...state.edges] });
+          state.setInitialState({ nodes: [...nodesToSave], edges: [...edgesToSave] });
           state.setHasUnsavedChanges(false);
           state.setSaveSuccess(true);
           navigate(`/navigation-editor/${encodeURIComponent(state.currentTreeName || createResponse.data.name || 'Unnamed Tree')}/${createResponse.data.id}`);
