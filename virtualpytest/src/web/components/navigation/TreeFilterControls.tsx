@@ -8,6 +8,7 @@ import {
   Button,
   Typography,
   Chip,
+  Tooltip,
 } from '@mui/material';
 
 interface TreeFilterControlsProps {
@@ -66,70 +67,130 @@ export const TreeFilterControls: React.FC<TreeFilterControlsProps> = ({
     return items;
   };
 
+  // Check if filter is currently active
+  const isFilterActive = focusNodeId !== null;
+
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+    <Box sx={{ 
+      display: 'grid',
+      gridTemplateColumns: '80px 80px 60px 80px 120px 150px',
+      alignItems: 'center',
+      gap: 1,
+      minWidth: '570px'
+    }}>
       {/* Node Selection */}
-      <FormControl size="small" sx={{ minWidth: 80 }}>
-        <InputLabel sx={{ fontSize: '0.75rem' }}>Node</InputLabel>
-        <Select
-          value={focusNodeId || 'all'}
-          label="Node"
-          onChange={(e) => onFocusNodeChange(e.target.value === 'all' ? null : e.target.value)}
-          sx={{ 
-            fontSize: '0.75rem',
-            '& .MuiSelect-select': { py: 0.5 }
-          }}
-        >
-          <MenuItem value="all" sx={{ fontSize: '0.75rem' }}>All</MenuItem>
-          {availableFocusNodes.map((node) => (
-            <MenuItem key={node.id} value={node.id} sx={{ fontSize: '0.75rem' }}>
-              {node.label}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
+      <Tooltip title="Focus on specific node or show all nodes">
+        <FormControl size="small" sx={{ minWidth: 80 }}>
+          <InputLabel sx={{ fontSize: '0.75rem' }}>Node</InputLabel>
+          <Select
+            value={focusNodeId || 'all'}
+            label="Node"
+            onChange={(e) => onFocusNodeChange(e.target.value === 'all' ? null : e.target.value)}
+            sx={{ 
+              fontSize: '0.75rem',
+              '& .MuiSelect-select': { py: 0.5 },
+              ...(isFilterActive && {
+                backgroundColor: 'action.selected',
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: 'primary.main',
+                  borderWidth: 2,
+                }
+              })
+            }}
+          >
+            <MenuItem value="all" sx={{ fontSize: '0.75rem' }}>All</MenuItem>
+            {availableFocusNodes.map((node) => (
+              <MenuItem key={node.id} value={node.id} sx={{ fontSize: '0.75rem' }}>
+                {node.label}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Tooltip>
 
       {/* Depth Selection */}
-      <FormControl size="small" sx={{ minWidth: 80 }}>
-        <Select
-          value={maxDisplayDepth}
-          onChange={(e) => onDepthChange(Number(e.target.value))}
-          displayEmpty
-          sx={{ 
-            fontSize: '0.75rem',
-            '& .MuiSelect-select': { py: 0.5 }
-          }}
-        >
-          {generateDepthMenuItems()}
-        </Select>
-      </FormControl>
+      <Tooltip title="Set maximum depth to display">
+        <FormControl size="small" sx={{ minWidth: 80 }}>
+          <Select
+            value={maxDisplayDepth}
+            onChange={(e) => onDepthChange(Number(e.target.value))}
+            displayEmpty
+            sx={{ 
+              fontSize: '0.75rem',
+              '& .MuiSelect-select': { py: 0.5 }
+            }}
+          >
+            {generateDepthMenuItems()}
+          </Select>
+        </FormControl>
+      </Tooltip>
 
       {/* Reset Button */}
-      <Button
-        variant="outlined"
-        size="small"
-        onClick={onResetFocus}
-        sx={{ 
-          minWidth: 'auto',
-          px: 1,
-          fontSize: '0.7rem',
-          textTransform: 'none'
-        }}
-      >
-        Reset
-      </Button>
+      <Tooltip title="Reset filter to show all nodes (or double-click any node when filter is active)">
+        <Button
+          variant={isFilterActive ? "contained" : "outlined"}
+          size="small"
+          onClick={onResetFocus}
+          sx={{ 
+            minWidth: 'auto',
+            px: 1,
+            fontSize: '0.7rem',
+            textTransform: 'none',
+            ...(isFilterActive && {
+              backgroundColor: 'warning.main',
+              color: 'warning.contrastText',
+              '&:hover': {
+                backgroundColor: 'warning.dark',
+              }
+            })
+          }}
+        >
+          Reset
+        </Button>
+      </Tooltip>
 
-      {/* Node Statistics */}
-      <Typography 
-        variant="caption" 
-        sx={{ 
-          fontSize: '0.7rem',
-          color: 'text.secondary',
-          ml: 1
-        }}
-      >
-        {visibleNodes}/{totalNodes} nodes
-      </Typography>
+      {/* Filter Status Indicator - Fixed width container */}
+      <Box sx={{ minWidth: 80, display: 'flex', justifyContent: 'center' }}>
+        {isFilterActive && (
+          <Chip
+            label="Filtered"
+            size="small"
+            color="primary"
+            variant="outlined"
+            sx={{ 
+              fontSize: '0.65rem',
+              height: 20,
+            }}
+          />
+        )}
+      </Box>
+
+      {/* Node Statistics - Fixed width container */}
+      <Box sx={{ minWidth: 120 }}>
+        <Typography 
+          variant="caption" 
+          sx={{ 
+            fontSize: '0.7rem',
+            color: isFilterActive ? 'primary.main' : 'text.secondary',
+            fontWeight: isFilterActive ? 'bold' : 'normal',
+          }}
+        >
+          {visibleNodes}/{totalNodes} nodes
+        </Typography>
+      </Box>
+      
+      {/* Double-click hint - Fixed width container */}
+      <Box sx={{ minWidth: 150 }}>
+        <Typography 
+          variant="caption" 
+          sx={{ 
+            fontSize: '0.65rem',
+            color: 'text.disabled',
+            fontStyle: 'italic',
+          }}
+        >
+        </Typography>
+      </Box>
     </Box>
   );
 }; 

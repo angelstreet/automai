@@ -159,6 +159,9 @@ const NavigationEditorContent: React.FC = () => {
     deleteSelected,
     resetNode,
     
+    // Additional setters we need
+    setReactFlowInstance,
+    
     // Configuration
     defaultEdgeOptions,
     
@@ -288,8 +291,8 @@ const NavigationEditorContent: React.FC = () => {
                 onPaneClick={onPaneClick}
                 onInit={(instance) => {
                   if (instance && !reactFlowInstance) {
-                    // Note: setReactFlowInstance would be called here if available from the hook
                     console.log('[@component:NavigationEditor] ReactFlow instance initialized');
+                    setReactFlowInstance(instance);
                   }
                 }}
                 nodeTypes={nodeTypes}

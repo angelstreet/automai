@@ -330,37 +330,30 @@ export const useNavigationEditor = () => {
     event.stopPropagation();
     const uiNode = node as UINavigationNode;
     
-    // Only allow navigation for menu type nodes
-    if (uiNode.data.type === 'menu') {
-      console.log(`[@hook:useNavigationEditor] Double-click on menu node: ${uiNode.data.label}`);
-      
-      // Check if this menu node has an associated tree
-      if (uiNode.data.tree_id && uiNode.data.tree_name) {
-        console.log(`[@hook:useNavigationEditor] Navigating to menu tree: ${uiNode.data.tree_name} (ID: ${uiNode.data.tree_id})`);
-        
-        // Add to navigation path
-        const newPath = [...navigationState.navigationPath, uiNode.data.tree_id];
-        const newNamePath = [...navigationState.navigationNamePath, uiNode.data.tree_name];
-        
-        navigationState.setNavigationPath(newPath);
-        navigationState.setNavigationNamePath(newNamePath);
-        navigationState.setCurrentTreeId(uiNode.data.tree_id);
-        navigationState.setCurrentTreeName(uiNode.data.tree_name);
-        
-        // Update URL to reflect the new tree
-        navigate(`/navigation-editor/${encodeURIComponent(uiNode.data.tree_name)}/${uiNode.data.tree_id}`);
-        
-        // Load the tree data from database
-        crudHook.loadFromDatabase();
-        
-        console.log(`[@hook:useNavigationEditor] Navigation completed to tree: ${uiNode.data.tree_name}`);
-      } else {
-        console.log(`[@hook:useNavigationEditor] Menu node ${uiNode.data.label} does not have an associated tree yet`);
-      }
+    console.log(`[@hook:useNavigationEditor] Double-click on node: ${uiNode.data.label} (type: ${uiNode.data.type})`);
+    
+    // Check if there's currently a filter applied
+    if (navigationState.focusNodeId) {
+      // If filter is applied, reset it to show all nodes
+      console.log(`[@hook:useNavigationEditor] Filter is active (focused on: ${navigationState.focusNodeId}), resetting filter`);
+      navigationState.setFocusNodeId(null);
+      navigationState.setMaxDisplayDepth(5);
+      console.log(`[@hook:useNavigationEditor] Filter reset - showing all nodes`);
     } else {
-      console.log(`[@hook:useNavigationEditor] Double-click on ${uiNode.data.type} node: ${uiNode.data.label}, navigation not allowed (only menu nodes can navigate)`);
+      // If no filter is applied, focus on the double-clicked node (if it's focusable)
+      const isFocusableNode = uiNode.data.type === 'menu' || uiNode.data.is_root;
+      
+      if (isFocusableNode) {
+        console.log(`[@hook:useNavigationEditor] No filter active, focusing on node: ${uiNode.data.label} (${uiNode.id})`);
+        navigationState.setFocusNodeId(uiNode.id);
+        // Set a reasonable depth for viewing the focused node and its children
+        navigationState.setMaxDisplayDepth(3);
+        console.log(`[@hook:useNavigationEditor] Focused on node: ${uiNode.data.label} with depth limit 3`);
+      } else {
+        console.log(`[@hook:useNavigationEditor] Node ${uiNode.data.label} is not focusable (type: ${uiNode.data.type}), double-click ignored`);
+      }
     }
-  }, [navigationState, navigate, crudHook.loadFromDatabase]);
+  }, [navigationState]);
 
   // Navigate back in breadcrumb
   const navigateToTreeLevel = useCallback((index: number) => {
