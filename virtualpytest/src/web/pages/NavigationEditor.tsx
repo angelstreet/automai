@@ -264,8 +264,8 @@ const NavigationEditorContent: React.FC = () => {
           position: 'relative', 
           minHeight: '500px',
           overflow: 'hidden',
-          transition: 'margin-right 0.3s ease-in-out',
-          marginRight: isRemotePanelOpen ? '300px' : '0px'
+          transition: 'margin-right',
+          marginRight: isRemotePanelOpen ? '160px' : '0px'
         }}>
           {isLoading ? (
             <Box sx={{ 
