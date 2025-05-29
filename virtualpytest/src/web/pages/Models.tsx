@@ -31,18 +31,14 @@ import {
   SelectChangeEvent,
   Checkbox,
   ListItemText,
+  Grid,
+  CircularProgress,
+  Snackbar,
 } from '@mui/material';
 import React, { useState } from 'react';
 import { CreateModelDialog } from '../components/model';
-
-interface Model {
-  id: string;
-  name: string;
-  types: string[];
-  controllers: string[];
-  version: string;
-  description: string;
-}
+import { useDeviceModels } from '../hooks/useDeviceModels';
+import { Model } from '../types/model.types';
 
 const modelTypes = [
   'Android Phone',
@@ -60,13 +56,6 @@ const modelTypes = [
   'LG TV',
 ];
 
-const controllerTypes = [
-  'Audio Video Controller',
-  'Power Controller',
-  'Remote Controller',
-  'Network Controller',
-];
-
 const ITEM_HEIGHT = 48;
 const ITEM_PADDING_TOP = 8;
 const MenuProps = {
@@ -78,35 +67,60 @@ const MenuProps = {
   },
 };
 
-const defaultModels: Model[] = [];
-
 const Models: React.FC = () => {
-  const [models, setModels] = useState<Model[]>(defaultModels);
+  const {
+    models,
+    isLoading,
+    error,
+    createModel,
+    updateModel,
+    deleteModel,
+    isCreating,
+    isUpdating,
+    isDeleting,
+    createError,
+    updateError,
+    deleteError,
+  } = useDeviceModels();
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ 
     name: '', 
     types: [] as string[], 
-    controllers: [] as string[],
+    controllers: {
+      remote: '',
+      av: '',
+      network: '',
+      power: '',
+    },
     version: '', 
     description: '' 
   });
   const [openDialog, setOpenDialog] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const handleEdit = (model: Model) => {
     setEditingId(model.id);
     setEditForm({
       name: model.name,
       types: model.types,
-      controllers: model.controllers,
+      controllers: {
+        remote: model.controllers.remote || '',
+        av: model.controllers.av || '',
+        network: model.controllers.network || '',
+        power: model.controllers.power || '',
+      },
       version: model.version,
       description: model.description,
     });
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
+    if (!editingId) return;
+    
     if (!editForm.name.trim() || editForm.types.length === 0) {
-      setError('Name and at least one Type are required');
+      setLocalError('Name and at least one Type are required');
       return;
     }
 
@@ -116,39 +130,59 @@ const Models: React.FC = () => {
     );
     
     if (isDuplicate) {
-      setError('A model with this name already exists');
+      setLocalError('A model with this name already exists');
       return;
     }
 
-    setModels(models.map(m => 
-      m.id === editingId 
-        ? { 
-            ...m, 
-            name: editForm.name.trim(), 
-            types: editForm.types,
-            controllers: editForm.controllers,
-            version: editForm.version.trim(), 
-            description: editForm.description.trim() 
-          }
-        : m
-    ));
-    setEditingId(null);
-    setError(null);
+    try {
+      await updateModel({
+        id: editingId,
+        model: {
+          name: editForm.name.trim(),
+          types: editForm.types,
+          controllers: editForm.controllers,
+          version: editForm.version.trim(),
+          description: editForm.description.trim(),
+        }
+      });
+      
+      setEditingId(null);
+      setLocalError(null);
+      setSuccessMessage('Device model updated successfully');
+    } catch (error) {
+      setLocalError(error instanceof Error ? error.message : 'Failed to update device model');
+    }
   };
 
   const handleCancelEdit = () => {
     setEditingId(null);
-    setEditForm({ name: '', types: [], controllers: [], version: '', description: '' });
-    setError(null);
+    setEditForm({ 
+      name: '', 
+      types: [], 
+      controllers: {
+        remote: '',
+        av: '',
+        network: '',
+        power: '',
+      }, 
+      version: '', 
+      description: '' 
+    });
+    setLocalError(null);
   };
 
-  const handleDelete = (id: string) => {
-    setModels(models.filter(m => m.id !== id));
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteModel(id);
+      setSuccessMessage('Device model deleted successfully');
+    } catch (error) {
+      setLocalError(error instanceof Error ? error.message : 'Failed to delete device model');
+    }
   };
 
-  const handleAddNew = (newModelData: Omit<Model, 'id'>) => {
+  const handleAddNew = async (newModelData: Omit<Model, 'id'>) => {
     if (!newModelData.name.trim() || newModelData.types.length === 0) {
-      setError('Name and at least one Type are required');
+      setLocalError('Name and at least one Type are required');
       return;
     }
 
@@ -158,26 +192,30 @@ const Models: React.FC = () => {
     );
     
     if (isDuplicate) {
-      setError('A model with this name already exists');
+      setLocalError('A model with this name already exists');
       return;
     }
 
-    const newId = (Math.max(...models.map(m => parseInt(m.id)), 0) + 1).toString();
-    setModels([...models, {
-      id: newId,
-      name: newModelData.name.trim(),
-      types: newModelData.types,
-      controllers: newModelData.controllers,
-      version: newModelData.version.trim(),
-      description: newModelData.description.trim(),
-    }]);
-    setOpenDialog(false);
-    setError(null);
+    try {
+      await createModel({
+        name: newModelData.name.trim(),
+        types: newModelData.types,
+        controllers: newModelData.controllers,
+        version: newModelData.version.trim(),
+        description: newModelData.description.trim(),
+      });
+      
+      setOpenDialog(false);
+      setLocalError(null);
+      setSuccessMessage('Device model created successfully');
+    } catch (error) {
+      setLocalError(error instanceof Error ? error.message : 'Failed to create device model');
+    }
   };
 
   const handleCloseDialog = () => {
     setOpenDialog(false);
-    setError(null);
+    setLocalError(null);
   };
 
   const handleTypeChange = (event: SelectChangeEvent<string[]>) => {
@@ -188,13 +226,29 @@ const Models: React.FC = () => {
     });
   };
 
-  const handleControllerChange = (event: SelectChangeEvent<string[]>) => {
-    const value = event.target.value;
-    setEditForm({
-      ...editForm,
-      controllers: typeof value === 'string' ? value.split(',') : value,
-    });
+  // Helper function to get controller display names
+  const getControllerDisplayValue = (controllers: Model['controllers']) => {
+    const activeControllers = Object.entries(controllers)
+      .filter(([_, value]) => value && value !== '')
+      .map(([type, value]) => ({ type, value }));
+    
+    return activeControllers;
   };
+
+  // Get the current error to display
+  const displayError = localError || createError || updateError || deleteError || (error ? 'Failed to load device models' : null);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress />
+        <Typography variant="body1" sx={{ ml: 2 }}>
+          Loading device models...
+        </Typography>
+      </Box>
+    );
+  }
 
   // Empty state component
   const EmptyState = () => (
@@ -215,6 +269,14 @@ const Models: React.FC = () => {
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3, maxWidth: 400 }}>
         Create your first device model to define hardware specifications and capabilities for your test automation.
       </Typography>
+      <Button
+        variant="contained"
+        startIcon={<AddIcon />}
+        onClick={() => setOpenDialog(true)}
+        disabled={isCreating}
+      >
+        Create Your First Model
+      </Button>
     </Box>
   );
 
@@ -234,14 +296,15 @@ const Models: React.FC = () => {
           startIcon={<AddIcon />}
           onClick={() => setOpenDialog(true)}
           size="small"
+          disabled={isCreating}
         >
-          Add Model
+          {isCreating ? 'Creating...' : 'Add Model'}
         </Button>
       </Box>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 1 }} onClose={() => setError(null)}>
-          {error}
+      {displayError && (
+        <Alert severity="error" sx={{ mb: 1 }} onClose={() => setLocalError(null)}>
+          {displayError}
         </Alert>
       )}
 
@@ -315,38 +378,23 @@ const Models: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         {editingId === model.id ? (
-                          <FormControl size="small" fullWidth>
-                            <Select
-                              multiple
-                              value={editForm.controllers}
-                              onChange={handleControllerChange}
-                              input={<OutlinedInput />}
-                              renderValue={(selected) => (
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                  {selected.map((value) => (
-                                    <Chip key={value} label={value} size="small" color="primary" variant="outlined" />
-                                  ))}
-                                </Box>
-                              )}
-                              MenuProps={MenuProps}
-                              sx={{ '& .MuiInputBase-root': { minHeight: '32px' } }}
-                            >
-                              {controllerTypes.map((controller) => (
-                                <MenuItem key={controller} value={controller}>
-                                  <Checkbox checked={editForm.controllers.indexOf(controller) > -1} />
-                                  <ListItemText primary={controller} />
-                                </MenuItem>
-                              ))}
-                            </Select>
-                          </FormControl>
+                          <Typography variant="body2" color="text.secondary">
+                            Edit controllers in create dialog
+                          </Typography>
                         ) : (
                           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                            {model.controllers.length > 0 ? (
-                              model.controllers.map((controller) => (
-                                <Chip key={controller} label={controller} size="small" color="primary" variant="outlined" />
+                            {getControllerDisplayValue(model.controllers).length > 0 ? (
+                              getControllerDisplayValue(model.controllers).map(({ type, value }) => (
+                                <Chip 
+                                  key={type} 
+                                  label={`${type}: ${value}`} 
+                                  size="small" 
+                                  color="primary" 
+                                  variant="outlined" 
+                                />
                               ))
                             ) : (
-                              <Typography variant="body2" color="text.secondary">N/A</Typography>
+                              <Typography variant="body2" color="text.secondary">No controllers</Typography>
                             )}
                           </Box>
                         )}
@@ -388,6 +436,7 @@ const Models: React.FC = () => {
                               color="primary"
                               onClick={handleSaveEdit}
                               sx={{ p: 0.5 }}
+                              disabled={isUpdating}
                             >
                               <SaveIcon fontSize="small" />
                             </IconButton>
@@ -396,6 +445,7 @@ const Models: React.FC = () => {
                               color="secondary"
                               onClick={handleCancelEdit}
                               sx={{ p: 0.5 }}
+                              disabled={isUpdating}
                             >
                               <CancelIcon fontSize="small" />
                             </IconButton>
@@ -407,6 +457,7 @@ const Models: React.FC = () => {
                               color="primary"
                               onClick={() => handleEdit(model)}
                               sx={{ p: 0.5 }}
+                              disabled={isUpdating || isDeleting}
                             >
                               <EditIcon fontSize="small" />
                             </IconButton>
@@ -415,6 +466,7 @@ const Models: React.FC = () => {
                               color="error"
                               onClick={() => handleDelete(model.id)}
                               sx={{ p: 0.5 }}
+                              disabled={isUpdating || isDeleting}
                             >
                               <DeleteIcon fontSize="small" />
                             </IconButton>
@@ -435,7 +487,15 @@ const Models: React.FC = () => {
         open={openDialog}
         onClose={handleCloseDialog}
         onSubmit={handleAddNew}
-        error={error}
+        error={localError}
+      />
+
+      {/* Success Message Snackbar */}
+      <Snackbar
+        open={!!successMessage}
+        autoHideDuration={6000}
+        onClose={() => setSuccessMessage(null)}
+        message={successMessage}
       />
     </Box>
   );

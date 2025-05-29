@@ -16,13 +16,23 @@ import {
   SelectChangeEvent,
   Checkbox,
   ListItemText,
+  Grid,
+  Typography,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
+import { useControllers } from './hooks/useControllers';
 
 interface Model {
   id: string;
   name: string;
   types: string[];
-  controllers: string[];
+  controllers: {
+    remote: string;
+    av: string;
+    network: string;
+    power: string;
+  };
   version: string;
   description: string;
 }
@@ -50,13 +60,6 @@ const modelTypes = [
   'LG TV',
 ];
 
-const controllerTypes = [
-  'Audio Video Controller',
-  'Power Controller',
-  'Remote Controller',
-  'Network Controller',
-];
-
 const ITEM_HEIGHT = 48;
 const ITEM_PADDING_TOP = 8;
 const MenuProps = {
@@ -74,10 +77,17 @@ const CreateModelDialog: React.FC<CreateModelDialogProps> = ({
   onSubmit,
   error,
 }) => {
+  const { controllerTypes, loading: controllersLoading, error: controllersError } = useControllers();
+  
   const [formData, setFormData] = useState({
     name: '',
     types: [] as string[],
-    controllers: [] as string[],
+    controllers: {
+      remote: '',
+      av: '',
+      network: '',
+      power: '',
+    },
     version: '',
     description: '',
   });
@@ -86,7 +96,12 @@ const CreateModelDialog: React.FC<CreateModelDialogProps> = ({
     setFormData({
       name: '',
       types: [],
-      controllers: [],
+      controllers: {
+        remote: '',
+        av: '',
+        network: '',
+        power: '',
+      },
       version: '',
       description: '',
     });
@@ -105,11 +120,13 @@ const CreateModelDialog: React.FC<CreateModelDialogProps> = ({
     });
   };
 
-  const handleControllerChange = (event: SelectChangeEvent<string[]>) => {
-    const value = event.target.value;
+  const handleControllerChange = (controllerType: string) => (event: SelectChangeEvent<string>) => {
     setFormData({
       ...formData,
-      controllers: typeof value === 'string' ? value.split(',') : value,
+      controllers: {
+        ...formData.controllers,
+        [controllerType]: event.target.value,
+      },
     });
   };
 
@@ -121,7 +138,7 @@ const CreateModelDialog: React.FC<CreateModelDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
       <DialogTitle sx={{ pb: 1 }}>Add New Device Model</DialogTitle>
       <DialogContent sx={{ pt: 1 }}>
         <Box sx={{ pt: 0.5 }}>
@@ -165,31 +182,108 @@ const CreateModelDialog: React.FC<CreateModelDialogProps> = ({
             </Select>
           </FormControl>
 
-          <FormControl fullWidth margin="dense" sx={{ mb: 1.5 }}>
-            <InputLabel size="small">Controllers</InputLabel>
-            <Select
-              multiple
-              size="small"
-              value={formData.controllers}
-              onChange={handleControllerChange}
-              input={<OutlinedInput label="Controllers" />}
-              renderValue={(selected) => (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                  {selected.map((value) => (
-                    <Chip key={value} label={value} size="small" color="primary" variant="outlined" />
-                  ))}
-                </Box>
-              )}
-              MenuProps={MenuProps}
-            >
-              {controllerTypes.map((controller) => (
-                <MenuItem key={controller} value={controller}>
-                  <Checkbox checked={formData.controllers.indexOf(controller) > -1} />
-                  <ListItemText primary={controller} />
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          {/* Controllers Section */}
+          <Typography variant="subtitle2" sx={{ mb: 1, mt: 2, fontWeight: 'bold' }}>
+            Controllers (Optional)
+          </Typography>
+          
+          {controllersError && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              Unable to load controllers: {controllersError}
+            </Alert>
+          )}
+
+          {controllersLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : (
+            <Grid container spacing={2}>
+              {/* Remote Controller */}
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Remote Controller</InputLabel>
+                  <Select
+                    value={formData.controllers.remote}
+                    onChange={handleControllerChange('remote')}
+                    label="Remote Controller"
+                  >
+                    <MenuItem value="">None</MenuItem>
+                    {controllerTypes?.remote
+                      ?.filter(controller => controller.status === 'available')
+                      .map((controller) => (
+                        <MenuItem key={controller.id} value={controller.id}>
+                          {controller.name}
+                        </MenuItem>
+                      ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              {/* Audio/Video Controller */}
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Audio/Video Controller</InputLabel>
+                  <Select
+                    value={formData.controllers.av}
+                    onChange={handleControllerChange('av')}
+                    label="Audio/Video Controller"
+                  >
+                    <MenuItem value="">None</MenuItem>
+                    {controllerTypes?.av
+                      ?.filter(controller => controller.status === 'available')
+                      .map((controller) => (
+                        <MenuItem key={controller.id} value={controller.id}>
+                          {controller.name}
+                        </MenuItem>
+                      ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              {/* Network Controller */}
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Network Controller</InputLabel>
+                  <Select
+                    value={formData.controllers.network}
+                    onChange={handleControllerChange('network')}
+                    label="Network Controller"
+                  >
+                    <MenuItem value="">None</MenuItem>
+                    {controllerTypes?.network
+                      ?.filter(controller => controller.status === 'available')
+                      .map((controller) => (
+                        <MenuItem key={controller.id} value={controller.id}>
+                          {controller.name}
+                        </MenuItem>
+                      ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              {/* Power Controller */}
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Power Controller</InputLabel>
+                  <Select
+                    value={formData.controllers.power}
+                    onChange={handleControllerChange('power')}
+                    label="Power Controller"
+                  >
+                    <MenuItem value="">None</MenuItem>
+                    {controllerTypes?.power
+                      ?.filter(controller => controller.status === 'available')
+                      .map((controller) => (
+                        <MenuItem key={controller.id} value={controller.id}>
+                          {controller.name}
+                        </MenuItem>
+                      ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
+          )}
 
           <TextField
             margin="dense"
@@ -198,7 +292,7 @@ const CreateModelDialog: React.FC<CreateModelDialogProps> = ({
             variant="outlined"
             value={formData.version}
             onChange={handleInputChange('version')}
-            sx={{ mb: 1.5 }}
+            sx={{ mb: 1.5, mt: 2 }}
             size="small"
             placeholder="e.g., 12.0, Android 11"
           />

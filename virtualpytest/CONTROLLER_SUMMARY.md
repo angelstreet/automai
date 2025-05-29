@@ -155,7 +155,7 @@ All controllers have been thoroughly tested:
 The VirtualPyTest system now supports these remote controller types:
 
 1. **mock** - Mock/simulation controller for testing
-2. **real_android_tv** - Real Android TV via ADB
+2. **android_tv** - Real Android TV via ADB
 3. **real_android_mobile** - Real Android mobile via SSH+ADB
 4. **ir_remote** - IR remote with classic TV/STB buttons ✨ NEW
 5. **bluetooth_remote** - Bluetooth HID remote ✨ NEW

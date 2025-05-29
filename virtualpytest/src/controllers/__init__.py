@@ -31,7 +31,7 @@ from .remote.bluetooth import BluetoothRemoteController
 # Controller type registry
 CONTROLLER_REGISTRY = {
     'remote': {
-        'real_android_tv': AndroidTVRemoteController,  # Real SSH+ADB-based Android TV controller
+        'android_tv': AndroidTVRemoteController,  # Real SSH+ADB-based Android TV controller
         'real_android_mobile': AndroidMobileRemoteController,  # Real SSH+ADB-based Android Mobile controller
         'ir_remote': IRRemoteController,     # IR remote with classic TV/STB buttons
         'bluetooth_remote': BluetoothRemoteController,  # Bluetooth HID remote
@@ -63,7 +63,7 @@ class ControllerFactory:
     
     @staticmethod
     def create_remote_controller(
-        device_type: str = "real_android_tv",
+        device_type: str = "android_tv",
         device_name: str = "Unknown Device",
         **kwargs
     ) -> RemoteControllerInterface:
@@ -200,7 +200,7 @@ class DeviceControllerSet:
     def __init__(
         self,
         device_name: str,
-        remote_type: str = "real_android_tv",
+        remote_type: str = "android_tv",
         av_type: str = "hdmi_stream", 
         verification_type: str = "mock",
         power_type: str = "mock",
@@ -293,7 +293,7 @@ def create_device_controllers(
     # Default controller mappings for different device types
     device_defaults = {
         'android_tv': {
-            'remote_type': 'real_android_tv',  # SSH+ADB Android TV controller
+            'remote_type': 'android_tv',  # SSH+ADB Android TV controller
             'av_type': 'adb',
             'verification_type': 'ocr',
             'power_type': 'smart_plug',  # Changed from 'adb' to 'smart_plug'

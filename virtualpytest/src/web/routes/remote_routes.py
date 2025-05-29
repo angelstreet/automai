@@ -53,7 +53,7 @@ def take_android_tv_control():
         from controllers import ControllerFactory
         
         controller = ControllerFactory.create_remote_controller(
-            device_type="real_android_tv",
+            device_type="android_tv",
             device_name="Web Interface TV",
             host_ip=data['host_ip'],
             host_username=data['host_username'],

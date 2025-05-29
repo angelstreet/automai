@@ -1345,13 +1345,13 @@ class RealAndroidTVController(RemoteControllerInterface):
 from controllers import ControllerFactory
 
 # Register the real Android TV controller
-ControllerFactory.register_controller("remote", "real_android_tv", RealAndroidTVController)
+ControllerFactory.register_controller("remote", "android_tv", RealAndroidTVController)
 
 # Use it in tests
 controllers = create_device_controllers(
     device_name="Living Room TV",
     device_type="android_tv",
-    remote_type="real_android_tv",  # Use real implementation
+    remote_type="android_tv",  # Use real implementation
     device_ip="192.168.1.100"
 )
 
@@ -1372,7 +1372,7 @@ def test_netflix_playback():
     controllers = create_device_controllers(
         device_name="Test Android TV",
         device_type="android_tv",
-        remote_type="real_android_tv",     # Real ADB remote
+        remote_type="android_tv",     # Real ADB remote
         av_type="hdmi",                    # HDMI capture
         verification_type="ocr",           # OCR verification
         power_type="adb",                  # ADB power management

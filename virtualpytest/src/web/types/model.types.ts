@@ -2,7 +2,12 @@ export interface Model {
   id: string;
   name: string;
   types: string[];
-  controllers: string[];
+  controllers: {
+    remote: string;
+    av: string;
+    network: string;
+    power: string;
+  };
   version: string;
   description: string;
 }
@@ -22,7 +27,7 @@ export const MODEL_TYPES = [
   'Linux',
   'Windows',
   'Tizen TV',
-  'LG Tv',
+  'LG TV',
 ] as const;
 
 export const CONTROLLER_TYPES = [
