@@ -68,44 +68,6 @@ export const UINavigationEdge: React.FC<EdgeProps<UINavigationEdgeType['data']>>
         d={edgePath}
         markerEnd={`url(#arrowhead-${id})`}
       />
-      
-      {/* From/To labels */}
-      {(data?.from || data?.to) && (
-        <>
-          {data?.from && (
-            <text
-              x={labelX}
-              y={labelY - 15}
-              style={{
-                fontSize: '9px',
-                fill: '#888',
-                textAnchor: 'middle',
-                dominantBaseline: 'middle',
-                pointerEvents: 'none',
-                fontStyle: 'italic',
-              }}
-            >
-              From: {data.from}
-            </text>
-          )}
-          {data?.to && (
-            <text
-              x={labelX}
-              y={labelY - 5}
-              style={{
-                fontSize: '9px',
-                fill: '#888',
-                textAnchor: 'middle',
-                dominantBaseline: 'middle',
-                pointerEvents: 'none',
-                fontStyle: 'italic',
-              }}
-            >
-              To: {data.to}
-            </text>
-          )}
-        </>
-      )}
     </>
   );
 }; 

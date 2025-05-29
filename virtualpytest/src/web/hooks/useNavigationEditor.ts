@@ -183,6 +183,12 @@ export const useNavigationEditor = () => {
       targetHandle: params.targetHandle
     });
     
+    // Get source and target node names
+    const sourceNode = nodes.find(node => node.id === params.source);
+    const targetNode = nodes.find(node => node.id === params.target);
+    const fromNodeName = sourceNode?.data?.label || params.source;
+    const toNodeName = targetNode?.data?.label || params.target;
+    
     // Determine edge type based on handles (top = blue, bottom = red)
     const isTopConnection = params.sourceHandle?.includes('top') || params.targetHandle?.includes('top');
     const isBottomConnection = params.sourceHandle?.includes('bottom') || params.targetHandle?.includes('bottom');
@@ -197,7 +203,9 @@ export const useNavigationEditor = () => {
       type: 'uiNavigation',
       data: { 
         action: 'ACTION',  // Default action, user can edit
-        edgeType: edgeType  // Add edge type for coloring
+        edgeType: edgeType,  // Add edge type for coloring
+        from: fromNodeName,  // Source node name
+        to: toNodeName       // Target node name
       },
     };
     
@@ -209,7 +217,7 @@ export const useNavigationEditor = () => {
       setHasUnsavedChanges(true);
       return updatedEdges;
     });
-  }, [saveToHistory, setEdges]);
+  }, [saveToHistory, setEdges, nodes]);
 
   // Undo function
   const undo = useCallback(() => {
@@ -644,6 +652,12 @@ export const useNavigationEditor = () => {
   const saveEdgeChanges = useCallback(() => {
     if (!selectedEdge) return;
     
+    // Get source and target node names for the edge
+    const sourceNode = nodes.find(node => node.id === selectedEdge.source);
+    const targetNode = nodes.find(node => node.id === selectedEdge.target);
+    const fromNodeName = sourceNode?.data?.label || selectedEdge.source;
+    const toNodeName = targetNode?.data?.label || selectedEdge.target;
+    
     setEdges((eds) =>
       eds.map((edge) =>
         edge.id === selectedEdge.id
@@ -653,6 +667,8 @@ export const useNavigationEditor = () => {
                 ...edge.data,
                 action: edgeForm.action,
                 description: edgeForm.description,
+                from: fromNodeName,  // Update with current node name
+                to: toNodeName       // Update with current node name
               },
             }
           : edge
@@ -660,7 +676,7 @@ export const useNavigationEditor = () => {
     );
     setHasUnsavedChanges(true);
     setIsEdgeDialogOpen(false);
-  }, [selectedEdge, edgeForm, setEdges]);
+  }, [selectedEdge, edgeForm, setEdges, nodes]);
 
   // Delete selected node or edge with change tracking
   const deleteSelected = useCallback(() => {

@@ -63,13 +63,6 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
           </IconButton>
         </Box>
         
-        {/* Show Edge Type */}
-        {selectedEdge.data?.edgeType && (
-          <Typography variant="body2" gutterBottom sx={{ mb: 0.5 }}>
-            Type: {selectedEdge.data.edgeType === 'top' ? 'Top (Blue)' : selectedEdge.data.edgeType === 'bottom' ? 'Bottom (Red)' : 'Default'}
-          </Typography>
-        )}
-        
         {/* Show From/To information */}
         {selectedEdge.data?.from && (
           <Typography variant="body2" gutterBottom sx={{ mb: 0.5 }}>
