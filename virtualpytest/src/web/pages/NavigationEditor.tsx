@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useState } from 'react';
+import React, { useEffect, useCallback, useState, useRef } from 'react';
 import ReactFlow, {
   Background,
   Controls, 
@@ -161,9 +161,12 @@ const NavigationEditorContent: React.FC = () => {
     // Configuration
     defaultEdgeOptions,
     
-    // Reset node
-    resetSelectedNode,
+    // Connection rules and debugging
+    getConnectionRulesSummary,
   } = useNavigationEditor();
+  
+  // Track the last loaded tree ID to prevent unnecessary reloads
+  const lastLoadedTreeId = useRef<string | null>(null);
   
   // Show message if tree ID is missing
   useEffect(() => {
@@ -174,10 +177,12 @@ const NavigationEditorContent: React.FC = () => {
   
   // Load tree data when component mounts or treeId changes
   useEffect(() => {
-    if (currentTreeId && !isLoadingInterface) {
+    if (currentTreeId && !isLoadingInterface && currentTreeId !== lastLoadedTreeId.current) {
+      console.log(`[@component:NavigationEditor] Loading tree data for: ${currentTreeId}`);
+      lastLoadedTreeId.current = currentTreeId;
       loadFromDatabase();
     }
-  }, [currentTreeId, isLoadingInterface, loadFromDatabase]);
+  }, [currentTreeId, isLoadingInterface]);
 
   return (
     <Box sx={{ 
@@ -340,7 +345,6 @@ const NavigationEditorContent: React.FC = () => {
                     onAddChildren={() => {}}
                     setNodeForm={setNodeForm}
                     setIsNodeDialogOpen={setIsNodeDialogOpen}
-                    onReset={resetSelectedNode}
                   />
                 )}
                 
@@ -368,7 +372,6 @@ const NavigationEditorContent: React.FC = () => {
         setNodeForm={setNodeForm}
         onSubmit={handleNodeFormSubmit}
         onClose={cancelNodeChanges}
-        onResetNode={resetSelectedNode}
       />
 
       {/* Edge Edit Dialog */}
