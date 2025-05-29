@@ -223,31 +223,59 @@ const CONTROLLER_CONFIGURATIONS: ControllerConfigMap = {
   av: [
     {
       id: 'hdmi_stream',
-      name: 'HDMI Stream',
-      description: 'HDMI stream URL viewer and controller',
+      name: 'HDMI Stream (SSH+Video Capture)',
+      description: 'HDMI video capture via SSH connection to host with video device',
       implementation: 'hdmi_stream',
       status: 'available',
       inputFields: [
+        ...createSSHConnectionFields(),
         {
-          name: 'stream_url',
-          label: 'Stream URL',
+          name: 'video_device',
+          label: 'Video Capture Device',
           type: 'text',
           required: true,
-          placeholder: 'http://192.168.1.100:8080/stream',
-          description: 'URL of the HDMI stream'
+          defaultValue: '/dev/video0',
+          placeholder: '/dev/video0',
+          description: 'Path to the video capture device (e.g., /dev/video0, /dev/video1)',
+          validation: {
+            pattern: '^/dev/video[0-9]+$'
+          }
         },
         {
-          name: 'stream_quality',
-          label: 'Stream Quality',
+          name: 'stream_path',
+          label: 'Stream Output Path',
+          type: 'text',
+          required: true,
+          defaultValue: '/tmp/output.m3u8',
+          placeholder: '/tmp/output.m3u8',
+          description: 'Path where the stream file will be saved on the host'
+        },
+        {
+          name: 'resolution',
+          label: 'Video Resolution',
           type: 'select',
           required: false,
-          description: 'Preferred stream quality',
+          defaultValue: '1920x1080',
+          description: 'Video capture resolution',
           options: [
-            { value: 'auto', label: 'Auto' },
-            { value: '1080p', label: '1080p' },
-            { value: '720p', label: '720p' },
-            { value: '480p', label: '480p' }
+            { value: '1920x1080', label: '1920x1080 (1080p)' },
+            { value: '1280x720', label: '1280x720 (720p)' },
+            { value: '854x480', label: '854x480 (480p)' },
+            { value: '640x360', label: '640x360 (360p)' }
           ]
+        },
+        {
+          name: 'fps',
+          label: 'Frame Rate (FPS)',
+          type: 'number',
+          required: false,
+          defaultValue: 30,
+          placeholder: '30',
+          description: 'Video capture frame rate',
+          validation: {
+            min: 1,
+            max: 60
+          }
         },
         {
           name: 'connection_timeout',
@@ -256,10 +284,10 @@ const CONTROLLER_CONFIGURATIONS: ControllerConfigMap = {
           required: false,
           defaultValue: 15,
           placeholder: '15',
-          description: 'Timeout for stream connection',
+          description: 'Timeout for SSH connection and stream setup',
           validation: {
             min: 5,
-            max: 60
+            max: 120
           }
         }
       ]
