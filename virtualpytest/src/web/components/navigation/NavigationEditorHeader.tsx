@@ -111,11 +111,11 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
   return (
     <AppBar position="static" color="default" elevation={1}>
       <Toolbar variant="dense" sx={{ minHeight: 48, px: 2 }}>
-        {/* Grid Layout with 4 sections */}
+        {/* Grid Layout with 4 sections - Fixed widths */}
         <Box sx={{ 
           display: 'grid', 
-          gridTemplateColumns: '2fr 1fr 1fr 1fr',
-          gap: 2,
+          gridTemplateColumns: '200px 340px 310px 240px',
+          gap: 1,
           alignItems: 'center',
           width: '100%'
         }}>
@@ -134,9 +134,12 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
                 whiteSpace: 'nowrap',
               }}
             >
+              {/* Show tree name from multiple possible sources */}
               {navigationNamePath.length > 0 
                 ? decodeURIComponent(navigationNamePath[navigationNamePath.length - 1])
-                : 'Navigation Tree'
+                : viewPath.length > 0 
+                  ? viewPath[viewPath.length - 1].name
+                  : 'Navigation Tree'
               }
               {hasUnsavedChanges && (
                 <Typography component="span" sx={{ color: 'warning.main', ml: 0.5 }}>
@@ -147,7 +150,7 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
           </Box>
           
           {/* Section 2: Node Controls (TreeFilterControls) */}
-          <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', minWidth: 0 }}>
             <TreeFilterControls
               focusNodeId={focusNodeId}
               availableFocusNodes={availableFocusNodes}
@@ -161,7 +164,7 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
           </Box>
           
           {/* Section 3: Action Buttons */}
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, minWidth: 0 }}>
             <Button
               startIcon={<AddIcon />}
               onClick={onAddNewNode}
@@ -226,9 +229,9 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
           </Box>
 
           {/* Section 4: Device Controls */}
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5, minWidth: 0 }}>
             {/* Device Selection Dropdown */}
-            <FormControl size="small" sx={{ minWidth: 100 }}>
+            <FormControl size="small" sx={{ minWidth: 80, maxWidth: 80 }}>
               <InputLabel id="device-select-label">Device</InputLabel>
               <Select
                 labelId="device-select-label"
@@ -236,10 +239,10 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
                 onChange={(e) => onDeviceSelect(e.target.value || null)}
                 label="Device"
                 disabled={isLoading || !!error}
-                sx={{ height: 32, fontSize: '0.875rem' }}
+                sx={{ height: 32, fontSize: '0.75rem' }}
               >
                 <MenuItem value="">
-                  <em>No device</em>
+                  <em>None</em>
                 </MenuItem>
                 {availableDevices.map((device) => (
                   <MenuItem key={device} value={device}>
@@ -259,13 +262,14 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
               color={isControlActive ? "success" : "primary"}
               sx={{ 
                 height: 32, 
-                fontSize: '0.65rem', 
-                minWidth: 'auto',
+                fontSize: '0.6rem', 
+                minWidth: 80,
+                maxWidth: 80,
                 whiteSpace: 'nowrap',
-                px: 1
+                px: 0.5
               }}
             >
-              {isControlActive ? 'Release' : 'Take&nbsp;Control'}
+              {isControlActive ? 'Release' : 'Take Ctrl'}
             </Button>
 
             {/* Toggle Remote Panel Button */}
