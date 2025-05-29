@@ -38,18 +38,22 @@ import {
 import React, { useState, useEffect } from 'react';
 import { userInterfaceApi, UserInterface as UserInterfaceType, UserInterfaceCreatePayload } from '../src/services/userInterfaceApi';
 
-const availableModels = [
+
+export const availableModels = [
   'Android Phone',
+  'Android TV',
+  'Android Tablet',
+  'iOs Phone',
+  'iOs Tablet',
   'Fire TV',
+  'Nvidia Shield',
   'Apple TV',
-  'STB EOS',
+  'STB',
   'Linux',
   'Windows',
-  'STB',
-  'Smart TV',
-  'Roku',
-  'Chromecast',
-];
+  'Tizen TV',
+  'LG TV',
+] as const;
 
 const UserInterface: React.FC = () => {
   const [userInterfaces, setUserInterfaces] = useState<UserInterfaceType[]>([]);

@@ -21,41 +21,62 @@ import {
   Paper,
   TextField,
   IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Alert,
   Select,
   MenuItem,
   FormControl,
   InputLabel,
   Chip,
+  OutlinedInput,
+  SelectChangeEvent,
+  Checkbox,
+  ListItemText,
 } from '@mui/material';
 import React, { useState } from 'react';
+import { CreateModelDialog } from '../components/model';
 
 interface Model {
   id: string;
   name: string;
-  type: string;
+  types: string[];
+  controllers: string[];
   version: string;
   description: string;
 }
 
 const modelTypes = [
   'Android Phone',
+  'Android TV',
+  'Android Tablet',
+  'iOs Phone',
+  'iOs Tablet',
   'Fire TV',
+  'Nvidia Shield',
   'Apple TV',
-  'STB EOS',
+  'STB',
   'Linux',
   'Windows',
-  'STB',
-  'Smart TV',
-  'Roku',
-  'Chromecast',
-  'Gaming Console',
-  'Tablet',
+  'Tizen TV',
+  'LG TV',
 ];
+
+const controllerTypes = [
+  'Audio Video Controller',
+  'Power Controller',
+  'Remote Controller',
+  'Network Controller',
+];
+
+const ITEM_HEIGHT = 48;
+const ITEM_PADDING_TOP = 8;
+const MenuProps = {
+  PaperProps: {
+    style: {
+      maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
+      width: 250,
+    },
+  },
+};
 
 const defaultModels: Model[] = [];
 
@@ -64,32 +85,28 @@ const Models: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ 
     name: '', 
-    type: '', 
+    types: [] as string[], 
+    controllers: [] as string[],
     version: '', 
     description: '' 
   });
   const [openDialog, setOpenDialog] = useState(false);
-  const [newModel, setNewModel] = useState({ 
-    name: '', 
-    type: '', 
-    version: '', 
-    description: '' 
-  });
   const [error, setError] = useState<string | null>(null);
 
   const handleEdit = (model: Model) => {
     setEditingId(model.id);
     setEditForm({
       name: model.name,
-      type: model.type,
+      types: model.types,
+      controllers: model.controllers,
       version: model.version,
       description: model.description,
     });
   };
 
   const handleSaveEdit = () => {
-    if (!editForm.name.trim() || !editForm.type.trim()) {
-      setError('Name and Type are required');
+    if (!editForm.name.trim() || editForm.types.length === 0) {
+      setError('Name and at least one Type are required');
       return;
     }
 
@@ -108,7 +125,8 @@ const Models: React.FC = () => {
         ? { 
             ...m, 
             name: editForm.name.trim(), 
-            type: editForm.type.trim(),
+            types: editForm.types,
+            controllers: editForm.controllers,
             version: editForm.version.trim(), 
             description: editForm.description.trim() 
           }
@@ -120,7 +138,7 @@ const Models: React.FC = () => {
 
   const handleCancelEdit = () => {
     setEditingId(null);
-    setEditForm({ name: '', type: '', version: '', description: '' });
+    setEditForm({ name: '', types: [], controllers: [], version: '', description: '' });
     setError(null);
   };
 
@@ -128,15 +146,15 @@ const Models: React.FC = () => {
     setModels(models.filter(m => m.id !== id));
   };
 
-  const handleAddNew = () => {
-    if (!newModel.name.trim() || !newModel.type.trim()) {
-      setError('Name and Type are required');
+  const handleAddNew = (newModelData: Omit<Model, 'id'>) => {
+    if (!newModelData.name.trim() || newModelData.types.length === 0) {
+      setError('Name and at least one Type are required');
       return;
     }
 
     // Check for duplicate names
     const isDuplicate = models.some(
-      (m) => m.name.toLowerCase() === newModel.name.toLowerCase().trim()
+      (m) => m.name.toLowerCase() === newModelData.name.toLowerCase().trim()
     );
     
     if (isDuplicate) {
@@ -147,20 +165,35 @@ const Models: React.FC = () => {
     const newId = (Math.max(...models.map(m => parseInt(m.id)), 0) + 1).toString();
     setModels([...models, {
       id: newId,
-      name: newModel.name.trim(),
-      type: newModel.type.trim(),
-      version: newModel.version.trim(),
-      description: newModel.description.trim(),
+      name: newModelData.name.trim(),
+      types: newModelData.types,
+      controllers: newModelData.controllers,
+      version: newModelData.version.trim(),
+      description: newModelData.description.trim(),
     }]);
-    setNewModel({ name: '', type: '', version: '', description: '' });
     setOpenDialog(false);
     setError(null);
   };
 
   const handleCloseDialog = () => {
     setOpenDialog(false);
-    setNewModel({ name: '', type: '', version: '', description: '' });
     setError(null);
+  };
+
+  const handleTypeChange = (event: SelectChangeEvent<string[]>) => {
+    const value = event.target.value;
+    setEditForm({
+      ...editForm,
+      types: typeof value === 'string' ? value.split(',') : value,
+    });
+  };
+
+  const handleControllerChange = (event: SelectChangeEvent<string[]>) => {
+    const value = event.target.value;
+    setEditForm({
+      ...editForm,
+      controllers: typeof value === 'string' ? value.split(',') : value,
+    });
   };
 
   // Empty state component
@@ -222,7 +255,8 @@ const Models: React.FC = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell><strong>Name</strong></TableCell>
-                    <TableCell><strong>Type</strong></TableCell>
+                    <TableCell><strong>Types</strong></TableCell>
+                    <TableCell><strong>Controllers</strong></TableCell>
                     <TableCell><strong>Version</strong></TableCell>
                     <TableCell><strong>Description</strong></TableCell>
                     <TableCell align="center"><strong>Actions</strong></TableCell>
@@ -249,19 +283,72 @@ const Models: React.FC = () => {
                         {editingId === model.id ? (
                           <FormControl size="small" fullWidth>
                             <Select
-                              value={editForm.type}
-                              onChange={(e) => setEditForm({ ...editForm, type: e.target.value })}
-                              sx={{ '& .MuiInputBase-root': { height: '32px' } }}
+                              multiple
+                              value={editForm.types}
+                              onChange={handleTypeChange}
+                              input={<OutlinedInput />}
+                              renderValue={(selected) => (
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                  {selected.map((value) => (
+                                    <Chip key={value} label={value} size="small" />
+                                  ))}
+                                </Box>
+                              )}
+                              MenuProps={MenuProps}
+                              sx={{ '& .MuiInputBase-root': { minHeight: '32px' } }}
                             >
                               {modelTypes.map((type) => (
                                 <MenuItem key={type} value={type}>
-                                  {type}
+                                  <Checkbox checked={editForm.types.indexOf(type) > -1} />
+                                  <ListItemText primary={type} />
                                 </MenuItem>
                               ))}
                             </Select>
                           </FormControl>
                         ) : (
-                          <Chip label={model.type} size="small" variant="outlined" />
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                            {model.types.map((type) => (
+                              <Chip key={type} label={type} size="small" variant="outlined" />
+                            ))}
+                          </Box>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingId === model.id ? (
+                          <FormControl size="small" fullWidth>
+                            <Select
+                              multiple
+                              value={editForm.controllers}
+                              onChange={handleControllerChange}
+                              input={<OutlinedInput />}
+                              renderValue={(selected) => (
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                  {selected.map((value) => (
+                                    <Chip key={value} label={value} size="small" color="primary" variant="outlined" />
+                                  ))}
+                                </Box>
+                              )}
+                              MenuProps={MenuProps}
+                              sx={{ '& .MuiInputBase-root': { minHeight: '32px' } }}
+                            >
+                              {controllerTypes.map((controller) => (
+                                <MenuItem key={controller} value={controller}>
+                                  <Checkbox checked={editForm.controllers.indexOf(controller) > -1} />
+                                  <ListItemText primary={controller} />
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        ) : (
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                            {model.controllers.length > 0 ? (
+                              model.controllers.map((controller) => (
+                                <Chip key={controller} label={controller} size="small" color="primary" variant="outlined" />
+                              ))
+                            ) : (
+                              <Typography variant="body2" color="text.secondary">N/A</Typography>
+                            )}
+                          </Box>
                         )}
                       </TableCell>
                       <TableCell>
@@ -343,71 +430,13 @@ const Models: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Add New Model Dialog */}
-      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ pb: 1 }}>Add New Device Model</DialogTitle>
-        <DialogContent sx={{ pt: 1 }}>
-          <Box sx={{ pt: 0.5 }}>
-            <TextField
-              autoFocus
-              margin="dense"
-              label="Name"
-              fullWidth
-              variant="outlined"
-              value={newModel.name}
-              onChange={(e) => setNewModel({ ...newModel, name: e.target.value })}
-              sx={{ mb: 1.5 }}
-              size="small"
-              placeholder="e.g., Samsung Galaxy S21"
-            />
-            
-            <FormControl fullWidth margin="dense" sx={{ mb: 1.5 }}>
-              <InputLabel size="small">Type</InputLabel>
-              <Select
-                size="small"
-                value={newModel.type}
-                onChange={(e) => setNewModel({ ...newModel, type: e.target.value })}
-                label="Type"
-              >
-                {modelTypes.map((type) => (
-                  <MenuItem key={type} value={type}>
-                    {type}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            <TextField
-              margin="dense"
-              label="Version"
-              fullWidth
-              variant="outlined"
-              value={newModel.version}
-              onChange={(e) => setNewModel({ ...newModel, version: e.target.value })}
-              sx={{ mb: 1.5 }}
-              size="small"
-              placeholder="e.g., 12.0, Android 11"
-            />
-            
-            <TextField
-              margin="dense"
-              label="Description"
-              fullWidth
-              variant="outlined"
-              value={newModel.description}
-              onChange={(e) => setNewModel({ ...newModel, description: e.target.value })}
-              size="small"
-              placeholder="Additional specifications or notes"
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ pt: 1, pb: 2 }}>
-          <Button onClick={handleCloseDialog} size="small">Cancel</Button>
-          <Button onClick={handleAddNew} variant="contained" size="small">
-            Add Model
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {/* Create Model Dialog */}
+      <CreateModelDialog
+        open={openDialog}
+        onClose={handleCloseDialog}
+        onSubmit={handleAddNew}
+        error={error}
+      />
     </Box>
   );
 };
