@@ -15,7 +15,7 @@ import {
 
 interface NodeForm {
   label: string;
-  type: 'screen' | 'dialog' | 'popup' | 'overlay';
+  type: 'screen' | 'dialog' | 'popup' | 'overlay' | 'menu';
   description: string;
 }
 
@@ -36,17 +36,17 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
 }) => {
   return (
     <Dialog open={isOpen} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Edit Screen</DialogTitle>
+      <DialogTitle>Edit Node</DialogTitle>
       <DialogContent>
         <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
           <TextField
-            label="Screen Name"
+            label="Node Name"
             value={nodeForm.label}
             onChange={(e) => setNodeForm({ ...nodeForm, label: e.target.value })}
             fullWidth
             required
             error={!nodeForm.label.trim()}
-            helperText={!nodeForm.label.trim() ? "Screen name is required" : ""}
+            helperText={!nodeForm.label.trim() ? "Node name is required" : ""}
           />
           
           <FormControl fullWidth>
@@ -60,6 +60,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
               <MenuItem value="dialog">Dialog</MenuItem>
               <MenuItem value="popup">Popup</MenuItem>
               <MenuItem value="overlay">Overlay</MenuItem>
+              <MenuItem value="menu">Menu</MenuItem>
             </Select>
           </FormControl>
           

@@ -109,6 +109,11 @@ export const useNavigationEditor = () => {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
 
+  // Add new state for progressive loading
+  const [loadedDepth, setLoadedDepth] = useState(2); // Start with depth 2 loaded
+  const [maxDepth, setMaxDepth] = useState(0); // Track maximum depth available
+  const [isProgressiveLoading, setIsProgressiveLoading] = useState(false);
+
   // Fetch user interface and root tree if interfaceId is provided
   useEffect(() => {
     const fetchUserInterface = async () => {
@@ -668,7 +673,7 @@ export const useNavigationEditor = () => {
       type: 'uiScreen', // Default to uiScreen, will be changed to uiMenu if type is set to menu
       position: { x: Math.random() * 400, y: Math.random() * 400 },
       data: {
-        label: 'New Screen',
+        label: 'New Node',
         type: 'screen',
         description: '',
         is_root: false, // Default to false, will be set appropriately when saved
@@ -720,7 +725,7 @@ export const useNavigationEditor = () => {
               type: 'uiScreen',
               position: { x: 250, y: 100 },
               data: {
-                label: nodeForm.label, // Root node has same name as tree
+                label: nodeForm.label, // Root node has same name as menu node
                 type: 'screen',
                 description: `Root node for ${nodeForm.label} navigation tree`,
                 is_root: true // The root node of each tree always has is_root: true
@@ -731,13 +736,25 @@ export const useNavigationEditor = () => {
           }
         };
         
+        console.log(`[@hook:useNavigationEditor] Sending tree creation request with data:`, {
+          name: treeData.name,
+          nodeCount: treeData.tree_data.nodes.length,
+          rootNodeName: treeData.tree_data.nodes[0].data.label
+        });
+        
         const createResponse = await apiCall('/api/navigation/trees', {
           method: 'POST',
           body: JSON.stringify(treeData),
         });
         
-        if (createResponse.success) {
-          console.log(`[@hook:useNavigationEditor] Created tree with ID: ${createResponse.data.id} for menu node: ${nodeForm.label}`);
+        console.log(`[@hook:useNavigationEditor] Tree creation response:`, {
+          success: createResponse.success,
+          hasData: !!createResponse.data,
+          error: createResponse.error
+        });
+        
+        if (createResponse.success && createResponse.data) {
+          console.log(`[@hook:useNavigationEditor] Successfully created tree with ID: ${createResponse.data.id} for menu node: ${nodeForm.label}`);
           
           // Update the node data with tree reference
           updatedNodeData = {
@@ -746,11 +763,17 @@ export const useNavigationEditor = () => {
             tree_name: createResponse.data.name,
             is_root: isFirstTree // Menu node gets is_root: true only if it's the first one
           };
+          
+          console.log(`[@hook:useNavigationEditor] Menu node ${nodeForm.label} now linked to tree ${createResponse.data.id}`);
         } else {
-          console.error(`[@hook:useNavigationEditor] Failed to create tree for menu node: ${createResponse.error}`);
+          console.error(`[@hook:useNavigationEditor] Failed to create tree for menu node: ${createResponse.error || 'Unknown error'}`);
+          // Still save the menu node even if tree creation failed
+          console.log(`[@hook:useNavigationEditor] Proceeding to save menu node without tree association`);
         }
       } catch (error) {
         console.error(`[@hook:useNavigationEditor] Error creating tree for menu node:`, error);
+        // Still save the menu node even if tree creation failed
+        console.log(`[@hook:useNavigationEditor] Proceeding to save menu node without tree association due to error`);
       }
     }
     
@@ -877,6 +900,77 @@ export const useNavigationEditor = () => {
     setEdges(viewEdges);
   }, [allNodes, allEdges, currentViewRootId, getCurrentViewNodes, getCurrentViewEdges, setNodes, setEdges]);
 
+  // Progressive loading function for TV menus
+  const loadChildrenAtDepth = useCallback(async (nodeId: string, targetDepth: number) => {
+    if (isProgressiveLoading || targetDepth <= loadedDepth) return;
+    
+    setIsProgressiveLoading(true);
+    console.log(`[@hook:useNavigationEditor] Loading children at depth ${targetDepth} for node ${nodeId}`);
+    
+    try {
+      // In a real implementation, this would call an API
+      // For now, we simulate progressive loading
+      const response = await fetch(`/api/navigation/trees/${currentTreeId}/load-depth`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          node_id: nodeId,
+          depth: targetDepth,
+          load_children: true
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Add new nodes and edges to existing ones
+        setNodes(prevNodes => {
+          const existingIds = new Set(prevNodes.map(n => n.id));
+          const newNodes = data.nodes.filter((n: UINavigationNode) => !existingIds.has(n.id));
+          return [...prevNodes, ...newNodes];
+        });
+        
+        setEdges(prevEdges => {
+          const existingIds = new Set(prevEdges.map(e => e.id));
+          const newEdges = data.edges.filter((e: UINavigationEdge) => !existingIds.has(e.id));
+          return [...prevEdges, ...newEdges];
+        });
+        
+        setLoadedDepth(targetDepth);
+        setMaxDepth(data.max_depth || targetDepth);
+        
+        console.log(`[@hook:useNavigationEditor] Successfully loaded depth ${targetDepth}, max depth: ${data.max_depth}`);
+      }
+    } catch (error) {
+      console.error(`[@hook:useNavigationEditor] Error loading children at depth ${targetDepth}:`, error);
+    } finally {
+      setIsProgressiveLoading(false);
+    }
+  }, [currentTreeId, loadedDepth, isProgressiveLoading]);
+
+  // Handle menu node entry (when user "enters" a menu)
+  const handleMenuEntry = useCallback(async (menuNode: UINavigationNode) => {
+    console.log(`[@hook:useNavigationEditor] Entering menu: ${menuNode.data.label}`);
+    
+    const currentDepth = menuNode.data.depth || 0;
+    const nextDepth = currentDepth + 1;
+    
+    // If we need to load more depth, do it progressively
+    if (nextDepth > loadedDepth) {
+      await loadChildrenAtDepth(menuNode.id, nextDepth);
+    }
+    
+    // Filter nodes to show only relevant ones for current context
+    const relevantNodes = allNodes.filter(node => {
+      const nodeDepth = node.data.depth || 0;
+      // Show current menu and its immediate children
+      return nodeDepth <= nextDepth && 
+             (nodeDepth <= currentDepth || node.data.parent_id === menuNode.id);
+    });
+    
+    setNodes(relevantNodes);
+  }, [loadedDepth, loadChildrenAtDepth, allNodes]);
+
   return {
     // State
     nodes,
@@ -975,6 +1069,13 @@ export const useNavigationEditor = () => {
     navigateToParentView,
     
     // Configuration
-    defaultEdgeOptions
+    defaultEdgeOptions,
+    
+    // Progressive loading state and functions
+    loadedDepth,
+    maxDepth,
+    isProgressiveLoading,
+    loadChildrenAtDepth,
+    handleMenuEntry
   };
 }; 

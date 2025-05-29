@@ -35,11 +35,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Paper,
   Snackbar,
   Alert,
@@ -261,7 +256,7 @@ const NavigationEditorContent: React.FC = () => {
             sx={{ mr: 1 }}
             disabled={isLoading || !!error}
           >
-            Add Screen
+            Add Node
           </Button>
           
           <Typography 
@@ -462,56 +457,13 @@ const NavigationEditorContent: React.FC = () => {
       </Box>
 
       {/* Node Edit Dialog */}
-      <Dialog open={isNodeDialogOpen} onClose={cancelNodeChanges} maxWidth="sm" fullWidth>
-        <DialogTitle>Edit Screen</DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <TextField
-              label="Screen Name"
-              value={nodeForm.label}
-              onChange={(e) => setNodeForm({ ...nodeForm, label: e.target.value })}
-              fullWidth
-              required
-              error={!nodeForm.label.trim()}
-              helperText={!nodeForm.label.trim() ? "Screen name is required" : ""}
-            />
-            
-            <FormControl fullWidth>
-              <InputLabel>Type</InputLabel>
-              <Select
-                value={nodeForm.type}
-                label="Type"
-                onChange={(e) => setNodeForm({ ...nodeForm, type: e.target.value as any })}
-              >
-                <MenuItem value="screen">Screen</MenuItem>
-                <MenuItem value="dialog">Dialog</MenuItem>
-                <MenuItem value="popup">Popup</MenuItem>
-                <MenuItem value="overlay">Overlay</MenuItem>
-                <MenuItem value="menu">Menu</MenuItem>
-              </Select>
-            </FormControl>
-            
-            <TextField
-              label="Description"
-              value={nodeForm.description}
-              onChange={(e) => setNodeForm({ ...nodeForm, description: e.target.value })}
-              multiline
-              rows={3}
-              fullWidth
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={cancelNodeChanges}>Cancel</Button>
-          <Button 
-            onClick={handleNodeFormSubmit} 
-            variant="contained"
-            disabled={!nodeForm.label.trim()}
-          >
-            Save
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <NodeEditDialog
+        isOpen={isNodeDialogOpen}
+        nodeForm={nodeForm}
+        setNodeForm={setNodeForm}
+        onSubmit={handleNodeFormSubmit}
+        onClose={cancelNodeChanges}
+      />
 
       {/* Edge Edit Dialog */}
       <EdgeEditDialog
