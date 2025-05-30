@@ -406,26 +406,6 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
                   </Button>
                 </Box>
 
-                {/* Show overlay toggle */}
-                {androidElements.length > 0 && (
-                  <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                    <Button
-                      variant={showOverlay ? "contained" : "outlined"}
-                      size="small"
-                      onClick={() => setShowOverlay(!showOverlay)}
-                      sx={{ flex: 1 }}
-                    >
-                      {showOverlay ? 'Hide Overlay' : 'Show Overlay'}
-                    </Button>
-                    {isAutoDumpScheduled && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <CircularProgress size={16} />
-                        <Typography variant="caption">Auto-dump in 2s...</Typography>
-                      </Box>
-                    )}
-                  </Box>
-                )}
-
                 {/* Element selection dropdown */}
                 <FormControl fullWidth size="small">
                   <InputLabel>Select element to click...</InputLabel>
