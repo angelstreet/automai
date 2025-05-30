@@ -337,6 +337,7 @@ export function AndroidTVRemotePanel({
   return (
     <Box sx={{ 
       p: 2, 
+      pt: 0,
       display: 'flex', 
       flexDirection: 'column', 
       height: '100%',
@@ -417,7 +418,7 @@ export function AndroidTVRemotePanel({
         disabled={connectionLoading}
         size="small"
         fullWidth
-        sx={{ mt: 1, height: '32px' }} // Fixed height
+        sx={{ mt: 0, height: '28px' }} // Reduced margin-top and height
       >
         {connectionLoading ? <CircularProgress size={16} /> : 'Disconnect'}
       </Button>
