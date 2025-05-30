@@ -55,7 +55,7 @@
       "key": "DPAD_CENTER",
       "label": "OK",
       "position": { "x": 70, "y": 133 },
-      "size": { "width": 20, "height": 20 },
+      "size": { "width": 50, "height": 50 },
       "shape": "circle",
       "comment": "Navigation center/select"
     },

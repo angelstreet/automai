@@ -9,6 +9,7 @@ import {
   Alert,
   IconButton,
   Tooltip,
+  TextField,
 } from '@mui/material';
 import { Android, Settings, Tv } from '@mui/icons-material';
 import { useAndroidTVConnection } from '../../hooks/remote/useAndroidTVConnection';
@@ -24,28 +25,22 @@ interface AndroidTVRemotePanelProps {
     device_ip: string;
     device_port?: string;
   };
-  /** Whether to auto-connect on mount if config is provided */
-  autoConnect?: boolean;
   /** Compact mode for smaller spaces like NavigationEditor */
   compact?: boolean;
   /** Show/hide screenshot display */
   showScreenshot?: boolean;
   /** Custom styling */
   sx?: any;
-  /** Callback when disconnect is complete (for parent to handle additional actions like closing panel) */
-  onDisconnectComplete?: () => void;
 }
 
 export function AndroidTVRemotePanel({
   connectionConfig,
-  autoConnect = false,
   compact = false,
   showScreenshot = true,
-  sx = {},
-  onDisconnectComplete
+  sx = {}
 }: AndroidTVRemotePanelProps) {
   // UI state
-  const [showOverlays, setShowOverlays] = useState(false);
+  const [showOverlays, setShowOverlays] = useState(true);
   const [isScreenshotLoading, setIsScreenshotLoading] = useState(false);
   const [screenshotError, setScreenshotError] = useState<string | null>(null);
 
@@ -65,7 +60,7 @@ export function AndroidTVRemotePanel({
     remoteConfig,
   } = useAndroidTVConnection();
 
-  // Initialize connection form with provided config
+  // Initialize connection form with provided config or fetch defaults
   useEffect(() => {
     if (connectionConfig) {
       console.log('[@component:AndroidTVRemotePanel] Initializing connection form with config:', connectionConfig);
@@ -83,32 +78,8 @@ export function AndroidTVRemotePanel({
     }
   }, [connectionConfig, fetchDefaultValues, setConnectionForm]);
 
-  // Auto-connect if config is provided and autoConnect is true
-  useEffect(() => {
-    if (connectionConfig && autoConnect && !session.connected && !connectionLoading) {
-      // Validate that we have all required connection parameters
-      const requiredFields: (keyof typeof connectionConfig)[] = ['host_ip', 'host_username', 'host_password', 'device_ip'];
-      const missingFields = requiredFields.filter(field => !connectionConfig[field]);
-      
-      if (missingFields.length > 0) {
-        console.error('[@component:AndroidTVRemotePanel] Missing required connection fields:', missingFields);
-        console.error('[@component:AndroidTVRemotePanel] Connection config:', connectionConfig);
-        return;
-      }
-      
-      console.log('[@component:AndroidTVRemotePanel] Auto-connecting with provided config:', {
-        host_ip: connectionConfig.host_ip,
-        device_ip: connectionConfig.device_ip,
-        host_username: connectionConfig.host_username,
-        // Don't log password for security
-      });
-      
-      // Add a small delay to ensure connection form is set
-      setTimeout(() => {
-        handleTakeControl();
-      }, 100);
-    }
-  }, [connectionConfig, autoConnect, session.connected, connectionLoading, handleTakeControl]);
+  // Use default scale from remoteConfig
+  const defaultScale = remoteConfig?.remote_info?.default_scale || (compact ? 0.6 : 1.0);
 
   const handleScreenshotClick = async () => {
     setIsScreenshotLoading(true);
@@ -126,150 +97,221 @@ export function AndroidTVRemotePanel({
     }
   };
 
-  // Connection status display
-  if (!session.connected) {
-    return (
-      <Box sx={{ 
-        p: 2, 
-        display: 'flex', 
-        flexDirection: 'column', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        height: '100%',
-        ...sx 
-      }}>
-        <Typography variant="body2" color="textSecondary" gutterBottom>
-          Android TV Not Connected
-        </Typography>
-        
-        {/* Show connection status or connect button */}
-        {connectionLoading ? (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-            <CircularProgress size={16} />
-            <Typography variant="caption" color="info.main">
-              Connecting...
-            </Typography>
-          </Box>
-        ) : connectionConfig ? (
+  // Handle form field changes
+  const handleFormChange = (field: string, value: string) => {
+    setConnectionForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  return (
+    <Box sx={{ 
+      p: compact ? 1 : 2, 
+      display: 'flex', 
+      flexDirection: 'column', 
+      height: '100%',
+      overflow: 'auto',
+      ...sx 
+    }}>
+      {/* Header */}
+
+      {connectionError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {connectionError}
+        </Alert>
+      )}
+
+      {!session.connected ? (
+        // Connection Configuration Form
+        <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            Connection Settings
+          </Typography>
+          <Grid container spacing={2} sx={{ mb: 2 }}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Host IP"
+                value={connectionForm.host_ip}
+                onChange={(e) => handleFormChange('host_ip', e.target.value)}
+                size="small"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Host Port"
+                value={connectionForm.host_port}
+                onChange={(e) => handleFormChange('host_port', e.target.value)}
+                size="small"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Username"
+                value={connectionForm.host_username}
+                onChange={(e) => handleFormChange('host_username', e.target.value)}
+                size="small"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Password"
+                type="password"
+                value={connectionForm.host_password}
+                onChange={(e) => handleFormChange('host_password', e.target.value)}
+                size="small"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Device IP"
+                value={connectionForm.device_ip}
+                onChange={(e) => handleFormChange('device_ip', e.target.value)}
+                size="small"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Device Port"
+                value={connectionForm.device_port}
+                onChange={(e) => handleFormChange('device_port', e.target.value)}
+                size="small"
+              />
+            </Grid>
+          </Grid>
+          
           <Button
             variant="contained"
             onClick={handleTakeControl}
             disabled={connectionLoading}
-            size="small"
-            sx={{ mb: 2 }}
+            fullWidth
           >
-            Connect
+            {connectionLoading ? <CircularProgress size={16} /> : 'Connect'}
           </Button>
-        ) : (
-          <Typography variant="caption" color="warning.main" textAlign="center" sx={{ mb: 2 }}>
-            No device configuration
-          </Typography>
-        )}
-        
-        {/* Show connection error if any */}
-        {connectionError && (
-          <Box sx={{ 
-            mt: 1, 
-            p: 1, 
-            bgcolor: 'error.light', 
-            borderRadius: 1, 
-            maxWidth: '100%',
-            wordBreak: 'break-word'
-          }}>
-            <Typography variant="caption" color="error" textAlign="center">
-              {connectionError}
-            </Typography>
-          </Box>
-        )}
-      </Box>
-    );
-  }
+        </Paper>
+      ) : (
+        // Connected - Two Column Layout
+        <Grid container spacing={3} sx={{ flex: 1 }}>
+          {/* Left Column - Screenshot */}
+          {showScreenshot && (
+            <Grid item xs={12} md={6}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                <Typography variant="h6" gutterBottom>
+                  Device Screenshot
+                </Typography>
+                
+                {screenshotError && (
+                  <Alert severity="error" sx={{ mb: 2 }}>
+                    {screenshotError}
+                  </Alert>
+                )}
+                
+                <Paper 
+                  elevation={2} 
+                  sx={{ 
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minHeight: 300,
+                    bgcolor: 'grey.100',
+                    overflow: 'hidden',
+                    mb: 2
+                  }}
+                >
+                  {androidScreenshot ? (
+                    <img 
+                      src={`data:image/png;base64,${androidScreenshot}`} 
+                      alt="Android TV Screenshot"
+                      style={{ 
+                        maxWidth: '100%',
+                        maxHeight: '100%',
+                        objectFit: 'contain'
+                      }}
+                    />
+                  ) : (
+                    <Typography variant="body2" color="textSecondary" textAlign="center">
+                      No screenshot available
+                      <br />
+                      Click "Take Screenshot" to capture the current screen
+                    </Typography>
+                  )}
+                </Paper>
+                
+                <Button
+                  variant="contained"
+                  onClick={handleScreenshotClick}
+                  disabled={isScreenshotLoading}
+                  fullWidth
+                >
+                  {isScreenshotLoading ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CircularProgress size={16} />
+                      <Typography variant="body2">Taking Screenshot...</Typography>
+                    </Box>
+                  ) : (
+                    'Take Screenshot'
+                  )}
+                </Button>
+              </Box>
+            </Grid>
+          )}
+          
+          {/* Right Column - Remote Control */}
+          <Grid item xs={12} md={showScreenshot ? 6 : 12}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', alignItems: 'center' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                <Typography variant="h6">
+                  Remote Control
+                </Typography>
+                <Button
+                  variant={showOverlays ? "contained" : "outlined"}
+                  size="small"
+                  onClick={() => setShowOverlays(!showOverlays)}
+                >
+                  {showOverlays ? 'Hide' : 'Show'} Overlays
+                </Button>
+              </Box>
 
-  // Get the scale from the remote config or fall back to 1
-  const remoteScale = remoteConfig?.remote_info.default_scale || 1;
-  
-  // Dynamic width based on remote scale
-  const containerWidth = 130 * remoteScale;
+              {/* Remote Interface */}
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                overflow: 'hidden',
+                alignItems: 'flex-start',
+                flex: 1,
+                mb: 2
+              }}>
+                <RemoteInterface
+                  remoteConfig={remoteConfig || null}
+                  scale={defaultScale}
+                  showOverlays={showOverlays}
+                  onCommand={handleRemoteCommand}
+                  fallbackImageUrl="/android-tv-remote.png"
+                  fallbackName="Android TV Remote"
+                />
+              </Box>
 
-  return (
-    <Box sx={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
-      height: '100%',
-      overflow: 'hidden',
-      position: 'relative',
-      ...sx 
-    }}>
-      {/* Show Overlays button - positioned in top right corner */}
-      <Box sx={{ 
-        position: 'absolute',
-        top: 0,
-        right: 0,
-        zIndex: 10,
-        m: 1
-      }}>
-        <Button
-          variant={showOverlays ? "contained" : "outlined"}
-          size="small"
-          onClick={() => setShowOverlays(!showOverlays)}
-          sx={{ 
-            minWidth: 'auto', 
-            px: 1, 
-            fontSize: '0.7rem',
-            opacity: 0.7,
-            '&:hover': { opacity: 1 }
-          }}
-        >
-          {showOverlays ? 'Hide Overlay' : 'Show Overlay'}
-        </Button>
-      </Box>
-      
-      {/* Remote Interface Container - positioned at the top */}
-      <Box sx={{ 
-        position: 'absolute',
-        top: 10,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: `${containerWidth}px`,
-      }}>
-        <RemoteInterface
-          remoteConfig={remoteConfig || null}
-          scale={remoteScale}
-          showOverlays={showOverlays}
-          onCommand={handleRemoteCommand}
-          fallbackImageUrl="/android-tv-remote.png"
-          fallbackName="Android TV Remote"
-        />
-      </Box>
-
-      {/* Disconnect button */}
-      <Button 
-        variant="contained" 
-        color="error"
-        onClick={async () => {
-          try {
-            await handleReleaseControl();
-            if (onDisconnectComplete) {
-              onDisconnectComplete();
-            }
-          } catch (error) {
-            console.error('[@component:AndroidTVRemotePanel] Error during disconnect:', error);
-          }
-        }}
-        disabled={connectionLoading}
-        size="small"
-        fullWidth
-        sx={{ 
-          mt: 0, 
-          height: '28px',
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0
-        }}
-      >
-        {connectionLoading ? <CircularProgress size={16} /> : 'Disconnect'}
-      </Button>
+              {/* Disconnect button */}
+              <Button 
+                variant="contained" 
+                color="error"
+                onClick={handleReleaseControl}
+                disabled={connectionLoading}
+                fullWidth
+              >
+                {connectionLoading ? <CircularProgress size={16} /> : 'Disconnect'}
+              </Button>
+            </Box>
+          </Grid>
+        </Grid>
+      )}
     </Box>
   );
 } 

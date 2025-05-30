@@ -9,6 +9,7 @@ import {
   Typography,
   CircularProgress,
   IconButton,
+  Android
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 import { useAndroidTVConnection } from '../../../hooks/remote/useAndroidTVConnection';
@@ -53,6 +54,7 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
     >
       <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
         <Typography variant="h6" component="div">
+          <Android color="primary" />
           Android TV Remote Control
         </Typography>
         

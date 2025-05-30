@@ -63,7 +63,7 @@ import { EdgeSelectionPanel } from '../components/navigation/EdgeSelectionPanel'
 import { NodeSelectionPanel } from '../components/navigation/NodeSelectionPanel';
 import { NavigationEditorHeader } from '../components/navigation/NavigationEditorHeader';
 import { AndroidMobileRemotePanel } from '../components/remote/AndroidMobileRemotePanel';
-import { AndroidTVRemotePanel } from '../components/remote/AndroidTVRemotePanel';
+import { CompactAndroidTVRemote } from '../components/remote/CompactAndroidTVRemote';
 import { IRRemotePanel } from '../components/remote/IRRemotePanel';
 import { BluetoothRemotePanel } from '../components/remote/BluetoothRemotePanel';
 
@@ -582,7 +582,7 @@ const NavigationEditorContent: React.FC = () => {
                   sx={{ flex: 1, height: '100%' }}
                 />
               ) : remoteConfig.type === 'android_tv' ? (
-                <AndroidTVRemotePanel
+                <CompactAndroidTVRemote
                   connectionConfig={extractConnectionConfigForAndroid(selectedDeviceData?.controller_configs?.remote)}
                   autoConnect={isControlActive}
                   showScreenshot={false}
