@@ -337,7 +337,7 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
                   App Launcher ({androidApps.length} apps)
                 </Typography>
                 
-                <Box sx={{ mb: 2, mt: 1}}>
+                <Box sx={{ mb: 1, mt: 1}}>
                   <FormControl fullWidth size="small">
                     <InputLabel>Select an app...</InputLabel>
                     <Select
@@ -373,12 +373,12 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
               </Box>
 
               {/* UI Elements Section */}
-              <Box sx={{ mb: 3 }}>
+              <Box sx={{ mb: 1 }}>
                 <Typography variant="h6" gutterBottom>
                   UI Elements ({androidElements.length})
                 </Typography>
 
-                <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
                   <Button
                     variant="contained"
                     size="small"
@@ -558,7 +558,7 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
               </Box>
 
               {/* Modal Controls */}
-              <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #e0e0e0' }}>
+              <Box sx={{ mt: 1, pt: 1, borderTop: '1px solid #e0e0e0' }}>
                 <Box sx={{ display: 'flex', gap: 1 }}>
                   <Button 
                     variant="outlined"
