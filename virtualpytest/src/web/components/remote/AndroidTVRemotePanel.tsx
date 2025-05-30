@@ -100,6 +100,8 @@ export function AndroidTVRemotePanel({
 
   const handleDisconnect = async () => {
     try {
+      // Clear screenshot error when disconnecting
+      setScreenshotError(null);
       await handleReleaseControl();
     } catch (error) {
       console.error('[@component:AndroidTVRemotePanel] Error during disconnect:', error);
