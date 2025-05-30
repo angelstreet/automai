@@ -564,7 +564,7 @@ const NavigationEditorContent: React.FC = () => {
                 borderBottom: '1px solid', 
                 borderColor: 'divider',
                 display: 'flex',
-                justifyContent: 'space-between',
+                justifyContent: 'center',
                 alignItems: 'center'
               }}>
                 <Typography variant={isCompact ? "subtitle1" : "h6"} component="div">
@@ -574,13 +574,6 @@ const NavigationEditorContent: React.FC = () => {
                    remoteConfig.type === 'bluetooth_remote' ? 'Bluetooth Remote' :
                    'Remote Control'}
                 </Typography>
-                <Button
-                  size="small"
-                  onClick={handleToggleRemotePanel}
-                  startIcon={<CloseIcon />}
-                >
-                  Close
-                </Button>
               </Box>
               
               {/* Connection Status - Hidden in compact mode */}
