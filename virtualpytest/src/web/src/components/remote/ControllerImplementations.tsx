@@ -26,12 +26,12 @@ import {
   Memory as ProcessorIcon,
 } from '@mui/icons-material';
 
-import { ControllerTypes, ControllerType } from '../types';
-import { AndroidTVModal } from '../modals/AndroidTVModal';
-import { AndroidMobileModal } from '../modals/AndroidMobileModal';
-import { IRRemoteModal } from '../modals/IRRemoteModal';
-import { BluetoothRemoteModal } from '../modals/BluetoothRemoteModal';
-import { HDMIStreamModal } from '../modals/HDMIStreamModal';
+import { ControllerTypes, ControllerType } from '../../types/remote/types';
+import { AndroidTVModal } from '../modals/remote/AndroidTVModal';
+import { AndroidMobileModal } from '../modals/remote/AndroidMobileModal';
+import { IRRemoteModal } from '../modals/remote/IRRemoteModal';
+import { BluetoothRemoteModal } from '../modals/remote/BluetoothRemoteModal';
+import { HDMIStreamModal } from '../modals/remote/HDMIStreamModal';
 
 interface ControllerImplementationsProps {
   controllerTypes: ControllerTypes | null;

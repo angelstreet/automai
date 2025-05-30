@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { IRRemoteSession, IRConnectionForm, RemoteConfig } from '../types';
+import { IRRemoteSession, IRConnectionForm, RemoteConfig } from '../../types/remote/types';
 
 const initialConnectionForm: IRConnectionForm = {
   device_path: '/dev/lirc0',

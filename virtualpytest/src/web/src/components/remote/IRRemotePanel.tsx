@@ -4,9 +4,15 @@ import {
   Button,
   Typography,
   CircularProgress,
+  Grid,
+  Paper,
+  Alert,
 } from '@mui/material';
-import { useIRRemoteConnection } from '../../../pages/controller/hooks/useIRRemoteConnection';
-import { RemoteInterface } from '../../../pages/controller/components/RemoteInterface';
+import { Wifi, WifiOff, Settings } from '@mui/icons-material';
+
+// Updated imports to use new structure
+import { useIRRemoteConnection } from '../../hooks/remote/useIRRemoteConnection';
+import { RemoteInterface } from './RemoteInterface';
 
 interface IRRemotePanelProps {
   /** Optional pre-configured connection parameters */

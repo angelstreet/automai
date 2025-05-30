@@ -4,9 +4,15 @@ import {
   Button,
   Typography,
   CircularProgress,
+  Grid,
+  Paper,
+  Alert,
 } from '@mui/material';
-import { useBluetoothRemoteConnection } from '../../../pages/controller/hooks/useBluetoothRemoteConnection';
-import { RemoteInterface } from '../../../pages/controller/components/RemoteInterface';
+import { Bluetooth, BluetoothDisabled, Settings } from '@mui/icons-material';
+
+// Updated imports to use new structure
+import { useBluetoothRemoteConnection } from '../../hooks/remote/useBluetoothRemoteConnection';
+import { RemoteInterface } from './RemoteInterface';
 
 interface BluetoothRemotePanelProps {
   /** Optional pre-configured connection parameters */

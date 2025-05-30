@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { BluetoothRemoteSession, BluetoothConnectionForm, RemoteConfig } from '../types';
+import { BluetoothRemoteSession, BluetoothConnectionForm, RemoteConfig } from '../../types/remote/types';
 
 const initialConnectionForm: BluetoothConnectionForm = {
   device_address: '00:00:00:00:00:00',

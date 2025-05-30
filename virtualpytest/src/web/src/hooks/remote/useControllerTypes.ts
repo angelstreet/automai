@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ControllerTypes } from '../types';
+import { ControllerTypes } from '../../types/remote/types';
 
 export function useControllerTypes() {
   const [controllerTypes, setControllerTypes] = useState<ControllerTypes | null>(null);

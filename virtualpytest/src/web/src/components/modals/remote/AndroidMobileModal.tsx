@@ -16,9 +16,9 @@ import {
   IconButton,
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
-import { useAndroidMobileConnection } from '../hooks/useAndroidMobileConnection';
-import { AndroidMobileOverlay } from '../components/AndroidMobileOverlay';
-import { AndroidMobileRemotePanel } from '../../../src/components/remote/AndroidMobileRemotePanel';
+import { useAndroidMobileConnection } from '../../../hooks/remote/useAndroidMobileConnection';
+import { AndroidMobileOverlay } from '../../remote/AndroidMobileOverlay';
+import { AndroidMobileRemotePanel } from '../../remote/AndroidMobileRemotePanel';
 
 interface AndroidMobileModalProps {
   open: boolean;

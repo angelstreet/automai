@@ -1,18 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   Box,
   Typography,
-  Card,
-  CardContent,
   Grid,
   Alert,
   CircularProgress,
   Container,
 } from '@mui/material';
 
-import { ControllerTypesOverview } from './components/ControllerTypesOverview';
-import { ControllerImplementations } from './components/ControllerImplementations';
-import { useControllerTypes } from './hooks/useControllerTypes';
+import { ControllerTypesOverview, ControllerImplementations } from '../../src/components/remote';
+import { useControllerTypes } from '../../src/hooks/remote';
 
 const ControllerPage: React.FC = () => {
   const { controllerTypes, loading, error, refetch } = useControllerTypes();

@@ -4,9 +4,15 @@ import {
   Button,
   Typography,
   CircularProgress,
+  Grid,
+  Paper,
+  Alert,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
-import { useAndroidTVConnection } from '../../../pages/controller/hooks/useAndroidTVConnection';
-import { RemoteInterface } from '../../../pages/controller/components/RemoteInterface';
+import { Android, Settings, Tv } from '@mui/icons-material';
+import { useAndroidTVConnection } from '../../hooks/remote/useAndroidTVConnection';
+import { RemoteInterface } from './RemoteInterface';
 
 interface AndroidTVRemotePanelProps {
   /** Optional pre-configured connection parameters */

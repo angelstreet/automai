@@ -12,19 +12,23 @@ import {
   TextField,
   Alert,
   CircularProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
   IconButton,
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
-import { useBluetoothRemoteConnection } from '../hooks/useBluetoothRemoteConnection';
-import { BluetoothRemotePanel } from '../../../src/components/remote/BluetoothRemotePanel';
+import { useIRRemoteConnection } from '../../../hooks/remote/useIRRemoteConnection';
+import { IRRemotePanel } from '../../remote/IRRemotePanel';
 
-interface BluetoothRemoteModalProps {
+interface IRRemoteModalProps {
   open: boolean;
   onClose: () => void;
 }
 
-export const BluetoothRemoteModal: React.FC<BluetoothRemoteModalProps> = ({ open, onClose }) => {
-  // Use the Bluetooth Remote connection hook to get connection form
+export const IRRemoteModal: React.FC<IRRemoteModalProps> = ({ open, onClose }) => {
+  // Use the IR Remote connection hook to get connection form
   const {
     session,
     connectionForm,
@@ -33,7 +37,7 @@ export const BluetoothRemoteModal: React.FC<BluetoothRemoteModalProps> = ({ open
     connectionError,
     handleConnect,
     handleDisconnect,
-  } = useBluetoothRemoteConnection();
+  } = useIRRemoteConnection();
 
   const handleCloseModal = () => {
     if (session.connected) {
@@ -54,7 +58,7 @@ export const BluetoothRemoteModal: React.FC<BluetoothRemoteModalProps> = ({ open
           {/* Left side: Title and status */}
           <Box display="flex" alignItems="center" gap={1}>
             <Typography variant="h6" component="span" sx={{ fontSize: '1.1rem' }}>
-              Bluetooth Remote
+              IR Remote Control
             </Typography>
             {session.connected && (
               <Chip 
@@ -81,7 +85,7 @@ export const BluetoothRemoteModal: React.FC<BluetoothRemoteModalProps> = ({ open
           /* Connection Form */
           <Box sx={{ pt: 2 }}>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Pair with a Bluetooth device to control it remotely using HID protocol.
+              Configure IR transmitter settings to control your TV or set-top box.
             </Typography>
             
             {connectionError && (
@@ -94,40 +98,45 @@ export const BluetoothRemoteModal: React.FC<BluetoothRemoteModalProps> = ({ open
               <Grid item xs={12}>
                 <TextField
                   fullWidth
-                  label="Device Address (MAC)"
-                  value={connectionForm.device_address}
-                  onChange={(e) => setConnectionForm(prev => ({ ...prev, device_address: e.target.value }))}
-                  placeholder="AA:BB:CC:DD:EE:FF"
+                  label="IR Device Path"
+                  value={connectionForm.device_path}
+                  onChange={(e) => setConnectionForm(prev => ({ ...prev, device_path: e.target.value }))}
+                  placeholder="/dev/lirc0"
                   required
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Device Name"
-                  value={connectionForm.device_name}
-                  onChange={(e) => setConnectionForm(prev => ({ ...prev, device_name: e.target.value }))}
-                  placeholder="Smart TV"
-                />
+                <FormControl fullWidth>
+                  <InputLabel>Protocol</InputLabel>
+                  <Select
+                    value={connectionForm.protocol}
+                    onChange={(e) => setConnectionForm(prev => ({ ...prev, protocol: e.target.value }))}
+                  >
+                    <MenuItem value="NEC">NEC</MenuItem>
+                    <MenuItem value="RC5">RC5</MenuItem>
+                    <MenuItem value="RC6">RC6</MenuItem>
+                    <MenuItem value="SONY">SONY</MenuItem>
+                  </Select>
+                </FormControl>
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  label="Pairing PIN"
-                  value={connectionForm.pairing_pin}
-                  onChange={(e) => setConnectionForm(prev => ({ ...prev, pairing_pin: e.target.value }))}
-                  placeholder="0000"
+                  label="Frequency (Hz)"
+                  value={connectionForm.frequency}
+                  onChange={(e) => setConnectionForm(prev => ({ ...prev, frequency: e.target.value }))}
+                  placeholder="38000"
                 />
               </Grid>
             </Grid>
           </Box>
         ) : (
           /* Connected - Show Remote Control Panel */
-          <BluetoothRemotePanel
+          <IRRemotePanel
             connectionConfig={{
-              device_address: connectionForm.device_address,
-              device_name: connectionForm.device_name,
-              pairing_pin: connectionForm.pairing_pin,
+              device_path: connectionForm.device_path,
+              protocol: connectionForm.protocol,
+              frequency: connectionForm.frequency,
             }}
             autoConnect={false} // Manual connect via connection form
             compact={false} // Full modal mode
@@ -143,9 +152,9 @@ export const BluetoothRemoteModal: React.FC<BluetoothRemoteModalProps> = ({ open
           <Button 
             variant="contained" 
             onClick={handleConnect}
-            disabled={connectionLoading || !connectionForm.device_address}
+            disabled={connectionLoading || !connectionForm.device_path}
           >
-            {connectionLoading ? <CircularProgress size={20} /> : 'Pair & Connect'}
+            {connectionLoading ? <CircularProgress size={20} /> : 'Connect'}
           </Button>
         ) : (
           <Button 

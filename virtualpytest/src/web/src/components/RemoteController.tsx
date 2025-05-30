@@ -1,5 +1,5 @@
 import React from 'react';
-import { AndroidMobileModal } from '../pages/controller/modals/AndroidMobileModal';
+import { AndroidMobileModal } from './modals/remote/AndroidMobileModal';
 import { AndroidMobileRemotePanel } from './remote/AndroidMobileRemotePanel';
 import { AndroidTVRemotePanel } from './remote/AndroidTVRemotePanel';
 import { IRRemotePanel } from './remote/IRRemotePanel';

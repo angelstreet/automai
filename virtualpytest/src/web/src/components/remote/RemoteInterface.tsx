@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box } from '@mui/material';
-import { RemoteConfig } from '../types';
+import { RemoteConfig } from '../../types/remote/types';
 
 interface RemoteInterfaceProps {
   remoteConfig: RemoteConfig | null;

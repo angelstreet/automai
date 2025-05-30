@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { AndroidMobileSession, ConnectionForm, RemoteConfig, AndroidElement, AndroidApp } from '../types';
+import { AndroidMobileSession, ConnectionForm, RemoteConfig, AndroidElement, AndroidApp } from '../../types/remote/types';
 
 const initialConnectionForm: ConnectionForm = {
   host_ip: '',

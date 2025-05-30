@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { AndroidTVSession, ConnectionForm, RemoteConfig } from '../types';
+import { AndroidTVSession, ConnectionForm, RemoteConfig } from '../../types/remote/types';
 
 const initialConnectionForm: ConnectionForm = {
   host_ip: '',

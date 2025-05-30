@@ -18,7 +18,7 @@ import Monitoring from '../pages/Monitoring';
 import RunTests from '../pages/RunTests';
 import TestReports from '../pages/TestReports';
 import UserInterface from '../pages/UserInterface';
-import TestCaseEditor from '../pages/testCaseEditor';
+import TestCaseEditor from '../pages/TestCaseEditor';
 import NavigationEditor from '../pages/NavigationEditor';
 
 // Import navigation components
