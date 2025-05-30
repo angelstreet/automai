@@ -351,7 +351,18 @@ const UserInterface: React.FC = () => {
             <EmptyState />
           ) : (
             <TableContainer component={Paper} variant="outlined" sx={{ boxShadow: 'none' }}>
-              <Table size="small" sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1 } }}>
+              <Table 
+                size="small" 
+                sx={{ 
+                  '& .MuiTableCell-root': { py: 0.5, px: 1 },
+                  '& .MuiTableRow-root:hover': {
+                    backgroundColor: (theme) => 
+                      theme.palette.mode === 'dark' 
+                        ? 'rgba(255, 255, 255, 0.08) !important' 
+                        : 'rgba(0, 0, 0, 0.04) !important'
+                  }
+                }}
+              >
                 <TableHead>
                   <TableRow>
                     <TableCell><strong>Name</strong></TableCell>
@@ -363,7 +374,7 @@ const UserInterface: React.FC = () => {
                 </TableHead>
                 <TableBody>
                   {userInterfaces.map((userInterface) => (
-                    <TableRow key={userInterface.id} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
+                    <TableRow key={userInterface.id}>
                       <TableCell>
                         {editingId === userInterface.id ? (
                           <TextField
