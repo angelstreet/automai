@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { AndroidTVSession, ConnectionForm, RemoteConfig } from '../../types/remote/types';
+import { AndroidTVSession, ConnectionForm, RemoteConfig, AndroidElement, AndroidApp } from '../../types/remote/types';
 import { RemoteType, BaseConnectionConfig } from '../../types/remote/remoteTypes';
 import { getRemoteConfig } from './remoteConfigs';
 import { androidTVRemote, androidMobileRemote } from '../../../config/remote';
@@ -27,6 +27,10 @@ export function useRemoteConnection(remoteType: RemoteType) {
   const [remoteConfig, setRemoteConfig] = useState<RemoteConfig | null>(null);
   const [androidScreenshot, setAndroidScreenshot] = useState<string | null>(null);
 
+  // Android Mobile specific state
+  const [androidElements, setAndroidElements] = useState<AndroidElement[]>([]);
+  const [androidApps, setAndroidApps] = useState<AndroidApp[]>([]);
+
   // Get device configuration
   const deviceConfig = getRemoteConfig(remoteType);
   
@@ -38,8 +42,14 @@ export function useRemoteConnection(remoteType: RemoteType) {
         console.log('[@hook:useRemoteConnection] Loaded Android TV remote configuration from local JSON file');
         break;
       case 'android-mobile':
+        console.log('[@hook:useRemoteConnection] androidMobileRemote import:', androidMobileRemote);
         setRemoteConfig(androidMobileRemote as RemoteConfig);
         console.log('[@hook:useRemoteConnection] Loaded Android Mobile remote configuration from local JSON file');
+        console.log('[@hook:useRemoteConnection] Android Mobile config structure:', {
+          name: androidMobileRemote?.remote_info?.name,
+          type: androidMobileRemote?.remote_info?.type,
+          buttonCount: Object.keys(androidMobileRemote?.button_layout || {}).length
+        });
         break;
       case 'ir':
       case 'bluetooth':
@@ -170,9 +180,14 @@ export function useRemoteConnection(remoteType: RemoteType) {
       setSession(initialSession);
       setConnectionError(null);
       setAndroidScreenshot(null);
+      // Clear Android mobile specific data
+      setAndroidElements([]);
+      setAndroidApps([]);
     } catch (err: any) {
       // Still reset session even if release fails
       setSession(initialSession);
+      setAndroidElements([]);
+      setAndroidApps([]);
     } finally {
       setConnectionLoading(false);
     }
@@ -204,11 +219,131 @@ export function useRemoteConnection(remoteType: RemoteType) {
     }
   }, [deviceConfig]);
 
+  // Android Mobile specific: Screenshot + UI dump
+  const handleScreenshotAndDumpUI = useCallback(async () => {
+    if (!deviceConfig?.apiEndpoints.dumpUI) {
+      throw new Error('UI dump not supported for this device type');
+    }
+    
+    try {
+      console.log('[@hook:useRemoteConnection] Taking screenshot and dumping UI elements...');
+      const response = await fetch(`http://localhost:5009${deviceConfig.apiEndpoints.dumpUI}`, {
+        method: 'POST',
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        if (result.screenshot) {
+          setAndroidScreenshot(result.screenshot);
+        }
+        if (result.elements) {
+          setAndroidElements(result.elements);
+          console.log(`[@hook:useRemoteConnection] Found ${result.elements.length} UI elements`);
+        }
+        console.log('[@hook:useRemoteConnection] Screenshot and UI dump completed successfully');
+      } else {
+        const errorMessage = result.error || 'Screenshot and UI dump failed';
+        console.error('[@hook:useRemoteConnection] Screenshot and UI dump failed:', errorMessage);
+        throw new Error(errorMessage);
+      }
+    } catch (err: any) {
+      console.error('[@hook:useRemoteConnection] Screenshot and UI dump error:', err);
+      throw err;
+    }
+  }, [deviceConfig]);
+
+  // Android Mobile specific: Get apps list
+  const handleGetApps = useCallback(async () => {
+    if (!deviceConfig?.apiEndpoints.getApps) {
+      throw new Error('App listing not supported for this device type');
+    }
+    
+    try {
+      console.log('[@hook:useRemoteConnection] Getting installed apps...');
+      const response = await fetch(`http://localhost:5009${deviceConfig.apiEndpoints.getApps}`, {
+        method: 'POST',
+      });
+
+      const result = await response.json();
+      if (result.success && result.apps) {
+        setAndroidApps(result.apps);
+        console.log(`[@hook:useRemoteConnection] Found ${result.apps.length} installed apps`);
+      } else {
+        const errorMessage = result.error || 'Failed to get apps list';
+        console.error('[@hook:useRemoteConnection] Get apps failed:', errorMessage);
+        throw new Error(errorMessage);
+      }
+    } catch (err: any) {
+      console.error('[@hook:useRemoteConnection] Get apps error:', err);
+      throw err;
+    }
+  }, [deviceConfig]);
+
+  // Android Mobile specific: Click UI element
+  const handleClickElement = useCallback(async (element: AndroidElement) => {
+    if (!deviceConfig?.apiEndpoints.clickElement) {
+      throw new Error('Element clicking not supported for this device type');
+    }
+    
+    try {
+      console.log(`[@hook:useRemoteConnection] Clicking element: ${element.id}`);
+      const response = await fetch(`http://localhost:5009${deviceConfig.apiEndpoints.clickElement}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ elementId: element.id }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        console.log(`[@hook:useRemoteConnection] Successfully clicked element: ${element.id}`);
+      } else {
+        const errorMessage = result.error || 'Element click failed';
+        console.error('[@hook:useRemoteConnection] Element click failed:', errorMessage);
+        throw new Error(errorMessage);
+      }
+    } catch (err: any) {
+      console.error('[@hook:useRemoteConnection] Element click error:', err);
+      throw err;
+    }
+  }, [deviceConfig]);
+
+  // Clear UI elements
+  const clearElements = useCallback(() => {
+    console.log('[@hook:useRemoteConnection] Clearing UI elements');
+    setAndroidElements([]);
+  }, []);
+
   const handleRemoteCommand = useCallback(async (command: string, params: any = {}) => {
     if (!deviceConfig) return;
     
     try {
       console.log(`[@hook:useRemoteConnection] Sending remote command: ${command}`, params);
+      
+      // Handle special Android mobile commands
+      if (remoteType === 'android-mobile' && command === 'LAUNCH_APP') {
+        const requestBody = {
+          command: 'launch_app',
+          params: { package: params.package }
+        };
+        
+        const response = await fetch(`http://localhost:5009${deviceConfig.apiEndpoints.command}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          console.log(`[@hook:useRemoteConnection] Successfully launched app: ${params.package}`);
+        } else {
+          console.error(`[@hook:useRemoteConnection] App launch failed:`, result.error);
+        }
+        return;
+      }
       
       // Format the command for the backend API
       // The backend expects: { command: 'press_key', params: { key: 'POWER' } }
@@ -234,7 +369,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
     } catch (err: any) {
       console.error(`[@hook:useRemoteConnection] Remote command error:`, err);
     }
-  }, [deviceConfig]);
+  }, [deviceConfig, remoteType]);
 
   return {
     session,
@@ -244,11 +379,24 @@ export function useRemoteConnection(remoteType: RemoteType) {
     connectionError,
     remoteConfig,
     androidScreenshot,
+    
+    // Android Mobile specific
+    androidElements,
+    androidApps,
+    
+    // Generic methods
     handleTakeControl,
     handleReleaseControl,
     handleScreenshot,
     handleRemoteCommand,
     fetchDefaultValues,
+    
+    // Android Mobile specific methods
+    handleScreenshotAndDumpUI,
+    handleGetApps,
+    handleClickElement,
+    clearElements,
+    
     deviceConfig,
   };
 } 

@@ -46,6 +46,10 @@ export interface RemoteDeviceConfig {
     screenshot?: string;
     command: string;
     config?: string;
+    // Android Mobile specific endpoints
+    dumpUI?: string;
+    getApps?: string;
+    clickElement?: string;
   };
   connectionFields: Array<{
     name: string; // Allow any string for field names

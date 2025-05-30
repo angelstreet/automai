@@ -1,14 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-
-interface AndroidElement {
-  id: number;
-  tag: string;
-  text: string;
-  resourceId: string;
-  contentDesc: string;
-  className: string;
-  bounds: string;
-}
+import { AndroidElement } from '../../types/remote/types';
 
 interface ScaledElement {
   id: number;
@@ -30,7 +21,7 @@ interface AndroidMobileOverlayProps {
   onElementClick?: (element: AndroidElement) => void;
 }
 
-// Same colors as UIElementsOverlay
+// Same colors as the original UIElementsOverlay
 const COLORS = ['#FF0000', '#0066FF', '#FFD700', '#00CC00', '#9900FF'];
 
 export function AndroidMobileOverlay({
@@ -260,7 +251,6 @@ export function AndroidMobileOverlay({
 
   return (
     <div ref={overlayRef} style={{ position: 'fixed', zIndex: 999999 }}>
-      
       {scaledElements.map((element, index) => (
         <div
           key={element.id}

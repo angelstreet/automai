@@ -46,7 +46,11 @@ export const ANDROID_MOBILE_CONFIG: RemoteDeviceConfig = {
     disconnect: '/api/virtualpytest/android-mobile/release-control',
     screenshot: '/api/virtualpytest/android-mobile/screenshot',
     command: '/api/virtualpytest/android-mobile/command',
-    config: '/api/virtualpytest/android-mobile/config'
+    config: '/api/virtualpytest/android-mobile/config',
+    // Android Mobile specific endpoints
+    dumpUI: '/api/virtualpytest/android-mobile/screenshot-and-dump-ui',
+    getApps: '/api/virtualpytest/android-mobile/get-apps',
+    clickElement: '/api/virtualpytest/android-mobile/click-element'
   },
   connectionFields: [
     { name: 'host_ip', label: 'Host IP', required: true },
