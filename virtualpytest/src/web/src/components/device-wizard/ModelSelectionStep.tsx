@@ -84,12 +84,6 @@ export const ModelSelectionStep: React.FC<ModelSelectionStepProps> = ({
 
   return (
     <Box sx={{ pt: 1 }}>
-      <Typography variant="h6" gutterBottom>
-        Select Device Model
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Choose the device model that matches your hardware. The model determines which controllers are available for configuration.
-      </Typography>
 
       {modelsError && (
         <Alert severity="warning" sx={{ mb: 2 }}>

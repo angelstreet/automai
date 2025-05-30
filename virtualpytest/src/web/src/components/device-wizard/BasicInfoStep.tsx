@@ -26,13 +26,6 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
 
   return (
     <Box sx={{ pt: 1 }}>
-      <Typography variant="h6" gutterBottom>
-        Device Information
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Provide basic information about your device. This will help identify and organize your devices.
-      </Typography>
-
       <TextField
         autoFocus
         margin="dense"

@@ -241,7 +241,6 @@ const CONTROLLER_CONFIGURATIONS: ControllerConfigMap = {
             pattern: '^/dev/video[0-9]+$'
           }
         },
-        
         {
           name: 'stream_path',
           label: 'Stream Output Path',
@@ -250,6 +249,14 @@ const CONTROLLER_CONFIGURATIONS: ControllerConfigMap = {
           defaultValue: '/tmp/output.m3u8',
           placeholder: '/tmp/output.m3u8',
           description: 'Path where the stream file will be saved on the host'
+        },
+        {
+          name: 'stream_url',
+          label: 'Stream URL',
+          type: 'text',
+          required: true,
+          placeholder: 'http://192.168.1.100:8080/stream.m3u8',
+          description: 'URL where the stream can be accessed (HTTP/HTTPS endpoint)'
         },
         {
           name: 'resolution',
