@@ -285,7 +285,14 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
                             maxHeight: '400px',
                             border: '1px solid #ccc',
                             borderRadius: '8px',
+                            // Make image non-selectable
+                            userSelect: 'none',
+                            WebkitUserSelect: 'none',
+                            MozUserSelect: 'none',
+                            msUserSelect: 'none',
+                            pointerEvents: 'auto' // Keep pointer events for Android Mobile (for UI interaction)
                           }}
+                          draggable={false} // Prevent image dragging
                         />
                       </Box>
                     ) : (
@@ -296,7 +303,12 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
                         display: 'flex', 
                         alignItems: 'center', 
                         justifyContent: 'center',
-                        borderRadius: 1
+                        borderRadius: 1,
+                        // Make placeholder non-selectable
+                        userSelect: 'none',
+                        WebkitUserSelect: 'none',
+                        MozUserSelect: 'none',
+                        msUserSelect: 'none'
                       }}>
                         <Typography color="textSecondary" textAlign="center">
                           Click "Screenshot & Dump UI" to capture.

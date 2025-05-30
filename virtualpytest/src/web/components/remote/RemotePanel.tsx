@@ -182,7 +182,11 @@ export function RemotePanel({
                   border: '2px dashed #ccc',
                   borderRadius: 2,
                   bgcolor: 'transparent',
-                  aspectRatio: '16/9'
+                  aspectRatio: '16/9',
+                  userSelect: 'none',
+                  WebkitUserSelect: 'none',
+                  MozUserSelect: 'none',
+                  msUserSelect: 'none'
                 }}
               >
                 {androidScreenshot ? (
@@ -192,8 +196,14 @@ export function RemotePanel({
                     style={{ 
                       width: '100%',
                       height: '100%',
-                      objectFit: 'contain'
+                      objectFit: 'contain',
+                      userSelect: 'none',
+                      WebkitUserSelect: 'none',
+                      MozUserSelect: 'none',
+                      msUserSelect: 'none',
+                      pointerEvents: 'none'
                     }}
+                    draggable={false}
                   />
                 ) : (
                   <Typography variant="body2" color="textSecondary" textAlign="center">

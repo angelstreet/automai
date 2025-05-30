@@ -106,8 +106,15 @@ export const RemoteInterface: React.FC<RemoteInterfaceProps> = ({
           display: 'block',
           maxWidth: '100%',
           height: 'auto',
-          borderRadius: '6px'
+          borderRadius: '6px',
+          // Make remote image non-selectable
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
+          MozUserSelect: 'none',
+          msUserSelect: 'none',
+          pointerEvents: 'none' // Prevent dragging
         }}
+        draggable={false} // Prevent image dragging
         onError={(e) => {
           // Fallback if image doesn't load
           e.currentTarget.style.width = '140px';
