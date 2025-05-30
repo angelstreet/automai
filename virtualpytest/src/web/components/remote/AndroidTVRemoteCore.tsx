@@ -167,7 +167,6 @@ export function AndroidTVRemoteCore({
             fallbackName="Android TV Remote"
           />
         </Box>
-
         <Button 
           variant="contained" 
           color="error"
@@ -176,7 +175,7 @@ export function AndroidTVRemoteCore({
           size="small"
           fullWidth
           sx={{ 
-            mt: 0, 
+            mb: 0, 
             height: '28px',
             position: 'absolute',
             bottom: 0,

@@ -53,6 +53,11 @@ export function AndroidTVRemotePanel({
     remoteConfig,
   } = useAndroidTVConnection();
 
+  // Reset screenshot loading state on mount
+  useEffect(() => {
+    setIsScreenshotLoading(false);
+  }, []);
+
   // Initialize connection form with provided config or fetch defaults
   useEffect(() => {
     if (connectionConfig) {
@@ -197,10 +202,7 @@ export function AndroidTVRemotePanel({
             display: 'flex', 
             flexDirection: 'column', 
             height: '100%',
-            p: 2,
-            border: '2px dashed #ccc',
-            borderRadius: 2,
-            bgcolor: 'transparent'
+            position: 'relative'
           }}>
             {screenshotError && (
               <Alert severity="error" sx={{ mb: 2 }}>
@@ -215,12 +217,12 @@ export function AndroidTVRemotePanel({
                 alignItems: 'center',
                 justifyContent: 'center',
                 minHeight: 250,
-                maxHeight: 400,
+                ml: 2,
+                p: 2,
+                border: '2px dashed #ccc',
+                borderRadius: 2,
                 bgcolor: androidScreenshot ? 'transparent' : 'grey.100',
-                borderRadius: 1,
-                mb: 2,
-                aspectRatio: '16/9',
-                overflow: 'hidden'
+                aspectRatio: '16/9'
               }}
             >
               {androidScreenshot ? (
@@ -249,8 +251,10 @@ export function AndroidTVRemotePanel({
               fullWidth
               size="small"
               sx={{ 
-                mt: 2, 
-                height: '36px'
+                height: '28px',
+                mt: 2,
+                ml: 2,
+                mr: 2,
               }}
             >
               {isScreenshotLoading ? (
