@@ -4,22 +4,22 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 // Import existing pages
-import CampaignEditor from '../pages/CampaignEditor';
-import Collections from '../pages/Collections';
-import Controller from '../pages/Controller';
-import Dashboard from '../pages/Dashboard';
-import DeviceManagement from '../pages/DeviceManagement';
+import CampaignEditor from './pages/CampaignEditor';
+import Collections from './pages/Collections';
+import Controller from './pages/Controller';
+import Dashboard from './pages/Dashboard';
+import DeviceManagement from './pages/DeviceManagement';
 
 // Import new pages
-import Environment from '../pages/Environment';
-import Library from '../pages/Library';
-import Models from '../pages/Models';
-import Monitoring from '../pages/Monitoring';
-import RunTests from '../pages/RunTests';
-import TestReports from '../pages/TestReports';
-import UserInterface from '../pages/UserInterface';
-import TestCaseEditor from '../pages/TestCaseEditor';
-import NavigationEditor from '../pages/NavigationEditor';
+import Environment from './pages/Environment';
+import Library from './pages/Library';
+import Models from './pages/Models';
+import Monitoring from './pages/Monitoring';
+import RunTests from './pages/RunTests';
+import TestReports from './pages/TestReports';
+import UserInterface from './pages/UserInterface';
+import TestCaseEditor from './pages/TestCaseEditor';
+import NavigationEditor from './pages/NavigationEditor';
 
 // Import navigation components
 import NavigationBar from './components/Navigation/NavigationBar';
