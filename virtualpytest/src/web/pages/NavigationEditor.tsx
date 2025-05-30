@@ -401,7 +401,7 @@ const NavigationEditorContent: React.FC = () => {
           minHeight: '500px',
           overflow: 'hidden',
           transition: 'margin-right',
-          marginRight: isRemotePanelOpen ? '350px' : '0px'
+          marginRight: isRemotePanelOpen ? '180px' : '0px'
         }}>
           {isLoading ? (
             <Box sx={{ 
@@ -545,7 +545,7 @@ const NavigationEditorContent: React.FC = () => {
               position: 'fixed',
               right: 0,
               top: '130px', // Adjust based on your header height
-              width: '350px',
+              width: '320px',
               height: 'calc(100vh - 130px)',
               bgcolor: 'background.paper',
               borderLeft: '1px solid',
