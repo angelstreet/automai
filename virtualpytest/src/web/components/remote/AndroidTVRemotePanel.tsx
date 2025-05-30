@@ -221,7 +221,7 @@ export function AndroidTVRemotePanel({
                 p: 2,
                 border: '2px dashed #ccc',
                 borderRadius: 2,
-                bgcolor: androidScreenshot ? 'transparent' : 'grey.100',
+                bgcolor: 'transparent',
                 aspectRatio: '16/9'
               }}
             >
@@ -237,8 +237,7 @@ export function AndroidTVRemotePanel({
                 />
               ) : (
                 <Typography variant="body2" color="textSecondary" textAlign="center">
-                  No screenshot available
-                  <br />
+    
                   Click "Take Screenshot" to capture the current screen
                 </Typography>
               )}
