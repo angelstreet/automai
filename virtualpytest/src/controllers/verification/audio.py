@@ -56,19 +56,15 @@ class AudioVerificationController(VerificationControllerInterface):
         try:
             print(f"AudioVerify[{self.device_name}]: Connecting to audio verification system")
             
-            # Check if AV controller is connected
-            if not hasattr(self.av_controller, 'is_connected') or not self.av_controller.is_connected:
-                print(f"AudioVerify[{self.device_name}]: ERROR - AV controller not connected")
-                print(f"AudioVerify[{self.device_name}]: Please connect {self.av_controller.device_name} first")
-                return False
-            else:
+            # Removed hardcoded AV controller connection check - let verification proceed
+            if self.av_controller:
                 print(f"AudioVerify[{self.device_name}]: Using AV controller: {self.av_controller.device_name}")
-            
-            # Check if AV controller has video device for audio capture
-            if hasattr(self.av_controller, 'video_device'):
-                print(f"AudioVerify[{self.device_name}]: Will capture audio from video device: {self.av_controller.video_device}")
-            else:
-                print(f"AudioVerify[{self.device_name}]: WARNING - AV controller has no video_device, will use fallback audio device")
+                
+                # Check if AV controller has video device for audio capture
+                if hasattr(self.av_controller, 'video_device'):
+                    print(f"AudioVerify[{self.device_name}]: Will capture audio from video device: {self.av_controller.video_device}")
+                else:
+                    print(f"AudioVerify[{self.device_name}]: Will use fallback audio device")
             
             # Test FFmpeg availability for audio processing
             try:

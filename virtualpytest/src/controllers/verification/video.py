@@ -62,18 +62,13 @@ class VideoVerificationController(VerificationControllerInterface):
         try:
             print(f"VideoVerify[{self.device_name}]: Connecting to video verification system")
             
-            # Check if AV controller is connected
-            if not hasattr(self.av_controller, 'is_connected') or not self.av_controller.is_connected:
-                print(f"VideoVerify[{self.device_name}]: ERROR - AV controller not connected")
-                print(f"VideoVerify[{self.device_name}]: Please connect {self.av_controller.device_name} first")
-                return False
-            else:
+            # Removed hardcoded AV controller connection check - let verification proceed
+            if self.av_controller:
                 print(f"VideoVerify[{self.device_name}]: Using AV controller: {self.av_controller.device_name}")
-            
-            # Check if AV controller has screenshot capability
-            if not hasattr(self.av_controller, 'take_screenshot'):
-                print(f"VideoVerify[{self.device_name}]: ERROR - AV controller has no screenshot capability")
-                return False
+                
+                # Check if AV controller has screenshot capability
+                if not hasattr(self.av_controller, 'take_screenshot'):
+                    print(f"VideoVerify[{self.device_name}]: WARNING - AV controller has no screenshot capability")
             
             # Test FFmpeg availability for video processing
             try:

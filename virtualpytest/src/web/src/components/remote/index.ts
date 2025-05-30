@@ -9,6 +9,3 @@ export { AndroidMobileRemotePanel } from './AndroidMobileRemotePanel';
 export { IRRemotePanel } from './IRRemotePanel';
 export { BluetoothRemotePanel } from './BluetoothRemotePanel';
 export { HDMIStreamPanel } from './HDMIStreamPanel';
-
-// Controller Configuration
-export { EditControllerParametersDialog } from './EditControllerParametersDialog'; 

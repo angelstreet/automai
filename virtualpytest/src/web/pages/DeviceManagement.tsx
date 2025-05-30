@@ -6,6 +6,7 @@ import {
   Cancel as CancelIcon,
   DevicesOther as DeviceIcon,
   Search as SearchIcon,
+  Settings as SettingsIcon,
 } from '@mui/icons-material';
 import {
   Box,
@@ -37,6 +38,7 @@ import React, { useState, useEffect } from 'react';
 import CreateDeviceDialog from '../src/components/CreateDeviceDialog';
 import EditDeviceDialog from '../src/components/EditDeviceDialog';
 import { deviceApi, Device, DeviceCreatePayload } from '../src/services/deviceService';
+import { useTheme } from '@mui/material/styles';
 
 const DeviceManagement: React.FC = () => {
   const [devices, setDevices] = useState<Device[]>([]);
@@ -55,6 +57,7 @@ const DeviceManagement: React.FC = () => {
   });
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const theme = useTheme();
 
   useEffect(() => {
     fetchDevices();
@@ -377,6 +380,7 @@ const DeviceManagement: React.FC = () => {
                     <TableCell><strong>Model</strong></TableCell>
                     <TableCell><strong>Description</strong></TableCell>
                     <TableCell align="center"><strong>Controllers</strong></TableCell>
+                    <TableCell align="center"><strong>Edit Controllers</strong></TableCell>
                     <TableCell align="center"><strong>Actions</strong></TableCell>
                   </TableRow>
                 </TableHead>
@@ -385,7 +389,16 @@ const DeviceManagement: React.FC = () => {
                     const controllerSummary = getControllerSummary(device);
                     
                     return (
-                      <TableRow key={device.id} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
+                      <TableRow 
+                        key={device.id} 
+                        sx={{ 
+                          '&:hover': { 
+                            backgroundColor: theme.palette.mode === 'dark' 
+                              ? 'rgba(255, 255, 255, 0.08)' 
+                              : 'rgba(0, 0, 0, 0.04)' 
+                          } 
+                        }}
+                      >
                         <TableCell>
                           {editingId === device.id ? (
                             <TextField
@@ -429,19 +442,24 @@ const DeviceManagement: React.FC = () => {
                           )}
                         </TableCell>
                         <TableCell align="center">
-                          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
-                            <Chip 
-                              label={`${controllerSummary.count} configured`}
-                              size="small" 
-                              color={controllerSummary.count > 0 ? 'success' : 'default'}
-                              variant={controllerSummary.count > 0 ? 'filled' : 'outlined'}
-                            />
-                            {controllerSummary.count > 0 && (
-                              <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.65rem' }}>
-                                {controllerSummary.summary}
-                              </Typography>
-                            )}
-                          </Box>
+                          <Chip 
+                            label={`${controllerSummary.count}`}
+                            size="small" 
+                            color={controllerSummary.count > 0 ? 'success' : 'default'}
+                            variant={controllerSummary.count > 0 ? 'filled' : 'outlined'}
+                          />
+                        </TableCell>
+                        <TableCell align="center">
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={() => handleOpenEditDialog(device)}
+                            sx={{ p: 0.5 }}
+                            disabled={submitting}
+                            title="Edit Controllers Configuration"
+                          >
+                            <SettingsIcon fontSize="small" />
+                          </IconButton>
                         </TableCell>
                         <TableCell align="center">
                           {editingId === device.id ? (
@@ -471,16 +489,6 @@ const DeviceManagement: React.FC = () => {
                             </Box>
                           ) : (
                             <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
-                              <IconButton
-                                size="small"
-                                color="primary"
-                                onClick={() => handleOpenEditDialog(device)}
-                                sx={{ p: 0.5 }}
-                                disabled={submitting}
-                                title="Edit Device & Controllers"
-                              >
-                                <EditIcon fontSize="small" />
-                              </IconButton>
                               <IconButton
                                 size="small"
                                 color="error"
