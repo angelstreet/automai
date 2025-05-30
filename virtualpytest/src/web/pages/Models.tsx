@@ -36,7 +36,7 @@ import {
   Snackbar,
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
-import { CreateModelDialog } from '../components/model';
+import { CreateModelDialog } from '../components/model/CreateModelDialog';
 import { deviceModelApi, Model } from '../services/deviceModelService';
 
 const modelTypes = [

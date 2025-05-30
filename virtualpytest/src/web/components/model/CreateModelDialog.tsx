@@ -21,7 +21,7 @@ import {
   CircularProgress,
   Alert,
 } from '@mui/material';
-import { useControllers } from './hooks/useControllers';
+import { useControllers } from '../../hooks/useControllers';
 
 interface Model {
   id: string;
