@@ -18,13 +18,18 @@ import {
 import { useRemoteConnection } from '../../../hooks/remote/useRemoteConnection';
 import { AndroidMobileOverlay } from '../../remote/AndroidMobileOverlay';
 import { AndroidElement } from '../../../types/remote/types';
+import { BaseConnectionConfig } from '../../../types/remote/remoteTypes';
 
 interface AndroidMobileModalProps {
   open: boolean;
   onClose: () => void;
+  /** Optional pre-configured connection parameters */
+  connectionConfig?: BaseConnectionConfig;
+  /** Whether to auto-connect on mount if config is provided */
+  autoConnect?: boolean;
 }
 
-export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
+export function AndroidMobileModal({ open, onClose, connectionConfig, autoConnect }: AndroidMobileModalProps) {
   // UI state
   const [isDumpingUI, setIsDumpingUI] = useState(false);
   const [dumpError, setDumpError] = useState<string | null>(null);
