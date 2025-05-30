@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { AndroidTVSession, ConnectionForm, RemoteConfig } from '../../types/remote/types';
+import { androidTVRemote } from '../../../config/remote';
 
 const initialConnectionForm: ConnectionForm = {
   host_ip: '',
@@ -21,8 +22,14 @@ export function useAndroidTVConnection() {
   const [connectionForm, setConnectionForm] = useState<ConnectionForm>(initialConnectionForm);
   const [connectionLoading, setConnectionLoading] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
-  const [remoteConfig, setRemoteConfig] = useState<RemoteConfig | null>(null);
+  const [remoteConfig, setRemoteConfig] = useState<RemoteConfig | null>(androidTVRemote as RemoteConfig);
   const [androidScreenshot, setAndroidScreenshot] = useState<string | null>(null);
+
+  // Load the remote configuration from JSON
+  useEffect(() => {
+    // We already imported the config, but log for clarity
+    console.log('[@hook:useAndroidTVConnection] Loaded remote configuration from local JSON file');
+  }, []);
 
   const fetchDefaultValues = useCallback(async () => {
     try {
@@ -40,16 +47,24 @@ export function useAndroidTVConnection() {
     }
   }, []);
 
+  // Kept for backward compatibility, now it just uses the local JSON
   const fetchAndroidTVConfig = useCallback(async () => {
+    // We're now using the imported JSON config
+    console.log('[@hook:useAndroidTVConnection] Using local remote configuration');
+    
+    // Only fetch from backend if needed for dynamic configurations
     try {
       const response = await fetch('http://localhost:5009/api/virtualpytest/android-tv/config');
       const result = await response.json();
       
       if (result.success && result.config) {
+        // Only update if the backend has different config
+        // This ensures we prioritize our local config but can be overridden by backend
+        console.log('[@hook:useAndroidTVConnection] Updated config from backend');
         setRemoteConfig(result.config);
       }
     } catch (error) {
-      console.log('Could not load Android TV config:', error);
+      console.log('[@hook:useAndroidTVConnection] Using default config, backend not available:', error);
     }
   }, []);
 
@@ -78,7 +93,8 @@ export function useAndroidTVConnection() {
         return;
       }
 
-      // Fetch config first
+      // We don't need to fetch config since we're using the local one
+      // Only fetch from backend for updating purposes
       await fetchAndroidTVConfig();
 
       console.log('[@hook:useAndroidTVConnection] Sending take-control request to backend...');

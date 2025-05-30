@@ -7,10 +7,6 @@ import {
   Button,
   Box,
   Typography,
-  Chip,
-  Grid,
-  TextField,
-  Alert,
   CircularProgress,
   IconButton,
 } from '@mui/material';
@@ -52,7 +48,7 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
     <Dialog 
       open={open} 
       onClose={handleCloseModal}
-      maxWidth="lg"
+      maxWidth="sm"
       fullWidth
     >
       <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
@@ -70,29 +66,30 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
           <CloseIcon />
         </IconButton>
       </DialogTitle>
-      <DialogContent>
+      <DialogContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '400px' }}>
         {/* Show error message if connection fails */}
         {connectionError && (
-          <Box sx={{ mb: 2, p: 2, bgcolor: 'error.light', borderRadius: 1 }}>
+          <Box sx={{ mb: 2, p: 2, bgcolor: 'error.light', borderRadius: 1, width: '100%' }}>
             <Typography color="error">{connectionError}</Typography>
           </Box>
         )}
 
-        {/* Always show Remote Control Panel with autoConnect=true */}
-        <AndroidTVRemotePanel
-          connectionConfig={{
-            host_ip: connectionForm.host_ip,
-            host_port: connectionForm.host_port,
-            host_username: connectionForm.host_username,
-            host_password: connectionForm.host_password,
-            device_ip: connectionForm.device_ip,
-            device_port: connectionForm.device_port,
-          }}
-          autoConnect={true} // Auto connect when config is available
-          compact={false} // Full modal mode
-          showScreenshot={true} // Show screenshot in modal
-          sx={{ height: '500px' }}
-        />
+        {/* Fixed height container for remote */}
+        <Box sx={{ height: '400px', width: '100%', display: 'flex', justifyContent: 'center' }}>
+          <AndroidTVRemotePanel
+            connectionConfig={{
+              host_ip: connectionForm.host_ip,
+              host_port: connectionForm.host_port,
+              host_username: connectionForm.host_username,
+              host_password: connectionForm.host_password,
+              device_ip: connectionForm.device_ip,
+              device_port: connectionForm.device_port,
+            }}
+            autoConnect={true}
+            compact={false}
+            showScreenshot={true}
+          />
+        </Box>
       </DialogContent>
       
       {/* Dialog Actions - Always visible */}

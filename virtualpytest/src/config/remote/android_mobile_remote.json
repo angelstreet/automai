@@ -1,0 +1,87 @@
+{
+  "remote_info": {
+    "name": "Android Mobile Remote",
+    "type": "android_mobile",
+    "image_url": "/android-mobile-remote.png",
+    "default_scale": 1.0,
+    "min_scale": 0.5,
+    "max_scale": 2.0,
+    "button_scale_factor": 1.0,
+    "global_offset": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  "button_layout": {
+    "back": {
+      "key": "BACK",
+      "position": { "x": 40, "y": 220 },
+      "size": { "width": 30, "height": 20 },
+      "shape": "rectangle",
+      "comment": "Back button"
+    },
+    "home": {
+      "key": "HOME",
+      "position": { "x": 90, "y": 220 },
+      "size": { "width": 30, "height": 20 },
+      "shape": "rectangle",
+      "comment": "Home button"
+    },
+    "menu": {
+      "key": "MENU",
+      "position": { "x": 140, "y": 220 },
+      "size": { "width": 30, "height": 20 },
+      "shape": "rectangle",
+      "comment": "Menu button"
+    },
+    "camera": {
+      "key": "CAMERA",
+      "position": { "x": 40, "y": 260 },
+      "size": { "width": 25, "height": 25 },
+      "shape": "circle",
+      "comment": "Camera button"
+    },
+    "call": {
+      "key": "CALL",
+      "position": { "x": 90, "y": 260 },
+      "size": { "width": 25, "height": 25 },
+      "shape": "circle",
+      "comment": "Call button"
+    },
+    "endcall": {
+      "key": "ENDCALL",
+      "position": { "x": 140, "y": 260 },
+      "size": { "width": 25, "height": 25 },
+      "shape": "circle",
+      "comment": "End call button"
+    },
+    "volume_down": {
+      "key": "VOLUME_DOWN",
+      "position": { "x": 30, "y": 300 },
+      "size": { "width": 25, "height": 20 },
+      "shape": "rectangle",
+      "comment": "Volume down"
+    },
+    "volume_mute": {
+      "key": "VOLUME_MUTE",
+      "position": { "x": 70, "y": 300 },
+      "size": { "width": 25, "height": 20 },
+      "shape": "rectangle",
+      "comment": "Volume mute"
+    },
+    "volume_up": {
+      "key": "VOLUME_UP",
+      "position": { "x": 110, "y": 300 },
+      "size": { "width": 25, "height": 20 },
+      "shape": "rectangle",
+      "comment": "Volume up"
+    },
+    "power": {
+      "key": "POWER",
+      "position": { "x": 150, "y": 300 },
+      "size": { "width": 25, "height": 20 },
+      "shape": "rectangle",
+      "comment": "Power button"
+    }
+  }
+} 

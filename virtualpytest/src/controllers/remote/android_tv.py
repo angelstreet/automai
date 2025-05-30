@@ -9,6 +9,8 @@ from typing import Dict, Any, List, Optional
 import subprocess
 import time
 import json
+import os
+from pathlib import Path
 from ..base_controllers import RemoteControllerInterface
 
 # Import SSH utilities and ADB utilities
@@ -27,16 +29,33 @@ class AndroidTVRemoteController(RemoteControllerInterface):
     @staticmethod
     def get_remote_config() -> Dict[str, Any]:
         """Get the remote configuration including layout, buttons, and image."""
+        try:
+            # Try to load configuration from JSON file first
+            config_path = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
+                'config', 'remote', 'android_tv_remote.json'
+            )
+            
+            if os.path.exists(config_path):
+                print(f"Loading Android TV remote config from: {config_path}")
+                with open(config_path, 'r') as config_file:
+                    return json.load(config_file)
+            else:
+                print(f"Config file not found at: {config_path}, using default config")
+        except Exception as e:
+            print(f"Error loading config from file: {e}, using default config")
+        
+        # Fallback to default configuration if file not found or error occurred
         return {
             'remote_info': {
                 'name': 'Fire TV Remote',
                 'type': 'android_tv',
                 'image_url': '/android-tv-remote.png',
-                'default_scale': 0.5,
+                'default_scale': 1,
                 'min_scale': 0.1,
                 'max_scale': 0.8,
                 # General scaling and offset parameters
-                'button_scale_factor': 2,  # General scaling factor for all button sizes
+                'button_scale_factor': 1,  # General scaling factor for all button sizes
                 'global_offset': {
                     'x': 0,  # Global X offset for all buttons
                     'y': 10   # Global Y offset for all buttons

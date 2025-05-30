@@ -46,7 +46,6 @@ export function AndroidTVRemotePanel({
 }: AndroidTVRemotePanelProps) {
   // UI state
   const [showOverlays, setShowOverlays] = useState(false);
-  const [remoteScale] = useState(1); // Fixed scale of 1, removed setRemoteScale
   const [isScreenshotLoading, setIsScreenshotLoading] = useState(false);
   const [screenshotError, setScreenshotError] = useState<string | null>(null);
 
@@ -63,6 +62,7 @@ export function AndroidTVRemotePanel({
     handleScreenshot,
     handleRemoteCommand,
     fetchDefaultValues,
+    remoteConfig,
   } = useAndroidTVConnection();
 
   // Initialize connection form with provided config
@@ -109,148 +109,6 @@ export function AndroidTVRemotePanel({
       }, 100);
     }
   }, [connectionConfig, autoConnect, session.connected, connectionLoading, handleTakeControl]);
-
-  // Local button layout configuration for Android TV remote
-  const localRemoteConfig = {
-    remote_info: {
-      name: 'Fire TV Remote',
-      type: 'android_tv',
-      image_url: '/android-tv-remote.png',
-      default_scale: 1,
-      min_scale: 0.2,
-      max_scale: 1.0,
-      button_scale_factor: 1,
-      global_offset: { x: 0, y: 0 },
-      text_style: {
-        fontSize: '14px',
-        fontWeight: 'bold',
-        color: 'white',
-        textShadow: '2px 2px 4px rgba(0,0,0,0.9)',
-      }
-    },
-    button_layout: {
-      power: {
-        key: 'POWER',
-        label: 'PWR',
-        position: { x: 31, y: 30 },
-        size: { width: 20, height: 20 },
-        shape: 'circle',
-        comment: 'Power button'
-      },
-      nav_up: {
-        key: 'UP',
-        label: '▲',
-        position: { x: 65 , y: 88 },
-        size: { width: 28, height: 18 },
-        shape: 'rectangle',
-        comment: 'Navigation up'
-      },
-      nav_left: {
-        key: 'LEFT',
-        label: '◄',
-        position: { x: 28, y: 122 },
-        size: { width: 18, height: 28 },
-        shape: 'rectangle',
-        comment: 'Navigation left'
-      },
-      nav_center: {
-        key: 'SELECT',
-        label: 'OK',
-        position: { x: 65, y: 122 },
-        size: { width: 60, height: 60 },
-        shape: 'circle',
-        comment: 'Navigation center/select'
-      },
-      nav_right: {
-        key: 'RIGHT',
-        label: '►',
-        position: { x: 103, y: 122 },
-        size: { width: 18, height: 28 },
-        shape: 'rectangle',
-        comment: 'Navigation right'
-      },
-      nav_down: {
-        key: 'DOWN',
-        label: '▼',
-        position: { x: 65, y: 160 },
-        size: { width: 28, height: 18 },
-        shape: 'rectangle',
-        comment: 'Navigation down'
-      },
-      back: {
-        key: 'BACK',
-        label: '←',
-        position: { x: 31, y: 191 },
-        size: { width: 26, height: 26 },
-        shape: 'circle',
-        comment: 'Back button'
-      },
-      home: {
-        key: 'HOME',
-        label: '🏠',
-        position: { x: 65, y: 190 },
-        size: { width: 26, height: 26 },
-        shape: 'circle',
-        comment: 'Home button'
-      },
-      menu: {
-        key: 'MENU',
-        label: '☰',
-        position: { x: 100  , y: 190 },
-        size: { width: 26, height: 26 },
-        shape: 'circle',
-        comment: 'Menu button'
-      },
-      rewind: {
-        key: 'REWIND',
-        label: '<<',
-        position: { x: 31, y: 225 },
-        size: { width: 26, height: 26 },
-        shape: 'circle',
-        comment: 'Rewind button'
-      },
-      play_pause: {
-        key: 'PLAY_PAUSE',
-        label: '⏯',
-        position: { x: 65 , y: 225 },
-        size: { width: 26, height: 26 },
-        shape: 'circle',
-        comment: 'Play/pause button'
-      },
-      fast_forward: {
-        key: 'FAST_FORWARD',
-        label: '>>',
-        position: { x: 100, y: 225 },
-        size: { width: 26, height: 26 },
-        shape: 'circle',
-        comment: 'Fast forward button'
-      },
-      volume_up: {
-        key: 'VOLUME_UP',
-        label: 'V+',
-        position: { x: 66, y: 260 },
-        size: { width: 23, height: 26 },
-        shape: 'rectangle',
-        comment: 'Volume up button'
-      },
-      volume_down: {
-        key: 'VOLUME_DOWN',
-        label: 'V-',
-        position: { x: 66, y: 290 },
-        size: { width: 23, height: 26 },
-        shape: 'rectangle',
-        comment: 'Volume down button'
-      },
-      mute: {
-        key: 'VOLUME_MUTE',
-        label: 'MUTE',
-        position: { x: 66, y: 327 },
-        size: { width: 26, height: 26 },
-        shape: 'circle',
-        comment: 'Mute button'
-      }
-    }
-  };
 
   const handleScreenshotClick = async () => {
     setIsScreenshotLoading(true);
@@ -327,10 +185,9 @@ export function AndroidTVRemotePanel({
     );
   }
 
+  // Fixed-size remote container - will be consistent across all usages
   return (
     <Box sx={{ 
-      p: 2, 
-      pt: 0,
       display: 'flex', 
       flexDirection: 'column', 
       height: '100%',
@@ -338,11 +195,12 @@ export function AndroidTVRemotePanel({
       ...sx 
     }}>
       <Box sx={{ 
+        flex: 1,
+        position: 'relative',
         display: 'flex',
         flexDirection: 'column',
-        flex: 1,
-        height: '100%',
-        position: 'relative',
+        alignItems: 'center',
+        justifyContent: 'center',
         overflow: 'hidden'
       }}>
         {/* Show Overlays button - positioned in top right corner */}
@@ -369,26 +227,21 @@ export function AndroidTVRemotePanel({
           </Button>
         </Box>
         
-        {/* Remote Interface */}
+        {/* Fixed-size Remote Interface Container */}
         <Box sx={{ 
-          position: 'relative',
-          height: '100%'
+          width: '130px',  // Fixed width
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center'
         }}>
-          <Box sx={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)'
-          }}>
-            <RemoteInterface
-              remoteConfig={localRemoteConfig}
-              scale={1} // Fixed scale of 1
-              showOverlays={showOverlays}
-              onCommand={handleRemoteCommand}
-              fallbackImageUrl="/android-tv-remote.png"
-              fallbackName="Android TV Remote"
-            />
-          </Box>
+          <RemoteInterface
+            remoteConfig={remoteConfig || null}
+            scale={1} // Use fixed scale of 1 regardless of config
+            showOverlays={showOverlays}
+            onCommand={handleRemoteCommand}
+            fallbackImageUrl="/android-tv-remote.png"
+            fallbackName="Android TV Remote"
+          />
         </Box>
       </Box>
 

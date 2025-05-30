@@ -9,6 +9,8 @@ from typing import Dict, Any, List, Optional
 import subprocess
 import time
 import json
+import os
+from pathlib import Path
 from ..base_controllers import RemoteControllerInterface
 
 
@@ -102,6 +104,23 @@ class IRRemoteController(RemoteControllerInterface):
     @staticmethod
     def get_remote_config() -> Dict[str, Any]:
         """Get the IR remote configuration including layout, buttons, and image."""
+        try:
+            # Try to load configuration from JSON file first
+            config_path = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
+                'config', 'remote', 'infrared_remote.json'
+            )
+            
+            if os.path.exists(config_path):
+                print(f"Loading IR remote config from: {config_path}")
+                with open(config_path, 'r') as config_file:
+                    return json.load(config_file)
+            else:
+                print(f"Config file not found at: {config_path}, using default config")
+        except Exception as e:
+            print(f"Error loading config from file: {e}, using default config")
+        
+        # Fallback to default configuration if file not found or error occurred
         return {
             'remote_info': {
                 'name': 'Sunrise Remote',

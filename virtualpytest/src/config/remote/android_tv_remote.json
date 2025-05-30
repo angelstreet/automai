@@ -1,0 +1,151 @@
+{
+  "remote_info": {
+    "name": "Fire TV Remote",
+    "type": "android_tv",
+    "image_url": "/android-tv-remote.png",
+    "default_scale": 1,
+    "min_scale": 1,
+    "max_scale": 1,
+    "button_scale_factor": 1,
+    "global_offset": {
+      "x": 0,
+      "y": 10
+    },
+    "text_style": {
+      "fontSize": "14px",
+      "fontWeight": "bold",
+      "color": "white",
+      "textShadow": "2px 2px 4px rgba(0,0,0,0.9)"
+    }
+  },
+  "button_layout": {
+    "power": {
+      "key": "POWER",
+      "label": "PWR",
+      "position": { "x": 70, "y": 28 },
+      "size": { "width": 18, "height": 18 },
+      "shape": "circle",
+      "comment": "Power button"
+    },
+    "voice": {
+      "key": "VOICE_ASSIST",
+      "label": "MIC",
+      "position": { "x": 70, "y": 58 },
+      "size": { "width": 20, "height": 20 },
+      "shape": "circle",
+      "comment": "Voice/microphone button"
+    },
+    "nav_up": {
+      "key": "DPAD_UP",
+      "label": "▲",
+      "position": { "x": 70, "y": 108 },
+      "size": { "width": 25, "height": 15 },
+      "shape": "rectangle",
+      "comment": "Navigation up"
+    },
+    "nav_left": {
+      "key": "DPAD_LEFT",
+      "label": "◄",
+      "position": { "x": 45, "y": 128 },
+      "size": { "width": 15, "height": 25 },
+      "shape": "rectangle",
+      "comment": "Navigation left"
+    },
+    "nav_center": {
+      "key": "DPAD_CENTER",
+      "label": "OK",
+      "position": { "x": 70, "y": 133 },
+      "size": { "width": 20, "height": 20 },
+      "shape": "circle",
+      "comment": "Navigation center/select"
+    },
+    "nav_right": {
+      "key": "DPAD_RIGHT",
+      "label": "►",
+      "position": { "x": 95, "y": 128 },
+      "size": { "width": 15, "height": 25 },
+      "shape": "rectangle",
+      "comment": "Navigation right"
+    },
+    "nav_down": {
+      "key": "DPAD_DOWN",
+      "label": "▼",
+      "position": { "x": 70, "y": 158 },
+      "size": { "width": 25, "height": 15 },
+      "shape": "rectangle",
+      "comment": "Navigation down"
+    },
+    "back": {
+      "key": "BACK",
+      "label": "←",
+      "position": { "x": 35, "y": 188 },
+      "size": { "width": 18, "height": 18 },
+      "shape": "circle",
+      "comment": "Back button"
+    },
+    "home": {
+      "key": "HOME",
+      "label": "🏠",
+      "position": { "x": 70, "y": 188 },
+      "size": { "width": 18, "height": 18 },
+      "shape": "circle",
+      "comment": "Home button"
+    },
+    "menu": {
+      "key": "MENU",
+      "label": "☰",
+      "position": { "x": 105, "y": 188 },
+      "size": { "width": 18, "height": 18 },
+      "shape": "circle",
+      "comment": "Menu button"
+    },
+    "rewind": {
+      "key": "MEDIA_REWIND",
+      "label": "<<",
+      "position": { "x": 35, "y": 228 },
+      "size": { "width": 18, "height": 18 },
+      "shape": "circle",
+      "comment": "Rewind button"
+    },
+    "play_pause": {
+      "key": "MEDIA_PLAY_PAUSE",
+      "label": "⏯",
+      "position": { "x": 70, "y": 228 },
+      "size": { "width": 18, "height": 18 },
+      "shape": "circle",
+      "comment": "Play/pause button"
+    },
+    "fast_forward": {
+      "key": "MEDIA_FAST_FORWARD",
+      "label": ">>",
+      "position": { "x": 105, "y": 228 },
+      "size": { "width": 18, "height": 18 },
+      "shape": "circle",
+      "comment": "Fast forward button"
+    },
+    "volume_up": {
+      "key": "VOLUME_UP",
+      "label": "V+",
+      "position": { "x": 70, "y": 268 },
+      "size": { "width": 22, "height": 22 },
+      "shape": "circle",
+      "comment": "Volume up button"
+    },
+    "volume_down": {
+      "key": "VOLUME_DOWN",
+      "label": "V-",
+      "position": { "x": 70, "y": 300 },
+      "size": { "width": 22, "height": 22 },
+      "shape": "circle",
+      "comment": "Volume down button"
+    },
+    "mute": {
+      "key": "VOLUME_MUTE",
+      "label": "MUTE",
+      "position": { "x": 70, "y": 334 },
+      "size": { "width": 22, "height": 22 },
+      "shape": "circle",
+      "comment": "Mute button"
+    }
+  }
+} 
