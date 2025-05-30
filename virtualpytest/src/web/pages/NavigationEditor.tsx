@@ -526,6 +526,12 @@ const NavigationEditorContent: React.FC = () => {
                   connectionConfig={extractConnectionConfigForAndroid(selectedDeviceData?.controller_configs?.remote)}
                   autoConnect={isControlActive}
                   showScreenshot={false}
+                  onDisconnectComplete={() => {
+                    handleTakeControl();
+                    if (isRemotePanelOpen) {
+                      handleToggleRemotePanel();
+                    }
+                  }}
                   sx={{ flex: 1, height: '100%' }}
                 />
               ) : remoteConfig.type === 'android_tv' ? (
@@ -547,6 +553,12 @@ const NavigationEditorContent: React.FC = () => {
                   remoteType="ir"
                   connectionConfig={extractConnectionConfigForIR(selectedDeviceData?.controller_configs?.remote) as any}
                   autoConnect={isControlActive}
+                  onDisconnectComplete={() => {
+                    handleTakeControl();
+                    if (isRemotePanelOpen) {
+                      handleToggleRemotePanel();
+                    }
+                  }}
                   sx={{ flex: 1, height: '100%' }}
                 />
               ) : remoteConfig.type === 'bluetooth_remote' ? (
@@ -554,6 +566,12 @@ const NavigationEditorContent: React.FC = () => {
                   remoteType="bluetooth"
                   connectionConfig={extractConnectionConfigForBluetooth(selectedDeviceData?.controller_configs?.remote) as any}
                   autoConnect={isControlActive}
+                  onDisconnectComplete={() => {
+                    handleTakeControl();
+                    if (isRemotePanelOpen) {
+                      handleToggleRemotePanel();
+                    }
+                  }}
                   sx={{ flex: 1, height: '100%' }}
                 />
               ) : (

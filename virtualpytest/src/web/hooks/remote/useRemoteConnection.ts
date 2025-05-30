@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { AndroidTVSession, ConnectionForm, RemoteConfig } from '../../types/remote/types';
 import { RemoteType, BaseConnectionConfig } from '../../types/remote/remoteTypes';
 import { getRemoteConfig } from './remoteConfigs';
-import { androidTVRemote } from '../../../config/remote';
+import { androidTVRemote, androidMobileRemote } from '../../../config/remote';
 
 const initialConnectionForm: ConnectionForm = {
   host_ip: '',
@@ -30,11 +30,24 @@ export function useRemoteConnection(remoteType: RemoteType) {
   // Get device configuration
   const deviceConfig = getRemoteConfig(remoteType);
   
-  // Load the remote configuration from JSON (Android TV specific for now)
+  // Load the remote configuration from JSON based on remote type
   useEffect(() => {
-    if (remoteType === 'android-tv') {
-      setRemoteConfig(androidTVRemote as RemoteConfig);
-      console.log('[@hook:useRemoteConnection] Loaded remote configuration from local JSON file');
+    switch (remoteType) {
+      case 'android-tv':
+        setRemoteConfig(androidTVRemote as RemoteConfig);
+        console.log('[@hook:useRemoteConnection] Loaded Android TV remote configuration from local JSON file');
+        break;
+      case 'android-mobile':
+        setRemoteConfig(androidMobileRemote as RemoteConfig);
+        console.log('[@hook:useRemoteConnection] Loaded Android Mobile remote configuration from local JSON file');
+        break;
+      case 'ir':
+      case 'bluetooth':
+        // These devices don't use the same remote config structure yet
+        console.log(`[@hook:useRemoteConnection] Remote type ${remoteType} uses API-based configuration`);
+        break;
+      default:
+        console.log(`[@hook:useRemoteConnection] Unknown remote type: ${remoteType}`);
     }
   }, [remoteType]);
 
@@ -56,12 +69,12 @@ export function useRemoteConnection(remoteType: RemoteType) {
     }
   }, [deviceConfig]);
 
-  // Kept for backward compatibility, now it just uses the local JSON
-  const fetchAndroidTVConfig = useCallback(async () => {
-    if (!deviceConfig || remoteType !== 'android-tv') return;
+  // Generic function to fetch remote config from backend (optional override)
+  const fetchRemoteConfig = useCallback(async () => {
+    if (!deviceConfig?.apiEndpoints.config) return;
     
     // We're now using the imported JSON config
-    console.log('[@hook:useRemoteConnection] Using local remote configuration');
+    console.log(`[@hook:useRemoteConnection] Using local remote configuration for ${remoteType}`);
     
     // Only fetch from backend if needed for dynamic configurations
     try {
@@ -71,11 +84,11 @@ export function useRemoteConnection(remoteType: RemoteType) {
       if (result.success && result.config) {
         // Only update if the backend has different config
         // This ensures we prioritize our local config but can be overridden by backend
-        console.log('[@hook:useRemoteConnection] Updated config from backend');
+        console.log(`[@hook:useRemoteConnection] Updated ${remoteType} config from backend`);
         setRemoteConfig(result.config);
       }
     } catch (error) {
-      console.log('[@hook:useRemoteConnection] Using default config, backend not available:', error);
+      console.log(`[@hook:useRemoteConnection] Using default ${remoteType} config, backend not available:`, error);
     }
   }, [deviceConfig, remoteType]);
 
@@ -108,7 +121,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
 
       // We don't need to fetch config since we're using the local one
       // Only fetch from backend for updating purposes
-      await fetchAndroidTVConfig();
+      await fetchRemoteConfig();
 
       console.log('[@hook:useRemoteConnection] Sending take-control request to backend...');
       const response = await fetch(`http://localhost:5009${deviceConfig.apiEndpoints.connect}`, {
@@ -142,7 +155,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
     } finally {
       setConnectionLoading(false);
     }
-  }, [connectionForm, fetchAndroidTVConfig, deviceConfig]);
+  }, [connectionForm, fetchRemoteConfig, deviceConfig]);
 
   const handleReleaseControl = useCallback(async () => {
     if (!deviceConfig) return;

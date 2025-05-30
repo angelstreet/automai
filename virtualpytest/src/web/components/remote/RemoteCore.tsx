@@ -46,6 +46,39 @@ export function RemoteCore({
   // Use default scale from remoteConfig
   const defaultScale = remoteConfig?.remote_info?.default_scale || 1;
 
+  // Get fallback values based on remote type
+  const getFallbackValues = () => {
+    switch (remoteType) {
+      case 'android-tv':
+        return {
+          imageUrl: '/android-tv-remote.png',
+          name: 'Android TV Remote'
+        };
+      case 'android-mobile':
+        return {
+          imageUrl: '/android-mobile-remote.png',
+          name: 'Android Mobile Remote'
+        };
+      case 'ir':
+        return {
+          imageUrl: '/ir-remote.png',
+          name: 'IR Remote'
+        };
+      case 'bluetooth':
+        return {
+          imageUrl: '/bluetooth-remote.png',
+          name: 'Bluetooth Remote'
+        };
+      default:
+        return {
+          imageUrl: '/generic-remote.png',
+          name: 'Remote Control'
+        };
+    }
+  };
+
+  const fallbackValues = getFallbackValues();
+
   if (style === 'panel') {
     // Panel style (same as compact, but within panel layout)
     const containerWidth = 130 * defaultScale;
@@ -94,8 +127,8 @@ export function RemoteCore({
             scale={defaultScale}
             showOverlays={showOverlays}
             onCommand={onCommand}
-            fallbackImageUrl="/android-tv-remote.png"
-            fallbackName="Android TV Remote"
+            fallbackImageUrl={fallbackValues.imageUrl}
+            fallbackName={fallbackValues.name}
           />
         </Box>
 
@@ -167,8 +200,8 @@ export function RemoteCore({
             scale={defaultScale}
             showOverlays={showOverlays}
             onCommand={onCommand}
-            fallbackImageUrl="/android-tv-remote.png"
-            fallbackName="Android TV Remote"
+            fallbackImageUrl={fallbackValues.imageUrl}
+            fallbackName={fallbackValues.name}
           />
         </Box>
         <Button 

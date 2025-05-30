@@ -1,7 +1,7 @@
 // Base remote configuration type
 export type RemoteType = 'android-tv' | 'android-mobile' | 'ir' | 'bluetooth';
 
-// Base connection configuration interface (shared across all remotes)
+// Base connection configuration interface (shared across Android remotes)
 export interface BaseConnectionConfig {
   host_ip: string;
   host_port?: string;
@@ -10,6 +10,23 @@ export interface BaseConnectionConfig {
   device_ip: string;
   device_port?: string;
 }
+
+// IR Remote connection configuration
+export interface IRConnectionConfig {
+  device_path: string;
+  protocol: string;
+  frequency: string;
+}
+
+// Bluetooth Remote connection configuration  
+export interface BluetoothConnectionConfig {
+  device_address: string;
+  device_name: string;
+  pairing_pin: string;
+}
+
+// Union type for all connection configs
+export type AnyConnectionConfig = BaseConnectionConfig | IRConnectionConfig | BluetoothConnectionConfig;
 
 // Remote device configuration
 export interface RemoteDeviceConfig {
@@ -31,7 +48,7 @@ export interface RemoteDeviceConfig {
     config?: string;
   };
   connectionFields: Array<{
-    name: keyof BaseConnectionConfig;
+    name: string; // Allow any string for field names
     label: string;
     type?: 'text' | 'password';
     required?: boolean;
