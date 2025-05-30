@@ -294,7 +294,7 @@ const UserInterface: React.FC = () => {
     
     try {
       console.log(`[@component:UserInterface] Loading ${controllerType} controller config for device:`, {
-        device: selectedDevice,
+      device: selectedDevice,
         userInterface: userInterface.name,
         controllerType
       });
@@ -306,8 +306,8 @@ const UserInterface: React.FC = () => {
 
       setSelectedDeviceForEdit(deviceWithConfig);
       setCurrentControllerType(controllerType);
-      setEditControllerOpen(true);
-      setError(null);
+    setEditControllerOpen(true);
+    setError(null);
     } catch (err) {
       console.error('[@component:UserInterface] Error loading device controller config:', err);
       setError('Failed to load device controller configuration');
@@ -454,10 +454,10 @@ const UserInterface: React.FC = () => {
                     <TableCell><strong>Name</strong></TableCell>
                     <TableCell><strong>Models</strong></TableCell>
                     <TableCell align="center"><strong>Navigation</strong></TableCell>
-                    <TableCell><strong>Remote Controller</strong></TableCell>
-                    <TableCell><strong>AV Controller</strong></TableCell>
-                    <TableCell><strong>Power Controller</strong></TableCell>
-                    <TableCell><strong>Network Controller</strong></TableCell>
+                    <TableCell align="center"><strong>Remote Controller</strong></TableCell>
+                    <TableCell align="center"><strong>AV Controller</strong></TableCell>
+                    <TableCell align="center"><strong>Power Controller</strong></TableCell>
+                    <TableCell align="center"><strong>Network Controller</strong></TableCell>
                     <TableCell align="center"><strong>Actions</strong></TableCell>
                   </TableRow>
                 </TableHead>
@@ -583,7 +583,7 @@ const UserInterface: React.FC = () => {
                           Navigation
                         </Button>
                       </TableCell>
-                      <TableCell>
+                      <TableCell align="center">
                         {/* Remote Controller Column - Simplified */}
                         {userInterface.models.length > 0 ? (
                           (() => {
@@ -591,11 +591,8 @@ const UserInterface: React.FC = () => {
                               userInterface.models.includes(device.model)
                             );
                             
-                            if (compatibleDevice) {
+                            if (compatibleDevice && compatibleDevice.controller_configs?.remote) {
                               const deviceType = getDeviceType(compatibleDevice);
-                              const controllerName = deviceType !== 'unknown' 
-                                ? `${deviceType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} Remote`
-                                : 'Unsupported Device';
                               
                               return (
                                 <Button
@@ -606,29 +603,29 @@ const UserInterface: React.FC = () => {
                                   disabled={deviceType === 'unknown'}
                                   sx={{ 
                                     minWidth: 'auto',
-                                    px: 1,
+                                    px: 0.5,
                                     py: 0.25,
-                                    fontSize: '0.75rem'
+                                    fontSize: '0.7rem'
                                   }}
                                 >
-                                  {controllerName}
+                                  Remote
                                 </Button>
                               );
                             } else {
                               return (
-                                <Typography variant="caption" color="error" sx={{ fontSize: '0.7rem' }}>
-                                  No Compatible Device
+                                <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem' }}>
+                                  -
                                 </Typography>
                               );
                             }
                           })()
                         ) : (
                           <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem' }}>
-                            No Models
+                            -
                           </Typography>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell align="center">
                         {/* AV Controller Column */}
                         {userInterface.models.length > 0 ? (
                           (() => {
@@ -636,13 +633,8 @@ const UserInterface: React.FC = () => {
                               userInterface.models.includes(device.model)
                             );
                             
-                            if (compatibleDevice) {
+                            if (compatibleDevice && compatibleDevice.controller_configs?.av) {
                               const deviceType = getDeviceType(compatibleDevice);
-                              // AV controllers are typically available for all device types
-                              const isAVSupported = deviceType !== 'unknown';
-                              const controllerName = isAVSupported 
-                                ? 'AV Controller'
-                                : 'Unsupported Device';
                               
                               return (
                                 <Button
@@ -650,32 +642,32 @@ const UserInterface: React.FC = () => {
                                   variant="outlined"
                                   startIcon={<LaunchIcon fontSize="small" />}
                                   onClick={() => handleOpenAVController(userInterface)}
-                                  disabled={!isAVSupported}
+                                  disabled={deviceType === 'unknown'}
                                   sx={{ 
                                     minWidth: 'auto',
-                                    px: 1,
+                                    px: 0.5,
                                     py: 0.25,
-                                    fontSize: '0.75rem'
+                                    fontSize: '0.7rem'
                                   }}
                                 >
-                                  {controllerName}
+                                  AV
                                 </Button>
                               );
                             } else {
                               return (
                                 <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem' }}>
-                                  No Compatible Device
+                                  -
                                 </Typography>
                               );
                             }
                           })()
                         ) : (
                           <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem' }}>
-                            No Models
+                            -
                           </Typography>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell align="center">
                         {/* Power Controller Column */}
                         {userInterface.models.length > 0 ? (
                           (() => {
@@ -683,13 +675,8 @@ const UserInterface: React.FC = () => {
                               userInterface.models.includes(device.model)
                             );
                             
-                            if (compatibleDevice) {
+                            if (compatibleDevice && compatibleDevice.controller_configs?.power) {
                               const deviceType = getDeviceType(compatibleDevice);
-                              // Power controllers are typically available for all device types
-                              const isPowerSupported = deviceType !== 'unknown';
-                              const controllerName = isPowerSupported 
-                                ? 'Power Controller'
-                                : 'Unsupported Device';
                               
                               return (
                                 <Button
@@ -697,32 +684,32 @@ const UserInterface: React.FC = () => {
                                   variant="outlined"
                                   startIcon={<LaunchIcon fontSize="small" />}
                                   onClick={() => handleOpenPowerController(userInterface)}
-                                  disabled={!isPowerSupported}
+                                  disabled={deviceType === 'unknown'}
                                   sx={{ 
                                     minWidth: 'auto',
-                                    px: 1,
+                                    px: 0.5,
                                     py: 0.25,
-                                    fontSize: '0.75rem'
+                                    fontSize: '0.7rem'
                                   }}
                                 >
-                                  {controllerName}
+                                  Power
                                 </Button>
                               );
                             } else {
                               return (
                                 <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem' }}>
-                                  No Compatible Device
+                                  -
                                 </Typography>
                               );
                             }
                           })()
                         ) : (
                           <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem' }}>
-                            No Models
+                            -
                           </Typography>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell align="center">
                         {/* Network Controller Column */}
                         {userInterface.models.length > 0 ? (
                           (() => {
@@ -730,13 +717,8 @@ const UserInterface: React.FC = () => {
                               userInterface.models.includes(device.model)
                             );
                             
-                            if (compatibleDevice) {
+                            if (compatibleDevice && compatibleDevice.controller_configs?.network) {
                               const deviceType = getDeviceType(compatibleDevice);
-                              // Network controllers are typically available for all device types
-                              const isNetworkSupported = deviceType !== 'unknown';
-                              const controllerName = isNetworkSupported 
-                                ? 'Network Controller'
-                                : 'Unsupported Device';
                               
                               return (
                                 <Button
@@ -744,28 +726,28 @@ const UserInterface: React.FC = () => {
                                   variant="outlined"
                                   startIcon={<LaunchIcon fontSize="small" />}
                                   onClick={() => handleOpenNetworkController(userInterface)}
-                                  disabled={!isNetworkSupported}
+                                  disabled={deviceType === 'unknown'}
                                   sx={{ 
                                     minWidth: 'auto',
-                                    px: 1,
+                                    px: 0.5,
                                     py: 0.25,
-                                    fontSize: '0.75rem'
+                                    fontSize: '0.7rem'
                                   }}
                                 >
-                                  {controllerName}
+                                  Network
                                 </Button>
                               );
                             } else {
                               return (
                                 <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem' }}>
-                                  No Compatible Device
+                                  -
                                 </Typography>
                               );
                             }
                           })()
                         ) : (
                           <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem' }}>
-                            No Models
+                            -
                           </Typography>
                         )}
                       </TableCell>
