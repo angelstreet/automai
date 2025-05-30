@@ -114,7 +114,7 @@ export function AndroidMobileCore({
                 <Typography variant="caption">Capturing...</Typography>
               </Box>
             ) : (
-              'Screenshot & Dump UI'
+              'Dump UI'
             )}
           </Button>
           <Button
@@ -263,7 +263,7 @@ export function AndroidMobileCore({
             disabled={!session.connected}
             sx={{ flex: 1 }}
           >
-            End Call
+            End
           </Button>
         </Box>
       </Box>
