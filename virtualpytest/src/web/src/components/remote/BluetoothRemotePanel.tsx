@@ -5,15 +5,15 @@ import {
   Typography,
   CircularProgress,
 } from '@mui/material';
-import { useIRRemoteConnection } from '../../pages/controller/hooks/useIRRemoteConnection';
-import { RemoteInterface } from '../../pages/controller/components/RemoteInterface';
+import { useBluetoothRemoteConnection } from '../../../pages/controller/hooks/useBluetoothRemoteConnection';
+import { RemoteInterface } from '../../../pages/controller/components/RemoteInterface';
 
-interface IRRemotePanelProps {
+interface BluetoothRemotePanelProps {
   /** Optional pre-configured connection parameters */
   connectionConfig?: {
-    device_path: string;
-    protocol?: string;
-    frequency?: string;
+    device_address: string;
+    device_name?: string;
+    pairing_pin?: string;
   };
   /** Whether to auto-connect on mount if config is provided */
   autoConnect?: boolean;
@@ -23,17 +23,17 @@ interface IRRemotePanelProps {
   sx?: any;
 }
 
-export function IRRemotePanel({
+export function BluetoothRemotePanel({
   connectionConfig,
   autoConnect = false,
   compact = false,
   sx = {}
-}: IRRemotePanelProps) {
+}: BluetoothRemotePanelProps) {
   // UI state
   const [showOverlays, setShowOverlays] = useState(false);
   const [remoteScale, setRemoteScale] = useState(1.2);
 
-  // Use the IR Remote connection hook
+  // Use the Bluetooth Remote connection hook
   const {
     session,
     connectionForm,
@@ -44,15 +44,15 @@ export function IRRemotePanel({
     handleConnect,
     handleDisconnect,
     handleCommand,
-  } = useIRRemoteConnection();
+  } = useBluetoothRemoteConnection();
 
   // Initialize connection form with provided config
   useEffect(() => {
     if (connectionConfig) {
       setConnectionForm({
-        device_path: connectionConfig.device_path,
-        protocol: connectionConfig.protocol || 'NEC',
-        frequency: connectionConfig.frequency || '38000',
+        device_address: connectionConfig.device_address,
+        device_name: connectionConfig.device_name || '',
+        pairing_pin: connectionConfig.pairing_pin || '0000',
       });
     }
   }, [connectionConfig, setConnectionForm]);
@@ -60,7 +60,7 @@ export function IRRemotePanel({
   // Auto-connect if config is provided and autoConnect is true
   useEffect(() => {
     if (connectionConfig && autoConnect && !session.connected && !connectionLoading) {
-      console.log('[@component:IRRemotePanel] Auto-connecting with provided config');
+      console.log('[@component:BluetoothRemotePanel] Auto-connecting with provided config');
       handleConnect();
     }
   }, [connectionConfig, autoConnect, session.connected, connectionLoading, handleConnect]);
@@ -85,7 +85,7 @@ export function IRRemotePanel({
         ...sx 
       }}>
         <Typography variant={compact ? "body2" : "h6"} color="textSecondary" gutterBottom>
-          IR Remote Not Connected
+          Bluetooth Remote Not Connected
         </Typography>
         {connectionConfig ? (
           <Button
@@ -94,11 +94,11 @@ export function IRRemotePanel({
             disabled={connectionLoading}
             size={compact ? "small" : "medium"}
           >
-            {connectionLoading ? <CircularProgress size={16} /> : 'Connect'}
+            {connectionLoading ? <CircularProgress size={16} /> : 'Pair & Connect'}
           </Button>
         ) : (
           <Typography variant="caption" color="textSecondary" textAlign="center">
-            Configure IR device parameters to enable remote control
+            Configure Bluetooth device parameters to enable remote control
           </Typography>
         )}
         {connectionError && (
@@ -122,7 +122,7 @@ export function IRRemotePanel({
       {/* Remote Control Section */}
       <Box sx={{ mb: 2 }}>
         <Typography variant={compact ? "subtitle2" : "h6"} gutterBottom>
-          IR Remote Control
+          Bluetooth Remote Control
         </Typography>
 
         {/* Controls for overlay and scale (only show in non-compact mode) */}

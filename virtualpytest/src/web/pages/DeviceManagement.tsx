@@ -34,8 +34,8 @@ import {
   DialogContentText,
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
-import CreateDeviceDialog from '../components/CreateDeviceDialog';
-import { deviceApi, Device, DeviceCreatePayload } from '../services/deviceService';
+import CreateDeviceDialog from '../src/components/CreateDeviceDialog';
+import { deviceApi, Device, DeviceCreatePayload } from '../src/services/deviceService';
 
 const DeviceManagement: React.FC = () => {
   const [devices, setDevices] = useState<Device[]>([]);

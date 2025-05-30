@@ -16,7 +16,7 @@ import {
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 import { useBluetoothRemoteConnection } from '../hooks/useBluetoothRemoteConnection';
-import { BluetoothRemotePanel } from '../../../components/remote/BluetoothRemotePanel';
+import { BluetoothRemotePanel } from '../../../src/components/remote/BluetoothRemotePanel';
 
 interface BluetoothRemoteModalProps {
   open: boolean;

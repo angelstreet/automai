@@ -9,8 +9,8 @@ import {
   Select,
   MenuItem,
 } from '@mui/material';
-import { useAndroidMobileConnection } from '../../pages/controller/hooks/useAndroidMobileConnection';
-import { AndroidMobileOverlay } from '../../pages/controller/components/AndroidMobileOverlay';
+import { useAndroidMobileConnection } from '../../../pages/controller/hooks/useAndroidMobileConnection';
+import { AndroidMobileOverlay } from '../../../pages/controller/components/AndroidMobileOverlay';
 
 interface AndroidMobileRemotePanelProps {
   /** Optional pre-configured connection parameters */

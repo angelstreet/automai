@@ -16,7 +16,7 @@ import {
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 import { useAndroidTVConnection } from '../hooks/useAndroidTVConnection';
-import { AndroidTVRemotePanel } from '../../../components/remote/AndroidTVRemotePanel';
+import { AndroidTVRemotePanel } from '../../../src/components/remote/AndroidTVRemotePanel';
 
 interface AndroidTVModalProps {
   open: boolean;

@@ -38,9 +38,9 @@ import {
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 import { userInterfaceApi, UserInterface as UserInterfaceType, UserInterfaceCreatePayload } from '../src/services/userInterfaceApi';
-import { deviceApi, Device } from '../services/deviceService';
-import { RemoteController, getDeviceType } from '../components/RemoteController';
-import { EditControllerParametersDialog, ControllerConfig } from '../components/remote/EditControllerParametersDialog';
+import { deviceApi, Device } from '../src/services/deviceService';
+import { RemoteController, getDeviceType } from '../src/components/RemoteController';
+import { EditControllerParametersDialog, ControllerConfig } from '../src/components/remote/EditControllerParametersDialog';
 
 
 const UserInterface: React.FC = () => {

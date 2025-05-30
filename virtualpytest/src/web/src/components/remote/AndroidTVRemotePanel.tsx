@@ -5,8 +5,8 @@ import {
   Typography,
   CircularProgress,
 } from '@mui/material';
-import { useAndroidTVConnection } from '../../pages/controller/hooks/useAndroidTVConnection';
-import { RemoteInterface } from '../../pages/controller/components/RemoteInterface';
+import { useAndroidTVConnection } from '../../../pages/controller/hooks/useAndroidTVConnection';
+import { RemoteInterface } from '../../../pages/controller/components/RemoteInterface';
 
 interface AndroidTVRemotePanelProps {
   /** Optional pre-configured connection parameters */

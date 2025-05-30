@@ -16,7 +16,7 @@ import {
   IconButton,
 } from '@mui/material';
 import { PlayArrow, Videocam, VolumeUp, Settings, Close as CloseIcon } from '@mui/icons-material';
-import { HDMIStreamPanel } from '../../../components/remote/HDMIStreamPanel';
+import { HDMIStreamPanel } from '../../../src/components/remote/HDMIStreamPanel';
 
 interface HDMIStreamModalProps {
   open: boolean;

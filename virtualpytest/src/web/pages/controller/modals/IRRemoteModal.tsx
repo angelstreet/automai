@@ -20,7 +20,7 @@ import {
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 import { useIRRemoteConnection } from '../hooks/useIRRemoteConnection';
-import { IRRemotePanel } from '../../../components/remote/IRRemotePanel';
+import { IRRemotePanel } from '../../../src/components/remote/IRRemotePanel';
 
 interface IRRemoteModalProps {
   open: boolean;

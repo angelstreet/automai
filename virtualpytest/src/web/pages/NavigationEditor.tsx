@@ -53,20 +53,20 @@ import {
 import { useParams, useNavigate } from 'react-router-dom';
 
 // Import extracted components and hooks
-import { useNavigationEditor } from '../hooks/useNavigationEditor';
-import { UINavigationNode } from '../components/navigation/UINavigationNode';
-import { UIMenuNode } from '../components/navigation/UIMenuNode';
-import { UINavigationEdge } from '../components/navigation/UINavigationEdge';
-import { NodeEditDialog } from '../components/navigation/NodeEditDialog';
-import { EdgeEditDialog } from '../components/navigation/EdgeEditDialog';
-import { EdgeSelectionPanel } from '../components/navigation/EdgeSelectionPanel';
-import { NodeSelectionPanel } from '../components/navigation/NodeSelectionPanel';
-import { NavigationEditorHeader } from '../components/navigation/NavigationEditorHeader';
-import { AndroidMobileRemotePanel } from '../components/remote/AndroidMobileRemotePanel';
-import { AndroidTVRemotePanel } from '../components/remote/AndroidTVRemotePanel';
-import { IRRemotePanel } from '../components/remote/IRRemotePanel';
-import { BluetoothRemotePanel } from '../components/remote/BluetoothRemotePanel';
-import { HDMIStreamPanel } from '../components/remote/HDMIStreamPanel';
+import { useNavigationEditor } from '../src/hooks/useNavigationEditor';
+import { UINavigationNode } from '../src/components/navigation/UINavigationNode';
+import { UIMenuNode } from '../src/components/navigation/UIMenuNode';
+import { UINavigationEdge } from '../src/components/navigation/UINavigationEdge';
+import { NodeEditDialog } from '../src/components/navigation/NodeEditDialog';
+import { EdgeEditDialog } from '../src/components/navigation/EdgeEditDialog';
+import { EdgeSelectionPanel } from '../src/components/navigation/EdgeSelectionPanel';
+import { NodeSelectionPanel } from '../src/components/navigation/NodeSelectionPanel';
+import { NavigationEditorHeader } from '../src/components/navigation/NavigationEditorHeader';
+import { AndroidMobileRemotePanel } from '../src/components/remote/AndroidMobileRemotePanel';
+import { AndroidTVRemotePanel } from '../src/components/remote/AndroidTVRemotePanel';
+import { IRRemotePanel } from '../src/components/remote/IRRemotePanel';
+import { BluetoothRemotePanel } from '../src/components/remote/BluetoothRemotePanel';
+import { HDMIStreamPanel } from '../src/components/remote/HDMIStreamPanel';
 
 // Node types for React Flow
 const nodeTypes = {
