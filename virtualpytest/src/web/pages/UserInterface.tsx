@@ -282,7 +282,7 @@ const UserInterface: React.FC = () => {
   };
 
   // Helper function to handle opening edit controller parameters
-  const handleOpenEditController = (userInterface: UserInterfaceType) => {
+  const handleOpenEditController = async (userInterface: UserInterfaceType) => {
     if (userInterface.models.length === 0) {
       setError('No models configured for this user interface');
       return;
@@ -301,14 +301,24 @@ const UserInterface: React.FC = () => {
     // Use the first compatible device
     const selectedDevice = compatibleDevices[0];
     
-    console.log(`[@component:UserInterface] Opening edit controller for device:`, {
-      device: selectedDevice,
-      userInterface: userInterface.name
-    });
+    try {
+      console.log(`[@component:UserInterface] Loading controller config for device:`, {
+        device: selectedDevice,
+        userInterface: userInterface.name
+      });
 
-    setSelectedDeviceForEdit(selectedDevice);
-    setEditControllerOpen(true);
-    setError(null);
+      // Load the device's current controller configuration
+      const deviceWithConfig = await deviceApi.getDevice(selectedDevice.id);
+      
+      console.log(`[@component:UserInterface] Loaded device config:`, deviceWithConfig.controller_configs);
+
+      setSelectedDeviceForEdit(deviceWithConfig);
+      setEditControllerOpen(true);
+      setError(null);
+    } catch (err) {
+      console.error('[@component:UserInterface] Error loading device controller config:', err);
+      setError('Failed to load device controller configuration');
+    }
   };
 
   // Save controller configuration
@@ -316,18 +326,37 @@ const UserInterface: React.FC = () => {
     try {
       console.log(`[@component:UserInterface] Saving controller config for device ${deviceId}:`, config);
       
-      // TODO: Implement API call to save controller configuration
-      // await deviceApi.updateDeviceControllerConfig(deviceId, { remote: config });
-      
-      // For now, simulate the API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Update the device's controller configuration in the database
+      // We need to update the device with the new controller_configs
+      const deviceToUpdate = devices.find(d => d.id === deviceId);
+      if (!deviceToUpdate) {
+        throw new Error('Device not found');
+      }
+
+      const updatedControllerConfigs = {
+        ...deviceToUpdate.controller_configs,
+        remote: config
+      };
+
+      await deviceApi.updateDevice(deviceId, {
+        name: deviceToUpdate.name,
+        description: deviceToUpdate.description,
+        model: deviceToUpdate.model,
+        controllerConfigs: updatedControllerConfigs
+      });
       
       // Reload devices to reflect the changes
       await loadDevices();
       
       console.log(`[@component:UserInterface] Successfully saved controller config for device ${deviceId}`);
+      
+      // Close the dialog
+      setEditControllerOpen(false);
+      setSelectedDeviceForEdit(null);
+      
     } catch (err) {
       console.error('[@component:UserInterface] Error saving controller config:', err);
+      setError('Failed to save controller configuration');
       throw err;
     }
   };
