@@ -1,6 +1,8 @@
 import React from 'react';
 import { AndroidMobileModal } from '../pages/controller/modals/AndroidMobileModal';
 import { AndroidMobileRemotePanel } from './remote/AndroidMobileRemotePanel';
+import { AndroidTVRemotePanel } from './remote/AndroidTVRemotePanel';
+import { IRRemotePanel } from './remote/IRRemotePanel';
 import { Dialog, DialogTitle, DialogContent, Box, Typography, IconButton } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 
@@ -20,7 +22,7 @@ export function RemoteController({ deviceType, device, open, onClose }: RemoteCo
   console.log(`[@component:RemoteController] Rendering remote controller for device type: ${deviceType}`);
 
   // Extract connection config from device if available
-  const getConnectionConfig = () => {
+  const getAndroidConnectionConfig = () => {
     if (!device?.controller_configs?.remote) return undefined;
     
     const config = device.controller_configs.remote;
@@ -34,13 +36,24 @@ export function RemoteController({ deviceType, device, open, onClose }: RemoteCo
     };
   };
 
+  const getIRConnectionConfig = () => {
+    if (!device?.controller_configs?.remote) return undefined;
+    
+    const config = device.controller_configs.remote;
+    return {
+      device_path: config.ir_device || config.device_path,
+      protocol: config.protocol,
+      frequency: config.frequency,
+    };
+  };
+
   // Render appropriate remote controller based on device type
   const renderRemoteController = () => {
     switch (deviceType) {
       case 'android_mobile':
         return (
           <AndroidMobileRemotePanel
-            connectionConfig={getConnectionConfig()}
+            connectionConfig={getAndroidConnectionConfig()}
             autoConnect={false} // Let user manually connect
             compact={false}
             showScreenshot={true}
@@ -49,8 +62,8 @@ export function RemoteController({ deviceType, device, open, onClose }: RemoteCo
         
       case 'android_tv':
         return (
-          <AndroidMobileRemotePanel
-            connectionConfig={getConnectionConfig()}
+          <AndroidTVRemotePanel
+            connectionConfig={getAndroidConnectionConfig()}
             autoConnect={false}
             compact={false}
             showScreenshot={true}
@@ -59,14 +72,11 @@ export function RemoteController({ deviceType, device, open, onClose }: RemoteCo
         
       case 'ir_remote':
         return (
-          <Box sx={{ p: 2, textAlign: 'center' }}>
-            <Typography variant="h6" gutterBottom>
-              IR Remote Controller
-            </Typography>
-            <Typography color="textSecondary">
-              IR Remote controller coming soon...
-            </Typography>
-          </Box>
+          <IRRemotePanel
+            connectionConfig={getIRConnectionConfig()}
+            autoConnect={false}
+            compact={false}
+          />
         );
         
       case 'bluetooth_remote':

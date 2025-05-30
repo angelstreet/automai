@@ -15,9 +15,8 @@ import {
   IconButton,
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
-
 import { useBluetoothRemoteConnection } from '../hooks/useBluetoothRemoteConnection';
-import { RemoteInterface } from '../components/RemoteInterface';
+import { BluetoothRemotePanel } from '../../../components/remote/BluetoothRemotePanel';
 
 interface BluetoothRemoteModalProps {
   open: boolean;
@@ -25,27 +24,16 @@ interface BluetoothRemoteModalProps {
 }
 
 export const BluetoothRemoteModal: React.FC<BluetoothRemoteModalProps> = ({ open, onClose }) => {
+  // Use the Bluetooth Remote connection hook to get connection form
   const {
     session,
     connectionForm,
     setConnectionForm,
     connectionLoading,
     connectionError,
-    remoteConfig,
     handleConnect,
     handleDisconnect,
-    handleCommand,
   } = useBluetoothRemoteConnection();
-
-  const [showOverlays, setShowOverlays] = useState(false);
-  const [remoteScale, setRemoteScale] = useState(1.2);
-
-  // Update scale when config loads
-  useEffect(() => {
-    if (remoteConfig) {
-      setRemoteScale(remoteConfig.remote_info.default_scale);
-    }
-  }, [remoteConfig]);
 
   const handleCloseModal = () => {
     if (session.connected) {
@@ -77,62 +65,20 @@ export const BluetoothRemoteModal: React.FC<BluetoothRemoteModalProps> = ({ open
             )}
           </Box>
           
-          {/* Right side: Controls */}
-          <Box display="flex" alignItems="center" gap={1}>
-            {session.connected && (
-              <>
-                {/* Show Overlays button */}
-                <Button
-                  variant={showOverlays ? "contained" : "outlined"}
-                  size="small"
-                  onClick={() => setShowOverlays(!showOverlays)}
-                  sx={{ minWidth: 'auto', px: 1 }}
-                >
-                  {showOverlays ? 'Hide Overlays' : 'Show Overlays'}
-                </Button>
-                
-                {/* Scale controls */}
-                <Box display="flex" alignItems="center" gap={0.5}>
-                  <Typography variant="caption" sx={{ fontSize: '0.75rem' }}>
-                    Scale:
-                  </Typography>
-                  <Button
-                    size="small"
-                    onClick={() => setRemoteScale(prev => Math.max(remoteConfig?.remote_info.min_scale || 0.5, prev - 0.1))}
-                    disabled={remoteScale <= (remoteConfig?.remote_info.min_scale || 0.5)}
-                    sx={{ minWidth: 24, width: 24, height: 24, p: 0 }}
-                  >
-                    -
-                  </Button>
-                  <Typography variant="caption" sx={{ minWidth: 35, textAlign: 'center', fontSize: '0.75rem' }}>
-                    {Math.round(remoteScale * 100)}%
-                  </Typography>
-                  <Button
-                    size="small"
-                    onClick={() => setRemoteScale(prev => Math.min(remoteConfig?.remote_info.max_scale || 2.0, prev + 0.1))}
-                    disabled={remoteScale >= (remoteConfig?.remote_info.max_scale || 2.0)}
-                    sx={{ minWidth: 24, width: 24, height: 24, p: 0 }}
-                  >
-                    +
-                  </Button>
-                </Box>
-              </>
-            )}
-            
-            {/* Close button - always visible */}
-            <IconButton
-              onClick={handleCloseModal}
-              size="small"
-              sx={{ ml: 1 }}
-              aria-label="close"
-            >
-              <CloseIcon />
-            </IconButton>
-          </Box>
+          {/* Right side: Close button */}
+          <IconButton
+            onClick={handleCloseModal}
+            size="small"
+            sx={{ ml: 1 }}
+            aria-label="close"
+          >
+            <CloseIcon />
+          </IconButton>
         </Box>
       </DialogTitle>
       <DialogContent sx={{ pb: 2, overflow: 'hidden', maxHeight: 'none' }}>
         {!session.connected ? (
+          /* Connection Form */
           <Box sx={{ pt: 2 }}>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
               Pair with a Bluetooth device to control it remotely using HID protocol.
@@ -176,16 +122,17 @@ export const BluetoothRemoteModal: React.FC<BluetoothRemoteModalProps> = ({ open
             </Grid>
           </Box>
         ) : (
-          <Box sx={{ pt: 2, display: 'flex', justifyContent: 'center', overflow: 'hidden' }}>
-            <RemoteInterface
-              remoteConfig={remoteConfig}
-              scale={remoteScale}
-              showOverlays={showOverlays}
-              onCommand={handleCommand}
-              fallbackImageUrl="/suncherry_remote.png"
-              fallbackName="Sunrise Remote"
-            />
-          </Box>
+          /* Connected - Show Remote Control Panel */
+          <BluetoothRemotePanel
+            connectionConfig={{
+              device_address: connectionForm.device_address,
+              device_name: connectionForm.device_name,
+              pairing_pin: connectionForm.pairing_pin,
+            }}
+            autoConnect={false} // Manual connect via connection form
+            compact={false} // Full modal mode
+            sx={{ height: '500px' }}
+          />
         )}
       </DialogContent>
       <DialogActions>

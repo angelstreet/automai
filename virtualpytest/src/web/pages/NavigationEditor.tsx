@@ -63,6 +63,8 @@ import { EdgeSelectionPanel } from '../components/navigation/EdgeSelectionPanel'
 import { NodeSelectionPanel } from '../components/navigation/NodeSelectionPanel';
 import { NavigationEditorHeader } from '../components/navigation/NavigationEditorHeader';
 import { AndroidMobileRemotePanel } from '../components/remote/AndroidMobileRemotePanel';
+import { AndroidTVRemotePanel } from '../components/remote/AndroidTVRemotePanel';
+import { IRRemotePanel } from '../components/remote/IRRemotePanel';
 
 // Node types for React Flow
 const nodeTypes = {
@@ -80,6 +82,7 @@ const NavigationEditorContent: React.FC = () => {
   const [isRemotePanelOpen, setIsRemotePanelOpen] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [isControlActive, setIsControlActive] = useState(false);
+  const [selectedDeviceType, setSelectedDeviceType] = useState<'android_mobile' | 'android_tv' | 'ir_remote'>('android_mobile');
 
   const {
     // State
@@ -442,20 +445,82 @@ const NavigationEditorContent: React.FC = () => {
               </Button>
             </Box>
             
-            {/* Android Mobile Remote Panel */}
-            <AndroidMobileRemotePanel
-              connectionConfig={undefined} // TODO: Get from user interface device config
-              autoConnect={false}
-              compact={true} // Use compact mode for NavigationEditor
-              showScreenshot={false} // Hide screenshot in navigation editor to save space
-              sx={{ 
-                flex: 1,
-                height: '100%',
-                '& .MuiTypography-h6': {
-                  fontSize: '1rem' // Smaller headings in compact mode
-                }
-              }}
-            />
+            {/* Device Type Selection */}
+            <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Device Type
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                <Button
+                  size="small"
+                  variant={selectedDeviceType === 'android_mobile' ? 'contained' : 'outlined'}
+                  onClick={() => setSelectedDeviceType('android_mobile')}
+                  sx={{ fontSize: '0.7rem' }}
+                >
+                  Android Mobile
+                </Button>
+                <Button
+                  size="small"
+                  variant={selectedDeviceType === 'android_tv' ? 'contained' : 'outlined'}
+                  onClick={() => setSelectedDeviceType('android_tv')}
+                  sx={{ fontSize: '0.7rem' }}
+                >
+                  Android TV
+                </Button>
+                <Button
+                  size="small"
+                  variant={selectedDeviceType === 'ir_remote' ? 'contained' : 'outlined'}
+                  onClick={() => setSelectedDeviceType('ir_remote')}
+                  sx={{ fontSize: '0.7rem' }}
+                >
+                  IR Remote
+                </Button>
+              </Box>
+            </Box>
+            
+            {/* Remote Panel Content */}
+            {selectedDeviceType === 'android_mobile' ? (
+              <AndroidMobileRemotePanel
+                connectionConfig={undefined} // TODO: Get from user interface device config
+                autoConnect={false}
+                compact={true} // Use compact mode for NavigationEditor
+                showScreenshot={false} // Hide screenshot in navigation editor to save space
+                sx={{ 
+                  flex: 1,
+                  height: '100%',
+                  '& .MuiTypography-h6': {
+                    fontSize: '1rem' // Smaller headings in compact mode
+                  }
+                }}
+              />
+            ) : selectedDeviceType === 'android_tv' ? (
+              <AndroidTVRemotePanel
+                connectionConfig={undefined} // TODO: Get from user interface device config
+                autoConnect={false}
+                compact={true} // Use compact mode for NavigationEditor
+                showScreenshot={false} // Hide screenshot in navigation editor to save space
+                sx={{ 
+                  flex: 1,
+                  height: '100%',
+                  '& .MuiTypography-h6': {
+                    fontSize: '1rem' // Smaller headings in compact mode
+                  }
+                }}
+              />
+            ) : (
+              <IRRemotePanel
+                connectionConfig={undefined} // TODO: Get from user interface device config
+                autoConnect={false}
+                compact={true} // Use compact mode for NavigationEditor
+                sx={{ 
+                  flex: 1,
+                  height: '100%',
+                  '& .MuiTypography-h6': {
+                    fontSize: '1rem' // Smaller headings in compact mode
+                  }
+                }}
+              />
+            )}
           </Box>
         )}
       </Box>
