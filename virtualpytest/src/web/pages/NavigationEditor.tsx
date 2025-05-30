@@ -540,117 +540,131 @@ const NavigationEditorContent: React.FC = () => {
         </Box>
 
         {/* Remote Control Panel - Only show if device has remote capabilities */}
-        {isRemotePanelOpen && remoteConfig && (
-          <Box sx={{
-            position: 'fixed',
-            right: 0,
-            top: '130px', // Adjust based on your header height
-            width: '350px', // Slightly wider for remote controls
-            height: 'calc(100vh - 130px)',
-            bgcolor: 'background.paper',
-            borderLeft: '1px solid',
-            borderColor: 'divider',
-            zIndex: 1000,
-            display: 'flex',
-            flexDirection: 'column',
-            boxShadow: '-2px 0 8px rgba(0, 0, 0, 0.1)'
-          }}>
-            {/* Remote Panel Header */}
-            <Box sx={{ 
-              p: 2, 
-              borderBottom: '1px solid', 
+        {isRemotePanelOpen && remoteConfig && (() => {
+          const isCompact = true; // NavigationEditor side panel is always compact
+          
+          return (
+            <Box sx={{
+              position: 'fixed',
+              right: 0,
+              top: '130px', // Adjust based on your header height
+              width: '350px', // Slightly wider for remote controls
+              height: 'calc(100vh - 130px)',
+              bgcolor: 'background.paper',
+              borderLeft: '1px solid',
               borderColor: 'divider',
+              zIndex: 1000,
               display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
+              flexDirection: 'column',
+              boxShadow: '-2px 0 8px rgba(0, 0, 0, 0.1)'
             }}>
-              <Typography variant="h6" component="div">
-                {remoteConfig.type === 'android_mobile' ? 'Android Mobile Remote' :
-                 remoteConfig.type === 'android_tv' ? 'Android TV Remote' :
-                 remoteConfig.type === 'ir_remote' ? 'IR Remote' :
-                 remoteConfig.type === 'bluetooth_remote' ? 'Bluetooth Remote' :
-                 'Remote Control'}
-              </Typography>
-              <Button
-                size="small"
-                onClick={handleToggleRemotePanel}
-                startIcon={<CloseIcon />}
-              >
-                Close
-              </Button>
-            </Box>
-            
-            {/* Connection Status */}
-            <Box sx={{ p: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
-              <Typography variant="caption" color={activeHook?.session.connected ? "success.main" : "textSecondary"}>
-                {activeHook?.session.connected ? `Connected to ${selectedDevice}` : `Connecting to ${selectedDevice}...`}
-              </Typography>
-            </Box>
-            
-            {/* Remote Panel Content - Dynamic based on device type */}
-            {remoteConfig.type === 'android_mobile' ? (
-              <AndroidMobileRemotePanel
-                connectionConfig={extractConnectionConfigForAndroid(selectedDeviceData?.controller_configs?.remote)}
-                autoConnect={isControlActive}
-                compact={true}
-                showScreenshot={false}
-                sx={{ 
-                  flex: 1,
-                  height: '100%',
-                  '& .MuiTypography-h6': {
-                    fontSize: '1rem'
-                  }
-                }}
-              />
-            ) : remoteConfig.type === 'android_tv' ? (
-              <AndroidTVRemotePanel
-                connectionConfig={extractConnectionConfigForAndroid(selectedDeviceData?.controller_configs?.remote)}
-                autoConnect={isControlActive}
-                compact={true}
-                showScreenshot={false}
-                sx={{ 
-                  flex: 1,
-                  height: '100%',
-                  '& .MuiTypography-h6': {
-                    fontSize: '1rem'
-                  }
-                }}
-              />
-            ) : remoteConfig.type === 'ir_remote' ? (
-              <IRRemotePanel
-                connectionConfig={extractConnectionConfigForIR(selectedDeviceData?.controller_configs?.remote)}
-                autoConnect={isControlActive}
-                compact={true}
-                sx={{ 
-                  flex: 1,
-                  height: '100%',
-                  '& .MuiTypography-h6': {
-                    fontSize: '1rem'
-                  }
-                }}
-              />
-            ) : remoteConfig.type === 'bluetooth_remote' ? (
-              <BluetoothRemotePanel
-                connectionConfig={extractConnectionConfigForBluetooth(selectedDeviceData?.controller_configs?.remote)}
-                autoConnect={isControlActive}
-                compact={true}
-                sx={{ 
-                  flex: 1,
-                  height: '100%',
-                  '& .MuiTypography-h6': {
-                    fontSize: '1rem'
-                  }
-                }}
-              />
-            ) : (
-              <Box sx={{ p: 2, textAlign: 'center' }}>
-                <Typography variant="body2" color="textSecondary">
-                  Unsupported remote type: {remoteConfig.type}
+              {/* Remote Panel Header */}
+              <Box sx={{ 
+                p: isCompact ? 1 : 2, 
+                borderBottom: '1px solid', 
+                borderColor: 'divider',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <Typography variant={isCompact ? "subtitle1" : "h6"} component="div">
+                  {remoteConfig.type === 'android_mobile' ? 'Android Mobile Remote' :
+                   remoteConfig.type === 'android_tv' ? 'Android TV Remote' :
+                   remoteConfig.type === 'ir_remote' ? 'IR Remote' :
+                   remoteConfig.type === 'bluetooth_remote' ? 'Bluetooth Remote' :
+                   'Remote Control'}
                 </Typography>
+                <Button
+                  size="small"
+                  onClick={handleToggleRemotePanel}
+                  startIcon={<CloseIcon />}
+                >
+                  Close
+                </Button>
               </Box>
-            )}
-          </Box>
-        )}
+              
+              {/* Connection Status - Hidden in compact mode */}
+              {!isCompact && (
+                <Box sx={{ p: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+                  <Typography variant="caption" color={activeHook?.session.connected ? "success.main" : "textSecondary"}>
+                    {activeHook?.session.connected ? `Connected to ${selectedDevice}` : `Connecting to ${selectedDevice}...`}
+                  </Typography>
+                </Box>
+              )}
+              
+              {/* Remote Panel Content - Dynamic based on device type */}
+              {remoteConfig.type === 'android_mobile' ? (
+                <AndroidMobileRemotePanel
+                  connectionConfig={extractConnectionConfigForAndroid(selectedDeviceData?.controller_configs?.remote)}
+                  autoConnect={isControlActive}
+                  compact={true}
+                  showScreenshot={false}
+                  sx={{ 
+                    flex: 1,
+                    height: '100%',
+                    '& .MuiTypography-h6': {
+                      fontSize: '1rem'
+                    }
+                  }}
+                />
+              ) : remoteConfig.type === 'android_tv' ? (
+                <AndroidTVRemotePanel
+                  connectionConfig={extractConnectionConfigForAndroid(selectedDeviceData?.controller_configs?.remote)}
+                  autoConnect={isControlActive}
+                  compact={true}
+                  showScreenshot={false}
+                  onDisconnectComplete={() => {
+                    // Trigger the same actions as the header "Release" button
+                    handleTakeControl(); // This will set isControlActive to false
+                    // Close the remote panel after releasing control
+                    if (isRemotePanelOpen) {
+                      handleToggleRemotePanel();
+                    }
+                  }}
+                  sx={{ 
+                    flex: 1,
+                    height: '100%',
+                    '& .MuiTypography-h6': {
+                      fontSize: '1rem'
+                    }
+                  }}
+                />
+              ) : remoteConfig.type === 'ir_remote' ? (
+                <IRRemotePanel
+                  connectionConfig={extractConnectionConfigForIR(selectedDeviceData?.controller_configs?.remote)}
+                  autoConnect={isControlActive}
+                  compact={true}
+                  sx={{ 
+                    flex: 1,
+                    height: '100%',
+                    '& .MuiTypography-h6': {
+                      fontSize: '1rem'
+                    }
+                  }}
+                />
+              ) : remoteConfig.type === 'bluetooth_remote' ? (
+                <BluetoothRemotePanel
+                  connectionConfig={extractConnectionConfigForBluetooth(selectedDeviceData?.controller_configs?.remote)}
+                  autoConnect={isControlActive}
+                  compact={true}
+                  sx={{ 
+                    flex: 1,
+                    height: '100%',
+                    '& .MuiTypography-h6': {
+                      fontSize: '1rem'
+                    }
+                  }}
+                />
+              ) : (
+                <Box sx={{ p: 2, textAlign: 'center' }}>
+                  <Typography variant="body2" color="textSecondary">
+                    Unsupported remote type: {remoteConfig.type}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          );
+        })()}
       </Box>
 
       {/* Node Edit Dialog */}

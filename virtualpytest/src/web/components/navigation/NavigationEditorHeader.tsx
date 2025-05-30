@@ -351,7 +351,7 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
                 px: 0.5
               }}
             >
-              {isControlActive ? 'Stop Remote' : 'Take Control'}
+              {isControlActive ? 'Release' : 'Take Control'}
             </Button>
           </Box>
         </Box>

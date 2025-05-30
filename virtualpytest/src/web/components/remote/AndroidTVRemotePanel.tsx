@@ -32,6 +32,8 @@ interface AndroidTVRemotePanelProps {
   showScreenshot?: boolean;
   /** Custom styling */
   sx?: any;
+  /** Callback when disconnect is complete (for parent to handle additional actions like closing panel) */
+  onDisconnectComplete?: () => void;
 }
 
 export function AndroidTVRemotePanel({
@@ -39,7 +41,8 @@ export function AndroidTVRemotePanel({
   autoConnect = false,
   compact = false,
   showScreenshot = true,
-  sx = {}
+  sx = {},
+  onDisconnectComplete
 }: AndroidTVRemotePanelProps) {
   // UI state
   const [showOverlays, setShowOverlays] = useState(true);
@@ -84,7 +87,7 @@ export function AndroidTVRemotePanel({
   useEffect(() => {
     if (connectionConfig && autoConnect && !session.connected && !connectionLoading) {
       // Validate that we have all required connection parameters
-      const requiredFields = ['host_ip', 'host_username', 'host_password', 'device_ip'];
+      const requiredFields: (keyof typeof connectionConfig)[] = ['host_ip', 'host_username', 'host_password', 'device_ip'];
       const missingFields = requiredFields.filter(field => !connectionConfig[field]);
       
       if (missingFields.length > 0) {
@@ -288,28 +291,34 @@ export function AndroidTVRemotePanel({
           Android TV Not Connected
         </Typography>
         
-        {/* Show connection status */}
-        {connectionLoading && (
+        {/* Show connection status or device config */}
+        {connectionLoading ? (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
             <CircularProgress size={16} />
             <Typography variant="caption" color="info.main">
               Connecting to device...
             </Typography>
           </Box>
-        )}
-        
-        {/* Show connection config status */}
-        {connectionConfig ? (
+        ) : connectionConfig ? (
           <Box sx={{ mb: 2, textAlign: 'center' }}>
-            <Typography variant="caption" color="success.main" display="block">
+            <Typography variant="caption" color="success.main" display="block" sx={{ mb: 1 }}>
               Device Config: ✓ {connectionConfig.host_ip} → {connectionConfig.device_ip}
             </Typography>
+            {compact && (
+              <Box sx={{ mb: 1 }}>
+                <Typography variant="caption" color="textSecondary" display="block">
+                  Host: {connectionConfig.host_ip}:{connectionConfig.host_port}
+                </Typography>
+                <Typography variant="caption" color="textSecondary" display="block">
+                  Device: {connectionConfig.device_ip}:{connectionConfig.device_port}
+                </Typography>
+              </Box>
+            )}
             <Button
               variant="contained"
               onClick={handleTakeControl}
               disabled={connectionLoading}
               size={compact ? "small" : "medium"}
-              sx={{ mt: 1 }}
             >
               {connectionLoading ? <CircularProgress size={16} /> : 'Connect'}
             </Button>
@@ -332,18 +341,6 @@ export function AndroidTVRemotePanel({
           }}>
             <Typography variant="caption" color="error" textAlign="center">
               Connection Error: {connectionError}
-            </Typography>
-          </Box>
-        )}
-        
-        {/* Debug info in compact mode */}
-        {compact && connectionConfig && (
-          <Box sx={{ mt: 1, textAlign: 'center' }}>
-            <Typography variant="caption" color="textSecondary" display="block">
-              Host: {connectionConfig.host_ip}:{connectionConfig.host_port}
-            </Typography>
-            <Typography variant="caption" color="textSecondary" display="block">
-              Device: {connectionConfig.device_ip}:{connectionConfig.device_port}
             </Typography>
           </Box>
         )}
@@ -492,7 +489,17 @@ export function AndroidTVRemotePanel({
       <Button 
         variant="contained" 
         color="error"
-        onClick={handleReleaseControl}
+        onClick={async () => {
+          try {
+            await handleReleaseControl();
+            // Call the callback after successful disconnect
+            if (onDisconnectComplete) {
+              onDisconnectComplete();
+            }
+          } catch (error) {
+            console.error('[@component:AndroidTVRemotePanel] Error during disconnect:', error);
+          }
+        }}
         disabled={connectionLoading}
         size="small"
         fullWidth
