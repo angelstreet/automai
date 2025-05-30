@@ -45,7 +45,7 @@ export const ControllerTypeSection: React.FC<ControllerTypeSectionProps> = ({
   // Load available configurations for this controller type
   useEffect(() => {
     const configs = ControllerConfigService.getConfigurationsByType(
-      controllerType as keyof typeof CONTROLLER_CONFIGURATIONS
+      controllerType as 'remote' | 'av' | 'network' | 'power'
     );
     
     // Filter to only available controllers
