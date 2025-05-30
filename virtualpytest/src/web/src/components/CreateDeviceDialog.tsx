@@ -201,6 +201,7 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
       };
 
       console.log('[@component:CreateDeviceDialog] Creating device with data:', deviceData);
+      console.log('[@component:CreateDeviceDialog] Controller configs detail:', JSON.stringify(formData.controllerConfigs, null, 2));
       await onSubmit(deviceData as any);
       
     } catch (err) {

@@ -90,7 +90,7 @@ const DeviceManagement: React.FC = () => {
     }
   };
 
-  const handleAddNew = async (newDeviceData: Omit<Device, 'id' | 'created_at' | 'updated_at'>) => {
+  const handleAddNew = async (newDeviceData: DeviceCreatePayload) => {
     if (!newDeviceData.name.trim()) {
       setError('Name is required');
       return;
@@ -110,10 +110,13 @@ const DeviceManagement: React.FC = () => {
       setSubmitting(true);
       setError(null);
 
+      console.log('[@component:DeviceManagement] Creating device with full data:', newDeviceData);
+
       const createdDevice = await deviceApi.createDevice({
         name: newDeviceData.name.trim(),
-        description: newDeviceData.description.trim(),
-        model: newDeviceData.model.trim(),
+        description: (newDeviceData.description || '').trim(),
+        model: (newDeviceData.model || '').trim(),
+        controllerConfigs: newDeviceData.controllerConfigs || {}, // Include controller configurations
       });
 
       // Update local state
