@@ -572,7 +572,7 @@ const UserInterface: React.FC = () => {
                           Edit Navigation
                         </Button>
                       </TableCell>
-                      <TableCell align="center">
+                      <TableCell>
                         {/* Remote Controller Column - Simplified */}
                         {userInterface.models.length > 0 ? (
                           (() => {
@@ -589,15 +589,15 @@ const UserInterface: React.FC = () => {
                               return (
                                 <Button
                                   size="small"
-                                  variant="text"
+                                  variant="outlined"
+                                  startIcon={<LaunchIcon fontSize="small" />}
                                   onClick={() => handleOpenEditController(userInterface)}
                                   disabled={deviceType === 'unknown'}
                                   sx={{ 
                                     minWidth: 'auto',
                                     px: 1,
-                                    py: 0.5,
-                                    fontSize: '0.75rem',
-                                    textTransform: 'none'
+                                    py: 0.25,
+                                    fontSize: '0.75rem'
                                   }}
                                 >
                                   {controllerName}
