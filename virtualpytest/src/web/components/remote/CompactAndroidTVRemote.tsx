@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback, useRef } from 'react';
 import {
   Box,
   Button,
@@ -49,31 +49,51 @@ export function CompactAndroidTVRemote({
     remoteConfig,
   } = useAndroidTVConnection();
 
+  // Track if we've already initialized to prevent duplicate calls
+  const isInitializedRef = useRef(false);
+  const configHashRef = useRef<string>('');
+
+  // Create a stable hash of the connection config to detect changes
+  const createConfigHash = useCallback((config: typeof connectionConfig) => {
+    if (!config) return '';
+    return `${config.host_ip}-${config.host_port}-${config.host_username}-${config.device_ip}-${config.device_port}`;
+  }, []);
+
   // Initialize connection form with provided config or fetch defaults
   useEffect(() => {
-    if (connectionConfig) {
-      console.log('[@component:CompactAndroidTVRemote] Initializing with provided config');
-      setConnectionForm({
-        host_ip: connectionConfig.host_ip,
-        host_port: connectionConfig.host_port || '22',
-        host_username: connectionConfig.host_username,
-        host_password: connectionConfig.host_password,
-        device_ip: connectionConfig.device_ip,
-        device_port: connectionConfig.device_port || '5555',
-      });
+    const currentConfigHash = createConfigHash(connectionConfig);
+    
+    // Only initialize if config has actually changed or we haven't initialized yet
+    if (currentConfigHash !== configHashRef.current || !isInitializedRef.current) {
+      configHashRef.current = currentConfigHash;
+      isInitializedRef.current = true;
       
-      // Auto-connect if requested and not already connected
-      if (autoConnect && !session.connected && !connectionLoading) {
-        console.log('[@component:CompactAndroidTVRemote] Auto-connecting...');
-        handleTakeControl();
+      if (connectionConfig) {
+        console.log('[@component:CompactAndroidTVRemote] Initializing with provided config');
+        setConnectionForm({
+          host_ip: connectionConfig.host_ip,
+          host_port: connectionConfig.host_port || '22',
+          host_username: connectionConfig.host_username,
+          host_password: connectionConfig.host_password,
+          device_ip: connectionConfig.device_ip,
+          device_port: connectionConfig.device_port || '5555',
+        });
+      } else {
+        console.log('[@component:CompactAndroidTVRemote] No config provided, fetching defaults');
+        fetchDefaultValues();
       }
-    } else {
-      console.log('[@component:CompactAndroidTVRemote] No config provided, fetching defaults');
-      fetchDefaultValues();
     }
-  }, [connectionConfig, fetchDefaultValues, setConnectionForm, autoConnect, session.connected, connectionLoading, handleTakeControl]);
+  }, [connectionConfig, createConfigHash, setConnectionForm, fetchDefaultValues]);
 
-  const handleDisconnect = async () => {
+  // Separate effect for auto-connect logic
+  useEffect(() => {
+    if (autoConnect && connectionConfig && !session.connected && !connectionLoading && isInitializedRef.current) {
+      console.log('[@component:CompactAndroidTVRemote] Auto-connecting...');
+      handleTakeControl();
+    }
+  }, [autoConnect, connectionConfig, session.connected, connectionLoading, handleTakeControl]);
+
+  const handleDisconnect = useCallback(async () => {
     try {
       await handleReleaseControl();
       if (onDisconnectComplete) {
@@ -82,7 +102,7 @@ export function CompactAndroidTVRemote({
     } catch (error) {
       console.error('[@component:CompactAndroidTVRemote] Error during disconnect:', error);
     }
-  };
+  }, [handleReleaseControl, onDisconnectComplete]);
 
   // For compact view, show loading or remote directly
   if (!session.connected) {

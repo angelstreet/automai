@@ -155,42 +155,53 @@ const NavigationEditorContent: React.FC = () => {
       
       console.log(`[@component:NavigationEditor] Auto-populating connection form for device: ${selectedDeviceData.name}`, remoteConfig);
       
-      if (remoteConfig.type === 'android_mobile' || remoteConfig.type === 'android_tv') {
+      if (remoteConfig.type === 'android_mobile' && activeHook === androidMobileHook) {
         const connectionConfig = extractConnectionConfigForAndroid(remoteConfig);
-        console.log('[@component:NavigationEditor] Extracted Android connection config:', connectionConfig);
-        if (connectionConfig && activeHook.setConnectionForm) {
-          activeHook.setConnectionForm(connectionConfig);
+        console.log('[@component:NavigationEditor] Extracted Android Mobile connection config:', connectionConfig);
+        if (connectionConfig && androidMobileHook.setConnectionForm) {
+          androidMobileHook.setConnectionForm(connectionConfig);
         }
-      } else if (remoteConfig.type === 'ir_remote') {
+      } else if (remoteConfig.type === 'android_tv' && activeHook === androidTVHook) {
+        const connectionConfig = extractConnectionConfigForAndroid(remoteConfig);
+        console.log('[@component:NavigationEditor] Extracted Android TV connection config:', connectionConfig);
+        if (connectionConfig && androidTVHook.setConnectionForm) {
+          androidTVHook.setConnectionForm(connectionConfig);
+        }
+      } else if (remoteConfig.type === 'ir_remote' && activeHook === irRemoteHook) {
         const connectionConfig = extractConnectionConfigForIR(remoteConfig);
         console.log('[@component:NavigationEditor] Extracted IR connection config:', connectionConfig);
-        if (connectionConfig && activeHook.setConnectionForm) {
-          activeHook.setConnectionForm(connectionConfig);
+        if (connectionConfig && irRemoteHook.setConnectionForm) {
+          irRemoteHook.setConnectionForm(connectionConfig);
         }
-      } else if (remoteConfig.type === 'bluetooth_remote') {
+      } else if (remoteConfig.type === 'bluetooth_remote' && activeHook === bluetoothRemoteHook) {
         const connectionConfig = extractConnectionConfigForBluetooth(remoteConfig);
         console.log('[@component:NavigationEditor] Extracted Bluetooth connection config:', connectionConfig);
-        if (connectionConfig && activeHook.setConnectionForm) {
-          activeHook.setConnectionForm(connectionConfig);
+        if (connectionConfig && bluetoothRemoteHook.setConnectionForm) {
+          bluetoothRemoteHook.setConnectionForm(connectionConfig);
         }
       }
     }
-  }, [selectedDeviceData, activeHook]);
+  }, [selectedDeviceData, activeHook, androidMobileHook, androidTVHook, irRemoteHook, bluetoothRemoteHook]);
 
   // Handle disconnection when control is released
   useEffect(() => {
-    if (!activeHook || !remoteConfig) return;
+    if (!remoteConfig) return;
 
     // Only handle disconnection when control is released
-    if (!isControlActive && activeHook.session.connected) {
+    if (!isControlActive) {
       console.log(`[@component:NavigationEditor] Control released, disconnecting from ${remoteConfig.type} device`);
-      if (remoteConfig.type === 'android_tv') {
-        activeHook.handleReleaseControl?.();
-      } else {
-        activeHook.handleDisconnect?.();
+      
+      if (remoteConfig.type === 'android_tv' && androidTVHook.handleReleaseControl) {
+        androidTVHook.handleReleaseControl();
+      } else if (remoteConfig.type === 'android_mobile' && androidMobileHook.handleDisconnect) {
+        androidMobileHook.handleDisconnect();
+      } else if (remoteConfig.type === 'ir_remote' && irRemoteHook.handleDisconnect) {
+        irRemoteHook.handleDisconnect();
+      } else if (remoteConfig.type === 'bluetooth_remote' && bluetoothRemoteHook.handleDisconnect) {
+        bluetoothRemoteHook.handleDisconnect();
       }
     }
-  }, [isControlActive, activeHook, remoteConfig]);
+  }, [isControlActive, remoteConfig, androidMobileHook, androidTVHook, irRemoteHook, bluetoothRemoteHook]);
 
   const {
     // State
@@ -364,12 +375,9 @@ const NavigationEditorContent: React.FC = () => {
         historyIndex={historyIndex}
         historyLength={history.length}
         userInterface={userInterface}
-        devices={getFilteredDevices()}
-        devicesLoading={devicesLoading}
         selectedDevice={selectedDevice}
         isControlActive={isControlActive}
         isRemotePanelOpen={isRemotePanelOpen}
-        remoteConfig={remoteConfig}
         onNavigateToParent={navigateToParent}
         onNavigateToTreeLevel={navigateToTreeLevel}
         onNavigateToParentView={navigateToParentView}
